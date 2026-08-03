@@ -18,6 +18,10 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
@@ -57,7 +61,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 59;
+	public static inline final SCHEMA_VERSION = 60;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -136,7 +140,8 @@ class OcamlLoweringReportWriter {
 			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
 			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
-			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
+			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
+			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -341,6 +346,17 @@ class OcamlLoweringReportWriter {
 					throw 'Call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}".';
 			}
 		}
+		final sortedControlAdmissions = controlAdmissions.map(OcamlControlAdmissionContract.copySnapshot);
+		sortedControlAdmissions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final controlAdmissionByFunction:Map<String, OcamlControlAdmissionSnapshot> = [];
+		final controlAdmissionIds:Map<String, Bool> = [];
+		for (admission in sortedControlAdmissions) {
+			OcamlControlAdmissionContract.requireSnapshot(admission);
+			if (controlAdmissionIds.exists(admission.id) || controlAdmissionByFunction.exists(admission.functionId))
+				throw 'Control admission identity "${admission.id}" or function "${admission.functionId}" occurs more than once.';
+			controlAdmissionIds.set(admission.id, true);
+			controlAdmissionByFunction.set(admission.functionId, admission);
+		}
 		final sortedControlTargets = controlLoopTargets.copy();
 		sortedControlTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final controlTargetById:Map<String, OcamlControlLoopTarget> = [];
@@ -348,6 +364,8 @@ class OcamlLoweringReportWriter {
 			OcamlControlPlan.requireLoopTarget(target);
 			if (controlTargetById.exists(target.id))
 				throw 'Control loop target identity "${target.id}" occurs more than once.';
+			if (!controlAdmissionByFunction.exists(target.functionId))
+				throw 'Control loop target "${target.id}" has no complete function-admission snapshot.';
 			controlTargetById.set(target.id, target);
 		}
 		final sortedControls = controls.copy();
@@ -357,6 +375,8 @@ class OcamlLoweringReportWriter {
 			OcamlControlPlan.requireDecision(control);
 			if (controlById.exists(control.id))
 				throw 'Control decision identity "${control.id}" occurs more than once.';
+			if (!controlAdmissionByFunction.exists(control.functionId))
+				throw 'Control decision "${control.id}" has no complete function-admission snapshot.';
 			controlById.set(control.id, true);
 			final payload = control.payload;
 			if (payload != null) {
@@ -452,6 +472,8 @@ class OcamlLoweringReportWriter {
 			OcamlControlPlan.requireCatchChain(chain);
 			if (catchChainIds.exists(chain.id))
 				throw 'Control catch-chain identity "${chain.id}" occurs more than once.';
+			if (!controlAdmissionByFunction.exists(chain.functionId))
+				throw 'Control catch chain "${chain.id}" has no complete function-admission snapshot.';
 			for (clause in chain.clauses) {
 				if (clause.semanticTypeId != "Dynamic" && !OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)) {
 					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
@@ -470,6 +492,20 @@ class OcamlLoweringReportWriter {
 				}
 			}
 			catchChainIds.set(chain.id, true);
+		}
+		for (admission in sortedControlAdmissions) {
+			final controlsForFunction = sortedControls.filter(control -> control.functionId == admission.functionId);
+			final catchesForFunction = sortedCatchChains.filter(chain -> chain.functionId == admission.functionId);
+			final returnFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
+			final loopFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Loop);
+			final throwFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Throw);
+			if (returnFamily.decisionCount != Lambda.count(controlsForFunction, control -> control.kind == OcamlControlTransferKind.Return)
+				|| loopFamily.decisionCount != Lambda.count(controlsForFunction,
+					control -> control.kind == OcamlControlTransferKind.Break || control.kind == OcamlControlTransferKind.Continue)
+				|| throwFamily.decisionCount != Lambda.count(controlsForFunction, control -> control.kind == OcamlControlTransferKind.Throw)
+				|| Lambda.count(admission.catches, entry -> entry.status == OcamlControlAdmissionStatus.Admitted) != catchesForFunction.length) {
+				throw 'Control admission "${admission.id}" disagrees with the report decisions or catch chains for function "${admission.functionId}".';
+			}
 		}
 		final sortedLocalConversions = localConversions.copy();
 		sortedLocalConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -676,6 +712,7 @@ class OcamlLoweringReportWriter {
 			catchChains: sortedCatchChains
 		});
 		final canonicalCatchChains = haxe.Json.stringify(sortedCatchChains);
+		final canonicalControlAdmissions = haxe.Json.stringify(sortedControlAdmissions);
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
@@ -744,6 +781,10 @@ class OcamlLoweringReportWriter {
 			controlTargetRevision: "sha256:" + Sha256.encode(canonicalControlTargets),
 			controlTargetCount: sortedControlTargets.length,
 			controlTargets: sortedControlTargets,
+			controlAdmissionModel: OcamlControlAdmissionContract.MODEL,
+			controlAdmissionRevision: "sha256:" + Sha256.encode(canonicalControlAdmissions),
+			controlAdmissionCount: sortedControlAdmissions.length,
+			controlAdmissions: sortedControlAdmissions,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,

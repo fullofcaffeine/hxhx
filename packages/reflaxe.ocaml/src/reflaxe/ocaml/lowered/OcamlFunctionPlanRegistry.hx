@@ -41,6 +41,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanne
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
@@ -1059,6 +1060,28 @@ class OcamlFunctionPlanRegistry {
 		}
 		chains.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return chains;
+	}
+
+	/**
+		Returns the complete typed-control disposition for every sealed function.
+
+		Unlike the admitted decision lists, this inventory also includes functions
+		whose return, loop-transfer, throw, or catch family remained on the older
+		builder path, together with the planner-owned reason.
+	**/
+	public function controlAdmissionSnapshots():Array<OcamlControlAdmissionSnapshot> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final snapshots:Array<OcamlControlAdmissionSnapshot> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null)
+				snapshots.push(sealed.plan.controls.admissionSnapshot());
+		}
+		for (nested in nestedFunctionsByOccurrence)
+			snapshots.push(nested.controls.admissionSnapshot());
+		snapshots.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return snapshots;
 	}
 
 	/** Returns every admitted anonymous representation in stable identity order. */

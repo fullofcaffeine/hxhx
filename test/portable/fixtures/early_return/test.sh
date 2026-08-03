@@ -9,7 +9,8 @@ INSPECTION_COPY="$(mktemp)"
 INVALID_NOMINAL_ROOT="$(mktemp -d)"
 INVALID_ARRAY_ROOT="$(mktemp -d)"
 INVALID_LITERAL_ROOT="$(mktemp -d)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT"' EXIT
+INVALID_ADMISSION_ROOT="$(mktemp -d)"
+trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT" "$INVALID_ADMISSION_ROOT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
 	echo "Missing generated early-return source or lowering report" >&2
@@ -28,14 +29,45 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 59
+if (!Array.isArray(report.controlAdmissions)) {
+	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
+}
+
+if (report.schemaVersion !== 60
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
+	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
+	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length
 	|| !sha256.test(report.controlRevision)
+	|| !sha256.test(report.controlAdmissionRevision)
 	|| !sha256.test(report.controlTargetRevision)) {
 	fail('unexpected function/loop control report schema, model, inventory, or revision')
+}
+
+function familyFor(admission, family) {
+	return admission?.families?.find(entry => entry.family === family)
+}
+
+const blockedParse = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
+const blockedParseReturn = familyFor(blockedParse, 'return')
+if (blockedParseReturn?.status !== 'blocked'
+	|| blockedParseReturn.occurrenceCount !== 4
+	|| blockedParseReturn.decisionCount !== 0
+	|| blockedParseReturn.blockers.length !== 1
+	|| blockedParseReturn.blockers[0].code !== 'return-boundary-unrepresented'
+	|| blockedParseReturn.blockers[0].semanticTypeId !== 'Null<{ line : Int, file : String }>') {
+	fail('the typed planner did not explain the existing anonymous-result return blocker')
+}
+const admittedBranch = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('Main|Main|static|function|branch|'))
+const unusedPrint = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('Main|Main|static|function|printLine|'))
+if (familyFor(admittedBranch, 'return')?.status !== 'admitted'
+	|| familyFor(unusedPrint, 'return')?.status !== 'not-needed') {
+	fail('the control admission inventory conflated admitted, blocked, and unused return families')
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
@@ -668,15 +700,25 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 36
+if (report.schemaVersion !== 37
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
+	|| report.summary.controlAdmissionCount !== report.lowering.controlAdmissions.length
+	|| report.summary.controlAdmissionCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
 	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 39
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
 	throw new Error('public inspection did not expose the 39 returns and four direct represented-array literal producers')
+}
+const blockedParseAdmission = report.lowering.controlAdmissions.find(admission =>
+	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
+const blockedParseReturn = blockedParseAdmission?.families.find(family => family.family === 'return')
+if (blockedParseReturn?.status !== 'blocked'
+	|| blockedParseReturn.blockers[0]?.code !== 'return-boundary-unrepresented'
+	|| !/^sha256:[0-9a-f]{64}$/.test(blockedParseAdmission.revision ?? '')) {
+	throw new Error('public inspection did not validate the existing anonymous-result return blocker')
 }
 const arrayThrow = report.lowering.controls.find(control =>
 	control.kind === 'throw'
@@ -773,6 +815,56 @@ if (nominalCall?.proofId !== 'typed-function-value-signature-matrix-v1:(Bool)->_
 	throw new Error('public inspection did not expose the exact nominal function-value result boundary')
 }
 NODE
+
+for mutation in duplicate missing-family edited-message stale-revision; do
+	invalid_output="$INVALID_ADMISSION_ROOT/$mutation"
+	cp -R out "$invalid_output"
+	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
+const crypto = require('crypto')
+const fs = require('fs')
+const path = process.argv[2]
+const mutation = process.argv[3]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const admission = report.controlAdmissions.find(entry =>
+	entry.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
+const family = admission?.families?.find(entry => entry.family === 'return')
+if (family?.status !== 'blocked') {
+	throw new Error('missing blocked return admission to corrupt')
+}
+switch (mutation) {
+	case 'duplicate':
+		report.controlAdmissions.push(structuredClone(report.controlAdmissions[0]))
+		report.controlAdmissionCount = report.controlAdmissions.length
+		break
+	case 'missing-family':
+		admission.families.pop()
+		break
+	case 'edited-message':
+		family.blockers[0].message = 'edited explanation'
+		break
+	case 'stale-revision':
+		admission.revision = `sha256:${'0'.repeat(64)}`
+		break
+	default:
+		throw new Error(`unsupported corruption ${mutation}`)
+}
+report.controlAdmissionRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.controlAdmissions)).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+	invalid_log="$INVALID_ADMISSION_ROOT/$mutation.log"
+	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
+		echo "The public inspector accepted corrupted control-admission $mutation evidence" >&2
+		exit 1
+	fi
+	if ! grep -Eq 'Control admission|Control-admission|control admission|control-admission|ocaml-control-admission' "$invalid_log"; then
+		echo "The public inspector rejected corrupted control-admission $mutation evidence for an unrelated reason" >&2
+		cat "$invalid_log" >&2
+		exit 1
+	fi
+done
 
 for mutation in semantic carrier representation layout proof; do
 	invalid_output="$INVALID_NOMINAL_ROOT/$mutation"

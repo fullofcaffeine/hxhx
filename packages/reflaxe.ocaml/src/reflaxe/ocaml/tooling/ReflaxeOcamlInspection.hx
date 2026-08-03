@@ -39,6 +39,13 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEle
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEvaluationStep;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionBlocker;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlFamilyAdmission;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
@@ -99,7 +106,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 36,
+			schemaVersion: 37,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -135,6 +142,7 @@ class ReflaxeOcamlInspection {
 				controlCount: lowering.controls.length,
 				controlCatchCount: lowering.controlCatches.length,
 				controlTargetCount: lowering.controlTargets.length,
+				controlAdmissionCount: lowering.controlAdmissions.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -243,7 +251,7 @@ class ReflaxeOcamlInspection {
 			lines.push('  - ${capability.label} [${capability.status}]: ${capability.reason}');
 		}
 		lines.push("");
-		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
+		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount} control_admissions=${report.summary.controlAdmissionCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
 		return lines.join("\n") + "\n";
 	}
 
@@ -395,6 +403,8 @@ class ReflaxeOcamlInspection {
 					controlCatches: [],
 					controlTargetRevision: null,
 					controlTargets: [],
+					controlAdmissionRevision: null,
+					controlAdmissions: [],
 					staticStorageRevision: null,
 					staticStorage: [],
 					scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
@@ -405,8 +415,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 59) {
-						throw 'Unsupported lowering report schema $version; expected 59.';
+					if (version != 60) {
+						throw 'Unsupported lowering report schema $version; expected 60.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -432,6 +442,7 @@ class ReflaxeOcamlInspection {
 					final controlTargets = inspectControlTargets(value);
 					final controls = inspectControls(value, representation, arrayLiteralProducers, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
+					final controlAdmissions = inspectControlAdmissions(value, controls, controlTargets, controlCatches);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
@@ -474,10 +485,12 @@ class ReflaxeOcamlInspection {
 						controlCatches: controlCatches,
 						controlTargetRevision: requiredSha256Revision(value, "controlTargetRevision"),
 						controlTargets: controlTargets,
+						controlAdmissionRevision: requiredSha256Revision(value, "controlAdmissionRevision"),
+						controlAdmissions: controlAdmissions,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -632,6 +645,149 @@ class ReflaxeOcamlInspection {
 		}
 		targets.sort((left, right) -> compareStrings(left.id, right.id));
 		return targets;
+	}
+
+	/**
+		Validates why each function did or did not use typed control lowering.
+
+		Admitted control lists alone are not complete evidence: an empty list could
+		mean either that the function needed no transfer or that one unsupported
+		occurrence forced the entire family onto the older builder path. This reader
+		requires the planner's explicit distinction and binds it back to every
+		reported transfer, loop target, and catch chain.
+	**/
+	static function inspectControlAdmissions(value:Dynamic, controls:Array<InspectionControl>, targets:Array<InspectionControlLoopTarget>,
+			catches:Array<InspectionControlCatchChain>):Array<OcamlControlAdmissionSnapshot> {
+		if (requiredString(value, "controlAdmissionModel") != OcamlControlAdmissionContract.MODEL)
+			throw "Unsupported control-admission report model.";
+		final rawAdmissions = requiredArray(value, "controlAdmissions");
+		if (rawAdmissions.length != requiredInt(value, "controlAdmissionCount"))
+			throw "Control-admission count does not match its inventory.";
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawAdmissions));
+		if (requiredSha256Revision(value, "controlAdmissionRevision") != expectedRevision)
+			throw "Control-admission report revision does not match its function inventory.";
+		final admissions = [for (entry in rawAdmissions) controlAdmissionSnapshot(entry)];
+		admissions.sort((left, right) -> compareStrings(left.id, right.id));
+		final byFunction:Map<String, OcamlControlAdmissionSnapshot> = [];
+		final ids:Map<String, Bool> = [];
+		for (admission in admissions) {
+			OcamlControlAdmissionContract.requireSnapshot(admission);
+			final expectedPipelineRevision = admission.functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+			if (admission.pipelineRevision != expectedPipelineRevision)
+				throw 'Control admission "${admission.id}" uses unsupported function-plan pipeline "${admission.pipelineRevision}".';
+			if (ids.exists(admission.id) || byFunction.exists(admission.functionId))
+				throw 'Control-admission report duplicates identity "${admission.id}" or function "${admission.functionId}".';
+			ids.set(admission.id, true);
+			byFunction.set(admission.functionId, admission);
+		}
+		for (control in controls)
+			requireControlAdmissionBinding(byFunction, control.functionId, control.programRevision, control.bodyRevision, control.pipelineRevision,
+				'control decision "${control.id}"');
+		for (target in targets)
+			requireControlAdmissionBinding(byFunction, target.functionId, target.programRevision, target.bodyRevision, target.pipelineRevision,
+				'control loop target "${target.id}"');
+		final catchById:Map<String, InspectionControlCatchChain> = [];
+		for (chain in catches) {
+			requireControlAdmissionBinding(byFunction, chain.functionId, chain.programRevision, chain.bodyRevision, chain.pipelineRevision,
+				'control catch chain "${chain.id}"');
+			catchById.set(chain.id, chain);
+		}
+		for (admission in admissions) {
+			final controlsForFunction = controls.filter(control -> control.functionId == admission.functionId);
+			final returnFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
+			final loopFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Loop);
+			final throwFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Throw);
+			if (returnFamily.decisionCount != Lambda.count(controlsForFunction, control -> control.kind == "return")
+				|| loopFamily.decisionCount != Lambda.count(controlsForFunction, control -> control.kind == "break" || control.kind == "continue")
+				|| throwFamily.decisionCount != Lambda.count(controlsForFunction, control -> control.kind == "throw")) {
+				throw 'Control admission "${admission.id}" disagrees with its admitted decision counts.';
+			}
+			for (entry in admission.catches) {
+				if (entry.status != OcamlControlAdmissionStatus.Admitted)
+					continue;
+				final chainId:String = cast entry.chainId;
+				final chain = catchById.get(chainId);
+				if (chain == null
+					|| chain.functionId != admission.functionId
+					|| chain.programRevision != admission.programRevision
+					|| chain.bodyRevision != admission.bodyRevision
+					|| chain.pipelineRevision != admission.pipelineRevision) {
+					throw 'Control admission "${admission.id}" refers to a missing or stale catch chain.';
+				}
+			}
+			final admittedCatchCount = Lambda.count(admission.catches, entry -> entry.status == OcamlControlAdmissionStatus.Admitted);
+			if (admittedCatchCount != Lambda.count(catches, chain -> chain.functionId == admission.functionId))
+				throw 'Control admission "${admission.id}" catch count disagrees with the admitted catch-chain inventory.';
+		}
+		return admissions;
+	}
+
+	static function controlAdmissionSnapshot(value:Dynamic):OcamlControlAdmissionSnapshot {
+		final families:Array<OcamlControlFamilyAdmission> = [
+			for (entry in requiredArray(value, "families"))
+				{
+					family: cast requiredString(entry, "family"),
+					status: cast requiredString(entry, "status"),
+					occurrenceCount: requiredInt(entry, "occurrenceCount"),
+					decisionCount: requiredInt(entry, "decisionCount"),
+					blockers: [
+						for (blocker in requiredArray(entry, "blockers"))
+							controlAdmissionBlocker(blocker)
+					]
+				}
+		];
+		final catches:Array<OcamlControlCatchAdmission> = [
+			for (entry in requiredArray(value, "catches"))
+				{
+					occurrenceId: requiredString(entry, "occurrenceId"),
+					source: controlAdmissionSource(requiredObject(entry, "source")),
+					status: cast requiredString(entry, "status"),
+					chainId: optionalString(entry, "chainId"),
+					blockers: [
+						for (blocker in requiredArray(entry, "blockers"))
+							controlAdmissionBlocker(blocker)
+					]
+				}
+		];
+		return {
+			id: requiredString(value, "id"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision"),
+			families: families,
+			catches: catches,
+			revision: requiredSha256Revision(value, "revision")
+		};
+	}
+
+	static function controlAdmissionBlocker(value:Dynamic):OcamlControlAdmissionBlocker {
+		return {
+			code: requiredString(value, "code"),
+			occurrenceId: requiredString(value, "occurrenceId"),
+			source: controlAdmissionSource(requiredObject(value, "source")),
+			semanticTypeId: optionalString(value, "semanticTypeId"),
+			message: requiredString(value, "message")
+		};
+	}
+
+	static function controlAdmissionSource(value:Dynamic):reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan {
+		return {
+			file: requiredString(value, "file"),
+			min: requiredInt(value, "min"),
+			max: requiredInt(value, "max")
+		};
+	}
+
+	static function requireControlAdmissionBinding(byFunction:Map<String, OcamlControlAdmissionSnapshot>, functionId:String, programRevision:String,
+			bodyRevision:String, pipelineRevision:String, owner:String):Void {
+		final admission = byFunction.get(functionId);
+		if (admission == null
+			|| admission.programRevision != programRevision
+			|| admission.bodyRevision != bodyRevision
+			|| admission.pipelineRevision != pipelineRevision) {
+			throw 'The $owner has no matching function-level control admission snapshot.';
+		}
 	}
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
@@ -3381,6 +3537,8 @@ class ReflaxeOcamlInspection {
 			controlCatches: [],
 			controlTargetRevision: null,
 			controlTargets: [],
+			controlAdmissionRevision: null,
+			controlAdmissions: [],
 			arrayLiteralProducerModel: null,
 			arrayLiteralProducerRevision: null,
 			arrayLiteralProducers: [],

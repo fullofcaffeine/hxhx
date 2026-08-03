@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (lowering.schemaVersion !== 59
+if (lowering.schemaVersion !== 60
 	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v3') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
@@ -133,7 +133,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 36
+if (report.schemaVersion !== 37
 	|| !report.summary?.valid
 	|| report.lowering?.structuralFields?.length < 14
 	|| report.summary.structuralFieldCount !== report.lowering.structuralFields.length) {

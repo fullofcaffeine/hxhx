@@ -2760,8 +2760,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
 				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.iMapInterfaceConversions(), functionPlanRegistry.iMapInterfaceCalls(),
 				functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(),
-				functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(), staticStoragePlan.reportEntries(),
-				staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(), functionPlanRegistry.controlAdmissionSnapshots(),
+				staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

@@ -1,0 +1,14 @@
+category	key	observation_count	distinct_owner_count	report_fixture_count	detail
+scope	portable-fixtures-passed	101	101	101	The complete portable run passed; 33 fixtures deliberately enabled the detailed lowering report used below.
+scope	control-admission-snapshots	5196		33	Every compiled root or nested function in a report-bearing fixture contributed one immutable snapshot.
+blocked-family	return	235	10	33	These rows contain 501 nested return occurrences; nine owners have no callable boundary and one owner has an unrepresented Counter return value.
+blocked-family	loop	0	0	33	All observed break and continue transfers have checked lexical loop targets.
+blocked-family	throw	201	9	33	These rows contain 202 throw occurrences, mostly repeated target-standard-library Eof and NotImplementedException paths.
+blocked-family	catch	140	10	33	The unsupported catch types are haxe.io.Eof, Signal, Float, and MyEnum in the measured fixtures.
+blocker-code	return-boundary-unrepresented	234	9	33	All nine distinct owners are absent from the callable-boundary inventory; this is the largest actionable ownership seam.
+blocker-code	return-value-unrepresented	1	1	1	One Counter value is outside the currently admitted return representations.
+blocker-code	throw-value-unrepresented	201	9	33	The unsupported semantic types are haxe.io.Eof, haxe.exceptions.NotImplementedException, Float, and OracleCustomException.
+blocker-code	catch-clause-unrepresented	140	10	33	Catch matching lacks a checked representation for the listed catch types.
+next-seam	function-result-boundary-without-call-admission	234	9	33	Start with one emitted exact-Int tracer such as StringTools._hexValue: it still generates __fallback_result and Obj.magic even though exact Int return transport already exists for admitted direct-static boundaries.
+deferred-seam	anonymous-structure-return	1	1	1	The nullable anonymous-object parseFileLine results repeat widely, but should follow a proved function-result boundary rather than drive another isolated carrier patch first.
+readiness	README-goals	0			This inventory changes observability only; it does not move product maturity or compatibility claims.

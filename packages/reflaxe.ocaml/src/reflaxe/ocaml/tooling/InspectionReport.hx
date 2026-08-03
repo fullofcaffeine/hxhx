@@ -1,6 +1,7 @@
 package reflaxe.ocaml.tooling;
 
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 
 /** One runtime module and the current report's reasons for selecting it. **/
 typedef InspectionRuntimeReason = {
@@ -782,6 +783,8 @@ typedef InspectionLowering = {
 	final controlCatches:Array<InspectionControlCatchChain>;
 	final controlTargetRevision:Null<String>;
 	final controlTargets:Array<InspectionControlLoopTarget>;
+	final controlAdmissionRevision:Null<String>;
+	final controlAdmissions:Array<OcamlControlAdmissionSnapshot>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -821,6 +824,7 @@ typedef InspectionSummary = {
 	final controlCount:Int;
 	final controlCatchCount:Int;
 	final controlTargetCount:Int;
+	final controlAdmissionCount:Int;
 	final staticStorageCount:Int;
 }
 

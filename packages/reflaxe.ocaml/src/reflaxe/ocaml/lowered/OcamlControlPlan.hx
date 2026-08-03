@@ -12,6 +12,12 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionBlocker;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier.OcamlEnumDynamicCarrierIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -380,6 +386,7 @@ class OcamlControlPlan {
 	public final loopFamilyAdmitted:Bool;
 	public final throwFamilyAdmitted:Bool;
 	public final binding:OcamlFunctionPlanBinding;
+	public final admission:Null<OcamlControlAdmissionSnapshot>;
 	public final revision:String;
 
 	final orderedTargets:Array<OcamlControlLoopTarget>;
@@ -402,7 +409,7 @@ class OcamlControlPlan {
 	public function new(returnFamilyAdmitted:Bool, loopFamilyAdmitted:Bool, throwFamilyAdmitted:Bool, binding:OcamlFunctionPlanBinding,
 			targets:Array<OcamlControlLoopTarget>, decisions:Array<OcamlControlDecision>, ?targetOccurrences:Array<OcamlControlLoopTargetOccurrence>,
 			?decisionOccurrences:Array<OcamlControlDecisionOccurrence>, ?catchChains:Array<OcamlCatchChainDecision>,
-			?catchOccurrences:Array<OcamlCatchChainOccurrence>) {
+			?catchOccurrences:Array<OcamlCatchChainOccurrence>, ?admission:OcamlControlAdmissionSnapshot) {
 		this.returnFamilyAdmitted = returnFamilyAdmitted;
 		this.loopFamilyAdmitted = loopFamilyAdmitted;
 		this.throwFamilyAdmitted = throwFamilyAdmitted;
@@ -564,6 +571,27 @@ class OcamlControlPlan {
 					throw 'reflaxe.ocaml [ocaml-control:missing-catch-occurrence]: catch chain "${chain.id}" has no exact typed occurrence';
 			}
 		}
+		this.admission = admission == null ? null : OcamlControlAdmissionContract.copySnapshot(admission);
+		if (this.admission != null) {
+			OcamlControlAdmissionContract.requireSnapshot(this.admission);
+			if (this.admission.functionId != binding.functionId
+				|| this.admission.programRevision != binding.programRevision
+				|| this.admission.bodyRevision != binding.bodyRevision
+				|| this.admission.pipelineRevision != binding.pipelineRevision) {
+				throw 'reflaxe.ocaml [ocaml-control-admission:stale-binding]: snapshot "${this.admission.id}" does not belong to function "${binding.functionId}"';
+			}
+			validateAdmissionFamily(this.admission, OcamlControlAdmissionFamily.Return, returnFamilyAdmitted,
+				Lambda.count(ordered, decision -> decision.kind == OcamlControlTransferKind.Return));
+			validateAdmissionFamily(this.admission, OcamlControlAdmissionFamily.Loop, loopFamilyAdmitted,
+				Lambda.count(ordered, decision -> decision.kind == OcamlControlTransferKind.Break
+					|| decision.kind == OcamlControlTransferKind.Continue));
+			validateAdmissionFamily(this.admission, OcamlControlAdmissionFamily.Throw, throwFamilyAdmitted,
+				Lambda.count(ordered, decision -> decision.kind == OcamlControlTransferKind.Throw));
+			if (this.admission.catches.length != catchOccurrenceFingerprints.length
+				|| Lambda.count(this.admission.catches, entry -> entry.status == OcamlControlAdmissionStatus.Admitted) != orderedCatchChains.length) {
+				throw 'reflaxe.ocaml [ocaml-control-admission:catch-mismatch]: snapshot "${this.admission.id}" disagrees with its admitted and legacy catch occurrences';
+			}
+		}
 		revision = "sha256:" + Sha256.encode([
 			returnFamilyAdmitted ? "return-admitted" : "return-legacy",
 			loopFamilyAdmitted ? "loop-admitted" : "loop-legacy",
@@ -571,7 +599,8 @@ class OcamlControlPlan {
 			binding.functionId,
 			binding.programRevision,
 			binding.bodyRevision,
-			binding.pipelineRevision
+			binding.pipelineRevision,
+			this.admission == null ? "control-admission-unavailable" : this.admission.revision
 		].concat(orderedTargets.map(loopTargetFingerprint))
 			.concat(ordered.map(decisionFingerprint))
 			.concat(orderedCatchChains.map(catchChainFingerprint))
@@ -581,7 +610,23 @@ class OcamlControlPlan {
 
 	/** Creates an explicit empty plan for a function outside every control slice. */
 	public static function notAdmitted(binding:OcamlFunctionPlanBinding):OcamlControlPlan {
-		return new OcamlControlPlan(false, false, false, binding, [], []);
+		return new OcamlControlPlan(false, false, false, binding, [], [], null, null, null, null, OcamlControlAdmissionContract.empty(binding));
+	}
+
+	/** Returns the detached planner explanation required by deterministic reports. */
+	public function admissionSnapshot():OcamlControlAdmissionSnapshot {
+		if (admission == null)
+			throw 'reflaxe.ocaml [ocaml-control-admission:missing]: function "${binding.functionId}" has no typed control-admission snapshot';
+		return OcamlControlAdmissionContract.copySnapshot(admission);
+	}
+
+	static function validateAdmissionFamily(snapshot:OcamlControlAdmissionSnapshot, kind:OcamlControlAdmissionFamily, admitted:Bool, decisionCount:Int):Void {
+		final family = OcamlControlAdmissionContract.requireFamilyByKind(snapshot, kind);
+		if (family.decisionCount != decisionCount
+			|| (family.status == OcamlControlAdmissionStatus.Admitted) != (admitted && family.occurrenceCount > 0)
+				|| (family.status == OcamlControlAdmissionStatus.Blocked && admitted)) {
+			throw 'reflaxe.ocaml [ocaml-control-admission:family-mismatch]: snapshot "${snapshot.id}" disagrees with its $kind plan';
+		}
 	}
 
 	/** Returns immutable loop-target copies in deterministic identity order. */
@@ -1792,20 +1837,31 @@ class OcamlControlPlanner {
 
 		final boundaryPayload = admittedBoundaryPayload(boundary);
 		final effectOnlyVoidBoundary = admittedEffectOnlyVoidBoundary(boundary);
-		var returnFamilyAdmitted = boundaryPayload != null || effectOnlyVoidBoundary;
+		final returnBoundaryAdmitted = boundaryPayload != null || effectOnlyVoidBoundary;
+		var returnFamilyAdmitted = returnBoundaryAdmitted;
 		var loopFamilyAdmitted = true;
 		var throwFamilyAdmitted = true;
+		var returnOccurrenceCount = 0;
+		var loopOccurrenceCount = 0;
+		var throwOccurrenceCount = 0;
+		final returnBlockers:Array<OcamlControlAdmissionBlocker> = [];
+		final loopBlockers:Array<OcamlControlAdmissionBlocker> = [];
+		final throwBlockers:Array<OcamlControlAdmissionBlocker> = [];
 		final targets:Array<OcamlControlLoopTarget> = [];
 		var decisions:Array<OcamlControlDecision> = [];
 		final catchChains:Array<OcamlCatchChainDecision> = [];
 		final targetOccurrences:Array<OcamlControlLoopTargetOccurrence> = [];
 		var decisionOccurrences:Array<OcamlControlDecisionOccurrence> = [];
 		final catchOccurrences:Array<OcamlCatchChainOccurrence> = [];
+		final catchAdmissions:Array<OcamlControlCatchAdmission> = [];
 		final loopStack:Array<OcamlControlLoopTarget> = [];
 
 		function addLoopTransfer(expression:TypedExpr, path:String, kind:OcamlControlTransferKind):Void {
+			loopOccurrenceCount++;
 			if (loopStack.length == 0) {
 				loopFamilyAdmitted = false;
+				loopBlockers.push(OcamlControlAdmissionContract.blocker("loop-target-missing", controlBlockerOccurrenceId(kind, path),
+					OcamlLoweredOrigin.sourceSpan(expression.pos)));
 				return;
 			}
 			final target = loopStack[loopStack.length - 1];
@@ -1845,14 +1901,24 @@ class OcamlControlPlanner {
 				case TReturn(value):
 					if (value != null)
 						visit(value, false, path + "/return-value");
-					if (directRootStatement || !returnFamilyAdmitted)
+					if (directRootStatement)
 						return;
+					returnOccurrenceCount++;
+					final returnSource = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final returnSemanticTypeId = value == null ? null : haxe.macro.TypeTools.toString(value.t);
+					final returnOccurrenceId = controlBlockerOccurrenceId(OcamlControlTransferKind.Return, path);
+					if (!returnFamilyAdmitted) {
+						if (!returnBoundaryAdmitted && returnBlockers.length == 0) {
+							returnBlockers.push(OcamlControlAdmissionContract.blocker("return-boundary-unrepresented", returnOccurrenceId, returnSource,
+								returnSemanticTypeId));
+						}
+						return;
+					}
 					if (value == null && effectOnlyVoidBoundary) {
-						final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 						final proofClaim = 'The final typed Haxe body assigns this payloadless return to the current effect-only Void function. The private payloadless runtime signal exits only that exact function boundary and does not invent a Haxe value, carrier, or representation.';
 						final decision:OcamlControlDecision = {
 							id: controlId(OcamlControlTransferKind.Return, path, binding.functionId),
-							source: source,
+							source: returnSource,
 							kind: OcamlControlTransferKind.Return,
 							effect: OcamlControlEffect.ExitFunction,
 							targetKind: OcamlControlTargetKind.Function,
@@ -1878,18 +1944,30 @@ class OcamlControlPlanner {
 						});
 						return;
 					}
-					final representation = value == null ? null : returnRepresentation(value);
-					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
-					if (value == null || payload == null) {
+					if (value == null) {
 						returnFamilyAdmitted = false;
+						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-payload-missing", returnOccurrenceId, returnSource));
 						return;
 					}
-					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final representation = value == null ? null : returnRepresentation(value);
+					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
+					if (representation == null) {
+						returnFamilyAdmitted = false;
+						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-value-unrepresented", returnOccurrenceId, returnSource,
+							returnSemanticTypeId));
+						return;
+					}
+					if (payload == null) {
+						returnFamilyAdmitted = false;
+						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-conversion-unrepresented", returnOccurrenceId, returnSource,
+							returnSemanticTypeId));
+						return;
+					}
 					final proofId = payload.proofId;
 					final proofClaim = payload.proofClaim;
 					final decision:OcamlControlDecision = {
 						id: controlId(OcamlControlTransferKind.Return, path, binding.functionId),
-						source: source,
+						source: returnSource,
 						kind: OcamlControlTransferKind.Return,
 						effect: OcamlControlEffect.ExitFunction,
 						targetKind: OcamlControlTargetKind.Function,
@@ -1914,7 +1992,11 @@ class OcamlControlPlanner {
 						decisionId: decision.id
 					});
 				case TThrow(value):
+					throwOccurrenceCount++;
 					visit(value, false, path + "/throw-value");
+					final throwSource = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final throwSemanticTypeId = haxe.macro.TypeTools.toString(value.t);
+					final throwOccurrenceId = controlBlockerOccurrenceId(OcamlControlTransferKind.Throw, path);
 					final representation = throwRepresentation(value);
 					final nominalRepresentation = representation == null ? null : representation.nominalRepresentation;
 					final enumRepresentation = representation != null && representation.enumIdentity != null;
@@ -1923,13 +2005,17 @@ class OcamlControlPlanner {
 						nominalRepresentation != null, enumRepresentation, representedArray);
 					if (representation == null || conversion == null) {
 						throwFamilyAdmitted = false;
+						throwBlockers.push(OcamlControlAdmissionContract.blocker(representation == null ? "throw-value-unrepresented" : "throw-conversion-unrepresented",
+							throwOccurrenceId, throwSource,
+							throwSemanticTypeId));
 						return;
 					}
-					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final proofId = OcamlControlPlan.expectedThrowProofId(representation.semanticTypeId, nominalRepresentation != null, enumRepresentation,
 						representedArray);
 					if (proofId == null) {
 						throwFamilyAdmitted = false;
+						throwBlockers.push(OcamlControlAdmissionContract.blocker("throw-proof-unrepresented", throwOccurrenceId, throwSource,
+							throwSemanticTypeId));
 						return;
 					}
 					final proofClaim = if (representedArray && representation.arrayLiteralProducerId != null) {
@@ -1954,7 +2040,7 @@ class OcamlControlPlanner {
 					};
 					final decision:OcamlControlDecision = {
 						id: controlId(OcamlControlTransferKind.Throw, path, OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID),
-						source: source,
+						source: throwSource,
 						kind: OcamlControlTransferKind.Throw,
 						effect: OcamlControlEffect.RaiseHaxeValue,
 						targetKind: OcamlControlTargetKind.HaxeExceptionChannel,
@@ -2024,13 +2110,20 @@ class OcamlControlPlanner {
 					visit(loopBody, false, path + "/while-body");
 					loopStack.pop();
 				case TTry(tryExpression, catches):
-					var catchTypesAdmitted = catches.length > 0;
-					for (entry in catches) {
+					final trySource = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final catchOccurrenceIdentity = catchOccurrenceId(path);
+					final catchBlockers:Array<OcamlControlAdmissionBlocker> = [];
+					if (catches.length == 0) {
+						catchBlockers.push(OcamlControlAdmissionContract.blocker("catch-chain-empty", catchOccurrenceIdentity, trySource));
+					}
+					for (index => entry in catches) {
 						if (selectCatchType(entry.v.t) == null) {
-							catchTypesAdmitted = false;
-							break;
+							catchBlockers.push(OcamlControlAdmissionContract.blocker("catch-clause-unrepresented",
+								catchOccurrenceIdentity + ":clause:" + index, OcamlLoweredOrigin.sourceSpan(entry.expr.pos),
+								haxe.macro.TypeTools.toString(entry.v.t)));
 						}
 					}
+					final catchTypesAdmitted = catchBlockers.length == 0;
 					visit(tryExpression, false, path + "/try-body");
 					for (index => entry in catches) {
 						final selected = catchTypesAdmitted ? selectCatchType(entry.v.t) : null;
@@ -2081,7 +2174,6 @@ class OcamlControlPlanner {
 							pipelineRevision: binding.pipelineRevision
 						});
 					}
-					final trySource = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					var admittedChainId:Null<String> = null;
 					if (admitted) {
 						final chainId = catchChainId(path);
@@ -2114,9 +2206,16 @@ class OcamlControlPlanner {
 					}
 					catchOccurrences.push({
 						expression: expression,
-						occurrenceId: catchOccurrenceId(path),
+						occurrenceId: catchOccurrenceIdentity,
 						source: trySource,
 						chainId: admittedChainId
+					});
+					catchAdmissions.push({
+						occurrenceId: catchOccurrenceIdentity,
+						source: trySource,
+						status: admittedChainId == null ? OcamlControlAdmissionStatus.Blocked : OcamlControlAdmissionStatus.Admitted,
+						chainId: admittedChainId,
+						blockers: catchBlockers
 					});
 				case TFunction(_):
 					// The nested function owns independent function and loop targets.
@@ -2158,8 +2257,18 @@ class OcamlControlPlanner {
 			final admittedIds = [for (decision in decisions) decision.id => true];
 			decisionOccurrences = decisionOccurrences.filter(occurrence -> admittedIds.exists(occurrence.decisionId));
 		}
+		final admission = OcamlControlAdmissionContract.create(binding, [
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Return, returnOccurrenceCount,
+				Lambda.count(decisions, decision -> decision.kind == OcamlControlTransferKind.Return), returnFamilyAdmitted, returnBlockers),
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Loop, loopOccurrenceCount,
+				Lambda.count(decisions, decision -> decision.kind == OcamlControlTransferKind.Break
+					|| decision.kind == OcamlControlTransferKind.Continue),
+				loopFamilyAdmitted, loopBlockers),
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Throw, throwOccurrenceCount,
+				Lambda.count(decisions, decision -> decision.kind == OcamlControlTransferKind.Throw), throwFamilyAdmitted, throwBlockers)
+		], catchAdmissions);
 		return new OcamlControlPlan(returnFamilyAdmitted, loopFamilyAdmitted, throwFamilyAdmitted, binding, targets, decisions, targetOccurrences,
-			decisionOccurrences, catchChains, catchOccurrences);
+			decisionOccurrences, catchChains, catchOccurrences, admission);
 	}
 
 	static function catchBranchResultPolicy(tryResultType:Type, branch:TypedExpr):OcamlCatchBranchResultPolicy {
@@ -2618,6 +2727,13 @@ class OcamlControlPlanner {
 			+ (kind : String)
 			+ ":"
 			+ Sha256.encode(binding.functionId + "|" + (kind : String) + "|" + targetId + "|" + path).substr(0, 24);
+	}
+
+	function controlBlockerOccurrenceId(kind:OcamlControlTransferKind, path:String):String {
+		return "control-admission-occurrence:"
+			+ (kind : String)
+			+ ":"
+			+ Sha256.encode(binding.functionId + "|" + (kind : String) + "|" + path).substr(0, 24);
 	}
 
 	function catchChainId(path:String):String {

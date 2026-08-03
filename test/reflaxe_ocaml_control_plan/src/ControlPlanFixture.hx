@@ -13,6 +13,9 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
@@ -660,6 +663,7 @@ class ControlPlanFixture {
 		if (!empty.returnFamilyAdmitted || !empty.loopFamilyAdmitted || !empty.throwFamilyAdmitted || empty.hasReturnTransfers()
 			|| empty.returnBoundaryDecision() != null)
 			throw "An admitted straight-line function did not retain independent empty families";
+		expectThrows("control-admission:missing", () -> empty.admissionSnapshot());
 		final loopOnly = new OcamlControlPlan(false, true, false, binding(), [loop], [loopBreak, loopContinue]);
 		if (loopOnly.returnFamilyAdmitted
 			|| !loopOnly.loopFamilyAdmitted
@@ -694,6 +698,38 @@ class ControlPlanFixture {
 		if (legacy.returnFamilyAdmitted || legacy.loopFamilyAdmitted || legacy.throwFamilyAdmitted || legacy.hasReturnTransfers()
 			|| legacy.catchChains().length != 0)
 			throw "A legacy function became control-plan admitted";
+		final blockedSource:OcamlLoweredSourceSpan = {file: "fixture/Main.hx", min: 400, max: 420};
+		final returnBlocker = OcamlControlAdmissionContract.blocker("return-boundary-unrepresented", "control-admission:return:fixture", blockedSource,
+			"anonymous{file:String,line:Int}");
+		final catchBlocker = OcamlControlAdmissionContract.blocker("catch-clause-unrepresented", "control-admission:catch:fixture:clause:0", blockedSource,
+			"Array<String>");
+		final admission = OcamlControlAdmissionContract.create(binding(), [
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Return, 2, 0, false, [returnBlocker]),
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Loop, 0, 0, true, []),
+			OcamlControlAdmissionContract.family(OcamlControlAdmissionFamily.Throw, 1, 1, true, [])
+		], [
+			{
+				occurrenceId: "control-catch-occurrence:fixture",
+				source: blockedSource,
+				status: OcamlControlAdmissionStatus.Blocked,
+				chainId: null,
+				blockers: [catchBlocker]
+			}
+		]);
+		if (OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return).status != OcamlControlAdmissionStatus.Blocked
+			|| OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Loop).status != OcamlControlAdmissionStatus.NotNeeded
+			|| admission.catches.length != 1) {
+			throw "Control-admission snapshot did not distinguish blocked, admitted, and unused families";
+		}
+		final editedBlocker = OcamlControlAdmissionContract.copySnapshot(admission);
+		Reflect.setField(cast editedBlocker.families[1].blockers[0], "message", "edited explanation");
+		expectThrows("invalid-blocker", () -> OcamlControlAdmissionContract.requireSnapshot(editedBlocker));
+		final missingFamily = OcamlControlAdmissionContract.copySnapshot(admission);
+		missingFamily.families.pop();
+		expectThrows("incomplete-families", () -> OcamlControlAdmissionContract.requireSnapshot(missingFamily));
+		final staleAdmission = OcamlControlAdmissionContract.copySnapshot(admission);
+		Reflect.setField(cast staleAdmission, "revision", "sha256:" + StringTools.rpad("", "0", 64));
+		expectThrows("stale-revision", () -> OcamlControlAdmissionContract.requireSnapshot(staleAdmission));
 
 		OcamlControlPlan.requireDecision(returnDecision("control:return:bool", 40, null, null, null, "Bool"));
 		OcamlControlPlan.requireDecision(returnDecision("control:return:string", 45, null, null, null, "String"));

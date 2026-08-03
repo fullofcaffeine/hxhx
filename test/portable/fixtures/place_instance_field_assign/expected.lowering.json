@@ -3523,7 +3523,8 @@
     }
   ],
   "runtimeRequirementCount": 38,
-  "schemaVersion": 59,
+  "schemaVersion": 60,
+  "controlAdmissionCount": 154,
   "structuralFieldModel": "typed-structural-field-overlap-v3",
   "unsafeOperationCount": 11,
   "unsafeOperationRevision": "sha256:df5f3d44feec221947fca381f6d1277dd0ff680ab16fe6c7f2b8cc7601fdaba0",
@@ -8228,8 +8229,10 @@
       "effect": "raise-haxe-value"
     }
   ],
+  "controlAdmissionRevision": "sha256:92f21f67ea8d0f51499a07f0fdd00b818ec6b746a0f65c5b7e9275ce69e17a65",
   "controlCount": 34,
   "unsafeOperationCompleteness": "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
+  "controlAdmissionModel": "typed-ocaml-control-admission-v1",
   "anonymousStructureOperationCount": 16,
   "planCount": 10,
   "localConversionRevision": "sha256:2641a1d1474991368f2166096463f7fa9130d5932701eef34f361ebc2c0f72f0",
@@ -10160,6 +10163,5188 @@
         }
       ],
       "result": "computed-value"
+    }
+  ],
+  "controlAdmissions": [
+    {
+      "catches": [
+        {
+          "chainId": null,
+          "status": "blocked",
+          "source": {
+            "min": 1481,
+            "max": 1579,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "blockers": [
+            {
+              "code": "catch-clause-unrepresented",
+              "message": "The catch type haxe.io.Eof has no checked payload-matching representation.",
+              "source": {
+                "min": 1577,
+                "max": 1579,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-catch-occurrence:fdb203cd6f8c0dabcbed7f6b:clause:0"
+            }
+          ],
+          "occurrenceId": "control-catch-occurrence:fdb203cd6f8c0dabcbed7f6b"
+        }
+      ],
+      "bodyRevision": "12:f7db542a10f3db3dfa8b8e64f86b97df26b9af7e5f6298d01a391f918d84449f",
+      "id": "control-admission:007a3649fc20f99453e2d3b9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:c6700684fd55bfbcb68d88ab8a0473f24df2943adec40bf7ed543d772c1548da"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d2ff9fede11a312349a1170a8664954bf8b6d04cd9cb63a770c6bd96dbec82ed",
+      "id": "control-admission:0ab11650ea673469adce8e81",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|Stdio|static|function|stdin|generics:0|->haxe.io.Input",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6535bbed36a32f6c8ae27e017f8da361b7e4219600d77900c521bdba63720c88"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:0b6c0dd24884eb7acb964232",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|AbstractHolder|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:30dc5f0b6724b002a4cf863ec743149e8ae9e1a90f839f1daf264254778546d2"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:8b633778bb00993f71e02d695497765135c3b0d66e2318481b82e9c25281e829",
+      "id": "control-admission:0eb54a24f8718f4473cf1a9f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|add|generics:1|required:add.T->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b9dd2003fa12ef7369a9b27db9c983aabef6a7654aec2d1b08ab86607c71ab1c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10ce78cb6469e843b1ca1ea34c0d475ac96b24868fa20cdcb937e4515989c783",
+      "id": "control-admission:0ee744be47cd733828d8eda8",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.exceptions.PosException|PosException|instance|function|new|generics:0|required:String,optional:Null<haxe.Exception>,optional:Null<haxe.PosInfos>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:8c887087cd1c8092da455bf3ab7c15760856e7e415ac422da8bae668cd95c751"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f4229ee9102da3b514b48ed344a312ef13d2dd476eb74ae764ebff72b3bb7ea9",
+      "id": "control-admission:0fb8438517cf0e1f7faad4c1",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_isUrlUnreserved|generics:0|required:Int->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:c26271cfa2ff3513ed64c06fdf4bc66ea28b78cd4a56fdb37860be8111400ca4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:6647df3e1f0e8ee1e96b522c58114b6373971fb73fa2c1e627cb139a61bc8135",
+      "id": "control-admission:1039775c8f296c534de2e8d9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|ConcatCounter|instance|function|nextLabel|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:44d73087d8d6bd6a94527ad827468f9faaf119ab6d26c0635b19231582f01f85"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:a34eaf7012d0d38dee49acc5b31da46d39eb1bd1b405f83e5e10a3fb41ec6e8c",
+      "id": "control-admission:1190eb8cddb4c1736a91e63a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|static|function|thrown|generics:0|required:Any->Any",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:12581026d5aeb1f45b7af6ac64dcd3bde4239f7da1964f209e082c6237e4b659"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:1f6ab09622fdcabc61c3737f03a419a797896b5723335391342a338b6505aa2e",
+      "id": "control-admission:126e38af12344f7221e464e9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_quoteWinArgOcaml|generics:0|required:String,required:Bool->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:595377a606b86876a9441db002de63fff1e1653bbcb113e92d51a0c8b79f2c20"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:de3d305ee0399b8051c5301ccc810b8ec2cd51193010e51488fdf66d120fa0ff",
+      "id": "control-admission:1934181dfcd8b0c289f62143",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|set_bigEndian|generics:0|required:Bool->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:86880d452dcf893610a6bc3f173c56358c61edf081e14bbbd74f3ab16d57c4bf"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:556eedbe025201b539195275c632ae6c6298cc8a214e0553dfb0cdd258ee562c",
+      "id": "control-admission:1c059489199388bfc7cfc6aa",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|endsWith|generics:0|required:String,required:String->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:a9bc64b813012b8ca2b07021f258e3010e4feae6bdfe65eb41436ae3ec860a2f"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:1c3f45d7a52a3029d98aaf76",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|prepare|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6c99d441135a4ed015ef552c329f75d8ee074c237fad7a45a2a52708e1ee5586"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:c2d034c41c6d3c38d5741120abcba6d8b7cae22842fcf5ef8012064247809744",
+      "id": "control-admission:1ed7db6ff209aea96f2ed447",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.io.Eof has no checked exception-channel representation.",
+              "source": {
+                "min": 2443,
+                "max": 2448,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-admission-occurrence:throw:a4308a90e67928fe544089d7"
+            }
+          ]
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioInput|instance|function|readLine|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:46c49894ef87146836d55005727acad18c8daa18238d15ebe154ff5a17025e2e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:ac1832a48397e0ef1d04864def0c157e374b0b4b52b70fbd4863168c853b446a",
+      "id": "control-admission:1f424263a9c9e73698b62201",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|exceptionStack|generics:0|optional:Bool->Array<haxe.StackItem>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:83ce755a3c7030a1ebc438715d0a789cbd7708a7dfdfdaa93f19d1e50c480695"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:2e64efd56f2c12bb4b3f1faed3e5c12743add31c2453879065e7fa8411ff0da3",
+      "id": "control-admission:207fce5a8c47c068e9af531e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|abstractControl|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:de0930d87587f28d8ec95ddfda2b8f35d1813be036513c9b91f4ce9b06a28459"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:1699316f57b8f097426c724496540b2dfe00162dcd9dbe6d4223bf0b1256b958",
+      "id": "control-admission:21b2e0d72edb2191771f0a8f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|get_previous|generics:0|->Null<haxe.Exception>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:882de939d5a3c7a5c6fe4e00fa432f553323ff60381522c0491748290bc44f30"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:50ba99368fd4af87bba0931c5054aeda8a92ffd8026623d6e83f8595ecd8b498",
+      "id": "control-admission:22710684bf2dabf70c3456b9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readInt24|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:64cba72ddfe20a489ad1f36d30705db8fa265c152919921ce3a9dd2cd0360103"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
+      "id": "control-admission:25fb86e933ee0b329e986031",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|quoteUnixArg|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:550b0fae1f9ac1306cb1675dc06cdcfde32d6d09c509cd95bb36e12fa9ff32e1"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "id": "control-admission:26bc37922a3bc7767108a811",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:1f83299c761573fa59ce384baa325d4c456828b41f5d47fcab6941d817a2ab11"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:24e797b66fb188989b24dc41159bd668615f39063b8053ca67fed64ce76f109e",
+      "id": "control-admission:272249d71bffa043b9589365",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|unsafeCodeAt|generics:0|required:String,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e098422ca35078455af4e00b846f75343968241364112a6758c353a2beb599e5"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:903a4690ed38b8978fdc57138bf94fcd47d0f001aeb6fe7163e330722a08fd4f",
+      "id": "control-admission:27ae7c22739461550efc12a0",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|unwrap|generics:0|->Any",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fc9ea68fa5f9a5a59f529456c492e01688596a22c49b0fd8a1bc03caa7e22633"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:973f6588abaed69a453bc38dce475a4cacdb937467e3a5912fe398ce6ff57bf5",
+      "id": "control-admission:27c6b04fdc5de4160dde6c0a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Int64|___Int64|instance|function|new|generics:0|required:haxe.Int32,required:haxe.Int32->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:abaa6ecede4659169161ab1f6f72bba4edbb5f6b9a487c0b6e9c93b26591f599"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:634ee67606ec8b780952a2a8aea828cd9790c40f0a750dbdf126df4b03039f4a",
+      "id": "control-admission:2b2d66084f481331b6d7bb09",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readUInt16|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b5897bbcfbfcee48f5a587d3f3ea02fd64486cc22989f8bba6c932ca99bcd53c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f3e0a6ad1286659af6eff2cc1b2ebc9723cc3d06bce3c71132c45c2f6e33b681",
+      "id": "control-admission:2c8952a9677173979b25b345",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|lpad|generics:0|required:String,required:String,required:Int->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ddcea4ffe03759f42589e2a10a5c3c5696c3b31df5cea454bff6fe16e0a3dace"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:059fa49eda0b782c900e3563ed20bcedef98250f9b36b62bb598e041f3173508",
+      "id": "control-admission:2d27958b35e37dc36b448320",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|copy|generics:0|required:Array<haxe.StackItem>->haxe.CallStack",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:1a9bb8643b6847ea1a319f057894faed2a46ac769118af0cd58498a7bffd36db"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4f469380596a9c4205def47f75f8ca0a1d4b5250179cb60bec984506d179b0fa",
+      "id": "control-admission:2d558bf106158706f82ef0f4",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|startsWith|generics:0|required:String,required:String->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:22bff329a666cdc6d3b46d11d16aa1e6b9187869becf61cd7601dd5c841d4161"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f2d31e36a67be1ad4b2ef8292385b6fb521fac980590588c438c762890fe7f78",
+      "id": "control-admission:2f1f1cd8b9eb6f436267b282",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|urlEncode|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:09db46119e531062684aac94629be6d76f639fcabb4ef0f904b95d3746472a49"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
+      "id": "control-admission:2f7195244797f8991c347111",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 3,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for Int, so nested returns remain on the older result path.",
+              "source": {
+                "min": 18882,
+                "max": 18904,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+              },
+              "semanticTypeId": "Int",
+              "occurrenceId": "control-admission-occurrence:return:fd321b1483e06c6305efdf8a"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7c618a2e38075306ddc1edc20d62ff7d2b895d0caf74041cfca1aab49834a825"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
+      "id": "control-admission:3355358d20df75b2c6cb9739",
+      "families": [
+        {
+          "occurrenceCount": 2,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 2,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d42b47eaa937dbfabc796bfd6c275c1b8f391bfcb1455317180ad166122864c4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:bddbb342d541793fd6d94d9aedaa725cb2e729affbd1a921c4855e55aa7ffb2b",
+      "id": "control-admission:375e0d6ea443605a64523e6e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "ocaml.Buffer|Buffer_Impl_|static|function|length|generics:0|required:ocaml.Buffer->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:1c801849eca666f94126d0b0c3b3283b1ab0866027539bbd4ccbb03cce365f1b"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f2fff2df8ad18ebd48330eda821d2d11f73a4ee146c82ca160ef10e5c04da409",
+      "id": "control-admission:3a7d79fec07c1a60365dae81",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|static|function|caught|generics:0|required:Any->haxe.Exception",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:896c7ce7524b0d03d578ef13be085834c840d4367f12e6de442d49a97e106a16"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:cdd51fb5de5b536da4a9db211a13ff934c23ca42a5622c214dc87e36b665f431",
+      "id": "control-admission:3bbb0d835f14eaeee6d0ce46",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.FPHelper|FPHelper|static|function|i64ToDouble|generics:0|required:Int,required:Int->Float",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ea25ed93cff1f4c5f429c5f296cc6fe61328c9e2da948735d239c348eb8082cf"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:1a674a3505df56518d15bb1e51ee1731a0a037f63bd27c77a55802a137c559f1",
+      "id": "control-admission:3e387735ed10ab1e9b389a7a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readDouble|generics:0|->Float",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:122c5e757c7d54b9a389a0b22910b504dab0ebb200199be7dbb1fc0e25b9e92e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:2cf41c780cc5237f9d8d97cfb0667e796ab7da9a29318ff3e8cbbdabfb52ab20",
+      "id": "control-admission:419411ae43b3ed3f050e06e0",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|toString|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7adc2f28916853cf97a6e79760f782ea300736d3f50cf8f03b40423c2c7b335c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
+      "id": "control-admission:42b6d29c37c598b33216d710",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.exceptions.NotImplementedException has no checked exception-channel representation.",
+              "source": {
+                "min": 1105,
+                "max": 1110,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+              },
+              "semanticTypeId": "haxe.exceptions.NotImplementedException",
+              "occurrenceId": "control-admission-occurrence:throw:b133a39707dc274a4f36d586"
+            }
+          ]
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f35c164fd13dd7bf9fb7d909634b91b7fa307c4fc12e0ed22bed3881e6ebb8de"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:bd127f8939023c5db21f96ba9e8b544794fbe173495685479221fd947dc10aa7",
+      "id": "control-admission:430f0af06740f8acfe9e4e3f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|addChar|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:5b1500a780af52b5411c650f977a277c053a450b0771eb752bfaec9d46616538"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:38172ea3a1d02f0b3c10c01477cc2f93ad45cbcf728ac01714c56d7b25a617a5",
+      "id": "control-admission:44a4cdc927a79850bbd13104",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7519d8c721cca780f23d071fc9aeb0d997d89f27572c51574f945da83f5d6bda"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:16e8f680fbcc442b8ac7a4d79452be0222080fb5671a9b305e861d2b6a6395a8",
+      "id": "control-admission:47f78ab95daa832d6fd2fee1",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for String, so nested returns remain on the older result path.",
+              "source": {
+                "min": 2734,
+                "max": 2775,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx"
+              },
+              "semanticTypeId": "String",
+              "occurrenceId": "control-admission-occurrence:return:7c2383290238102a0fd67f6a"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|details|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:bb13ce94800358df570a6339e55dcd2f3124191e711653cd49f249630af7a2df"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:480011d539b2ab774d83e2ef",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|flush|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d4d867d5a3a8e8c3ac09e4da1299f7512f30537ff2451eac2debc5ebcbad8dbc"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:26df1e66dc071beb11bcd7c41b60b09e78b5c76d1de586fcfc78cf2411b7d047",
+      "id": "control-admission:49c3bf9fa74f20e4252fd7df",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|htmlUnescape|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:cc0c73a46e6e3c3134e046aab2b40662fe288bf6140ae2785d1f413273c05dff"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b41f26389ef8e01c4fdef5012416ad7f2cc3059a1bc947e86761218c9ab7a6fb",
+      "id": "control-admission:4c4d98db740aa0299f586700",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|contains|generics:0|required:String,required:String->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f8e27eea5a2c4d00c471261da047450c2924e8226157d0db34e50a9ca0b4b475"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:abf0c4c1a6047e4ddbd14e236a6b56049484cbfbf4e0713b7bfd1656076d8968",
+      "id": "control-admission:4c5b47ee03ae6061e8d595d4",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d5a1973d795b513773e7206cfd6c47905aaf32fe15e5ffe5b60c074498487ad4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:ddb72a2d0b343e22dfb87471cf61a0905c3bfb8944b7cf05bfb9b5213422bca0",
+      "id": "control-admission:4d19d31822d77742bf81ebb3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|iterator|generics:0|required:String->haxe.iterators.StringIterator",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e1640ffe65553ec96f3e5183eb3359527dc49cddd86710c97d703b83972c3a86"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:52181f40f74446d3d908813d3f111d4429c3dbad54d2a65b3607a82f52949448",
+      "id": "control-admission:4fa7e7555fad30e7c3e65115",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "ocaml.Buffer|Buffer_Impl_|static|function|create|generics:0|required:Int->ocaml.Buffer",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:00b62dca708ac88fd20a63f41e48e53895f5647e590cc2f36fff421c6367598f"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:5c24cb866cf8e4bb74655d0770e45e08c8fa5f1f4034a978fd68b095b401b7bb",
+      "id": "control-admission:51cb1f1a8d1e8266b9f91041",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:704587d43167b7a1866a7b6c750f679c1a66dd5586aa816d5cef52afd5005532"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f2da20c40227294bea00e26653d423d352898313aa4128a0cf6ff477a1449a5f",
+      "id": "control-admission:522656138e4f3f7f5110be4e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.ValueException|ValueException|instance|function|unwrap|generics:0|->Any",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:82170f88f8298275a4f58aa129dc2ee7d446362c80afef7b1015279fb1c4eaf0"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:30bddeb1fbb42afce97caa7ca1de90e69143d5da2fe0afaabb6ffc75ad706c42",
+      "id": "control-admission:552ceb5621a15b32f29341f3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|receiver|generics:0|->Holder",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f0cf634edc3482eeac176e3b0f5442fdb31d44ad14535600278c73e038f02327"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f50cb17b3c452d5697195dda48c00bcf24e65de7f6b7454912c400c6411960df",
+      "id": "control-admission:55ff78354228e45a01e8b7d7",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readAll|generics:0|optional:Null<Int>->haxe.io.Bytes",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:8933fa9a7a8b379c978912c1b480e81a46b65929a0339eae2f06519c4d098f7d"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:c52809e7d856204d42f34e1d8292c8f2021f19d74006ddfc0ed938868edfafc9",
+      "id": "control-admission:56defe4c9e3747d345ffb331",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|replace|generics:0|required:String,required:String,required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fc66db1bde16a357802d83c950af81b26dbaf2642de9ade84db88c8f7576b25e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:5886966f4faf41520fa3c97d",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|saveStack|generics:0|required:Any->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:592bd433552e4c222aa2726175faa38c4cec66ef6d49bff4942ac6e51e357049"
+    },
+    {
+      "catches": [
+        {
+          "chainId": null,
+          "status": "blocked",
+          "source": {
+            "min": 2784,
+            "max": 3086,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "blockers": [
+            {
+              "code": "catch-clause-unrepresented",
+              "message": "The catch type haxe.io.Eof has no checked payload-matching representation.",
+              "source": {
+                "min": 3012,
+                "max": 3086,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-catch-occurrence:360b9f35afd0c8dcf200dfe6:clause:0"
+            }
+          ],
+          "occurrenceId": "control-catch-occurrence:360b9f35afd0c8dcf200dfe6"
+        }
+      ],
+      "bodyRevision": "12:d674caeb074206dbf8405cbed3dc31b27ecdb5134b067c23d1a24aee63fa3d26",
+      "id": "control-admission:58ed49ac5a20e954c421558d",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.io.Eof has no checked exception-channel representation.",
+              "source": {
+                "min": 3074,
+                "max": 3079,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-admission-occurrence:throw:af8d5ea1e8548045520147ec"
+            }
+          ]
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readLine|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:51a887040df643920526aa51eba1e473a5905ba84ee9a2053ac6a8fd8b18bb9c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:59b491d5b982564945f4f8c3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Eof|Eof|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:edeac5034335c924cf16d223618e5839f281b647fa2a0650ab35e5d5b424dcc1"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:52d57cb4b04296fe46713f7870f036a2e7a11c05c316936e4b56bd4454cb975b",
+      "id": "control-admission:59d3987479d59768000766d1",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|callStack|generics:0|->Array<haxe.StackItem>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:de63052c329e15f0c13e72be1504805000f5937e2927e417e9ee90f2a370e6cb"
+    },
+    {
+      "catches": [
+        {
+          "chainId": null,
+          "status": "blocked",
+          "source": {
+            "min": 2556,
+            "max": 2725,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "blockers": [
+            {
+              "code": "catch-clause-unrepresented",
+              "message": "The catch type haxe.io.Eof has no checked payload-matching representation.",
+              "source": {
+                "min": 2723,
+                "max": 2725,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-catch-occurrence:14eb2b30de7affc80bda2280:clause:0"
+            }
+          ],
+          "occurrenceId": "control-catch-occurrence:14eb2b30de7affc80bda2280"
+        }
+      ],
+      "bodyRevision": "12:cc8318d40db4c6a3e8b7212a4cb05f72e5a83e4b9ce17e850e7ef818127352c2",
+      "id": "control-admission:5a686f2d95438101d4df479d",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeInput|generics:0|required:haxe.io.Input,optional:Null<Int>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:872ffb8b6f186ee55ed911e32394ceb9e4f0b5eb6f7f081388e76cc49ee9d761"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:a058544d67ce2663dd6db8288d04681c502230e538b1d70c46871d3c816ee560",
+      "id": "control-admission:5a97857e38942098b2ba3c38",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|utf16CodePointAt|generics:0|required:String,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b42b1cd4444f2d2f225bd2120761f25883063d549abb8712e5fc3ed7a7ce4494"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:8e120cdc621fa773f26f47cf37e1da845d375b201dc284b94f4603cc67fbcf55",
+      "id": "control-admission:603e990e8fbb978dd87e62cf",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:4057e198bfe44251cd74bb8573f7c005bb5194ea6ce8784412aee447eddf0497"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:04338af7b5d1384b453a84b0bf696635bef36150b7e4565de21a055d088d71db",
+      "id": "control-admission:609bdbc33d39a6d2376a5acb",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|exceptionStack|generics:0|->haxe._NativeStackTrace.NativeTrace",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:cebaa5159766472ab4c3b892022ed9cb0403e94e2930e008a16497feb84eafe9"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:62e3aebd8bbe139f0e8b0d2a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|close|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:572a48def5e02d9b6bfca1fb5e48078c52a83b9068de0cf06236200e2a26cbbd"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:9f90c082bc2ec09b7072b84500d08c4bebb16b08e02b8da3acd8f3003015735f",
+      "id": "control-admission:66413030a7ea79d208ccdefd",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|keyValueIterator|generics:0|required:String->haxe.iterators.StringKeyValueIterator",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f0b5517cbaf1439f5d85b150bcf7b4af34221b64aeecab3eb7c677b728d6579e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:08ffafd2617cad7e354a62d38c6dcac1ab715fc5c288afaddd391d5fb3293dc5",
+      "id": "control-admission:677d356150e678fe310c4fb8",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_hexUpper|generics:0|required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:9d0cac9da2088331d93499484a5473278f44933d7a4d0ef0c8a0af6e84052598"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:935e4eae357c7ec31343c37be5b8859aa33e3d891cc95ca540cfb33c45a2c121",
+      "id": "control-admission:6785d12010fd1575bddc4e29",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 2,
+          "family": "return",
+          "status": "admitted",
+          "decisionCount": 2,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|rtrim|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ba8fda2e49ca95fd7407794d4a9f073ab654d7aa386c9a2d7c7fb7b3211b47a4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:47a01507c78c24eefa7acecdcaae0f75ca8597143d7860f1613082c447929c60",
+      "id": "control-admission:6a6d2d52b502ef6220a15aec",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|toHaxe|generics:0|required:Any,optional:Int->Array<haxe.StackItem>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b73c1fde1c6ec2069af58488e8ef00423d1bd88ef2d7936d4067e4786a231911"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4319ca26b2d12bbbfa39e9a3142cc0c5175fdd92295ce8fac6a69412f620694e",
+      "id": "control-admission:6ac58070fa89f27c3846ef45",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for the observed value, so nested returns remain on the older result path.",
+              "source": {
+                "min": 3019,
+                "max": 3025,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": null,
+              "occurrenceId": "control-admission-occurrence:return:b22ce3a79d7bc2613d5e08a2"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioOutput|instance|function|writeString|generics:0|required:String,optional:Null<haxe.io.Encoding>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:71df934e8109e81c3248fb4d0e6626d0faf8a36f67f7528b0d983036f3177f9e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:569c016dda77756cb013d3ddc7e647369889e60be7441c37221a17fcf59a4a09",
+      "id": "control-admission:6b1eac0265cadf3dea29a398",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Eof|Eof|instance|function|toString|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d35bbf62528e039c1c4602ab225b7749fc8215131da1796c8a389ed0cd7980cf"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:24e797b66fb188989b24dc41159bd668615f39063b8053ca67fed64ce76f109e",
+      "id": "control-admission:6d19dd609bc3d73c5dc55f5a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|fastCodeAt|generics:0|required:String,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f5b646a871e8652a69bbde92e01c6b01dae71851d2208e8f82993a9938839124"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:106ef18c7db75bed01d85a26a5dbed78ef0a9363438396c2fcb50b364c48097e",
+      "id": "control-admission:6d7c76d1be11d81d5354248a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ed0a8902d4f940b5153c97baab6736f063a79ebb5e23fc43d609da257b2ab88b"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b08ca207c8988c5522a3463f274b5bdcb0434d899d9d77417edd7570a514b840",
+      "id": "control-admission:6df7334718ab5308bb13df44",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addInt32|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:03aa42888c70f8cee56e226f7c0b10ff886f9f6fee38caa1a7092f08289f3fb4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d8dd3a2515763e63efd42f7bb441ebf5bd8ffc21bd3c4bc6637f072a14e71880",
+      "id": "control-admission:71e1bdf06227fa2d0cd1d632",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeUInt16|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:9539cb15747a80b2ca31711e4b95897ddab91229f8e82edd17182ee74c7eed77"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4d750da328632dfd1735674414fe6c9d080632ebc49c01e9c8e9288f28a39508",
+      "id": "control-admission:7238e491613c66700a4e3c28",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|get_length|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fbbc943ca261156b531d57752a1dd463411ed323949de84e67406a4a0798d5b4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:c3e86c401ce11b0f1500763eec3d0efead4ceb8c1a1e1cc7e861379ad7a0ecb3",
+      "id": "control-admission:74d009554e06c066c47c60ea",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeUInt24|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b66cb5ce4ad6b6a60cc9313361b76fc4a3c6b004003db395fecafeac51c71cb5"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:39efc1f106b47cb1c653666a5c693420734a233b0bd9a05d4367b22ce12e3b9a",
+      "id": "control-admission:768f8a230f332c3900417e6f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|hex|generics:0|required:Int,optional:Null<Int>->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ec080f1f7a6d6ce963f640626bbd1e10ff756c081e6d6df6946dea63ef282bf5"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:2db94b72855723e594ab16526cc14b94260fa4e3688f620c94b5d6f3aee8e58c",
+      "id": "control-admission:78dfc122228a2cb9d3c693c2",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|rhs|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:0897f48c98dbcce22ba094ef4dc475f6c9e686bfa57c4bde09ba065c19983b28"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:ead2c9d408dc631c476b80d2a2b7fcb986238bd048cb75f1d2b8ba2e9cc6cc49",
+      "id": "control-admission:7b99f725f36861fbd3b957bf",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:dea4b9e824f0f16bb43b852f25b487aa9237aad7e2571df47af7e4a1029f5afd"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:9abe853774324c7a1bf7f3b023ebbabe713016cc6af76d4b729aab58bc0d99be",
+      "id": "control-admission:7bf0743f3b603b49ab1d37ad",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|get_message|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ca233c3e61ada6bd6c87cb50528a9432318757ee98acd24a38b3a3a13be3ce13"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:fcc4abd7499909983e3d4bf1a6cbf629801a6ab9a9223c0d20f3e2c94a0d9ee6",
+      "id": "control-admission:7d46add4cd77cf39be94ab12",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readUntil|generics:0|required:Int->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e330181a06d22db748d3d8d4038ec2236a052971a0b493f3a643d4f014e60458"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:dabe19ec759c64c9737a6a5009666c0f32ca99e401054d963b9b4480a67a7ff6",
+      "id": "control-admission:7ed89a61e44d98c6e39f8f17",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|read|generics:0|required:Int->haxe.io.Bytes",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:88feddae2f9b0c64689f17c807c97ca5f0e794de1fce065e8b5ae51956bef58c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "id": "control-admission:7f8ac3ebb8072d7a731864b7",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 4,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for Null<{ line : Int, file : String }>, so nested returns remain on the older result path.",
+              "source": {
+                "min": 2430,
+                "max": 2441,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+              },
+              "semanticTypeId": "Null<{ line : Int, file : String }>",
+              "occurrenceId": "control-admission-occurrence:return:3c8d813fbc106f77a814e489"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:61f906864f8e86b7600e581064ef6a4a968794a96c7d7816b9a3bd56f377b167"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d85ba67f33ec8644fca1bccea0b72ec2675a65712f6f8f923ff07c7e3f648501",
+      "id": "control-admission:81d21965eddaca87581c421f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioInput|instance|function|new|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7d0bc39f182780178c540f2916afd988c926a92c3900900c5ce869c3fca44c0e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "id": "control-admission:8353cd6704bc5d89ec1a1f5b",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b0e2403d9a59f1db2c34e7c1843dbbe7641d9838ccb28d7d616790a7c276045c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:30409f2f5611fa333ad3f9271e524766d42be4fd5d22ce1d9f129354fc641026",
+      "id": "control-admission:839e244c6442844c5e284087",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeFullBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:2f561bc9370ed424f83d6774df3dfd889990f0304753b88371cf3fa573507d44"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:41fcd2044dd6aaa6e602e7df14777bb82c5e673ec203bf8b63d437fce1191189",
+      "id": "control-admission:84eb76cd6d4a7a817de07888",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "ocaml.Buffer|Buffer_Impl_|static|function|_new|generics:0|required:Dynamic->ocaml.Buffer",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:45fc85829d9e3716d8ebbfc43c253990df1ee80086cc68981f51a05e5cc40f8e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:520d27b03007bcadaf0b108ab329c3f9a3d391cc9b73ac7a08de25100514a3a9",
+      "id": "control-admission:86c2269d350d673038513b8d",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeDouble|generics:0|required:Float->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d79f68fbd1e462d29a0a3aaa08405ed86b8ca87f03359d9892bea740cbb125c2"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:6d872be493207ae0e2b29643a9499d7a63d9f58110c0899d73d590aac9f02574",
+      "id": "control-admission:873989be86d65a12cace3b3f",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|main|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f164e3aff6bdc6ce43ed7c85de5a4895ed54d9b5c9bc8da3cb28472e9cfd4f25"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:eec5cfe34c0e53f2bd9338f13e017eabc8714f15fd71d7c0bb45b5ea83652c78",
+      "id": "control-admission:8776402a6fdd4309fc6e1a24",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readUInt24|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7efdcc0c80d5bf8df9be42e0a3669e16fadb4508e6ff96b86bd251826294e8ae"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:2a502a6a3ec0317ba75eda2959ed788f7c29f0b6107759170f85b80036c4b640",
+      "id": "control-admission:8ad772049e7bfbd0627d3dd3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.iterators.StringIterator|StringIterator|instance|function|new|generics:0|required:String->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:c8e27f1dd131f3a7a8f25c32628561a4516ed92514d6199b6ee6d833cb933472"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:bb93198d44fe27f5b105e3522e4ca30e53a21d60bd35e4c3d8044c7ccfcf10fd",
+      "id": "control-admission:8ae10c5128aa2b8dd28ceea4",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|boolRhs|generics:0|->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:5d3ddfca839624f8b0a3c3aa0d5533d0b0bd6031cd2160a0b68da018a0f7adbb"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f64f280bddfbe079e2ac876cf4e829dea732ed13487db49c305495cb5c44754f",
+      "id": "control-admission:8b5a6e3631fb8784882ee9f2",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readInt16|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:241be7f0b9bad2905646390c2ae4b23665407ade0e0e717f47016dadf9639023"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d16bdf606b7c3e7f761be69c1bcb1d447a6332d48d6d0cb74bb1de4158834e8b",
+      "id": "control-admission:8bbc9af1734ae6f6a1951f05",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readFloat|generics:0|->Float",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6aa6f373e78d95959719d741ab668d0ecf872ba99488345b93a2ee242ef01526"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:407e996c36f4fa6626fb3b77e07b3979de3dfc887e7494e9c357be9ed9140e7f",
+      "id": "control-admission:8e507004f6a58b2ea427a9d0",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|ConcatCounter|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:aac30905392d780d733ba60812c6f027f7caa2d3d88e7f47c3f2468d7f19a4ea"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:aa4a392013cbef42712e68c154241cdae65eae2b4ed1fef9b85027af2025c938",
+      "id": "control-admission:912835db41a0df213341f64b",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addByte|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ca0d3973536fadbf2cca5498aabf7dce0f3fa1dbab6b2770165420c958cb4cf6"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:e9a07d612735074de6033d15c6e23db788c65ae62e96c9ba91471efb5e5dd4c4",
+      "id": "control-admission:93baddb0d5204537674dd395",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeFloat|generics:0|required:Float->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:61570c642cdbfe0380ede278feb1692d089fa94f8a0f3b6715ea9ac53fa3e171"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:c5ba0fa562554264b25e82a7b59e274904b594ecc8fc7eb80c23d26d3b88750b",
+      "id": "control-admission:97f381e967888008ea8cdb11",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|toString|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fe095fabbfb7b464939041095ac552cb22a71457e1039b8e9184075257a45af6"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:538661a369484b614313cbad1176f63f3a555633fe771465072cdd3f4f1cf82f",
+      "id": "control-admission:98054aca76fd64172c9d7ca7",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|callStack|generics:0|->haxe._NativeStackTrace.NativeTrace",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d9313b086e2ceb77e1bf86f9c26de0aaef1b2e101c277d5717fc0bd653bbfec2"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:dccdf1b93450642e7eef85e93c09851a7919f0eaddcc45df847c33512fdc5d18",
+      "id": "control-admission:9820715f5ccdf0702c61e981",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|urlDecode|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:c71ac1648cb8068d0792b9bbee30401c6bac239fe936b8bab5a64d54d8ca1156"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:ac63c236a81e09a4b536d1097368e35dc2aa070e7b48763495f3aabf4771bb87",
+      "id": "control-admission:98f15c533f03d0dac176ba65",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readFullBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:d13f10809548c7e69a253914cc89071e2475254ae2432245e93128172f800c09"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:880a41790713457edc286ac1f434c1c44c37d58e23fc4d4268d3bf48b1e56580",
+      "id": "control-admission:9c2586ca8772e2e571f71c60",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addDouble|generics:0|required:Float->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:5eaa51705e1bd7edd31b0f4f2cb3eaf2bf2c983ad530322392e6547cceaffa23"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:8e9afff6e18a585df9f8dfcc77a79eb93a813c797380d8a593c474ab3a777790",
+      "id": "control-admission:9df30d6e3edd282b39fe66df",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|new|generics:0|required:String,optional:Null<haxe.Exception>,optional:Null<Any>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:733640922a7b7e08873c17a8ac78d02232a700730b9fabb4006209f71a04dd7b"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:c2a7f8b2fdd5fdc69a4a8fddefa8770af62c11f078c214e0b20fab72c8e412ef",
+      "id": "control-admission:9ede3af9fcbe8d5e2c38a589",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeInt32|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:dff134716ed2c5022a68391001790e1e760ef4fc8b41f6ba307409b8e4f9f4a2"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:870df52dd893659566917cfe39ad0205d77cb3a4dc4493c9cd5767a685e6e32f",
+      "id": "control-admission:9f60e71f182df5eb1098541e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|htmlEscape|generics:0|required:String,optional:Null<Bool>->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:42e4a70859578b7ce22fe0a88c86bcedca84064d5c90e7136dcc5f989ff0007a"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:cfe6221aa897513c2d0ad5109618098b0ec3d751cb8d9df69826f46657a7a30f",
+      "id": "control-admission:a203a41994b204644dfd3331",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioOutput|instance|function|writeByte|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7300c8b441fc471954cea2ef157a645686561802e27a746a937705dbb31c6263"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:49d5582c90fa8a3e38ac48828a40912ae1e0a5e1ec1fb959489d58b1dfc7b74a",
+      "id": "control-admission:a69a01cdfbe541ff9675684b",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.exceptions.NotImplementedException|NotImplementedException|instance|function|new|generics:0|optional:String,optional:Null<haxe.Exception>,optional:Null<haxe.PosInfos>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:591247ff79725cf1d335e67b667a45fab4f8916632bbe6c9683a370f46d2ff7d"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:aa5e324c801a06db03760e1b48f138e5128e24cb8d72eb106cf36230a1cac959",
+      "id": "control-admission:a7c7d02829a60127d4af3331",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|get_stack|generics:0|->haxe.CallStack",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:2a64a65addb901a594700daff4d71654f173eddafe1faa15a8932bdae718438d"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:94a7ea5e7a8c52c4a1d10c299f3f19b6cbac7a8494bf394047787b614b97f2e4",
+      "id": "control-admission:a82a43b27efed869a47f4168",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.ValueException|ValueException|instance|function|new|generics:0|required:Any,optional:Null<haxe.Exception>,optional:Null<Any>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:30a7f2d3bddfa1ff42278b111d6d22d9e0ad2f988e283ffe63b1dfc3b5a81e06"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:db44b264eec38a64e40c68409955af1d1f6f42f643cf07b0418fa88d7c929406",
+      "id": "control-admission:a8e01f68bfd2387aa8f11c06",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|getBytes|generics:0|->haxe.io.Bytes",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7db1c4dfca9ee48c202de4c106ee48114a217a4b595f13fd6635e7a215beab91"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:aa34e4280accf08f47e4b3f9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|close|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:a7b9850f26c390da32d38a4ddb8986aa731148e5d72cad2c7f36406db09b1010"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:a0e31001ea41d553cad707b8149ae999ebaf892353e48ab6f388dffe7cc13d2a",
+      "id": "control-admission:b356710343d48ee186adbbf6",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 2,
+          "family": "return",
+          "status": "admitted",
+          "decisionCount": 2,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|ltrim|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7c9f0d5c3986b2724b219d206f9499ad7c46656a57bd34e84ba565c16aad060e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:87df2a2904258b717d35478e88817c82fbc34669bfd38beabeef5c85ea8deda0",
+      "id": "control-admission:b358028509f74aeeec5f7240",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioOutput|instance|function|flush|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:7b826d39b4111256e39776faca1cbfc34b64664df93c3b367480aaf149d81c17"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "id": "control-admission:b5c05e59267837e39a85991b",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Holder|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:3bd2b37903e1e0dcd232a4f742bf82addfa823ad34c5319f0d248c527a29b6dc"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b33af7e2e4c5ed3e7beb0c84c791041ed98a52b320bc13616b046dfc0048eba1",
+      "id": "control-admission:b745ec418993622f169471bb",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|nativeToHaxe|generics:0|required:haxe._CallStack.NativeTrace,optional:Int->Array<haxe.StackItem>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:75078f475ca8076884118eff200cb552ec0b2ede3d94485a10b62db6c03a618b"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:0b4976099106da7a0d5b652bba475a7ec400276d5a933bd69bfba0ef8600a7d0",
+      "id": "control-admission:b910270e4b1be6c6ee35fa9c",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringBuf|StringBuf|instance|function|addSub|generics:0|required:String,required:Int,optional:Null<Int>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e82241da55373f07ae42d5286a336ebbfabf3741e56e2addbafa67b5c0c5431e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:e6cb44e6065f26a5aa4039e96cadcfc72e72be0fc50fdc80bfa5800a2a255151",
+      "id": "control-admission:b9af15a1af5943f23df18712",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeUInt8|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:5a79a0ba4d7982d2fb402bb9a450c3347f9fca088e9e02e2f80367bea60f47c0"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
+      "id": "control-admission:bba03464c9f1bbee1f5c10a2",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.exceptions.NotImplementedException has no checked exception-channel representation.",
+              "source": {
+                "min": 1331,
+                "max": 1336,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+              },
+              "semanticTypeId": "haxe.exceptions.NotImplementedException",
+              "occurrenceId": "control-admission-occurrence:throw:475b33ee2c94a755f0d0aaf5"
+            }
+          ]
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:67de9c9a00d3d87b50341ba65e012d98644c2d5774aa73378db535dd541c7e44"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b06d143d2f54576e2402bf74473019e3760d4b28b17af96b5c7f1210f93e915a",
+      "id": "control-admission:bc7dcb6c8ed8d534ff81a2b7",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|__unshiftStack|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f35b8098fcff45d2445080ea285e6eead2d5669a4fb3be72310aac7e4a8f2cf2"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:640d364bd4fd64a7da349cbc04efb052f59a2b21632630dab3439f8da7b51b38",
+      "id": "control-admission:bc85e01d8c01f3825dc324b3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeInt16|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:52f675caa481257503e8178f6da1be6740ea0dbb196f0aae7e374faa189b09c8"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4aa9bc96de2125992c95da2ac6f1b3f3f1a06626213d11e9eb762e797cecba8e",
+      "id": "control-admission:be9ef7170ea254e17e474ade",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|set_bigEndian|generics:0|required:Bool->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6e663ce0c36c8cc76ad401c414e2b0e2ee5474178ed9efdc87c92746315e718c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:5cd48de8907b2881a15ae79d57d63b2acbbd485664bb16861256d394203f89c1",
+      "id": "control-admission:bea153292c067c9d0d372050",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|get_length|generics:0|required:Array<haxe.StackItem>->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6ccb9f9977e8e0db5b0fcb318612ed43a255ce8c4ff1789d04d1af17e9bb2949"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
+      "id": "control-admission:c15200c2a7f6ca379935aaf9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:66a4f574985866141a0d2b34cfe10226e263aa39ab3ca444e295009bc358313c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d3f09f438df7634c94068dad3518e269fb7cab63fdae0357ac56f0b846177acc",
+      "id": "control-admission:c4445e2292315463dfc9c68e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "ocaml.Buffer|Buffer_Impl_|static|function|addString|generics:0|required:ocaml.Buffer,required:String->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:326c7a52a9d76669f159d4daeec73dc6d2f07ccde0d0c3993ca12a2fd67968c0"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:0e084bd498ec6e0418d6a4fc6430c20fcbd44222ae6fb692ed5130f65722c817",
+      "id": "control-admission:c9e7d16e28418edf96f1ba02",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|new|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:5d71b93f6d1bc8d7aaffefa9011f882b0699b2ba5a560022aea0bea3395bf1ea"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:4fae17395cf45cd75578628b7c604b234e01815a86d6992e32402bb936e021cc",
+      "id": "control-admission:ca648c78423105ba2d2f620d",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.exceptions.PosException|PosException|instance|function|toString|generics:0|->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:42284fdf6a6a74f4568910d9a45656807730ad6835e76415c301eb4c31558752"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:7b3a3fd27050311144bbb22820f9002b46afab87b42e8064e9d952cc664099fb",
+      "id": "control-admission:cac3aea5060645e4d04108fe",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|rpad|generics:0|required:String,required:String,required:Int->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:a27b9dd0aa89d5f9d4abf521675e95914876de19724a8fc1b867b55cda85c851"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:bf8998c090ec8b08454dec580f767ca8f0377ddd0cc4ecd2ab6e3b4fdf2a0837",
+      "id": "control-admission:cb55dc0eb29d31706c376d8c",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readString|generics:0|required:Int,optional:Null<haxe.io.Encoding>->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:dd3d5692001001ffb30cceea6ac957a95081159d2d2755beab4625f50c470d34"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:5b2031078b691e3e593f8ea2f0fb5f40a43efd0d5b94e8debb16c4a1a7a658e3",
+      "id": "control-admission:cd051d0dbf3a8ccf239b8398",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readInt8|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:2d27aab09eebea273eaca2f623c2cb340d47a6ae1d9afc5c199b71f0eeaf4ddb"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:7789ad35ee4f44db437dd84e6a07e2495ac125884c8c7b72b2efaab3e032e4a1",
+      "id": "control-admission:cf18087046f26fc647995274",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeInt24|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:64b3e56446a505b9942f9ddbfadda8a35f9c3fdf52e02ecfef733a6658470c75"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:9f83d7e0c27c15ff5c5278ce6074307c84f02b77bdc1bfda945d33c79cf1195b",
+      "id": "control-admission:cf55d195b91a9a33d0d4d30e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|write|generics:0|required:haxe.io.Bytes->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:64996d7ff71bb59d7a295885376042be6fb3e9fa4940e9f58f3ea338979d416c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:3ed670a7b8b3ad70a9d5ce408311f379f005e9cb470a2ccc9b95a984e2752105",
+      "id": "control-admission:d12ed069b7fed26eb7ea9455",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "ocaml.Buffer|Buffer_Impl_|static|function|contents|generics:0|required:ocaml.Buffer->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:6a0ff56310b962d52c02a6ffac3aaf0fccd77fe9cda9baeb9132fcf5bca2a082"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:27aed3bcfca2d9a31fda7cc96ddb92d8e1ebeefc1944945edf2cfeede9f4bd26",
+      "id": "control-admission:d347e7ed9b05f68e16f8b8c3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|add|generics:0|required:haxe.io.Bytes->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:052c92bf35ccf51dd2ee53dcd2a51316ec7964955302733bfe67146e42754f19"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:903a4690ed38b8978fdc57138bf94fcd47d0f001aeb6fe7163e330722a08fd4f",
+      "id": "control-admission:d3e3e8200c81f7251616644a",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|get_native|generics:0|->Any",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:2b71b4c41136eaa5f57883f49912d6a0367bd8ed14fec0be3810a41bac44815c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:66ad75781699dc4b5138b3e22bedb9e441cfa870e3a75f15bd38f4792b887979",
+      "id": "control-admission:dc59d251c509c90d369374ec",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "Main|Main|static|function|rhsMutating|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:1ccca16511e7bbc616afca2f59fbe457b367367fa84843fc65c514ea9e01375d"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:8991f965452fdbdc728c0c6ddacba7931cc3070350a1476be3d6a2babd0c3863",
+      "id": "control-admission:dccf1a216ab4b2bb0ed146eb",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.iterators.StringKeyValueIterator|StringKeyValueIterator|instance|function|new|generics:0|required:String->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:08e063852057de331b4fc4b57ff1e28346ea15ee26dac4bba2bf040289f1b04a"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:eacb571d9748489b32d58a524581899d99d39e74ad885116304ca4be37f42954",
+      "id": "control-admission:dd017bc3cb15880d5f99dac7",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Input|Input|instance|function|readInt32|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:8e1e2bfa8b3de1bbcc7eef9eec5702b54180dca05450635cb75330a4d4210187"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b35e27df803548854f18105df079cf371e1f91141315100133693d9ca2d22c92",
+      "id": "control-admission:e2d601f2d9babd97a58cadea",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|Stdio|static|function|stdout|generics:0|->haxe.io.Output",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:0124bb9d33707457bf4dda945f18f3d1b6dbb0c22de761db4a0a5f08f8cb1c69"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:e9b2b934f50752d129dde12caf53951de72fc11fddb8074784fae9fb1951885b",
+      "id": "control-admission:e3602e90f4549276790a80bf",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|Stdio|static|function|stderr|generics:0|->haxe.io.Output",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:05c6fab699b759be2adcc1b2c0545cf3f84d86f171d8b12cfc603aaf6c9d2d54"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:e1dcff41f51f3c8ed605dc6b4f06ae754cd06ad253b0a6200369e4da51b4c9f7",
+      "id": "control-admission:e58f4cae1e1450f006bcbca3",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioOutput|instance|function|new|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e754a077591183461de59ac47ac1de1cb64a51d1f94447675affe06e1e9d6db5"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:0cf93c262dea87c7f5d2cbcc6a4461069af84ee593dc21968ec21a8612b5d689",
+      "id": "control-admission:e6191f364697edea9108415d",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addInt64|generics:0|required:haxe.Int64->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:9eb450f5fd220e45142ddc7692847f52b5b209394be0c0408c53d3a9924febad"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:da0c243e6feb3921c6e29e8ec8e09d7e27ef88d19e2215408c31fd958e804015",
+      "id": "control-admission:e75bc16ec775c66eda698e69",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addFloat|generics:0|required:Float->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:cbf1666c9457527a2ddc983ea2ef7c7bd4c44c70b1f2d3ccded93a3534b7fcea"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:a4d8e4fdb1dc0af670abc739a8a5406596970e559fab187eedf488f9e49e69e0",
+      "id": "control-admission:e7a075071db0598b11acb4b5",
+      "families": [
+        {
+          "occurrenceCount": 3,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 3,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|subtract|generics:0|required:Array<haxe.StackItem>,required:haxe.CallStack->haxe.CallStack",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fce170116e0a00f3118f1f993494f15d130a06029dfa8f494025088f0cc84291"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:be879a0d42226e117cafa2554f89956404110198ab8ac6c4e5ba1772c398f24c",
+      "id": "control-admission:e88ee4d1f1dca1e48f79c030",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|get|generics:0|required:Array<haxe.StackItem>,required:Int->haxe.StackItem",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:b2991ec91ce198d841797acd9d4d9b09e84b74d0a44bd0450bbccab4490aa775"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:5dac9a326f112209c15b325495d873759c1532d361c864ff106d336835cd5d67",
+      "id": "control-admission:e9abe33717662b33cd35112c",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.FPHelper|FPHelper|static|function|floatToI32|generics:0|required:Float->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:789333f64a152d6f7592b090064365b6f490ef0fc42d76d144ca1e33ca031759"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:3df4533d100c63e3167c208e6b4c7915cbb10e9054580e3b5e488f52d1c37dd4",
+      "id": "control-admission:e9e339cef43d9f22bc404d47",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.Exception|Exception|instance|function|__shiftStack|generics:0|->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:81ac2dfa20ec39d0dc907062bd44264a85cb2a2113575b4fc8633e48aba4f4a5"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:079041983c167ba4c27dc5edb575dcb02261c2b09409a814edf3b123874bfe59",
+      "id": "control-admission:ea8eac485731d0c17ca9b7ef",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.FPHelper|FPHelper|static|function|doubleToI64|generics:0|required:Float->haxe.Int64",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:e9047ded67ab7dede6445d236fe8ee4556dba0285eea088902a8a732fab89974"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:3bb35f45d57a846d90d9692fae8032815fb256b9cfe8008b16e998dc4b49d383",
+      "id": "control-admission:eb08785af4a3ddde18eb4840",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeInt8|generics:0|required:Int->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:4f2952e81040030f6e18c152e35f29a8909976a3a7455921d04a0046b54def7c"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:faaaaf9fd362ff914933e10635d78279c8e9490589d0add563aa15eeec45a52d",
+      "id": "control-admission:f043010c0715e33ed302eab1",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for Int, so nested returns remain on the older result path.",
+              "source": {
+                "min": 2793,
+                "max": 2801,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "Int",
+              "occurrenceId": "control-admission-occurrence:return:fc109df3b332399e2a81dae8"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioOutput|instance|function|writeBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fbb8f6884d6dfe237c31142c1449ac7b37295f546a3f8f44e5e42ce5f8c4f708"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:eb095fa761fd433d91208e1584391ee584515434e389ecfca92f87216af83477",
+      "id": "control-admission:f0febda6591ce4a8dcb597c1",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.io.Eof has no checked exception-channel representation.",
+              "source": {
+                "min": 1944,
+                "max": 1949,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-admission-occurrence:throw:14fcb8274cf1b7f66286d551"
+            }
+          ]
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioInput|instance|function|readByte|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:1a4ceb6f107d7547f503b3fcecb2417ab255e903ac68b983c8ba79a7e66d6ac9"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:829e9cbac902ac8febf162827f009899452351b08883a86bd14465381b4ed883",
+      "id": "control-admission:f2ca73835eed3fded722f4d5",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|asArray|generics:0|required:Array<haxe.StackItem>->Array<haxe.StackItem>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:705e0186c7e006a1ccc001e607110e567c7251278a674fa812dcaed52c0584be"
+    },
+    {
+      "catches": [
+        {
+          "chainId": null,
+          "status": "blocked",
+          "source": {
+            "min": 2092,
+            "max": 2226,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+          },
+          "blockers": [
+            {
+              "code": "catch-clause-unrepresented",
+              "message": "The catch type haxe.io.Eof has no checked payload-matching representation.",
+              "source": {
+                "min": 2190,
+                "max": 2211,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-catch-occurrence:ea73231edef82fc1e536517e:clause:0"
+            }
+          ],
+          "occurrenceId": "control-catch-occurrence:ea73231edef82fc1e536517e"
+        }
+      ],
+      "bodyRevision": "12:008bf661e62b21e20d4b8fa3137028b9c53d4b09c1b4302709ad570ebb043473",
+      "id": "control-admission:f4ee340049c87e033cb1cac0",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for Int, so nested returns remain on the older result path.",
+              "source": {
+                "min": 2067,
+                "max": 2075,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "Int",
+              "occurrenceId": "control-admission-occurrence:return:770cbb70d2819f2f344628e7"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 1,
+          "family": "throw",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "throw-value-unrepresented",
+              "message": "The thrown value haxe.io.Eof has no checked exception-channel representation.",
+              "source": {
+                "min": 2206,
+                "max": 2211,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+              },
+              "semanticTypeId": "haxe.io.Eof",
+              "occurrenceId": "control-admission-occurrence:throw:1b6e4926f57368eab9db5aaf"
+            }
+          ]
+        }
+      ],
+      "functionId": "sys.io.Stdio|OcamlStdioInput|instance|function|readBytes|generics:0|required:haxe.io.Bytes,required:Int,required:Int->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:f82fcefe637ba0e137ae11b5fd6f0ba9dffee0b77dfd2a9cea4f4474390cbce4"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "id": "control-admission:f5eede3ff788cc3e6a4f248d",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 4,
+          "family": "return",
+          "status": "blocked",
+          "decisionCount": 0,
+          "blockers": [
+            {
+              "code": "return-boundary-unrepresented",
+              "message": "The function result boundary has no checked carrier for Null<{ line : Int, file : String }>, so nested returns remain on the older result path.",
+              "source": {
+                "min": 1951,
+                "max": 1962,
+                "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+              },
+              "semanticTypeId": "Null<{ line : Int, file : String }>",
+              "occurrenceId": "control-admission-occurrence:return:7592371ba3304436e8475494"
+            }
+          ]
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:bca42398daab8f00a37be219465e597d416d1741c54997ab6f590c58d0a1965e"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:8da1dc4926ba7842c6fba18e63d3c3a7f2782a8a703ff981b7091e71d43711db",
+      "id": "control-admission:f5ff82249d2941fc07a2e9e7",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|isEof|generics:0|required:Int->Bool",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:ad64aa752a50975311debca0aaceec12be89f9178244aee6f7f8b1dca08389ab"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "id": "control-admission:f8e3b6cb283aeac417a5558c",
+      "families": [
+        {
+          "occurrenceCount": 1,
+          "family": "loop",
+          "status": "admitted",
+          "decisionCount": 1,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 2,
+          "family": "return",
+          "status": "admitted",
+          "decisionCount": 2,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:cc5a8bce496d30145af773a54ee7a29c4928c9fbf05de9a5192e37f1bbfc2d3d"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:597a82a8913da637a0e38476fe4fdde5e6ddd1121b2d6d343679ed63b446f668",
+      "id": "control-admission:fa285c9ba7d8d53bcc2f5d07",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|toString|generics:0|required:haxe.CallStack->String",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:732029ad0a9ef8b3d02319b0e1a8387212ce6d49b789c999dcced01176f7bf51"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:d66dced6f293aa18e150847cc14662eb64de1bc19ccc2e5f2e252140ab19fcd2",
+      "id": "control-admission:fa447d7893de57986331ba6e",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.FPHelper|FPHelper|static|function|i32ToFloat|generics:0|required:Int->Float",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:0149e1745b1a8080ebea5dcd60e75656eba9bdbb5194a046d6d0beadd39dba75"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:eb2a39632106979dbcaebf7472d0ee02872dacc635ddbff140ce2f1a0bcfb2a1",
+      "id": "control-admission:fbf9bda177736b6f4cb91ca9",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.Output|Output|instance|function|writeString|generics:0|required:String,optional:Null<haxe.io.Encoding>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:8b248c4f8c6d24e2b01aedc3087742e4f2e1c1f4e0d392886d62e3c71849ef27"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:3d5bafd628489407003f6dc978117378e16bc39ca91816f3bb224113ba16034e",
+      "id": "control-admission:fc209b0782ab5ee91eee6767",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|addString|generics:0|required:String,optional:Null<haxe.io.Encoding>->Void",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:a6b200037aca30b6e14b91ffc00205eab4f22ca64fc2b4348b03debd848f5917"
+    },
+    {
+      "catches": [],
+      "bodyRevision": "12:f4d769523c97498901a52c3b0782bf1eccd7275281ebda888b5a0b428bd59abe",
+      "id": "control-admission:fc67caa55d72007a8e28d079",
+      "families": [
+        {
+          "occurrenceCount": 0,
+          "family": "loop",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "return",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        },
+        {
+          "occurrenceCount": 0,
+          "family": "throw",
+          "status": "not-needed",
+          "decisionCount": 0,
+          "blockers": []
+        }
+      ],
+      "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|get_length|generics:0|->Int",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "programRevision": "d0dc30b9fccea8d2d1a0d9e9699b4215f2254b7f8940f15d4383a056c7773117",
+      "revision": "sha256:fb202f7691e9f0c25bb13871ba786afcd77c66250b5ce742a3cbd2c5e164aca4"
     }
   ],
   "containerElementConversionRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",

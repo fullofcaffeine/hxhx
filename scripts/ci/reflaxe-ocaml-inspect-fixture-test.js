@@ -44,7 +44,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 36)
+	assert.strictEqual(report.schemaVersion, 37)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -91,6 +91,7 @@ try {
 	assert.strictEqual(report.lowering.callableBoundaries.length, report.summary.callableBoundaryCount)
 	assert.strictEqual(report.lowering.controls.length, report.summary.controlCount)
 	assert.strictEqual(report.lowering.controlTargets.length, report.summary.controlTargetCount)
+	assert.strictEqual(report.lowering.controlAdmissions.length, report.summary.controlAdmissionCount)
 	assert.match(report.lowering.controlTargetRevision, sha256Revision)
 	assert.match(report.lowering.callRevision, sha256Revision)
 	assert(report.lowering.calls.every(call =>
