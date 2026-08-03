@@ -1,0 +1,6 @@
+dense=ab:2:alpha:beta:true
+null=2:<null>:true:true
+sparse=5:<null>:<null>:epsilon
+refill=5:beta2:gamma
+grow=7:<null>:<null>
+shrink=3:ALPHA:beta2:gamma:true

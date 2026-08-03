@@ -7,6 +7,7 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
@@ -35,6 +36,15 @@ class RepresentationRegistryFixture {
 		}
 		if (!failed)
 			throw '$label should have failed.';
+	}
+
+	/** Copies and damages one public decision without mutating registry-owned state. */
+	static function expectDecisionCorruption(label:String, decision:OcamlRepresentationDecision, expectedMessage:String, mutate:Dynamic->Void):Void {
+		final corrupted:Dynamic = Reflect.copy(decision);
+		Reflect.setField(corrupted, "proof", Reflect.copy(decision.proof));
+		Reflect.setField(corrupted, "profileEligibility", decision.profileEligibility.copy());
+		mutate(corrupted);
+		expectFailure(label, expectedMessage, () -> OcamlRepresentationRegistry.validateDecisionSnapshot(cast corrupted, "program:representation-fixture"));
 	}
 
 	/** Registers the closed fixture class with its already-sealed Int field. */
@@ -101,6 +111,8 @@ class RepresentationRegistryFixture {
 			"the direct nominal Array<Int> should be admitted");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Float>))) == null,
 			"Array<Float> should remain outside the exact Array<Int> slice");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<String>))) == null,
+			"the String element proof must not implicitly admit an Array<String> descriptor");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro(null : Null<Array<Int>>))) == null,
 			"an explicit nullable Array<Int> wrapper should remain outside the slice");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : IntArrayAlias))) == null,
@@ -183,6 +195,7 @@ class RepresentationRegistryFixture {
 		final stringCaptured = registry.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		final stringInstanceField = registry.selectExactString(OcamlRepresentationDomain.InstanceField);
 		final stringStaticField = registry.selectExactString(OcamlRepresentationDomain.StaticField);
+		final stringArrayElement = registry.selectExactString(OcamlRepresentationDomain.ArrayElement);
 		final dynamicInternal = registry.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 		final counterType = registerCounter(registry);
 		final counterInternal = registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.InternalValue);
@@ -300,11 +313,24 @@ class RepresentationRegistryFixture {
 			&& stringMutable.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
 			&& stringCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
 			&& stringInstanceField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner
-			&& stringStaticField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.StaticFieldOwner,
-			"exact String should separate immutable text values from the local, instance, or static storage that replaces them");
+			&& stringStaticField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.StaticFieldOwner
+			&& stringArrayElement.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.ArrayElementOwner,
+			"exact String should separate immutable text values from the local, field, or array slot that replaces them");
 		assertTrue(stringInternal.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
 			&& stringInternal.proof.claim.indexOf("single runtime-owned HxString.hx_null_string") >= 0,
 			"the exact String proof should name and confine its runtime-null boundary");
+		assertTrue(stringArrayElement.semanticTypeId == "String"
+			&& stringArrayElement.carrierTypeId == "string"
+			&& stringArrayElement.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
+			&& stringArrayElement.identityPolicy == OcamlRepresentationIdentityPolicy.PrimitiveValue
+			&& stringArrayElement.aliasingPolicy == OcamlRepresentationAliasingPolicy.NoValueAlias
+			&& stringArrayElement.valueMutationPolicy == OcamlRepresentationValueMutationPolicy.ImmutableValue
+			&& stringArrayElement.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			&& stringArrayElement.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel
+			&& stringArrayElement.proof.id == "nullable-string-array-element-carrier-v1"
+			&& stringArrayElement.proof.claim.indexOf("sparse and out-of-bounds slots") >= 0,
+			"the String array-element decision should preserve nullable values without exposing HxArray's private storage mode");
+		OcamlRepresentationRegistry.validateDecisionSnapshot(stringArrayElement, "program:representation-fixture");
 		assertTrue(dynamicInternal.semanticTypeId == "Dynamic"
 			&& dynamicInternal.carrierTypeId == "Obj.t"
 			&& dynamicInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
@@ -366,7 +392,7 @@ class RepresentationRegistryFixture {
 			"an exact-program lookup should return the selected decision");
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
-		assertTrue(repeated.revision == mutable.revision && registry.decisions().length == 32 && registry.representedArrays().length == 1,
+		assertTrue(repeated.revision == mutable.revision && registry.decisions().length == 33 && registry.representedArrays().length == 1,
 			"selecting the same answer twice should reuse one decision and one represented-array descriptor");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
@@ -420,6 +446,22 @@ class RepresentationRegistryFixture {
 		Reflect.setField(wrongStringProof.proof, "id", "unreviewed-string-cast");
 		expectFailure("wrong String unsafe proof", "unsupported-decision",
 			() -> OcamlStringRepresentationMaterializer.materialize(wrongStringProof, OcamlRepresentationDomain.StaticField));
+		expectDecisionCorruption("missing String array null policy", stringArrayElement, "invalid-decision",
+			decision -> Reflect.deleteField(decision, "nullPolicy"));
+		expectDecisionCorruption("corrupted String array carrier", stringArrayElement, "stale-decision-snapshot",
+			decision -> Reflect.setField(decision, "carrierTypeId", "Obj.t"));
+		expectDecisionCorruption("corrupted String array storage owner", stringArrayElement, "stale-decision-snapshot",
+			decision -> Reflect.setField(decision, "storageMutationPolicy", OcamlRepresentationStorageMutationPolicy.ImmutableBinding));
+		expectDecisionCorruption("corrupted String array boxing", stringArrayElement, "stale-decision-snapshot",
+			decision -> Reflect.setField(decision, "boxingPolicy", OcamlRepresentationBoxingPolicy.DirectUnboxed));
+		expectDecisionCorruption("missing String array proof", stringArrayElement, "invalid-decision", decision -> {
+			final proof:Dynamic = Reflect.field(decision, "proof");
+			Reflect.deleteField(proof, "id");
+		});
+		expectDecisionCorruption("corrupted String array program", stringArrayElement, "stale-program-revision",
+			decision -> Reflect.setField(decision, "programRevision", "program:other"));
+		expectDecisionCorruption("corrupted String array revision", stringArrayElement, "stale-decision-snapshot",
+			decision -> Reflect.setField(decision, "revision", "sha256:" + StringTools.lpad("", "3", 64)));
 
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
@@ -444,8 +486,6 @@ class RepresentationRegistryFixture {
 			() -> registry.selectExactNullInt(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported Null<Bool> array domain", "admitted only for internal, local, instance-field, or static-field storage",
 			() -> registry.selectExactNullBool(OcamlRepresentationDomain.ArrayElement));
-		expectFailure("unsupported String array domain", "admitted only for internal, local, instance-field, or static-field storage",
-			() -> registry.selectExactString(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported Dynamic mutable domain", "Dynamic is admitted only as an internal value",
 			() -> registry.selectExactDynamic(OcamlRepresentationDomain.MutableLocalStorage));
 		expectFailure("unsupported mutable nominal class domain", "admitted only for immutable internal bindings or captured local cells",
@@ -496,6 +536,7 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactString(OcamlRepresentationDomain.InstanceField);
 		registryAgain.selectExactString(OcamlRepresentationDomain.StaticField);
+		registryAgain.selectExactString(OcamlRepresentationDomain.ArrayElement);
 		registryAgain.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 		final counterTypeAgain = registerCounter(registryAgain);
 		registryAgain.selectMonomorphicClassValue(counterTypeAgain, OcamlRepresentationDomain.CapturedLocalStorage);

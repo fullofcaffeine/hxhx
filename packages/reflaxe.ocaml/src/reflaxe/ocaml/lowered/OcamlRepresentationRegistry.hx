@@ -39,14 +39,16 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	`Null<haxe.io.Bytes>` have internal-value decisions that preserve their
 	distinct typed forms while sharing one nullable reference carrier. Exact core
 	`String` uses the target's nullable string carrier across internal values,
-	local cells, and direct fields. Exact `Dynamic` uses one internal `Obj.t`
+	local cells, direct fields, and the independently proved `ArrayElement`
+	domain. That element decision does not itself admit an `Array<String>`
+	descriptor or producer. Exact `Dynamic` uses one internal `Obj.t`
 	carrier with occurrence-bound conversions that either preserve an existing
 	Dynamic value or box one typed concrete value. A proven monomorphic class may
 	additionally occupy one captured local cell when every whole-value replacement
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v19";
+	public static inline final MODEL_REVISION = "ocaml-representation-v20";
 	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
@@ -754,8 +756,11 @@ class OcamlRepresentationRegistry {
 		Haxe 4.3.7 initializes omitted String storage to null, while OCaml
 		`string` has no null constructor. The selected proof therefore admits one
 		narrow unsafe operation: the materializer may cast the canonical runtime
-		sentinel into the string carrier for an implicit default. Non-null strings
-		and admitted Haxe-to-Haxe call boundaries stay direct.
+		sentinel into the string carrier for an implicit default. An array element
+		uses that same nullable carrier, while `HxArray` owns sparse slots,
+		out-of-bounds null reads, and storage-mode changes. This decision does not
+		admit a represented `Array<String>`; a later descriptor must consume it
+		explicitly.
 	**/
 	public function selectExactString(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
@@ -763,8 +768,19 @@ class OcamlRepresentationRegistry {
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
 			case StaticField: OcamlRepresentationStorageMutationPolicy.StaticFieldOwner;
+			case ArrayElement: OcamlRepresentationStorageMutationPolicy.ArrayElementOwner;
+		};
+		final proof:OcamlRepresentationProof = switch (domain) {
 			case ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: exact String is admitted only for internal, local, instance-field, or static-field storage, not $domain';
+				{
+					id: "nullable-string-array-element-carrier-v1",
+					claim: "Exact Haxe String array elements use the nullable string carrier. Non-null text remains direct, while the canonical Haxe null sentinel preserves explicit null values, sparse and out-of-bounds slots, and grow-resize holes through HxArray's observable operations. HxArray may change its private storage mode without changing values, order, length, or shared container identity. This proof does not admit an Array<String> descriptor, literal producer, local, call, return, throw, catch, native boundary, public ABI, typedef, abstract, generic, nested, or mixed array."
+				};
+			case _:
+				{
+					id: "nullable-string-runtime-sentinel-carrier-v1",
+					claim: "Exact Haxe String uses OCaml string for non-null values and preserves the canonical Haxe null sentinel through the single runtime-owned HxString.hx_null_string value. Generated storage and expressions reference that value instead of creating occurrence-local Obj.magic casts. HxString.equals checks the sentinel before native string equality. This proof does not admit typedefs, abstracts, Dynamic, native ABI crossings, array elements, or arbitrary class carriers."
+				};
 		};
 		return register({
 			semanticTypeId: "String",
@@ -778,10 +794,7 @@ class OcamlRepresentationRegistry {
 			boxingPolicy: OcamlRepresentationBoxingPolicy.NullableStringCarrier,
 			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
 			reason: exactStringReason(domain),
-			proof: {
-				id: "nullable-string-runtime-sentinel-carrier-v1",
-				claim: "Exact Haxe String uses OCaml string for non-null values and preserves the canonical Haxe null sentinel through the single runtime-owned HxString.hx_null_string value. Generated storage and expressions reference that value instead of creating occurrence-local Obj.magic casts. HxString.equals checks the sentinel before native string equality. This proof does not admit typedefs, abstracts, Dynamic, native ABI crossings, array elements, or arbitrary class carriers."
-			},
+			proof: proof,
 			profileEligibility: ["metal", "portable"]
 		});
 	}
@@ -1226,6 +1239,36 @@ class OcamlRepresentationRegistry {
 		return copyDecision(decision);
 	}
 
+	/**
+		Rejects a damaged plain-data copy of one registered decision.
+
+		Reports and inspection tools receive copies rather than the registry's
+		private objects. This check recomputes the copy's identity and content
+		digest, then binds it to the caller's current program. It proves that the
+		copy still contains exactly the decision the registry produced; it does not
+		admit a new semantic type or replace the closed selectors above.
+	**/
+	public static function validateDecisionSnapshot(decision:OcamlRepresentationDecision, expectedProgramRevision:String):Void {
+		if (decision == null)
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: a representation snapshot is missing";
+		validateSelection(decision);
+		if (expectedProgramRevision == null
+			|| expectedProgramRevision.length == 0
+			|| decision.programRevision != expectedProgramRevision) {
+			throw 'reflaxe.ocaml [ocaml-representation:stale-program-revision]: representation "${decision.id}" belongs to ${decision.programRevision}, not $expectedProgramRevision';
+		}
+		final canonical = canonicalSelection(decision);
+		final expectedKey = decisionKey(canonical.semanticTypeId, canonical.domain);
+		final expectedId = "representation:" + canonical.semanticTypeId + ":" + (canonical.domain : String);
+		final expectedRevision = "sha256:" + Sha256.encode(selectionFingerprint(canonical));
+		if (decision.id != expectedId
+			|| decision.key != expectedKey
+			|| decision.revision != expectedRevision
+			|| decision.profileEligibility.join(",") != canonical.profileEligibility.join(",")) {
+			throw 'reflaxe.ocaml [ocaml-representation:stale-decision-snapshot]: representation "${decision.id}" no longer matches its identity, revision, or canonical profiles';
+		}
+	}
+
 	/** Resolves one represented-array descriptor and checks its exact revision. */
 	public function requireRepresentedArray(descriptorId:String, descriptorRevision:String, expectedProgramRevision:String):OcamlRepresentedArrayDescriptor {
 		final actualProgramRevision = requireProgramRevision();
@@ -1415,7 +1458,7 @@ class OcamlRepresentationRegistry {
 			case StaticField:
 				"An exact Haxe String static field uses the nullable string carrier in one ref cell and starts at the canonical Haxe null sentinel when no initializer is present.";
 			case ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: no exact String storage reason exists for $domain';
+				"An exact Haxe String array slot uses the nullable string carrier; HxArray owns slot replacement, null holes, bounds behavior, and private storage-mode changes.";
 		}
 	}
 
@@ -1467,11 +1510,27 @@ class OcamlRepresentationRegistry {
 	}
 
 	static function validateSelection(selection:OcamlRepresentationSelection):Void {
-		if (selection.semanticTypeId.length == 0 || selection.carrierTypeId.length == 0 || selection.reason.length == 0)
+		if (selection == null
+			|| selection.semanticTypeId == null
+			|| selection.carrierTypeId == null
+			|| selection.reason == null
+			|| selection.semanticTypeId.length == 0
+			|| selection.carrierTypeId.length == 0
+			|| selection.reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: semantic type, carrier, and reason must be non-empty";
-		if (selection.proof.id.length == 0 || selection.proof.claim.length == 0)
+		if (selection.domain == null
+			|| selection.nullPolicy == null
+			|| selection.identityPolicy == null
+			|| selection.aliasingPolicy == null
+			|| selection.storageMutationPolicy == null
+			|| selection.valueMutationPolicy == null
+			|| selection.boxingPolicy == null
+			|| selection.implicitDefaultPolicy == null)
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs complete domain, null, identity, aliasing, mutation, boxing, and default policies";
+		if (selection.proof == null || selection.proof.id == null || selection.proof.claim == null || selection.proof.id.length == 0
+			|| selection.proof.claim.length == 0)
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs a named proof and claim";
-		if (selection.profileEligibility.length == 0)
+		if (selection.profileEligibility == null || selection.profileEligibility.length == 0)
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs at least one eligible profile";
 		final nominalFieldCount = (selection.nominalTargetModuleName == null ? 0 : 1) + (selection.nominalTargetTypeName == null ? 0 : 1)
 			+ (selection.nominalLayoutRevision == null ? 0 : 1);
