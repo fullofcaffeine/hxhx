@@ -72,6 +72,7 @@ class ReflaxeOcamlInspection {
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
+	static inline final NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
@@ -79,7 +80,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v72";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v73";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v10";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -111,7 +112,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 39,
+			schemaVersion: 40,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -424,8 +425,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 62) {
-						throw 'Unsupported lowering report schema $version; expected 62.';
+					if (version != 63) {
+						throw 'Unsupported lowering report schema $version; expected 63.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1602,9 +1603,13 @@ class ReflaxeOcamlInspection {
 						throw 'Function-result boundary "${boundary.id}" disagrees with callable owner "$callableId".';
 					}
 				case "static-inline-exact-int-declaration":
-					validateDeclarationExactIntResult(boundary, STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID, "|static|function|", "static inline");
+					validateDeclarationExactResult(boundary, STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID, "|static|function|", "static inline", "Int", "int");
 				case "non-generic-instance-exact-int-declaration":
-					validateDeclarationExactIntResult(boundary, NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID, "|instance|function|", "non-generic instance");
+					validateDeclarationExactResult(boundary, NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID, "|instance|function|", "non-generic instance",
+						"Int", "int");
+				case "non-generic-instance-exact-string-declaration":
+					validateDeclarationExactResult(boundary, NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID, "|instance|function|", "non-generic instance",
+						"String", "string");
 				case _:
 					throw 'Function-result boundary "${boundary.id}" has unsupported source "${boundary.source}".';
 			}
@@ -1615,9 +1620,9 @@ class ReflaxeOcamlInspection {
 		return boundaries;
 	}
 
-	/** Validates a result-only exact-`Int` declaration without admitting calls. */
-	static function validateDeclarationExactIntResult(boundary:InspectionFunctionResultBoundary, expectedProofId:String, functionMode:String,
-			label:String):Void {
+	/** Validates one result-only exact declaration without admitting calls. */
+	static function validateDeclarationExactResult(boundary:InspectionFunctionResultBoundary, expectedProofId:String, functionMode:String, label:String,
+			semanticTypeId:String, carrierTypeId:String):Void {
 		final result = boundary.result;
 		if (boundary.callableBoundaryId != null
 			|| boundary.sourceModuleId.length == 0
@@ -1626,14 +1631,14 @@ class ReflaxeOcamlInspection {
 			|| boundary.functionId.indexOf(functionMode) < 0
 			|| boundary.resultKind != "value"
 			|| result == null
-			|| !isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Int", "int")
-			|| !isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Int", "int")
+			|| !isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, semanticTypeId, carrierTypeId)
+			|| !isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, semanticTypeId, carrierTypeId)
 			|| result.index != -1
 			|| result.parameterOptional
 			|| result.conversion != "identity"
 			|| result.proofId != "identity-call-carrier-v1"
 			|| boundary.proofId != expectedProofId) {
-			throw 'Function-result boundary "${boundary.id}" exceeds the declaration-only $label exact-Int slice.';
+			throw 'Function-result boundary "${boundary.id}" exceeds the declaration-only $label exact-$semanticTypeId slice.';
 		}
 	}
 

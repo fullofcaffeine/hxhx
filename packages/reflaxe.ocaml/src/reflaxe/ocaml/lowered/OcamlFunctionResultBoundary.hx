@@ -17,6 +17,7 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final CallableBoundary = "callable-boundary";
 	final StaticInlineExactIntDeclaration = "static-inline-exact-int-declaration";
 	final NonGenericInstanceExactIntDeclaration = "non-generic-instance-exact-int-declaration";
+	final NonGenericInstanceExactStringDeclaration = "non-generic-instance-exact-string-declaration";
 }
 
 /**
@@ -55,15 +56,16 @@ class OcamlFunctionResultBoundary {
 	public static inline final CALLABLE_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
+	public static inline final NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 
 	/**
 		Selects one result boundary without expanding the callable ABI.
 
-		Existing admitted static methods reuse their callable result. The new
-		Declaration-only paths currently admit two exact-`Int` result shapes: the
-		existing static inline `_hexValue` tracer and a concrete non-generic instance
-		method. The instance rule deliberately ignores receiver and parameter ABI;
-		it proves only the value produced when the already-emitted method finishes.
+		Existing admitted callables reuse their result. Declaration-only paths
+		currently admit the existing static inline exact-`Int`
+		tracer plus exact `Int` and `String` results for concrete non-generic instance
+		methods. An instance rule deliberately ignores receiver and parameter ABI; it
+		proves only the value produced when the already-emitted method finishes.
 	**/
 	public static function select(data:ClassFuncData, callable:Null<OcamlCallableBoundaryPlan>, representations:OcamlRepresentationRegistry,
 			binding:OcamlFunctionPlanBinding):Null<OcamlFunctionResultBoundaryPlan> {
@@ -82,18 +84,23 @@ class OcamlFunctionResultBoundary {
 			case _:
 				return null;
 		}
-		final exactIntResult = switch (TypeTools.follow(data.field.type)) {
-			case TFun(_, result): OcamlRepresentationRegistry.isExactInt(result);
-			case _: false;
+		final followedResult = switch (TypeTools.follow(data.field.type)) {
+			case TFun(_, result): result;
+			case _: null;
 		};
-		if (!exactIntResult)
+		if (followedResult == null)
 			return null;
+		final exactIntResult = OcamlRepresentationRegistry.isExactInt(followedResult);
+		final exactStringResult = OcamlRepresentationRegistry.isExactString(followedResult);
 
 		var source:OcamlFunctionResultBoundarySource;
 		var reason:String;
 		var proofId:String;
 		var proofClaim:String;
+		var semanticTypeId:String;
 		if (data.isStatic) {
+			if (!exactIntResult)
+				return null;
 			final matchesStaticTracer = switch (data.field.kind) {
 				case FMethod(MethInline):
 					switch (TypeTools.follow(data.field.type)) {
@@ -108,18 +115,30 @@ class OcamlFunctionResultBoundary {
 			reason = "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.";
 			proofId = STATIC_INLINE_EXACT_INT_PROOF_ID;
 			proofClaim = "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.";
+			semanticTypeId = "Int";
 		} else {
 			switch (data.field.kind) {
 				case FMethod(MethNormal):
 				case _:
 					return null;
 			}
-			source = OcamlFunctionResultBoundarySource.NonGenericInstanceExactIntDeclaration;
-			reason = "The final typed declaration is a concrete non-generic instance method with an exact Int result. The compiler may recover its function-owned returns as Int without deciding how a receiver, parameter, override, or call site is represented.";
-			proofId = NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID;
-			proofClaim = "The followed instance-method result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
+			if (exactIntResult) {
+				source = OcamlFunctionResultBoundarySource.NonGenericInstanceExactIntDeclaration;
+				reason = "The final typed declaration is a concrete non-generic instance method with an exact Int result. The compiler may recover its function-owned returns as Int without deciding how a receiver, parameter, override, or call site is represented.";
+				proofId = NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID;
+				proofClaim = "The followed instance-method result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
+				semanticTypeId = "Int";
+			} else if (exactStringResult) {
+				source = OcamlFunctionResultBoundarySource.NonGenericInstanceExactStringDeclaration;
+				reason = "The final typed declaration is a concrete non-generic instance method with an exact String result. The compiler may recover its function-owned returns as String without deciding how a receiver, parameter, override, or call site is represented.";
+				proofId = NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID;
+				proofClaim = "The followed instance-method result and the program representation registry independently select String -> string. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
+				semanticTypeId = "String";
+			} else {
+				return null;
+			}
 		}
-		final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+		final representation = semanticTypeId == "Int" ? representations.selectExactInt(OcamlRepresentationDomain.InternalValue) : representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 		final result:OcamlCallValuePlan = {
 			index: -1,
 			parameterOptional: false,
@@ -131,7 +150,7 @@ class OcamlFunctionResultBoundary {
 			outputRepresentationId: representation.id,
 			conversion: OcamlCallCarrierConversion.Identity,
 			proofId: "identity-call-carrier-v1",
-			proofClaim: "The final typed function result already uses the exact Int internal carrier, so function completion preserves that carrier without conversion."
+			proofClaim: 'The final typed function result already uses the exact $semanticTypeId internal carrier, so function completion preserves that carrier without conversion.'
 		};
 		final selected:OcamlFunctionResultBoundaryPlan = {
 			id: "function-result-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
@@ -248,21 +267,26 @@ class OcamlFunctionResultBoundary {
 					|| boundary.proofId != CALLABLE_RESULT_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: callable-derived result boundary "${boundary.id}" has no callable owner';
 			case StaticInlineExactIntDeclaration:
-				requireDeclarationExactInt(boundary, STATIC_INLINE_EXACT_INT_PROOF_ID, "|static|function|", "static inline");
+				requireDeclarationExactValue(boundary, STATIC_INLINE_EXACT_INT_PROOF_ID, "|static|function|", "static inline", "Int", "int");
 			case NonGenericInstanceExactIntDeclaration:
-				requireDeclarationExactInt(boundary, NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID, "|instance|function|", "non-generic instance");
+				requireDeclarationExactValue(boundary, NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID, "|instance|function|", "non-generic instance", "Int", "int");
+			case NonGenericInstanceExactStringDeclaration:
+				requireDeclarationExactValue(boundary, NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID, "|instance|function|", "non-generic instance", "String",
+					"string");
 		}
 	}
 
 	/**
-		Checks the common exact-`Int` result without mistaking it for call authority.
+		Checks one exact declaration result without mistaking it for call authority.
 
 		The function identity must also name the declaration mode selected by the
 		source record. This catches a report that relabels an instance method as the
 		static tracer (or vice versa) while leaving the carrier bytes unchanged.
 	**/
-	static function requireDeclarationExactInt(boundary:OcamlFunctionResultBoundaryPlan, expectedProofId:String, functionMode:String, label:String):Void {
+	static function requireDeclarationExactValue(boundary:OcamlFunctionResultBoundaryPlan, expectedProofId:String, functionMode:String, label:String,
+			semanticTypeId:String, carrierTypeId:String):Void {
 		final result = boundary.result;
+		final representationId = 'representation:$semanticTypeId:internal-value';
 		if (boundary.callableBoundaryId != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
@@ -270,15 +294,15 @@ class OcamlFunctionResultBoundary {
 			|| boundary.functionId.indexOf(functionMode) < 0
 			|| boundary.resultKind != OcamlCallResultKind.Value
 			|| result == null
-			|| result.inputSemanticTypeId != "Int"
-			|| result.inputCarrierTypeId != "int"
-			|| result.inputRepresentationId != "representation:Int:internal-value"
-			|| result.outputSemanticTypeId != "Int"
-			|| result.outputCarrierTypeId != "int"
-			|| result.outputRepresentationId != "representation:Int:internal-value"
+			|| result.inputSemanticTypeId != semanticTypeId
+			|| result.inputCarrierTypeId != carrierTypeId
+			|| result.inputRepresentationId != representationId
+			|| result.outputSemanticTypeId != semanticTypeId
+			|| result.outputCarrierTypeId != carrierTypeId
+			|| result.outputRepresentationId != representationId
 			|| result.conversion != OcamlCallCarrierConversion.Identity
 			|| boundary.proofId != expectedProofId) {
-			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the $label exact-Int slice';
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the $label exact-$semanticTypeId slice';
 		}
 	}
 

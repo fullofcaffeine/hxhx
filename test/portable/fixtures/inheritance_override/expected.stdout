@@ -1,2 +1,6 @@
 foo=2
+base0=base-zero
+base1=base-other
+child0=child-zero
+child1=child-other
 OK inheritance_override
