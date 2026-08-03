@@ -167,6 +167,16 @@ class RepresentationRegistryFixture {
 			outerWrapperKind: "none",
 			nestingKind: "flat"
 		};
+		final mismatchedStringArrayIdentity:OcamlNormalizedRepresentedArray = {
+			arraySemanticTypeId: "Array<Int>",
+			elementSemanticTypeId: "String",
+			sourceForm: "direct-builtin-array",
+			closureKind: "closed-monomorphic",
+			outerWrapperKind: "none",
+			nestingKind: "flat"
+		};
+		expectFailure("mismatched String array identity", "invalid-array-shape",
+			() -> registry.selectNormalizedRepresentedArray(mismatchedStringArrayIdentity, OcamlRepresentationDomain.InternalValue));
 		final dormantStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.InternalValue);
 		final dormantMutableStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.MutableLocalStorage);
 		final dormantCapturedStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity,
@@ -535,6 +545,22 @@ class RepresentationRegistryFixture {
 			descriptor -> Reflect.setField(descriptor, "programRevision", "program:other"));
 		expectArrayDescriptorCorruption("corrupted Array<String> profile", dormantStringArrayDescriptor, dormantStringElement,
 			descriptor -> Reflect.setField(descriptor, "profileEligibility", ["portable"]));
+		final corruptedStringElementCarrier:Dynamic = Reflect.copy(dormantStringElement);
+		Reflect.setField(corruptedStringElementCarrier, "carrierTypeId", "Obj.t");
+		expectFailure("corrupted Array<String> element carrier", "stale-array-descriptor-leaf",
+			() -> OcamlRepresentationRegistry.validateRepresentedArrayDescriptor(dormantStringArrayDescriptor, cast corruptedStringElementCarrier,
+				"program:representation-fixture"));
+		final corruptedStringElementDomain:Dynamic = Reflect.copy(dormantStringElement);
+		Reflect.setField(corruptedStringElementDomain, "domain", OcamlRepresentationDomain.InternalValue);
+		expectFailure("corrupted Array<String> element domain", "stale-array-descriptor-leaf",
+			() -> OcamlRepresentationRegistry.validateRepresentedArrayDescriptor(dormantStringArrayDescriptor, cast corruptedStringElementDomain,
+				"program:representation-fixture"));
+		expectDecisionCorruption("corrupted Array<String> outer carrier", dormantStringArray, "stale-decision-snapshot",
+			decision -> Reflect.setField(decision, "carrierTypeId", "Obj.t HxArray.t"));
+		expectDecisionCorruption("corrupted Array<String> outer proof", dormantStringArray, "stale-decision-snapshot", decision -> {
+			final proof:Dynamic = Reflect.field(decision, "proof");
+			Reflect.setField(proof, "id", "unreviewed-array-string-proof");
+		});
 		final staleStringArrayReference:Dynamic = Reflect.copy(dormantStringArray);
 		Reflect.setField(staleStringArrayReference, "arrayDescriptorRevision", "sha256:" + StringTools.lpad("", "5", 64));
 		expectFailure("corrupted Array<String> descriptor edge", "stale-array-descriptor", () -> registry.register(cast staleStringArrayReference));

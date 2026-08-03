@@ -2612,6 +2612,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateRepresentedArrayDescriptor(descriptor:InspectionRepresentedArrayDescriptor, element:InspectionRepresentationDecision):Void {
+		final expectedArraySemanticTypeId = 'Array<${descriptor.elementSemanticTypeId}>';
 		final expectedCarrier = element.carrierTypeId + " HxArray.t";
 		final expectedReason = 'The direct closed flat ${descriptor.arraySemanticTypeId} shape uses ${element.id}@${element.revision} for element storage and composes its ${element.carrierTypeId} carrier with HxArray.t.';
 		final expectedProofId = "direct-flat-array-element-binding-v1";
@@ -2639,6 +2640,7 @@ class ReflaxeOcamlInspection {
 		].join("\n"));
 		if (descriptor.id != "represented-array:" + descriptor.arraySemanticTypeId
 			|| descriptor.key != descriptor.arraySemanticTypeId
+			|| descriptor.arraySemanticTypeId != expectedArraySemanticTypeId
 			|| descriptor.programRevision != element.programRevision
 			|| descriptor.modelRevision != "ocaml-represented-array-v1"
 			|| descriptor.revision != expectedRevision

@@ -1093,8 +1093,10 @@ class OcamlRepresentationRegistry {
 	function registerRepresentedArray(normalized:OcamlNormalizedRepresentedArray,
 			elementRepresentation:OcamlRepresentationDecision):OcamlRepresentedArrayDescriptor {
 		final programRevision = requireProgramRevision();
+		final expectedArraySemanticTypeId = 'Array<${normalized.elementSemanticTypeId}>';
 		if (normalized.arraySemanticTypeId.length == 0
 			|| normalized.elementSemanticTypeId.length == 0
+			|| normalized.arraySemanticTypeId != expectedArraySemanticTypeId
 			|| normalized.sourceForm != "direct-builtin-array"
 			|| normalized.closureKind != "closed-monomorphic"
 			|| normalized.outerWrapperKind != "none"
@@ -1299,6 +1301,7 @@ class OcamlRepresentationRegistry {
 			expectedProgramRevision:String):Void {
 		final profiles = elementRepresentation.profileEligibility.copy();
 		profiles.sort(Reflect.compare);
+		final expectedArraySemanticTypeId = 'Array<${descriptor.elementSemanticTypeId}>';
 		final expectedCarrier = elementRepresentation.carrierTypeId + " HxArray.t";
 		final expectedReason = 'The direct closed flat ${descriptor.arraySemanticTypeId} shape uses ${elementRepresentation.id}@${elementRepresentation.revision} for element storage and composes its ${elementRepresentation.carrierTypeId} carrier with HxArray.t.';
 		final expectedProofId = "direct-flat-array-element-binding-v1";
@@ -1327,6 +1330,7 @@ class OcamlRepresentationRegistry {
 		final expectedRevision = "sha256:" + Sha256.encode(fingerprint);
 		if (descriptor.id != "represented-array:" + descriptor.arraySemanticTypeId
 			|| descriptor.key != descriptor.arraySemanticTypeId
+			|| descriptor.arraySemanticTypeId != expectedArraySemanticTypeId
 			|| descriptor.programRevision != expectedProgramRevision
 			|| descriptor.modelRevision != ARRAY_DESCRIPTOR_MODEL_REVISION
 			|| descriptor.revision != expectedRevision
