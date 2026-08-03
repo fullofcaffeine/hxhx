@@ -167,8 +167,8 @@ for (const functionName of ['ocamlstdioinput_readBytes__impl', 'ocamlstdiooutput
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 46) {
-	fail(`expected 46 represented return decisions, including StringTools._hexValue and the two stdio instance methods, got ${returnControls.length}`)
+if (returnControls.length !== 47) {
+	fail(`expected 47 represented return decisions, including StringTools._hexValue, the two stdio instance methods, and Exception.details, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -806,9 +806,9 @@ if (report.schemaVersion !== 40
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 46
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 47
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 46 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 47 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -1316,4 +1316,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=46 function_results=52 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=47 function_results=52 producers=4"
