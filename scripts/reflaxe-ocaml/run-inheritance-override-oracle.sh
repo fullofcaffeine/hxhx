@@ -33,4 +33,4 @@ for route in interp neko; do
 	fi
 done
 
-echo "INHERITANCE_OVERRIDE_ORACLE:PASS routes=2 cases=6"
+echo "INHERITANCE_OVERRIDE_ORACLE:PASS routes=2 cases=12"

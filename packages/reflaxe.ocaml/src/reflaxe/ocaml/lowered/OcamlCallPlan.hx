@@ -2399,7 +2399,7 @@ class OcamlCallPlanner {
 	}
 
 	/** Returns whether a type is the exact built-in `Void` result. */
-	static function isExactVoid(type:Type):Bool {
+	public static function isExactVoid(type:Type):Bool {
 		return switch (TypeTools.follow(type)) {
 			case TAbstract(abstractRef, _): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Void";
 			case _:

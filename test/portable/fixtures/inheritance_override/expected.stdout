@@ -3,4 +3,10 @@ base0=base-zero
 base1=base-other
 child0=child-zero
 child1=child-other
+base-void-before
+base-void-before
+base-void-after
+child-void-before
+child-void-before
+child-void-after
 OK inheritance_override

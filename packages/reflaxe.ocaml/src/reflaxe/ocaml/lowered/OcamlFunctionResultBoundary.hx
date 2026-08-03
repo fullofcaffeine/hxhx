@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
@@ -18,6 +19,7 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final StaticInlineExactIntDeclaration = "static-inline-exact-int-declaration";
 	final NonGenericInstanceExactIntDeclaration = "non-generic-instance-exact-int-declaration";
 	final NonGenericInstanceExactStringDeclaration = "non-generic-instance-exact-string-declaration";
+	final NonGenericInstanceEffectOnlyVoidDeclaration = "non-generic-instance-effect-only-void-declaration";
 }
 
 /**
@@ -57,15 +59,16 @@ class OcamlFunctionResultBoundary {
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
+	public static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 
 	/**
 		Selects one result boundary without expanding the callable ABI.
 
 		Existing admitted callables reuse their result. Declaration-only paths
 		currently admit the existing static inline exact-`Int`
-		tracer plus exact `Int` and `String` results for concrete non-generic instance
-		methods. An instance rule deliberately ignores receiver and parameter ABI; it
-		proves only the value produced when the already-emitted method finishes.
+		tracer plus exact `Int`, `String`, and payloadless `Void` results for concrete
+		non-generic instance methods. An instance rule deliberately ignores receiver
+		and parameter ABI; it proves only how the already-emitted method finishes.
 	**/
 	public static function select(data:ClassFuncData, callable:Null<OcamlCallableBoundaryPlan>, representations:OcamlRepresentationRegistry,
 			binding:OcamlFunctionPlanBinding):Null<OcamlFunctionResultBoundaryPlan> {
@@ -92,12 +95,14 @@ class OcamlFunctionResultBoundary {
 			return null;
 		final exactIntResult = OcamlRepresentationRegistry.isExactInt(followedResult);
 		final exactStringResult = OcamlRepresentationRegistry.isExactString(followedResult);
+		final effectOnlyVoidResult = OcamlCallPlanner.isExactVoid(followedResult);
 
 		var source:OcamlFunctionResultBoundarySource;
 		var reason:String;
 		var proofId:String;
 		var proofClaim:String;
 		var semanticTypeId:String;
+		var resultKind = OcamlCallResultKind.Value;
 		if (data.isStatic) {
 			if (!exactIntResult)
 				return null;
@@ -122,7 +127,14 @@ class OcamlFunctionResultBoundary {
 				case _:
 					return null;
 			}
-			if (exactIntResult) {
+			if (effectOnlyVoidResult) {
+				source = OcamlFunctionResultBoundarySource.NonGenericInstanceEffectOnlyVoidDeclaration;
+				reason = "The final typed declaration is a concrete non-generic instance method with a Void result. The compiler may complete its function-owned payloadless returns without deciding how a receiver, parameter, override, or call site is represented.";
+				proofId = NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID;
+				proofClaim = "The followed instance-method result is exact Haxe Void, which carries no value. This result-only record authorizes function completion through the payloadless return signal, but no receiver, parameter, dispatch, or call occurrence.";
+				semanticTypeId = "Void";
+				resultKind = OcamlCallResultKind.EffectOnlyVoid;
+			} else if (exactIntResult) {
 				source = OcamlFunctionResultBoundarySource.NonGenericInstanceExactIntDeclaration;
 				reason = "The final typed declaration is a concrete non-generic instance method with an exact Int result. The compiler may recover its function-owned returns as Int without deciding how a receiver, parameter, override, or call site is represented.";
 				proofId = NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID;
@@ -138,19 +150,23 @@ class OcamlFunctionResultBoundary {
 				return null;
 			}
 		}
-		final representation = semanticTypeId == "Int" ? representations.selectExactInt(OcamlRepresentationDomain.InternalValue) : representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-		final result:OcamlCallValuePlan = {
-			index: -1,
-			parameterOptional: false,
-			inputSemanticTypeId: representation.semanticTypeId,
-			inputCarrierTypeId: representation.carrierTypeId,
-			inputRepresentationId: representation.id,
-			outputSemanticTypeId: representation.semanticTypeId,
-			outputCarrierTypeId: representation.carrierTypeId,
-			outputRepresentationId: representation.id,
-			conversion: OcamlCallCarrierConversion.Identity,
-			proofId: "identity-call-carrier-v1",
-			proofClaim: 'The final typed function result already uses the exact $semanticTypeId internal carrier, so function completion preserves that carrier without conversion.'
+		final result:Null<OcamlCallValuePlan> = if (resultKind == OcamlCallResultKind.EffectOnlyVoid) {
+			null;
+		} else {
+			final representation = semanticTypeId == "Int" ? representations.selectExactInt(OcamlRepresentationDomain.InternalValue) : representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+			{
+				index: -1,
+				parameterOptional: false,
+				inputSemanticTypeId: representation.semanticTypeId,
+				inputCarrierTypeId: representation.carrierTypeId,
+				inputRepresentationId: representation.id,
+				outputSemanticTypeId: representation.semanticTypeId,
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				conversion: OcamlCallCarrierConversion.Identity,
+				proofId: "identity-call-carrier-v1",
+				proofClaim: 'The final typed function result already uses the exact $semanticTypeId internal carrier, so function completion preserves that carrier without conversion.'
+			};
 		};
 		final selected:OcamlFunctionResultBoundaryPlan = {
 			id: "function-result-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
@@ -159,7 +175,7 @@ class OcamlFunctionResultBoundary {
 			sourceModuleId: data.classType.module,
 			sourceTypeName: data.classType.name,
 			sourceFieldName: data.field.name,
-			resultKind: OcamlCallResultKind.Value,
+			resultKind: resultKind,
 			result: result,
 			profileEligibility: ["metal", "portable"],
 			reason: reason,
@@ -273,6 +289,22 @@ class OcamlFunctionResultBoundary {
 			case NonGenericInstanceExactStringDeclaration:
 				requireDeclarationExactValue(boundary, NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID, "|instance|function|", "non-generic instance", "String",
 					"string");
+			case NonGenericInstanceEffectOnlyVoidDeclaration:
+				requireDeclarationEffectOnlyVoid(boundary);
+		}
+	}
+
+	/** Checks that an instance `Void` declaration owns no value or callable facts. */
+	static function requireDeclarationEffectOnlyVoid(boundary:OcamlFunctionResultBoundaryPlan):Void {
+		if (boundary.callableBoundaryId != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf("|instance|function|") < 0
+			|| boundary.resultKind != OcamlCallResultKind.EffectOnlyVoid
+			|| boundary.result != null
+			|| boundary.proofId != NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the non-generic instance effect-only Void slice';
 		}
 	}
 

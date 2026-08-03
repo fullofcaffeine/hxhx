@@ -73,6 +73,7 @@ class ReflaxeOcamlInspection {
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
+	static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_RESULT_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
@@ -80,7 +81,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v73";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v74";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v10";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -112,7 +113,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 40,
+			schemaVersion: 41,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -425,8 +426,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 63) {
-						throw 'Unsupported lowering report schema $version; expected 63.';
+					if (version != 64) {
+						throw 'Unsupported lowering report schema $version; expected 64.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1610,6 +1611,8 @@ class ReflaxeOcamlInspection {
 				case "non-generic-instance-exact-string-declaration":
 					validateDeclarationExactResult(boundary, NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID, "|instance|function|", "non-generic instance",
 						"String", "string");
+				case "non-generic-instance-effect-only-void-declaration":
+					validateDeclarationEffectOnlyVoidResult(boundary);
 				case _:
 					throw 'Function-result boundary "${boundary.id}" has unsupported source "${boundary.source}".';
 			}
@@ -1618,6 +1621,20 @@ class ReflaxeOcamlInspection {
 			previousId = boundary.id;
 		}
 		return boundaries;
+	}
+
+	/** Rejects any value carrier or callable owner on declaration-only instance `Void`. */
+	static function validateDeclarationEffectOnlyVoidResult(boundary:InspectionFunctionResultBoundary):Void {
+		if (boundary.callableBoundaryId != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf("|instance|function|") < 0
+			|| boundary.resultKind != "effect-only-void"
+			|| boundary.result != null
+			|| boundary.proofId != NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_RESULT_PROOF_ID) {
+			throw 'Function-result boundary "${boundary.id}" exceeds the declaration-only non-generic instance effect-only Void slice.';
+		}
 	}
 
 	/** Validates one result-only exact declaration without admitting calls. */

@@ -31,7 +31,7 @@ assert.doesNotMatch(arrayElementBuilder[0], /fromDirectValue/,
 	'array syntax must consume the sealed enum identity instead of classifying the typed constructor again')
 
 const conversions = lowering.containerElementConversions
-assert.equal(lowering.schemaVersion, 63)
+assert.equal(lowering.schemaVersion, 64)
 assert.equal(conversions.length, 4,
 	'the method-local and static-initializer enum values should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 0, 1, 1])
@@ -114,7 +114,7 @@ function inspect(outputDirectory) {
 const inspection = inspect(path.join(fixtureRoot, 'out'))
 assert.equal(inspection.status, 0, `public inspection rejected the valid container plan: ${inspection.stdout}${inspection.stderr}`)
 const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 40)
+assert.equal(inspectionReport.schemaVersion, 41)
 assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
 assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
 

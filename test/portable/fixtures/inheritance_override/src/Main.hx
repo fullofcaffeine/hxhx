@@ -11,6 +11,14 @@ class Base {
 			return "base-zero";
 		return "base-other";
 	}
+
+	/** Prints one base marker and leaves before the later marker on the early path. */
+	public function visit(value:Int):Void {
+		Sys.println("base-void-before");
+		if (value == 0)
+			return;
+		Sys.println("base-void-after");
+	}
 }
 
 class Child extends Base {
@@ -28,6 +36,14 @@ class Child extends Base {
 			return "child-zero";
 		return "child-other";
 	}
+
+	/** Keeps virtual dispatch observable while exercising a payloadless early return. */
+	override public function visit(value:Int):Void {
+		Sys.println("child-void-before");
+		if (value == 0)
+			return;
+		Sys.println("child-void-after");
+	}
 }
 
 class Main {
@@ -40,6 +56,10 @@ class Main {
 		Sys.println("base1=" + base.label(1));
 		Sys.println("child0=" + child.label(0));
 		Sys.println("child1=" + child.label(1));
+		base.visit(0);
+		base.visit(1);
+		child.visit(0);
+		child.visit(1);
 		Sys.println("OK inheritance_override");
 	}
 }

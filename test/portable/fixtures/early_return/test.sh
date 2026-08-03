@@ -34,7 +34,7 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 63
+if (report.schemaVersion !== 64
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
@@ -480,7 +480,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v10'
-			: control.pipelineRevision !== 'ocaml-function-plans-v73')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v74')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -640,7 +640,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v73'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v74'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -796,7 +796,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 40
+if (report.schemaVersion !== 41
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
