@@ -5,7 +5,7 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
-import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -172,8 +172,8 @@ class OcamlRuntimeRequirementLedger {
 
 	/** Returns runtime explanations selected by one complete standard-Map interface adapter. */
 	public static function requirementsForIMapInterfaceConversion(decision:OcamlIMapInterfaceConversionDecision):Array<OcamlRuntimeRequirement> {
-		OcamlIMapInterfacePlan.requireConversionDecision(decision);
-		final requirementIds = OcamlIMapInterfacePlan.runtimeRequirementIds(decision);
+		OcamlIMapInterfaceContract.requireConversion(decision);
+		final requirementIds = OcamlIMapInterfaceContract.runtimeRequirementIds(decision);
 		final out:Array<OcamlRuntimeRequirement> = [];
 		for (index in 0...decision.runtimeCapabilities.length) {
 			final capability = decision.runtimeCapabilities[index];

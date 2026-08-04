@@ -1,5 +1,9 @@
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionRole;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
@@ -102,6 +106,40 @@ class RuntimeRequirementLedgerFixture {
 		return target;
 	}
 
+	/**
+		Builds a plain saved IMap conversion without any live compiler objects.
+
+		The runtime ledger consumes this report-shaped value after target planning.
+		Keeping the fixture at this boundary proves that validating saved runtime
+		facts does not accidentally require the active Reflaxe compiler request.
+	**/
+	static function standardStringMapInterfaceConversion(runtimeCapabilities:Array<String>):OcamlIMapInterfaceConversionDecision {
+		return {
+			id: "imap-interface-conversion:runtime-fixture",
+			source: {file: "src/Main.hx", min: 20, max: 36},
+			role: OcamlIMapInterfaceConversionRole.CallArgument,
+			roleIndex: 0,
+			sourceKind: OcamlIMapInterfaceSourceKind.StandardStringMap,
+			sourceSemanticTypeId: "HxMap<Int>",
+			sourceCarrierTypeId: OcamlStandardIMapCallContract.carrierId(OcamlStandardIMapKeyKind.StringKey),
+			targetSemanticTypeId: "haxe.IMap<String, Int>",
+			targetCarrierTypeId: OcamlIMapInterfaceContract.TARGET_CARRIER_ID,
+			keySemanticTypeId: "String",
+			valueSemanticTypeId: "Int",
+			standardKeyKind: OcamlStandardIMapKeyKind.StringKey,
+			keyStringifier: OcamlStandardIMapCallContract.stringifierForSemanticTypeId("String"),
+			valueStringifier: OcamlStandardIMapCallContract.stringifierForSemanticTypeId("Int"),
+			methods: [],
+			runtimeCapabilities: runtimeCapabilities,
+			proofId: OcamlIMapInterfaceContract.CONVERSION_PROOF_ID,
+			proofClaim: OcamlIMapInterfaceContract.CONVERSION_PROOF_CLAIM,
+			functionId: "Main|Main|static|main",
+			programRevision: "program:runtime-fixture",
+			bodyRevision: "body:runtime-fixture",
+			pipelineRevision: "pipeline:runtime-fixture"
+		};
+	}
+
 	static function main():Void {
 		final macHaxePath = ["", "Users", "alice", "haxe", "versions", "4.3.7", "std", "haxe", "Exception.hx"].join("/");
 		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(macHaxePath) == "haxe-stdlib/haxe/Exception.hx",
@@ -121,6 +159,16 @@ class RuntimeRequirementLedgerFixture {
 		});
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram("program:fixture-a");
+		final exactIMapCapabilities = OcamlStandardIMapCallContract.adapterRuntimeCapabilities("String", "Int");
+		final iMapRequirements = OcamlRuntimeRequirementLedger.requirementsForIMapInterfaceConversion(standardStringMapInterfaceConversion(exactIMapCapabilities));
+		assertTrue(iMapRequirements.length == exactIMapCapabilities.length,
+			"a saved IMap conversion should expand through the framework-free validation contract");
+		final rejectedIMapLedger = new OcamlRuntimeRequirementLedger();
+		rejectedIMapLedger.beginProgram("program:invalid-imap-fixture");
+		expectFailure("invalid saved IMap conversion", "conflicting source kind, method surface, or runtime inventory",
+			() -> rejectedIMapLedger.recordIMapInterfaceConversion(standardStringMapInterfaceConversion([OcamlRuntimeRequirementLedger.HAXE_MAP])));
+		assertTrue(rejectedIMapLedger.requirementsSorted().length == 0,
+			"a malformed saved IMap conversion should fail before any runtime requirement is accepted");
 		final stringRepresentation = exactStringRepresentation();
 		ledger.recordRepresentationDecision(stringRepresentation);
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
