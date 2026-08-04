@@ -78,7 +78,7 @@
     "guard:handwritten-ocaml-ownership": "node scripts/ci/handwritten-ocaml-ownership-check.js && node scripts/ci/handwritten-ocaml-ownership-fixture-test.js",
     "guard:native-server-request-state": "node scripts/ci/native-server-request-state-audit-check.js",
     "guard:typed-backend-bodies": "node scripts/ci/typed-backend-body-boundary-check.js",
-    "guard:reflaxe-ocaml-imap-boundary": "node scripts/ci/reflaxe-ocaml-imap-boundary-check.js",
+    "guard:reflaxe-ocaml-imap-boundary": "node scripts/ci/reflaxe-ocaml-imap-boundary-fixture-test.js && node scripts/ci/reflaxe-ocaml-imap-boundary-check.js",
     "guard:reflaxe-hxhx-core-boundary": "node scripts/ci/reflaxe-hxhx-core-boundary-check.js",
     "guard:upstream-stdlib": "node scripts/ci/upstream-stdlib-boundary-check.js",
     "guard:stdlib-ledger": "node scripts/ci/stdlib-provenance-ledger-check.js",
