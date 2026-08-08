@@ -38,8 +38,8 @@ if (report.schemaVersion !== 65
 
 const catches = report.controlCatches.filter(chain =>
 	chain.functionId.startsWith('Main|Main|'))
-if (catches.length !== 10) {
-	fail(`expected 10 exact primitive/Dynamic catch chains, got ${catches.length}`)
+if (catches.length !== 13) {
+	fail(`expected 13 exact primitive/Dynamic catch chains, got ${catches.length}`)
 }
 if (catches.some(chain =>
 	chain.functionId.includes('|function|independentAdmission|')
@@ -120,6 +120,26 @@ if (independent[0].tryBodyResultPolicy !== 'discard-completed-value-to-unit'
 	fail('the Void try with value-producing branches did not seal its unit-discard policy')
 }
 
+const callback = catches.find(chain => chain.functionId.includes('|function|capture|'))
+if (!callback
+	|| callback.tryBodyResultPolicy !== 'discard-completed-value-to-unit'
+	|| callback.clauses.length !== 2
+	|| callback.clauses.some(clause => clause.bodyResultPolicy !== 'discard-completed-value-to-unit')) {
+	fail('the Void callback catch did not discard every completed branch value')
+}
+const directVoid = catches.find(chain => chain.functionId.includes('|function|discardBoolFromCatch|'))
+if (!directVoid
+	|| directVoid.tryBodyResultPolicy !== 'discard-completed-value-to-unit'
+	|| directVoid.clauses.some(clause => clause.bodyResultPolicy !== 'discard-completed-value-to-unit')) {
+	fail('the direct Void catch did not discard its Boolean branch values')
+}
+const valueProducing = catches.find(chain => chain.functionId.includes('|function|valueProducingCatch|'))
+if (!valueProducing
+	|| valueProducing.tryBodyResultPolicy !== 'preserve-typed-result'
+	|| valueProducing.clauses.some(clause => clause.bodyResultPolicy !== 'preserve-typed-result')) {
+	fail('the non-Void catch stopped preserving its selected String value')
+}
+
 const orderedStart = source.indexOf('let orderedBool =')
 const orderedEnd = source.indexOf('\nlet exactFirst =', orderedStart)
 const orderedBody = source.slice(orderedStart, orderedEnd)
@@ -148,6 +168,22 @@ if (nativeStart < 0
 	|| !nativeBody.includes('"native=dynamic"')) {
 	fail('target-native exceptions did not enter the sealed Dynamic catch chain')
 }
+const callbackStart = source.indexOf('let capture =')
+const callbackEnd = source.indexOf('\nlet callbackVoidResult =', callbackStart)
+const callbackBody = source.slice(callbackStart, callbackEnd)
+if (callbackStart < 0
+	|| callbackEnd < 0
+	|| !callbackBody.includes('ignore (HxArray.push')) {
+	fail('the Void callback catch did not discard Array.push\'s generated integer result')
+}
+const directVoidStart = source.indexOf('let discardBoolFromCatch =')
+const directVoidEnd = source.indexOf('\nlet directVoidResult =', directVoidStart)
+const directVoidBody = source.slice(directVoidStart, directVoidEnd)
+if (directVoidStart < 0
+	|| directVoidEnd < 0
+	|| !directVoidBody.includes('ignore (HxArray.remove')) {
+	fail('the direct Void catch did not discard Array.remove\'s generated Boolean result')
+}
 NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
@@ -170,9 +206,9 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 42
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
-	|| report.lowering.controlCatches.length !== 10
+	|| report.lowering.controlCatches.length !== 13
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 10 validated catch-chain decisions')
+	throw new Error('public inspection did not expose the 13 validated catch-chain decisions')
 }
 NODE
 
@@ -203,4 +239,4 @@ fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
-echo "REFLAXE_OCAML_EXACT_CATCH_CONTROL_FIXTURE:PASS chains=10"
+echo "REFLAXE_OCAML_EXACT_CATCH_CONTROL_FIXTURE:PASS chains=13"

@@ -113,6 +113,56 @@ class Main {
 		return "independent=" + out;
 	}
 
+	/**
+	 * Runs a callback whose result is deliberately ignored by Haxe.
+	 *
+	 * `Array.push` returns the new array length, but this function promises
+	 * `Void`. Every target must therefore discard the final catch call's value.
+	 */
+	static function capture(action:() -> Void, problems:Array<String>):Void {
+		try {
+			action();
+		} catch (_:Int) {
+			problems.push("wrong-int");
+		} catch (message:String) {
+			problems.push(message);
+		}
+	}
+
+	static function callbackVoidResult():String {
+		final problems = new Array<String>();
+		capture(() -> throwString("callback"), problems);
+		return "callback=" + problems.join("|");
+	}
+
+	/** A Boolean-returning call at the end of a `Void` catch is discarded. */
+	static function discardBoolFromCatch(values:Array<Int>):Void {
+		try {
+			throwInt();
+		} catch (_:Int) {
+			values.remove(7);
+		} catch (_:Dynamic) {
+			values.remove(8);
+		}
+	}
+
+	static function directVoidResult():String {
+		final values = [7];
+		discardBoolFromCatch(values);
+		return "directBool=" + values.length;
+	}
+
+	/** A non-`Void` `try` keeps the selected branch value. */
+	static function valueProducingCatch():String {
+		final value = try {
+			throwString("value");
+			"wrong";
+		} catch (_:String) {
+			"kept";
+		}
+		return "valueResult=" + value;
+	}
+
 	static function main():Void {
 		printLine([
 			orderedBool(),
@@ -121,7 +171,10 @@ class Main {
 			nullString(),
 			outerPropagation(),
 			rethrow(),
-			independentChains()
+			independentChains(),
+			callbackVoidResult(),
+			directVoidResult(),
+			valueProducingCatch()
 		].join(","));
 	}
 }

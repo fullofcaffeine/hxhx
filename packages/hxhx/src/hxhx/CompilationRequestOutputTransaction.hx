@@ -275,17 +275,12 @@ class CompilationRequestOutputTransaction {
 		try {
 			action();
 		} catch (error:haxe.io.Error) {
-			appendProblem(problems, label + ": " + Std.string(error));
+			problems.push(label + ": " + Std.string(error));
 		} catch (error:haxe.Exception) {
-			appendProblem(problems, label + ": " + error.message);
+			problems.push(label + ": " + error.message);
 		} catch (error:String) {
-			appendProblem(problems, label + ": " + error);
+			problems.push(label + ": " + error);
 		}
-	}
-
-	/** Keep every catch branch explicitly `Void` across Haxe and native OCaml. **/
-	static function appendProblem(problems:Array<String>, message:String):Void {
-		problems.push(message);
 	}
 
 	static function ensureDirectory(path:String, created:Array<String>):Void {
