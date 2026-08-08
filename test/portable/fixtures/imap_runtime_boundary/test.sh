@@ -17,7 +17,7 @@ if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
 }
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
-	call.pipelineRevision !== 'ocaml-function-plans-v77'
+	call.pipelineRevision !== 'ocaml-function-plans-v78'
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')

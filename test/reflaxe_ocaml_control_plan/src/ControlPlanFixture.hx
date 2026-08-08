@@ -40,6 +40,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -82,6 +83,16 @@ class ControlPlanFixture {
 			programRevision: parent.programRevision,
 			bodyRevision: FunctionBodyRevision.initial(nestedFunction.expr, externalLocals).id,
 			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
+		};
+	}
+
+	/** Combines one typed function occurrence with its exact immediate parent. */
+	static function nestedFunctionIdentity(parent:OcamlFunctionPlanBinding, binding:OcamlFunctionPlanBinding, expression:TypedExpr,
+			identities:LexicalLocalIdentityPlan):OcamlNestedFunctionIdentity {
+		return {
+			occurrenceId: identities.requireFunctionOccurrence(expression).id,
+			parentBinding: parent,
+			binding: binding
 		};
 	}
 
@@ -1283,21 +1294,28 @@ class ControlPlanFixture {
 		});
 		final nestedExternalLocalList = nestedExternalLocals(nestedExpression);
 		final nestedObservedBodyRevision = nestedBodyRevision(nestedExpression, nestedExternalLocalList);
-		nestedRegistry.deferNestedFunction(nestedExpression, nestedParent, nestedExternalLocalList, nestedObservedBodyRevision,
+		final deferredRegistry = new OcamlFunctionPlanRegistry();
+		deferredRegistry.beginProgram(nestedParent.programRevision);
+		final deferredIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, nestedExpression);
+		deferredRegistry.registerRootIdentityPlan(nestedParent, deferredIdentities);
+		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
+		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
+		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
 			"fixture explicitly defers one observed literal");
-		if (nestedRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
+		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
 		expectThrows("duplicate-occurrence",
-			() -> nestedRegistry.deferNestedFunction(nestedExpression, nestedParent, nestedExternalLocalList, nestedObservedBodyRevision, "fixture duplicate"));
-		expectThrows("unobserved-occurrence", () -> nestedRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
-		expectThrows("parent-mismatch", () -> nestedRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
+			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
+				deferredIdentities, "fixture duplicate"));
+		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
+		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
 		final staleParent:OcamlFunctionPlanBinding = {
 			functionId: nestedParent.functionId,
 			programRevision: "program:stale",
 			bodyRevision: nestedParent.bodyRevision,
 			pipelineRevision: nestedParent.pipelineRevision
 		};
-		expectThrows("stale-parent", () -> nestedRegistry.nestedFunctionPlanFor(nestedExpression, staleParent));
+		expectThrows("stale-parent", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, staleParent));
 
 		final admittedOwnerBody = Context.typeExpr(macro {
 			final local = function(value:Int):Int {
@@ -1563,6 +1581,56 @@ class ControlPlanFixture {
 			siblingIdentities);
 		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
 			throw "The exact same-root nested parent did not retain its child plan";
+		final deferredChildRegistry = new OcamlFunctionPlanRegistry();
+		deferredChildRegistry.beginProgram(siblingRoot.programRevision);
+		deferredChildRegistry.registerRootIdentityPlan(siblingRoot, siblingIdentities);
+		deferredChildRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
+		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
+		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
+			siblingChild.binding.bodyRevision, siblingIdentities, "fixture child uses the older result path");
+		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
+			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
+
+		// The outer function returns another function, so its result behavior stays
+		// on the older syntax path. Its inner Int function is independently
+		// representable. The child must still name the outer function as its exact
+		// parent, even though the outer function has no represented behavior plan.
+		final deferredParentRegistry = new OcamlFunctionPlanRegistry();
+		deferredParentRegistry.beginProgram("program:deferred-parent-fixture");
+		final deferredParentRoot:OcamlFunctionPlanBinding = {
+			functionId: "Main|Main|static|function|deferredParentOwner|generics:0|->Int",
+			programRevision: "program:deferred-parent-fixture",
+			bodyRevision: "0:deferred-parent-root-body",
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+		final deferredParentOwnerBody = Context.typeExpr(macro {
+			final make = function() {
+				return function(value:Int):Int {
+					if (value > 0)
+						return value;
+					return 0;
+				};
+			};
+			make();
+		});
+		final deferredParentExpressions = functionLiterals(deferredParentOwnerBody);
+		if (deferredParentExpressions.length != 2)
+			throw 'The deferred-parent fixture expected two function literals, got ${deferredParentExpressions.length}';
+		final deferredParentIdentities = LexicalLocalIdentityPlan.build(deferredParentRoot.functionId, deferredParentOwnerBody);
+		deferredParentRegistry.registerRootIdentityPlan(deferredParentRoot, deferredParentIdentities);
+		final deferredParentExpression = deferredParentExpressions[0];
+		final deferredParentExternalLocals = nestedExternalLocals(deferredParentExpression);
+		final deferredParentBinding = nestedFunctionBinding(deferredParentRoot, deferredParentExpression, deferredParentExternalLocals,
+			deferredParentIdentities);
+		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
+		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
+			deferredParentBinding.bodyRevision, deferredParentIdentities, "fixture outer function uses the older result path");
+		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
+			"control:return:deferred-parent-child");
+		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.externalLocals, representedChild.binding.bodyRevision,
+			representedChild.plan, deferredParentIdentities);
+		if (deferredParentRegistry.nestedFunctionPlanFor(representedChild.expression, deferredParentBinding) == null)
+			throw "A represented child of a deferred parent did not retain its plan";
 
 		// Starting another request with the same program name must still discard all
 		// request-local identity and parent records. Re-registering a freshly built
@@ -1583,13 +1651,6 @@ class ControlPlanFixture {
 			refreshedSiblingIdentities);
 		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
 			throw "The same-program reset did not rebuild the exact nested-parent plan";
-
-		final childExpression = Context.typeExpr(macro function(value:Int):Int return value);
-		final childExternalLocals = nestedExternalLocals(childExpression);
-		nestedRegistry.deferNestedFunction(childExpression, admittedBinding, childExternalLocals, nestedBodyRevision(childExpression, childExternalLocals),
-			"fixture proves an admitted nested parent can own a deeper literal");
-		if (nestedRegistry.nestedFunctionPlanFor(childExpression, admittedBinding) != null)
-			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
 		expectThrows("duplicate-occurrence",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan,

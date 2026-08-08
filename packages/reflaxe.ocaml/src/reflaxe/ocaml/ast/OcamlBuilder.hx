@@ -7905,8 +7905,8 @@ class OcamlBuilder {
 		if (storagePlan == null)
 			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
 		final parentBinding = currentFunctionPlanBinding;
-		final nestedPlan:Null<OcamlSealedNestedFunctionPlan> = parentBinding == null ? null : functionPlanRegistry.nestedFunctionPlanFor(expression,
-			parentBinding);
+		final nestedDisposition = parentBinding == null ? null : functionPlanRegistry.nestedFunctionSyntaxDispositionFor(expression, parentBinding);
+		final nestedPlan:Null<OcamlSealedNestedFunctionPlan> = nestedDisposition == null ? null : nestedDisposition.plan;
 		final callableBoundary = nestedPlan == null ? null : nestedPlan.callableBoundary;
 		final functionResultBoundary = nestedPlan == null ? null : nestedPlan.functionResultBoundary;
 
@@ -7947,8 +7947,8 @@ class OcamlBuilder {
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
 		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
-		if (nestedPlan != null)
-			currentFunctionPlanBinding = nestedPlan.binding;
+		if (nestedDisposition != null)
+			currentFunctionPlanBinding = nestedDisposition.binding;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		final needsReturnCatch = nestedPlan == null ? containsNestedReturnInFunctionBody(tfunc.expr) : nestedPlan.controls.hasReturnTransfers();

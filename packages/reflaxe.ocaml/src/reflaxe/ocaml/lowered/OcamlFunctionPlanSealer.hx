@@ -32,6 +32,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanne
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -269,7 +270,6 @@ class OcamlFunctionPlanSealer {
 				case TFunction(tfunc):
 					final bodyExternalLocals = nestedBodyExternalLocals(tfunc, localIdentities);
 					final observedBodyRevision = FunctionBodyRevision.initial(tfunc.expr, bodyExternalLocals).id;
-					var childParentBinding = lexicalParentBinding;
 					final occurrence = try {
 						localIdentities.requireFunctionOccurrence(expression);
 					} catch (error:Dynamic) {
@@ -287,9 +287,18 @@ class OcamlFunctionPlanSealer {
 						bodyRevision: observedBodyRevision,
 						pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
 					};
+					final nestedIdentity:OcamlNestedFunctionIdentity = {
+						occurrenceId: occurrenceId,
+						parentBinding: lexicalParentBinding,
+						binding: nestedBinding
+					};
+					// Every nested body becomes the parent of its own children, even when
+					// this function still uses the older result or control syntax. The
+					// optional behavior plan does not own the lexical parent relationship.
+					final childParentBinding = nestedBinding;
 					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null) {
-						registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
+						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
 							"The typed function literal is outside the existing represented-result callable boundary.");
 					} else {
 						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
@@ -310,7 +319,7 @@ class OcamlFunctionPlanSealer {
 						final allControlFamiliesAdmitted = controls.returnFamilyAdmitted && controls.loopFamilyAdmitted && controls.throwFamilyAdmitted;
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
-							registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
+							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.");
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
@@ -325,7 +334,6 @@ class OcamlFunctionPlanSealer {
 								arrayLiteralProducers: arrayLiteralProducers
 							};
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
-							childParentBinding = nestedBinding;
 						}
 					}
 					TypedExprTools.iter(tfunc.expr, child -> visit(child, childParentBinding));
