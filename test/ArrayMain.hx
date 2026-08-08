@@ -80,6 +80,41 @@ class ArrayMain {
 		if (sorted[0] != 1 || sorted[2] != 3)
 			throw "sort";
 
+		final sortedFloats = [Math.POSITIVE_INFINITY, -0.0, 4.5, Math.NEGATIVE_INFINITY];
+		sortedFloats.sort((x, y) -> x < y ? -1 : (x > y ? 1 : 0));
+		if (sortedFloats[0] != Math.NEGATIVE_INFINITY || sortedFloats[2] != 4.5 || sortedFloats[3] != Math.POSITIVE_INFINITY)
+			throw "sort_float_order";
+		if (1.0 / sortedFloats[1] != Math.NEGATIVE_INFINITY)
+			throw "sort_float_negative_zero";
+
+		final floatCopy = sortedFloats.copy();
+		if (floatCopy[0] != Math.NEGATIVE_INFINITY || floatCopy[3] != Math.POSITIVE_INFINITY)
+			throw "copy_float";
+		final floatSlice = sortedFloats.slice(1, 3);
+		if (floatSlice.length != 2 || 1.0 / floatSlice[0] != Math.NEGATIVE_INFINITY || floatSlice[1] != 4.5)
+			throw "slice_float";
+		final floatConcat = floatSlice.concat([Math.NaN]);
+		if (floatConcat.length != 3 || !Math.isNaN(floatConcat[2]))
+			throw "concat_float_nan";
+		final floatSplice = floatCopy.splice(1, 2);
+		if (floatSplice.length != 2 || 1.0 / floatSplice[0] != Math.NEGATIVE_INFINITY || floatSplice[1] != 4.5)
+			throw "splice_float";
+
+		final sortedStrings = ["c", "a", "b"];
+		sortedStrings.sort((x, y) -> x < y ? -1 : (x > y ? 1 : 0));
+		if (sortedStrings.join("") != "abc")
+			throw "sort_string";
+
+		final sortedNullable:Array<Null<Int>> = [3, null, 1];
+		sortedNullable.sort((x, y) -> x == null ? (y == null ? 0 : -1) : (y == null ? 1 : x - y));
+		if (sortedNullable[0] != null || sortedNullable[1] != 1 || sortedNullable[2] != 3)
+			throw "sort_nullable";
+
+		final deoptimizedFloats:Array<Dynamic> = [1.5, 2.5];
+		deoptimizedFloats.push("x");
+		if (deoptimizedFloats[0] != 1.5 || deoptimizedFloats[1] != 2.5 || deoptimizedFloats[2] != "x")
+			throw "float_deopt";
+
 		final strArr = ["a", "b", "c"];
 		if (strArr.join("-") != "a-b-c")
 			throw "join";
