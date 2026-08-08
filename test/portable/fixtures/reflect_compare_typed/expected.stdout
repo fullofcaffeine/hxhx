@@ -1,0 +1,10 @@
+strings=a,b,c
+ints=-2,0,7
+floats=1,0,-1
+direct.int=-1
+direct.float=1
+direct.string=0
+static.string=-1
+string.null.null=0
+float.nan=reflaxe.ocaml [ocaml-reflect-compare:unordered-nan]
+string.null.value=reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]

@@ -39,6 +39,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescr
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
@@ -63,7 +65,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 65;
+	public static inline final SCHEMA_VERSION = 66;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -140,7 +142,7 @@ class OcamlLoweringReportWriter {
 			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
 			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
 			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
-			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, reflectCompare:Array<OcamlReflectCompareDecision>,
 			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
@@ -736,6 +738,16 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaries: sortedCallableBoundaries
 		});
+		final sortedReflectCompare = reflectCompare.copy();
+		sortedReflectCompare.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final reflectCompareIds:Map<String, Bool> = [];
+		for (decision in sortedReflectCompare) {
+			OcamlReflectComparePlan.requireDecision(decision);
+			if (reflectCompareIds.exists(decision.id))
+				throw 'Reflect.compare decision identity "${decision.id}" occurs more than once.';
+			reflectCompareIds.set(decision.id, true);
+		}
+		final canonicalReflectCompare = haxe.Json.stringify(sortedReflectCompare);
 		final canonicalFunctionResultBoundaries = haxe.Json.stringify(sortedFunctionResultBoundaries);
 		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
 		final canonicalControls = haxe.Json.stringify({
@@ -801,6 +813,10 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
+			reflectCompareModel: OcamlReflectComparePlan.MODEL_REVISION,
+			reflectCompareRevision: "sha256:" + Sha256.encode(canonicalReflectCompare),
+			reflectCompareCount: sortedReflectCompare.length,
+			reflectCompare: sortedReflectCompare,
 			functionResultBoundaryModel: OcamlFunctionResultBoundary.MODEL,
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,

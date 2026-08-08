@@ -92,6 +92,9 @@ import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDomain;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -138,6 +141,7 @@ class OcamlBuilder {
 	var currentBytesReadPlan:Null<OcamlBytesReadPlan> = null;
 	var currentIMapInterfacePlan:Null<OcamlIMapInterfacePlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
+	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 
@@ -896,6 +900,69 @@ class OcamlBuilder {
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
 		return out;
+	}
+
+	/**
+		Builds the comparator selected for one resolved standard function value.
+
+		For example, contextual typing turns `names.sort(Reflect.compare)` into a
+		String comparator before this builder runs. The generated closure therefore
+		uses only String operations; it never receives `Obj.t` values and never asks
+		OCaml to compare arbitrary runtime objects.
+	**/
+	function buildPlannedReflectCompareFunction(decision:OcamlReflectCompareDecision, position:Position):OcamlExpr {
+		try {
+			OcamlReflectComparePlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), position);
+		}
+		final leftName = freshTmp("reflect_left");
+		final rightName = freshTmp("reflect_right");
+		final left = OcamlExpr.EIdent(leftName);
+		final right = OcamlExpr.EIdent(rightName);
+		final ordered = OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Lt, left, right), OcamlExpr.EConst(OcamlConst.CInt(-1)),
+			OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Gt, left, right), OcamlExpr.EConst(OcamlConst.CInt(1)), OcamlExpr.EConst(OcamlConst.CInt(0))));
+		final parameterType = switch (decision.domain) {
+			case Int: OcamlTypeExpr.TIdent("int");
+			case Float: OcamlTypeExpr.TIdent("float");
+			case String: OcamlTypeExpr.TIdent("string");
+		}
+		final body = switch (decision.domain) {
+			case Int:
+				ordered;
+			case Float:
+				final leftNaN = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Float"), "is_nan"), [left]);
+				final rightNaN = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Float"), "is_nan"), [right]);
+				OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Or, leftNaN, rightNaN), reflectCompareFailure("unordered-nan"), ordered);
+			case String:
+				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
+				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
+				final bothNull = OcamlExpr.EBinop(OcamlBinop.And, leftNull, rightNull);
+				final oneNull = OcamlExpr.EBinop(OcamlBinop.Or, leftNull, rightNull);
+				OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch"), ordered));
+		}
+		return OcamlExpr.EFun([
+			OcamlPat.PAnnot(OcamlPat.PVar(leftName), parameterType),
+			OcamlPat.PAnnot(OcamlPat.PVar(rightName), parameterType)
+		], body);
+	}
+
+	/** Produces a catchable Haxe error for an exceptional admitted value. */
+	function reflectCompareFailure(reason:String):OcamlExpr {
+		final message = 'reflaxe.ocaml [ocaml-reflect-compare:$reason]';
+		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw"), [
+			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString(message))])
+		]);
+	}
+
+	/** Evaluates both direct-call operands once, from left to right, then compares. */
+	function buildPlannedReflectCompareCall(decision:OcamlReflectCompareDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		if (arguments.length != 2)
+			return callPlanInvariant('Reflect.compare plan "${decision.id}" expected two operands, received ${arguments.length}', position);
+		final leftName = freshTmp("reflect_arg_0");
+		final rightName = freshTmp("reflect_arg_1");
+		final invoke = OcamlExpr.EApp(buildPlannedReflectCompareFunction(decision, position), [OcamlExpr.EIdent(leftName), OcamlExpr.EIdent(rightName)]);
+		return OcamlExpr.ELet(leftName, buildExpr(arguments[0]), OcamlExpr.ELet(rightName, buildExpr(arguments[1]), invoke, false), false);
 	}
 
 	/**
@@ -2278,6 +2345,8 @@ class OcamlBuilder {
 		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
 		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
+		final plannedReflectCompareValue = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForValue(e);
+		final plannedReflectCompareCall = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForCall(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
 				OcamlAnonymousStructureSyntax.buildLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), buildExpr,
@@ -2329,6 +2398,10 @@ class OcamlBuilder {
 				buildPlannedIMapInterfaceCall(plannedIMapInterfaceCall, callee, arguments, e.pos);
 			case TCall(_, _) if (iMapInterfaceCallCandidate):
 				callPlanInvariant("an exact IMap interface call reached syntax without its sealed dispatch decision", e.pos);
+			case TCall(_, arguments) if (plannedReflectCompareCall != null):
+				buildPlannedReflectCompareCall(plannedReflectCompareCall, arguments, e.pos);
+			case TCall(callee, _) if (OcamlReflectComparePlan.isResolvedStandardCompare(callee)):
+				callPlanInvariant("a resolved Reflect.compare call reached syntax without its sealed comparison-domain plan", e.pos);
 			case TNew(_, _, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
@@ -2340,6 +2413,14 @@ class OcamlBuilder {
 					e.pos);
 			case TCall(callee, arguments) if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, e.t, representationRegistry)):
 				callPlanInvariant("admitted typed function-value call reached syntax without its sealed occurrence plan", e.pos);
+			case _ if (plannedReflectCompareValue != null):
+				buildPlannedReflectCompareFunction(plannedReflectCompareValue, e.pos);
+			case _ if (OcamlReflectComparePlan.isResolvedStandardCompare(e)):
+				final source = OcamlLoweredOrigin.sourceSpan(e.pos);
+				final available = currentReflectComparePlan == null ? [] : currentReflectComparePlan.decisions()
+					.map(decision -> '${decision.source.file}:${decision.source.min}:${decision.source.max}/${decision.domain}');
+				callPlanInvariant('a resolved Reflect.compare function value with type ${TypeTools.toString(e.t)} at ${source.file}:${source.min}:${source.max} reached syntax in ${currentFunctionPlanBinding == null ? "standalone-or-unbound" : currentFunctionPlanBinding.functionId} without its sealed comparison-domain plan; available=${available.join(",")}',
+					e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):
@@ -7348,6 +7429,7 @@ class OcamlBuilder {
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
+		final previousReflectComparePlan = currentReflectComparePlan;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
@@ -7358,6 +7440,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
+		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -7368,6 +7451,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
+		currentReflectComparePlan = previousReflectComparePlan;
 		return result;
 	}
 
@@ -7388,6 +7472,7 @@ class OcamlBuilder {
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
+		final previousReflectComparePlan = currentReflectComparePlan;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
@@ -7398,6 +7483,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
+		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -7408,6 +7494,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
+		currentReflectComparePlan = previousReflectComparePlan;
 		return result;
 	}
 
@@ -7599,6 +7686,7 @@ class OcamlBuilder {
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousCallPlan = currentCallPlan;
+		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousLoopDepth = loopDepth;
@@ -7619,6 +7707,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = functionPlan.bytesReads;
 		currentIMapInterfacePlan = functionPlan.imapInterfaces;
 		currentCallPlan = functionPlan.calls;
+		currentReflectComparePlan = functionPlan.reflectCompare;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		loopDepth = 0;
@@ -7789,6 +7878,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentCallPlan = previousCallPlan;
+		currentReflectComparePlan = previousReflectComparePlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		loopDepth = previousLoopDepth;

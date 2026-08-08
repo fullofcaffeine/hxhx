@@ -43,6 +43,8 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectComparePlanner;
 
 private typedef OcamlPlaceRuntimeFacts = {
 	final decisionId:String;
@@ -128,7 +130,8 @@ class OcamlFunctionPlanSealer {
 			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
 				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
 				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), imapInterfaces, new OcamlCallPlan([]), controls, callableBoundary,
-				functionResultBoundary, constructionBoundary, anonymousStructures, new OcamlStructuralFieldPlan([]), new OcamlArrayLiteralProducerPlan([]));
+				functionResultBoundary, constructionBoundary, anonymousStructures, new OcamlStructuralFieldPlan([]), new OcamlArrayLiteralProducerPlan([]),
+				new OcamlReflectComparePlan([]));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
@@ -146,6 +149,7 @@ class OcamlFunctionPlanSealer {
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
+		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
@@ -240,7 +244,7 @@ class OcamlFunctionPlanSealer {
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
-			structuralFields, arrayLiteralProducers);
+			structuralFields, arrayLiteralProducers, reflectCompare);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);

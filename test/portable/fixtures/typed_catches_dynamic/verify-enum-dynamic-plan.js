@@ -81,7 +81,7 @@ function inspect(outputDirectory) {
 const inspection = inspect('out')
 assert.equal(inspection.status, 0, `public inspection rejected the valid enum plan: ${inspection.stdout}${inspection.stderr}`)
 const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 42)
+assert.equal(inspectionReport.schemaVersion, 43)
 assert.equal(inspectionReport.lowering.localConversions.filter(entry => entry.conversion === 'box-exact-enum-to-dynamic').length,
 	enumConversions.length)
 

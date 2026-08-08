@@ -53,6 +53,9 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDe
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectComparePlanner;
 
 /** One validated target plan that is immutable after its function is sealed. */
 typedef OcamlSealedPlacePlan = {
@@ -84,6 +87,7 @@ typedef OcamlSealedFunctionPlan = {
 	final bytesReads:OcamlBytesReadPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final calls:OcamlCallPlan;
+	final reflectCompare:OcamlReflectComparePlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>;
@@ -140,6 +144,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
 	final bytesReads:OcamlBytesReadPlan;
+	final reflectCompare:OcamlReflectComparePlan;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -192,7 +197,7 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v76";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v77";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v11";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -230,6 +235,7 @@ class OcamlFunctionPlanRegistry {
 	final standaloneAnonymousStructuresById:StringMap<OcamlAnonymousStructureDecision> = new StringMap();
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 	final standaloneStructuralFieldsById:StringMap<OcamlStructuralFieldDecision> = new StringMap();
+	final standaloneReflectCompareById:StringMap<OcamlReflectCompareDecision> = new StringMap();
 
 	public function new() {}
 
@@ -254,6 +260,7 @@ class OcamlFunctionPlanRegistry {
 		standaloneAnonymousStructuresById.clear();
 		standaloneAnonymousOperationsById.clear();
 		standaloneStructuralFieldsById.clear();
+		standaloneReflectCompareById.clear();
 	}
 
 	/**
@@ -521,6 +528,7 @@ class OcamlFunctionPlanRegistry {
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(expression);
+		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(expression);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
@@ -534,9 +542,11 @@ class OcamlFunctionPlanRegistry {
 		bytesProducers.requireRepresentations(representations);
 		bytesReads.requirePlanBinding(binding);
 		bytesReads.requireRepresentations(representations);
+		reflectCompare.requirePlanBinding(binding);
 		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
 		recordStandaloneStructuralFields(structuralFields);
+		recordStandaloneReflectCompare(reflectCompare);
 		return {
 			binding: binding,
 			containerElements: containerElements,
@@ -545,8 +555,19 @@ class OcamlFunctionPlanRegistry {
 			bytesAccesses: bytesAccesses,
 			bytesMutations: bytesMutations,
 			bytesProducers: bytesProducers,
-			bytesReads: bytesReads
+			bytesReads: bytesReads,
+			reflectCompare: reflectCompare
 		};
+	}
+
+	/** Keeps report-safe comparison decisions from non-function roots. */
+	function recordStandaloneReflectCompare(plan:OcamlReflectComparePlan):Void {
+		for (decision in plan.decisions()) {
+			final existing = standaloneReflectCompareById.get(decision.id);
+			if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(decision))
+				throw 'reflaxe.ocaml [ocaml-reflect-compare:conflicting-standalone]: standalone decision "${decision.id}" changed within one request';
+			standaloneReflectCompareById.set(decision.id, decision);
+		}
 	}
 
 	/** Keeps report-safe structural-field decisions from non-function roots. */
@@ -630,6 +651,7 @@ class OcamlFunctionPlanRegistry {
 		plan.bytesProducers.requireRepresentations(representations);
 		plan.bytesReads.requirePlanBinding(expected);
 		plan.bytesReads.requireRepresentations(representations);
+		plan.reflectCompare.requirePlanBinding(expected);
 		return plan;
 	}
 
@@ -781,7 +803,7 @@ class OcamlFunctionPlanRegistry {
 			imapInterfaces:OcamlIMapInterfacePlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
 			functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
 			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan,
-			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan):Void {
+			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -796,6 +818,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedAnonymousStructures = anonymousStructures ?? new OcamlAnonymousStructurePlan([], []);
 		final sealedStructuralFields = structuralFields ?? new OcamlStructuralFieldPlan([]);
 		final sealedArrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
+		final sealedReflectCompare = reflectCompare ?? new OcamlReflectComparePlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
@@ -812,6 +835,7 @@ class OcamlFunctionPlanRegistry {
 			if (requiresDeclaredCallable(call))
 				requireCallableDeclaration(call);
 		}
+		sealedReflectCompare.requirePlanBinding(binding);
 		controls.requirePlanBinding(binding);
 		if (callableBoundary != null) {
 			registerCallableBoundary(callableBoundary, binding);
@@ -842,6 +866,7 @@ class OcamlFunctionPlanRegistry {
 				bytesReads: bytesReads,
 				imapInterfaces: imapInterfaces,
 				calls: calls,
+				reflectCompare: sealedReflectCompare,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
 				functionResultBoundary: functionResultBoundary == null ? null : OcamlFunctionResultBoundary.copy(functionResultBoundary),
@@ -995,6 +1020,24 @@ class OcamlFunctionPlanRegistry {
 		}
 		calls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return calls;
+	}
+
+	/** Returns every typed `Reflect.compare` decision in deterministic order. */
+	public function reflectCompareDecisions():Array<OcamlReflectCompareDecision> {
+		final byId:Map<String, OcamlReflectCompareDecision> = [];
+		for (decision in standaloneReflectCompareById)
+			byId.set(decision.id, decision);
+		for (record in sealedFunctions) {
+			for (decision in record.plan.reflectCompare.decisions()) {
+				final existing = byId.get(decision.id);
+				if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(decision))
+					throw 'reflaxe.ocaml [ocaml-reflect-compare:conflicting-report]: decision "${decision.id}" differs between sealed roots';
+				byId.set(decision.id, decision);
+			}
+		}
+		final out = [for (decision in byId) decision];
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
 	}
 
 	/** Returns every concrete-to-`IMap` conversion in deterministic identity order. */

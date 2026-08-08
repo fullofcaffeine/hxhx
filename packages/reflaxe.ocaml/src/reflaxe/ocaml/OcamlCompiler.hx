@@ -2759,9 +2759,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.structuralFieldDecisions(), functionPlanRegistry.localConversions(),
 				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
 				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.iMapInterfaceConversions(), functionPlanRegistry.iMapInterfaceCalls(),
-				functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(), functionPlanRegistry.functionResultBoundaries(),
-				functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(),
-				functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(), functionPlanRegistry.reflectCompareDecisions(),
+				functionPlanRegistry.functionResultBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
+				functionPlanRegistry.controlCatchChains(), functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(),
+				staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

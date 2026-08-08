@@ -13,6 +13,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionReflectCompare;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
@@ -83,7 +84,9 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v76";
+	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v1";
+	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v1:";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v77";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v11";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -115,7 +118,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 42,
+			schemaVersion: 43,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -148,6 +151,7 @@ class ReflaxeOcamlInspection {
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
+				reflectCompareCount: lowering.reflectCompare.length,
 				functionResultBoundaryCount: lowering.functionResultBoundaries.length,
 				controlCount: lowering.controls.length,
 				controlCatchCount: lowering.controlCatches.length,
@@ -219,6 +223,7 @@ class ReflaxeOcamlInspection {
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
+			lines.push('[PASS] Reflect.compare: ${report.lowering.reflectCompare.length} exact Int, Float, or String comparison${report.lowering.reflectCompare.length == 1 ? "" : "s"} selected before OCaml syntax.');
 			lines.push('[PASS] Function results: ${report.lowering.functionResultBoundaries.length} emitted function completion boundar${report.lowering.functionResultBoundaries.length == 1 ? "y" : "ies"} validated independently from call receivers and arguments.');
 			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
@@ -408,6 +413,8 @@ class ReflaxeOcamlInspection {
 					callRevision: null,
 					calls: [],
 					callableBoundaries: [],
+					reflectCompareRevision: null,
+					reflectCompare: [],
 					functionResultBoundaryRevision: null,
 					functionResultBoundaries: [],
 					controlRevision: null,
@@ -428,8 +435,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 65) {
-						throw 'Unsupported lowering report schema $version; expected 65.';
+					if (version != 66) {
+						throw 'Unsupported lowering report schema $version; expected 66.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -452,6 +459,7 @@ class ReflaxeOcamlInspection {
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
+					final reflectCompare = inspectReflectCompare(value);
 					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries,
 						anonymousStructures.structures);
 					final controlTargets = inspectControlTargets(value);
@@ -495,6 +503,8 @@ class ReflaxeOcamlInspection {
 						callRevision: requiredSha256Revision(value, "callRevision"),
 						calls: callInventory.calls,
 						callableBoundaries: callInventory.boundaries,
+						reflectCompareRevision: requiredSha256Revision(value, "reflectCompareRevision"),
+						reflectCompare: reflectCompare,
 						functionResultBoundaryRevision: requiredSha256Revision(value, "functionResultBoundaryRevision"),
 						functionResultBoundaries: functionResultBoundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
@@ -508,7 +518,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${reflectCompare.length} typed Reflect.compare decision${reflectCompare.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -1448,6 +1458,62 @@ class ReflaxeOcamlInspection {
 			&& decision.nominalTargetTypeName == nominal.targetTypeName
 			&& decision.nominalLayoutRevision == nominal.layoutRevision
 			&& decision.proofId == nominal.representationProofId;
+	}
+
+	/**
+		Validates the target's concrete `Reflect.compare` choices.
+
+		The report contains plain data chosen from final Haxe types. Inspection checks
+		that every entry names one admitted domain and the matching proof, so tooling
+		does not infer comparison behavior from generated OCaml text.
+	**/
+	static function inspectReflectCompare(value:Dynamic):Array<InspectionReflectCompare> {
+		if (requiredString(value, "reflectCompareModel") != REFLECT_COMPARE_MODEL)
+			throw "Unsupported Reflect.compare report model.";
+		final raw = requiredArray(value, "reflectCompare");
+		if (raw.length != requiredInt(value, "reflectCompareCount"))
+			throw "Reflect.compare count does not match its inventory.";
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		if (requiredSha256Revision(value, "reflectCompareRevision") != expectedRevision)
+			throw "Reflect.compare revision does not match its ordered decision inventory.";
+		final decisions = [for (entry in raw) reflectCompareDecision(entry)];
+		final ids:Map<String, Bool> = [];
+		for (decision in decisions) {
+			if (ids.exists(decision.id))
+				throw 'Reflect.compare report contains duplicate identity "${decision.id}".';
+			if (decision.sourceFile.length == 0 || decision.sourceMin < 0 || decision.sourceMax < decision.sourceMin)
+				throw 'Reflect.compare decision "${decision.id}" has an invalid source span.';
+			if (decision.domain != "int" && decision.domain != "float" && decision.domain != "string")
+				throw 'Reflect.compare decision "${decision.id}" has unsupported domain "${decision.domain}".';
+			if (decision.proofId != REFLECT_COMPARE_PROOF_ID_PREFIX + decision.domain || decision.proofClaim.length == 0)
+				throw 'Reflect.compare decision "${decision.id}" has an incomplete domain proof.';
+			if (decision.functionId.length == 0
+				|| decision.programRevision.length == 0
+				|| decision.bodyRevision.length == 0
+				|| (decision.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
+					&& decision.pipelineRevision != STANDALONE_EXPRESSION_PIPELINE_REVISION))
+				throw 'Reflect.compare decision "${decision.id}" has an invalid plan binding.';
+			ids.set(decision.id, true);
+		}
+		decisions.sort((left, right) -> compareStrings(left.id, right.id));
+		return decisions;
+	}
+
+	static function reflectCompareDecision(value:Dynamic):InspectionReflectCompare {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			domain: requiredString(value, "domain"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
 	}
 
 	static function inspectCalls(value:Dynamic,
@@ -3836,6 +3902,8 @@ class ReflaxeOcamlInspection {
 			callRevision: null,
 			calls: [],
 			callableBoundaries: [],
+			reflectCompareRevision: null,
+			reflectCompare: [],
 			functionResultBoundaryRevision: null,
 			functionResultBoundaries: [],
 			controlRevision: null,

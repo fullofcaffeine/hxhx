@@ -601,6 +601,21 @@ typedef InspectionCallableBoundary = {
 	final pipelineRevision:String;
 }
 
+/** One concrete standard comparison selected from the final typed Haxe input. */
+typedef InspectionReflectCompare = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final domain:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /**
 	One emitted function's completed result, independent of receiver or arguments.
 
@@ -814,6 +829,8 @@ typedef InspectionLowering = {
 	final callRevision:Null<String>;
 	final calls:Array<InspectionCall>;
 	final callableBoundaries:Array<InspectionCallableBoundary>;
+	final reflectCompareRevision:Null<String>;
+	final reflectCompare:Array<InspectionReflectCompare>;
 	final functionResultBoundaryRevision:Null<String>;
 	final functionResultBoundaries:Array<InspectionFunctionResultBoundary>;
 	final controlRevision:Null<String>;
@@ -860,6 +877,7 @@ typedef InspectionSummary = {
 	final unsafeOperationCount:Int;
 	final callCount:Int;
 	final callableBoundaryCount:Int;
+	final reflectCompareCount:Int;
 	final functionResultBoundaryCount:Int;
 	final controlCount:Int;
 	final controlCatchCount:Int;
