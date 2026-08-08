@@ -868,6 +868,12 @@ let resize (a : 'a t) (new_len : int) : unit =
       | IntStore _ | FloatStore _ | StringStore _ -> failwith "HxArray invariant: expected ObjStore during grow-resize")
     )
 
+(** Sorts the live values without changing their OCaml array representation.
+
+    OCaml stores float arrays in a different memory layout from object arrays.
+    Copying raw values between those layouts can corrupt the OCaml heap.
+    Each branch therefore sorts and copies values within one storage layout.
+    The selected branch also proves the concrete type used by its comparator cast. *)
 let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
   match unwrap_or_empty a with
   | None -> ()
@@ -875,13 +881,12 @@ let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
     if a.length < 2 then
       ()
     else (
-      let slice = Stdlib.Array.init a.length (fun i -> Obj.repr (get a i)) in
-      Stdlib.Array.sort
-        (fun x y -> cmp (Obj.obj x) (Obj.obj y))
-        slice;
-      ensure_obj_store a |> ignore;
-      (match a.store with
+      match a.store with
       | ObjStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        Stdlib.Array.sort
+          (fun x y -> cmp (Obj.obj x) (Obj.obj y))
+          slice;
         Stdlib.Array.blit slice 0 data 0 a.length;
         let nulls = ref 0 in
         for i = 0 to a.length - 1 do
@@ -889,5 +894,19 @@ let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
         done;
         a.null_slots <- !nulls;
         promote_obj_store_if_possible a
-      | IntStore _ | FloatStore _ | StringStore _ -> failwith "HxArray invariant: expected ObjStore after ensure_obj_store")
+      | IntStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_ints : int -> int -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_ints slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
+      | FloatStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_floats : float -> float -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_floats slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
+      | StringStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_strings : string -> string -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_strings slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
     )
