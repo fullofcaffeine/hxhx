@@ -56,7 +56,7 @@ let unwrap__impl = fun (self : t) () -> (Obj.magic self : t).__nativeException
 
 let toString__impl = fun (self : t) () -> (Obj.magic self : t).get_message (Obj.magic self) ()
 
-let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
+let details__impl = fun (self : t) () -> (try (
   ignore (if (Obj.magic self : t).get_previous (Obj.magic self) () == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tmp = (Obj.magic self : t).get_stack (Obj.magic self) () in (
     ignore (if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("null" : string) in (
       tempRight := __assign_14;
@@ -105,17 +105,17 @@ let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
     )) done);
     !result
   )
-) in Obj.magic __fallback_result_31 with
-  | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30
+) with
+  | HxRuntime.Hx_return __ret_30 -> (Obj.obj __ret_30 : string) : string)
 
-let __shiftStack__impl = fun (self : t) () -> ignore (ignore (let __place_receiver_32 = self in let __place_old_33 = (__place_receiver_32 : t).__skipStack in let __place_new_34 = HxInt.add __place_old_33 1 in (
-  (__place_receiver_32 : t).__skipStack <- __place_new_34;
-  __place_old_33
+let __shiftStack__impl = fun (self : t) () -> ignore (ignore (let __place_receiver_31 = self in let __place_old_32 = (__place_receiver_31 : t).__skipStack in let __place_new_33 = HxInt.add __place_old_32 1 in (
+  (__place_receiver_31 : t).__skipStack <- __place_new_33;
+  __place_old_32
 )))
 
-let __unshiftStack__impl = fun (self : t) () -> ignore (ignore (let __place_receiver_35 = self in let __place_old_36 = (__place_receiver_35 : t).__skipStack in let __place_new_37 = HxInt.add __place_old_36 (-1) in (
-  (__place_receiver_35 : t).__skipStack <- __place_new_37;
-  __place_old_36
+let __unshiftStack__impl = fun (self : t) () -> ignore (ignore (let __place_receiver_34 = self in let __place_old_35 = (__place_receiver_34 : t).__skipStack in let __place_new_36 = HxInt.add __place_old_35 (-1) in (
+  (__place_receiver_34 : t).__skipStack <- __place_new_36;
+  __place_old_35
 )))
 
 let get_message__impl = fun (self : t) () -> (Obj.magic self : t).__exceptionMessage
@@ -125,15 +125,15 @@ let get_previous__impl = fun (self : t) () -> (Obj.magic self : t).__previousExc
 let get_native__impl = fun (self : t) () -> (Obj.magic self : t).__nativeException
 
 let get_stack__impl = fun (self : t) () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Haxe_CallStack.stackitem HxArray.t) in (
-  ignore (let _g = (Obj.magic self : t).__exceptionStack in if _g == Obj.magic (HxRuntime.hx_null) then let __assign_38 = let __assign_39 = Haxe_NativeStackTrace.toHaxe ((Obj.magic self : t).__nativeStack) ((Obj.magic self : t).__skipStack) in (
-    (Obj.magic self : t).__exceptionStack <- __assign_39;
-    __assign_39
-  ) in (
-    tempResult := __assign_38;
+  ignore (let _g = (Obj.magic self : t).__exceptionStack in if _g == Obj.magic (HxRuntime.hx_null) then let __assign_37 = let __assign_38 = Haxe_NativeStackTrace.toHaxe ((Obj.magic self : t).__nativeStack) ((Obj.magic self : t).__skipStack) in (
+    (Obj.magic self : t).__exceptionStack <- __assign_38;
     __assign_38
-  ) else let s = _g in let __assign_40 = s in (
-    tempResult := __assign_40;
-    __assign_40
+  ) in (
+    tempResult := __assign_37;
+    __assign_37
+  ) else let s = _g in let __assign_39 = s in (
+    tempResult := __assign_39;
+    __assign_39
   ));
   !tempResult
 )
@@ -190,32 +190,32 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.Exception"; message = HxString.hx_null_string; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = HxString.hx_null_string; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t)
 
 let caught = fun value -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : t) in (
-  ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_41 = Obj.magic (Obj.obj value) in (
-    tempResult := __assign_41;
-    __assign_41
+  ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_40 = Obj.magic (Obj.obj value) in (
+    tempResult := __assign_40;
+    __assign_40
   ) else let tempString = ref (HxString.hx_null_string : string) in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_42 = ("null" : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_41 = ("null" : string) in (
+      tempString := __assign_41;
+      __assign_41
+    ) else let __assign_42 = (HxDynamic.toStdString value : string) in (
       tempString := __assign_42;
       __assign_42
-    ) else let __assign_43 = (HxDynamic.toStdString value : string) in (
-      tempString := __assign_43;
-      __assign_43
     ));
-    let __assign_44 = Obj.magic (create (!tempString : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) value) in (
-      tempResult := __assign_44;
-      __assign_44
+    let __assign_43 = Obj.magic (create (!tempString : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) value) in (
+      tempResult := __assign_43;
+      __assign_43
     )
   ));
   !tempResult
 )
 
 let thrown = fun value -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_45 = Obj.magic (let __obj_46 = Obj.obj value in (Obj.magic __obj_46 : t).get_native (Obj.magic __obj_46) ()) in (
-    tempResult := __assign_45;
-    __assign_45
-  ) else let __assign_47 = Obj.magic value in (
-    tempResult := __assign_47;
-    __assign_47
+  ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_44 = Obj.magic (let __obj_45 = Obj.obj value in (Obj.magic __obj_45 : t).get_native (Obj.magic __obj_45) ()) in (
+    tempResult := __assign_44;
+    __assign_44
+  ) else let __assign_46 = Obj.magic value in (
+    tempResult := __assign_46;
+    __assign_46
   ));
   Obj.magic (!tempResult)
 )

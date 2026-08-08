@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable b : int HxArray.t }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = Obj.magic (HxRuntime.hx_null) } : t) in (
-  ignore (ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
+  ignore (ignore (let __assign_1 = Obj.magic (let __represented_array_2 = HxArray.create () in __represented_array_2) in (
     (Obj.magic self : t).b <- __assign_1;
     __assign_1
   )));

@@ -17,7 +17,7 @@ let flush__impl = fun (self : t) () -> ignore (ignore (HxFileStream.flush_out ((
 
 let writeByte__impl = fun (self : t) (c : int) -> ignore (ignore (HxFileStream.write_byte ((Obj.magic self : t).h) c))
 
-let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_7 = (
+let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> (try (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
@@ -26,22 +26,22 @@ let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) 
     ) in (Obj.magic self : t).writeByte (Obj.magic self) (let __bytes_access_receiver_4 = buf in let __bytes_access_arg_0_5 = HxInt.add pos i in HxBytes.get __bytes_access_receiver_4 __bytes_access_arg_0_5)) done);
     len
   )
-) in Obj.magic __fallback_result_7 with
-  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6
+) with
+  | HxRuntime.Hx_return __ret_6 -> (Obj.obj __ret_6 : int) : int)
 
 let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (ignore (let tempNumber = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_8 = 0 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_7 = 0 in (
+      tempNumber := __assign_7;
+      __assign_7
+    )
+    | Sys_io_FileSeek.SeekCur -> let __assign_8 = 1 in (
       tempNumber := __assign_8;
       __assign_8
     )
-    | Sys_io_FileSeek.SeekCur -> let __assign_9 = 1 in (
+    | Sys_io_FileSeek.SeekEnd -> let __assign_9 = 2 in (
       tempNumber := __assign_9;
       __assign_9
-    )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_10 = 2 in (
-      tempNumber := __assign_10;
-      __assign_10
     ));
   HxFileStream.seek_out ((Obj.magic self : t).h) p (!tempNumber)
 )))
@@ -60,17 +60,17 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileOutput"; bigEnd
 
 let seekKind = fun pos -> let tempResult = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_11 = 0 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_10 = 0 in (
+      tempResult := __assign_10;
+      __assign_10
+    )
+    | Sys_io_FileSeek.SeekCur -> let __assign_11 = 1 in (
       tempResult := __assign_11;
       __assign_11
     )
-    | Sys_io_FileSeek.SeekCur -> let __assign_12 = 1 in (
+    | Sys_io_FileSeek.SeekEnd -> let __assign_12 = 2 in (
       tempResult := __assign_12;
       __assign_12
-    )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_13 = 2 in (
-      tempResult := __assign_13;
-      __assign_13
     ));
   !tempResult
 )

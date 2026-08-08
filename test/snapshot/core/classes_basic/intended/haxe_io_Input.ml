@@ -33,7 +33,7 @@ let readByte__impl = fun (self : t) () -> (
 let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> let pos = ref pos in (
   ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > (let __bytes_receiver_4 = s in HxBytes.length __bytes_receiver_4) then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
   let k = ref len in (
-    ignore (try while !k > 0 do ignore ((
+    ignore (try ignore (while !k > 0 do ignore ((
       ignore (let __bytes_access_receiver_5 = s in let __bytes_access_arg_0_6 = !pos in let __bytes_access_arg_1_7 = (Obj.magic self : t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_5 __bytes_access_arg_0_6 __bytes_access_arg_1_7);
       ignore (let __old_8 = !pos in let __new_9 = HxInt.add __old_8 1 in (
         ignore (pos := __new_9);
@@ -43,18 +43,18 @@ let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> 
         ignore (k := __new_11);
         __old_10
       )
-    )) done with
+    )) done) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_12 -> raise (HxRuntime.Hx_return __ret_12)
       | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_13, __exn_tags_14) -> if HxRuntime.tags_has __exn_tags_14 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_13 : Haxe_io_Eof.t) in (
         ignore _hx;
-        ()
+        ignore ()
       ) else HxRuntime.hx_throw_typed __exn_v_13 __exn_tags_14
       | __exn_15 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_15) : Haxe_io_Eof.t) in (
         ignore _hx;
-        ()
+        ignore ()
       ) else raise (__exn_15));
     HxInt.sub len (!k)
   )
@@ -114,7 +114,7 @@ let readUntil__impl = fun (self : t) (hx_end : int) -> let buf = Obj.magic (Haxe
 )
 
 let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuffer.create ()) in let last = ref (0 : int) in let s = ref (HxString.hx_null_string : string) in (
-  ignore (try (
+  ignore (try ignore ((
     ignore (try while true do try ignore ((
       ignore (let __assign_21 = (Obj.magic self : t).readByte (Obj.magic self) () in (
         last := __assign_21;
@@ -133,30 +133,30 @@ let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuff
       s := __assign_25;
       __assign_25
     )) else ()
-  ) with
+  )) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_26 -> raise (HxRuntime.Hx_return __ret_26)
     | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_27, __exn_tags_28) -> if HxRuntime.tags_has __exn_tags_28 "haxe.io.Eof" then let e = (Obj.obj __exn_v_27 : Haxe_io_Eof.t) in (
       ignore e;
-      (
+      ignore ((
         ignore (let __assign_29 = (let __bytes_receiver_30 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_30 () : string) in (
           s := __assign_29;
           __assign_29
         ));
         if HxString.length (!s) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.io.Eof"]) else ()
-      )
+      ))
     ) else HxRuntime.hx_throw_typed __exn_v_27 __exn_tags_28
     | __exn_31 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let e = (Obj.obj (Obj.repr __exn_31) : Haxe_io_Eof.t) in (
       ignore e;
-      (
+      ignore ((
         ignore (let __assign_32 = (let __bytes_receiver_33 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_33 () : string) in (
           s := __assign_32;
           __assign_32
         ));
         if HxString.length (!s) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.io.Eof"]) else ()
-      )
+      ))
     ) else raise (__exn_31));
   !s
 )

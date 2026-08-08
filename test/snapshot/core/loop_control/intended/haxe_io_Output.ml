@@ -88,21 +88,21 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     tempNumber := __assign_13;
     __assign_13
   ));
-  let size = !tempNumber in let buf = Obj.magic (HxBytes.alloc size) in try while true do ignore (let len = (Obj.magic i : Haxe_io_Input.t).readBytes (Obj.magic i) (Obj.magic buf) 0 size in (
+  let size = !tempNumber in let buf = Obj.magic (HxBytes.alloc size) in try ignore (while true do ignore (let len = (Obj.magic i : Haxe_io_Input.t).readBytes (Obj.magic i) (Obj.magic buf) 0 size in (
     ignore (if len = 0 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Blocked))) ["Dynamic"; "haxe.io.Error"]) else ());
     (Obj.magic self : t).writeFullBytes (Obj.magic self) (Obj.magic buf) 0 len
-  )) done with
+  )) done) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_15 -> raise (HxRuntime.Hx_return __ret_15)
     | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_16, __exn_tags_17) -> if HxRuntime.tags_has __exn_tags_17 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_16 : Haxe_io_Eof.t) in (
       ignore _hx;
-      ()
+      ignore ()
     ) else HxRuntime.hx_throw_typed __exn_v_16 __exn_tags_17
     | __exn_18 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_18) : Haxe_io_Eof.t) in (
       ignore _hx;
-      ()
+      ignore ()
     ) else raise (__exn_18)
 )))
 

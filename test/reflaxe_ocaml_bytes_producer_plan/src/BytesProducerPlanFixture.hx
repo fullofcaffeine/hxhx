@@ -205,7 +205,8 @@ class BytesProducerPlanFixture {
 			bytesAccesses: firstStandalone.bytesAccesses,
 			bytesMutations: firstStandalone.bytesMutations,
 			bytesProducers: firstStandalone.bytesProducers,
-			bytesReads: firstStandalone.bytesReads
+			bytesReads: firstStandalone.bytesReads,
+			reflectCompare: firstStandalone.reflectCompare
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 
