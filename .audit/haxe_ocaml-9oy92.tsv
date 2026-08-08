@@ -1,0 +1,3 @@
+ts	phase	decision	why	evidence	result
+2026-08-08T18:49:52Z	frame	Confirmed the Bead is still unresolved on current main	Direct calls use HxReflect.compare, but the same function passed as Array.sort callback bypasses direct-call lowering	minimal native probe on 65b8a6751; generated Main.ml calls Reflect.compare; Dune reports Unbound module Reflect	task claimed; no active PR; runtime semantics held for numeric review
+2026-08-08T18:49:52Z	oracle	Recorded target-stable and target-variant upstream Haxe 4.3.7 behavior before implementation	The public API defines same-type numeric and string comparison but leaves several other orderings unspecified	interp, JavaScript, and Neko fixture with 19 cases	15 cases agree; NaN cases and null versus string vary on Neko
