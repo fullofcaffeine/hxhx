@@ -81,6 +81,15 @@ compiler checks when they materially slow iteration. Run those targeted heavy ch
 npm run test:m14:heavy
 ```
 
+The heavy compiler ring includes a stage0-free numeric-literal test. It builds
+the committed bootstrap compiler, generates JavaScript twice, and compares
+runtime behavior with upstream Haxe 4.3.7. Run the slower current-source form
+only when you need to qualify a freshly generated native compiler:
+
+```bash
+npm run test:m14:hih-complete-numeric-literals:current-source
+```
+
 Before running deeper compatibility gates, read:
 
 - `docs/02-user-guide/concepts/execution_modes.md`
