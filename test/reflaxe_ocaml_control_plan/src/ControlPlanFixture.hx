@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainOccurrence;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchClauseDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchEffect;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchInputChannel;
@@ -450,6 +451,23 @@ class ControlPlanFixture {
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
 			pipelineRevision: "typed-ocaml-function-plan-v33"
+		};
+	}
+
+	/** Builds one exact typed-try occurrence with detached branch-result rules. */
+	static function catchOccurrence(expression:TypedExpr, occurrenceId:String, source:OcamlLoweredSourceSpan, chainId:Null<String>,
+			?tryBodyResultPolicy:OcamlCatchBranchResultPolicy, ?clauseBodyResultPolicies:Array<OcamlCatchBranchResultPolicy>):OcamlCatchChainOccurrence {
+		final catchCount = switch (expression.expr) {
+			case TTry(_, catches): catches.length;
+			case _: throw "The catch occurrence fixture requires a typed try expression";
+		};
+		return {
+			expression: expression,
+			occurrenceId: occurrenceId,
+			source: source,
+			chainId: chainId,
+			tryBodyResultPolicy: tryBodyResultPolicy ?? OcamlCatchBranchResultPolicy.PreserveTypedResult,
+			clauseBodyResultPolicies: clauseBodyResultPolicies ?? [for (_ in 0...catchCount) OcamlCatchBranchResultPolicy.PreserveTypedResult]
 		};
 	}
 
@@ -1182,55 +1200,49 @@ class ControlPlanFixture {
 			min: 300,
 			max: 380
 		};
+		final exactCatchPolicies = exactCatchChain.clauses.map(clause -> clause.bodyResultPolicy);
 		final indexedCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:exact",
-				source: typedCatchSource,
-				chainId: exactCatchChain.id
-			}
+			catchOccurrence(typedTries[0], "control-catch-occurrence:exact", typedCatchSource, exactCatchChain.id, exactCatchChain.tryBodyResultPolicy,
+				exactCatchPolicies)
 		]);
 		if (!indexedCatch.hasCatchDispositionFor(typedTries[0]) || indexedCatch.catchChainFor(typedTries[0])?.id != exactCatchChain.id)
 			throw "The typed catch occurrence did not resolve its exact source-ordered chain";
+		final exactResults = indexedCatch.catchBranchResultDispositionFor(typedTries[0]);
+		if (exactResults.clauseBodyResultPolicies.length != exactCatchChain.clauses.length
+			|| exactResults.tryBodyResultPolicy != exactCatchChain.tryBodyResultPolicy)
+			throw "The typed catch occurrence lost its branch-result policies";
+		expectThrows("stale-catch-result-policy", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
+			catchOccurrence(typedTries[0], "control-catch-occurrence:stale-results", typedCatchSource, exactCatchChain.id,
+				OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit, exactCatchPolicies)
+		]));
+		expectThrows("invalid-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
+			catchOccurrence(typedTries[0], "control-catch-occurrence:missing-results", typedCatchSource, null,
+				OcamlCatchBranchResultPolicy.PreserveTypedResult, [])
+		]));
 		final indexedLegacyCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:legacy",
-				source: typedCatchSource,
-				chainId: null
-			}
+			catchOccurrence(typedTries[0], "control-catch-occurrence:legacy", typedCatchSource, null,
+				OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit, [
+					for (_ in 0...exactCatchChain.clauses.length)
+						OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit
+				])
 		]);
 		if (!indexedLegacyCatch.hasCatchDispositionFor(typedTries[0]) || indexedLegacyCatch.catchChainFor(typedTries[0]) != null)
 			throw "An explicit legacy catch disposition became an admitted chain";
+		final legacyResults = indexedLegacyCatch.catchBranchResultDispositionFor(typedTries[0]);
+		if (legacyResults.tryBodyResultPolicy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit
+			|| Lambda.exists(legacyResults.clauseBodyResultPolicies, policy -> policy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit))
+			throw "An explicit legacy catch disposition lost its sealed Void result policies";
 		expectThrows("missing-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:legacy-only",
-				source: typedCatchSource,
-				chainId: null
-			}
+			catchOccurrence(typedTries[0], "control-catch-occurrence:legacy-only", typedCatchSource, null)
 		]));
 		expectThrows("duplicate-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:duplicate",
-				source: typedCatchSource,
-				chainId: exactCatchChain.id
-			},
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:duplicate",
-				source: typedCatchSource,
-				chainId: exactCatchChain.id
-			}
+			catchOccurrence(typedTries[0], "control-catch-occurrence:duplicate", typedCatchSource, exactCatchChain.id, exactCatchChain.tryBodyResultPolicy,
+				exactCatchPolicies),
+			catchOccurrence(typedTries[0], "control-catch-occurrence:duplicate", typedCatchSource, exactCatchChain.id, exactCatchChain.tryBodyResultPolicy,
+				exactCatchPolicies)
 		]));
 		expectThrows("missing-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
-			{
-				expression: typedTries[0],
-				occurrenceId: "control-catch-occurrence:missing-chain",
-				source: typedCatchSource,
-				chainId: "control-catch-chain:missing"
-			}
+			catchOccurrence(typedTries[0], "control-catch-occurrence:missing-chain", typedCatchSource, "control-catch-chain:missing")
 		]));
 
 		expectThrows("missing-target", () -> new OcamlControlPlan(false, true, false, binding(), [], [loopBreak]));
@@ -1690,25 +1702,16 @@ class ControlPlanFixture {
 		expectThrows("stale-catch-chain",
 			() -> new OcamlControlPlan(true, true, true, caughtBinding, [], [caughtDecision], [], [{expression: caughtReturn, decisionId: caughtDecision.id}],
 				[foreignCaughtChain], [
-				{
-					expression: caughtTry,
-					occurrenceId: "catch-occurrence:nested-foreign",
-					source: OcamlLoweredOrigin.sourceSpan(caughtTry.pos),
-					chainId: foreignCaughtChain.id
-				}
-			]));
+					catchOccurrence(caughtTry, "catch-occurrence:nested-foreign", OcamlLoweredOrigin.sourceSpan(caughtTry.pos), foreignCaughtChain.id,
+						foreignCaughtChain.tryBodyResultPolicy, foreignCaughtChain.clauses.map(clause -> clause.bodyResultPolicy))
+				]));
 		// An observed nested try with no admitted chain is a deliberate legacy
 		// disposition. The registry must reject it now that nested catches are
 		// allowed, rather than confusing "observed" with "fully represented".
 		final caughtControls = new OcamlControlPlan(true, true, true, caughtBinding, [], [caughtDecision], [],
 			[{expression: caughtReturn, decisionId: caughtDecision.id}], [], [
-			{
-				expression: caughtTry,
-				occurrenceId: "catch-occurrence:nested-caught",
-				source: OcamlLoweredOrigin.sourceSpan(caughtTry.pos),
-				chainId: null
-			}
-		]);
+				catchOccurrence(caughtTry, "catch-occurrence:nested-caught", OcamlLoweredOrigin.sourceSpan(caughtTry.pos), null)
+			]);
 		final caughtPlan:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: caughtIdentities.requireFunctionOccurrence(caughtExpression).id,
 			parentBinding: caughtParent,

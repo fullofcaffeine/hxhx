@@ -4599,9 +4599,15 @@ class OcamlBuilder {
 				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tagExpr]);
 			case TTry(tryExpr, catches):
+				var branchResultDisposition:Null<reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultDisposition> = null;
 				if (currentControlPlan != null) {
 					if (!currentControlPlan.hasCatchDispositionFor(e))
 						return controlPlanInvariant("a typed try reached syntax without an explicit admitted or legacy catch disposition", e.pos);
+					branchResultDisposition = try {
+						currentControlPlan.catchBranchResultDispositionFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
 					final catchChain = try {
 						currentControlPlan.catchChainFor(e);
 					} catch (error:Dynamic) {
@@ -4611,9 +4617,12 @@ class OcamlBuilder {
 						return buildPlannedCatchChain(catchChain, tryExpr, catches, e.pos);
 				}
 				if (catches.length == 0) {
-					buildExpr(tryExpr);
-				} else {
 					final builtTry = buildExpr(tryExpr);
+					branchResultDisposition == null ? builtTry : applyCatchBranchResultPolicy(branchResultDisposition.tryBodyResultPolicy, builtTry,
+						branchResultDisposition.occurrenceId, e.pos);
+				} else {
+					final builtTry = branchResultDisposition == null ? buildExpr(tryExpr) : applyCatchBranchResultPolicy(branchResultDisposition.tryBodyResultPolicy,
+						buildExpr(tryExpr), branchResultDisposition.occurrenceId, e.pos);
 
 					inline function isDynamicCatchType(t:Type):Bool {
 						return switch (followNoAbstracts(t)) {
@@ -4684,6 +4693,11 @@ class OcamlBuilder {
 							}
 
 							var body = buildExpr(c.expr);
+							if (branchResultDisposition != null) {
+								final sourceIndex = catches.length - 1 - i;
+								body = applyCatchBranchResultPolicy(branchResultDisposition.clauseBodyResultPolicies[sourceIndex], body,
+									branchResultDisposition.occurrenceId + ":clause:" + sourceIndex, e.pos);
+							}
 							final boundValue:OcamlExpr = if (isDynamic) {
 								valueExpr;
 							} else if (isHaxeException) {

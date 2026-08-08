@@ -343,6 +343,21 @@ typedef OcamlCatchChainOccurrence = {
 	final occurrenceId:String;
 	final source:OcamlLoweredSourceSpan;
 	final chainId:Null<String>;
+	final tryBodyResultPolicy:OcamlCatchBranchResultPolicy;
+	final clauseBodyResultPolicies:Array<OcamlCatchBranchResultPolicy>;
+}
+
+/**
+	How every completed branch of one exact typed `try` reaches its result type.
+
+	This record remains available when catch matching still uses the older path.
+	The OCaml syntax builder may consume these policies, but it cannot infer them
+	from target expressions or change which catch clause receives an exception.
+**/
+typedef OcamlCatchBranchResultDisposition = {
+	final occurrenceId:String;
+	final tryBodyResultPolicy:OcamlCatchBranchResultPolicy;
+	final clauseBodyResultPolicies:Array<OcamlCatchBranchResultPolicy>;
 }
 
 /**
@@ -404,6 +419,7 @@ class OcamlControlPlan {
 	final decisionIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
 	final catchChainIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
 	final catchDispositionByExpression:ObjectMap<TypedExpr, Bool> = new ObjectMap();
+	final catchBranchResultsByExpression:ObjectMap<TypedExpr, OcamlCatchBranchResultDisposition> = new ObjectMap();
 	final hasOccurrenceIndex:Bool;
 	final hasCatchOccurrenceIndex:Bool;
 	final catchOccurrenceFingerprints:Array<String>;
@@ -539,30 +555,51 @@ class OcamlControlPlan {
 		final indexedCatchOccurrenceIds:Map<String, Bool> = [];
 		final normalizedCatchOccurrenceFingerprints:Array<String> = [];
 		for (occurrence in catchOccurrences ?? []) {
+			final catchCount = switch (occurrence.expression.expr) {
+				case TTry(_, catches): catches.length;
+				case _: -1;
+			};
 			if (occurrence.occurrenceId.length == 0
 				|| occurrence.source.file.length == 0
 				|| occurrence.source.min < 0
-				|| occurrence.source.max < occurrence.source.min) {
-				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-occurrence]: typed try occurrence has incomplete stable identity or source';
+				|| occurrence.source.max < occurrence.source.min
+				|| catchCount < 0
+				|| !isCatchBranchResultPolicy(occurrence.tryBodyResultPolicy)
+				|| occurrence.clauseBodyResultPolicies.length != catchCount
+				|| Lambda.exists(occurrence.clauseBodyResultPolicies, policy -> !isCatchBranchResultPolicy(policy))) {
+				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-occurrence]: typed try occurrence has incomplete identity, source, or branch-result policies';
 			}
 			if (indexedCatchOccurrenceIds.exists(occurrence.occurrenceId))
 				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-occurrence]: catch occurrence "${occurrence.occurrenceId}" appears more than once';
 			if (catchDispositionByExpression.exists(occurrence.expression))
 				throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-occurrence]: one typed try node has more than one admitted or legacy disposition';
 			if (occurrence.chainId != null) {
-				if (!catchChainsById.exists(occurrence.chainId))
+				final chain = catchChainsById.get(occurrence.chainId);
+				if (chain == null)
 					throw 'reflaxe.ocaml [ocaml-control:missing-catch-occurrence]: typed try occurrence refers to missing catch chain "${occurrence.chainId}"';
+				if (chain.tryBodyResultPolicy != occurrence.tryBodyResultPolicy
+					|| chain.clauses.length != occurrence.clauseBodyResultPolicies.length
+					|| Lambda.exists(chain.clauses, clause -> clause.bodyResultPolicy != occurrence.clauseBodyResultPolicies[clause.order])) {
+					throw 'reflaxe.ocaml [ocaml-control:stale-catch-result-policy]: admitted catch chain "${occurrence.chainId}" disagrees with its typed occurrence result policies';
+				}
 				if (indexedCatchChainIds.exists(occurrence.chainId))
 					throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-occurrence]: catch chain "${occurrence.chainId}" is indexed by more than one typed occurrence';
 				catchChainIdByExpression.set(occurrence.expression, occurrence.chainId);
 				indexedCatchChainIds.set(occurrence.chainId, true);
 			}
 			catchDispositionByExpression.set(occurrence.expression, true);
+			catchBranchResultsByExpression.set(occurrence.expression, {
+				occurrenceId: occurrence.occurrenceId,
+				tryBodyResultPolicy: occurrence.tryBodyResultPolicy,
+				clauseBodyResultPolicies: occurrence.clauseBodyResultPolicies.copy()
+			});
 			indexedCatchOccurrenceIds.set(occurrence.occurrenceId, true);
 			normalizedCatchOccurrenceFingerprints.push([
 				occurrence.occurrenceId,
 				sourceKey(occurrence.source),
-				occurrence.chainId ?? "legacy-catch-chain"
+				occurrence.chainId ?? "legacy-catch-chain",
+				(occurrence.tryBodyResultPolicy : String),
+				occurrence.clauseBodyResultPolicies.map(policy -> (policy : String)).join(",")
 			].join("|"));
 		}
 		normalizedCatchOccurrenceFingerprints.sort(Reflect.compare);
@@ -745,6 +782,26 @@ class OcamlControlPlan {
 		if (matching.length > 1)
 			throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-source]: ${matching.length} sealed catch chains match one typed try at ${sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))}';
 		return matching.length == 0 ? null : copyCatchChain(matching[0]);
+	}
+
+	/**
+		Returns the result policies already selected from the final typed `try`.
+
+		Catch matching may still be on the older path, but both paths must use this
+		same record when deciding whether a completed branch value is preserved or
+		discarded as Haxe `Void`.
+	**/
+	public function catchBranchResultDispositionFor(expression:TypedExpr):OcamlCatchBranchResultDisposition {
+		if (!hasCatchOccurrenceIndex || !catchDispositionByExpression.exists(expression))
+			throw 'reflaxe.ocaml [ocaml-control:missing-catch-result-policy]: typed try occurrence has no sealed branch-result policies';
+		final disposition = catchBranchResultsByExpression.get(expression);
+		if (disposition == null)
+			throw 'reflaxe.ocaml [ocaml-control:missing-catch-result-policy]: typed try occurrence lost its sealed branch-result policies';
+		return {
+			occurrenceId: disposition.occurrenceId,
+			tryBodyResultPolicy: disposition.tryBodyResultPolicy,
+			clauseBodyResultPolicies: disposition.clauseBodyResultPolicies.copy()
+		};
 	}
 
 	/** Whether the planner explicitly classified this exact typed `try` node. */
@@ -2149,6 +2206,8 @@ class OcamlControlPlanner {
 				case TTry(tryExpression, catches):
 					final trySource = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final catchOccurrenceIdentity = catchOccurrenceId(path);
+					final tryBodyResultPolicy = catchBranchResultPolicy(expression.t, tryExpression);
+					final clauseBodyResultPolicies = catches.map(entry -> catchBranchResultPolicy(expression.t, entry.expr));
 					final catchBlockers:Array<OcamlControlAdmissionBlocker> = [];
 					if (catches.length == 0) {
 						catchBlockers.push(OcamlControlAdmissionContract.blocker("catch-chain-empty", catchOccurrenceIdentity, trySource));
@@ -2197,7 +2256,7 @@ class OcamlControlPlanner {
 							runtimeTag: selected.runtimeTag,
 							conversion: selected.conversion,
 							nominalRepresentation: selected.nominalRepresentation,
-							bodyResultPolicy: catchBranchResultPolicy(expression.t, entry.expr),
+							bodyResultPolicy: clauseBodyResultPolicies[index],
 							effects: [
 								OcamlCatchEffect.SelectFirstMatchingClause,
 								OcamlCatchEffect.BindCatchVariable,
@@ -2220,7 +2279,7 @@ class OcamlControlPlanner {
 							id: chainId,
 							source: trySource,
 							clauses: clauses,
-							tryBodyResultPolicy: catchBranchResultPolicy(expression.t, tryExpression),
+							tryBodyResultPolicy: tryBodyResultPolicy,
 							inputChannels: [
 								OcamlCatchInputChannel.HaxeExceptionSignal,
 								OcamlCatchInputChannel.TargetNativeException
@@ -2245,7 +2304,9 @@ class OcamlControlPlanner {
 						expression: expression,
 						occurrenceId: catchOccurrenceIdentity,
 						source: trySource,
-						chainId: admittedChainId
+						chainId: admittedChainId,
+						tryBodyResultPolicy: tryBodyResultPolicy,
+						clauseBodyResultPolicies: clauseBodyResultPolicies
 					});
 					catchAdmissions.push({
 						occurrenceId: catchOccurrenceIdentity,

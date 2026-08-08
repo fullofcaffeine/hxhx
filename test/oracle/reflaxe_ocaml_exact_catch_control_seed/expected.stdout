@@ -1,1 +1,1 @@
-ordered=true,exactFirst=41,string=boom,nullString=dynamic,propagate=41,rethrow=42,independent=bool:true|string:ok,callback=callback,directBool=0,valueResult=kept
+ordered=true,exactFirst=41,string=boom,nullString=dynamic,propagate=41,rethrow=42,independent=bool:true|string:ok,callback=callback,legacyVoid=io-error,directBool=0,valueResult=kept

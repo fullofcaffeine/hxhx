@@ -54,4 +54,4 @@ if ! grep -q "This block is unreachable" "$OUT_DIR/invalid-dynamic-first.stderr"
 	exit 1
 fi
 
-echo "REFLAXE_OCAML_EXACT_CATCH_ORACLE:PASS routes=3 cases=11"
+echo "REFLAXE_OCAML_EXACT_CATCH_ORACLE:PASS routes=3 cases=12"

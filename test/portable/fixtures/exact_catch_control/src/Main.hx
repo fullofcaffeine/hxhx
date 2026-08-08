@@ -151,6 +151,31 @@ class Main {
 	}
 
 	/**
+	 * Repeats the production output-transaction catch order.
+	 *
+	 * `haxe.io.Error` is not yet part of the exact catch-matching plan, so this
+	 * chain deliberately uses the older matching path. Its already-known `Void`
+	 * branch-result rule must still reach generated syntax.
+	 */
+	static function captureProductionTypes(action:() -> Void, problems:Array<String>):Void {
+		try {
+			action();
+		} catch (_:haxe.io.Error) {
+			problems.push("io-error");
+		} catch (_:haxe.Exception) {
+			problems.push("wrong-exception");
+		} catch (message:String) {
+			problems.push(message);
+		}
+	}
+
+	static function legacyVoidResult():String {
+		final problems = new Array<String>();
+		captureProductionTypes(() -> throw haxe.io.Error.Custom("legacy"), problems);
+		return "legacyVoid=" + problems.join("|");
+	}
+
+	/**
 	 * Leaves a Boolean-returning call at the end of a direct `Void` catch.
 	 *
 	 * This complements `capture`: the result-discard rule belongs to the typed
@@ -194,6 +219,7 @@ class Main {
 			independentAdmission(),
 			targetNativeFailure(),
 			callbackVoidResult(),
+			legacyVoidResult(),
 			directVoidResult(),
 			valueProducingCatch()
 		].join(","));

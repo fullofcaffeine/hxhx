@@ -72,7 +72,7 @@ for (const chain of catches) {
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
 		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v75'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v76'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -175,6 +175,14 @@ if (callbackStart < 0
 	|| callbackEnd < 0
 	|| !callbackBody.includes('ignore (HxArray.push')) {
 	fail('the Void callback catch did not discard Array.push\'s generated integer result')
+}
+const legacyVoidStart = source.indexOf('let captureProductionTypes =')
+const legacyVoidEnd = source.indexOf('\nlet legacyVoidResult =', legacyVoidStart)
+const legacyVoidBody = source.slice(legacyVoidStart, legacyVoidEnd)
+if (legacyVoidStart < 0
+	|| legacyVoidEnd < 0
+	|| !legacyVoidBody.includes('ignore (HxArray.push')) {
+	fail('the legacy-matched Void catch did not consume its planned Array.push result policy')
 }
 const directVoidStart = source.indexOf('let discardBoolFromCatch =')
 const directVoidEnd = source.indexOf('\nlet directVoidResult =', directVoidStart)

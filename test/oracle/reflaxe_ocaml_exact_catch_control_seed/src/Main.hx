@@ -135,6 +135,30 @@ class Main {
 		return "callback=" + problems.join("|");
 	}
 
+	/**
+	 * Uses the same typed catch order as the hxhx output transaction.
+	 *
+	 * The enum catch ends in `Array.push`, whose integer result is ignored
+	 * because the callback and this function both return `Void`.
+	 */
+	static function captureProductionTypes(action:() -> Void, problems:Array<String>):Void {
+		try {
+			action();
+		} catch (_:haxe.io.Error) {
+			problems.push("io-error");
+		} catch (_:haxe.Exception) {
+			problems.push("wrong-exception");
+		} catch (message:String) {
+			problems.push(message);
+		}
+	}
+
+	static function legacyVoidResult():String {
+		final problems = new Array<String>();
+		captureProductionTypes(() -> throw haxe.io.Error.Custom("legacy"), problems);
+		return "legacyVoid=" + problems.join("|");
+	}
+
 	/** A Boolean-returning call at the end of a `Void` catch is discarded. */
 	static function discardBoolFromCatch(values:Array<Int>):Void {
 		try {
@@ -173,6 +197,7 @@ class Main {
 			rethrow(),
 			independentChains(),
 			callbackVoidResult(),
+			legacyVoidResult(),
 			directVoidResult(),
 			valueProducingCatch()
 		].join(","));
