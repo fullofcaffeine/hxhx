@@ -6,6 +6,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldContra
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlKeyValueTupleProjectionTarget;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralField;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
 
@@ -84,6 +85,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 			runtimeModule: requiredString(value, "runtimeModule"),
 			runtimeOperation: requiredString(value, "runtimeOperation"),
 			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: runtimeUseOccurrences(value),
 			evaluationSchedule: requiredStringArray(value, "evaluationSchedule"),
 			iteratorTarget: rawIteratorTarget == null ? null : iteratorTarget(requiredObject(value, "iteratorTarget")),
 			keyValueTupleTarget: rawTupleTarget == null ? null : keyValueTupleTarget(requiredObject(value, "keyValueTupleTarget")),
@@ -94,6 +96,31 @@ class ReflaxeOcamlStructuralFieldInspection {
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
 		};
+	}
+
+	static function runtimeUseOccurrences(value:Dynamic):Array<OcamlRuntimeUseOccurrence> {
+		return [
+			for (entry in requiredArray(value, "runtimeUseOccurrences")) {
+				final source = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					planRevision: requiredSha256Revision(entry, "planRevision"),
+					ownerId: requiredString(entry, "ownerId"),
+					requirementId: requiredString(entry, "requirementId"),
+					domain: cast requiredString(entry, "domain"),
+					exactSymbol: requiredString(entry, "exactSymbol"),
+					role: requiredString(entry, "role"),
+					order: requiredInt(entry, "order"),
+					source: {
+						file: requiredString(source, "file"),
+						min: requiredInt(source, "min"),
+						max: requiredInt(source, "max")
+					},
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					cardinality: requiredInt(entry, "cardinality")
+				};
+			}
+		];
 	}
 
 	static function keyValueTupleTarget(value:Dynamic):OcamlKeyValueTupleProjectionTarget {
@@ -146,6 +173,23 @@ class ReflaxeOcamlStructuralFieldInspection {
 			runtimeModule: decision.runtimeModule,
 			runtimeOperation: decision.runtimeOperation,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			evaluationSchedule: decision.evaluationSchedule.copy(),
 			iteratorTarget: decision.iteratorTarget == null ? null : cast iteratorInspection(decision.iteratorTarget),
 			proofId: decision.proofId,

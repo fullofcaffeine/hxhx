@@ -105,6 +105,7 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
@@ -338,6 +339,32 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/** Builds and reconciles only the runtime subtree owned by one structural field. */
+	function buildStructuralField(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, value:Null<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			// The structural-field planner currently owns nested expressions as part
+			// of their enclosing typed body. Use that sealed owner here instead of
+			// the nested function's separate control-flow binding.
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+			final materialization = OcamlStructuralFieldSyntax.build(decision, receiver, value, buildExpr, freshTmp, runtimeAuthority);
+			// The receiver and assigned value can contain separately planned work.
+			// Reconcile only the completed call subtree created for this field.
+			runtimeAuthority.reconcileExpression(materialization.runtimeOperation);
+			materialization.expression;
+		} catch (error:Dynamic) {
+			structuralFieldInvariant(Std.string(error), position);
+		}
 	}
 
 	function bytesProducerInvariant(message:String, position:Position):Dynamic {
@@ -2463,11 +2490,11 @@ class OcamlBuilder {
 			case _ if (plannedAnonymousOperation != null):
 				anonymousStructureInvariant('anonymous operation "${plannedAnonymousOperation.id}" no longer matches its typed expression', e.pos);
 			case TField(receiver, FAnon(_)) if (plannedStructuralField != null):
-				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, null, buildExpr, freshTmp);
+				buildStructuralField(plannedStructuralField, receiver, null, e.pos);
 			case TField(receiver, FClosure(null, _)) if (plannedStructuralField != null):
-				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, null, buildExpr, freshTmp);
+				buildStructuralField(plannedStructuralField, receiver, null, e.pos);
 			case TBinop(OpAssign, {expr: TField(receiver, FAnon(_))}, value) if (plannedStructuralField != null):
-				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, value, buildExpr, freshTmp);
+				buildStructuralField(plannedStructuralField, receiver, value, e.pos);
 			case _ if (structuralFieldCandidate):
 				structuralFieldInvariant("an ambiguous structural field reached syntax without its sealed typed decision", e.pos);
 			case _ if (plannedBytesAccess != null && bytesAccessOccurrence != null):
@@ -7565,9 +7592,11 @@ class OcamlBuilder {
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
+		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentStructuralFieldPlan = validatedPlan.structuralFields;
@@ -7587,6 +7616,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
+		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
 	}
 
@@ -7608,9 +7638,11 @@ class OcamlBuilder {
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
+		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentStructuralFieldPlan = validatedPlan.structuralFields;
@@ -7630,6 +7662,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
+		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
 	}
 

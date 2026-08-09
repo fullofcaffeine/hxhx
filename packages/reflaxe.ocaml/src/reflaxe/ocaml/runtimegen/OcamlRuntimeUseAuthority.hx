@@ -225,7 +225,15 @@ class OcamlRuntimeUseAuthority {
 	}
 
 	static function isPlainPrivateReference(name:String):Bool {
-		return name == "HxArray.set" || name == "HxArray.create" || name == "HxArray.push";
+		return name == "HxArray.set"
+			|| name == "HxArray.create"
+			|| name == "HxArray.push"
+			|| name == "HxAnon.get"
+			|| name == "HxAnon.set"
+			|| name == "HxRuntime.box_bool"
+			|| name == "HxRuntime.unbox_bool_or_obj"
+			|| name == "HxIterator.hasNext"
+			|| name == "HxIterator.next";
 	}
 }
 #end

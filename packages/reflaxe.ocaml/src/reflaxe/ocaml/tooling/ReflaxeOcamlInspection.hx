@@ -3516,6 +3516,7 @@ class ReflaxeOcamlInspection {
 			final tupleProjection = field.operation == "project-tuple-key" || field.operation == "project-tuple-value";
 			if (tupleProjection) {
 				if (field.runtimeRequirementIds.length != 0
+					|| field.runtimeUseOccurrences.length != 0
 					|| field.runtimeModule != "Stdlib"
 					|| (field.operation == "project-tuple-key" ? field.runtimeOperation != "fst" : field.runtimeOperation != "snd"))
 					throw 'Structural field decision "${field.id}" has an invalid Stdlib tuple projection.';
@@ -3524,7 +3525,10 @@ class ReflaxeOcamlInspection {
 			final iteratorMethod = field.operation == "capture-iterator-method";
 			final capability = iteratorMethod ? "haxe-iterator" : "haxe-structural-field";
 			final requirementId = field.id + ":runtime:" + capability;
-			if (field.runtimeRequirementIds.length != 1 || field.runtimeRequirementIds[0] != requirementId)
+			final boolCarrier = field.loadConversion == "unbox-bool" || field.storeConversion == "box-bool";
+			final boolRequirementId = field.id + ":runtime:haxe-structural-bool-carrier";
+			final expectedRequirementIds = boolCarrier ? [requirementId, boolRequirementId] : [requirementId];
+			if (field.runtimeRequirementIds.join(",") != expectedRequirementIds.join(","))
 				throw 'Structural field decision "${field.id}" has the wrong runtime requirement identity.';
 			final requirement = requirements.get(requirementId);
 			if (requirement == null)
@@ -3550,6 +3554,30 @@ class ReflaxeOcamlInspection {
 				throw 'Structural field decision "${field.id}" runtime requirement "$requirementId" disagrees with its sealed typed operation.';
 			}
 			referenced.set(requirementId, true);
+			if (boolCarrier) {
+				final boolRequirement = requirements.get(boolRequirementId);
+				if (boolRequirement == null)
+					throw 'Structural field decision "${field.id}" refers to missing Boolean carrier requirement "$boolRequirementId".';
+				final boolSource = requiredObject(boolRequirement, "source");
+				final boolSubject = requiredObject(boolRequirement, "subject");
+				final boolRoots = requiredStringArray(boolRequirement, "rootModules");
+				if (requiredString(boolRequirement, "sourceKind") != "haxe-expression"
+					|| requiredString(boolRequirement, "sourceId") != field.id
+					|| requiredString(boolSource, "file") != field.sourceFile
+					|| requiredInt(boolSource, "min") != field.sourceMin
+					|| requiredInt(boolSource, "max") != field.sourceMax
+					|| requiredString(boolRequirement, "semanticCapability") != "haxe-structural-bool-carrier"
+					|| requiredString(boolRequirement, "cause") != "lowering-decision"
+					|| requiredString(boolRequirement, "decisionId") != field.id
+					|| requiredString(boolSubject, "kind") != "haxe-type"
+					|| requiredString(boolSubject, "id") != "Bool"
+					|| requiredString(boolRequirement, "implementationFeature") != "haxe-boolean-carrier-v1"
+					|| boolRoots.join(",") != "HxRuntime"
+					|| requiredStringArray(boolRequirement, "profileEligibility").join(",") != "metal,portable") {
+					throw 'Structural field decision "${field.id}" Boolean carrier requirement "$boolRequirementId" disagrees with its sealed conversion.';
+				}
+				referenced.set(boolRequirementId, true);
+			}
 		}
 		for (conversion in iMapInterfaceConversions) {
 			for (capability in conversion.runtimeCapabilities) {

@@ -2,6 +2,7 @@ package reflaxe.ocaml.tooling;
 
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** One runtime module and the current report's reasons for selecting it. **/
 typedef InspectionRuntimeReason = {
@@ -483,6 +484,7 @@ typedef InspectionStructuralField = {
 	final runtimeModule:String;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final evaluationSchedule:Array<String>;
 	final iteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
 	final proofId:String;

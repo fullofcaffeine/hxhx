@@ -124,6 +124,25 @@ class RuntimeUseAuthorityFixture {
 		expectFailure("stale final token", "stale runtime use", () -> staleOwner.reconcileExpression(OcamlExpr.ERuntimeIdent(staleReference)));
 	}
 
+	/** Proves every migrated structural-field helper rejects an unmarked call. */
+	static function structuralFieldPlainReferencesFail():Void {
+		for (symbol in [
+			"HxAnon.get",
+			"HxAnon.set",
+			"HxRuntime.box_bool",
+			"HxRuntime.unbox_bool_or_obj",
+			"HxIterator.hasNext",
+			"HxIterator.next"
+		]) {
+			final separator = symbol.indexOf(".");
+			final moduleName = symbol.substr(0, separator);
+			final fieldName = symbol.substr(separator + 1);
+			final checker = authority([occurrence("U1", 0)]);
+			expectFailure(symbol, 'plain private runtime reference $symbol',
+				() -> checker.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent(moduleName), fieldName)));
+		}
+	}
+
 	static function exactRequirementRoot():Void {
 		final missingRoot = Reflect.copy(requirement());
 		Reflect.setField(missingRoot, "rootModules", ["HxOther"]);
@@ -136,6 +155,7 @@ class RuntimeUseAuthorityFixture {
 		duplicateSameSymbolUseFails();
 		constructionFailures();
 		reconciliationFailures();
+		structuralFieldPlainReferencesFail();
 		exactRequirementRoot();
 		assertTrue(true, "runtime use authority fixture completed");
 		Sys.println("RUNTIME_USE_AUTHORITY:PASS");

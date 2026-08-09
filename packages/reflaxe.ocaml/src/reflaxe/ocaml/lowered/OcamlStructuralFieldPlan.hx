@@ -19,6 +19,9 @@ import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIte
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** The caller-visible meaning selected for one field that overlaps a target protocol. */
 enum abstract OcamlStructuralFieldOperation(String) from String to String {
@@ -101,6 +104,7 @@ typedef OcamlStructuralFieldDecision = {
 	final runtimeModule:String;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final evaluationSchedule:Array<String>;
 	final iteratorTarget:Null<OcamlStructuralIteratorCallTarget>;
 	final keyValueTupleTarget:Null<OcamlKeyValueTupleProjectionTarget>;
@@ -114,8 +118,9 @@ typedef OcamlStructuralFieldDecision = {
 
 /** Pure identity and validation rules shared by planning, syntax, and reports. */
 class OcamlStructuralFieldContract {
-	public static inline final MODEL = "typed-structural-field-overlap-v3";
+	public static inline final MODEL = "typed-structural-field-overlap-v4";
 	public static inline final HAXE_ANON_CAPABILITY = "haxe-structural-field";
+	public static inline final HAXE_BOOL_CARRIER_CAPABILITY = "haxe-structural-bool-carrier";
 	public static inline final HAXE_ITERATOR_CAPABILITY = "haxe-iterator";
 	public static inline final STORED_PROOF_ID = "structural-stored-field-v1";
 	public static inline final ITERATOR_PROOF_ID = "structural-iterator-method-value-v1";
@@ -136,6 +141,77 @@ class OcamlStructuralFieldContract {
 		return decisionId + ":runtime:" + (operation == CaptureIteratorMethod ? HAXE_ITERATOR_CAPABILITY : HAXE_ANON_CAPABILITY);
 	}
 
+	/** Returns the extra direct-root requirement for a stored Boolean conversion. */
+	public static function boolCarrierRuntimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + HAXE_BOOL_CARRIER_CAPABILITY;
+	}
+
+	/** Returns every direct runtime root selected by one structural-field decision. */
+	public static function runtimeRequirementIdsFor(decision:OcamlStructuralFieldDecision):Array<String> {
+		if (isTupleProjection(decision.operation))
+			return [];
+		final result = [runtimeRequirementId(decision.id, decision.operation)];
+		if (decision.loadConversion == UnboxBool || decision.storeConversion == BoxBool)
+			result.push(boolCarrierRuntimeRequirementId(decision.id));
+		return result;
+	}
+
+	/**
+		Builds the private runtime names that target syntax must consume.
+
+		Order follows traversal of the completed target expression. This lets the
+		caller inspect the actual field-owned syntax without entering receiver or
+		assigned-value expressions, which can have independent plan owners.
+	**/
+	public static function runtimeUseOccurrencesFor(decision:OcamlStructuralFieldDecision):Array<OcamlRuntimeUseOccurrence> {
+		if (isTupleProjection(decision.operation))
+			return [];
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final result = new Array<OcamlRuntimeUseOccurrence>();
+
+		function add(requirementId:String, exactSymbol:String, role:String):Void {
+			result.push({
+				id: decision.id + ":runtime-use:" + role,
+				planRevision: planRevision,
+				ownerId: decision.id,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: exactSymbol,
+				role: role,
+				order: result.length,
+				source: {
+					file: decision.source.file,
+					min: decision.source.min,
+					max: decision.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
+
+		final operationRequirement = runtimeRequirementId(decision.id, decision.operation);
+		switch (decision.operation) {
+			case ReadStoredField:
+				if (decision.loadConversion == UnboxBool)
+					add(boolCarrierRuntimeRequirementId(decision.id), "HxRuntime.unbox_bool_or_obj", "unbox-bool");
+				add(operationRequirement, decision.runtimeModule + "." + decision.runtimeOperation, "read-field");
+			case WriteStoredField:
+				add(operationRequirement, decision.runtimeModule + "." + decision.runtimeOperation, "write-field");
+				if (decision.storeConversion == BoxBool)
+					add(boolCarrierRuntimeRequirementId(decision.id), "HxRuntime.box_bool", "box-bool");
+			case CaptureIteratorMethod:
+				add(operationRequirement, decision.runtimeModule + "." + decision.runtimeOperation, "capture-iterator-method");
+			case ProjectTupleKey, ProjectTupleValue:
+		}
+		return result;
+	}
+
 	/** Returns whether the decision uses only an OCaml Stdlib tuple projection. */
 	public static function isTupleProjection(operation:OcamlStructuralFieldOperation):Bool {
 		return operation == ProjectTupleKey || operation == ProjectTupleValue;
@@ -143,7 +219,7 @@ class OcamlStructuralFieldContract {
 
 	/** Builds the content identity after every behavior-bearing field is known. */
 	public static function decisionId(decision:OcamlStructuralFieldDecision):String {
-		return "structural-field:" + Sha256.encode(fingerprint(copy(decision, ""))).substr(0, 24);
+		return "structural-field:" + Sha256.encode(semanticFingerprint(decision)).substr(0, 24);
 	}
 
 	/** Rejects missing, contradictory, or stale plain decision data. */
@@ -195,16 +271,35 @@ class OcamlStructuralFieldContract {
 			case ProjectTupleKey, ProjectTupleValue:
 				requireTupleProjection(decision);
 		}
-		if (isTupleProjection(decision.operation)) {
-			if (decision.runtimeRequirementIds.length != 0)
-				throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: tuple projection "${decision.id}" must not claim a repository runtime module';
-		} else {
-			final expectedRequirement = runtimeRequirementId(decision.id, decision.operation);
-			if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != expectedRequirement)
-				throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: structural field decision "${decision.id}" does not own its exact runtime requirement';
-		}
+		final expectedRequirements = runtimeRequirementIdsFor(decision);
+		if (decision.runtimeRequirementIds.join(",") != expectedRequirements.join(","))
+			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: structural field decision "${decision.id}" does not own its exact direct-root runtime requirements';
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime-use]: structural field decision "${decision.id}" does not own every target runtime use';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
 		if (decision.id != decisionId(decision))
 			throw 'reflaxe.ocaml [ocaml-structural-field:stale]: structural field decision "${decision.id}" does not match its canonical facts';
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime-use]: structural field decision "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
 	}
 
 	static function requireStored(decision:OcamlStructuralFieldDecision, operation:String, schedule:Array<String>, read:Bool):Void {
@@ -300,6 +395,23 @@ class OcamlStructuralFieldContract {
 			runtimeModule: decision.runtimeModule,
 			runtimeOperation: decision.runtimeOperation,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			evaluationSchedule: decision.evaluationSchedule.copy(),
 			iteratorTarget: decision.iteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.iteratorTarget),
 			keyValueTupleTarget: decision.keyValueTupleTarget == null ? null : copyKeyValueTupleTarget(decision.keyValueTupleTarget),
@@ -350,8 +462,8 @@ class OcamlStructuralFieldContract {
 		].join("|");
 	}
 
-	/** Canonical text used by decision IDs and complete-plan revisions. */
-	public static function fingerprint(decision:OcamlStructuralFieldDecision):String {
+	/** Canonical semantic text used by decision IDs before derived runtime facts exist. */
+	static function semanticFingerprint(decision:OcamlStructuralFieldDecision):String {
 		return [
 			Std.string(decision.occurrenceOrdinal),
 			decision.source.file,
@@ -375,6 +487,30 @@ class OcamlStructuralFieldContract {
 			decision.programRevision,
 			decision.bodyRevision,
 			decision.pipelineRevision
+		].join("|");
+	}
+
+	/** Canonical text used by complete-plan revisions after runtime uses are sealed. */
+	public static function fingerprint(decision:OcamlStructuralFieldDecision):String {
+		final runtimeUses = decision.runtimeUseOccurrences.map(use -> [
+			use.id,
+			use.planRevision,
+			use.ownerId,
+			use.requirementId,
+			(use.domain : String),
+			use.exactSymbol,
+			use.role,
+			Std.string(use.order),
+			use.source.file,
+			Std.string(use.source.min),
+			Std.string(use.source.max),
+			use.profileEligibility.join(","),
+			Std.string(use.cardinality)
+		].join("|")).join("\u001e");
+		return [
+			semanticFingerprint(decision),
+			decision.runtimeRequirementIds.join(","),
+			runtimeUses
 		].join("|");
 	}
 }
@@ -664,6 +800,7 @@ class OcamlStructuralFieldPlanner {
 			runtimeModule: "",
 			runtimeOperation: "",
 			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			evaluationSchedule: [],
 			iteratorTarget: null,
 			keyValueTupleTarget: null,
@@ -680,9 +817,9 @@ class OcamlStructuralFieldPlanner {
 		final provisional:OcamlStructuralFieldDecision = cast raw;
 		final id = OcamlStructuralFieldContract.decisionId(provisional);
 		Reflect.setField(raw, "id", id);
-		Reflect.setField(raw, "runtimeRequirementIds",
-			OcamlStructuralFieldContract.isTupleProjection(provisional.operation) ? [] : [OcamlStructuralFieldContract.runtimeRequirementId(id,
-				provisional.operation)]);
+		final identified:OcamlStructuralFieldDecision = cast raw;
+		Reflect.setField(raw, "runtimeRequirementIds", OcamlStructuralFieldContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(raw, "runtimeUseOccurrences", OcamlStructuralFieldContract.runtimeUseOccurrencesFor(identified));
 		final decision:OcamlStructuralFieldDecision = cast raw;
 		OcamlStructuralFieldContract.require(decision);
 		return decision;

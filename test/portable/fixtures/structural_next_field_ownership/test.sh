@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (lowering.schemaVersion !== 69
-	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v3') {
+	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v4') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
 
@@ -36,11 +36,42 @@ for (const field of storedFields) {
 		throw new Error(`stored structural field ${field.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === field.id)
-	if (requirements.length !== 1
-		|| requirements[0].id !== `${field.id}:runtime:haxe-structural-field`
-		|| requirements[0].semanticCapability !== 'haxe-structural-field'
-		|| requirements[0].rootModules?.join(',') !== 'HxAnon') {
+	const boolField = field.fieldSemanticTypeId === 'Bool'
+	const expectedRequirementIds = [
+		`${field.id}:runtime:haxe-structural-field`,
+		...(boolField ? [`${field.id}:runtime:haxe-structural-bool-carrier`] : [])
+	]
+	const requirementsById = new Map(requirements.map(requirement => [requirement.id, requirement]))
+	const fieldRequirement = requirementsById.get(expectedRequirementIds[0])
+	const boolRequirement = boolField ? requirementsById.get(expectedRequirementIds[1]) : null
+	if (requirements.length !== expectedRequirementIds.length
+		|| expectedRequirementIds.some(id => !requirementsById.has(id))
+		|| fieldRequirement.semanticCapability !== 'haxe-structural-field'
+		|| fieldRequirement.rootModules?.join(',') !== 'HxAnon'
+		|| (boolField && (boolRequirement.semanticCapability !== 'haxe-structural-bool-carrier'
+			|| boolRequirement.rootModules?.join(',') !== 'HxRuntime'))) {
 		throw new Error(`stored structural field ${field.id} does not own its exact HxAnon requirement`)
+	}
+	const expectedUses = field.operation === 'read-stored-field'
+		? [
+			...(boolField ? [['HxRuntime.unbox_bool_or_obj', 'unbox-bool']] : []),
+			['HxAnon.get', 'read-field']
+		]
+		: [
+			['HxAnon.set', 'write-field'],
+			...(boolField ? [['HxRuntime.box_bool', 'box-bool']] : [])
+		]
+	if (field.runtimeUseOccurrences?.length !== expectedUses.length)
+		throw new Error(`stored structural field ${field.id} has no exact runtime-use inventory`)
+	for (const [index, [symbol, role]] of expectedUses.entries()) {
+		const use = field.runtimeUseOccurrences[index]
+		if (use.ownerId !== field.id
+			|| use.exactSymbol !== symbol
+			|| use.role !== role
+			|| use.order !== index
+			|| use.cardinality !== 1) {
+			throw new Error(`stored structural field ${field.id} has a stale runtime use at index ${index}`)
+		}
 	}
 }
 
@@ -56,6 +87,7 @@ for (const field of tupleFields) {
 		|| field.runtimeModule !== 'Stdlib'
 		|| field.runtimeOperation !== expectedProjection
 		|| field.runtimeRequirementIds.length !== 0
+		|| field.runtimeUseOccurrences?.length !== 0
 		|| target.projection !== expectedProjection
 		|| target.keySemanticTypeId !== 'String'
 		|| target.valueSemanticTypeId !== 'Int'
@@ -179,6 +211,34 @@ fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a stored field with a corrupted runtime owner" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const stored = report.structuralFields.find(field => field.runtimeUseOccurrences?.length > 0)
+stored.runtimeUseOccurrences.pop()
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a stored field with a missing private runtime use" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const tuple = report.structuralFields.find(field => field.operation === 'project-tuple-key')
+tuple.runtimeUseOccurrences = report.structuralFields.find(field => field.runtimeUseOccurrences?.length > 0).runtimeUseOccurrences
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a standard-library tuple projection with private runtime uses" >&2
 	exit 1
 fi
 cp "$lowering_backup" out/ocaml_lowering_report.json

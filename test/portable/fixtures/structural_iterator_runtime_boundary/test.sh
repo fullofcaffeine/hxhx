@@ -63,6 +63,16 @@ for (const method of methodValues) {
 		|| requirements[0].rootModules?.join(',') !== 'HxIterator') {
 		throw new Error(`Iterator method value ${method.id} does not own its exact runtime requirement`)
 	}
+	const uses = method.runtimeUseOccurrences ?? []
+	if (uses.length !== 1
+		|| uses[0].ownerId !== method.id
+		|| uses[0].requirementId !== requirements[0].id
+		|| uses[0].exactSymbol !== `HxIterator.${method.fieldName}`
+		|| uses[0].role !== 'capture-iterator-method'
+		|| uses[0].order !== 0
+		|| uses[0].cardinality !== 1) {
+		throw new Error(`Iterator method value ${method.id} does not own its exact runtime use`)
+	}
 }
 
 const runtime = JSON.parse(fs.readFileSync('out/ocaml_runtime_requirement_report.json', 'utf8'))
@@ -137,6 +147,20 @@ fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted an Iterator method value with a direct-call proof" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const method = report.structuralFields.find(item => item.operation === 'capture-iterator-method')
+method.runtimeUseOccurrences[0].exactSymbol = 'HxIterator.corrupted'
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a method value with the wrong private runtime symbol" >&2
 	exit 1
 fi
 cp "$lowering_backup" out/ocaml_lowering_report.json

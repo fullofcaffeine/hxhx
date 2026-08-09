@@ -5636,7 +5636,7 @@
   "runtimeRequirementCount": 47,
   "schemaVersion": 69,
   "controlAdmissionCount": 151,
-  "structuralFieldModel": "typed-structural-field-overlap-v3",
+  "structuralFieldModel": "typed-structural-field-overlap-v4",
   "unsafeOperationCount": 21,
   "unsafeOperationRevision": "sha256:c5f776e1dfd452cc9e708edad6ec94ccc55dd8862550f0cc9138e23a473c58c8",
   "structuralFieldCount": 0,

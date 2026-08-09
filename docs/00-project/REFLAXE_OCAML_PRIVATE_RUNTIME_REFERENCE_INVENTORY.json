@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.32",
+  "reviewBead": "haxe_ocaml-0uwin.33",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.32",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.33",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 426,
+    "total": 424,
     "byDomain": {
-      "expression": 396,
+      "expression": 394,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -50,11 +50,10 @@
       "imap-interface-syntax": 12,
       "place-assignment": 6,
       "standard-map-carrier-model": 3,
-      "string-representation-materializer": 1,
-      "structural-field-syntax": 2
+      "string-representation-materializer": 1
     }
   },
-  "inventoryRevision": "9e10d2d87d7427970dc1c30696ddd4d1fd69e6d627b5f082a10b194679d780d4",
+  "inventoryRevision": "4099083cda36760277fe335fb7047453e04f2e50247be8008b1ee316e19ff4f9",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
@@ -4055,26 +4054,6 @@
       "rootModule": "HxDynamic",
       "ordinal": 1,
       "migrationFamily": "imap-interface-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.unbox_bool_or_obj",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "structural-field-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.box_bool",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "structural-field-syntax"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFieldRepresentationMaterializer.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",

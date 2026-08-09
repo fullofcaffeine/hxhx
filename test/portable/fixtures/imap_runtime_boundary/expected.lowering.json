@@ -723,6 +723,7 @@
   "structuralFields": [
     {
       "resultSemanticTypeId": "String",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
       "evaluationSchedule": [
@@ -769,6 +770,7 @@
     },
     {
       "resultSemanticTypeId": "Int",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
       "evaluationSchedule": [
@@ -815,6 +817,7 @@
     },
     {
       "resultSemanticTypeId": "_Main.ObjectKey",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:5c594d317766445eb9c42c4002d4b609a29b2e57bb4d14a319037ae975aa9507",
       "evaluationSchedule": [
@@ -861,6 +864,7 @@
     },
     {
       "resultSemanticTypeId": "String",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "evaluationSchedule": [
@@ -907,6 +911,7 @@
     },
     {
       "resultSemanticTypeId": "Int",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "evaluationSchedule": [
@@ -953,6 +958,7 @@
     },
     {
       "resultSemanticTypeId": "Int",
+      "runtimeUseOccurrences": [],
       "runtimeRequirementIds": [],
       "bodyRevision": "12:5c594d317766445eb9c42c4002d4b609a29b2e57bb4d14a319037ae975aa9507",
       "evaluationSchedule": [
@@ -1959,7 +1965,7 @@
     }
   ],
   "iMapInterfaceConversionCount": 5,
-  "structuralFieldRevision": "sha256:d1589c428a25bfe3bd7e254250376f8b0a04ac44ad45107928b59855ff2553a9",
+  "structuralFieldRevision": "sha256:b4822697a4f12b14697d0c6aa3933eb5e2c0a54e8dcf60dc65ff6f79019f22c1",
   "controlTargets": [
     {
       "bodyRevision": "12:16e8f680fbcc442b8ac7a4d79452be0222080fb5671a9b305e861d2b6a6395a8",
@@ -4892,7 +4898,7 @@
   "runtimeRequirementCount": 81,
   "schemaVersion": 69,
   "controlAdmissionCount": 153,
-  "structuralFieldModel": "typed-structural-field-overlap-v3",
+  "structuralFieldModel": "typed-structural-field-overlap-v4",
   "unsafeOperationCount": 1,
   "unsafeOperationRevision": "sha256:6695187de66e3d38dc7cbc3ec38e82c8fb1627afab3bd9395a338704f8e39922",
   "structuralFieldCount": 6,
