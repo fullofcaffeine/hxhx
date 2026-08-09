@@ -1,0 +1,21 @@
+Command:
+npm run test:m14:hih-complete-numeric-literals:current-source
+
+Candidate:
+f09500606a7f7802dcda2284eacf487751c9dc0f
+dirty=0
+
+Result:
+PASS
+
+Key evidence:
+- Current-source Haxe/Reflaxe generation completed after about 2,044 seconds.
+- The previous candidate failed at 1,684 seconds on nullable String Reflect.compare.
+- Dune completed the generated native compiler build (1,434 actions).
+- The resulting compiler passed the numeric-literals workload twice.
+- Final marker: HXHX_COMPLETE_NUMERIC_LITERALS:PASS mode=current-source
+- Current-source input SHA-256: 22be24d1340f4b4f3408bd9df1d433b782f603b8f3735c0327ee7bd99dea20d1
+
+This proves the former nullable comparison boundary is no longer the
+compiler-scale stopping point. It does not by itself close broader Full1,
+bootstrap, shared-target, or release-readiness goals.
