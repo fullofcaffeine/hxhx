@@ -509,7 +509,7 @@ typedef InspectionIMapInterfaceConversion = {
 	final sourceMin:Int;
 	final sourceMax:Int;
 	final role:String;
-	final roleIndex:Int;
+	final roleIdentity:String;
 	final sourceKind:String;
 	final sourceSemanticTypeId:String;
 	final sourceCarrierTypeId:String;

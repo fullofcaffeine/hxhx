@@ -1,0 +1,34 @@
+Command:
+haxe build.hxml -D ocaml_emit_only
+
+Fixture:
+test/portable/fixtures/imap_runtime_boundary
+
+Controlled perturbation:
+The unrelated OCaml printer method `escapeLineDirectiveFile` was refactored to
+bind its input to one behavior-preserving local before using it. The edit does
+not inspect, create, or emit IMap values and produced the same target behavior.
+It was removed immediately after capturing the second report.
+
+Expected invariant:
+Unchanged fixture source should produce the same IMap conversions, runtime
+requirements, and aggregate IMap report revision.
+
+Observed pre-fix failure:
+- root local roleIndex: 67681 -> 67682
+- nested local roleIndex: 67661 -> 67662
+- both local-initializer conversion IDs changed
+- all runtime-requirement IDs derived from those conversions changed
+- iMapInterfaceRevision changed from
+  sha256:34f19ddd144295ea3c31dd878d1b2384df2d92405e8df8217b473359897e6ac5
+  to
+  sha256:42edea843c63e36d20fa67509aa8c5d68527e423e5d888927458dacddea11d60
+- complete report SHA-256 changed from
+  a5cf3b8145fcd0920936b666f2f9c96a23b685beaf1663d9867d074683c3df8f
+  to
+  cc8a7b0b88f9984ada3f209c2fc554f381607a86c08017759a6c13f60797771d
+
+The semantic fixture source, conversion source spans, function identities,
+source/target types, and runtime capability sets were unchanged. This is the
+intended red state: process-local Haxe TVar allocation leaked into published
+target evidence.

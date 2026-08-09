@@ -53,7 +53,17 @@ typedef OcamlIMapInterfaceConversionDecision = {
 	final id:String;
 	final source:OcamlIMapInterfaceSourceSpan;
 	final role:OcamlIMapInterfaceConversionRole;
-	final roleIndex:Int;
+
+	/**
+		Stable identity for this role inside the owning function.
+
+		Call arguments use `call-argument:<index>`, returns and assignments use
+		fixed names, and local initializers use the lexical-local identity created
+		from their source structure. A request-local Haxe `TVar.id` is never valid
+		here because saved reports must survive a clean compiler process.
+	**/
+	final roleIdentity:String;
+
 	final sourceKind:OcamlIMapInterfaceSourceKind;
 	final sourceSemanticTypeId:String;
 	final sourceCarrierTypeId:String;
@@ -147,7 +157,8 @@ typedef OcamlIMapStorageAliasDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v3";
+	public static inline final MODEL = "typed-imap-interface-adapter-v4";
+	static inline final LEXICAL_LOCAL_ID_PREFIX = "lexical-local-v1:";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
 	public static inline final STORAGE_ALIAS_PROOF_ID = "typed-standard-map-storage-alias-v2";
@@ -178,6 +189,7 @@ class OcamlIMapInterfaceContract {
 	public static function requireConversion(decision:OcamlIMapInterfaceConversionDecision):Void {
 		if (decision == null
 			|| decision.id.length == 0
+			|| decision.roleIdentity == null
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
@@ -191,7 +203,7 @@ class OcamlIMapInterfaceContract {
 			|| decision.programRevision.length == 0
 			|| decision.bodyRevision.length == 0
 			|| decision.pipelineRevision.length == 0
-			|| !validConversionRole(decision.role, decision.roleIndex)) {
+			|| !validConversionRole(decision.role, decision.roleIdentity)) {
 			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion has incomplete type, source, proof, or revision facts";
 		}
 		final expectedKeyKind = standardKeyKind(decision.sourceKind);
@@ -321,12 +333,48 @@ class OcamlIMapInterfaceContract {
 		return decision.runtimeCapabilities.map(capability -> decision.id + ":runtime:" + capability);
 	}
 
-	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIndex:Int):Bool {
+	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Bool {
 		return switch (role) {
-			case CallArgument, LocalInitializer: roleIndex >= 0;
-			case ReturnValue, Assignment: roleIndex == -1;
+			case CallArgument: StringTools.startsWith(roleIdentity, "call-argument:") && validNonNegativeIndex(roleIdentity.substr("call-argument:".length));
+			case LocalInitializer:
+				isReusableLexicalLocalId(roleIdentity);
+			case ReturnValue:
+				roleIdentity == "return-value";
+			case Assignment:
+				roleIdentity == "assignment";
 			case _: false;
 		}
+	}
+
+	/**
+		Checks the generic lexical-local identity without loading Reflaxe itself.
+
+		This pure report model is also used by small standalone tooling tests. The
+		compiler creates the value through `LexicalLocalIdentityPlan`; inspection
+		only needs to reject a temporary number, malformed digest, or other schema.
+	**/
+	static function isReusableLexicalLocalId(value:String):Bool {
+		if (!StringTools.startsWith(value, LEXICAL_LOCAL_ID_PREFIX) || value.length != LEXICAL_LOCAL_ID_PREFIX.length + 64)
+			return false;
+		for (index in LEXICAL_LOCAL_ID_PREFIX.length...value.length) {
+			final code = value.charCodeAt(index);
+			final isDigit = code != null && code >= 48 && code <= 57;
+			final isLowerHex = code != null && code >= 97 && code <= 102;
+			if (!isDigit && !isLowerHex)
+				return false;
+		}
+		return true;
+	}
+
+	static function validNonNegativeIndex(value:String):Bool {
+		if (value.length == 0)
+			return false;
+		for (index in 0...value.length) {
+			final code = value.charCodeAt(index);
+			if (code == null || code < 48 || code > 57)
+				return false;
+		}
+		return true;
 	}
 
 	static function standardKeyKind(sourceKind:OcamlIMapInterfaceSourceKind):Null<OcamlStandardIMapKeyKind> {

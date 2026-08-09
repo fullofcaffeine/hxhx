@@ -118,7 +118,7 @@ class RuntimeRequirementLedgerFixture {
 			id: "imap-interface-conversion:runtime-fixture",
 			source: {file: "src/Main.hx", min: 20, max: 36},
 			role: OcamlIMapInterfaceConversionRole.CallArgument,
-			roleIndex: 0,
+			roleIdentity: "call-argument:0",
 			sourceKind: OcamlIMapInterfaceSourceKind.StandardStringMap,
 			sourceSemanticTypeId: "HxMap<Int>",
 			sourceCarrierTypeId: OcamlStandardIMapCallContract.carrierId(OcamlStandardIMapKeyKind.StringKey),

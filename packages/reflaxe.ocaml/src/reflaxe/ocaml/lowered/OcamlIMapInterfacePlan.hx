@@ -26,6 +26,7 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperati
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierKind;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 
 typedef OcamlIMapInterfaceMethodMaterialization = {
 	final decision:OcamlIMapInterfaceMethodDecision;
@@ -307,7 +308,7 @@ class OcamlIMapInterfacePlan {
 			Std.string(decision.source.min),
 			Std.string(decision.source.max),
 			(decision.role : String),
-			Std.string(decision.roleIndex),
+			decision.roleIdentity,
 			(decision.sourceKind : String),
 			decision.sourceSemanticTypeId,
 			decision.sourceCarrierTypeId,
@@ -393,7 +394,7 @@ class OcamlIMapInterfacePlan {
 			id: decision.id,
 			source: {file: decision.source.file, min: decision.source.min, max: decision.source.max},
 			role: decision.role,
-			roleIndex: decision.roleIndex,
+			roleIdentity: decision.roleIdentity,
 			sourceKind: decision.sourceKind,
 			sourceSemanticTypeId: decision.sourceSemanticTypeId,
 			sourceCarrierTypeId: decision.sourceCarrierTypeId,
@@ -471,11 +472,14 @@ class OcamlIMapInterfacePlanner {
 	final context:CompilationContext;
 	final binding:OcamlFunctionPlanBinding;
 	final staticStorage:OcamlStaticStoragePlan;
+	final localIdentities:LexicalLocalIdentityPlan;
 
-	public function new(context:CompilationContext, binding:OcamlFunctionPlanBinding, staticStorage:OcamlStaticStoragePlan) {
+	public function new(context:CompilationContext, binding:OcamlFunctionPlanBinding, staticStorage:OcamlStaticStoragePlan,
+			localIdentities:LexicalLocalIdentityPlan) {
 		this.context = context;
 		this.binding = binding;
 		this.staticStorage = staticStorage;
+		this.localIdentities = localIdentities;
 	}
 
 	/**
@@ -505,8 +509,8 @@ class OcamlIMapInterfacePlanner {
 		final calls:ObjectMap<TypedExpr, OcamlIMapInterfaceCallDecision> = new ObjectMap();
 		final storageAliases = planStandardMapStorageAliases(expression);
 
-		function registerConversion(targetType:Type, value:TypedExpr, role:OcamlIMapInterfaceConversionRole, roleIndex:Int):Void {
-			final selected = selectConversion(targetType, value, role, roleIndex);
+		function registerConversion(targetType:Type, value:TypedExpr, role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Void {
+			final selected = selectConversion(targetType, value, role, roleIdentity);
 			if (selected == null)
 				return;
 			final existing = conversions.get(value);
@@ -530,7 +534,8 @@ class OcamlIMapInterfacePlanner {
 						case TFun(parameters, _):
 							for (index in 0...arguments.length) {
 								if (index < parameters.length)
-									registerConversion(parameters[index].t, arguments[index], OcamlIMapInterfaceConversionRole.CallArgument, index);
+									registerConversion(parameters[index].t, arguments[index], OcamlIMapInterfaceConversionRole.CallArgument,
+										'call-argument:$index');
 							}
 						case _:
 					}
@@ -541,18 +546,19 @@ class OcamlIMapInterfacePlanner {
 							case TFun(parameters, _):
 								for (index in 0...arguments.length) {
 									if (index < parameters.length)
-										registerConversion(parameters[index].t, arguments[index], OcamlIMapInterfaceConversionRole.CallArgument, index);
+										registerConversion(parameters[index].t, arguments[index], OcamlIMapInterfaceConversionRole.CallArgument,
+											'call-argument:$index');
 								}
 							case _:
 						}
 					}
 				case TReturn(value) if (value != null && functionResultType != null):
-					registerConversion(functionResultType, value, OcamlIMapInterfaceConversionRole.ReturnValue, -1);
+					registerConversion(functionResultType, value, OcamlIMapInterfaceConversionRole.ReturnValue, "return-value");
 				case TVar(variable, initializer) if (initializer != null):
 					if (storageAliases.initializers.get(initializer) == null)
-						registerConversion(variable.t, initializer, OcamlIMapInterfaceConversionRole.LocalInitializer, variable.id);
+						registerConversion(variable.t, initializer, OcamlIMapInterfaceConversionRole.LocalInitializer, localIdentities.require(variable).id);
 				case TBinop(OpAssign, left, right):
-					registerConversion(left.t, right, OcamlIMapInterfaceConversionRole.Assignment, -1);
+					registerConversion(left.t, right, OcamlIMapInterfaceConversionRole.Assignment, "assignment");
 				case _:
 			}
 			TypedExprTools.iter(current, visit);
@@ -987,7 +993,7 @@ class OcamlIMapInterfacePlanner {
 	}
 
 	function selectConversion(targetType:Type, value:TypedExpr, role:OcamlIMapInterfaceConversionRole,
-			roleIndex:Int):Null<OcamlIMapInterfaceConversionMaterialization> {
+			roleIdentity:String):Null<OcamlIMapInterfaceConversionMaterialization> {
 		final target = exactIMap(targetType);
 		final sourceType = conversionSourceType(value);
 		if (target == null || exactIMap(sourceType) != null)
@@ -1001,7 +1007,7 @@ class OcamlIMapInterfacePlanner {
 				case IntKeys: OcamlIMapInterfaceSourceKind.StandardIntMapAbstract;
 				case ObjectIdentityKeys: OcamlIMapInterfaceSourceKind.StandardObjectMapAbstract;
 			};
-			return standardConversion(value, sourceType, role, roleIndex, null, target.owner, target.key, target.value, abstractSource.kind, sourceKind);
+			return standardConversion(value, sourceType, role, roleIdentity, null, target.owner, target.key, target.value, abstractSource.kind, sourceKind);
 		}
 		return switch (TypeTools.follow(sourceType)) {
 			case TInst(classRef, parameters):
@@ -1015,19 +1021,19 @@ class OcamlIMapInterfacePlanner {
 						case IntKeys: OcamlIMapInterfaceSourceKind.StandardIntMap;
 						case ObjectIdentityKeys: OcamlIMapInterfaceSourceKind.StandardObjectMap;
 					};
-					standardConversion(value, sourceType, role, roleIndex, sourceClass, target.owner, target.key, target.value, standard.kind, sourceKind);
+					standardConversion(value, sourceType, role, roleIdentity, sourceClass, target.owner, target.key, target.value, standard.kind, sourceKind);
 				} else {
 					final implemented = implementedIMap(sourceClass);
 					if (implemented == null || !sameType(implemented.key, target.key) || !sameType(implemented.value, target.value))
 						return null;
-					userConversion(value, sourceType, role, roleIndex, sourceClass, target.owner, target.key, target.value);
+					userConversion(value, sourceType, role, roleIdentity, sourceClass, target.owner, target.key, target.value);
 				}
 			case _:
 				null;
 		};
 	}
 
-	function standardConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:Null<ClassType>,
+	function standardConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIdentity:String, sourceClass:Null<ClassType>,
 			interfaceClass:ClassType, keyType:Type, valueType:Type, kind:OcamlStandardMapCarrierKind,
 			sourceKind:OcamlIMapInterfaceSourceKind):OcamlIMapInterfaceConversionMaterialization {
 		final keyKind:OcamlStandardIMapKeyKind = switch (kind) {
@@ -1047,7 +1053,7 @@ class OcamlIMapInterfacePlanner {
 			resultSemanticTypeId: OcamlStandardIMapCallContract.expectedResultSemanticTypeId(operation, targetSemanticTypeId, keySemanticTypeId,
 				valueSemanticTypeId)
 		});
-		final decision = conversionDecision(value, sourceType, role, roleIndex, sourceKind, sourceClass, OcamlStandardIMapCallContract.carrierId(keyKind),
+		final decision = conversionDecision(value, sourceType, role, roleIdentity, sourceKind, sourceClass, OcamlStandardIMapCallContract.carrierId(keyKind),
 			keyType, valueType, keyKind, methods, OcamlStandardIMapCallContract.adapterRuntimeCapabilities(keySemanticTypeId, valueSemanticTypeId));
 		return {
 			decision: decision,
@@ -1059,7 +1065,7 @@ class OcamlIMapInterfacePlanner {
 		};
 	}
 
-	function userConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:ClassType,
+	function userConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIdentity:String, sourceClass:ClassType,
 			interfaceClass:ClassType, keyType:Type, valueType:Type):OcamlIMapInterfaceConversionMaterialization {
 		if (sourceClass.params.length > 0)
 			throw 'reflaxe.ocaml [ocaml-imap-interface:unsupported-user-implementation]: generic user IMap implementation ${fullClassName(sourceClass)} needs an explicit specialization contract';
@@ -1100,8 +1106,8 @@ class OcamlIMapInterfacePlanner {
 		final sourceCarrier = context.ocamlModuleNameForModuleId(sourceClass.module)
 			+ "."
 			+ context.scopedInstanceTypeName(sourceClass.module, sourceClass.name);
-		final decision = conversionDecision(value, sourceType, role, roleIndex, OcamlIMapInterfaceSourceKind.UserImplementation, sourceClass, sourceCarrier,
-			keyType, valueType, null, methods.map(method -> method.decision), []);
+		final decision = conversionDecision(value, sourceType, role, roleIdentity, OcamlIMapInterfaceSourceKind.UserImplementation, sourceClass,
+			sourceCarrier, keyType, valueType, null, methods.map(method -> method.decision), []);
 		return {
 			decision: decision,
 			keyType: keyType,
@@ -1112,7 +1118,7 @@ class OcamlIMapInterfacePlanner {
 		};
 	}
 
-	function conversionDecision(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int,
+	function conversionDecision(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIdentity:String,
 			sourceKind:OcamlIMapInterfaceSourceKind, sourceClass:Null<ClassType>, sourceCarrierTypeId:String, keyType:Type, valueType:Type,
 			standardKeyKind:Null<OcamlStandardIMapKeyKind>, methods:Array<OcamlIMapInterfaceMethodDecision>,
 			runtimeCapabilities:Array<String>):OcamlIMapInterfaceConversionDecision {
@@ -1126,7 +1132,7 @@ class OcamlIMapInterfacePlanner {
 			binding.pipelineRevision,
 			'${source.file}:${source.min}:${source.max}',
 			(role : String),
-			Std.string(roleIndex),
+			roleIdentity,
 			(sourceKind : String),
 			semanticTypeId(sourceType),
 			keySemanticTypeId,
@@ -1136,7 +1142,7 @@ class OcamlIMapInterfacePlanner {
 			id: "imap-interface-conversion:" + Sha256.encode(fingerprint).substr(0, 24),
 			source: source,
 			role: role,
-			roleIndex: roleIndex,
+			roleIdentity: roleIdentity,
 			sourceKind: sourceKind,
 			sourceSemanticTypeId: semanticTypeId(sourceType),
 			sourceCarrierTypeId: sourceCarrierTypeId,

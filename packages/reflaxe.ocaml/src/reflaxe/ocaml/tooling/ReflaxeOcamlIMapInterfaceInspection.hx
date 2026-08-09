@@ -41,8 +41,8 @@ typedef InspectionIMapInterfaceInventory = {
 	Edited, missing, or stale evidence makes inspection fail.
 **/
 class ReflaxeOcamlIMapInterfaceInspection {
-	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v83";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v15";
+	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v84";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final NESTED_FUNCTION_ID_MARKER = "|nested-function|";
 
 	/** Reads and validates every concrete-to-interface conversion and interface call. */
@@ -158,7 +158,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			id: requiredString(value, "id"),
 			source: source,
 			role: cast(requiredString(value, "role"), OcamlIMapInterfaceConversionRole),
-			roleIndex: requiredInt(value, "roleIndex"),
+			roleIdentity: requiredString(value, "roleIdentity"),
 			sourceKind: cast(requiredString(value, "sourceKind"), OcamlIMapInterfaceSourceKind),
 			sourceSemanticTypeId: requiredString(value, "sourceSemanticTypeId"),
 			sourceCarrierTypeId: requiredString(value, "sourceCarrierTypeId"),
@@ -249,7 +249,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			sourceMin: decision.source.min,
 			sourceMax: decision.source.max,
 			role: decision.role,
-			roleIndex: decision.roleIndex,
+			roleIdentity: decision.roleIdentity,
 			sourceKind: decision.sourceKind,
 			sourceSemanticTypeId: decision.sourceSemanticTypeId,
 			sourceCarrierTypeId: decision.sourceCarrierTypeId,

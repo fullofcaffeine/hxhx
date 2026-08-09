@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 68
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v3'
+if (report.schemaVersion !== 69
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v4'
 	|| report.iMapStorageAliasCount !== 0
 	|| report.iMapStorageAliases?.length !== 0) {
 	throw new Error('an ordinary source IMap local was mistaken for a closed standard Map storage alias')

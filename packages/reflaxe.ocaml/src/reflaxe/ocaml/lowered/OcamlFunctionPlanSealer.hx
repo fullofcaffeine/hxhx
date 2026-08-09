@@ -147,7 +147,7 @@ class OcamlFunctionPlanSealer {
 		final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(binding, representations).plan(data.expr);
 		arrayLiteralProducers.requirePlanBinding(binding);
 		arrayLiteralProducers.requireRepresentations(representations);
-		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage).plan(data.expr, functionResultType);
+		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
@@ -301,7 +301,8 @@ class OcamlFunctionPlanSealer {
 					// function's return/control behavior has moved to its typed plan. Plan
 					// this exact body now so syntax never reuses the enclosing function's
 					// conversions or guesses an adapter from a type name.
-					final imapInterfaces = new OcamlIMapInterfacePlanner(context, nestedBinding, staticStorage).plan(tfunc.expr, nestedResultType);
+					final imapInterfaces = new OcamlIMapInterfacePlanner(context, nestedBinding, staticStorage,
+						localIdentities).plan(tfunc.expr, nestedResultType);
 					imapInterfaces.requirePlanBinding(nestedBinding);
 					for (conversion in imapInterfaces.conversions())
 						context.recordIMapInterfaceRuntimeRequirements(conversion);

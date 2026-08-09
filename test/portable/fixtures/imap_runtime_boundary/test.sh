@@ -5,11 +5,11 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 68
+if (report.schemaVersion !== 69
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
-if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v3'
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v4'
 	|| report.iMapInterfaceConversionCount !== 5
 	|| report.iMapInterfaceCallCount !== 55
 	|| report.iMapStorageAliasCount !== 6
@@ -19,8 +19,8 @@ if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v3'
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
 	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
-		? 'ocaml-nested-function-plans-v15'
-		: 'ocaml-function-plans-v83')
+		? 'ocaml-nested-function-plans-v16'
+		: 'ocaml-function-plans-v84')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
@@ -28,7 +28,7 @@ if (calls.some(call =>
 const nestedCalls = calls.filter(call => call.functionId.includes('|nested-function|'))
 if (nestedCalls.length !== 1
 	|| nestedCalls[0].operation !== 'exists'
-	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v15') {
+	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v16') {
 	throw new Error('the nested function did not keep its exact IMap interface call plan')
 }
 const operations = new Set(calls.map(call => call.operation))
@@ -48,11 +48,23 @@ for (const operation of [
 		throw new Error(`the IMap fixture did not cover ${operation}`)
 }
 const conversions = report.iMapInterfaceConversions
+if (conversions.some(conversion => Object.hasOwn(conversion, 'roleIndex'))) {
+	throw new Error('the IMap report still publishes request-local numeric role indices')
+}
+const localConversions = conversions.filter(conversion => conversion.role === 'local-initializer')
+if (localConversions.length !== 2
+	|| localConversions.some(conversion => !/^lexical-local-v1:[0-9a-f]{64}$/.test(conversion.roleIdentity))
+	|| new Set(localConversions.map(conversion => conversion.roleIdentity)).size !== localConversions.length) {
+	throw new Error('local IMap conversions did not use distinct stable lexical-local identities')
+}
+if (conversions.some(conversion => conversion.role === 'call-argument' && conversion.roleIdentity !== 'call-argument:0')) {
+	throw new Error('call-argument IMap conversions did not preserve their stable named argument position')
+}
 const nestedConversions = conversions.filter(conversion => conversion.functionId.includes('|nested-function|'))
 if (nestedConversions.length !== 1
 	|| nestedConversions[0].role !== 'local-initializer'
 	|| nestedConversions[0].sourceKind !== 'standard-string-map'
-	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v15') {
+	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v16') {
 	throw new Error('the nested function did not keep its exact concrete-to-IMap conversion plan')
 }
 const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKind))
@@ -81,7 +93,7 @@ const expectedAliases = [
 for (const expected of expectedAliases) {
 	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
 		&& candidate.standardKeyKind === expected.kind)
-	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v15' : 'ocaml-function-plans-v83'
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v16' : 'ocaml-function-plans-v84'
 	if (!alias
 		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
 		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`
@@ -158,6 +170,28 @@ const fs = require('fs')
 const crypto = require('crypto')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const local = report.iMapInterfaceConversions.find(conversion => conversion.role === 'local-initializer')
+if (!local)
+	throw new Error('the IMap fixture has no local conversion identity to corrupt')
+local.roleIdentity = '67681'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
+})).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a request-local numeric IMap role identity" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const crypto = require('crypto')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 report.iMapInterfaceConversions[0].sourceCarrierTypeId = 'HxMap.wrong_map'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
@@ -194,7 +228,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapInterfaceConversions.find(conversion => conversion.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested conversion to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v83'
+nested.pipelineRevision = 'ocaml-function-plans-v84'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
@@ -267,7 +301,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapStorageAliases.find(alias => alias.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested storage alias to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v83'
+nested.pipelineRevision = 'ocaml-function-plans-v84'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,

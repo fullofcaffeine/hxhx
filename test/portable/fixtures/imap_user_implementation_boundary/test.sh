@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 68
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v3'
+if (report.schemaVersion !== 69
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v4'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
 	|| report.iMapInterfaceConversionCount !== 6
@@ -79,7 +79,7 @@ for (const operation of ['set', 'get', 'exists', 'remove', 'keys', 'iterator', '
 		throw new Error(`the interface-call inventory does not exercise ${operation}`)
 }
 for (const call of report.iMapInterfaceCalls) {
-	if (call.pipelineRevision !== 'ocaml-function-plans-v83'
+	if (call.pipelineRevision !== 'ocaml-function-plans-v84'
 		|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 		|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`) {
 		throw new Error(`interface call ${call.id} has a stale or conflicting receiver boundary`)
