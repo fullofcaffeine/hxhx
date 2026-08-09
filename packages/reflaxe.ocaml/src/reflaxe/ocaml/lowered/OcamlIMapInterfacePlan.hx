@@ -18,12 +18,14 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceMethodDec
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceSpan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasNullPolicy;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasUseDecision;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierKind;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 
 typedef OcamlIMapInterfaceMethodMaterialization = {
 	final decision:OcamlIMapInterfaceMethodDecision;
@@ -57,6 +59,8 @@ private typedef PendingStandardMapStorageAlias = {
 	final keyType:Type;
 	final valueType:Type;
 	final kind:OcamlStandardMapCarrierKind;
+	final sourceCarrierTypeId:String;
+	final nullPolicy:OcamlIMapStorageAliasNullPolicy;
 	final uses:Array<OcamlIMapStorageAliasUseDecision>;
 	final useExpressions:Array<TypedExpr>;
 	var invalid:Bool;
@@ -358,11 +362,13 @@ class OcamlIMapInterfacePlan {
 			Std.string(decision.source.min),
 			Std.string(decision.source.max),
 			decision.sourceSemanticTypeId,
+			decision.sourceCarrierTypeId,
 			decision.preservedCarrierTypeId,
 			decision.targetSemanticTypeId,
 			decision.keySemanticTypeId,
 			decision.valueSemanticTypeId,
 			(decision.standardKeyKind : String),
+			(decision.nullPolicy : String),
 			decision.uses.map(use -> '${use.source.file}:${use.source.min}:${use.source.max}:${use.nativeOperation}:${use.carrierTypeId}').join(","),
 			decision.proofId,
 			decision.functionId,
@@ -442,11 +448,13 @@ class OcamlIMapInterfacePlan {
 			id: decision.id,
 			source: {file: decision.source.file, min: decision.source.min, max: decision.source.max},
 			sourceSemanticTypeId: decision.sourceSemanticTypeId,
+			sourceCarrierTypeId: decision.sourceCarrierTypeId,
 			preservedCarrierTypeId: decision.preservedCarrierTypeId,
 			targetSemanticTypeId: decision.targetSemanticTypeId,
 			keySemanticTypeId: decision.keySemanticTypeId,
 			valueSemanticTypeId: decision.valueSemanticTypeId,
 			standardKeyKind: decision.standardKeyKind,
+			nullPolicy: decision.nullPolicy,
 			uses: decision.uses.map(copyStorageAliasUse),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
@@ -462,10 +470,12 @@ class OcamlIMapInterfacePlan {
 class OcamlIMapInterfacePlanner {
 	final context:CompilationContext;
 	final binding:OcamlFunctionPlanBinding;
+	final staticStorage:OcamlStaticStoragePlan;
 
-	public function new(context:CompilationContext, binding:OcamlFunctionPlanBinding) {
+	public function new(context:CompilationContext, binding:OcamlFunctionPlanBinding, staticStorage:OcamlStaticStoragePlan) {
 		this.context = context;
 		this.binding = binding;
+		this.staticStorage = staticStorage;
 	}
 
 	/**
@@ -569,7 +579,7 @@ class OcamlIMapInterfacePlanner {
 					return;
 				case TVar(local, initializer) if (initializer != null):
 					final target = exactIMap(local.t);
-					final source = standardMapAbstractTypes(initializer.t);
+					final source = standardMapStorageSource(initializer);
 					if (target != null && source != null && sameType(target.key, source.key) && sameType(target.value, source.value)) {
 						candidates.set(local.id, {
 							localId: local.id,
@@ -578,6 +588,8 @@ class OcamlIMapInterfacePlanner {
 							keyType: source.key,
 							valueType: source.value,
 							kind: source.kind,
+							sourceCarrierTypeId: source.sourceCarrierTypeId,
+							nullPolicy: source.nullPolicy,
 							uses: [],
 							useExpressions: [],
 							invalid: false
@@ -655,17 +667,20 @@ class OcamlIMapInterfacePlanner {
 				'${source.file}:${source.min}:${source.max}',
 				keySemanticTypeId,
 				valueSemanticTypeId,
-				(keyKind : String)
+				(keyKind : String),
+				(candidate.nullPolicy : String)
 			].concat(candidate.uses.map(storageAliasUseIdentity)).join("|");
 			final decision:OcamlIMapStorageAliasDecision = {
 				id: "imap-storage-alias:" + Sha256.encode(fingerprint).substr(0, 24),
 				source: source,
 				sourceSemanticTypeId: semanticTypeId(candidate.initializer.t),
+				sourceCarrierTypeId: candidate.sourceCarrierTypeId,
 				preservedCarrierTypeId: standardCarrierId(candidate.kind),
 				targetSemanticTypeId: semanticTypeId(candidate.targetType),
 				keySemanticTypeId: keySemanticTypeId,
 				valueSemanticTypeId: valueSemanticTypeId,
 				standardKeyKind: keyKind,
+				nullPolicy: candidate.nullPolicy,
 				uses: candidate.uses.map(copyAliasUse),
 				proofId: OcamlIMapInterfacePlan.STORAGE_ALIAS_PROOF_ID,
 				proofClaim: OcamlIMapInterfacePlan.STORAGE_ALIAS_PROOF_CLAIM,
@@ -773,6 +788,70 @@ class OcamlIMapInterfacePlanner {
 				} else {
 					null;
 				}
+			case _:
+				null;
+		};
+	}
+
+	/**
+		Selects the raw standard Map carrier that an `IMap` expansion may preserve.
+
+		A nullable value is admitted only for an exact static field read whose field
+		declaration still has `Map<K,V>` storage. This matters because an arbitrary
+		`Null<Map<K,V>>` local can use a different target representation and cannot
+		be treated as an `HxMap` merely because its source type looks similar.
+	**/
+	function standardMapStorageSource(initializer:TypedExpr):Null<{
+		kind:OcamlStandardMapCarrierKind,
+		key:Type,
+		value:Type,
+		sourceCarrierTypeId:String,
+		nullPolicy:OcamlIMapStorageAliasNullPolicy
+	}> {
+		final direct = standardMapAbstractTypes(initializer.t);
+		if (direct != null) {
+			return {
+				kind: direct.kind,
+				key: direct.key,
+				value: direct.value,
+				sourceCarrierTypeId: standardCarrierId(direct.kind),
+				nullPolicy: OcamlIMapStorageAliasNullPolicy.NonNullableSource
+			};
+		}
+
+		final nullable = nullableStandardMapAbstractTypes(initializer.t);
+		if (nullable == null)
+			return null;
+		final storageEntry = switch (unwrapParenthesesAndMetadata(initializer).expr) {
+			case TField(_, FStatic(classRef, fieldRef)):
+				final classType = classRef.get();
+				staticStorage.require(classType.module, classType.name, fieldRef.get().name);
+			case _: null;
+		};
+		if (storageEntry == null
+			|| storageEntry.semanticTypeId != semanticTypeId(initializer.t)
+			|| storageEntry.carrierTypeId != "Obj.t") {
+			return null;
+		}
+		return {
+			kind: nullable.kind,
+			key: nullable.key,
+			value: nullable.value,
+			sourceCarrierTypeId: storageEntry.carrierTypeId,
+			nullPolicy: OcamlIMapStorageAliasNullPolicy.CheckNullAndUnbox
+		};
+	}
+
+	/** Returns the standard Map facts inside one exact `Null<Map<K,V>>`. */
+	static function nullableStandardMapAbstractTypes(type:Type):Null<{
+		kind:OcamlStandardMapCarrierKind,
+		key:Type,
+		value:Type
+	}> {
+		return switch (followTypeAliases(type)) {
+			case TAbstract(abstractRef, [inner]):
+				final abstractType = abstractRef.get();
+				if (abstractType.pack.length == 0 && abstractType.name == "Null") standardMapAbstractTypes(inner); else null;
 			case _:
 				null;
 		};
@@ -1164,9 +1243,8 @@ class OcamlIMapInterfacePlanner {
 		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return '${source.file}:${source.min}:${source.max}';
 	}
-}
+} /** Resolves core primitive `Type` values without keeping compiler globals in decisions. */
 
-/** Resolves core primitive `Type` values without keeping compiler globals in decisions. */
 private class ContextType {
 	public static function stringType():Type {
 		return haxe.macro.Context.getType("String");

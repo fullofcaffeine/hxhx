@@ -573,11 +573,13 @@ typedef InspectionIMapStorageAlias = {
 	final sourceMin:Int;
 	final sourceMax:Int;
 	final sourceSemanticTypeId:String;
+	final sourceCarrierTypeId:String;
 	final preservedCarrierTypeId:String;
 	final targetSemanticTypeId:String;
 	final keySemanticTypeId:String;
 	final valueSemanticTypeId:String;
 	final standardKeyKind:String;
+	final nullPolicy:String;
 	final uses:Array<InspectionIMapStorageAliasUse>;
 	final proofId:String;
 	final proofClaim:String;

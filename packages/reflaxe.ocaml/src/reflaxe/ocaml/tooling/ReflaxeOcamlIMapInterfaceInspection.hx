@@ -10,6 +10,7 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceMethodDec
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceSpan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasNullPolicy;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasUseDecision;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
@@ -40,8 +41,8 @@ typedef InspectionIMapInterfaceInventory = {
 	Edited, missing, or stale evidence makes inspection fail.
 **/
 class ReflaxeOcamlIMapInterfaceInspection {
-	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v79";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v14";
+	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v80";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v15";
 	static inline final NESTED_FUNCTION_ID_MARKER = "|nested-function|";
 
 	/** Reads and validates every concrete-to-interface conversion and interface call. */
@@ -206,11 +207,13 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			id: requiredString(value, "id"),
 			source: source,
 			sourceSemanticTypeId: requiredString(value, "sourceSemanticTypeId"),
+			sourceCarrierTypeId: requiredString(value, "sourceCarrierTypeId"),
 			preservedCarrierTypeId: requiredString(value, "preservedCarrierTypeId"),
 			targetSemanticTypeId: requiredString(value, "targetSemanticTypeId"),
 			keySemanticTypeId: requiredString(value, "keySemanticTypeId"),
 			valueSemanticTypeId: requiredString(value, "valueSemanticTypeId"),
 			standardKeyKind: cast(requiredString(value, "standardKeyKind"), OcamlStandardIMapKeyKind),
+			nullPolicy: cast(requiredString(value, "nullPolicy"), OcamlIMapStorageAliasNullPolicy),
 			uses: [for (entry in requiredArray(value, "uses")) storageAliasUse(entry)],
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
@@ -297,11 +300,13 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			sourceMin: decision.source.min,
 			sourceMax: decision.source.max,
 			sourceSemanticTypeId: decision.sourceSemanticTypeId,
+			sourceCarrierTypeId: decision.sourceCarrierTypeId,
 			preservedCarrierTypeId: decision.preservedCarrierTypeId,
 			targetSemanticTypeId: decision.targetSemanticTypeId,
 			keySemanticTypeId: decision.keySemanticTypeId,
 			valueSemanticTypeId: decision.valueSemanticTypeId,
 			standardKeyKind: decision.standardKeyKind,
+			nullPolicy: decision.nullPolicy,
 			uses: decision.uses.map(inspectionStorageAliasUse),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,

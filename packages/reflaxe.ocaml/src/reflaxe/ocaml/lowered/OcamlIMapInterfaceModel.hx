@@ -100,6 +100,15 @@ typedef OcamlIMapStorageAliasUseDecision = {
 	final carrierTypeId:String;
 }
 
+/** How a proven standard Map storage alias handles a possible Haxe null. */
+enum abstract OcamlIMapStorageAliasNullPolicy(String) from String to String {
+	/** The typed source is an exact non-null `Map<K,V>`. */
+	final NonNullableSource = "non-null-source";
+
+	/** Check an `Obj.t` once, throw on null, then recover the exact Map carrier. */
+	final CheckNullAndUnbox = "check-null-and-unbox";
+}
+
 /**
 	A closed standard-library expansion that may keep native Map storage.
 
@@ -114,11 +123,13 @@ typedef OcamlIMapStorageAliasDecision = {
 	final id:String;
 	final source:OcamlIMapInterfaceSourceSpan;
 	final sourceSemanticTypeId:String;
+	final sourceCarrierTypeId:String;
 	final preservedCarrierTypeId:String;
 	final targetSemanticTypeId:String;
 	final keySemanticTypeId:String;
 	final valueSemanticTypeId:String;
 	final standardKeyKind:OcamlStandardIMapKeyKind;
+	final nullPolicy:OcamlIMapStorageAliasNullPolicy;
 	final uses:Array<OcamlIMapStorageAliasUseDecision>;
 	final proofId:String;
 	final proofClaim:String;
@@ -136,14 +147,14 @@ typedef OcamlIMapStorageAliasDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v2";
+	public static inline final MODEL = "typed-imap-interface-adapter-v3";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
-	public static inline final STORAGE_ALIAS_PROOF_ID = "typed-standard-map-storage-alias-v1";
+	public static inline final STORAGE_ALIAS_PROOF_ID = "typed-standard-map-storage-alias-v2";
 	public static inline final TARGET_CARRIER_ID = "Obj.t(haxe_Constraints.imap_t)";
 	public static inline final CONVERSION_PROOF_CLAIM = "The final typed Haxe occurrence converts either a canonical standard Map declaration or a class proven to implement the exact haxe.Constraints.IMap<K,V> interface into one dispatch record. Standard storage and user methods remain distinct; a key type never proves the runtime receiver implementation.";
 	public static inline final CALL_PROOF_CLAIM = "The final typed Haxe call resolves to one method on the exact haxe.Constraints.IMap<K,V> declaration. The receiver is already the sealed interface carrier, so target syntax evaluates it once, evaluates arguments in source order, and invokes only the recorded dispatch field.";
-	public static inline final STORAGE_ALIAS_PROOF_CLAIM = "The final typed local has exact haxe.Constraints.IMap<K,V> type and an exact haxe.ds.Map<K,V> initializer. Every read of that local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.";
+	public static inline final STORAGE_ALIAS_PROOF_CLAIM = "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.";
 
 	public static final REQUIRED_METHODS = [
 		"get",
@@ -255,16 +266,30 @@ class OcamlIMapInterfaceContract {
 
 	/** Rejects a storage alias that does not prove one closed standard Map expansion. */
 	public static function requireStorageAlias(decision:OcamlIMapStorageAliasDecision):Void {
-		if (decision == null
-			|| decision.id.length == 0
+		if (decision == null)
+			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias]: storage alias is missing";
+		final mapSemanticTypeId = 'Map<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>';
+		final expectedSourceSemanticTypeId = switch (decision.nullPolicy) {
+			case NonNullableSource: mapSemanticTypeId;
+			case CheckNullAndUnbox: 'Null<$mapSemanticTypeId>';
+			case _: "";
+		};
+		final expectedCarrierTypeId = OcamlStandardIMapCallContract.carrierId(decision.standardKeyKind);
+		final expectedSourceCarrierTypeId = switch (decision.nullPolicy) {
+			case NonNullableSource: expectedCarrierTypeId;
+			case CheckNullAndUnbox: "Obj.t";
+			case _: "";
+		};
+		if (decision.id.length == 0
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
 			|| decision.keySemanticTypeId.length == 0
 			|| decision.valueSemanticTypeId.length == 0
-			|| decision.sourceSemanticTypeId != 'Map<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
+			|| decision.sourceSemanticTypeId != expectedSourceSemanticTypeId
 			|| decision.targetSemanticTypeId != 'haxe.IMap<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
-			|| decision.preservedCarrierTypeId != OcamlStandardIMapCallContract.carrierId(decision.standardKeyKind)
+			|| decision.sourceCarrierTypeId != expectedSourceCarrierTypeId
+			|| decision.preservedCarrierTypeId != expectedCarrierTypeId
 			|| !OcamlStandardIMapCallContract.keyKindMatchesSemanticType(decision.standardKeyKind, decision.keySemanticTypeId)
 			|| decision.uses.length == 0
 			|| decision.proofId != STORAGE_ALIAS_PROOF_ID

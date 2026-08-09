@@ -74,6 +74,8 @@ import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasNullPolicy;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfaceConversionMaterialization;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfaceMethodMaterialization;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
@@ -1589,7 +1591,7 @@ class OcamlBuilder {
 				// for this exact local, so keep its initializer in the same raw carrier.
 				// Ordinary source-level Map-to-IMap assignments are not admitted here;
 				// they continue through the dispatch-record conversion below.
-				return buildExpr(rhs);
+				return buildIMapStorageAliasInitializer(storageAlias, rhs);
 			}
 		}
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
@@ -1612,6 +1614,37 @@ class OcamlBuilder {
 				NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic:
 				localStorageInvariant('local $localId leaked an occurrence-only carrier conversion into its initializer summary', rhs.pos);
 		}
+	}
+
+	/**
+		Builds one planned raw Map initializer without guessing from its source type.
+
+		For a nullable static Map field, the field read is evaluated once. A null
+		value raises the same catchable `Null Access` error used by other checked
+		OCaml-target reads; a non-null value keeps the already-proven `HxMap` carrier.
+	**/
+	function buildIMapStorageAliasInitializer(decision:OcamlIMapStorageAliasDecision, rhs:TypedExpr):OcamlExpr {
+		final built = buildExpr(rhs);
+		return switch (decision.nullPolicy) {
+			case NonNullableSource:
+				built;
+			case CheckNullAndUnbox:
+				final valueName = freshTmp("nullable_standard_map");
+				final value = OcamlExpr.EIdent(valueName);
+				final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [value]);
+				final recovered = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
+				final throwNullAccess = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
+					OcamlExpr.EList([
+						OcamlExpr.EConst(OcamlConst.CString("String")),
+						OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
+					])
+				]);
+				OcamlExpr.ELet(valueName, built, OcamlExpr.EIf(isNull, throwNullAccess, recovered), false);
+			case _:
+				callPlanInvariant('reflaxe.ocaml [ocaml-imap-interface:unknown-storage-alias-null-policy]: storage alias "${decision.id}" has unsupported null policy "${decision.nullPolicy}"',
+					rhs.pos);
+		};
 	}
 
 	/**
