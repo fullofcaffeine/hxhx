@@ -53,7 +53,7 @@ try {
 	assert(report.summary.representationDecisionCount > 0)
 	assert.strictEqual(report.summary.representedArrayCount, report.representation.representedArrays.length)
 	assert.strictEqual(report.summary.arrayLiteralProducerCount, report.lowering.arrayLiteralProducers.length)
-	assert.strictEqual(report.lowering.arrayLiteralProducerModel, 'ocaml-represented-array-literal-producer-v2')
+	assert.strictEqual(report.lowering.arrayLiteralProducerModel, 'ocaml-represented-array-literal-producer-v3')
 	assert.match(report.lowering.arrayLiteralProducerRevision, sha256Revision)
 	assert(report.summary.staticStorageCount > 0)
 	assert.strictEqual(report.artifactManifest.status, 'present')

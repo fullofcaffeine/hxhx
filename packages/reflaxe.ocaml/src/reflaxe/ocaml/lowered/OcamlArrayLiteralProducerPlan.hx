@@ -187,6 +187,24 @@ class OcamlArrayLiteralProducerPlan {
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			profileEligibility: decision.profileEligibility.copy(),
+			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			functionId: decision.functionId,
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
@@ -295,6 +313,8 @@ class OcamlArrayLiteralProducerPlanner {
 				representationRevision: descriptor.elementRepresentationRevision
 			});
 		}
+		final evaluationSchedule = OcamlArrayLiteralProducerContract.schedule(elements);
+		final profileEligibility = descriptor.profileEligibility.copy();
 		return {
 			id: id,
 			source: source,
@@ -310,11 +330,14 @@ class OcamlArrayLiteralProducerPlanner {
 			elementRepresentationId: descriptor.elementRepresentationId,
 			elementRepresentationRevision: descriptor.elementRepresentationRevision,
 			elements: elements,
-			evaluationSchedule: OcamlArrayLiteralProducerContract.schedule(elements),
+			evaluationSchedule: evaluationSchedule,
 			constructionPolicy: OcamlArrayLiteralProducerContract.CONSTRUCTION_POLICY,
 			proofId: OcamlArrayLiteralProducerContract.proofIdFor(descriptor.elementSemanticTypeId),
 			proofClaim: OcamlArrayLiteralProducerContract.proofClaimFor(descriptor.elementSemanticTypeId),
-			profileEligibility: descriptor.profileEligibility.copy(),
+			profileEligibility: profileEligibility,
+			runtimeRequirementIds: [OcamlArrayLiteralProducerContract.runtimeRequirementIdFor(id)],
+			runtimeUseOccurrences: OcamlArrayLiteralProducerContract.runtimeUseOccurrencesFor(binding, id, source, elements, evaluationSchedule,
+				profileEligibility),
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,

@@ -15,6 +15,8 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.OcamlBuildContext;
+import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -108,6 +110,8 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallCon
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 
 /**
 	Converts Haxe's final typed expressions into OCaml syntax.
@@ -1234,7 +1238,18 @@ class OcamlBuilder {
 						return arrayLiteralProducerInvariant(Std.string(error), container.pos);
 					}
 					return try {
-						OcamlArrayLiteralSyntax.build(decision, items, buildExpr, freshTmp);
+						final binding = currentFunctionPlanBinding;
+						if (binding == null)
+							return arrayLiteralProducerInvariant("represented array literal has no active function-plan binding", container.pos);
+						final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+						final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+						final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+							ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+						final materialization = OcamlArrayLiteralSyntax.build(decision, items, buildExpr, freshTmp, runtimeAuthority);
+						// Element expressions can contain independently owned compiler work.
+						// Reconcile only this literal's actual create and push call subtrees.
+						runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeOperations));
+						materialization.expression;
 					} catch (error:Dynamic) {
 						arrayLiteralProducerInvariant(Std.string(error), container.pos);
 					}

@@ -5647,11 +5647,36 @@
   "iMapInterfaceRevision": "sha256:64d92240128e90347edcc756ea385cc264adedacd0a7ed20530385e93cf50a59",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 1,
-  "arrayLiteralProducerRevision": "sha256:1290a12ea15d8a37127339f89749f7195e0e270ae9fae4e6c03051a1fbff2cb6",
+  "arrayLiteralProducerRevision": "sha256:84742e562d24a5926a8ff581eb278eef9660de98c33de2bbbf30aa5ab37d790d",
   "iMapInterfaceModel": "typed-imap-interface-adapter-v4",
   "arrayLiteralProducers": [
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:cd22b2cc3244cff3dc138dfe74c091a44ef247df41e63f82f60ab7bdd3be9644",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53",
+          "id": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53:runtime-use:create",
+          "source": {
+            "min": 963,
+            "max": 965,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<Int>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:0e084bd498ec6e0418d6a4fc6430c20fcbd44222ae6fb692ed5130f65722c817",
       "evaluationSchedule": [
         {
@@ -5674,7 +5699,7 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
       "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:ff968492bf2ad474293be3c9ff1c73ff",
+      "id": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53",
       "source": {
         "min": 963,
         "max": 965,
@@ -13124,7 +13149,7 @@
       "representationId": "representation:Int:static-field"
     }
   ],
-  "runtimeRequirementCount": 32,
+  "runtimeRequirementCount": 33,
   "schemaVersion": 69,
   "controlAdmissionCount": 190,
   "structuralFieldModel": "typed-structural-field-overlap-v3",
@@ -22368,7 +22393,7 @@
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 75,
-  "runtimeRequirementRevision": "sha256:8d2494544b49385a5ad04b153d29ad524294f9694a5be0daeae8def7c6265a81",
+  "runtimeRequirementRevision": "sha256:d639739830fb9cef04ac5500206f0d5b7bfb0f73f0551278d49b1d1162489c52",
   "callRevision": "sha256:63952f7090573d1daecde56fa09e612ca33c3b4484b8f32903eccd47e237dc24",
   "representedArrayCount": 1,
   "controls": [
@@ -24661,7 +24686,7 @@
   "planCount": 0,
   "localConversionRevision": "sha256:9aadcf3ccfedb110b2a6ab8d7c3598c7b35e61bc07f6f6c8edb0cb57ac348b59",
   "representationModel": "typed-ocaml-program-representation",
-  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v2",
+  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v3",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-anonymous-structure-v1",
@@ -25077,6 +25102,32 @@
         "portable"
       ],
       "decisionId": "anonymous-operation:fb486a60a09187563dd88718",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 963,
+        "max": 965,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
+      },
+      "sourceId": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:57a5f2661f6c32f3ab585419ee301a53",
       "sourceKind": "haxe-expression"
     },
     {

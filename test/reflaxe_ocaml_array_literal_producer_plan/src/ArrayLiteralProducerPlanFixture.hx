@@ -5,6 +5,9 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import reflaxe.ocaml.ast.OcamlArrayLiteralSyntax;
+import reflaxe.ocaml.ast.OcamlConst;
+import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEvaluationKind;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
@@ -17,6 +20,11 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlNormalizedRepresentedArray;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
 	Checks compiler-owned construction records for direct represented array literals.
@@ -92,6 +100,39 @@ class ArrayLiteralProducerPlanFixture {
 					|| evaluate.elementProducerId != decision.elements[index].id
 					|| store.elementProducerId != decision.elements[index].id) {
 					Context.error('Array literal producer case "$name" does not evaluate and store element $index exactly once in order.', field.pos);
+				}
+			}
+			final runtimeRequirementId = decision.id + ":runtime:haxe-array-literal-construction";
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != runtimeRequirementId)
+				Context.error('Array literal producer case "$name" has no exact HxArray construction requirement.', field.pos);
+			if (decision.runtimeUseOccurrences.length != elementCount + 1)
+				Context.error('Array literal producer case "$name" does not own one create use and one push use per element.', field.pos);
+			final createUse = decision.runtimeUseOccurrences[0];
+			if (createUse.id != decision.id + ":runtime-use:create"
+				|| createUse.planRevision != runtimePlanRevision
+				|| createUse.ownerId != decision.id
+				|| createUse.requirementId != runtimeRequirementId
+				|| createUse.domain != OcamlRuntimeUseDomain.ExpressionIdentifier
+				|| createUse.exactSymbol != "HxArray.create"
+				|| createUse.role != "create-array"
+				|| createUse.order != 0
+				|| createUse.cardinality != 1) {
+				Context.error('Array literal producer case "$name" has an invalid HxArray.create occurrence.', field.pos);
+			}
+			for (index in 0...decision.elements.length) {
+				final pushUse = decision.runtimeUseOccurrences[index + 1];
+				final storeStep = decision.evaluationSchedule[index * 2 + 2];
+				if (pushUse.id != decision.id + ':runtime-use:push:$index'
+					|| pushUse.planRevision != runtimePlanRevision
+					|| pushUse.ownerId != decision.id
+					|| pushUse.requirementId != runtimeRequirementId
+					|| pushUse.domain != OcamlRuntimeUseDomain.ExpressionIdentifier
+					|| pushUse.exactSymbol != "HxArray.push"
+					|| pushUse.role != 'store-element:$index'
+					|| pushUse.order != storeStep.ordinal
+					|| pushUse.cardinality != 1) {
+					Context.error('Array literal producer case "$name" has an invalid HxArray.push occurrence for element $index.', field.pos);
 				}
 			}
 			decisions.push(decision);
@@ -183,6 +224,29 @@ class ArrayLiteralProducerPlanFixture {
 		final missingRepresentations = new OcamlRepresentationRegistry();
 		missingRepresentations.beginProgram(PROGRAM_REVISION);
 		expectThrows("missing-decision", () -> new OcamlArrayLiteralProducerPlan([sample]).requireRepresentations(missingRepresentations));
+
+		final missingRequirement = copy(sample, {runtimeRequirementIds: []});
+		expectThrows("invalid-runtime-requirement", () -> new OcamlArrayLiteralProducerPlan([missingRequirement]));
+		final missingRuntimeUse = copy(sample, {runtimeUseOccurrences: sample.runtimeUseOccurrences.slice(0, sample.runtimeUseOccurrences.length - 1)});
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([missingRuntimeUse]));
+		final duplicatedRuntimeUse = copy(sample, {runtimeUseOccurrences: [sample.runtimeUseOccurrences[0]].concat(sample.runtimeUseOccurrences)});
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([duplicatedRuntimeUse]));
+		final reorderedRuntimeUses = sample.runtimeUseOccurrences.copy();
+		final reorderedRuntimeUse = reorderedRuntimeUses[0];
+		reorderedRuntimeUses[0] = reorderedRuntimeUses[1];
+		reorderedRuntimeUses[1] = reorderedRuntimeUse;
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([copy(sample, {runtimeUseOccurrences: reorderedRuntimeUses})]));
+		final wrongRuntimeSymbol = copy(sample, {});
+		Reflect.setField(cast wrongRuntimeSymbol.runtimeUseOccurrences[0], "exactSymbol", "HxArray.push");
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([wrongRuntimeSymbol]));
+		final staleRuntimeUse = copy(sample, {});
+		Reflect.setField(cast staleRuntimeUse.runtimeUseOccurrences[0], "planRevision", changedRevision());
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([staleRuntimeUse]));
+		final wrongRuntimeProfile = copy(sample, {});
+		Reflect.setField(cast wrongRuntimeProfile.runtimeUseOccurrences[0], "profileEligibility", ["portable"]);
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayLiteralProducerPlan([wrongRuntimeProfile]));
+
+		proveRuntimeSyntax(sample, sampleLiteral);
 
 		Sys.println("REFLAXE_OCAML_ARRAY_LITERAL_PRODUCER_PLAN_FIXTURE:PASS");
 		return macro null;
@@ -288,6 +352,39 @@ class ArrayLiteralProducerPlanFixture {
 				};
 			}
 		];
+		final evaluationSchedule = OcamlArrayLiteralProducerContract.schedule(elements);
+		final runtimeRequirementId = id + ":runtime:haxe-array-literal-construction";
+		final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(owner);
+		final runtimeUseOccurrences = [
+			{
+				id: id + ":runtime-use:create",
+				planRevision: runtimePlanRevision,
+				ownerId: id,
+				requirementId: runtimeRequirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxArray.create",
+				role: "create-array",
+				order: 0,
+				source: source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			}
+		];
+		for (index in 0...elements.length) {
+			runtimeUseOccurrences.push({
+				id: id + ':runtime-use:push:$index',
+				planRevision: runtimePlanRevision,
+				ownerId: id,
+				requirementId: runtimeRequirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxArray.push",
+				role: 'store-element:$index',
+				order: index * 2 + 2,
+				source: elements[index].source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
 		return {
 			id: id,
 			source: source,
@@ -303,11 +400,13 @@ class ArrayLiteralProducerPlanFixture {
 			elementRepresentationId: descriptor.elementRepresentationId,
 			elementRepresentationRevision: descriptor.elementRepresentationRevision,
 			elements: elements,
-			evaluationSchedule: OcamlArrayLiteralProducerContract.schedule(elements),
+			evaluationSchedule: evaluationSchedule,
 			constructionPolicy: "create-then-evaluate-and-push-in-order",
 			proofId: "direct-array-string-literal-construction-v1",
 			proofClaim: "This occurrence allocates one direct represented Array<String>, evaluates each exact String element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.",
 			profileEligibility: ["metal", "portable"],
+			runtimeRequirementIds: [runtimeRequirementId],
+			runtimeUseOccurrences: runtimeUseOccurrences,
 			functionId: owner.functionId,
 			programRevision: owner.programRevision,
 			bodyRevision: owner.bodyRevision,
@@ -320,6 +419,89 @@ class ArrayLiteralProducerPlanFixture {
 		for (field in Reflect.fields(changes))
 			Reflect.setField(value, field, Reflect.field(changes, field));
 		return cast value;
+	}
+
+	/**
+		Checks that syntax consumes the sealed uses and that structural corruption fails.
+
+		The fixture supplies inert element expressions because this proof owns only
+		the container create and push calls. The portable fixtures separately execute
+		real source elements and check their evaluation order.
+	**/
+	static function proveRuntimeSyntax(decision:OcamlArrayLiteralProducerDecision, literal:TypedExpr):Void {
+		final items = switch (literal.expr) {
+			case TArrayDecl(values): values;
+			case _: Context.error("The runtime-use syntax proof requires a typed array literal.", literal.pos);
+		};
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForArrayLiteralProducer(decision);
+		if (requirements.length != 1
+			|| requirements[0].id != decision.runtimeRequirementIds[0]
+			|| requirements[0].rootModules.join(",") != "HxArray") {
+			Context.error("The array-literal runtime requirement does not select the exact HxArray root.", literal.pos);
+		}
+
+		function materialize(authority:OcamlRuntimeUseAuthority) {
+			var temporaryIndex = 0;
+			return OcamlArrayLiteralSyntax.build(decision, items, _ -> OcamlExpr.EConst(OcamlConst.CInt(0)), prefix -> {
+				temporaryIndex += 1;
+				return prefix + "_fixture_" + temporaryIndex;
+			}, authority);
+		}
+
+		function authority(?occurrences:Array<OcamlRuntimeUseOccurrence>):OcamlRuntimeUseAuthority {
+			return new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(binding("ordered")), "portable", requirements,
+				occurrences == null ? decision.runtimeUseOccurrences : occurrences);
+		}
+
+		final validAuthority = authority();
+		final valid = materialize(validAuthority);
+		validAuthority.reconcileExpression(OcamlExpr.ESeq(valid.runtimeOperations));
+		final receipts = validAuthority.receiptsSorted();
+		if (receipts.length != decision.runtimeUseOccurrences.length
+			|| receipts[0].exactSymbol != "HxArray.create"
+			|| receipts[receipts.length - 1].exactSymbol != "HxArray.push") {
+			Context.error("The array-literal syntax did not consume its planned runtime uses in order.", literal.pos);
+		}
+		expectThrows("after reconciliation",
+			() -> validAuthority.expressionIdentifier(decision.runtimeUseOccurrences[0].id, decision.runtimeUseOccurrences[0].planRevision,
+				decision.runtimeUseOccurrences[0].exactSymbol));
+
+		final missingAuthority = authority();
+		final missing = materialize(missingAuthority);
+		expectThrows("missing runtime use", () -> missingAuthority.reconcileExpression(OcamlExpr.ESeq(missing.runtimeOperations.slice(1))));
+
+		final duplicateAuthority = authority();
+		final duplicate = materialize(duplicateAuthority);
+		final duplicateOperations = duplicate.runtimeOperations.copy();
+		duplicateOperations.push(duplicate.runtimeOperations[duplicate.runtimeOperations.length - 1]);
+		expectThrows("duplicate runtime use", () -> duplicateAuthority.reconcileExpression(OcamlExpr.ESeq(duplicateOperations)));
+
+		final reorderedAuthority = authority();
+		final reordered = materialize(reorderedAuthority);
+		final reorderedOperations = reordered.runtimeOperations.copy();
+		final firstOperation = reorderedOperations[0];
+		reorderedOperations[0] = reorderedOperations[1];
+		reorderedOperations[1] = firstOperation;
+		expectThrows("runtime use order", () -> reorderedAuthority.reconcileExpression(OcamlExpr.ESeq(reorderedOperations)));
+
+		final plainAuthority = authority();
+		final plainCreate = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+		expectThrows("plain private runtime reference HxArray.create", () -> plainAuthority.reconcileExpression(plainCreate));
+
+		final profileOccurrences = decision.runtimeUseOccurrences.map(use -> {
+			id: use.id,
+			planRevision: use.planRevision,
+			ownerId: use.ownerId,
+			requirementId: use.requirementId,
+			domain: use.domain,
+			exactSymbol: use.exactSymbol,
+			role: use.role,
+			order: use.order,
+			source: use.source,
+			profileEligibility: ["metal"],
+			cardinality: use.cardinality
+		});
+		expectThrows("not eligible for profile portable", () -> materialize(authority(profileOccurrences)));
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {

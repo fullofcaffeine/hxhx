@@ -314,7 +314,7 @@ if (nestedArrayThrows[0].payload.arrayLiteralProducerId != null
 	fail('the local Array<Int> throw incorrectly claimed a direct-literal producer')
 }
 
-if (report.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v2'
+if (report.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v3'
 	|| report.arrayLiteralProducerCount !== report.arrayLiteralProducers.length
 	|| report.arrayLiteralProducerCount !== 4
 	|| !sha256.test(report.arrayLiteralProducerRevision)) {
@@ -342,6 +342,38 @@ const scheduleFor = producer => producer.evaluationSchedule.map(step => {
 		: String(producer.elements.findIndex(element => element.id === step.elementProducerId))
 	return `${step.kind}:${elementIndex}:${producerIndex}`
 })
+function requireArrayLiteralRuntimeOwnership(producer) {
+	const requirementId = `${producer.id}:runtime:haxe-array-literal-construction`
+	const expectedSymbols = ['HxArray.create', ...producer.elements.map(() => 'HxArray.push')]
+	const expectedRoles = ['create-array', ...producer.elements.map((_, index) => `store-element:${index}`)]
+	const expectedOrders = [0, ...producer.elements.map((_, index) => index * 2 + 2)]
+	if (producer.runtimeRequirementIds?.join(',') !== requirementId
+		|| producer.runtimeUseOccurrences?.length !== expectedSymbols.length
+		|| producer.runtimeUseOccurrences.some((use, index) =>
+			use.id !== `${producer.id}:runtime-use:${index === 0 ? 'create' : `push:${index - 1}`}`
+			|| !sha256.test(use.planRevision)
+			|| use.ownerId !== producer.id
+			|| use.requirementId !== requirementId
+			|| use.domain !== 'expression-identifier'
+			|| use.exactSymbol !== expectedSymbols[index]
+			|| use.role !== expectedRoles[index]
+			|| use.order !== expectedOrders[index]
+			|| use.profileEligibility?.join(',') !== 'metal,portable'
+			|| use.cardinality !== 1)) {
+		fail(`direct ${producer.arraySemanticTypeId} literal does not own its exact HxArray.create/push occurrences`)
+	}
+	const requirement = report.runtimeRequirements.find(entry => entry.id === requirementId)
+	if (requirement?.semanticCapability !== 'haxe-array-literal-construction'
+		|| requirement.implementationFeature !== 'haxe-array-literal-construction-v1'
+		|| requirement.sourceKind !== 'haxe-expression'
+		|| requirement.sourceId !== producer.id
+		|| requirement.decisionId !== producer.id
+		|| requirement.subject?.id !== producer.arraySemanticTypeId
+		|| requirement.rootModules?.join(',') !== 'HxArray'
+		|| requirement.profileEligibility?.join(',') !== 'metal,portable') {
+		fail(`direct ${producer.arraySemanticTypeId} literal does not publish its exact HxArray runtime requirement`)
+	}
+}
 if (!literalProducer.id.startsWith('array-literal-producer:')
 	|| literalProducer.literalOrdinal !== 0
 	|| literalProducer.arraySemanticTypeId !== 'Array<Int>'
@@ -369,6 +401,7 @@ if (!literalProducer.id.startsWith('array-literal-producer:')
 	|| scheduleFor(literalProducer).join(',') !== expectedSchedule.join(',')) {
 	fail('nestedArrayLiteralThrowClosure did not seal its exact ordered Array<Int> literal construction')
 }
+requireArrayLiteralRuntimeOwnership(literalProducer)
 const literalThrows = report.controls.filter(control =>
 	control.kind === 'throw'
 	&& control.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
@@ -421,6 +454,7 @@ if (!stringLiteralProducer.id.startsWith('array-literal-producer:')
 	|| scheduleFor(stringLiteralProducer).join(',') !== expectedSchedule.join(',')) {
 	fail('nestedStringArrayLiteralThrowClosure did not seal its exact ordered Array<String> literal construction')
 }
+requireArrayLiteralRuntimeOwnership(stringLiteralProducer)
 const stringLiteralThrows = report.controls.filter(control =>
 	control.kind === 'throw'
 	&& control.functionId.includes('|function|nestedStringArrayLiteralThrowClosure|')
@@ -972,7 +1006,7 @@ const literalThrow = report.lowering.controls.find(control =>
 	control.kind === 'throw'
 	&& control.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
 	&& control.functionId.includes('|nested-function|'))
-if (report.lowering.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v2'
+if (report.lowering.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v3'
 	|| !/^sha256:[0-9a-f]{64}$/.test(report.lowering.arrayLiteralProducerRevision ?? '')
 	|| literalProducer?.elements.length !== 2
 	|| literalProducer.evaluationSchedule.map(step => step.kind).join(',')

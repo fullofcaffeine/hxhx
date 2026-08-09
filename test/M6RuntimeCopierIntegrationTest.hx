@@ -540,6 +540,7 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-type-registry-dynamic-string",
 			"compiler-type-registry-optional-null",
 			"haxe-anonymous-structure",
+			"haxe-array-literal-construction",
 			"haxe-bytes-access",
 			"haxe-bytes-producer",
 			"haxe-bytes-read",

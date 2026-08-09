@@ -147,6 +147,8 @@ class OcamlFunctionPlanSealer {
 		final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(binding, representations).plan(data.expr);
 		arrayLiteralProducers.requirePlanBinding(binding);
 		arrayLiteralProducers.requireRepresentations(representations);
+		for (decision in arrayLiteralProducers.decisions())
+			context.recordArrayLiteralRuntimeRequirements(decision);
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -350,6 +352,8 @@ class OcamlFunctionPlanSealer {
 								arrayLiteralProducers: arrayLiteralProducers,
 								imapInterfaces: imapInterfaces
 							};
+							for (decision in arrayLiteralProducers.decisions())
+								context.recordArrayLiteralRuntimeRequirements(decision);
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}
 					}

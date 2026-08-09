@@ -52,6 +52,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlFamilyAdmission;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 using StringTools;
 
@@ -471,7 +472,7 @@ class ReflaxeOcamlInspection {
 					final controlAdmissions = inspectControlAdmissions(value, controls, controlTargets, controlCatches);
 					requireFunctionResultCoverage(functionResultBoundaries, controlAdmissions, controls);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
 						callInventory.calls, controls);
 					{
@@ -617,6 +618,28 @@ class ReflaxeOcamlInspection {
 				};
 			}
 		];
+		final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence> = [
+			for (entry in requiredArray(value, "runtimeUseOccurrences")) {
+				final useSource = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					planRevision: requiredSha256Revision(entry, "planRevision"),
+					ownerId: requiredString(entry, "ownerId"),
+					requirementId: requiredString(entry, "requirementId"),
+					domain: cast requiredString(entry, "domain"),
+					exactSymbol: requiredString(entry, "exactSymbol"),
+					role: requiredString(entry, "role"),
+					order: requiredInt(entry, "order"),
+					source: {
+						file: requiredString(useSource, "file"),
+						min: requiredInt(useSource, "min"),
+						max: requiredInt(useSource, "max")
+					},
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					cardinality: requiredInt(entry, "cardinality")
+				};
+			}
+		];
 		final producer:OcamlArrayLiteralProducerDecision = {
 			id: requiredString(value, "id"),
 			source: {
@@ -641,6 +664,8 @@ class ReflaxeOcamlInspection {
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: runtimeUseOccurrences,
 			functionId: requiredString(value, "functionId"),
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
@@ -3231,9 +3256,10 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
-			localConversions:Array<InspectionLocalConversion>, containerElementConversions:Array<InspectionContainerElementConversion>,
-			anonymousOperations:Array<InspectionAnonymousStructureOperation>, structuralFields:Array<InspectionStructuralField>,
-			iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
+			arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>, localConversions:Array<InspectionLocalConversion>,
+			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
+			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>, calls:Array<InspectionCall>,
+			controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -3278,6 +3304,34 @@ class ReflaxeOcamlInspection {
 					throw 'Lowered plan "${plan.id}" refers to missing runtime requirement "$requirementId".';
 				referenced.set(requirementId, true);
 			}
+		}
+		for (producer in arrayLiteralProducers) {
+			final requirementId = OcamlArrayLiteralProducerContract.runtimeRequirementIdFor(producer.id);
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Array-literal producer "${producer.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (producer.runtimeRequirementIds.length != 1
+				|| producer.runtimeRequirementIds[0] != requirementId
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != producer.id
+				|| requiredString(source, "file") != producer.source.file
+				|| requiredInt(source, "min") != producer.source.min
+				|| requiredInt(source, "max") != producer.source.max
+				|| requiredString(requirement, "semanticCapability") != "haxe-array-literal-construction"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != producer.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != producer.arraySemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-array-literal-construction-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxArray"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != producer.profileEligibility.join(",")) {
+				throw 'Array-literal producer "${producer.id}" runtime requirement "$requirementId" disagrees with its sealed HxArray dependency.';
+			}
+			referenced.set(requirementId, true);
 		}
 		for (conversion in localConversions) {
 			if (conversion.conversion != "box-exact-enum-to-dynamic")

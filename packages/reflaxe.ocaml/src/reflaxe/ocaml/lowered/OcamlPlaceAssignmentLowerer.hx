@@ -242,8 +242,8 @@ class OcamlPlaceAssignmentLowerer {
 					}
 					final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 					final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
-					final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile, context.runtimeRequirementsSorted(),
-						plan.runtimeUseOccurrences);
+					final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+						context.runtimeRequirementsByIds(plan.runtimeRequirementIds), plan.runtimeUseOccurrences);
 					final runtimeUse = plan.runtimeUseOccurrences[0];
 					final runtimeStoreReference = runtimeAuthority.expressionIdentifier(runtimeUse.id, runtimePlanRevision, runtimeUse.exactSymbol);
 					final emission = OcamlPlaceAssignmentEmitter.emitArraySimple(plan, runtimeStoreReference, buildExpr, freshTemporary);

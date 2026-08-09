@@ -593,6 +593,16 @@ class OcamlLoweringReportWriter {
 				includedRequirementIds.set(expected.id, true);
 			}
 		}
+		for (producer in sortedArrayLiteralProducers) {
+			for (expected in OcamlRuntimeRequirementLedger.requirementsForArrayLiteralProducer(producer)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Array-literal producer "${producer.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Array-literal producer "${producer.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (entry in sorted) {
 			for (requirementId in entry.runtimeRequirementIds) {
 				if (!requirementById.exists(requirementId))

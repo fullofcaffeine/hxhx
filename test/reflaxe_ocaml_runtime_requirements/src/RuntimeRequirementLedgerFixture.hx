@@ -207,6 +207,15 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(requirements.length == 26,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "call:imap-to-string:runtime:haxe-array", "requirements should be sorted by stable identity");
+		final selectedRequirements = ledger.requirementsByIds(["place:b:runtime:haxe-array-element-set", "place:a:runtime:haxe-int32-add"]);
+		assertTrue(selectedRequirements.length == 2
+			&& selectedRequirements[0].id == "place:b:runtime:haxe-array-element-set"
+			&& selectedRequirements[1].id == "place:a:runtime:haxe-int32-add",
+			"a sealed plan should receive only its exact runtime requirements in plan order");
+		expectFailure("repeated exact requirement lookup", 'lookup repeats "place:a:runtime:haxe-int32-add"',
+			() -> ledger.requirementsByIds(["place:a:runtime:haxe-int32-add", "place:a:runtime:haxe-int32-add"]));
+		expectFailure("missing exact requirement lookup", 'lookup is missing "place:missing:runtime:haxe-int32-add"',
+			() -> ledger.requirementsByIds(["place:missing:runtime:haxe-int32-add"]));
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
 		assertTrue(placeRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType && placeRequirement.subject.id == "Int",

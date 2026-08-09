@@ -2701,11 +2701,36 @@
   "iMapInterfaceRevision": "sha256:016bfb4844d8e026492d25adec5ae5af9eeec317cd86f719696c52151850bba1",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
-  "arrayLiteralProducerRevision": "sha256:820406bb59128a77cddfb7aabb581dcf11eda86fb8f1fa185c63f936c5f89882",
+  "arrayLiteralProducerRevision": "sha256:3d4ad999805f9a8c089ce3714ae29af83d9500fa1da738f863530da842f6d056",
   "iMapInterfaceModel": "typed-imap-interface-adapter-v4",
   "arrayLiteralProducers": [
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:8cf2d9aee1f9bf7e5fbd82e7ecd726e9c5de8451b13cc98de3c93f4cd4b43ead",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209",
+          "id": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209:runtime-use:create",
+          "source": {
+            "min": 2448,
+            "max": 2477,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<Int>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "evaluationSchedule": [
         {
@@ -2728,7 +2753,7 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
       "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:1fe2b2f886d0ab49482504d3bfbaa735",
+      "id": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209",
       "source": {
         "min": 2448,
         "max": 2477,
@@ -2750,8 +2775,33 @@
       "literalOrdinal": 0
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:8cf2d9aee1f9bf7e5fbd82e7ecd726e9c5de8451b13cc98de3c93f4cd4b43ead",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:695d1125a49edb6670fd272657136b67",
+          "id": "array-literal-producer:695d1125a49edb6670fd272657136b67:runtime-use:create",
+          "source": {
+            "min": 2578,
+            "max": 2604,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:695d1125a49edb6670fd272657136b67:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<String>",
-      "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
+      "runtimeRequirementIds": [
+        "array-literal-producer:695d1125a49edb6670fd272657136b67:runtime:haxe-array-literal-construction"
+      ],
+      "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "evaluationSchedule": [
         {
           "elementIndex": null,
@@ -2760,33 +2810,9 @@
           "kind": "create-array"
         },
         {
-          "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:830fbc1e61f2bb19e229",
-          "ordinal": 1,
-          "kind": "evaluate-element"
-        },
-        {
-          "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:830fbc1e61f2bb19e229",
-          "ordinal": 2,
-          "kind": "store-element"
-        },
-        {
-          "elementIndex": 1,
-          "elementProducerId": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:6501b6a4718ba999c3b5",
-          "ordinal": 3,
-          "kind": "evaluate-element"
-        },
-        {
-          "elementIndex": 1,
-          "elementProducerId": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:6501b6a4718ba999c3b5",
-          "ordinal": 4,
-          "kind": "store-element"
-        },
-        {
           "elementIndex": null,
           "elementProducerId": null,
-          "ordinal": 5,
+          "ordinal": 1,
           "kind": "result-array"
         }
       ],
@@ -2794,43 +2820,16 @@
       "proofClaim": "This occurrence allocates one direct represented Array<String>, evaluates each exact String element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.",
       "arrayDescriptorRevision": "sha256:01b2ce0d707bdbcf1ee78bc62f0307ee939c3a3344786fcdadf4b53b5988b76e",
       "constructionPolicy": "create-then-evaluate-and-push-in-order",
-      "elements": [
-        {
-          "carrierTypeId": "string",
-          "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-          "id": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:830fbc1e61f2bb19e229",
-          "source": {
-            "min": 1978,
-            "max": 1986,
-            "file": "src/Main.hx"
-          },
-          "semanticTypeId": "String",
-          "index": 0,
-          "representationId": "representation:String:array-element"
-        },
-        {
-          "carrierTypeId": "string",
-          "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-          "id": "array-literal-producer:7b92115373bbed9698fb179602f1550d:element:6501b6a4718ba999c3b5",
-          "source": {
-            "min": 1988,
-            "max": 1996,
-            "file": "src/Main.hx"
-          },
-          "semanticTypeId": "String",
-          "index": 1,
-          "representationId": "representation:String:array-element"
-        }
-      ],
+      "elements": [],
       "resultRepresentationRevision": "sha256:dc286335de05a4d986b80b71b1fd48c6676df5d3bdfb68f8177b2de3d877a716",
       "elementRepresentationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-      "id": "array-literal-producer:7b92115373bbed9698fb179602f1550d",
+      "id": "array-literal-producer:695d1125a49edb6670fd272657136b67",
       "source": {
-        "min": 1977,
-        "max": 1997,
+        "min": 2578,
+        "max": 2604,
         "file": "src/Main.hx"
       },
-      "functionId": "Main|Main|static|function|runStrings|generics:0|required:haxe.IMap<String, Int>->Void",
+      "functionId": "Main|Main|static|function|runInts|generics:0|required:haxe.IMap<Int, String>->Void",
       "proofId": "direct-array-string-literal-construction-v1",
       "arrayCarrierTypeId": "string HxArray.t",
       "elementCarrierTypeId": "string",
@@ -2846,7 +2845,32 @@
       "literalOrdinal": 1
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:e03f8e4892c52f92fea571ab9bee9b3da519eb5b3655d4a60d3af433895dcce0",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332",
+          "id": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332:runtime-use:create",
+          "source": {
+            "min": 963,
+            "max": 965,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<Int>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:72bbdca1fb33cdbead3c38694804b332:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:0e084bd498ec6e0418d6a4fc6430c20fcbd44222ae6fb692ed5130f65722c817",
       "evaluationSchedule": [
         {
@@ -2869,7 +2893,7 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
       "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:7cd5fd7d4603d542584a295e2104f0cf",
+      "id": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332",
       "source": {
         "min": 963,
         "max": 965,
@@ -2891,7 +2915,72 @@
       "literalOrdinal": 0
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:8cf2d9aee1f9bf7e5fbd82e7ecd726e9c5de8451b13cc98de3c93f4cd4b43ead",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
+          "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime-use:create",
+          "source": {
+            "min": 2921,
+            "max": 2943,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:8cf2d9aee1f9bf7e5fbd82e7ecd726e9c5de8451b13cc98de3c93f4cd4b43ead",
+          "cardinality": 1,
+          "role": "store-element:0",
+          "ownerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
+          "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime-use:push:0",
+          "source": {
+            "min": 2922,
+            "max": 2931,
+            "file": "src/Main.hx"
+          },
+          "order": 2,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:8cf2d9aee1f9bf7e5fbd82e7ecd726e9c5de8451b13cc98de3c93f4cd4b43ead",
+          "cardinality": 1,
+          "role": "store-element:1",
+          "ownerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
+          "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime-use:push:1",
+          "source": {
+            "min": 2933,
+            "max": 2942,
+            "file": "src/Main.hx"
+          },
+          "order": 4,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<String>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "evaluationSchedule": [
         {
@@ -2902,25 +2991,25 @@
         },
         {
           "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:ad19fdf44b678c971f6a",
+          "elementProducerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:02e02a5cacd8a6b92197",
           "ordinal": 1,
           "kind": "evaluate-element"
         },
         {
           "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:ad19fdf44b678c971f6a",
+          "elementProducerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:02e02a5cacd8a6b92197",
           "ordinal": 2,
           "kind": "store-element"
         },
         {
           "elementIndex": 1,
-          "elementProducerId": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:076f24c59740db1066c4",
+          "elementProducerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:de4ac3c79439dd77a687",
           "ordinal": 3,
           "kind": "evaluate-element"
         },
         {
           "elementIndex": 1,
-          "elementProducerId": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:076f24c59740db1066c4",
+          "elementProducerId": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:de4ac3c79439dd77a687",
           "ordinal": 4,
           "kind": "store-element"
         },
@@ -2939,7 +3028,7 @@
         {
           "carrierTypeId": "string",
           "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-          "id": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:ad19fdf44b678c971f6a",
+          "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:02e02a5cacd8a6b92197",
           "source": {
             "min": 2922,
             "max": 2931,
@@ -2952,7 +3041,7 @@
         {
           "carrierTypeId": "string",
           "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-          "id": "array-literal-producer:8dab19917bc308b877925f7d668544ba:element:076f24c59740db1066c4",
+          "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:element:de4ac3c79439dd77a687",
           "source": {
             "min": 2933,
             "max": 2942,
@@ -2965,7 +3054,7 @@
       ],
       "resultRepresentationRevision": "sha256:dc286335de05a4d986b80b71b1fd48c6676df5d3bdfb68f8177b2de3d877a716",
       "elementRepresentationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-      "id": "array-literal-producer:8dab19917bc308b877925f7d668544ba",
+      "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
       "source": {
         "min": 2921,
         "max": 2943,
@@ -2987,7 +3076,52 @@
       "literalOrdinal": 2
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:87f95d21b9d38600995f929af59d60aca64ac53e263058ce44aa3c59c48ecbe3",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c",
+          "id": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime-use:create",
+          "source": {
+            "min": 3904,
+            "max": 3913,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:87f95d21b9d38600995f929af59d60aca64ac53e263058ce44aa3c59c48ecbe3",
+          "cardinality": 1,
+          "role": "store-element:0",
+          "ownerId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c",
+          "id": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime-use:push:0",
+          "source": {
+            "min": 3905,
+            "max": 3912,
+            "file": "src/Main.hx"
+          },
+          "order": 2,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<String>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:5c594d317766445eb9c42c4002d4b609a29b2e57bb4d14a319037ae975aa9507",
       "evaluationSchedule": [
         {
@@ -2998,13 +3132,13 @@
         },
         {
           "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:aa61b46ae0778939f8484ef08226e740:element:483cba4ff963f5c7b7fd",
+          "elementProducerId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:element:75e11d0b74184a991782",
           "ordinal": 1,
           "kind": "evaluate-element"
         },
         {
           "elementIndex": 0,
-          "elementProducerId": "array-literal-producer:aa61b46ae0778939f8484ef08226e740:element:483cba4ff963f5c7b7fd",
+          "elementProducerId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:element:75e11d0b74184a991782",
           "ordinal": 2,
           "kind": "store-element"
         },
@@ -3023,7 +3157,7 @@
         {
           "carrierTypeId": "string",
           "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-          "id": "array-literal-producer:aa61b46ae0778939f8484ef08226e740:element:483cba4ff963f5c7b7fd",
+          "id": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:element:75e11d0b74184a991782",
           "source": {
             "min": 3905,
             "max": 3912,
@@ -3036,7 +3170,7 @@
       ],
       "resultRepresentationRevision": "sha256:dc286335de05a4d986b80b71b1fd48c6676df5d3bdfb68f8177b2de3d877a716",
       "elementRepresentationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-      "id": "array-literal-producer:aa61b46ae0778939f8484ef08226e740",
+      "id": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c",
       "source": {
         "min": 3904,
         "max": 3913,
@@ -3058,8 +3192,73 @@
       "literalOrdinal": 0
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:3b0992673e14a76ebc4061bc9d53394cb16c4819b0d797fd4769f938e439dccb",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
+          "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime-use:create",
+          "source": {
+            "min": 1977,
+            "max": 1997,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:3b0992673e14a76ebc4061bc9d53394cb16c4819b0d797fd4769f938e439dccb",
+          "cardinality": 1,
+          "role": "store-element:0",
+          "ownerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
+          "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime-use:push:0",
+          "source": {
+            "min": 1978,
+            "max": 1986,
+            "file": "src/Main.hx"
+          },
+          "order": 2,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:3b0992673e14a76ebc4061bc9d53394cb16c4819b0d797fd4769f938e439dccb",
+          "cardinality": 1,
+          "role": "store-element:1",
+          "ownerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
+          "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime-use:push:1",
+          "source": {
+            "min": 1988,
+            "max": 1996,
+            "file": "src/Main.hx"
+          },
+          "order": 4,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<String>",
-      "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
+      "runtimeRequirementIds": [
+        "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime:haxe-array-literal-construction"
+      ],
+      "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
       "evaluationSchedule": [
         {
           "elementIndex": null,
@@ -3068,9 +3267,33 @@
           "kind": "create-array"
         },
         {
+          "elementIndex": 0,
+          "elementProducerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:bcf541bb8b594103e945",
+          "ordinal": 1,
+          "kind": "evaluate-element"
+        },
+        {
+          "elementIndex": 0,
+          "elementProducerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:bcf541bb8b594103e945",
+          "ordinal": 2,
+          "kind": "store-element"
+        },
+        {
+          "elementIndex": 1,
+          "elementProducerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:94bdc492565e3ed715a8",
+          "ordinal": 3,
+          "kind": "evaluate-element"
+        },
+        {
+          "elementIndex": 1,
+          "elementProducerId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:94bdc492565e3ed715a8",
+          "ordinal": 4,
+          "kind": "store-element"
+        },
+        {
           "elementIndex": null,
           "elementProducerId": null,
-          "ordinal": 1,
+          "ordinal": 5,
           "kind": "result-array"
         }
       ],
@@ -3078,16 +3301,43 @@
       "proofClaim": "This occurrence allocates one direct represented Array<String>, evaluates each exact String element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.",
       "arrayDescriptorRevision": "sha256:01b2ce0d707bdbcf1ee78bc62f0307ee939c3a3344786fcdadf4b53b5988b76e",
       "constructionPolicy": "create-then-evaluate-and-push-in-order",
-      "elements": [],
+      "elements": [
+        {
+          "carrierTypeId": "string",
+          "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
+          "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:bcf541bb8b594103e945",
+          "source": {
+            "min": 1978,
+            "max": 1986,
+            "file": "src/Main.hx"
+          },
+          "semanticTypeId": "String",
+          "index": 0,
+          "representationId": "representation:String:array-element"
+        },
+        {
+          "carrierTypeId": "string",
+          "representationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
+          "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:element:94bdc492565e3ed715a8",
+          "source": {
+            "min": 1988,
+            "max": 1996,
+            "file": "src/Main.hx"
+          },
+          "semanticTypeId": "String",
+          "index": 1,
+          "representationId": "representation:String:array-element"
+        }
+      ],
       "resultRepresentationRevision": "sha256:dc286335de05a4d986b80b71b1fd48c6676df5d3bdfb68f8177b2de3d877a716",
       "elementRepresentationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-      "id": "array-literal-producer:de56471e9d8dd16ad04c7c58eb992de9",
+      "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
       "source": {
-        "min": 2578,
-        "max": 2604,
+        "min": 1977,
+        "max": 1997,
         "file": "src/Main.hx"
       },
-      "functionId": "Main|Main|static|function|runInts|generics:0|required:haxe.IMap<Int, String>->Void",
+      "functionId": "Main|Main|static|function|runStrings|generics:0|required:haxe.IMap<String, Int>->Void",
       "proofId": "direct-array-string-literal-construction-v1",
       "arrayCarrierTypeId": "string HxArray.t",
       "elementCarrierTypeId": "string",
@@ -3103,7 +3353,32 @@
       "literalOrdinal": 1
     },
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:3b0992673e14a76ebc4061bc9d53394cb16c4819b0d797fd4769f938e439dccb",
+          "cardinality": 1,
+          "role": "create-array",
+          "ownerId": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa",
+          "id": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa:runtime-use:create",
+          "source": {
+            "min": 1519,
+            "max": 1548,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa:runtime:haxe-array-literal-construction",
+          "domain": "expression-identifier"
+        }
+      ],
       "arrayDescriptorId": "represented-array:Array<String>",
+      "runtimeRequirementIds": [
+        "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa:runtime:haxe-array-literal-construction"
+      ],
       "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
       "evaluationSchedule": [
         {
@@ -3126,7 +3401,7 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:dc286335de05a4d986b80b71b1fd48c6676df5d3bdfb68f8177b2de3d877a716",
       "elementRepresentationRevision": "sha256:22f7687ffb0b0b751eed8b9424eed01740db3b5245c6065b59c08f7b010f2acd",
-      "id": "array-literal-producer:eff21eceb0457cf4706b5ba49541cf8f",
+      "id": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa",
       "source": {
         "min": 1519,
         "max": 1548,
@@ -4614,7 +4889,7 @@
       "representationId": "representation:Int:static-field"
     }
   ],
-  "runtimeRequirementCount": 74,
+  "runtimeRequirementCount": 81,
   "schemaVersion": 69,
   "controlAdmissionCount": 153,
   "structuralFieldModel": "typed-structural-field-overlap-v3",
@@ -12570,7 +12845,7 @@
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 65,
-  "runtimeRequirementRevision": "sha256:6267beb4899299e666917106949287abc932a0fafe152ebbe18ae26ecde251a8",
+  "runtimeRequirementRevision": "sha256:f8a33afc8b83a5b72cc48633777e741092641f93c6775ee05f9e9fe31e2c4b1b",
   "callRevision": "sha256:b07bd246a8784fb905365754a5bbc2645b9ea7fab4b34e9364bda34829c48237",
   "representedArrayCount": 2,
   "controls": [
@@ -14589,7 +14864,7 @@
   "planCount": 1,
   "localConversionRevision": "sha256:4edfb862af9797ff64216ea3f98c947c871948bee29fee1ef736d3ac6c5b66c2",
   "representationModel": "typed-ocaml-program-representation",
-  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v2",
+  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v3",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-anonymous-structure-v1",
@@ -15005,6 +15280,188 @@
         "portable"
       ],
       "decisionId": "anonymous-operation:ff0e13af7b17f8ac5e196860",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 2448,
+        "max": 2477,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:302c3b2aa9ae31b5bb354bb2ad6cc209",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:695d1125a49edb6670fd272657136b67:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 2578,
+        "max": 2604,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:695d1125a49edb6670fd272657136b67",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:695d1125a49edb6670fd272657136b67",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 963,
+        "max": 965,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
+      },
+      "sourceId": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:72bbdca1fb33cdbead3c38694804b332",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:79fa602664032f827f9fb194c37a3873:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 2921,
+        "max": 2943,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:79fa602664032f827f9fb194c37a3873",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 3904,
+        "max": 3913,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:95c25a85b6e5f7cb5f52ba7b94e8458c",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 1977,
+        "max": 1997,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:c0b86984e5bdbb9af42d261fda6a7372",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-literal-construction-v1",
+      "subject": {
+        "id": "Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-literal-construction",
+      "explanation": "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa:runtime:haxe-array-literal-construction",
+      "source": {
+        "min": 1519,
+        "max": 1548,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-literal-producer:d436c7d6e8cdb05c755876430ebef3aa",
       "sourceKind": "haxe-expression"
     },
     {

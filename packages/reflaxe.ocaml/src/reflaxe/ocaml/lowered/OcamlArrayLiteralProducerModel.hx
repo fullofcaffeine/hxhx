@@ -4,6 +4,9 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** One ordered action used to construct a represented Haxe array literal. */
 enum abstract OcamlArrayLiteralEvaluationKind(String) from String to String {
@@ -68,6 +71,8 @@ typedef OcamlArrayLiteralProducerDecision = {
 	final proofId:String;
 	final proofClaim:String;
 	final profileEligibility:Array<String>;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final functionId:String;
 	final programRevision:String;
 	final bodyRevision:String;
@@ -76,8 +81,9 @@ typedef OcamlArrayLiteralProducerDecision = {
 
 /** Closed identities and validation shared by planning, reports, and syntax. */
 class OcamlArrayLiteralProducerContract {
-	public static inline final MODEL_REVISION = "ocaml-represented-array-literal-producer-v2";
+	public static inline final MODEL_REVISION = "ocaml-represented-array-literal-producer-v3";
 	public static inline final CONSTRUCTION_POLICY = "create-then-evaluate-and-push-in-order";
+	public static inline final RUNTIME_CAPABILITY = "haxe-array-literal-construction";
 	public static inline final INT_PROOF_ID = "direct-array-int-literal-construction-v1";
 	public static inline final INT_PROOF_CLAIM = "This occurrence allocates one direct represented Array<Int>, evaluates each exact Int element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.";
 	public static inline final STRING_PROOF_ID = "direct-array-string-literal-construction-v1";
@@ -152,6 +158,78 @@ class OcamlArrayLiteralProducerContract {
 		].join("\n")).substr(0, 20);
 	}
 
+	/** Returns the one runtime requirement owned by a direct literal decision. */
+	public static function runtimeRequirementIdFor(literalId:String):String {
+		if (literalId == null || literalId.length == 0)
+			throw "reflaxe.ocaml [ocaml-array-literal:invalid-runtime-owner]: array literal runtime ownership requires a producer identity";
+		return literalId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/**
+		Builds the private-runtime uses fixed by one literal construction schedule.
+
+		The create use follows the first schedule step. Each push use follows the
+		matching store step, after the source element has been evaluated. These
+		records authorize target identifiers only; the surrounding producer decision
+		continues to own evaluation order and the returned array value.
+	**/
+	public static function runtimeUseOccurrencesFor(binding:OcamlFunctionPlanBinding, literalId:String, source:OcamlLoweredSourceSpan,
+			elements:Array<OcamlArrayLiteralElementProducer>, schedule:Array<OcamlArrayLiteralEvaluationStep>,
+			profileEligibility:Array<String>):Array<OcamlRuntimeUseOccurrence> {
+		if (schedule.length != elements.length * 2 + 2
+			|| schedule[0].kind != OcamlArrayLiteralEvaluationKind.CreateArray
+			|| schedule[schedule.length - 1].kind != OcamlArrayLiteralEvaluationKind.ResultArray) {
+			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-runtime-schedule]: producer "$literalId" cannot derive runtime uses from an incomplete construction schedule';
+		}
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final requirementId = runtimeRequirementIdFor(literalId);
+		final occurrences:Array<OcamlRuntimeUseOccurrence> = [
+			{
+				id: literalId + ":runtime-use:create",
+				planRevision: planRevision,
+				ownerId: literalId,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxArray.create",
+				role: "create-array",
+				order: schedule[0].ordinal,
+				source: {
+					file: source.file,
+					min: source.min,
+					max: source.max
+				},
+				profileEligibility: profileEligibility.copy(),
+				cardinality: 1
+			}
+		];
+		for (index in 0...elements.length) {
+			final storeStep = schedule[index * 2 + 2];
+			if (storeStep.kind != OcamlArrayLiteralEvaluationKind.StoreElement
+				|| storeStep.elementIndex != index
+				|| storeStep.elementProducerId != elements[index].id) {
+				throw 'reflaxe.ocaml [ocaml-array-literal:invalid-runtime-schedule]: producer "$literalId" has no exact store step for element $index';
+			}
+			occurrences.push({
+				id: literalId + ':runtime-use:push:$index',
+				planRevision: planRevision,
+				ownerId: literalId,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxArray.push",
+				role: 'store-element:$index',
+				order: storeStep.ordinal,
+				source: {
+					file: elements[index].source.file,
+					min: elements[index].source.min,
+					max: elements[index].source.max
+				},
+				profileEligibility: profileEligibility.copy(),
+				cardinality: 1
+			});
+		}
+		return occurrences;
+	}
+
 	/** Builds the only schedule accepted for this literal family. */
 	public static function schedule(elements:Array<OcamlArrayLiteralElementProducer>):Array<OcamlArrayLiteralEvaluationStep> {
 		final out:Array<OcamlArrayLiteralEvaluationStep> = [
@@ -203,6 +281,21 @@ class OcamlArrayLiteralProducerContract {
 			step.elementIndex == null ? "" : Std.string(step.elementIndex),
 			step.elementProducerId ?? ""
 		].join("|"));
+		final runtimeUses = decision.runtimeUseOccurrences.map(use -> [
+			use.id,
+			use.planRevision,
+			use.ownerId,
+			use.requirementId,
+			(use.domain : String),
+			use.exactSymbol,
+			use.role,
+			Std.string(use.order),
+			use.source.file,
+			Std.string(use.source.min),
+			Std.string(use.source.max),
+			use.profileEligibility.join(","),
+			Std.string(use.cardinality)
+		].join("|"));
 		return [
 			decision.id,
 			decision.source.file,
@@ -225,6 +318,8 @@ class OcamlArrayLiteralProducerContract {
 			decision.proofId,
 			decision.proofClaim,
 			decision.profileEligibility.join(","),
+			decision.runtimeRequirementIds.join(","),
+			runtimeUses.join("\u001e"),
 			decision.functionId,
 			decision.programRevision,
 			decision.bodyRevision,
@@ -301,6 +396,34 @@ class OcamlArrayLiteralProducerContract {
 				|| actual.elementProducerId != expected.elementProducerId) {
 				throw 'reflaxe.ocaml [ocaml-array-literal:invalid-evaluation-schedule]: producer "${decision.id}" changed construction step $index';
 			}
+		}
+		final expectedRequirementId = runtimeRequirementIdFor(decision.id);
+		if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != expectedRequirementId)
+			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-runtime-requirement]: producer "${decision.id}" does not own its exact HxArray construction requirement';
+		final expectedRuntimeUses = runtimeUseOccurrencesFor(binding, decision.id, decision.source, decision.elements, decision.evaluationSchedule,
+			decision.profileEligibility);
+		if (decision.runtimeUseOccurrences.length != expectedRuntimeUses.length)
+			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-runtime-use]: producer "${decision.id}" does not own one create use and one push use per element';
+		for (index in 0...expectedRuntimeUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedRuntimeUses[index]);
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-runtime-use]: producer "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
 		}
 	}
 

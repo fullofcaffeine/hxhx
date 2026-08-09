@@ -5,6 +5,8 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
@@ -33,6 +35,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final INT32_ADD = "haxe-int32-add";
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
+	public static inline final ARRAY_LITERAL_CONSTRUCTION = "haxe-array-literal-construction";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -252,6 +255,45 @@ class OcamlRuntimeRequirementLedger {
 	}
 
 	/**
+		Returns the runtime reason selected by one direct represented array literal.
+
+		The producer already fixes allocation, source-order element evaluation, and
+		one store per element. This record connects that source decision to the
+		`HxArray` implementation before target syntax creates either private name.
+	**/
+	public static function requirementsForArrayLiteralProducer(decision:OcamlArrayLiteralProducerDecision):Array<OcamlRuntimeRequirement> {
+		OcamlArrayLiteralProducerContract.requireDecision(decision);
+		final requirementId = OcamlArrayLiteralProducerContract.runtimeRequirementIdFor(decision.id);
+		if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != requirementId)
+			throw 'Array literal producer "${decision.id}" has no exact runtime requirement.';
+		return [
+			normalize({
+				id: requirementId,
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: ARRAY_LITERAL_CONSTRUCTION,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.arraySemanticTypeId
+				},
+				implementationFeature: "haxe-array-literal-construction-v1",
+				rootModules: ["HxArray"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed direct array literal uses HxArray to allocate one mutable Haxe array and append each evaluated element exactly once in source order."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one direct represented array literal. */
+	public function recordArrayLiteralProducer(decision:OcamlArrayLiteralProducerDecision):Void {
+		for (requirement in requirementsForArrayLiteralProducer(decision))
+			record(requirement);
+	}
+
+	/**
 		Returns the closed runtime requirements implied by one sealed program
 		representation.
 
@@ -373,6 +415,31 @@ class OcamlRuntimeRequirementLedger {
 	public function requirementsSorted():Array<OcamlRuntimeRequirement> {
 		final out = [for (entry in byId) entry];
 		out.sort((left, right) -> compareStrings(left.id, right.id));
+		return out;
+	}
+
+	/**
+		Returns the recorded requirements named by one sealed lowering plan.
+
+		The returned order matches `ids`, so a caller can compare it with the
+		plan that requested the runtime behavior. Missing or repeated IDs are an
+		invariant failure: generation must not continue with incomplete authority.
+	**/
+	public function requirementsByIds(ids:Array<String>):Array<OcamlRuntimeRequirement> {
+		if (ids == null)
+			throw "OCaml runtime requirement lookup identities must be an array.";
+		final out = new Array<OcamlRuntimeRequirement>();
+		final seen:Map<String, Bool> = [];
+		for (rawId in ids) {
+			final id = required(rawId, "lookup identity");
+			if (seen.exists(id))
+				throw 'OCaml runtime requirement lookup repeats "$id".';
+			final requirement = byId.get(id);
+			if (requirement == null)
+				throw 'OCaml runtime requirement lookup is missing "$id".';
+			seen.set(id, true);
+			out.push(requirement);
+		}
 		return out;
 	}
 

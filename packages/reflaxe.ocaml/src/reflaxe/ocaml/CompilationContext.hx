@@ -15,6 +15,7 @@ import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
@@ -524,6 +525,17 @@ class CompilationContext {
 	}
 
 	/**
+		Records why one sealed direct array literal needs `HxArray`.
+
+		The producer has already fixed allocation and one ordered store per source
+		element. This method copies that decision into runtime packaging; it does not
+		inspect the generated target expression.
+	**/
+	public function recordArrayLiteralRuntimeRequirements(decision:OcamlArrayLiteralProducerDecision):Void {
+		runtimeRequirements.recordArrayLiteralProducer(decision);
+	}
+
+	/**
 		Records why one sealed anonymous-object operation needs `HxAnon`.
 
 		The operation was already selected from the final typed function. This
@@ -598,6 +610,11 @@ class CompilationContext {
 	/** Returns decision-point runtime explanations in stable identity order. **/
 	public function runtimeRequirementsSorted():Array<OcamlRuntimeRequirement> {
 		return runtimeRequirements.requirementsSorted();
+	}
+
+	/** Returns the exact recorded requirements named by one sealed lowering plan. **/
+	public function runtimeRequirementsByIds(ids:Array<String>):Array<OcamlRuntimeRequirement> {
+		return runtimeRequirements.requirementsByIds(ids);
 	}
 
 	/** Returns roots from recorded runtime requirements, before dependency closure. **/

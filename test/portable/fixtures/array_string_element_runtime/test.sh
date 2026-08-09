@@ -39,15 +39,29 @@ if (descriptor.id !== 'represented-array:Array<String>'
 	|| producer.elementRepresentationRevision !== descriptor.elementRepresentationRevision
 	|| producer.proofId !== 'direct-array-string-literal-construction-v1'
 	|| producer.elements.length !== 2
+	|| producer.runtimeRequirementIds?.length !== 1
+	|| producer.runtimeRequirementIds[0] !== `${producer.id}:runtime:haxe-array-literal-construction`
+	|| producer.runtimeUseOccurrences?.map(use => use.exactSymbol).join(',') !== 'HxArray.create,HxArray.push,HxArray.push'
+	|| producer.runtimeUseOccurrences.map(use => use.order).join(',') !== '0,2,4'
 	|| producer.evaluationSchedule.map(step => step.kind).join(',')
 		!== 'create-array,evaluate-element,store-element,evaluate-element,store-element,result-array') {
 	throw new Error('the direct Array<String> literal did not retain its exact descriptor, element carrier, and evaluation schedule')
+}
+const requirement = report.runtimeRequirements.find(entry => entry.id === producer.runtimeRequirementIds[0])
+if (requirement?.sourceId !== producer.id
+	|| requirement.decisionId !== producer.id
+	|| requirement.semanticCapability !== 'haxe-array-literal-construction'
+	|| requirement.implementationFeature !== 'haxe-array-literal-construction-v1'
+	|| requirement.subject?.id !== 'Array<String>'
+	|| requirement.rootModules?.join(',') !== 'HxArray') {
+	throw new Error('the direct Array<String> literal did not publish its exact HxArray construction requirement')
 }
 for (const [name, value] of Object.entries(report)) {
 	if (Array.isArray(value)
 		&& name !== 'representations'
 		&& name !== 'representedArrays'
 		&& name !== 'arrayLiteralProducers'
+		&& name !== 'runtimeRequirements'
 		&& value.some(entry => JSON.stringify(entry).includes('Array<String>'))) {
 		throw new Error(`Array<String> escaped the literal-only boundary through report inventory ${name}`)
 	}
