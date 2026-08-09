@@ -1,0 +1,42 @@
+Owning compiler-scale command:
+  npm run test:m14:hih-complete-numeric-literals:current-source
+
+Original failure before this task:
+  - The current-source hxhx build ran for 631 seconds.
+  - Reflaxe rethrew `Uncaught exception Stack overflow` at
+    ReflectCompiler.hx:249.
+  - That lifecycle frame did not identify the recursive operation.
+
+Faithful reduced command:
+  REFLAXE_OCAML_PROGRESS_FILE=/tmp/reflaxe-ocaml-cpp-runtime-stack-red/progress-phase.log \
+  haxe -cp /tmp/reflaxe-ocaml-cpp-runtime-stack-red/src \
+    -cp packages/hxhx-core/src \
+    -main StackReproMain \
+    -lib reflaxe.ocaml \
+    -D no-inline -D no-traces -D no_traces \
+    -D ocaml_output=/tmp/reflaxe-ocaml-cpp-runtime-stack-red/out-phase \
+    -D ocaml_emit_only \
+    -D reflaxe_ocaml_telemetry \
+    -D reflaxe_ocaml_telemetry_detail \
+    -D reflaxe_ocaml_telemetry_class=backend.cpp.CppRuntimeSupport
+
+Observed reduced failure:
+  - All 35 CppRuntimeSupport functions finished typed lowering.
+  - OCaml binding ordering completed.
+  - Runtime-requirement scanning completed.
+  - The final progress event was `class_print_begin`.
+  - No `class_print` or `class_end` event followed; the evaluator reported
+    `Stack overflow`.
+
+Smallest code-level red test:
+  npm run test:printer
+
+Expected pre-fix result:
+  A 20,000-level valid `let value = () in ...` expression exhausted the Haxe
+  evaluator stack in the recursive OCaml expression printer. This is the same
+  syntax shape produced by the large CppRuntimeSupport source-building class.
+
+Localization conclusion:
+  The failure belonged to OcamlASTPrinter expression traversal. It did not
+  belong to Haxe parsing or typing, target lowering, binding ordering, runtime
+  ownership, output publication, Dune, or generated-file repair.

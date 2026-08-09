@@ -5,11 +5,22 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 
 using StringTools;
 
+private enum OcamlExpressionPrintWork {
+	EmitText(value:String);
+	EmitExpression(expression:OcamlExpr, contextPrecedence:Int, indentation:Int);
+}
+
 /**
  * Pretty-printer for OcamlAST.
  *
  * Goal (M1): render valid OCaml with stable formatting and correct precedence.
  * This is intentionally conservative about parentheses to avoid precedence bugs.
+ *
+ * Expression rendering uses an explicit work stack. Generated compiler code can
+ * contain thousands of nested `let ... in` expressions, which are valid OCaml
+ * syntax but exceed the Haxe evaluator's function-call stack when printed by a
+ * recursive visitor. The work stack preserves the same output order without
+ * making one Haxe function call per syntax-tree level.
  */
 class OcamlASTPrinter {
 	static inline final INDENT = "  ";
@@ -79,138 +90,334 @@ class OcamlASTPrinter {
 	static inline final PREC_ATOM = 100;
 
 	function exprPrec(e:OcamlExpr):Int {
-		return switch (e) {
-			case EPos(_, inner):
-				exprPrec(inner);
-			case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
-				PREC_ATOM;
-			case EField(_, _):
-				PREC_FIELD;
-			case EApp(_, _), EAppArgs(_, _):
-				PREC_APP;
-			case EUnop(_, _):
-				PREC_MUL;
-			case EBinop(op, _, _):
-				switch (op) {
-					case Or: PREC_OR;
-					case And: PREC_AND;
-					case Eq, Neq, PhysEq, PhysNeq, Lt, Lte, Gt, Gte: PREC_CMP;
-					case Cons: PREC_CONS;
-					case Concat: PREC_CONCAT;
-					case Add, AddF, Sub, SubF: PREC_ADD;
-					case Mul, MulF, Div, DivF, Mod: PREC_MUL;
-				}
-			case EAssign(_, _, _):
-				PREC_ASSIGN;
-			case ESeq(_):
-				PREC_SEQ;
-			case EWhile(_, _):
-				PREC_SEQ;
-			case ELet(_, _, _, _), EFun(_, _), EIf(_, _, _), EMatch(_, _), ETry(_, _), ERaise(_):
-				PREC_LET;
+		var current = e;
+		while (true) {
+			switch (current) {
+				case EPos(_, inner):
+					current = inner;
+				case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
+					return PREC_ATOM;
+				case EField(_, _):
+					return PREC_FIELD;
+				case EApp(_, _), EAppArgs(_, _):
+					return PREC_APP;
+				case EUnop(_, _):
+					return PREC_MUL;
+				case EBinop(op, _, _):
+					return switch (op) {
+						case Or: PREC_OR;
+						case And: PREC_AND;
+						case Eq, Neq, PhysEq, PhysNeq, Lt, Lte, Gt, Gte: PREC_CMP;
+						case Cons: PREC_CONS;
+						case Concat: PREC_CONCAT;
+						case Add, AddF, Sub, SubF: PREC_ADD;
+						case Mul, MulF, Div, DivF, Mod: PREC_MUL;
+					};
+				case EAssign(_, _, _):
+					return PREC_ASSIGN;
+				case ESeq(_), EWhile(_, _):
+					return PREC_SEQ;
+				case ELet(_, _, _, _), EFun(_, _), EIf(_, _, _), EMatch(_, _), ETry(_, _), ERaise(_):
+					return PREC_LET;
+			}
 		}
+		return PREC_TOP;
 	}
 
 	function printExprCtx(e:OcamlExpr, ctxPrec:Int, indentLevel:Int):String {
-		final p = exprPrec(e);
-		final s = switch (e) {
-			case EConst(c):
-				printConst(c);
-			case EIdent(name):
-				name;
-			case ERaw(code):
-				code;
-			case EPos(pos, inner):
-				// OCaml line directives (`# <line> "<file>"`) must start at column 0.
-				// Many printer contexts prefix subexpressions with indentation, so we force
-				// a newline before the directive to ensure it starts at column 0.
-				//
-				// After the directive we re-apply the current indentation level so the
-				// generated OCaml remains readable (best-effort; debug mode).
-				//
-				// Note: this may introduce extra newlines and can shift formatting, so it is
-				// only expected to appear when `-D ocaml_sourcemap` is enabled.
-				final innerPrinted = printExprCtx(inner, ctxPrec, indentLevel);
-				"\n# "
-				+ Std.string(pos.line)
-				+ " \""
-				+ escapeLineDirectiveFile(pos.file)
-				+ "\"\n"
-				+ indent(indentLevel)
-				+ innerPrinted;
-			case ERaise(exn):
-				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
+		final buffer = new StringBuf();
+		final work:Array<OcamlExpressionPrintWork> = [EmitExpression(e, ctxPrec, indentLevel)];
+		while (work.length > 0) {
+			switch (work.pop()) {
+				case EmitText(value):
+					buffer.add(value);
+				case EmitExpression(expression, contextPrecedence, indentation):
+					final needsContextParens = exprPrec(expression) < contextPrecedence;
+					if (needsContextParens)
+						work.push(EmitText(")"));
+					pushExpressionContent(work, expression, contextPrecedence, indentation);
+					if (needsContextParens)
+						work.push(EmitText("("));
+			}
+		}
+		return buffer.toString();
+	}
+
+	function pushExpressionContent(work:Array<OcamlExpressionPrintWork>, expression:OcamlExpr, contextPrecedence:Int, indentation:Int):Void {
+		switch (expression) {
+			case EConst(constant):
+				work.push(EmitText(printConst(constant)));
+			case EIdent(name), ERaw(name):
+				work.push(EmitText(name));
+			case EPos(position, inner):
+				pushExpression(work, inner, contextPrecedence, indentation);
+				work.push(EmitText("\n# " + Std.string(position.line) + " \"" + escapeLineDirectiveFile(position.file) + "\"\n" + indent(indentation)));
+			case ERaise(exception):
+				work.push(EmitText(")"));
+				pushExpression(work, exception, PREC_TOP, indentation);
+				work.push(EmitText("raise ("));
 			case ETuple(items):
-				// OCaml parsing gotcha: tuple elements that begin with `let ... in`, `if ... then`,
-				// `match`, etc. must be parenthesized, otherwise the comma can associate outside
-				// the intended tuple and constructors like `C (let x = ... in x, y)` fail to parse.
-				//
-				// We keep output stable by only adding parentheses for “statement-like” expressions.
-				function needsTupleElemParens(expr:OcamlExpr):Bool {
-					return switch (expr) {
-						case EPos(_, inner): needsTupleElemParens(inner);
-						case ELet(_, _, _, _) | EFun(_, _) | EIf(_, _, _) | EMatch(_, _) | ETry(_, _) | ESeq(_) | EWhile(_, _) | EAssign(_, _, _) | ERaise(_):
-							true;
-						case _:
-							false;
+				work.push(EmitText(")"));
+				pushExpressionArray(work, items, ", ", PREC_TOP, indentation, needsTupleElementParens);
+				work.push(EmitText("("));
+			case EAnnot(inner, type):
+				work.push(EmitText(")"));
+				work.push(EmitText(printType(type)));
+				work.push(EmitText(" : "));
+				pushExpression(work, inner, PREC_TOP, indentation);
+				work.push(EmitText("("));
+			case ERecord(fields):
+				if (fields.length == 0) {
+					work.push(EmitText("{}"));
+				} else {
+					work.push(EmitText(" }"));
+					var index = fields.length;
+					while (index > 0) {
+						index--;
+						if (index < fields.length - 1)
+							work.push(EmitText("; "));
+						final field = fields[index];
+						pushExpression(work, field.value, PREC_TOP, indentation, recordFunctionValueNeedsParens(field.value));
+						work.push(EmitText(field.name + " = "));
+					}
+					work.push(EmitText("{ "));
+				}
+			case EField(owner, field):
+				work.push(EmitText("." + field));
+				pushExpression(work, owner, PREC_FIELD, indentation);
+			case EApp(functionExpression, arguments):
+				var index = arguments.length;
+				while (index > 0) {
+					index--;
+					final argument = arguments[index];
+					pushExpression(work, argument, PREC_ATOM, indentation, needsExprParensInApp(argument));
+					work.push(EmitText(" "));
+				}
+				pushExpression(work, functionExpression, PREC_APP, indentation);
+			case EAppArgs(functionExpression, arguments):
+				var index = arguments.length;
+				while (index > 0) {
+					index--;
+					final argument = arguments[index];
+					if (argument.label == null) {
+						pushExpression(work, argument.expr, PREC_ATOM, indentation, needsExprParensInApp(argument.expr));
+					} else {
+						pushExpression(work, argument.expr, PREC_TOP, indentation, labelledArgumentNeedsParens(argument.expr));
+						work.push(EmitText((argument.isOptional ? "?" : "~") + argument.label + ":"));
+					}
+					work.push(EmitText(" "));
+				}
+				pushExpression(work, functionExpression, PREC_APP, indentation);
+			case EBinop(op, left, right):
+				final precedence = binaryPrecedence(op);
+				final isRightAssociative = op == Cons || op == Concat;
+				pushExpression(work, right, isRightAssociative ? precedence : precedence + 1, indentation);
+				work.push(EmitText(" " + binaryOperatorText(op) + " "));
+				pushExpression(work, left, isRightAssociative ? precedence + 1 : precedence, indentation);
+			case EUnop(op, inner):
+				switch (op) {
+					case Not:
+						work.push(EmitText(")"));
+						pushExpression(work, inner, PREC_TOP, indentation);
+						work.push(EmitText("not ("));
+					case Neg, NegF, Deref:
+						final prefix = switch (op) {
+							case Neg: "-";
+							case NegF: "-.";
+							case Deref: "!";
+							case Not: "not ";
+						};
+						final needsParens = needsParensAfterPrefix(inner);
+						pushExpression(work, inner, needsParens ? PREC_TOP : (op == Deref ? PREC_FIELD : PREC_MUL), indentation, needsParens);
+						work.push(EmitText(prefix));
+				}
+			case EAssign(op, left, right):
+				pushExpression(work, right, PREC_ASSIGN + 1, indentation);
+				work.push(EmitText(switch (op) {
+					case RefSet: " := ";
+					case FieldSet: " <- ";
+				}));
+				pushExpression(work, left, PREC_ASSIGN + 1, indentation);
+			case ESeq(expressions):
+				if (expressions.length == 0) {
+					work.push(EmitText("()"));
+				} else if (expressions.length == 1) {
+					pushExpression(work, expressions[0], PREC_TOP, indentation);
+				} else {
+					work.push(EmitText("\n" + indent(indentation) + ")"));
+					var index = expressions.length;
+					while (index > 0) {
+						index--;
+						pushExpression(work, expressions[index], PREC_TOP, indentation + 1);
+						work.push(EmitText(index == 0 ? "(\n" + indent(indentation + 1) : ";\n" + indent(indentation + 1)));
 					}
 				}
-				"(" + items.map(i -> {
-					final inner = printExprCtx(i, PREC_TOP, indentLevel);
-					needsTupleElemParens(i) ? ("(" + inner + ")") : inner;
-				}).join(", ") + ")";
-			case EAnnot(expr, typ):
-				"(" + printExprCtx(expr, PREC_TOP, indentLevel) + " : " + printType(typ) + ")";
-			case ERecord(fields):
-				printRecord(fields, indentLevel);
-			case EField(expr, field):
-				final left = printExprCtx(expr, PREC_FIELD, indentLevel);
-				left + "." + field;
-			case EApp(fn, args):
-				printApp(fn, args, indentLevel);
-			case EAppArgs(fn, args):
-				printAppArgs(fn, args, indentLevel);
-			case EBinop(op, left, right):
-				printBinop(op, left, right, indentLevel);
-			case EUnop(op, expr):
-				printUnop(op, expr, indentLevel);
-			case EAssign(op, lhs, rhs):
-				final opStr = switch (op) {
-					case RefSet: ":=";
-					case FieldSet: "<-";
-				}
-				final l = printExprCtx(lhs, PREC_ASSIGN + 1, indentLevel);
-				final r = printExprCtx(rhs, PREC_ASSIGN + 1, indentLevel);
-				l + " " + opStr + " " + r;
-			case ESeq(exprs):
-				printSeq(exprs, indentLevel);
-			case EWhile(cond, body):
-				"while "
-				+ printExprCtx(cond, PREC_TOP, indentLevel)
-				+ " do "
-				+ printExprCtx(body, PREC_TOP, indentLevel)
-				+ " done";
+			case EWhile(condition, body):
+				work.push(EmitText(" done"));
+				pushExpression(work, body, PREC_TOP, indentation);
+				work.push(EmitText(" do "));
+				pushExpression(work, condition, PREC_TOP, indentation);
+				work.push(EmitText("while "));
 			case EList(items):
-				"[" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join("; ") + "]";
-			case ELet(name, value, body, isRec):
-				printLetIn(name, value, body, isRec, indentLevel);
-			case EFun(params, body):
-				final ps = params.map(printPat).join(" ");
-				"fun " + ps + " -> " + printExprCtx(body, PREC_TOP, indentLevel);
-			case EIf(cond, thenExpr, elseExpr):
-				"if "
-				+ printExprCtx(cond, PREC_TOP, indentLevel)
-				+ " then "
-				+ printExprCtx(thenExpr, PREC_TOP, indentLevel)
-				+ " else "
-				+ printExprCtx(elseExpr, PREC_TOP, indentLevel);
+				work.push(EmitText("]"));
+				pushExpressionArray(work, items, "; ", PREC_TOP, indentation, _ -> false);
+				work.push(EmitText("["));
+			case ELet(name, value, body, isRecursive):
+				pushExpression(work, body, PREC_TOP, indentation);
+				work.push(EmitText(" in "));
+				pushExpression(work, value, PREC_TOP, indentation);
+				work.push(EmitText("let" + (isRecursive ? " rec" : "") + " " + name + " = "));
+			case EFun(parameters, body):
+				pushExpression(work, body, PREC_TOP, indentation);
+				work.push(EmitText("fun " + parameters.map(printPat).join(" ") + " -> "));
+			case EIf(condition, thenExpression, elseExpression):
+				pushExpression(work, elseExpression, PREC_TOP, indentation);
+				work.push(EmitText(" else "));
+				pushExpression(work, thenExpression, PREC_TOP, indentation);
+				work.push(EmitText(" then "));
+				pushExpression(work, condition, PREC_TOP, indentation);
+				work.push(EmitText("if "));
 			case EMatch(scrutinee, cases):
-				printMatch(scrutinee, cases, indentLevel);
+				pushMatchCases(work, cases, indentation);
+				work.push(EmitText(" with\n"));
+				pushExpression(work, scrutinee, PREC_TOP, indentation);
+				work.push(EmitText("match "));
 			case ETry(body, cases):
-				printTry(body, cases, indentLevel);
+				pushMatchCases(work, cases, indentation);
+				work.push(EmitText(" with\n"));
+				pushExpression(work, body, PREC_TOP, indentation);
+				work.push(EmitText("try "));
 		}
+	}
 
-		return (p < ctxPrec) ? ("(" + s + ")") : s;
+	static function pushExpression(work:Array<OcamlExpressionPrintWork>, expression:OcamlExpr, contextPrecedence:Int, indentation:Int,
+			explicitParens:Bool = false):Void {
+		if (explicitParens)
+			work.push(EmitText(")"));
+		work.push(EmitExpression(expression, contextPrecedence, indentation));
+		if (explicitParens)
+			work.push(EmitText("("));
+	}
+
+	static function pushExpressionArray(work:Array<OcamlExpressionPrintWork>, expressions:Array<OcamlExpr>, separator:String, contextPrecedence:Int,
+			indentation:Int, needsExplicitParens:OcamlExpr->Bool):Void {
+		var index = expressions.length;
+		while (index > 0) {
+			index--;
+			if (index < expressions.length - 1)
+				work.push(EmitText(separator));
+			final expression = expressions[index];
+			pushExpression(work, expression, contextPrecedence, indentation, needsExplicitParens(expression));
+		}
+	}
+
+	function pushMatchCases(work:Array<OcamlExpressionPrintWork>, cases:Array<OcamlMatchCase>, indentation:Int):Void {
+		var index = cases.length;
+		while (index > 0) {
+			index--;
+			final matchCase = cases[index];
+			pushExpression(work, matchCase.expr, PREC_TOP, indentation + 1, needsGroupingInMatchArmExpr(matchCase.expr));
+			work.push(EmitText(" -> "));
+			if (matchCase.guard != null) {
+				pushExpression(work, matchCase.guard, PREC_TOP, indentation + 1);
+				work.push(EmitText(" when "));
+			}
+			work.push(EmitText(indent(indentation + 1) + "| " + printPat(matchCase.pat)));
+			if (index > 0)
+				work.push(EmitText("\n"));
+		}
+	}
+
+	static function binaryPrecedence(op:OcamlBinop):Int {
+		return switch (op) {
+			case Or: PREC_OR;
+			case And: PREC_AND;
+			case Eq, Neq, PhysEq, PhysNeq, Lt, Lte, Gt, Gte: PREC_CMP;
+			case Cons: PREC_CONS;
+			case Concat: PREC_CONCAT;
+			case Add, AddF, Sub, SubF: PREC_ADD;
+			case Mul, MulF, Div, DivF, Mod: PREC_MUL;
+		}
+	}
+
+	static function binaryOperatorText(op:OcamlBinop):String {
+		return switch (op) {
+			case Add: "+";
+			case AddF: "+.";
+			case Concat: "^";
+			case Sub: "-";
+			case SubF: "-.";
+			case Mul: "*";
+			case MulF: "*.";
+			case Div: "/";
+			case DivF: "/.";
+			case Mod: "mod";
+			case Cons: "::";
+			case Eq: "=";
+			case Neq: "<>";
+			case PhysEq: "==";
+			case PhysNeq: "!=";
+			case Lt: "<";
+			case Lte: "<=";
+			case Gt: ">";
+			case Gte: ">=";
+			case And: "&&";
+			case Or: "||";
+		}
+	}
+
+	static function needsTupleElementParens(expression:OcamlExpr):Bool {
+		var current = expression;
+		while (true) {
+			switch (current) {
+				case EPos(_, inner):
+					current = inner;
+				case ELet(_, _, _, _) | EFun(_, _) | EIf(_, _, _) | EMatch(_, _) | ETry(_, _) | ESeq(_) | EWhile(_, _) | EAssign(_, _, _) | ERaise(_):
+					return true;
+				case _:
+					return false;
+			}
+		}
+		return false;
+	}
+
+	static function recordFunctionValueNeedsParens(expression:OcamlExpr):Bool {
+		return switch (expression) {
+			case EPos(_, inner):
+				switch (inner) {
+					case EFun(_, _): true;
+					case _: false;
+				}
+			case EFun(_, _): true;
+			case _: false;
+		}
+	}
+
+	static function labelledArgumentNeedsParens(expression:OcamlExpr):Bool {
+		return switch (expression) {
+			case EPos(_, inner):
+				switch (inner) {
+					case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_): false;
+					case _: true;
+				}
+			case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_): false;
+			case _: true;
+		}
+	}
+
+	static function needsParensAfterPrefix(expression:OcamlExpr):Bool {
+		var current = expression;
+		while (true) {
+			switch (current) {
+				case EPos(_, inner):
+					current = inner;
+				case EConst(_), EIdent(_), EField(_, _):
+					return false;
+				case _:
+					return true;
+			}
+		}
+		return true;
 	}
 
 	function printConst(c:OcamlConst):String {
@@ -240,197 +447,21 @@ class OcamlASTPrinter {
 		return out;
 	}
 
-	function printSeq(exprs:Array<OcamlExpr>, indentLevel:Int):String {
-		if (exprs.length == 0)
-			return "()";
-		if (exprs.length == 1)
-			return printExprCtx(exprs[0], PREC_TOP, indentLevel);
-
-		final indent0 = indent(indentLevel);
-		final indent1 = indent(indentLevel + 1);
-		final buf = new StringBuf();
-		buf.add("(\n");
-		for (i in 0...exprs.length) {
-			if (i != 0)
-				buf.add(";\n");
-			buf.add(indent1);
-			buf.add(printExprCtx(exprs[i], PREC_TOP, indentLevel + 1));
-		}
-		buf.add("\n");
-		buf.add(indent0);
-		buf.add(")");
-		return buf.toString();
-	}
-
-	function printBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr, indentLevel:Int):String {
-		final opStr = switch (op) {
-			case Add: "+";
-			case AddF: "+.";
-			case Concat: "^";
-			case Sub: "-";
-			case SubF: "-.";
-			case Mul: "*";
-			case MulF: "*.";
-			case Div: "/";
-			case DivF: "/.";
-			case Mod: "mod";
-			case Cons: "::";
-			case Eq: "=";
-			case Neq: "<>";
-			case PhysEq: "==";
-			case PhysNeq: "!=";
-			case Lt: "<";
-			case Lte: "<=";
-			case Gt: ">";
-			case Gte: ">=";
-			case And: "&&";
-			case Or: "||";
-		}
-
-		final p = exprPrec(OcamlExpr.EBinop(op, left, right));
-		final isRightAssoc = op == Cons || op == Concat;
-		final l = printExprCtx(left, isRightAssoc ? (p + 1) : p, indentLevel);
-		final r = printExprCtx(right, isRightAssoc ? p : (p + 1), indentLevel);
-		return l + " " + opStr + " " + r;
-	}
-
-	function printUnop(op:OcamlUnop, expr:OcamlExpr, indentLevel:Int):String {
-		function needsParensAfterPrefix(e:OcamlExpr):Bool {
-			var cur = e;
-			while (true) {
-				switch (cur) {
-					case EPos(_, inner):
-						cur = inner;
-					case _:
-						return switch (cur) {
-							case EConst(_), EIdent(_), EField(_, _):
-								false;
-							case _:
-								true;
-						}
-				}
-			}
-			return true;
-		}
-
-		return switch (op) {
-			// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
-			case Not:
-				"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
-			case Neg:
-				needsParensAfterPrefix(expr) ? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "-" + printExprCtx(expr, PREC_MUL, indentLevel);
-			case NegF:
-				needsParensAfterPrefix(expr) ? "-.(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "-." + printExprCtx(expr, PREC_MUL, indentLevel);
-			case Deref:
-				needsParensAfterPrefix(expr) ? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
-		}
-	}
-
-	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
-		if (fields.length == 0)
-			return "{}";
-		final buf = new StringBuf();
-		buf.add("{ ");
-		for (i in 0...fields.length) {
-			if (i != 0)
-				buf.add("; ");
-			final f = fields[i];
-			// OCaml precedence gotcha: `fun ... -> ...; other_field = ...` can be parsed as a
-			// sequence inside the function body instead of a record field separator.
-			// Parenthesize function values to keep record syntax unambiguous.
-			final rendered = printExprCtx(f.value, PREC_TOP, indentLevel);
-			final value = switch (f.value) {
-				case EPos(_, inner):
-					switch (inner) {
-						case EFun(_, _): "(" + rendered + ")";
-						case _: rendered;
-					}
-				case EFun(_, _): "(" + rendered + ")";
-				case _: rendered;
-			};
-			buf.add(f.name);
-			buf.add(" = ");
-			buf.add(value);
-		}
-		buf.add(" }");
-		return buf.toString();
-	}
-
-	function printApp(fn:OcamlExpr, args:Array<OcamlExpr>, indentLevel:Int):String {
-		final f = printExprCtx(fn, PREC_APP, indentLevel);
-		if (args.length == 0)
-			return f;
-		final buf = new StringBuf();
-		buf.add(f);
-		for (i in 0...args.length) {
-			buf.add(" ");
-			final a = args[i];
-			final rendered = printExprCtx(a, PREC_ATOM, indentLevel);
-			buf.add(needsExprParensInApp(a) ? ("(" + rendered + ")") : rendered);
-		}
-		return buf.toString();
-	}
-
-	function printAppArgs(fn:OcamlExpr, args:Array<OcamlApplyArg>, indentLevel:Int):String {
-		final f = printExprCtx(fn, PREC_APP, indentLevel);
-		if (args.length == 0)
-			return f;
-
-		inline function renderLabelArg(prefix:String, label:String, value:OcamlExpr):String {
-			final rendered = printExprCtx(value, PREC_TOP, indentLevel);
-			final needsParens = switch (value) {
-				case EPos(_, inner):
-					switch (inner) {
-						case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_):
-							false;
-						case _:
-							true;
-					}
-				case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_):
-					false;
-				case _:
-					true;
-			}
-			return needsParens ? (prefix + label + ":(" + rendered + ")") : (prefix + label + ":" + rendered);
-		}
-
-		final buf = new StringBuf();
-		buf.add(f);
-		for (i in 0...args.length) {
-			buf.add(" ");
-			final a = args[i];
-			if (a.label == null) {
-				final rendered = printExprCtx(a.expr, PREC_ATOM, indentLevel);
-				buf.add(needsExprParensInApp(a.expr) ? ("(" + rendered + ")") : rendered);
-			} else {
-				final prefix = a.isOptional ? "?" : "~";
-				buf.add(renderLabelArg(prefix, a.label, a.expr));
-			}
-		}
-
-		return buf.toString();
-	}
-
 	function needsExprParensInApp(e:OcamlExpr):Bool {
-		return switch (e) {
-			case EPos(_, inner):
-				needsExprParensInApp(inner);
-			case EConst(CInt(v)): v < 0;
-			case EConst(CFloat(v)): v.startsWith("-");
-			case _: false;
+		var current = e;
+		while (true) {
+			switch (current) {
+				case EPos(_, inner):
+					current = inner;
+				case EConst(CInt(value)):
+					return value < 0;
+				case EConst(CFloat(value)):
+					return value.startsWith("-");
+				case _:
+					return false;
+			}
 		}
-	}
-
-	function printLetIn(name:String, value:OcamlExpr, body:OcamlExpr, isRec:Bool, indentLevel:Int):String {
-		final recStr = isRec ? " rec" : "";
-		return "let"
-			+ recStr
-			+ " "
-			+ name
-			+ " = "
-			+ printExprCtx(value, PREC_TOP, indentLevel)
-			+ " in "
-			+ printExprCtx(body, PREC_TOP, indentLevel);
+		return false;
 	}
 
 	function needsGroupingInMatchArmExpr(e:OcamlExpr):Bool {
@@ -474,30 +505,6 @@ class OcamlASTPrinter {
 		}
 
 		return endsWithBranchyTail(e);
-	}
-
-	function printMatch(scrutinee:OcamlExpr, cases:Array<OcamlMatchCase>, indentLevel:Int):String {
-		final caseIndent = indent(indentLevel + 1);
-		final head = "match " + printExprCtx(scrutinee, PREC_TOP, indentLevel) + " with";
-		final arms = cases.map(function(c) {
-			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
-			final rhs = printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
-			final renderedRhs = needsGroupingInMatchArmExpr(c.expr) ? ("(" + rhs + ")") : rhs;
-			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + renderedRhs;
-		});
-		return head + "\n" + arms.join("\n");
-	}
-
-	function printTry(body:OcamlExpr, cases:Array<OcamlMatchCase>, indentLevel:Int):String {
-		final caseIndent = indent(indentLevel + 1);
-		final head = "try " + printExprCtx(body, PREC_TOP, indentLevel) + " with";
-		final arms = cases.map(function(c) {
-			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
-			final rhs = printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
-			final renderedRhs = needsGroupingInMatchArmExpr(c.expr) ? ("(" + rhs + ")") : rhs;
-			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + renderedRhs;
-		});
-		return head + "\n" + arms.join("\n");
 	}
 
 	// =========================================================

@@ -13,9 +13,27 @@ class OcamlASTPrinterTest {
 		}
 	}
 
+	/**
+		Proves that valid generated syntax can be much deeper than the Haxe
+		process call stack. Large source-building functions produce this shape
+		when their local computations become nested OCaml `let ... in` nodes.
+	**/
+	static function verifyDeepExpressionPrintingIsStackSafe(printer:OcamlASTPrinter):Void {
+		final nestingDepth = 20000;
+		var expression:OcamlExpr = OcamlExpr.EIdent("leaf");
+		for (_ in 0...nestingDepth)
+			expression = OcamlExpr.ELet("value", OcamlExpr.EConst(OcamlConst.CUnit), expression, false);
+
+		final rendered = printer.printExpr(expression);
+		final layer = "let value = () in ";
+		assertEq(Std.string((layer.length * nestingDepth) + "leaf".length), Std.string(rendered.length), "deep expression output length");
+		assertEq("leaf", rendered.substr(rendered.length - "leaf".length), "deep expression leaf");
+	}
+
 	static function main() {
 		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
+		verifyDeepExpressionPrintingIsStackSafe(p);
 
 		// const + escaping
 		assertEq("\"a\\n\\t\\\\\\\"b\"", p.printExpr(OcamlExpr.EConst(OcamlConst.CString("a\n\t\\\"b"))), "string escape");

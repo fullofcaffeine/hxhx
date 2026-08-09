@@ -1,0 +1,25 @@
+Command:
+  npm run test:m14:hih-complete-numeric-literals:current-source
+
+Candidate:
+  source head 997cd1baec045807559dddc5207cb14f599b99d3, dirty=1
+
+Result:
+  - The JavaScript complete numeric-literal check passed.
+  - The Stage0 current-source build ran for 1,684 seconds.
+  - It passed the former 631-second evaluator stack overflow.
+  - It then stopped at a later, independently actionable semantic diagnostic.
+
+Next fail-closed diagnostic:
+  reflaxe.ocaml [ocaml-reflect-compare:unsupported-domain]: resolved
+  Reflect.compare has unsupported contextual type
+  (a : Null<String>, b : Null<String>) -> Int called with
+  (Null<String>, String); the first native contract accepts only exact
+  (Int, Int), (Float, Float), or (String, String) operands
+
+Disposition:
+  This run proves that deep OCaml expression printing no longer consumes one
+  Haxe call frame per syntax-tree level. Nullable String comparison is a new
+  target-semantic boundary and must not be hidden inside the printer task.
+  README Goals remain unchanged because the complete product route is still
+  blocked by that later diagnostic and other open prerequisites.
