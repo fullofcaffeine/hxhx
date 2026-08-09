@@ -3696,8 +3696,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 				duneLayout: duneLayoutValue,
 				executables: executables
 			};
+			final emitsPluginRegistration = duneLayoutValue != null
+				&& StringTools.trim(duneLayoutValue).toLowerCase() == "plugin"
+				&& pluginRegisterPluginId != null
+				&& pluginRegisterProviderType != null;
+			if (emitsPluginRegistration)
+				ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.HXHX_BACKEND_PLUGIN_HOST);
 			nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarations(duneProjectConfig);
-			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts, revision.id, activeProfile, ctx.runtimeRequirementsSorted());
 		}
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");

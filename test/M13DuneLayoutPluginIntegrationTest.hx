@@ -134,6 +134,12 @@ class M13DuneLayoutPluginIntegrationTest {
 		assertContains(pluginRegisterEntryContent, "\"test.plugin\" \"backend.js.JsBackend\"",
 			"plugin register entry should preserve plugin/provider identifiers");
 		assertExists(pluginRegisterOutDir + "/runtime/HxHxBackendPluginHost.ml", "plugin register host runtime");
+		final pluginRegisterRequirementPath = pluginRegisterOutDir + "/ocaml_runtime_requirement_report.json";
+		assertExists(pluginRegisterRequirementPath, "plugin register runtime requirement report");
+		final pluginRegisterRequirements = sys.io.File.getContent(pluginRegisterRequirementPath);
+		assertContains(pluginRegisterRequirements, "compiler:generated:DunePluginEntry:backend-provider-registration",
+			"plugin register entry should name its exact runtime requirement");
+		assertContains(pluginRegisterRequirements, "hxhx-backend-plugin-host", "plugin register entry should name its runtime capability");
 
 		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
 			final prev = Sys.getCwd();

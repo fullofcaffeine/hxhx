@@ -40,6 +40,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
 	public static inline final TYPE_REGISTRY_DYNAMIC_STRING = "compiler-type-registry-dynamic-string";
+	public static inline final HXHX_BACKEND_PLUGIN_HOST = "hxhx-backend-plugin-host";
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
@@ -308,8 +309,13 @@ class OcamlRuntimeRequirementLedger {
 
 	/** Records one helper required by compiler-generated output or packaging policy. **/
 	public function recordCompilerInfrastructure(capability:String):Void {
+		record(requirementForCompilerInfrastructure(capability));
+	}
+
+	/** Builds the exact immutable requirement used by generated text authority. */
+	public static function requirementForCompilerInfrastructure(capability:String):OcamlRuntimeRequirement {
 		final implementation = compilerInfrastructureImplementation(capability);
-		record({
+		return normalize({
 			id: implementation.id,
 			sourceKind: OcamlRuntimeRequirementSourceKind.CompilerInfrastructure,
 			sourceId: implementation.sourceId,
@@ -323,7 +329,7 @@ class OcamlRuntimeRequirementLedger {
 			},
 			implementationFeature: implementation.feature,
 			rootModules: [implementation.module],
-			profileEligibility: ["metal", "portable"],
+			profileEligibility: capability == HXHX_BACKEND_PLUGIN_HOST ? ["portable"] : ["metal", "portable"],
 			explanation: implementation.explanation
 		});
 	}
@@ -582,6 +588,18 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-dynamic-class-string-v1",
 					module: "HxDynamic",
 					explanation: "Generated classes with an exact zero-argument String toString method register one typed adapter with the shared Dynamic runtime."
+				};
+			case HXHX_BACKEND_PLUGIN_HOST:
+				{
+					id: "compiler:generated:DunePluginEntry:backend-provider-registration",
+					sourceId: "compiler-generated:DunePluginEntry",
+					sourceFile: "compiler-generated/DunePluginEntry.ml",
+					decisionId: "compiler-runtime:emit-backend-plugin-registration",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "DunePluginEntry",
+					feature: "hxhx-backend-plugin-host-registration-v1",
+					module: "HxHxBackendPluginHost",
+					explanation: "A generated native backend-plugin entry registers its declared provider type with the hxhx host when OCaml loads the plugin."
 				};
 			case _:
 				throw 'Unknown compiler runtime capability "$capability".';

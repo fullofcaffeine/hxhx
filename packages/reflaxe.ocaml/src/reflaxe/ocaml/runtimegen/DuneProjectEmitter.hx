@@ -2,6 +2,9 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
+import reflaxe.ocaml.runtimegen.OcamlCheckedGeneratedText.OcamlCheckedGeneratedTextRecord;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
@@ -151,7 +154,8 @@ class DuneProjectEmitter {
 		}
 	}
 
-	public static function emit(output:OutputManager, cfg:DuneProjectConfig, artifacts:OcamlArtifactManifestBuilder):Void {
+	public static function emit(output:OutputManager, cfg:DuneProjectConfig, artifacts:OcamlArtifactManifestBuilder, programRevision:String,
+			activeProfile:String, runtimeRequirements:Array<OcamlRuntimeRequirement>):Void {
 		final projectName = cfg.projectName;
 		final exeName = cfg.exeName;
 		final duneLayout = normalizeDuneLayout(cfg.duneLayout);
@@ -171,6 +175,11 @@ class DuneProjectEmitter {
 				stability: OcamlArtifactStability.Stable,
 				includeInSourceBundle: true
 			});
+		}
+
+		function saveCheckedGenerated(path:String, record:OcamlCheckedGeneratedTextRecord, kind:OcamlArtifactKind):Void {
+			OcamlCheckedGeneratedText.verify(record);
+			saveGenerated(path, record.content, kind);
 		}
 
 		saveGenerated(".gitignore", "_build/\n*.install\n", OcamlArtifactKind.GitIgnore);
@@ -226,23 +235,52 @@ class DuneProjectEmitter {
 		}
 
 		inline function emitPluginRegistrationEntry(name:String, pluginId:String, providerType:String, marker:Null<String>):Void {
-			final lines = ["let () ="];
-			if (marker != null && StringTools.trim(marker).length > 0)
-				lines.push("  print_endline \"" + escapeOcamlString(marker) + "\";");
-			lines.push("  HxHxBackendPluginHost.register_provider_type \""
-				+ escapeOcamlString(pluginId)
-				+ "\" \""
-				+ escapeOcamlString(providerType)
-				+ "\"");
-			lines.push("");
 			#if macro
 			final useLineDirectives = !haxe.macro.Context.defined(LINE_DIRECTIVE_DISABLE_DEFINE);
 			#else
 			final useLineDirectives = false;
 			#end
 			final entryFile = name + ".ml";
-			final content = (useLineDirectives ? ("# 1 \"" + escapeLineDirectivePath(entryFile) + "\"\n") : "") + lines.join("\n");
-			saveGenerated(entryFile, content, OcamlArtifactKind.EntrySource);
+			final ownerId = "compiler-generated:" + entryFile + ":backend-provider-registration";
+			final planRevision = OcamlCheckedGeneratedText.revision(ownerId, [
+				programRevision,
+				activeProfile,
+				entryFile,
+				pluginId,
+				providerType,
+				marker == null ? "" : marker,
+				Std.string(useLineDirectives)
+			]);
+			final requirement = OcamlRuntimeRequirementLedger.requirementForCompilerInfrastructure(OcamlRuntimeRequirementLedger.HXHX_BACKEND_PLUGIN_HOST);
+			final runtimeUseId = ownerId + ":runtime-use:register-provider-type";
+			final checked = new OcamlCheckedGeneratedText(ownerId, planRevision, activeProfile, runtimeRequirements, [
+				{
+					id: runtimeUseId,
+					planRevision: planRevision,
+					ownerId: ownerId,
+					requirementId: requirement.id,
+					domain: OcamlRuntimeUseDomain.GeneratedText,
+					exactSymbol: "HxHxBackendPluginHost.register_provider_type",
+					role: "backend-provider-registration",
+					order: 0,
+					source: {
+						file: "compiler-generated/" + entryFile,
+						min: 0,
+						max: 0
+					},
+					profileEligibility: requirement.profileEligibility,
+					cardinality: 1
+				}
+			]);
+			if (useLineDirectives)
+				checked.addLiteral("# 1 \"" + escapeLineDirectivePath(entryFile) + "\"\n");
+			checked.addLiteral("let () =\n");
+			if (marker != null && StringTools.trim(marker).length > 0)
+				checked.addLiteral("  print_endline \"" + escapeOcamlString(marker) + "\";\n");
+			checked.addLiteral("  ");
+			checked.addRuntimeUse(runtimeUseId, planRevision, "HxHxBackendPluginHost.register_provider_type");
+			checked.addLiteral(" \"" + escapeOcamlString(pluginId) + "\" \"" + escapeOcamlString(providerType) + "\"\n");
+			saveCheckedGenerated(entryFile, checked.seal(), OcamlArtifactKind.EntrySource);
 		}
 
 		switch (duneLayout) {

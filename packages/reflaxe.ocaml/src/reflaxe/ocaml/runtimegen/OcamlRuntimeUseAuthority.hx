@@ -70,6 +70,11 @@ class OcamlRuntimeUseAuthority {
 		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.ExpressionIdentifier, exactSymbol);
 	}
 
+	/** Creates one generated-text placeholder after checking all sealed facts. */
+	public function generatedTextIdentifier(id:String, requestedPlanRevision:String, exactSymbol:String):OcamlRuntimeReference {
+		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.GeneratedText, exactSymbol);
+	}
+
 	function reference(id:String, requestedPlanRevision:String, domain:OcamlRuntimeUseDomain, exactSymbol:String):OcamlRuntimeReference {
 		if (sealed)
 			throw 'Cannot authorize runtime use $id after reconciliation sealed this plan.';
@@ -132,37 +137,66 @@ class OcamlRuntimeUseAuthority {
 		here, before any OCaml text can be published.
 	**/
 	public function reconcileExpression(expression:OcamlExpr):Void {
-		if (sealed)
-			throw "Runtime-use authority can reconcile its plan only once.";
-		sealed = true;
+		beginReconciliation();
 		final errors:Array<String> = [];
 		final observedIds:Array<String> = [];
 		final counts:Map<String, Int> = [];
 
 		OcamlASTTraversal.walkExprPre(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
-				final occurrence = occurrencesById.get(reference.id);
-				if (occurrence == null) {
-					errors.push('unknown runtime use ${reference.id}');
-				} else if (reference.planRevision != planRevision) {
-					errors.push('stale runtime use ${reference.id}: expected plan $planRevision, received ${reference.planRevision}');
-				} else if (reference.domain != occurrence.domain) {
-					errors.push('runtime use ${reference.id} has the wrong target domain');
-				} else if (reference.exactSymbol != occurrence.exactSymbol) {
-					errors.push('runtime use ${reference.id} has the wrong target symbol ${reference.exactSymbol}');
-				} else {
-					observedIds.push(reference.id);
-					final previousCount = counts.get(reference.id);
-					counts.set(reference.id, (previousCount == null ? 0 : previousCount) + 1);
-					validateRequirementForReconciliation(occurrence, errors);
-				}
+				observeReference(reference, observedIds, counts, errors);
 			case EIdent(name) if (isPlainPrivateReference(name)):
 				errors.push('plain private runtime reference $name');
 			case EField(EIdent(moduleName), field) if (isPlainPrivateReference(moduleName + "." + field)):
 				errors.push('plain private runtime reference $moduleName.$field');
 			case _:
 		}, _ -> {}, _ -> {});
+		finishReconciliation(observedIds, counts, errors);
+	}
 
+	/**
+		Seals and reconciles the runtime placeholders in one generated text record.
+
+		The checked text builder separately proves that each placeholder occurs in
+		OCaml code rather than inside a string or comment. This method owns the same
+		identity, requirement, cardinality, and owner-local order checks used by the
+		structured target tree.
+	**/
+	public function reconcileGeneratedText(references:Array<OcamlRuntimeReference>):Void {
+		beginReconciliation();
+		final errors:Array<String> = [];
+		final observedIds:Array<String> = [];
+		final counts:Map<String, Int> = [];
+		for (reference in references)
+			observeReference(reference, observedIds, counts, errors);
+		finishReconciliation(observedIds, counts, errors);
+	}
+
+	function beginReconciliation():Void {
+		if (sealed)
+			throw "Runtime-use authority can reconcile its plan only once.";
+		sealed = true;
+	}
+
+	function observeReference(reference:OcamlRuntimeReference, observedIds:Array<String>, counts:Map<String, Int>, errors:Array<String>):Void {
+		final occurrence = occurrencesById.get(reference.id);
+		if (occurrence == null) {
+			errors.push('unknown runtime use ${reference.id}');
+		} else if (reference.planRevision != planRevision) {
+			errors.push('stale runtime use ${reference.id}: expected plan $planRevision, received ${reference.planRevision}');
+		} else if (reference.domain != occurrence.domain) {
+			errors.push('runtime use ${reference.id} has the wrong target domain');
+		} else if (reference.exactSymbol != occurrence.exactSymbol) {
+			errors.push('runtime use ${reference.id} has the wrong target symbol ${reference.exactSymbol}');
+		} else {
+			observedIds.push(reference.id);
+			final previousCount = counts.get(reference.id);
+			counts.set(reference.id, (previousCount == null ? 0 : previousCount) + 1);
+			validateRequirementForReconciliation(occurrence, errors);
+		}
+	}
+
+	function finishReconciliation(observedIds:Array<String>, counts:Map<String, Int>, errors:Array<String>):Void {
 		for (occurrence in occurrencesInOrder) {
 			final observedCount = counts.get(occurrence.id);
 			final count = observedCount == null ? 0 : observedCount;

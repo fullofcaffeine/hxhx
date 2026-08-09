@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.27",
+  "reviewBead": "haxe_ocaml-0uwin.29",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.27",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.29",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,10 +15,10 @@
     }
   ],
   "counts": {
-    "total": 445,
+    "total": 444,
     "byDomain": {
       "expression": 398,
-      "generated-text": 17,
+      "generated-text": 16,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -52,13 +52,12 @@
       "field-representation-materializer": 1,
       "imap-interface-syntax": 12,
       "place-assignment": 6,
-      "plugin-build-generated-text": 1,
       "standard-map-carrier-model": 3,
       "string-representation-materializer": 1,
       "structural-field-syntax": 2
     }
   },
-  "inventoryRevision": "5b84cf1f9a977460fe2c2263ec9ce851839bb98fd27fa626aea160fabc847f26",
+  "inventoryRevision": "4582921f9ddfad49158af00d23e921b06ceb6f03a87633ecc75f8d4af850a03a",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
@@ -4499,16 +4498,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 2,
       "migrationFamily": "compiler-core"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/DuneProjectEmitter.hx::generated-text::lines.push::HxHxBackendPluginHost.register_provider_type::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/DuneProjectEmitter.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxHxBackendPluginHost.register_provider_type",
-      "rootModule": "HxHxBackendPluginHost",
-      "ordinal": 1,
-      "migrationFamily": "plugin-build-generated-text"
     }
   ]
 }
