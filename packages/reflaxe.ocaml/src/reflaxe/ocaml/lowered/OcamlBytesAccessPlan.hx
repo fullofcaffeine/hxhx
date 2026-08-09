@@ -320,6 +320,14 @@ class OcamlBytesAccessPlan {
 			decision.resultRepresentationRevision,
 			decision.runtimeOperation,
 			decision.runtimeRequirementIds.join(","),
+			decision.runtimeUseOccurrences.map(use -> [
+				use.id,
+				use.planRevision,
+				use.requirementId,
+				use.exactSymbol,
+				use.role,
+				Std.string(use.order)
+			].join(":")).join(","),
 			decision.proofId,
 			decision.proofClaim,
 			decision.functionId,
@@ -368,6 +376,23 @@ class OcamlBytesAccessPlan {
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeOperation: decision.runtimeOperation,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -511,6 +536,7 @@ class OcamlBytesAccessPlanner {
 			resultRepresentationRevision: resultRepresentation == null ? "" : resultRepresentation.revision,
 			runtimeOperation: OcamlBytesAccessContract.fieldName(occurrence.kind),
 			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: OcamlBytesAccessContract.PROOF_ID,
 			proofClaim: OcamlBytesAccessContract.PROOF_CLAIM,
 			functionId: binding.functionId,
@@ -558,7 +584,7 @@ class OcamlBytesAccessPlanner {
 	}
 
 	static function copyWithIdentity(decision:OcamlBytesAccessDecision, id:String):OcamlBytesAccessDecision {
-		return {
+		final identified:OcamlBytesAccessDecision = {
 			id: id,
 			occurrenceId: decision.occurrenceId,
 			source: {file: decision.source.file, min: decision.source.min, max: decision.source.max},
@@ -595,7 +621,8 @@ class OcamlBytesAccessPlanner {
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeOperation: decision.runtimeOperation,
-			runtimeRequirementIds: [id + ":runtime:" + OcamlBytesAccessContract.RUNTIME_CAPABILITY],
+			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -603,6 +630,10 @@ class OcamlBytesAccessPlanner {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
+		final completed:Dynamic = identified;
+		Reflect.setField(completed, "runtimeRequirementIds", OcamlBytesAccessContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(completed, "runtimeUseOccurrences", OcamlBytesAccessContract.runtimeUseOccurrencesFor(identified));
+		return cast completed;
 	}
 }
 #end

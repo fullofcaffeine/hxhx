@@ -53,6 +53,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
@@ -421,6 +422,35 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/**
+		Builds one Bytes access from its completed compiler decision.
+
+		The decision names each conversion helper and final `HxBytes` operation that
+		target syntax may use. The completed identifiers are checked in order before
+		printing, so syntax cannot introduce a plausible but unplanned runtime call.
+	**/
+	function buildBytesAccess(decision:OcamlBytesAccessDecision, receiver:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+			final materialization = OcamlBytesAccessSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
+			// Receiver and argument expressions can contain helper calls owned by
+			// other decisions. Check only the identifiers this access inserted.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeReferences));
+			materialization.expression;
+		} catch (error:Dynamic) {
+			bytesAccessInvariant(Std.string(error), position);
+		}
 	}
 
 	function bytesReadInvariant(message:String, position:Position):Dynamic {
@@ -2530,7 +2560,7 @@ class OcamlBuilder {
 			case _ if (structuralFieldCandidate):
 				structuralFieldInvariant("an ambiguous structural field reached syntax without its sealed typed decision", e.pos);
 			case _ if (plannedBytesAccess != null && bytesAccessOccurrence != null):
-				OcamlBytesAccessSyntax.build(plannedBytesAccess, bytesAccessOccurrence.receiver, bytesAccessOccurrence.arguments, buildExpr, freshTmp);
+				buildBytesAccess(plannedBytesAccess, bytesAccessOccurrence.receiver, bytesAccessOccurrence.arguments, e.pos);
 			case _ if (bytesAccessOccurrence != null):
 				bytesAccessInvariant("an admitted Bytes access reached syntax without its sealed occurrence plan", e.pos);
 			case _ if (plannedBytesMutation != null && bytesMutationOccurrence != null):

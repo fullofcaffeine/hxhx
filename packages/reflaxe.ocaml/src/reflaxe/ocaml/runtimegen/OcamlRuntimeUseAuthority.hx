@@ -236,6 +236,21 @@ class OcamlRuntimeUseAuthority {
 			|| name == "HxIterator.next"
 			|| name == "HxBytes.fill"
 			|| name == "HxBytes.blit"
+			|| name == "HxBytes.get"
+			|| name == "HxBytes.set"
+			|| name == "HxBytes.getUInt16"
+			|| name == "HxBytes.setUInt16"
+			|| name == "HxBytes.getInt32"
+			|| name == "HxBytes.setInt32"
+			|| name == "HxBytes.getInt64"
+			|| name == "HxBytes.setInt64"
+			|| name == "HxBytes.getFloat"
+			|| name == "HxBytes.setFloat"
+			|| name == "HxBytes.getDouble"
+			|| name == "HxBytes.setDouble"
+			|| name == "HxBytes.getData"
+			|| name == "HxBytes.fastGet"
+			|| name == "HxBytes.requireMultiByteInt"
 			|| name == "HxRuntime.nullable_int_unwrap";
 	}
 }

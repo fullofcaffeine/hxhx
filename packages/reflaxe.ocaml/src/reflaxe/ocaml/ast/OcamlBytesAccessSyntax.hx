@@ -8,6 +8,19 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessInvocationKind;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessKind;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+
+/**
+	Returns the generated access and the private helper identifiers it inserted.
+
+	The caller checks this identifier list against the completed access decision.
+	Receiver and argument expressions are excluded because their helper calls are
+	owned by their own compiler decisions.
+**/
+typedef OcamlBytesAccessMaterialization = {
+	final expression:OcamlExpr;
+	final runtimeReferences:Array<OcamlExpr>;
+}
 
 /**
 	Constructs OCaml syntax from one already-validated Bytes access decision.
@@ -19,13 +32,16 @@ import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64Representat
 **/
 class OcamlBytesAccessSyntax {
 	public static function build(decision:OcamlBytesAccessDecision, receiver:Null<TypedExpr>, arguments:Array<TypedExpr>,
-			buildExpression:TypedExpr->OcamlExpr, freshName:String->String):OcamlExpr {
+			buildExpression:TypedExpr->OcamlExpr, freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlBytesAccessMaterialization {
 		OcamlBytesAccessContract.requireDecision(decision);
+		if (runtimeAuthority == null)
+			throw 'reflaxe.ocaml [ocaml-bytes:missing-access-runtime-authority]: access "${decision.id}" cannot construct private runtime identifiers';
 		if (arguments.length != decision.argumentCount)
 			throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-arity-mismatch]: access "${decision.id}" expected ${decision.argumentCount} arguments but received ${arguments.length}';
 
 		final evaluated:Array<{name:String, value:OcamlExpr}> = [];
 		final converted:Array<{name:String, value:OcamlExpr}> = [];
+		final runtimeReferences:Array<OcamlExpr> = [];
 		var receiverValue:Null<OcamlExpr> = null;
 		final argumentValues:Array<Null<OcamlExpr>> = [for (_ in 0...decision.argumentCount) null];
 		for (slot in decision.evaluationOrder) {
@@ -60,9 +76,13 @@ class OcamlBytesAccessSyntax {
 				case Identity:
 					throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-conversion-mismatch]: access "${decision.id}" tried to materialize an identity conversion';
 				case RequireNonNullInt:
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [input]);
+					final runtimeReference = runtimeIdentifier(decision, runtimeAuthority, 'convert-argument:$index', "HxRuntime.nullable_int_unwrap");
+					runtimeReferences.push(runtimeReference);
+					OcamlExpr.EApp(runtimeReference, [input]);
 				case RequireMultiByteIntOrOutsideBounds:
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "requireMultiByteInt"), [input]);
+					final runtimeReference = runtimeIdentifier(decision, runtimeAuthority, 'convert-argument:$index', "HxBytes.requireMultiByteInt");
+					runtimeReferences.push(runtimeReference);
+					OcamlExpr.EApp(runtimeReference, [input]);
 			}
 			converted.push({name: name, value: value});
 			argumentValues[index] = OcamlExpr.EIdent(name);
@@ -92,7 +112,9 @@ class OcamlBytesAccessSyntax {
 			case _:
 				callArguments;
 		}
-		var out = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), decision.runtimeOperation), runtimeArguments);
+		final callReference = runtimeIdentifier(decision, runtimeAuthority, "access-bytes", "HxBytes." + decision.runtimeOperation);
+		runtimeReferences.push(callReference);
+		var out = OcamlExpr.EApp(callReference, runtimeArguments);
 		for (offset in 0...converted.length) {
 			final binding = converted[converted.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
@@ -101,7 +123,15 @@ class OcamlBytesAccessSyntax {
 			final binding = evaluated[evaluated.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
-		return out;
+		return {expression: out, runtimeReferences: runtimeReferences};
+	}
+
+	static function runtimeIdentifier(decision:OcamlBytesAccessDecision, authority:OcamlRuntimeUseAuthority, role:String, exactSymbol:String):OcamlExpr {
+		final matches = decision.runtimeUseOccurrences.filter(use -> use.role == role);
+		if (matches.length != 1 || matches[0].exactSymbol != exactSymbol)
+			throw 'reflaxe.ocaml [ocaml-bytes:wrong-access-runtime-use]: access "${decision.id}" has no exact $role/$exactSymbol occurrence';
+		final use = matches[0];
+		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
 	}
 
 	static function required(decision:OcamlBytesAccessDecision, value:Null<OcamlExpr>, label:String):OcamlExpr {

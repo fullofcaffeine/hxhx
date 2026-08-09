@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.34",
+  "reviewBead": "haxe_ocaml-0uwin.35",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.34",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.35",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 422,
+    "total": 419,
     "byDomain": {
-      "expression": 392,
+      "expression": 389,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -41,7 +41,6 @@
       "builder-runtime-tags": 10,
       "builder-string": 25,
       "builder-type": 28,
-      "bytes-access-syntax": 3,
       "bytes-producer-syntax": 5,
       "bytes-read-syntax": 3,
       "compiler-core": 13,
@@ -52,7 +51,7 @@
       "string-representation-materializer": 1
     }
   },
-  "inventoryRevision": "36605841694e11f1407bf8539289f982acfa208cb1321b4bad347eae3b67d97c",
+  "inventoryRevision": "0561979c9f97eeec04f4c477bb2351dd76f4efe30f22d07df90e97557e673b38",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
@@ -3803,36 +3802,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 10,
       "migrationFamily": "builder-boolean-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.nullable_int_unwrap",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "bytes-access-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EField(EIdent)::HxBytes.requireMultiByteInt::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxBytes.requireMultiByteInt",
-      "rootModule": "HxBytes",
-      "ordinal": 1,
-      "migrationFamily": "bytes-access-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EIdent::HxBytes::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
-      "domain": "expression",
-      "construction": "EIdent",
-      "symbol": "HxBytes",
-      "rootModule": "HxBytes",
-      "ordinal": 1,
-      "migrationFamily": "bytes-access-syntax"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.create::1",

@@ -57,6 +57,7 @@ class BytesAccessPlanFixture {
 			"setUInt16" => OcamlBytesAccessKind.SetUInt16,
 			"setUInt16NullablePosition" => OcamlBytesAccessKind.SetUInt16,
 			"setUInt16NullableValue" => OcamlBytesAccessKind.SetUInt16,
+			"setUInt16NullablePositionAndValue" => OcamlBytesAccessKind.SetUInt16,
 			"getInt32" => OcamlBytesAccessKind.GetInt32,
 			"getInt32NullablePosition" => OcamlBytesAccessKind.GetInt32,
 			"setInt32" => OcamlBytesAccessKind.SetInt32,
@@ -203,9 +204,24 @@ class BytesAccessPlanFixture {
 						requireNullableIntConversion(decision, 0, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
 					case "setUInt16NullableValue", "setInt32NullableValue", "setUInt16NullableValueInSourceOrder":
 						requireNullableIntConversion(decision, 1, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
+					case "setUInt16NullablePositionAndValue":
+						requireNullableIntConversion(decision, 0, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
+						requireNullableIntConversion(decision, 1, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
 					case _:
 				}
 			}
+			final expectedRuntimeSymbols = [];
+			for (conversion in decision.argumentConversions)
+				switch (conversion) {
+					case Identity:
+					case RequireNonNullInt:
+						expectedRuntimeSymbols.push("HxRuntime.nullable_int_unwrap");
+					case RequireMultiByteIntOrOutsideBounds:
+						expectedRuntimeSymbols.push("HxBytes.requireMultiByteInt");
+				}
+			expectedRuntimeSymbols.push("HxBytes." + decision.runtimeOperation);
+			if (decision.runtimeUseOccurrences.map(use -> use.exactSymbol).join(",") != expectedRuntimeSymbols.join(","))
+				Context.error('Bytes access case "$name" has no exact private-runtime use inventory.', field.pos);
 			final occurrence = accessOccurrence(body);
 			if (occurrence == null || first.requireFor(occurrence, representations).id != decision.id)
 				Context.error('Bytes access case "$name" did not resolve its exact sealed occurrence.', field.pos);
@@ -269,12 +285,20 @@ class BytesAccessPlanFixture {
 		for (decision in decisions)
 			OcamlBytesRuntimeRequirementRecorder.recordAccess(ledger, decision);
 		final requirements = ledger.requirementsSorted();
-		if (requirements.length != decisions.length)
-			Context.error('Expected ${decisions.length} Bytes access requirements, received ${requirements.length}.', Context.currentPos());
+		final nullableRequirementCount = decisions.filter(decision -> Lambda.exists(decision.argumentConversions,
+			conversion -> conversion == OcamlBytesAccessArgumentConversion.RequireNonNullInt))
+			.length;
+		final expectedRequirementCount = decisions.length + nullableRequirementCount;
+		if (requirements.length != expectedRequirementCount)
+			Context.error('Expected $expectedRequirementCount Bytes access requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_ACCESS
-				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
-				|| requirement.rootModules.join(",") != "HxBytes") {
+			final accessRequirement = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_ACCESS
+				&& requirement.subject.id == OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+				&& requirement.rootModules.join(",") == "HxBytes";
+			final nullableRequirement = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_ACCESS_NULLABLE_INT
+				&& requirement.subject.id == "Null<Int>"
+				&& requirement.rootModules.join(",") == "HxRuntime";
+			if (!accessRequirement && !nullableRequirement) {
 				Context.error('Runtime requirement "${requirement.id}" does not select the exact HxBytes access contract.', Context.currentPos());
 			}
 		}
@@ -292,6 +316,10 @@ class BytesAccessPlanFixture {
 		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
 			reseal(sample, {boundsPolicy: OcamlBytesAccessBoundsPolicy.DeclaredBytesChecked})
 		]));
+		expectThrows("invalid-access-runtime-use", () -> new OcamlBytesAccessPlan([copy(sample, {runtimeUseOccurrences: []})]));
+		final wrongRuntimeUse:Dynamic = Reflect.copy(sample.runtimeUseOccurrences[0]);
+		Reflect.setField(wrongRuntimeUse, "exactSymbol", "HxBytes.get");
+		expectThrows("invalid-access-runtime-use", () -> new OcamlBytesAccessPlan([copy(sample, {runtimeUseOccurrences: [wrongRuntimeUse]})]));
 		final numericSample = Lambda.find(decisions,
 			decision -> decision.kind == OcamlBytesAccessKind.GetUInt16 && decision.functionId == "BytesAccessCases.getUInt16");
 		if (numericSample == null)
@@ -315,6 +343,12 @@ class BytesAccessPlanFixture {
 				&& decision.functionId == "BytesAccessCases.getUInt16NullablePosition");
 		if (nullableNumericSample == null)
 			Context.error("The Bytes access fixture has no nullable getUInt16 decision.", Context.currentPos());
+		final doubleNullableSample = Lambda.find(decisions, decision -> decision.functionId == "BytesAccessCases.setUInt16NullablePositionAndValue");
+		if (doubleNullableSample == null || doubleNullableSample.runtimeUseOccurrences.length != 3)
+			Context.error("The Bytes access fixture has no two-conversion access decision.", Context.currentPos());
+		final reversedRuntimeUses = doubleNullableSample.runtimeUseOccurrences.copy();
+		reversedRuntimeUses.reverse();
+		expectThrows("invalid-access-runtime-use", () -> new OcamlBytesAccessPlan([copy(doubleNullableSample, {runtimeUseOccurrences: reversedRuntimeUses})]));
 		expectThrows("invalid-access-argument", () -> new OcamlBytesAccessPlan([
 			reseal(nullableNumericSample, {argumentConversions: [OcamlBytesAccessArgumentConversion.RequireNonNullInt]})
 		]));
@@ -615,7 +649,9 @@ class BytesAccessPlanFixture {
 		final changed:OcamlBytesAccessDecision = cast value;
 		final id = OcamlBytesAccessContract.idFor(changed);
 		Reflect.setField(value, "id", id);
-		Reflect.setField(value, "runtimeRequirementIds", [id + ":runtime:" + OcamlBytesAccessContract.RUNTIME_CAPABILITY]);
+		final identified:OcamlBytesAccessDecision = cast value;
+		Reflect.setField(value, "runtimeRequirementIds", OcamlBytesAccessContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(value, "runtimeUseOccurrences", OcamlBytesAccessContract.runtimeUseOccurrencesFor(identified));
 		return cast value;
 	}
 

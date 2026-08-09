@@ -141,6 +141,21 @@ class RuntimeUseAuthorityFixture {
 			"HxIterator.next",
 			"HxBytes.fill",
 			"HxBytes.blit",
+			"HxBytes.get",
+			"HxBytes.set",
+			"HxBytes.getUInt16",
+			"HxBytes.setUInt16",
+			"HxBytes.getInt32",
+			"HxBytes.setInt32",
+			"HxBytes.getInt64",
+			"HxBytes.setInt64",
+			"HxBytes.getFloat",
+			"HxBytes.setFloat",
+			"HxBytes.getDouble",
+			"HxBytes.setDouble",
+			"HxBytes.getData",
+			"HxBytes.fastGet",
+			"HxBytes.requireMultiByteInt",
 			"HxRuntime.nullable_int_unwrap"
 		]) {
 			final separator = symbol.indexOf(".");

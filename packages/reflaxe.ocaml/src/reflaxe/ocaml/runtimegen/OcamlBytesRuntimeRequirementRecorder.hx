@@ -27,6 +27,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	public static inline final HAXE_BYTES_MUTATION = OcamlBytesMutationContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_MUTATION_NULLABLE_INT = OcamlBytesMutationContract.NULLABLE_INT_RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_ACCESS = OcamlBytesAccessContract.RUNTIME_CAPABILITY;
+	public static inline final HAXE_BYTES_ACCESS_NULLABLE_INT = OcamlBytesAccessContract.NULLABLE_INT_RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
 
@@ -123,7 +124,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	**/
 	public static function recordAccess(ledger:OcamlRuntimeRequirementLedger, decision:OcamlBytesAccessDecision):Void {
 		OcamlBytesAccessContract.requireDecision(decision);
-		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_ACCESS;
+		final requirementId = OcamlBytesAccessContract.runtimeRequirementId(decision.id);
 		if (decision.runtimeRequirementIds[0] != requirementId)
 			throw 'Bytes access "${decision.id}" does not name its exact runtime requirement.';
 		ledger.record({
@@ -143,6 +144,28 @@ class OcamlBytesRuntimeRequirementRecorder {
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation calls HxBytes after evaluating raw inputs once in source order and then applying ${decision.argumentConversions.join(",")} conversions in argument order. It fixes ${decision.boundsPolicy} bounds, a ${decision.accessWidthBytes}-byte access, ${decision.byteOrderPolicy} ordering, ${decision.valuePolicy} value behavior, ${decision.mutationPolicy} mutation, ${decision.aliasPolicy} aliasing, and ${decision.resultKind} result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target\'s deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.'
 		});
+		if (decision.runtimeRequirementIds.length == 2) {
+			final nullableRequirementId = OcamlBytesAccessContract.nullableIntRuntimeRequirementId(decision.id);
+			if (decision.runtimeRequirementIds[1] != nullableRequirementId)
+				throw 'Bytes access "${decision.id}" does not name its exact nullable Int runtime requirement.';
+			ledger.record({
+				id: nullableRequirementId,
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_BYTES_ACCESS_NULLABLE_INT,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Null<Int>"
+				},
+				implementationFeature: "haxe-nullable-int-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: ["metal", "portable"],
+				explanation: 'The sealed ${decision.calleeId} access receives a nullable integer where a single-byte HxBytes operation requires an exact Int, so HxRuntime rejects null before the selected access runs.'
+			});
+		}
 	}
 
 	/**

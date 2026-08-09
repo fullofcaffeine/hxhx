@@ -126,6 +126,11 @@ class BytesAccessCases {
 		bytes.setUInt16(position, value);
 	}
 
+	/** Supplies two converted arguments so the plan can prove their stable order. */
+	public static function setUInt16NullablePositionAndValue(bytes:Bytes, position:Null<Int>, value:Null<Int>):Void {
+		bytes.setUInt16(position, value);
+	}
+
 	public static function getInt32(bytes:Bytes, position:Int):Int {
 		return bytes.getInt32(position);
 	}

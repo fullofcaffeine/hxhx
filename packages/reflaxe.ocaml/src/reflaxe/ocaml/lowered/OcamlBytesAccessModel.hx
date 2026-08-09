@@ -6,6 +6,9 @@ import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentat
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Exact byte, integer, IEEE-754 Float, and data-alias operations admitted from the target Bytes override. */
 enum abstract OcamlBytesAccessKind(String) from String to String {
@@ -135,6 +138,7 @@ typedef OcamlBytesAccessDecision = {
 	final resultRepresentationRevision:String;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -146,6 +150,7 @@ typedef OcamlBytesAccessDecision = {
 /** Closed facts shared by exact Bytes-access planning, syntax, and reporting. */
 class OcamlBytesAccessContract {
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-access";
+	public static inline final NULLABLE_INT_RUNTIME_CAPABILITY = "haxe-bytes-access-nullable-int";
 	public static inline final VOID_SEMANTIC_TYPE_ID = "Void";
 	public static inline final OCCURRENCE_ID_PREFIX = "bytes-access-occurrence:";
 	public static inline final PROOF_ID = "exact-haxe-bytes-access-v5";
@@ -303,6 +308,72 @@ class OcamlBytesAccessContract {
 		}
 	}
 
+	/** Returns the direct HxBytes requirement for one access decision. */
+	public static function runtimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/** Returns the direct HxRuntime requirement for single-byte nullable inputs. */
+	public static function nullableIntRuntimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + NULLABLE_INT_RUNTIME_CAPABILITY;
+	}
+
+	/** Returns every direct runtime root selected by one access decision. */
+	public static function runtimeRequirementIdsFor(decision:OcamlBytesAccessDecision):Array<String> {
+		final result = [runtimeRequirementId(decision.id)];
+		if (Lambda.exists(decision.argumentConversions, conversion -> conversion == OcamlBytesAccessArgumentConversion.RequireNonNullInt))
+			result.push(nullableIntRuntimeRequirementId(decision.id));
+		return result;
+	}
+
+	/**
+		Builds the exact private helper calls target syntax must consume.
+
+		Raw inputs are evaluated before this list is used. Argument conversions then
+		run in argument order, followed by the final selected HxBytes operation.
+	**/
+	public static function runtimeUseOccurrencesFor(decision:OcamlBytesAccessDecision):Array<OcamlRuntimeUseOccurrence> {
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final result = new Array<OcamlRuntimeUseOccurrence>();
+
+		function add(requirementId:String, exactSymbol:String, role:String):Void {
+			result.push({
+				id: decision.id + ":runtime-use:" + role,
+				planRevision: planRevision,
+				ownerId: decision.id,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: exactSymbol,
+				role: role,
+				order: result.length,
+				source: {
+					file: decision.source.file,
+					min: decision.source.min,
+					max: decision.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
+
+		for (index in 0...decision.argumentConversions.length)
+			switch (decision.argumentConversions[index]) {
+				case Identity:
+				case RequireNonNullInt:
+					add(nullableIntRuntimeRequirementId(decision.id), "HxRuntime.nullable_int_unwrap", 'convert-argument:$index');
+				case RequireMultiByteIntOrOutsideBounds:
+					add(runtimeRequirementId(decision.id), "HxBytes.requireMultiByteInt", 'convert-argument:$index');
+			}
+		add(runtimeRequirementId(decision.id), "HxBytes." + decision.runtimeOperation, "access-bytes");
+		return result;
+	}
+
 	/** Rejects incomplete, stale-shaped, or internally conflicting access facts. */
 	public static function requireDecision(decision:OcamlBytesAccessDecision):Void {
 		if (decision == null)
@@ -345,8 +416,7 @@ class OcamlBytesAccessContract {
 			|| decision.aliasPolicy != aliasPolicy(decision.kind)
 			|| decision.resultKind != resultKind(decision.kind)
 			|| decision.runtimeOperation != expectedField
-			|| decision.runtimeRequirementIds.length != 1
-			|| decision.runtimeRequirementIds[0] != decision.id + ":runtime:" + RUNTIME_CAPABILITY
+			|| decision.runtimeRequirementIds.join(",") != runtimeRequirementIdsFor(decision).join(",")
 			|| decision.proofId != PROOF_ID
 			|| decision.proofClaim != PROOF_CLAIM
 			|| decision.functionId.length == 0
@@ -358,6 +428,30 @@ class OcamlBytesAccessContract {
 		requireReceiver(decision, hasReceiver);
 		requireArguments(decision);
 		requireResult(decision);
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-access-runtime-use]: access "${decision.id}" does not own every private runtime use';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-access-runtime-use]: access "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
 	}
 
 	static function isOccurrenceId(value:String):Bool {
