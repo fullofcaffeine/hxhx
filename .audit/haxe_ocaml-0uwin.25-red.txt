@@ -1,0 +1,17 @@
+Oracle command:
+test/portable/fixtures/imap_nullable_standard_boundary/run-haxe-oracle.sh
+
+Oracle result:
+HAXE_4_3_7_NULLABLE_STANDARD_MAP_ORACLE:PASS
+
+Target command:
+PORTABLE_FIXTURE_ALLOWLIST=imap_nullable_standard_boundary PORTABLE_JOBS=1 bash scripts/test-portable.sh
+
+Target exit:
+1
+
+Target diagnostic:
+src/Main.hx:33: characters 10-17 : reflaxe.ocaml [ocaml-call:plan-invariant]: reflaxe.ocaml [ocaml-imap-interface:missing-conversion]: src/Main.hx:867:874 has no sealed conversion from Null<Map<String, Int>> (typed occurrence Null<Map<String, Int>>) to haxe.IMap<String, Int>
+
+Expected reason:
+The current IMap planner recognizes concrete standard Maps and the Map abstract. It does not record the source carrier or null policy for Null<Map<K,V>>.

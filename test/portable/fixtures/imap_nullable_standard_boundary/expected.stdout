@@ -1,0 +1,4 @@
+string=1
+int=two
+object=3
+nullThrows=true
