@@ -1,0 +1,23 @@
+Command:
+  npm run test:portable -- --fixture nullable_int_conditional_local
+
+Observed before implementation:
+  src/Main.hx:22: characters 39-54 : reflaxe.ocaml [ocaml-lowering:local-storage-invariant]: local lexical-local-v1:2dd4572af0c66ab696f204175dd9bb1abd53ec66046498e97d0ef00647c6d7a3 has no sealed assignment conversion for occurrence "local-conversion:5606534918ad49978feb010d956fbeb5"
+
+Independent oracle:
+  test/portable/fixtures/nullable_int_conditional_local/run-haxe-oracle.sh
+  HAXE_4_3_7_NULLABLE_INT_CONDITIONAL_LOCAL_ORACLE:PASS
+
+Final Haxe 4.3.7 typed-program facts:
+  - nested read():Int
+  - count:Null<Int>
+  - initializer: If:Null<Int>
+  - then branch counts.get(key):Null<Int>
+  - else branch 0:Int
+  - count + 1:Int
+
+Expected failure reason:
+  The whole-tree local representation plan sealed the conversion with the root
+  function binding. Syntax entered the nested function, kept consuming that
+  root-owned plan, but recomputed the occurrence identity with the nested
+  behavior binding. The two exact IDs therefore could not match.

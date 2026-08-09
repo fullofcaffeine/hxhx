@@ -33,7 +33,7 @@ if (JSON.stringify(domains) !== JSON.stringify(['float', 'float', 'float', 'int'
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v1:${decision.domain}`
-		|| !['ocaml-function-plans-v80', 'ocaml-standalone-expression-plans-v3'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v81', 'ocaml-standalone-expression-plans-v3'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 }

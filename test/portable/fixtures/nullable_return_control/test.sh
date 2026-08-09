@@ -69,7 +69,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v80'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v81'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason

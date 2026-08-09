@@ -1,0 +1,28 @@
+Command:
+  npm run test:m14:hih-complete-numeric-literals:current-source
+
+Candidate:
+  source head 5359e3e3a3a1ffabce588c97343d2615fa5764db, dirty=1
+
+Result:
+  - JavaScript complete numeric-literal check passed.
+  - The Stage0 current-source build ran for 361 seconds.
+  - It passed the previous local-conversion failure at EmitterStage.hx:7778.
+  - It stopped later at EmitterStage.hx:8066.
+
+Next fail-closed diagnostic:
+  reflaxe.ocaml [ocaml-lowering:place-invariant]: origin
+  "place:d253a301540bfb2085b285bb" belongs to root function/body/pipeline
+  EmitterStage.emitToDir / 12:f7785a826e3b00897e08dee86bd2b398e7f6d519841861093b4b766cb3500f19
+  / ocaml-function-plans-v81, not the twice-nested function binding
+  ending in / 0:712db1f983166b930f7349c5d8b38b12b0017f52a1f32527666703e91d114a68
+  / ocaml-nested-function-plans-v15.
+
+Source occurrence:
+  packages/hxhx-core/src/EmitterStage.hx:8066
+  seenStamp[i] = 0;
+
+Disposition:
+  This is a later, independent plan-owner mismatch for an indexed assignment.
+  It is not part of the completed local storage/representation conversion fix.
+  Preserve the exact failure and route it to a follow-up Bead.

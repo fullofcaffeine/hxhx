@@ -20,7 +20,7 @@ const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
 	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
 		? 'ocaml-nested-function-plans-v15'
-		: 'ocaml-function-plans-v80')
+		: 'ocaml-function-plans-v81')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
@@ -81,7 +81,7 @@ const expectedAliases = [
 for (const expected of expectedAliases) {
 	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
 		&& candidate.standardKeyKind === expected.kind)
-	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v15' : 'ocaml-function-plans-v80'
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v15' : 'ocaml-function-plans-v81'
 	if (!alias
 		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
 		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`
@@ -194,7 +194,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapInterfaceConversions.find(conversion => conversion.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested conversion to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v80'
+nested.pipelineRevision = 'ocaml-function-plans-v81'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
@@ -213,7 +213,15 @@ const fs = require('fs')
 const crypto = require('crypto')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
-report.iMapStorageAliases[0].preservedCarrierTypeId = 'HxMap.int_map'
+// Decision IDs include the plan revision, so their sorted order may change
+// after a legitimate schema update. Select the semantic case this negative
+// test owns instead of assuming it remains the first report entry.
+const rootStringAlias = report.iMapStorageAliases.find(alias =>
+	alias.standardKeyKind === 'string'
+	&& !alias.functionId.includes('|nested-function|'))
+if (!rootStringAlias)
+	throw new Error('the IMap fixture has no root string-map alias to corrupt')
+rootStringAlias.preservedCarrierTypeId = 'HxMap.int_map'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
@@ -232,7 +240,12 @@ const fs = require('fs')
 const crypto = require('crypto')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
-report.iMapStorageAliases[0].uses[0].nativeOperation = 'exists_int'
+const rootStringAlias = report.iMapStorageAliases.find(alias =>
+	alias.standardKeyKind === 'string'
+	&& !alias.functionId.includes('|nested-function|'))
+if (!rootStringAlias)
+	throw new Error('the IMap fixture has no root string-map alias to corrupt')
+rootStringAlias.uses[0].nativeOperation = 'exists_int'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
@@ -254,7 +267,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapStorageAliases.find(alias => alias.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested storage alias to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v80'
+nested.pipelineRevision = 'ocaml-function-plans-v81'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,

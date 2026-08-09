@@ -147,6 +147,17 @@ class OcamlBuilder {
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 
+	/**
+		Identifies the root function that sealed the active local plans.
+
+		One root local plan covers its complete tree of nested functions so captured
+		and nested locals share one storage and carrier decision. A nested function
+		still installs its own behavior binding for calls and control flow. Keeping
+		this second binding prevents local conversion lookup from accidentally using
+		that nested behavior identity.
+	**/
+	var currentLocalPlanBinding:Null<OcamlFunctionPlanBinding> = null;
+
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
 	// `ref` locals whose initializer is `null` (or omitted and null-defaulted).
@@ -1052,8 +1063,10 @@ class OcamlBuilder {
 		construction.
 	**/
 	function activeLocalRepresentationPlan(position:Position):Null<OcamlLocalRepresentationPlan> {
-		if (currentLocalRepresentationPlan == null && currentFunctionPlanBinding != null)
+		if (currentLocalRepresentationPlan == null && currentLocalPlanBinding != null)
 			return localStorageInvariant("sealed function reached syntax construction without its local representation plan", position);
+		if (currentLocalRepresentationPlan != null && currentLocalPlanBinding == null)
+			return localStorageInvariant("local representation plan reached syntax construction without its owning function binding", position);
 		return currentLocalRepresentationPlan;
 	}
 
@@ -1066,7 +1079,7 @@ class OcamlBuilder {
 		revision before syntax can use it.
 	**/
 	function plannedLocalRepresentation(localId:Int, position:Position):Null<OcamlRepresentationDecision> {
-		final binding = currentFunctionPlanBinding;
+		final binding = currentLocalPlanBinding;
 		if (binding == null)
 			return null;
 		final localRepresentations = activeLocalRepresentationPlan(position);
@@ -1121,7 +1134,7 @@ class OcamlBuilder {
 		reclassify the typed expression and make the same target decision again.
 	**/
 	function requireLocalConversionOccurrence(localId:Int, role:OcamlLocalConversionRole, expression:TypedExpr):OcamlLocalConversionDecision {
-		final binding = currentFunctionPlanBinding;
+		final binding = currentLocalPlanBinding;
 		if (binding == null)
 			return localStorageInvariant('local $localId requires an occurrence conversion outside a sealed function body', expression.pos);
 		final plan = activeLocalRepresentationPlan(expression.pos);
@@ -7761,6 +7774,7 @@ class OcamlBuilder {
 		final storagePlan = functionPlan.localStorage;
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousLocalPlanBinding = currentLocalPlanBinding;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousStructuralFieldPlan = currentStructuralFieldPlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
@@ -7775,6 +7789,7 @@ class OcamlBuilder {
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
+		currentLocalPlanBinding = functionPlan.binding;
 		functionPlan.bytesAccesses.requireRepresentations(representationRegistry);
 		functionPlan.bytesMutations.requireRepresentations(representationRegistry);
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
@@ -7953,6 +7968,7 @@ class OcamlBuilder {
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentLocalPlanBinding = previousLocalPlanBinding;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentStructuralFieldPlan = previousStructuralFieldPlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;

@@ -27,7 +27,7 @@ for (const [kind, facts] of expected) {
 			|| alias.targetSemanticTypeId !== `haxe.IMap<${facts.key}, ${facts.value}>`
 			|| alias.nullPolicy !== 'check-null-and-unbox'
 			|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
-			|| alias.pipelineRevision !== 'ocaml-function-plans-v80'
+			|| alias.pipelineRevision !== 'ocaml-function-plans-v81'
 			|| alias.uses.length !== 1
 			|| alias.uses[0].carrierTypeId !== facts.carrier
 			|| alias.uses[0].nativeOperation !== facts.operation)) {

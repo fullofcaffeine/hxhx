@@ -92,7 +92,7 @@ for (const operation of dynamicUnsafeOperations) {
 	assert(expectedProof, `Unexpected Dynamic unsafe operation ${operation.operation}`)
 	assert.equal(operation.proofId, expectedProof)
 	assert.equal(operation.outputCarrierTypeId, 'Obj.t')
-	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v80')
+	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v81')
 }
 
 const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
@@ -100,7 +100,7 @@ const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
 )
 assert.equal(dynamicCallableBoundaries.length, 2)
 for (const boundary of dynamicCallableBoundaries) {
-	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v80')
+	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v81')
 	assert.equal(boundary.arguments.length, 1)
 	assert.deepEqual(boundary.arguments[0], {
 		parameterOptional: false,
