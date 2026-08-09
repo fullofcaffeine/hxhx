@@ -95,7 +95,7 @@ class OcamlASTPrinter {
 			switch (current) {
 				case EPos(_, inner):
 					current = inner;
-				case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
+				case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
 					return PREC_ATOM;
 				case EField(_, _):
 					return PREC_FIELD;
@@ -149,6 +149,8 @@ class OcamlASTPrinter {
 				work.push(EmitText(printConst(constant)));
 			case EIdent(name), ERaw(name):
 				work.push(EmitText(name));
+			case ERuntimeIdent(reference):
+				work.push(EmitText(reference.exactSymbol));
 			case EPos(position, inner):
 				pushExpression(work, inner, contextPrecedence, indentation);
 				work.push(EmitText("\n# " + Std.string(position.line) + " \"" + escapeLineDirectiveFile(position.file) + "\"\n" + indent(indentation)));

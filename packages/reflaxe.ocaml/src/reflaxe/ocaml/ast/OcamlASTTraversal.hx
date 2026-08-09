@@ -29,7 +29,7 @@ class OcamlASTTraversal {
 	public static function mapExprImmediate(expression:OcamlExpr, mapExpression:OcamlExpr->OcamlExpr, mapPattern:OcamlPat->OcamlPat,
 			mapType:OcamlTypeExpr->OcamlTypeExpr):OcamlExpr {
 		return switch (expression) {
-			case EConst(_), EIdent(_), ERaw(_):
+			case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_):
 				expression;
 			case EPos(pos, inner):
 				final mappedInner = mapExpression(inner);
@@ -180,6 +180,8 @@ class OcamlASTTraversal {
 		final children:Array<OcamlASTWalkItem> = [];
 		while (work.length > 0) {
 			final current = work.pop();
+			if (current == null)
+				break;
 			children.resize(0);
 			switch (current) {
 				case Expression(expression):

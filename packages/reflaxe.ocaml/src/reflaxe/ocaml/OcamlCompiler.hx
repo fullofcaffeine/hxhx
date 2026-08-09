@@ -1939,6 +1939,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						exprMentionsIdent(inner, target);
 					case EIdent(n):
 						n == target;
+					case ERuntimeIdent(reference):
+						reference.exactSymbol == target;
 					case EConst(_):
 						false;
 					case ERaw(_):
@@ -4672,6 +4674,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case EIdent(n):
 					if (!isBound(n) && want.exists(n))
 						out.set(n, true);
+				case ERuntimeIdent(reference):
+					if (!isBound(reference.exactSymbol) && want.exists(reference.exactSymbol))
+						out.set(reference.exactSymbol, true);
 				case ELet(n, value, body, isRec):
 					if (isRec) {
 						boundAdd(n);

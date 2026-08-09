@@ -168,7 +168,8 @@ class OcamlFunctionPlanSealer {
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, localIdentities, staticStorage);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, localIdentities, staticStorage,
+			binding);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 

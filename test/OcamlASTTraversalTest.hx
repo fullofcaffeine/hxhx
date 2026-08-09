@@ -10,9 +10,37 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /** Verifies exhaustive, deterministic traversal of the OCaml target AST. */
 class OcamlASTTraversalTest {
+	/** Builds a real checked token so tests cannot bypass its restricted constructor. */
+	public static function runtimeIdentifierExpression():OcamlExpr {
+		final source:OcamlLoweredSourceSpan = {file: "Traversal.hx", min: 7, max: 8};
+		final requirementId = "traversal:runtime:haxe-array-element-set";
+		final authority = new OcamlRuntimeUseAuthority("plan:traversal", "portable", [
+			OcamlRuntimeRequirementLedger.requirementForPlaceCapability("traversal", "traversal", "traversal", source, "Int", requirementId)
+		], [
+			{
+				id: "traversal:runtime-use:array-set",
+				planRevision: "plan:traversal",
+				ownerId: "traversal",
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxArray.set",
+				role: "store",
+				order: 0,
+				source: source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			}
+		]);
+		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier("traversal:runtime-use:array-set", "plan:traversal", "HxArray.set"));
+	}
+
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
 			throw message;
@@ -73,6 +101,7 @@ class OcamlASTTraversalTest {
 		return OcamlExpr.ESeq([
 			OcamlExpr.EConst(OcamlConst.CUnit),
 			OcamlExpr.EIdent("ident_leaf"),
+			runtimeIdentifierExpression(),
 			OcamlExpr.ERaw("raw_leaf"),
 			OcamlExpr.EPos(debugPosition, OcamlExpr.EIdent("position_child")),
 			OcamlExpr.ERaise(OcamlExpr.EIdent("raise_child")),

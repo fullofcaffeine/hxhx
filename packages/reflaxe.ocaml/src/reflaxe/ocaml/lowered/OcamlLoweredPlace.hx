@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Place forms currently understood by the typed OCaml lowering model. */
 enum abstract OcamlLoweredPlaceKind(String) from String to String {
@@ -224,6 +225,7 @@ typedef OcamlLoweredArraySimpleAssignment = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A typed exact-Int array `+=` with an explicit old-element load. */

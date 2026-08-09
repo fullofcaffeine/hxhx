@@ -389,6 +389,19 @@ class OcamlPlaceAssignmentValidator {
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-array-element-set";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("array element assignment requires exactly the semantic haxe-array-element-set runtime capability");
+		if (plan.runtimeUseOccurrences.length != 1) {
+			errors.push("array element assignment requires exactly one authorized runtime store occurrence");
+		} else {
+			final runtimeUse = plan.runtimeUseOccurrences[0];
+			if (runtimeUse.ownerId != plan.id
+				|| runtimeUse.requirementId != expectedRuntimeId
+				|| runtimeUse.domain != reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain.ExpressionIdentifier
+				|| runtimeUse.exactSymbol != plan.place.targetModuleName + "." + plan.place.targetStoreName
+				|| runtimeUse.role != "store"
+				|| runtimeUse.order != 3
+				|| runtimeUse.cardinality != 1)
+				errors.push("array element assignment runtime store occurrence disagrees with its sealed place, requirement, or schedule");
+		}
 		if (containsUnsealedAdmittedPlace(plan.receiver)
 			|| containsUnsealedAdmittedPlace(plan.index)
 			|| containsUnsealedAdmittedPlace(plan.rightHandSide))

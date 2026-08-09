@@ -40,6 +40,8 @@ class OcamlASTPrinterTest {
 
 		// let-in
 		assertEq("let x = 1 in x", p.printExpr(OcamlExpr.ELet("x", OcamlExpr.EConst(OcamlConst.CInt(1)), OcamlExpr.EIdent("x"), false)), "let-in");
+		assertEq("HxArray.set", p.printExpr(OcamlASTTraversalTest.runtimeIdentifierExpression()),
+			"checked runtime identifier prints the exact planned symbol without printer decisions");
 
 		// application + arg parens for low-precedence expressions
 		assertEq("f (let x = 1 in x)", p.printExpr(OcamlExpr.EApp(OcamlExpr.EIdent("f"), [

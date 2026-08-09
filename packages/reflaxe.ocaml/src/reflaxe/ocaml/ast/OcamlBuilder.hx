@@ -7670,6 +7670,8 @@ class OcamlBuilder {
 				false;
 			case EIdent(name):
 				name == target;
+			case ERuntimeIdent(reference):
+				reference.exactSymbol == target;
 			case ELet(name, value, body, _): exprMentionsIdent(value, target) || (name != target && exprMentionsIdent(body, target));
 			case EFun(params, body):
 				var shadowed = false;

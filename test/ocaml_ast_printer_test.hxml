@@ -2,4 +2,5 @@
 -cp test
 
 -main OcamlASTPrinterTest
+-D reflaxe_runtime
 --interp

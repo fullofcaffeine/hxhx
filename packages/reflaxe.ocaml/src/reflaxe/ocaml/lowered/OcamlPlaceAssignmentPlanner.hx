@@ -35,6 +35,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 
 /** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
@@ -45,9 +47,11 @@ class OcamlPlaceAssignmentPlanner {
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final localIdentities:LexicalLocalIdentityPlan;
 	final staticStorage:OcamlStaticStoragePlan;
+	final binding:OcamlFunctionPlanBinding;
 
 	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry,
-			localRepresentations:OcamlLocalRepresentationPlan, localIdentities:LexicalLocalIdentityPlan, staticStorage:OcamlStaticStoragePlan) {
+			localRepresentations:OcamlLocalRepresentationPlan, localIdentities:LexicalLocalIdentityPlan, staticStorage:OcamlStaticStoragePlan,
+			binding:OcamlFunctionPlanBinding) {
 		this.context = context;
 		this.currentModuleId = currentModuleId;
 		this.currentTypeName = currentTypeName;
@@ -55,6 +59,7 @@ class OcamlPlaceAssignmentPlanner {
 		this.localRepresentations = localRepresentations;
 		this.localIdentities = localIdentities;
 		this.staticStorage = staticStorage;
+		this.binding = binding;
 	}
 
 	/** Selects one complete place plan from a final origin-bearing operation. */
@@ -428,8 +433,11 @@ class OcamlPlaceAssignmentPlanner {
 		final target = planArrayElement(originId, left);
 		if (target == null)
 			return null;
+		final planId = originId + ":array-simple-assignment";
+		final requirementId = originId + ":runtime:haxe-array-element-set";
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		return {
-			id: originId + ":array-simple-assignment",
+			id: planId,
 			originId: originId,
 			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
 			semanticTypeId: "Int",
@@ -456,7 +464,22 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: [originId + ":runtime:haxe-array-element-set"]
+			runtimeRequirementIds: [requirementId],
+			runtimeUseOccurrences: [
+				{
+					id: originId + ":runtime-use:array-set",
+					planRevision: planRevision,
+					ownerId: planId,
+					requirementId: requirementId,
+					domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+					exactSymbol: target.place.targetModuleName + "." + target.place.targetStoreName,
+					role: "store",
+					order: 3,
+					source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+					profileEligibility: ["metal", "portable"],
+					cardinality: 1
+				}
+			]
 		};
 	}
 

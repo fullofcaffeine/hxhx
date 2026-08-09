@@ -19,6 +19,13 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
+
+/** The completed array assignment plus the exact store subtree that uses runtime authority. */
+typedef OcamlArraySimpleEmission = {
+	final expression:OcamlExpr;
+	final runtimeStore:OcamlExpr;
+}
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
 class OcamlPlaceAssignmentEmitter {
@@ -88,19 +95,22 @@ class OcamlPlaceAssignmentEmitter {
 	}
 
 	/** Emits the sealed array, index, RHS, store, and assigned-result schedule. */
-	public static function emitArraySimple(plan:OcamlLoweredArraySimpleAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+	public static function emitArraySimple(plan:OcamlLoweredArraySimpleAssignment, runtimeStoreReference:OcamlRuntimeReference,
+			buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlArraySimpleEmission {
 		final receiverName = freshTemporary("place_array");
 		final indexName = freshTemporary("place_index");
 		final rightHandSideName = freshTemporary("place_rhs");
 		final typedReceiver = OcamlExpr.EAnnot(OcamlExpr.EIdent(receiverName), OcamlTypeExpr.TIdent(plan.place.receiverCarrierTypeId));
 		final typedIndex = OcamlExpr.EAnnot(OcamlExpr.EIdent(indexName), OcamlTypeExpr.TIdent(plan.place.indexCarrierTypeId));
-		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName),
-			[typedReceiver, typedIndex, OcamlExpr.EIdent(rightHandSideName)]);
-		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
-			OcamlExpr.ELet(indexName, buildExpr(plan.index), OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
-				OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
-				OcamlExpr.EIdent(rightHandSideName)
-			]), false), false), false);
+		final store = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimeStoreReference), [typedReceiver, typedIndex, OcamlExpr.EIdent(rightHandSideName)]);
+		return {
+			expression: OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
+				OcamlExpr.ELet(indexName, buildExpr(plan.index), OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
+					OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
+					OcamlExpr.EIdent(rightHandSideName)
+				]), false), false), false),
+			runtimeStore: store
+		};
 	}
 
 	/** Emits the sealed array/index/load-before-RHS schedule for exact Int `+=`. */

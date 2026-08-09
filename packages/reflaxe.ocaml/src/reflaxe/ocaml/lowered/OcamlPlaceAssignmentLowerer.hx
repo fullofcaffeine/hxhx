@@ -3,6 +3,8 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.OcamlBuildContext;
+import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
@@ -12,6 +14,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -236,7 +240,17 @@ class OcamlPlaceAssignmentLowerer {
 							runtimeRequirementIds: plan.runtimeRequirementIds
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitArraySimple(plan, buildExpr, freshTemporary));
+					final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+					final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+					final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile, context.runtimeRequirementsSorted(),
+						plan.runtimeUseOccurrences);
+					final runtimeUse = plan.runtimeUseOccurrences[0];
+					final runtimeStoreReference = runtimeAuthority.expressionIdentifier(runtimeUse.id, runtimePlanRevision, runtimeUse.exactSymbol);
+					final emission = OcamlPlaceAssignmentEmitter.emitArraySimple(plan, runtimeStoreReference, buildExpr, freshTemporary);
+					// Reconcile the completed store call here. Nested child expressions own
+					// separate sealed plans and are checked by their own authorities.
+					runtimeAuthority.reconcileExpression(emission.runtimeStore);
+					Lowered(emission.expression);
 				}
 			case ArrayCompound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArrayCompoundIntAdd(plan);
