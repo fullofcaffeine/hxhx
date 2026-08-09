@@ -53,6 +53,7 @@ import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter.DuneProjectConfig;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
+import reflaxe.ocaml.runtimegen.OcamlCheckedGeneratedText;
 import reflaxe.ocaml.runtimegen.OcamlDuneBuildState;
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
@@ -60,6 +61,13 @@ import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifest;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryClassFields;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryClassSuper;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryClassTags;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEmptyConstructor;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEnumLayout;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryProgramIdentifier;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
@@ -3366,12 +3374,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return "\"" + escapeOcamlString(s) + "\"";
 			}
 
-			function ocamlStringListLiteral(items:Array<String>):String {
-				if (items.length == 0)
-					return "[]";
-				return "[ " + items.map(ocamlStringLiteral).join("; ") + " ]";
-			}
-
 			function computeInstanceFields(fullName:String):Array<String> {
 				final out:Array<String> = [];
 				final seen:Map<String, Bool> = [];
@@ -3401,14 +3403,122 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return out;
 			}
 
-			function ocamlExprForDynArgToExpected(t:Type, objExpr:String):String {
+			final enumLayouts:Array<OcamlTypeRegistryEnumLayout> = [];
+			for (name in enumNames) {
+				final layouts = ctx.enumConstructorLayoutsByFullName.get(name);
+				if (layouts == null)
+					continue;
+				for (layout in layouts)
+					enumLayouts.push({
+						enumName: name,
+						constructorName: layout.name,
+						haxeIndex: layout.haxeIndex,
+						ocamlTag: layout.ocamlTag,
+						carriesPayload: layout.carriesPayload
+					});
+			}
+
+			final emptyConstructors:Array<OcamlTypeRegistryEmptyConstructor> = [];
+			for (name in classNames) {
+				final hasCtor = ctx.ctorPresentByFullName.exists(name) && ctx.ctorPresentByFullName.get(name) == true;
+				if (!hasCtor)
+					continue;
+				final moduleId = ctx.classModuleIdByFullName.get(name);
+				if (moduleId == null)
+					continue;
+				final parts = name.split(".");
+				if (parts.length == 0)
+					continue;
+				final typeName = parts[parts.length - 1];
+				emptyConstructors.push({
+					className: name,
+					moduleName: moduleIdToOcamlModuleName(moduleId),
+					targetFunctionName: ctx.scopedValueName(moduleId, typeName, "__empty")
+				});
+			}
+
+			final classFields:Array<OcamlTypeRegistryClassFields> = [];
+			for (name in classNames)
+				classFields.push({
+					className: name,
+					instanceFields: computeInstanceFields(name),
+					staticFields: computeStaticFields(name)
+				});
+
+			final classSupers:Array<OcamlTypeRegistryClassSuper> = [];
+			for (name in classNames) {
+				final superName = ctx.superByFullName.get(name);
+				if (superName != null)
+					classSupers.push({className: name, superName: superName});
+			}
+
+			final classTags:Array<OcamlTypeRegistryClassTags> = [];
+			for (name in classTagNames) {
+				final tags = ctx.classTagsByFullName.get(name);
+				if (tags == null)
+					continue;
+				final sortedTags = tags.copy();
+				sortedTags.sort(Reflect.compare);
+				classTags.push({className: name, tags: sortedTags});
+			}
+
+			final dynamicStringifierNames = [for (name in ctx.dynamicStringifierByFullName.keys()) name];
+			dynamicStringifierNames.sort(Reflect.compare);
+			final programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier> = [];
+			for (name in enumNames) {
+				final layouts = ctx.enumConstructorLayoutsByFullName.get(name);
+				final moduleId = ctx.enumModuleIdByFullName.get(name);
+				if (layouts == null || moduleId == null)
+					continue;
+				final moduleName = moduleIdToOcamlModuleName(moduleId);
+				for (layout in layouts) {
+					final useIdPrefix = "legacy:enum-constructor:" + name + ":" + layout.name;
+					programIdentifiers.push({id: useIdPrefix + ":program-module", exactIdentifier: moduleName});
+					programIdentifiers.push({id: useIdPrefix + ":program-constructor", exactIdentifier: layout.name});
+				}
+			}
+			for (name in classNames) {
+				final hasCtor = ctx.ctorPresentByFullName.exists(name) && ctx.ctorPresentByFullName.get(name) == true;
+				final moduleId = ctx.classModuleIdByFullName.get(name);
+				final parts = name.split(".");
+				if (!hasCtor || moduleId == null || parts.length == 0)
+					continue;
+				final useIdPrefix = "legacy:class-constructor:" + name;
+				programIdentifiers.push({id: useIdPrefix + ":program-module", exactIdentifier: moduleIdToOcamlModuleName(moduleId)});
+				programIdentifiers.push({
+					id: useIdPrefix + ":program-constructor",
+					exactIdentifier: ctx.scopedValueName(moduleId, parts[parts.length - 1], "create")
+				});
+			}
+			for (index in 0...emptyConstructors.length) {
+				final constructor = emptyConstructors[index];
+				programIdentifiers.push({id: "program:empty-constructor-module:" + Std.string(index), exactIdentifier: constructor.moduleName});
+				programIdentifiers.push({id: "program:empty-constructor-function:" + Std.string(index), exactIdentifier: constructor.targetFunctionName});
+			}
+			for (name in dynamicStringifierNames) {
+				final stringifier = ctx.dynamicStringifierByFullName.get(name);
+				if (stringifier == null)
+					continue;
+				final useId = "legacy:dynamic-stringifier:" + name;
+				programIdentifiers.push({id: useId + ":program-module", exactIdentifier: moduleIdToOcamlModuleName(stringifier.moduleId)});
+				programIdentifiers.push({id: useId + ":program-method", exactIdentifier: stringifier.targetMethodName});
+			}
+
+			final typeRegistry = new OcamlTypeRegistryBaseEmitter(artifactProfile, revision.id, useLineDirectives, classNames, enumNames, enumLayouts,
+				emptyConstructors, classFields, classSupers, classTags, programIdentifiers);
+			typeRegistry.emitHeader();
+
+			function ocamlExprForDynArgToExpected(t:Type, objExpr:String, useIdPrefix:String):String {
 				final ot = ocamlTypeExprFromHaxeType(t);
 				return switch (ot) {
 					case OcamlTypeExpr.TIdent("Obj.t"):
 						objExpr;
 					case OcamlTypeExpr.TIdent("bool"):
 						usesRuntimeUnbox = true;
-						"HxRuntime.unbox_bool_or_obj (" + objExpr + ")";
+						typeRegistry.legacyRuntimeToken(useIdPrefix + ":unbox-bool", "HxRuntime.unbox_bool_or_obj")
+						+ " ("
+						+ objExpr
+						+ ")";
 					case OcamlTypeExpr.TIdent("int") | OcamlTypeExpr.TIdent("float") | OcamlTypeExpr.TIdent("string") | OcamlTypeExpr.TIdent("bytes") | OcamlTypeExpr.TIdent("char"):
 						"Obj.obj ("
 						+ objExpr
@@ -3418,49 +3528,31 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			function ocamlExprForMissingOptionalArg(t:Type):String {
+			function ocamlExprForMissingOptionalArg(t:Type, useIdPrefix:String):String {
 				final ot = ocamlTypeExprFromHaxeType(t);
 				return switch (ot) {
 					case OcamlTypeExpr.TIdent("Obj.t"):
-						"HxRuntime.hx_null";
+						typeRegistry.legacyRuntimeToken(useIdPrefix + ":dynamic-null", "HxRuntime.hx_null");
 					case OcamlTypeExpr.TIdent("string") if (OcamlRepresentationRegistry.isExactString(t)):
-						printer.printExpr(exactStringNullValue(OcamlRepresentationDomain.InternalValue));
+						exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+						typeRegistry.legacyRuntimeToken(useIdPrefix + ":string-null", "HxString.hx_null_string");
 					case _:
-						"Obj.magic HxRuntime.hx_null";
+						"Obj.magic " + typeRegistry.legacyRuntimeToken(useIdPrefix + ":boxed-null", "HxRuntime.hx_null");
 				}
 			}
 
-			final lines:Array<String> = [
-				if (useLineDirectives) "# 1 \"HxTypeRegistry.ml\"" else null,
-				"(* Generated by reflaxe.ocaml (WIP) *)",
-				"(* Type registry used by `Type.resolveClass/resolveEnum`, `Type.get*Fields`, `Type.createInstance`, and typed catches. *)",
-				"",
-				"let init () : unit ="
-			];
-			lines.remove(null);
-
 			if (classNames.length == 0 && enumNames.length == 0 && classTagNames.length == 0) {
-				lines.push("  ()");
+				typeRegistry.emitClassAndEnumIdentities();
+				typeRegistry.emitEnumLayouts();
+				typeRegistry.emitEmptyConstructors();
+				typeRegistry.emitClassFields();
+				typeRegistry.emitClassSupers();
+				typeRegistry.emitClassTags();
 			} else {
 				ctx.markRuntimeModule("HxType");
 				ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
-				for (n in classNames) {
-					lines.push("  ignore (HxType.class_ " + ocamlStringLiteral(n) + ");");
-				}
-				for (n in enumNames) {
-					lines.push("  ignore (HxType.enum_ " + ocamlStringLiteral(n) + ");");
-				}
-				for (n in enumNames) {
-					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
-					if (layouts == null)
-						continue;
-					for (layout in layouts) {
-						final representation = layout.carriesPayload ? ("HxType.EnumBlock " + Std.string(layout.ocamlTag)) : ("HxType.EnumImmediate "
-							+ Std.string(layout.ocamlTag));
-						lines.push("  HxType.register_enum_ctor_layout " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(layout.name) + " "
-							+ Std.string(layout.haxeIndex) + " (" + representation + ");");
-					}
-				}
+				typeRegistry.emitClassAndEnumIdentities();
+				typeRegistry.emitEnumLayouts();
 				// `Type.createEnum` / `Type.createEnumIndex` constructor registry (M10).
 				for (n in enumNames) {
 					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
@@ -3477,29 +3569,41 @@ class OcamlCompiler extends DirectToStringCompiler {
 						final argsInfo = expected != null ? expected : [];
 
 						final argsName = argsInfo.length == 0 ? "_args" : "args";
-						lines.push("  HxType.register_enum_ctor " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(ctorName) + " (fun (" + argsName
-							+ " : Obj.t HxArray.t) ->");
+						final useIdPrefix = "legacy:enum-constructor:" + n + ":" + ctorName;
+						final registerConstructor = typeRegistry.legacyRuntimeToken(useIdPrefix + ":register", "HxType.register_enum_ctor");
+						final dynamicArrayType = typeRegistry.legacyRuntimeToken(useIdPrefix + ":array-type", "HxArray.t");
+						typeRegistry.addLegacyTemplate("  " + registerConstructor + " " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(ctorName)
+							+ " (fun (" + argsName + " : Obj.t " + dynamicArrayType + ") ->\n");
 						usesDynamicArgArrays = true;
 						if (argsInfo.length == 0) {
-							lines.push("    Obj.repr (" + modName + "." + ctorName + ")");
+							final programModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-module", modName);
+							final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", ctorName);
+							typeRegistry.addLegacyTemplate("    Obj.repr (" + programModule + "." + programConstructor + ")\n");
 						} else {
-							lines.push("    let len = HxArray.length args in");
+							final arrayLength = typeRegistry.legacyRuntimeToken(useIdPrefix + ":array-length", "HxArray.length");
+							typeRegistry.addLegacyTemplate("    let len = " + arrayLength + " args in\n");
 							for (i in 0...argsInfo.length) {
 								final ea = argsInfo[i];
-								final fetch = "(HxArray.get args " + Std.string(i) + ")";
-								final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch);
+								final argUseIdPrefix = useIdPrefix + ":argument:" + Std.string(i);
+								final arrayGet = typeRegistry.legacyRuntimeToken(argUseIdPrefix + ":array-get", "HxArray.get");
+								final fetch = "(" + arrayGet + " args " + Std.string(i) + ")";
+								final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch, argUseIdPrefix);
 								if (ea.opt)
 									usesOptionalNullPadding = true;
-								final outOfBounds = ea.opt ? ocamlExprForMissingOptionalArg(ea.t) : ("failwith "
-									+ ocamlStringLiteral("Type.createEnum: missing ctor arg '" + ea.name + "' for " + n + "." + ctorName));
-								lines.push("    let a" + Std.string(i) + " = if len > " + Std.string(i) + " then " + inBounds + " else " + outOfBounds + " in");
+								final outOfBounds = ea.opt ? ocamlExprForMissingOptionalArg(ea.t,
+									argUseIdPrefix) : ("failwith "
+										+ ocamlStringLiteral("Type.createEnum: missing ctor arg '" + ea.name + "' for " + n + "." + ctorName));
+								typeRegistry.addLegacyTemplate("    let a" + Std.string(i) + " = if len > " + Std.string(i) + " then " + inBounds + " else "
+									+ outOfBounds + " in\n");
 							}
 							final argList = [for (i in 0...argsInfo.length) ("a" + Std.string(i))];
-							final ctorCall = argsInfo.length > 1 ? (modName + "." + ctorName + " (" + argList.join(", ") + ")") : (modName + "." + ctorName
-								+ " " + argList[0]);
-							lines.push("    Obj.repr (" + ctorCall + ")");
+							final programModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-module", modName);
+							final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", ctorName);
+							final ctorCall = argsInfo.length > 1 ? (programModule + "." + programConstructor + " (" + argList.join(", ") + ")") : (programModule
+								+ "." + programConstructor + " " + argList[0]);
+							typeRegistry.addLegacyTemplate("    Obj.repr (" + ctorCall + ")\n");
 						}
-						lines.push("  );");
+						typeRegistry.addLegacyLiteral("  );\n");
 					}
 				}
 				// `Type.createInstance` constructor registry.
@@ -3520,78 +3624,59 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final expected = ctorArgs != null ? ctorArgs : [];
 
 					final argsName = expected.length == 0 ? "_args" : "args";
-					lines.push("  HxType.register_class_ctor " + ocamlStringLiteral(n) + " (fun (" + argsName + " : Obj.t HxArray.t) ->");
+					final useIdPrefix = "legacy:class-constructor:" + n;
+					final registerConstructor = typeRegistry.legacyRuntimeToken(useIdPrefix + ":register", "HxType.register_class_ctor");
+					final dynamicArrayType = typeRegistry.legacyRuntimeToken(useIdPrefix + ":array-type", "HxArray.t");
+					typeRegistry.addLegacyTemplate("  " + registerConstructor + " " + ocamlStringLiteral(n) + " (fun (" + argsName + " : Obj.t "
+						+ dynamicArrayType + ") ->\n");
 					usesDynamicArgArrays = true;
 					if (expected.length == 0) {
-						lines.push("    Obj.repr (" + modName + "." + createName + " ())");
+						final programModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-module", modName);
+						final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", createName);
+						typeRegistry.addLegacyTemplate("    Obj.repr (" + programModule + "." + programConstructor + " ())\n");
 					} else {
-						lines.push("    let len = HxArray.length args in");
+						final arrayLength = typeRegistry.legacyRuntimeToken(useIdPrefix + ":array-length", "HxArray.length");
+						typeRegistry.addLegacyTemplate("    let len = " + arrayLength + " args in\n");
 						for (i in 0...expected.length) {
 							final ea = expected[i];
-							final fetch = "(HxArray.get args " + Std.string(i) + ")";
-							final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch);
+							final argUseIdPrefix = useIdPrefix + ":argument:" + Std.string(i);
+							final arrayGet = typeRegistry.legacyRuntimeToken(argUseIdPrefix + ":array-get", "HxArray.get");
+							final fetch = "(" + arrayGet + " args " + Std.string(i) + ")";
+							final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch, argUseIdPrefix);
 							if (ea.opt)
 								usesOptionalNullPadding = true;
-							final outOfBounds = ea.opt ? ocamlExprForMissingOptionalArg(ea.t) : ("failwith "
-								+ ocamlStringLiteral("Type.createInstance: missing ctor arg '" + ea.name + "' for " + n));
-							lines.push("    let a" + Std.string(i) + " = if len > " + Std.string(i) + " then " + inBounds + " else " + outOfBounds + " in");
+							final outOfBounds = ea.opt ? ocamlExprForMissingOptionalArg(ea.t,
+								argUseIdPrefix) : ("failwith " + ocamlStringLiteral("Type.createInstance: missing ctor arg '" + ea.name + "' for " + n));
+							typeRegistry.addLegacyTemplate("    let a" + Std.string(i) + " = if len > " + Std.string(i) + " then " + inBounds + " else "
+								+ outOfBounds + " in\n");
 						}
 						final argList = [for (i in 0...expected.length) ("a" + Std.string(i))];
-						lines.push("    Obj.repr (" + modName + "." + createName + " " + argList.join(" ") + ")");
+						final programModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-module", modName);
+						final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", createName);
+						typeRegistry.addLegacyTemplate("    Obj.repr (" + programModule + "." + programConstructor + " " + argList.join(" ") + ")\n");
 					}
-					lines.push("  );");
+					typeRegistry.addLegacyLiteral("  );\n");
 				}
-				// `Type.createEmptyInstance` registry.
-				for (n in classNames) {
-					final hasCtor = ctx.ctorPresentByFullName.exists(n) && ctx.ctorPresentByFullName.get(n) == true;
-					if (!hasCtor)
-						continue;
-					final modId = ctx.classModuleIdByFullName.get(n);
-					if (modId == null)
-						continue;
-					final parts = n.split(".");
-					if (parts.length == 0)
-						continue;
-					final typeName = parts[parts.length - 1];
-					final modName = moduleIdToOcamlModuleName(modId);
-					final emptyName = ctx.scopedValueName(modId, typeName, "__empty");
-					lines.push("  HxType.register_class_empty_ctor " + ocamlStringLiteral(n) + " (fun () -> Obj.repr (" + modName + "." + emptyName + " ()));");
-				}
-				for (n in classNames) {
-					final inst = computeInstanceFields(n);
-					final stat = computeStaticFields(n);
-					lines.push("  HxType.register_class_instance_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(inst) + ";");
-					lines.push("  HxType.register_class_static_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(stat) + ";");
-				}
-				final dynamicStringifierNames = [for (name in ctx.dynamicStringifierByFullName.keys()) name];
-				dynamicStringifierNames.sort(Reflect.compare);
+				typeRegistry.emitEmptyConstructors();
+				typeRegistry.emitClassFields();
 				for (name in dynamicStringifierNames) {
 					final stringifier = ctx.dynamicStringifierByFullName.get(name);
 					if (stringifier == null)
 						continue;
 					final moduleName = moduleIdToOcamlModuleName(stringifier.moduleId);
-					lines.push("  HxDynamic.register_class_stringifier " + ocamlStringLiteral(name) + " (fun value -> " + moduleName + "."
-						+ stringifier.targetMethodName + " (Obj.obj value) ());");
+					final useId = "legacy:dynamic-stringifier:" + name;
+					final registerStringifier = typeRegistry.legacyRuntimeToken(useId, "HxDynamic.register_class_stringifier");
+					final programModule = typeRegistry.programIdentifierToken(useId + ":program-module", moduleName);
+					final programMethod = typeRegistry.programIdentifierToken(useId + ":program-method", stringifier.targetMethodName);
+					typeRegistry.addLegacyTemplate("  " + registerStringifier + " " + ocamlStringLiteral(name) + " (fun value -> " + programModule + "."
+						+ programMethod + " (Obj.obj value) ());\n");
 				}
 				if (dynamicStringifierNames.length > 0) {
 					ctx.markRuntimeModule("HxDynamic");
 					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_STRING);
 				}
-				// `Type.getSuperClass` registry.
-				for (n in classNames) {
-					final sup = ctx.superByFullName.get(n);
-					if (sup == null)
-						continue;
-					lines.push("  HxType.register_class_super " + ocamlStringLiteral(n) + " (HxType.class_ " + ocamlStringLiteral(sup) + ");");
-				}
-				for (n in classTagNames) {
-					final tags = ctx.classTagsByFullName.get(n);
-					if (tags == null)
-						continue;
-					final sortedTags = tags.copy();
-					sortedTags.sort(Reflect.compare);
-					lines.push("  HxType.register_class_tags " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(sortedTags) + ";");
-				}
+				typeRegistry.emitClassSupers();
+				typeRegistry.emitClassTags();
 				if (usesDynamicArgArrays) {
 					ctx.markRuntimeModule("HxArray");
 					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
@@ -3604,11 +3689,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 					ctx.markRuntimeModule("HxRuntime");
 					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
 				}
-				lines.push("  ()");
 			}
-			lines.push("");
-
-			output.saveFile("HxTypeRegistry.ml", lines.join("\n"));
+			typeRegistry.emitFooter();
+			final typeRegistryRecord = typeRegistry.seal();
+			OcamlCheckedGeneratedText.verify(typeRegistryRecord);
+			output.saveFile("HxTypeRegistry.ml", typeRegistryRecord.content);
 			artifacts.record({
 				path: "HxTypeRegistry.ml",
 				kind: OcamlArtifactKind.TypeRegistrySource,

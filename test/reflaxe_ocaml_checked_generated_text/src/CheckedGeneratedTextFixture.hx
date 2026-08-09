@@ -142,7 +142,7 @@ class CheckedGeneratedTextFixture {
 		forgedMarker.addLiteral("let forged = ReflaxeCheckedRuntimeUse0\nlet hidden = \"");
 		forgedMarker.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set");
 		forgedMarker.addLiteral("\"\n");
-		expectFailure("forged placeholder marker", "reserved runtime placeholder", () -> forgedMarker.seal());
+		expectFailure("forged placeholder marker", "reserved generated-text placeholder", () -> forgedMarker.seal());
 
 		final wrongProfile = new OcamlCheckedGeneratedText(OWNER_ID, PLAN_REVISION, "metal", [requirement()], [occurrence("U1", 0)]);
 		expectFailure("wrong profile", "not eligible for profile metal", () -> wrongProfile.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set"));
@@ -160,10 +160,45 @@ class CheckedGeneratedTextFixture {
 		expectFailure("changed hash", "content hash", () -> OcamlCheckedGeneratedText.verify(record));
 	}
 
+	static function legacyBridgeRemainsSeparateFromAuthority():Void {
+		final legacy = builder([]);
+		legacy.addLiteral("let legacy = ");
+		legacy.addLegacyRuntimeUse("legacy:set", "HxArray.set");
+		legacy.addLiteral("\n");
+		final record = legacy.seal();
+		assertTrue(record.orderedUseIds.length == 0, "legacy use was incorrectly counted as checked authority");
+		assertTrue(record.legacyUseIds.join(",") == "legacy:set", "legacy use identity was not reported");
+		final copiedLegacyIds = record.legacyUseIds;
+		copiedLegacyIds.push("mutated");
+		assertTrue(record.legacyUseIds.join(",") == "legacy:set", "legacy use identities leaked a mutable array");
+
+		final duplicate = builder([]);
+		duplicate.addLegacyRuntimeUse("legacy:set", "HxArray.set");
+		expectFailure("duplicate legacy", "constructed more than once", () -> duplicate.addLegacyRuntimeUse("legacy:set", "HxArray.get"));
+
+		final wrongSymbol = builder([]);
+		expectFailure("invalid legacy symbol", "requires one exact private runtime symbol", () -> wrongSymbol.addLegacyRuntimeUse("legacy:set", "Array.set"));
+
+		final checkedThenLegacy = builder([occurrence("U1", 0)]);
+		checkedThenLegacy.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set");
+		expectFailure("checked then legacy", "cannot be both checked and legacy", () -> checkedThenLegacy.addLegacyRuntimeUse("U1", "HxArray.set"));
+
+		final legacyThenChecked = builder([occurrence("U1", 0)]);
+		legacyThenChecked.addLegacyRuntimeUse("U1", "HxArray.set");
+		legacyThenChecked.addLiteral(" ");
+		legacyThenChecked.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set");
+		expectFailure("legacy then checked", "repeats or launders legacy runtime use U1", () -> legacyThenChecked.seal());
+
+		final forgedMarker = builder([]);
+		forgedMarker.addLiteral("let forged = ReflaxeLegacyRuntimeUse0\n");
+		expectFailure("forged legacy marker", "reserved generated-text placeholder", () -> forgedMarker.seal());
+	}
+
 	static function main():Void {
 		validAndDeterministic();
 		corruptionFails();
 		changedHashFails();
+		legacyBridgeRemainsSeparateFromAuthority();
 		Sys.println("CHECKED_GENERATED_TEXT:PASS");
 	}
 }

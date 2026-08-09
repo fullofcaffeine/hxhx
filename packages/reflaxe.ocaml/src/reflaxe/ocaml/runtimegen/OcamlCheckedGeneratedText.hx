@@ -11,6 +11,8 @@ using StringTools;
 private enum OcamlGeneratedTextChunk {
 	Literal(value:String);
 	RuntimeUse(reference:OcamlRuntimeReference, marker:String);
+	LegacyRuntimeUse(id:String, exactSymbol:String, marker:String);
+	ProgramIdentifier(id:String, exactIdentifier:String, marker:String);
 }
 
 /**
@@ -25,21 +27,36 @@ class OcamlCheckedGeneratedTextRecord {
 	public final ownerId:String;
 	public final planRevision:String;
 	public var orderedUseIds(get, never):Array<String>;
+	public var legacyUseIds(get, never):Array<String>;
+	public var programIdentifierIds(get, never):Array<String>;
 	public final content:String;
 	public final contentHash:String;
 
 	final orderedUseIdsValue:Array<String>;
+	final legacyUseIdsValue:Array<String>;
+	final programIdentifierIdsValue:Array<String>;
 
-	private function new(ownerId:String, planRevision:String, orderedUseIds:Array<String>, content:String, contentHash:String) {
+	private function new(ownerId:String, planRevision:String, orderedUseIds:Array<String>, legacyUseIds:Array<String>, programIdentifierIds:Array<String>,
+			content:String, contentHash:String) {
 		this.ownerId = ownerId;
 		this.planRevision = planRevision;
 		this.orderedUseIdsValue = orderedUseIds.copy();
+		this.legacyUseIdsValue = legacyUseIds.copy();
+		this.programIdentifierIdsValue = programIdentifierIds.copy();
 		this.content = content;
 		this.contentHash = contentHash;
 	}
 
 	function get_orderedUseIds():Array<String> {
 		return orderedUseIdsValue.copy();
+	}
+
+	function get_legacyUseIds():Array<String> {
+		return legacyUseIdsValue.copy();
+	}
+
+	function get_programIdentifierIds():Array<String> {
+		return programIdentifierIdsValue.copy();
 	}
 }
 
@@ -55,12 +72,16 @@ class OcamlCheckedGeneratedTextRecord {
 **/
 class OcamlCheckedGeneratedText {
 	static inline final MARKER_PREFIX = "ReflaxeCheckedRuntimeUse";
+	static inline final LEGACY_MARKER_PREFIX = "ReflaxeLegacyRuntimeUse";
+	static inline final PROGRAM_IDENTIFIER_MARKER_PREFIX = "ReflaxeProgramIdentifier";
 
 	final ownerId:String;
 	final planRevision:String;
 	final authority:OcamlRuntimeUseAuthority;
 	final chunks:Array<OcamlGeneratedTextChunk> = [];
 	final runtimeReferences:Array<OcamlRuntimeReference> = [];
+	final legacyUseIds:Array<String> = [];
+	final programIdentifierIds:Array<String> = [];
 	var sealed:Bool = false;
 
 	public function new(ownerId:String, planRevision:String, activeProfile:String, requirements:Array<OcamlRuntimeRequirement>,
@@ -97,6 +118,53 @@ class OcamlCheckedGeneratedText {
 		chunks.push(RuntimeUse(reference, marker));
 	}
 
+	/**
+		Adds one still-unmigrated private-runtime name without granting it semantic
+		authority.
+
+		This is a temporary bridge for a generated file whose checked and unchecked
+		sections cannot be published separately. The marker proves that the name is
+		an OCaml code identifier in the complete file, while `legacyUseIds` keeps the
+		remaining debt visible to tests and the migration inventory. Callers must not
+		interpret this as a checked runtime use.
+	**/
+	public function addLegacyRuntimeUse(id:String, exactSymbol:String):Void {
+		ensureOpen();
+		final stableId = requiredLogicalId(id, "legacy generated-text runtime use identity");
+		if (!~/^Hx[A-Z][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_']*$/.match(exactSymbol))
+			throw 'Legacy generated-text runtime use $stableId requires one exact private runtime symbol, received $exactSymbol.';
+		if (legacyUseIds.contains(stableId))
+			throw 'Legacy generated-text runtime use $stableId was constructed more than once.';
+		for (reference in runtimeReferences)
+			if (reference.id == stableId)
+				throw 'Generated-text runtime use $stableId cannot be both checked and legacy.';
+		final marker = LEGACY_MARKER_PREFIX + Std.string(legacyUseIds.length);
+		legacyUseIds.push(stableId);
+		chunks.push(LegacyRuntimeUse(stableId, exactSymbol, marker));
+	}
+
+	/**
+		Adds a compiler-provided program identifier that only resembles a private
+		runtime name.
+
+		For example, a user class named `HxProgramOwned` may produce an OCaml module
+		with that exact name. This placeholder proves its code position but does not
+		create a runtime-use receipt. Access is restricted to the type-registry
+		emitter, which receives these names from the current typed program snapshot.
+	**/
+	@:allow(reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter)
+	private function addProgramIdentifier(id:String, exactIdentifier:String):Void {
+		ensureOpen();
+		final stableId = requiredLogicalId(id, "generated-text program identifier identity");
+		if (!~/^[A-Za-z_][A-Za-z0-9_']*$/.match(exactIdentifier))
+			throw 'Generated-text program identifier $stableId is not one exact OCaml identifier: $exactIdentifier.';
+		if (programIdentifierIds.contains(stableId))
+			throw 'Generated-text program identifier $stableId was constructed more than once.';
+		final marker = PROGRAM_IDENTIFIER_MARKER_PREFIX + Std.string(programIdentifierIds.length);
+		programIdentifierIds.push(stableId);
+		chunks.push(ProgramIdentifier(stableId, exactIdentifier, marker));
+	}
+
 	/** Seals, reconciles, renders, hashes, and verifies the complete generated file. */
 	public function seal():OcamlCheckedGeneratedTextRecord {
 		ensureOpen();
@@ -120,23 +188,36 @@ class OcamlCheckedGeneratedText {
 					// marker-shaped identifier across this checked placeholder.
 					literalsOnly.add(" ");
 					markerIds.push(marker);
+				case LegacyRuntimeUse(_, exactSymbol, marker):
+					content.add(exactSymbol);
+					sanitized.add(marker);
+					literalsOnly.add(" ");
+					markerIds.push(marker);
+				case ProgramIdentifier(_, exactIdentifier, marker):
+					content.add(exactIdentifier);
+					sanitized.add(marker);
+					literalsOnly.add(" ");
+					markerIds.push(marker);
 			}
 		}
 
-		final forgedMarkers = scanCodeIdentifiers(literalsOnly.toString()).filter(identifier -> identifier.startsWith(MARKER_PREFIX));
+		final forgedMarkers = scanCodeIdentifiers(literalsOnly.toString()).filter(identifier -> identifier.startsWith(MARKER_PREFIX)
+			|| identifier.startsWith(LEGACY_MARKER_PREFIX)
+			|| identifier.startsWith(PROGRAM_IDENTIFIER_MARKER_PREFIX));
 		if (forgedMarkers.length > 0)
-			throw 'Checked generated text for $ownerId contains reserved runtime placeholder ${forgedMarkers[0]} in an unchecked literal.';
+			throw 'Checked generated text for $ownerId contains reserved generated-text placeholder ${forgedMarkers[0]} in an unchecked literal.';
 		final codeIdentifiers = scanCodeIdentifiers(sanitized.toString());
 		final privateNames = codeIdentifiers.filter(isPrivateRuntimeName);
 		if (privateNames.length > 0)
 			throw 'Checked generated text for $ownerId contains private runtime name ${privateNames[0]} in an unchecked literal.';
 		final observedMarkers = codeIdentifiers.filter(identifier -> markerIds.contains(identifier));
 		if (observedMarkers.join("|") != markerIds.join("|"))
-			throw 'Checked generated text runtime placeholder is not an OCaml code identifier in planned order for $ownerId.';
+			throw 'Checked generated text placeholder is not an OCaml code identifier in planned order for $ownerId.';
 
 		final exactContent = content.toString();
 		final orderedUseIds = runtimeReferences.map(reference -> reference.id);
-		final record = new OcamlCheckedGeneratedTextRecord(ownerId, planRevision, orderedUseIds, exactContent, "sha256:" + Sha256.encode(exactContent));
+		final record = new OcamlCheckedGeneratedTextRecord(ownerId, planRevision, orderedUseIds, legacyUseIds, programIdentifierIds, exactContent,
+			"sha256:" + Sha256.encode(exactContent));
 		verify(record);
 		return record;
 	}
@@ -155,6 +236,18 @@ class OcamlCheckedGeneratedText {
 			final stableId = requiredLogicalId(id, "generated-text runtime use identity");
 			if (seen.exists(stableId))
 				throw 'Checked generated text record ${record.ownerId} repeats runtime use $stableId.';
+			seen.set(stableId, true);
+		}
+		for (id in record.legacyUseIds) {
+			final stableId = requiredLogicalId(id, "legacy generated-text runtime use identity");
+			if (seen.exists(stableId))
+				throw 'Checked generated text record ${record.ownerId} repeats or launders legacy runtime use $stableId.';
+			seen.set(stableId, true);
+		}
+		for (id in record.programIdentifierIds) {
+			final stableId = requiredLogicalId(id, "generated-text program identifier identity");
+			if (seen.exists(stableId))
+				throw 'Checked generated text record ${record.ownerId} repeats program identifier $stableId.';
 			seen.set(stableId, true);
 		}
 	}

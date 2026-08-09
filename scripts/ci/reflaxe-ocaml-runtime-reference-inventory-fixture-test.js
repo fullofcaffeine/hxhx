@@ -28,6 +28,9 @@ class FixtureSyntax {
     final typ = OcamlTypeExpr.TIdent("int HxArray.t");
     final pat = OcamlPat.PConstructor("HxOption.Some", []);
     lines.push("  HxType.class_ name;");
+    checked.addLegacyRuntimeUse("legacy:ctor", "HxType.register_class_ctor");
+    final getToken = checked.legacyRuntimeToken("legacy:get", "HxArray.get");
+    checked.addRuntimeUse("checked:set", revision, "HxArray.set");
     final unqualifiedRaw = ERaw(otherCode);
     return OcamlExpr.ERaw(userCode);
   }
@@ -42,6 +45,8 @@ assert.deepStrictEqual(records.map(record => [record.domain, record.construction
 	['type', 'TIdent', 'HxArray.t'],
 	['pattern', 'PConstructor', 'HxOption.Some'],
 	['generated-text', 'lines.push', 'HxType.class_'],
+	['generated-text', 'addLegacyRuntimeUse', 'HxType.register_class_ctor'],
+	['generated-text', 'legacyRuntimeToken', 'HxArray.get'],
 	['raw-boundary', 'ERaw', null],
 	['raw-boundary', 'OcamlExpr.ERaw', null],
 ])

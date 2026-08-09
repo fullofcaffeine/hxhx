@@ -246,6 +246,25 @@ function discoverGeneratedText(records, relativePath, source, masked) {
 	}
 }
 
+/** Finds explicit temporary placeholders without counting checked runtime uses as legacy. */
+function discoverLegacyGeneratedText(records, relativePath, source, masked) {
+	const legacyCall = /\b(addLegacyRuntimeUse|legacyRuntimeToken)\s*\(/g
+	for (const match of masked.matchAll(legacyCall)) {
+		const openIndex = match.index + match[0].lastIndexOf('(')
+		const closeIndex = findClosingParenthesis(masked, openIndex)
+		if (closeIndex === -1) continue
+		const callSource = masked.slice(openIndex + 1, closeIndex)
+		for (const symbol of privateReferences(stringContents(callSource).join('\n'))) {
+			addRecord(records, {
+				path: relativePath,
+				domain: 'generated-text',
+				construction: match[1],
+				symbol,
+			}, source, match.index)
+		}
+	}
+}
+
 function discoverRawBoundaries(records, relativePath, source, masked) {
 	const rawConstructor = /\b(?:OcamlExpr\.)?ERaw\s*\(/g
 	for (const match of masked.matchAll(rawConstructor)) {
@@ -269,6 +288,7 @@ function discoverFromSourceMap(sourceMap) {
 		const masked = maskHaxeComments(source)
 		discoverStructured(records, relativePath, source, masked)
 		discoverGeneratedText(records, relativePath, source, masked)
+		discoverLegacyGeneratedText(records, relativePath, source, masked)
 		discoverRawBoundaries(records, relativePath, source, masked)
 	}
 

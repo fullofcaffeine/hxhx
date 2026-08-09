@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.29",
+  "reviewBead": "haxe_ocaml-0uwin.29.1",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.29",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.29.1",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,10 +15,10 @@
     }
   ],
   "counts": {
-    "total": 444,
+    "total": 441,
     "byDomain": {
       "expression": 398,
-      "generated-text": 16,
+      "generated-text": 13,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -48,7 +48,7 @@
       "bytes-producer-syntax": 5,
       "bytes-read-syntax": 3,
       "compiler-core": 13,
-      "compiler-generated-modules": 16,
+      "compiler-generated-modules": 13,
       "field-representation-materializer": 1,
       "imap-interface-syntax": 12,
       "place-assignment": 6,
@@ -57,7 +57,7 @@
       "structural-field-syntax": 2
     }
   },
-  "inventoryRevision": "4582921f9ddfad49158af00d23e921b06ceb6f03a87633ecc75f8d4af850a03a",
+  "inventoryRevision": "4e4ad6fd0691789b09f3b1b7d0cff7332ce3127ce87561c7774fac901f0b06f8",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
@@ -4230,162 +4230,132 @@
       "migrationFamily": "compiler-core"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.class_::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxRuntime.unbox_bool_or_obj::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.class_",
-      "rootModule": "HxType",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.enum_::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxRuntime.hx_null::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.enum_",
-      "rootModule": "HxType",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_enum_ctor_layout::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxString.hx_null_string::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_enum_ctor_layout",
-      "rootModule": "HxType",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxString.hx_null_string",
+      "rootModule": "HxString",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.t::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxRuntime.hx_null::2",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxArray.t",
-      "rootModule": "HxArray",
-      "ordinal": 1,
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_enum_ctor::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxType.register_enum_ctor::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
+      "construction": "legacyRuntimeToken",
       "symbol": "HxType.register_enum_ctor",
       "rootModule": "HxType",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.length::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.t::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.length::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "legacyRuntimeToken",
       "symbol": "HxArray.length",
       "rootModule": "HxArray",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.t::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.get::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxArray.t",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxArray.get",
       "rootModule": "HxArray",
-      "ordinal": 2,
+      "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_ctor::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxType.register_class_ctor::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
+      "construction": "legacyRuntimeToken",
       "symbol": "HxType.register_class_ctor",
       "rootModule": "HxType",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.length::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.t::2",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.length::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "legacyRuntimeToken",
       "symbol": "HxArray.length",
       "rootModule": "HxArray",
       "ordinal": 2,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_empty_ctor::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxArray.get::2",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_class_empty_ctor",
-      "rootModule": "HxType",
-      "ordinal": 1,
-      "migrationFamily": "compiler-generated-modules"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_instance_fields::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_class_instance_fields",
-      "rootModule": "HxType",
-      "ordinal": 1,
-      "migrationFamily": "compiler-generated-modules"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_static_fields::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_class_static_fields",
-      "rootModule": "HxType",
-      "ordinal": 1,
-      "migrationFamily": "compiler-generated-modules"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxDynamic.register_class_stringifier::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxDynamic.register_class_stringifier",
-      "rootModule": "HxDynamic",
-      "ordinal": 1,
-      "migrationFamily": "compiler-generated-modules"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.class_::2",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.class_",
-      "rootModule": "HxType",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
       "ordinal": 2,
       "migrationFamily": "compiler-generated-modules"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_super::1",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::legacyRuntimeToken::HxDynamic.register_class_stringifier::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
       "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_class_super",
-      "rootModule": "HxType",
-      "ordinal": 1,
-      "migrationFamily": "compiler-generated-modules"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_tags::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "generated-text",
-      "construction": "lines.push",
-      "symbol": "HxType.register_class_tags",
-      "rootModule": "HxType",
+      "construction": "legacyRuntimeToken",
+      "symbol": "HxDynamic.register_class_stringifier",
+      "rootModule": "HxDynamic",
       "ordinal": 1,
       "migrationFamily": "compiler-generated-modules"
     },
