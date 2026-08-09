@@ -67,6 +67,16 @@ does not claim that every generated call to the module has its own explanation.
 Whole-program runtime authority and the generated artifact manifest therefore
 correctly remain incomplete under `haxe_ocaml-0uwin`.
 
+`ocaml_runtime_selection_shadow_report.json` checks the next packaging step
+without taking control of it. It resolves the recorded requirement roots
+through the same locked catalog, then compares that result with the runtime
+files selected by today's compiler. The comparison includes module closure,
+source paths, byte counts, SHA-256 identities, and inclusion reasons. A
+selection match means the requirements would copy the same files for that one
+request; it does not prove that every generated helper use has its own
+explanation. Until the legacy inventory is empty and occurrence checks pass,
+the current compiler selection remains authoritative.
+
 Typed target-runtime externs declare their need by capability rather than by
 copying a module name into the packaging plan. For example,
 `@:ocamlRuntime("haxe-standard-io")` selects the checked `HxStdio`

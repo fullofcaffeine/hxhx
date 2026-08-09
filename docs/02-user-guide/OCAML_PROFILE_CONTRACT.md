@@ -232,6 +232,25 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     requirements visible even when no generated expression refers to them
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
+- `ocaml_runtime_selection_shadow_report.json`
+  - `authorityStatus` is `observation-only`: this report never chooses or copies
+    a runtime file
+  - `runtimeMode`, `selectionMode`, and `requirementRevision` bind the comparison
+    to the exact current packaging policy and sealed requirement ledger
+  - `currentSelection` describes the roots, dependency closure, checked source
+    paths and SHA-256 identities, and reasons used by today's compiler
+  - `requirementsOnlySelection` resolves only the sealed semantic requirement
+    roots through the same checked runtime manifest
+  - `sourceSelectionStatus` says whether both paths select the same modules and
+    exact source bytes; `exactComparisonStatus` additionally requires the same
+    direct roots and reasons
+  - `differences` keeps current-only and requirements-only roots, modules,
+    source files, changed source identities, and reasons separate so a
+    redundant observation is not confused with a missing runtime file
+  - a mismatch blocks removing the current selection path; a match is useful
+    evidence but does not authorize removal by itself. The private-runtime
+    legacy inventory must also reach zero and every generated helper use must
+    reconcile with one sealed compiler decision.
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
   - `schemaVersion` (current: `46`)
   - local identities use the `lexical-local-v1` form. They describe the

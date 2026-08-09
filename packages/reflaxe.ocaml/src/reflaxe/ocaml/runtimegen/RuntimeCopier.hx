@@ -16,6 +16,7 @@ import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.OcamlRuntimeMode;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.runtimegen.RuntimeSelectionShadowReportWriter.RuntimeSelectionReason;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceModule;
 #if macro
@@ -43,11 +44,6 @@ private typedef ProfileReport = {
 	final verifier:ProfileReportVerifier;
 }
 
-private typedef RuntimePlanInclusionReason = {
-	final module:String;
-	final reasons:Array<String>;
-}
-
 private typedef RuntimePlanReport = {
 	final schemaVersion:Int;
 	final profile:String;
@@ -61,7 +57,7 @@ private typedef RuntimePlanReport = {
 	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
-	final inclusionReasons:Array<RuntimePlanInclusionReason>;
+	final inclusionReasons:Array<RuntimeSelectionReason>;
 }
 
 /**
@@ -279,8 +275,8 @@ class RuntimeCopier {
 		}
 	}
 
-	static function inclusionReasonsSorted(reasonMap:Map<String, Map<String, Bool>>, selectedModules:Array<String>):Array<RuntimePlanInclusionReason> {
-		final out:Array<RuntimePlanInclusionReason> = [];
+	static function inclusionReasonsSorted(reasonMap:Map<String, Map<String, Bool>>, selectedModules:Array<String>):Array<RuntimeSelectionReason> {
+		final out:Array<RuntimeSelectionReason> = [];
 		for (moduleName in selectedModules) {
 			final reasonSet = reasonMap.get(moduleName);
 			final reasons:Array<String> = [];
@@ -334,7 +330,7 @@ class RuntimeCopier {
 
 	static function writeRuntimePlanReport(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, context:OcamlBuildContext, selectionMode:String,
 			availableModules:Array<String>, trackedModules:Array<String>, manualModules:Array<String>, selectedModules:Array<String>,
-			inclusionReasons:Array<RuntimePlanInclusionReason>):Void {
+			inclusionReasons:Array<RuntimeSelectionReason>):Void {
 		final report:RuntimePlanReport = {
 			schemaVersion: 2,
 			profile: OcamlProfileContract.toDefineValue(context.profile),
@@ -417,7 +413,7 @@ class RuntimeCopier {
 			RuntimeSourceManifest.resolveClosure(sourceManifest, requiredModules, profile, allowHxHxRuntime);
 		final selectionMode = runtimeSelectionModeLabel(buildContext, requiredModules, enabledCompilerObservedModules, manualModules);
 		final inclusionReasonMap:Map<String, Map<String, Bool>> = [];
-		final selectedEntries:Array<RuntimeSourceModule> = switch (buildContext.runtimeMode) {
+		final selection = switch (buildContext.runtimeMode) {
 			case Selective:
 				final rootSet:Map<String, Bool> = [];
 				rootSet.set(RUNTIME_CORE_MODULE, true);
@@ -437,12 +433,21 @@ class RuntimeCopier {
 						rootSet.set(moduleName, true);
 					addRootReasons(inclusionReasonMap, tokenRoots, "token_scan");
 				}
-				RuntimeSourceManifest.resolveClosure(sourceManifest, mapKeysSorted(rootSet), profile, allowHxHxRuntime);
+				final roots = mapKeysSorted(rootSet);
+				{
+					roots: roots,
+					entries: RuntimeSourceManifest.resolveClosure(sourceManifest, roots, profile, allowHxHxRuntime)
+				};
 			case Full:
 				final roots = RuntimeSourceManifest.fullRoots(sourceManifest, profile, allowHxHxRuntime);
 				addRootReasons(inclusionReasonMap, roots, "full_runtime_mode");
-				RuntimeSourceManifest.resolveClosure(sourceManifest, roots, profile, allowHxHxRuntime);
+				{
+					roots: roots,
+					entries: RuntimeSourceManifest.resolveClosure(sourceManifest, roots, profile, allowHxHxRuntime)
+				};
 		}
+		final currentRoots = selection.roots;
+		final selectedEntries:Array<RuntimeSourceModule> = selection.entries;
 		if (buildContext.runtimeMode == Selective)
 			addDependencyReasons(inclusionReasonMap, selectedEntries);
 		final selectedModuleList = [for (entry in selectedEntries) entry.module];
@@ -453,6 +458,8 @@ class RuntimeCopier {
 			selectedModuleList, inclusionReasons);
 		OcamlRuntimeRequirementReportWriter.write(output, artifacts, profile, allowHxHxRuntime, buildContext.runtimeMode, selectionMode, sourceManifest,
 			recordedRequirements, requirementRevision, compilerObservedModulesAll, selectedEntries);
+		RuntimeSelectionShadowReportWriter.write(output, artifacts, profile, OcamlRuntimeMode.toDefineValue(buildContext.runtimeMode), selectionMode,
+			requirementRevision, allowHxHxRuntime, sourceManifest, recordedRequirements, currentRoots, selectedEntries, inclusionReasons);
 
 		for (entry in selectedEntries)
 			for (file in entry.files) {

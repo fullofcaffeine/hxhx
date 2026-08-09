@@ -38,6 +38,9 @@ Use this ID in your integration docs/config so upgrades are explicit and auditab
   - Stage0 `reflaxe.ocaml` runtime planning reports (when using that path):
     - `ocaml_profile_report.json`
     - `ocaml_runtime_plan_report.json`
+    - `ocaml_runtime_requirement_report.json`
+    - `ocaml_runtime_selection_shadow_report.json` (observation-only comparison;
+      it does not select runtime files)
 
 ## Versioning guarantees
 

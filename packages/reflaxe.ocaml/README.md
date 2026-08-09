@@ -228,6 +228,18 @@ directly selected by at least one recorded compiler reason, and lists which are
 not. This name overlap does not mean every use site is explained. The existing
 runtime selection report therefore remains the current compiler/runtime report,
 not a complete explanation for the whole program.
+
+Runtime-enabled builds also write
+`ocaml_runtime_selection_shadow_report.json`. A **shadow comparison** computes
+what the sealed requirement records would select, but it does not change which
+files the compiler copies. The report compares direct roots, dependency
+closure, source paths, file sizes, SHA-256 identities, and inclusion reasons.
+`sourceSelectionStatus: match` means both paths would copy the same checked
+runtime bytes; `exactComparisonStatus: match` additionally means their roots
+and reasons agree. Either result remains observation-only while the private
+runtime-reference inventory is nonzero, so a matching report is not a claim of
+complete authority or release readiness.
+
 Program-wide representation, native dependency, raw/unsafe, typed binding, and
 curated export-ABI inspection remain visibly unavailable until their owning
 checked records land. The command never scans emitted OCaml or Dune text to

@@ -1,4 +1,5 @@
 import reflaxe.ocaml.runtimegen.RuntimeModuleOwnership;
+import reflaxe.ocaml.runtimegen.RuntimeSelectionShadowReportWriter.RuntimeSelectionShadowReport;
 
 private typedef ProfileReportVerifier = {
 	final mode:String;
@@ -250,6 +251,13 @@ class M6RuntimeCopierIntegrationTest {
 		return cast haxe.Json.parse(sys.io.File.getContent(reportPath));
 	}
 
+	static function readRuntimeSelectionShadowReport(outDir:String):RuntimeSelectionShadowReport {
+		final reportPath = outDir + "/ocaml_runtime_selection_shadow_report.json";
+		if (!sys.FileSystem.exists(reportPath))
+			throw "missing runtime selection shadow report: " + reportPath;
+		return cast haxe.Json.parse(sys.io.File.getContent(reportPath));
+	}
+
 	static function main() {
 		final ownershipPartition = RuntimeModuleOwnership.partitionCompilerObservations(["HxRuntime", "HxProgramOwned", "HxRuntime"], ["HxProgramOwned"],
 			["HxRuntime", "HxArray"]);
@@ -444,6 +452,11 @@ class M6RuntimeCopierIntegrationTest {
 		final metalRequirementReport = readRuntimeRequirementReport(metalOutDir);
 		final portableManualRequirementReport = readRuntimeRequirementReport(portableManualOutDir);
 		final typeRegistryRequirementReport = readRuntimeRequirementReport(typeRegistryOutDir);
+		final portableSelectionShadow = readRuntimeSelectionShadowReport(portableOutDir);
+		final metalSelectionShadow = readRuntimeSelectionShadowReport(metalOutDir);
+		final metalFullSelectionShadow = readRuntimeSelectionShadowReport(metalFullOutDir);
+		final portableManualSelectionShadow = readRuntimeSelectionShadowReport(portableManualOutDir);
+		final metalTokenFallbackDebugSelectionShadow = readRuntimeSelectionShadowReport(metalTokenFallbackDebugOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
@@ -508,6 +521,15 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"portable report includes full-runtime reason");
+		assertTrue(portableSelectionShadow.authorityStatus == "observation-only", "the portable shadow must not control runtime packaging");
+		assertTrue(portableSelectionShadow.sourceSelectionStatus == "mismatch",
+			"portable full mode should expose runtime files not yet selected by explicit requirements");
+		assertArrayEquals(portableRuntimeReport.selectedModules, portableSelectionShadow.currentSelection.closureModules,
+			"the portable shadow current side should reproduce authoritative packaging");
+		assertTrue(portableSelectionShadow.differences.currentOnlyClosureModules.length > 0,
+			"the portable full-runtime comparison should retain its current-only module evidence");
+		for (file in portableSelectionShadow.requirementsOnlySelection.sourceFiles)
+			assertTrue(~/^sha256:[0-9a-f]{64}$/.match(file.sha256), "requirements-only source files should retain checked SHA-256 identities");
 		assertTrue(portableRequirementReport.schemaVersion == 5, "portable requirement report schema version");
 		assertTrue(portableRequirementReport.model == "recorded-ocaml-runtime-requirements", "portable requirement report model");
 		assertTrue(portableRequirementReport.authorityStatus == "partial", "portable requirement report authority status");
@@ -652,6 +674,15 @@ class M6RuntimeCopierIntegrationTest {
 			"every compiler-observed runtime module should overlap a recorded root without claiming complete occurrence ownership");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
+		assertTrue(metalSelectionShadow.authorityStatus == "observation-only", "the metal shadow must remain observation-only");
+		assertTrue(metalSelectionShadow.sourceSelectionStatus == "match",
+			"the representative selective metal request should copy the same source files from requirements alone");
+		assertTrue(metalSelectionShadow.exactComparisonStatus == "mismatch",
+			"current compiler-observation reasons must remain visible even when copied files match");
+		assertArrayEquals(metalRuntimeReport.selectedModules, metalSelectionShadow.currentSelection.closureModules,
+			"the metal shadow current side should reproduce authoritative packaging");
+		assertArrayEquals(metalSelectionShadow.currentSelection.closureModules, metalSelectionShadow.requirementsOnlySelection.closureModules,
+			"the representative metal closure should match without letting the shadow control output");
 
 		assertTrue(metalFullRuntimeReport.profile == "metal", "metal full runtime report profile");
 		assertTrue(metalFullRuntimeReport.runtimeMode == "full", "metal full runtime report mode");
@@ -660,6 +691,8 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalFullRuntimeReport.trackedModules.length == 0, "metal full runtime report should not expose selective tracked modules");
 		assertContains("\n" + reasonsForModule(metalFullRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"metal full report includes full-runtime reason");
+		assertTrue(metalFullSelectionShadow.sourceSelectionStatus == "mismatch",
+			"metal full mode should keep its explicit extra sources visible in the shadow report");
 
 		assertTrue(emptyProfileRuntimeReport.profile == "portable", "empty profile runtime report profile");
 		assertTrue(emptyProfileRuntimeReport.runtimeMode == "full", "empty profile runtime mode");
@@ -685,6 +718,8 @@ class M6RuntimeCopierIntegrationTest {
 		assertNotContains("\n" + portableManualRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "portable manual runtime omits file runtime");
 		assertArrayEquals(portableManualRuntimeReport.selectedModules, portableMinimalManualRuntimeReport.selectedModules,
 			"manual runtime roots should only add optional roots; they must not replace mandatory semantic requirements");
+		assertTrue(portableManualSelectionShadow.sourceSelectionStatus == "match",
+			"manual roots that repeat semantic requirements should not change the copied source set");
 
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
 		assertTrue(metalTokenNoiseRuntimeReport.runtimeMode == "selective", "token noise runtime mode");
@@ -710,5 +745,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalTokenFallbackDebugRuntimeReport.tokenScanFallbackEnabled == true, "fallback-debug should be enabled");
 		assertContains(metalTokenFallbackDebugRuntimeReport.selectionMode, "plus_token_scan_fallback",
 			"fallback-debug selection mode should expose token-scan suffix");
+		assertTrue(metalTokenFallbackDebugSelectionShadow.sourceSelectionStatus == "mismatch",
+			"a token-scan-only runtime file must remain a visible blocker rather than entering requirements-only selection");
 	}
 }
