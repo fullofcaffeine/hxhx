@@ -18,7 +18,8 @@ OVERFLOW_EXECUTABLE="${OVERFLOW_OUTPUT//-/_}.exe"
 INVALID_SCHEDULE_OUTPUT="out-invalid-anonymous-schedule-$$"
 INVALID_REVISION_OUTPUT="out-invalid-anonymous-revision-$$"
 INVALID_ORDER_OUTPUT="out-invalid-anonymous-order-$$"
-trap 'rm -f "$FIRST_REPORT" "$INSPECTION_REPORT" "$INVALID_LOG"; rm -rf "$ORACLE_DIR" "$OVERFLOW_OUTPUT" "$INVALID_SCHEDULE_OUTPUT" "$INVALID_REVISION_OUTPUT" "$INVALID_ORDER_OUTPUT"' EXIT
+INVALID_RUNTIME_USE_OUTPUT="out-invalid-anonymous-runtime-use-$$"
+trap 'rm -f "$FIRST_REPORT" "$INSPECTION_REPORT" "$INVALID_LOG"; rm -rf "$ORACLE_DIR" "$OVERFLOW_OUTPUT" "$INVALID_SCHEDULE_OUTPUT" "$INVALID_REVISION_OUTPUT" "$INVALID_ORDER_OUTPUT" "$INVALID_RUNTIME_USE_OUTPUT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$RUNTIME_REPORT_FILE" ]; then
 	echo "Missing generated anonymous-object source, lowering report, or runtime report" >&2
@@ -63,7 +64,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 69
-	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
+	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v4'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
 	|| !sha256.test(report.anonymousStructureRevision)) {
@@ -104,13 +105,19 @@ const expectedSchedules = new Map([
 for (const operation of operations) {
 	countByKind.set(operation.kind, (countByKind.get(operation.kind) ?? 0) + 1)
 	const compoundWrite = operation.kind === 'compound-write-field'
+	const boolCarrier = operation.loadConversion === 'unbox-bool' || operation.storeConversion === 'box-bool'
+	const expectedRequirementIds = [
+		`${operation.id}:runtime:haxe-anonymous-structure`,
+		...(boolCarrier ? [`${operation.id}:runtime:haxe-anonymous-bool-carrier`] : []),
+		...(compoundWrite ? [`${operation.id}:runtime:haxe-int32-add`] : [])
+	]
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
 		|| operation.pipelineRevision !== 'ocaml-function-plans-v84'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
-		|| operation.runtimeRequirementIds?.length !== (compoundWrite ? 2 : 1)
+		|| operation.runtimeRequirementIds?.join(',') !== expectedRequirementIds.join(',')
 		|| operation.runtimeReadOperation !== (compoundWrite ? 'get' : null)
 		|| operation.fieldOperator !== (compoundWrite ? 'int-add' : null)) {
 		fail(`anonymous operation ${operation.id} does not preserve its sealed shape, schedule, proof, or runtime owner`)
@@ -125,8 +132,19 @@ for (const operation of operations) {
 		|| requirement.rootModules?.join(',') !== 'HxAnon') {
 		fail(`anonymous operation ${operation.id} has no exact HxAnon runtime explanation`)
 	}
+	if (boolCarrier) {
+		const boolRequirement = report.runtimeRequirements.find(item => item.id === expectedRequirementIds[1])
+		if (!boolRequirement
+			|| boolRequirement.decisionId !== operation.id
+			|| boolRequirement.sourceId !== operation.occurrenceId
+			|| boolRequirement.semanticCapability !== 'haxe-anonymous-bool-carrier'
+			|| boolRequirement.implementationFeature !== 'haxe-boolean-carrier-v1'
+			|| boolRequirement.rootModules?.join(',') !== 'HxRuntime') {
+			fail(`anonymous operation ${operation.id} has no exact HxRuntime Boolean-carrier explanation`)
+		}
+	}
 	if (compoundWrite) {
-		const arithmetic = report.runtimeRequirements.find(item => item.id === operation.runtimeRequirementIds[1])
+		const arithmetic = report.runtimeRequirements.find(item => item.id === `${operation.id}:runtime:haxe-int32-add`)
 		if (!arithmetic
 			|| arithmetic.decisionId !== operation.id
 			|| arithmetic.sourceId !== operation.occurrenceId
@@ -134,6 +152,29 @@ for (const operation of operations) {
 			|| arithmetic.implementationFeature !== 'haxe-int32-arithmetic-v1'
 			|| arithmetic.rootModules?.join(',') !== 'HxInt') {
 			fail(`anonymous compound write ${operation.id} has no exact HxInt arithmetic explanation`)
+		}
+	}
+	const expectedUses = operation.kind === 'create'
+		? [['HxAnon.create', 'create-container']]
+		: operation.kind === 'initialize-field'
+			? [['HxAnon.set', 'initialize-field'], ...(boolCarrier ? [['HxRuntime.box_bool', 'box-field-value']] : [])]
+			: operation.kind === 'read-field'
+				? [...(boolCarrier ? [['HxRuntime.unbox_bool_or_obj', 'unbox-field-value']] : []), ['HxAnon.get', 'read-field']]
+				: operation.kind === 'write-field'
+					? [['HxAnon.set', 'write-field'], ...(boolCarrier ? [['HxRuntime.box_bool', 'box-field-value']] : [])]
+					: [['HxAnon.get', 'read-field'], ['HxInt.add', 'apply-field-operator'], ['HxAnon.set', 'write-field']]
+	if (operation.runtimeUseOccurrences?.length !== expectedUses.length)
+		fail(`anonymous operation ${operation.id} has no exact private-runtime use inventory`)
+	for (const [index, [symbol, role]] of expectedUses.entries()) {
+		const use = operation.runtimeUseOccurrences[index]
+		if (use.ownerId !== operation.id
+			|| use.exactSymbol !== symbol
+			|| use.role !== role
+			|| use.order !== index
+			|| use.cardinality !== 1
+			|| use.domain !== 'expression-identifier'
+			|| !sha256.test(use.planRevision)) {
+			fail(`anonymous operation ${operation.id} has a stale private-runtime use at index ${index}`)
 		}
 	}
 }
@@ -195,7 +236,8 @@ if (report.schemaVersion !== 45
 		item.kind === 'compound-write-field'
 		&& item.fieldOperator === 'int-add'
 		&& item.runtimeReadOperation === 'get'
-		&& item.runtimeRequirementIds?.length === 2)) {
+		&& item.runtimeRequirementIds?.length === 2
+		&& item.runtimeUseOccurrences?.map(use => use.exactSymbol).join(',') === 'HxAnon.get,HxInt.add,HxAnon.set')) {
 	throw new Error('public inspection did not preserve the validated anonymous-object inventory')
 }
 NODE
@@ -274,6 +316,32 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 fi
 if ! grep -Fq "anonymous operation inventory is not in strict identity order" "$INVALID_LOG"; then
 	echo "Public inspection rejected reordered anonymous-operation evidence without an actionable reason" >&2
+	cat "$INVALID_LOG" >&2
+	exit 1
+fi
+
+cp -R out "$INVALID_RUNTIME_USE_OUTPUT"
+node - "$INVALID_RUNTIME_USE_OUTPUT/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const operation = report.anonymousStructureOperations.find(item => item.runtimeUseOccurrences?.length > 1)
+if (!operation) {
+	throw new Error('fixture has no multi-use anonymous operation to corrupt')
+}
+operation.runtimeUseOccurrences.reverse()
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output "$INVALID_RUNTIME_USE_OUTPUT" --require-lowering --json >"$INVALID_LOG" 2>&1; then
+	echo "Public inspection accepted an anonymous operation with reordered private-runtime permissions" >&2
+	exit 1
+fi
+if ! grep -Fq "wrong-runtime-use" "$INVALID_LOG"; then
+	echo "Public inspection rejected reordered private-runtime permissions without an actionable reason" >&2
 	cat "$INVALID_LOG" >&2
 	exit 1
 fi

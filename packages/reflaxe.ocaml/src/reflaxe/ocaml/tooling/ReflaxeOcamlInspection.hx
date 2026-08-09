@@ -3456,9 +3456,17 @@ class ReflaxeOcamlInspection {
 		}
 		for (operation in anonymousOperations) {
 			final compoundWrite = operation.kind == "compound-write-field";
-			if (operation.runtimeRequirementIds.length != (compoundWrite ? 2 : 1))
-				throw 'Anonymous operation "${operation.id}" has the wrong number of runtime requirements for ${operation.kind}.';
-			final requirementId = operation.runtimeRequirementIds[0];
+			final boolCarrier = operation.loadConversion == "unbox-bool" || operation.storeConversion == "box-bool";
+			final requirementId = operation.id + ":runtime:haxe-anonymous-structure";
+			final boolRequirementId = operation.id + ":runtime:haxe-anonymous-bool-carrier";
+			final arithmeticId = operation.id + ":runtime:haxe-int32-add";
+			final expectedRequirementIds = [requirementId];
+			if (boolCarrier)
+				expectedRequirementIds.push(boolRequirementId);
+			if (compoundWrite)
+				expectedRequirementIds.push(arithmeticId);
+			if (operation.runtimeRequirementIds.join(",") != expectedRequirementIds.join(","))
+				throw 'Anonymous operation "${operation.id}" has the wrong runtime requirement identities for ${operation.kind}.';
 			final requirement = requirements.get(requirementId);
 			if (requirement == null)
 				throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "$requirementId".';
@@ -3484,8 +3492,31 @@ class ReflaxeOcamlInspection {
 				throw 'Anonymous operation "${operation.id}" runtime requirement "$requirementId" disagrees with its sealed runtime-container decision.';
 			}
 			referenced.set(requirementId, true);
+			if (boolCarrier) {
+				final boolRequirement = requirements.get(boolRequirementId);
+				if (boolRequirement == null)
+					throw 'Anonymous operation "${operation.id}" refers to missing Boolean carrier requirement "$boolRequirementId".';
+				final boolSource = requiredObject(boolRequirement, "source");
+				final boolSubject = requiredObject(boolRequirement, "subject");
+				final boolRoots = requiredStringArray(boolRequirement, "rootModules");
+				if (requiredString(boolRequirement, "sourceKind") != "haxe-expression"
+					|| requiredString(boolRequirement, "sourceId") != operation.occurrenceId
+					|| requiredString(boolSource, "file") != operation.sourceFile
+					|| requiredInt(boolSource, "min") != operation.sourceMin
+					|| requiredInt(boolSource, "max") != operation.sourceMax
+					|| requiredString(boolRequirement, "semanticCapability") != "haxe-anonymous-bool-carrier"
+					|| requiredString(boolRequirement, "cause") != "lowering-decision"
+					|| requiredString(boolRequirement, "decisionId") != operation.id
+					|| requiredString(boolSubject, "kind") != "haxe-type"
+					|| requiredString(boolSubject, "id") != "Bool"
+					|| requiredString(boolRequirement, "implementationFeature") != "haxe-boolean-carrier-v1"
+					|| boolRoots.join(",") != "HxRuntime"
+					|| requiredStringArray(boolRequirement, "profileEligibility").join(",") != "metal,portable") {
+					throw 'Anonymous operation "${operation.id}" Boolean carrier requirement "$boolRequirementId" disagrees with its sealed conversion.';
+				}
+				referenced.set(boolRequirementId, true);
+			}
 			if (compoundWrite) {
-				final arithmeticId = operation.runtimeRequirementIds[1];
 				final arithmetic = requirements.get(arithmeticId);
 				if (arithmetic == null)
 					throw 'Anonymous compound write "${operation.id}" refers to missing Int32 runtime requirement "$arithmeticId".';

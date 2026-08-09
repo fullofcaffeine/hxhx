@@ -9,34 +9,53 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructur
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureStoreConversion;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructureLiteralPlan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+
+/** One operation-owned subtree whose private identifiers must be reconciled. */
+typedef OcamlAnonymousStructureRuntimeOperation = {
+	final operationId:String;
+	final expression:OcamlExpr;
+}
+
+/** The generated expression and the private-runtime subtrees inserted into it. */
+typedef OcamlAnonymousStructureMaterialization = {
+	final expression:OcamlExpr;
+	final runtimeOperations:Array<OcamlAnonymousStructureRuntimeOperation>;
+}
 
 /**
 	Constructs OCaml expressions from sealed anonymous-object operations.
 
 	The helper receives the selected structure, exact field carriers, conversion
-	steps, and evaluation schedule. It can call `HxAnon.create`, `get`, or `set`,
-	but it cannot decide that an unplanned Haxe value should use `HxAnon`.
+	steps, evaluation schedule, and permissions for the private runtime names it
+	may insert. It cannot decide that an unplanned Haxe value should use `HxAnon`
+	or introduce a helper that the source-bound operation did not name.
 **/
 class OcamlAnonymousStructureSyntax {
 	/**
 		Creates one object and initializes its fields in Haxe source order.
 
-		`buildExpression` is called exactly once for each field expression. The
-		container is allocated before the first field value, matching the schedule
-		validated by the plan.
+		`buildExpression` is called exactly once for each field expression. Each
+		create or initialize operation has a separate runtime authority, so a field
+		cannot reuse another field's permission.
 	**/
 	public static function buildLiteral(plan:OcamlAnonymousStructureLiteralPlan, fields:Array<{
 		name:String,
 		expr:TypedExpr
-	}>, buildExpression:TypedExpr->OcamlExpr, freshName:String->String):OcamlExpr {
+	}>,
+			buildExpression:TypedExpr->OcamlExpr, freshName:String->String,
+			runtimeAuthorityFor:OcamlAnonymousStructureOperationDecision->OcamlRuntimeUseAuthority):OcamlAnonymousStructureMaterialization {
 		OcamlAnonymousStructureContract.requireStructure(plan.structure);
 		OcamlAnonymousStructureContract.requireOperation(plan.create, plan.structure);
 		if (fields.length != plan.initializers.length)
 			throw 'reflaxe.ocaml [ocaml-anonymous:literal-syntax-field-count]: literal expected ${plan.initializers.length} fields but received ${fields.length}';
 		final containerName = freshName("anonymous_value");
-		final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.create.runtimeModule), plan.create.runtimeOperation),
+		final createAuthority = runtimeAuthorityFor(plan.create);
+		final create = OcamlExpr.EApp(runtimeIdentifier(plan.create, createAuthority, "create-container",
+			plan.create.runtimeModule + "." + plan.create.runtimeOperation),
 			[OcamlExpr.EConst(OcamlConst.CUnit)]);
 		final steps = new Array<OcamlExpr>();
+		final runtimeOperations:Array<OcamlAnonymousStructureRuntimeOperation> = [{operationId: plan.create.id, expression: create}];
 		for (index in 0...fields.length) {
 			final operation = plan.initializers[index];
 			OcamlAnonymousStructureContract.requireOperation(operation, plan.structure);
@@ -45,29 +64,40 @@ class OcamlAnonymousStructureSyntax {
 				|| operation.fieldName != fields[index].name) {
 				throw 'reflaxe.ocaml [ocaml-anonymous:literal-syntax-order]: source field "${fields[index].name}" does not match initializer ${operation.id} at order $index';
 			}
-			final stored = storeValue(operation, buildExpression(fields[index].expr));
-			final call = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), operation.runtimeOperation), [
-				OcamlExpr.EIdent(containerName),
-				OcamlExpr.EConst(OcamlConst.CString(fields[index].name)),
-				stored
-			]);
+			final runtimeAuthority = runtimeAuthorityFor(operation);
+			final stored = storeValue(operation, buildExpression(fields[index].expr), runtimeAuthority);
+			final call = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "initialize-field",
+				operation.runtimeModule + "." + operation.runtimeOperation), [
+					OcamlExpr.EIdent(containerName),
+					OcamlExpr.EConst(OcamlConst.CString(fields[index].name)),
+					stored
+				]);
 			steps.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [call]));
+			runtimeOperations.push({operationId: operation.id, expression: call});
 		}
 		steps.push(OcamlExpr.EIdent(containerName));
-		return OcamlExpr.ELet(containerName, create, OcamlExpr.ESeq(steps), false);
+		return {
+			expression: OcamlExpr.ELet(containerName, create, OcamlExpr.ESeq(steps), false),
+			runtimeOperations: runtimeOperations
+		};
 	}
 
 	/** Reads one field after evaluating the receiver exactly once. */
 	public static function buildRead(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, buildExpression:TypedExpr->OcamlExpr,
-			freshName:String->String):OcamlExpr {
+			freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlAnonymousStructureMaterialization {
 		if (operation.kind != OcamlAnonymousStructureOperationKind.ReadField)
 			throw 'reflaxe.ocaml [ocaml-anonymous:read-syntax-kind]: operation "${operation.id}" is not a field read';
 		final receiverName = freshName("anonymous_receiver");
-		final loaded = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), operation.runtimeOperation), [
-			OcamlExpr.EIdent(receiverName),
-			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName))
-		]);
-		return OcamlExpr.ELet(receiverName, buildExpression(receiver), loadValue(operation, loaded), false);
+		final loaded = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "read-field",
+			operation.runtimeModule + "." + operation.runtimeOperation), [
+				OcamlExpr.EIdent(receiverName),
+				OcamlExpr.EConst(OcamlConst.CString(operation.fieldName))
+			]);
+		final converted = loadValue(operation, loaded, runtimeAuthority);
+		return {
+			expression: OcamlExpr.ELet(receiverName, buildExpression(receiver), converted, false),
+			runtimeOperations: [{operationId: operation.id, expression: converted}]
+		};
 	}
 
 	/**
@@ -78,18 +108,28 @@ class OcamlAnonymousStructureSyntax {
 		expression returns the unboxed Haxe value.
 	**/
 	public static function buildWrite(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, value:TypedExpr,
-			buildExpression:TypedExpr->OcamlExpr, freshName:String->String):OcamlExpr {
+			buildExpression:TypedExpr->OcamlExpr, freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlAnonymousStructureMaterialization {
 		if (operation.kind != OcamlAnonymousStructureOperationKind.WriteField)
 			throw 'reflaxe.ocaml [ocaml-anonymous:write-syntax-kind]: operation "${operation.id}" is not a field write';
 		final receiverName = freshName("anonymous_receiver");
 		final valueName = freshName("anonymous_field_value");
-		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), operation.runtimeOperation), [
-			OcamlExpr.EIdent(receiverName),
-			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName)),
-			storeValue(operation, OcamlExpr.EIdent(valueName))
-		]);
+		final store = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "write-field",
+			operation.runtimeModule + "." + operation.runtimeOperation), [
+				OcamlExpr.EIdent(receiverName),
+				OcamlExpr.EConst(OcamlConst.CString(operation.fieldName)),
+				storeValue(operation, OcamlExpr.EIdent(valueName), runtimeAuthority)
+			]);
 		final writeAndReturn = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]), OcamlExpr.EIdent(valueName)]);
-		return OcamlExpr.ELet(receiverName, buildExpression(receiver), OcamlExpr.ELet(valueName, buildExpression(value), writeAndReturn, false), false);
+		return {
+			expression: OcamlExpr.ELet(receiverName, buildExpression(receiver), OcamlExpr.ELet(valueName, buildExpression(value), writeAndReturn, false),
+				false),
+			runtimeOperations: [
+				{
+					operationId: operation.id,
+					expression: store
+				}
+			]
+		};
 	}
 
 	/**
@@ -97,11 +137,10 @@ class OcamlAnonymousStructureSyntax {
 
 		The generated sequence evaluates the object, reads and unboxes its old
 		field, evaluates the right-hand side, performs Haxe's 32-bit addition,
-		stores the new value, and returns that same new value. The plan has already
-		selected every step; this helper only translates them into OCaml syntax.
+		stores the new value, and returns that same new value.
 	**/
 	public static function buildCompoundWrite(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, value:TypedExpr,
-			buildExpression:TypedExpr->OcamlExpr, freshName:String->String):OcamlExpr {
+			buildExpression:TypedExpr->OcamlExpr, freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlAnonymousStructureMaterialization {
 		if (operation.kind != OcamlAnonymousStructureOperationKind.CompoundWriteField)
 			throw 'reflaxe.ocaml [ocaml-anonymous:compound-write-syntax-kind]: operation "${operation.id}" is not a compound field write';
 		final readOperation = operation.runtimeReadOperation;
@@ -111,51 +150,73 @@ class OcamlAnonymousStructureSyntax {
 		final oldValueName = freshName("anonymous_old_field_value");
 		final valueName = freshName("anonymous_field_value");
 		final newValueName = freshName("anonymous_new_field_value");
-		final loaded = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), readOperation), [
+		final loaded = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "read-field", operation.runtimeModule + "." + readOperation), [
 			OcamlExpr.EIdent(receiverName),
 			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName))
 		]);
+		final convertedOldValue = loadValue(operation, loaded, runtimeAuthority);
 		final updated = switch (operation.fieldOperator) {
 			case IntAdd:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [OcamlExpr.EIdent(oldValueName), OcamlExpr.EIdent(valueName)]);
+				OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "apply-field-operator", "HxInt.add"),
+					[OcamlExpr.EIdent(oldValueName), OcamlExpr.EIdent(valueName)]);
 			case null:
 				throw 'reflaxe.ocaml [ocaml-anonymous:compound-write-syntax-operator]: operation "${operation.id}" has no planned field operator';
 		}
-		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), operation.runtimeOperation), [
-			OcamlExpr.EIdent(receiverName),
-			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName)),
-			storeValue(operation, OcamlExpr.EIdent(newValueName))
-		]);
+		final store = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "write-field",
+			operation.runtimeModule + "." + operation.runtimeOperation), [
+				OcamlExpr.EIdent(receiverName),
+				OcamlExpr.EConst(OcamlConst.CString(operation.fieldName)),
+				storeValue(operation, OcamlExpr.EIdent(newValueName), runtimeAuthority)
+			]);
 		final storeAndReturn = OcamlExpr.ESeq([
 			OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
 			OcamlExpr.EIdent(newValueName)
 		]);
-		return OcamlExpr.ELet(receiverName, buildExpression(receiver),
-			OcamlExpr.ELet(oldValueName, loadValue(operation, loaded),
-				OcamlExpr.ELet(valueName, buildExpression(value), OcamlExpr.ELet(newValueName, updated, storeAndReturn, false), false), false),
-			false);
+		return {
+			expression: OcamlExpr.ELet(receiverName, buildExpression(receiver),
+				OcamlExpr.ELet(oldValueName, convertedOldValue,
+					OcamlExpr.ELet(valueName, buildExpression(value), OcamlExpr.ELet(newValueName, updated, storeAndReturn, false), false), false),
+				false),
+			runtimeOperations: [
+				{
+					operationId: operation.id,
+					expression: OcamlExpr.ESeq([convertedOldValue, updated, store])
+				}
+			]
+		};
 	}
 
-	static function storeValue(operation:OcamlAnonymousStructureOperationDecision, value:OcamlExpr):OcamlExpr {
+	static function storeValue(operation:OcamlAnonymousStructureOperationDecision, value:OcamlExpr, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlExpr {
 		return switch (operation.storeConversion) {
 			case ObjRepr:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
 			case BoxBool:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [value]);
+				OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "box-field-value", "HxRuntime.box_bool"), [value]);
 			case null:
 				throw 'reflaxe.ocaml [ocaml-anonymous:missing-store-conversion]: operation "${operation.id}" has no field-store conversion';
 		}
 	}
 
-	static function loadValue(operation:OcamlAnonymousStructureOperationDecision, value:OcamlExpr):OcamlExpr {
+	static function loadValue(operation:OcamlAnonymousStructureOperationDecision, value:OcamlExpr, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlExpr {
 		return switch (operation.loadConversion) {
 			case ObjObj:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
 			case UnboxBool:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [value]);
+				OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "unbox-field-value", "HxRuntime.unbox_bool_or_obj"), [value]);
 			case null:
 				throw 'reflaxe.ocaml [ocaml-anonymous:missing-load-conversion]: operation "${operation.id}" has no field-load conversion';
 		}
+	}
+
+	static function runtimeIdentifier(operation:OcamlAnonymousStructureOperationDecision, authority:OcamlRuntimeUseAuthority, role:String,
+			exactSymbol:String):OcamlExpr {
+		if (authority == null)
+			throw 'reflaxe.ocaml [ocaml-anonymous:missing-runtime-authority]: operation "${operation.id}" cannot construct private runtime identifiers';
+		final matches = operation.runtimeUseOccurrences.filter(use -> use.role == role);
+		if (matches.length != 1 || matches[0].exactSymbol != exactSymbol)
+			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime-use]: operation "${operation.id}" has no exact $role/$exactSymbol occurrence';
+		final use = matches[0];
+		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
 	}
 }
 #end

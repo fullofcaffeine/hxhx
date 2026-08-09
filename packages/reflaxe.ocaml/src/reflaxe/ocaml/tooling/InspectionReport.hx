@@ -244,6 +244,7 @@ typedef InspectionAnonymousStructureOperation = {
 	final runtimeReadOperation:Null<String>;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;

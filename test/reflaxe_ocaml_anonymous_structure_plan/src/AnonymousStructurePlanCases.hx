@@ -36,6 +36,11 @@ class AnonymousStructurePlanCases {
 		return original.count;
 	}
 
+	public static function boolRead():Bool {
+		var value = {enabled: true};
+		return value.enabled;
+	}
+
 	public static function parameterOnly(value:PlainAnonymousValue):Int {
 		return value.count;
 	}

@@ -3,6 +3,9 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** The anonymous-object action whose meaning was fixed before OCaml syntax. */
 enum abstract OcamlAnonymousStructureOperationKind(String) from String to String {
@@ -146,6 +149,7 @@ typedef OcamlAnonymousStructureOperationDecision = {
 	final runtimeReadOperation:Null<String>;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -156,10 +160,11 @@ typedef OcamlAnonymousStructureOperationDecision = {
 
 /** Pure validation and identity rules shared by planning, reports, and tests. */
 class OcamlAnonymousStructureContract {
-	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v3";
+	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v4";
 	public static inline final OCCURRENCE_PREFIX = "anonymous-occurrence:";
 	public static inline final RUNTIME_CAPABILITY = "haxe-anonymous-structure";
 	public static inline final INT32_ADD_CAPABILITY = "haxe-int32-add";
+	public static inline final BOOL_CARRIER_CAPABILITY = "haxe-anonymous-bool-carrier";
 	public static inline final RUNTIME_MODULE = "HxAnon";
 	public static inline final INT32_ADD_MODULE = "HxInt";
 	public static inline final PROOF_ID = "direct-anonymous-runtime-operations-v3";
@@ -180,12 +185,92 @@ class OcamlAnonymousStructureContract {
 		return operationId + ":runtime:" + RUNTIME_CAPABILITY;
 	}
 
+	/** Returns the extra direct-root requirement for a Boolean field conversion. */
+	public static function boolCarrierRuntimeRequirementId(operationId:String):String {
+		return operationId + ":runtime:" + BOOL_CARRIER_CAPABILITY;
+	}
+
+	/** Returns the checked Int32-addition requirement for a compound write. */
+	public static function int32AddRuntimeRequirementId(operationId:String):String {
+		return operationId + ":runtime:" + INT32_ADD_CAPABILITY;
+	}
+
 	/** Returns every runtime requirement selected by an operation, in stable order. */
-	public static function runtimeRequirementIds(operationId:String, kind:OcamlAnonymousStructureOperationKind):Array<String> {
-		final out = [runtimeRequirementId(operationId)];
-		if (kind == OcamlAnonymousStructureOperationKind.CompoundWriteField)
-			out.push(operationId + ":runtime:" + INT32_ADD_CAPABILITY);
+	public static function runtimeRequirementIdsFor(operation:OcamlAnonymousStructureOperationDecision, ?operationId:String):Array<String> {
+		final id = operationId ?? operation.id;
+		final out = [runtimeRequirementId(id)];
+		if (operation.storeConversion == OcamlAnonymousStructureStoreConversion.BoxBool
+			|| operation.loadConversion == OcamlAnonymousStructureLoadConversion.UnboxBool)
+			out.push(boolCarrierRuntimeRequirementId(id));
+		if (operation.kind == OcamlAnonymousStructureOperationKind.CompoundWriteField)
+			out.push(int32AddRuntimeRequirementId(id));
 		return out;
+	}
+
+	/**
+		Builds the exact private runtime names inserted for one source operation.
+
+		The order follows a pre-order walk of the operation-owned target expression.
+		Receiver and assigned-value expressions have separate owners and are not
+		included here.
+	**/
+	public static function runtimeUseOccurrencesFor(operation:OcamlAnonymousStructureOperationDecision, ?operationId:String):Array<OcamlRuntimeUseOccurrence> {
+		final id = operationId ?? operation.id;
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: operation.functionId,
+			programRevision: operation.programRevision,
+			bodyRevision: operation.bodyRevision,
+			pipelineRevision: operation.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final result = new Array<OcamlRuntimeUseOccurrence>();
+
+		function add(requirementId:String, exactSymbol:String, role:String):Void {
+			result.push({
+				id: id + ":runtime-use:" + role,
+				planRevision: planRevision,
+				ownerId: id,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: exactSymbol,
+				role: role,
+				order: result.length,
+				source: {
+					file: operation.source.file,
+					min: operation.source.min,
+					max: operation.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
+
+		final anonymousRequirement = runtimeRequirementId(id);
+		final boolRequirement = boolCarrierRuntimeRequirementId(id);
+		switch (operation.kind) {
+			case Create:
+				add(anonymousRequirement, operation.runtimeModule + "." + operation.runtimeOperation, "create-container");
+			case InitializeField:
+				add(anonymousRequirement, operation.runtimeModule + "." + operation.runtimeOperation, "initialize-field");
+				if (operation.storeConversion == OcamlAnonymousStructureStoreConversion.BoxBool)
+					add(boolRequirement, "HxRuntime.box_bool", "box-field-value");
+			case ReadField:
+				if (operation.loadConversion == OcamlAnonymousStructureLoadConversion.UnboxBool)
+					add(boolRequirement, "HxRuntime.unbox_bool_or_obj", "unbox-field-value");
+				add(anonymousRequirement, operation.runtimeModule + "." + operation.runtimeOperation, "read-field");
+			case WriteField:
+				add(anonymousRequirement, operation.runtimeModule + "." + operation.runtimeOperation, "write-field");
+				if (operation.storeConversion == OcamlAnonymousStructureStoreConversion.BoxBool)
+					add(boolRequirement, "HxRuntime.box_bool", "box-field-value");
+			case CompoundWriteField:
+				final readOperation = operation.runtimeReadOperation;
+				if (readOperation == null)
+					throw 'reflaxe.ocaml [ocaml-anonymous:missing-runtime-read]: compound operation "$id" has no runtime read';
+				add(anonymousRequirement, operation.runtimeModule + "." + readOperation, "read-field");
+				add(int32AddRuntimeRequirementId(id), "HxInt.add", "apply-field-operator");
+				add(anonymousRequirement, operation.runtimeModule + "." + operation.runtimeOperation, "write-field");
+		}
+		return result;
 	}
 
 	/** Fails when a structure no longer matches the bounded representation proof. */
@@ -271,12 +356,17 @@ class OcamlAnonymousStructureContract {
 				case Create:
 			}
 		}
-		final expectedRuntimeRequirements = runtimeRequirementIds(operation.id, operation.kind);
+		if (operation.id != operationId(copyOperation(operation, "")))
+			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: anonymous operation "${operation.id}" does not match its canonical facts';
+		final expectedRuntimeRequirements = runtimeRequirementIdsFor(operation);
 		if (operation.runtimeRequirementIds.join("\n") != expectedRuntimeRequirements.join("\n")) {
 			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime]: anonymous operation "${operation.id}" does not name its exact runtime requirements';
 		}
-		if (operation.id != operationId(copyOperation(operation, "")))
-			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: anonymous operation "${operation.id}" does not match its canonical facts';
+		final expectedRuntimeUses = runtimeUseOccurrencesFor(operation);
+		if (operation.runtimeUseOccurrences.length != expectedRuntimeUses.length)
+			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime-use]: anonymous operation "${operation.id}" has the wrong number of runtime uses';
+		for (index in 0...expectedRuntimeUses.length)
+			requireRuntimeUse(operation.id, index, operation.runtimeUseOccurrences[index], expectedRuntimeUses[index]);
 	}
 
 	/** Computes the path-independent shape revision. */
@@ -443,6 +533,25 @@ class OcamlAnonymousStructureContract {
 		].join("\n");
 	}
 
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime-use]: anonymous operation "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
+	}
+
 	/**
 		Copies an operation while replacing its identity.
 
@@ -453,6 +562,24 @@ class OcamlAnonymousStructureContract {
 		before validation.
 	**/
 	public static function copyOperation(decision:OcamlAnonymousStructureOperationDecision, id:String):OcamlAnonymousStructureOperationDecision {
+		final runtimeRequirementIds = id == decision.id ? decision.runtimeRequirementIds.copy() : runtimeRequirementIdsFor(decision, id);
+		final runtimeUseOccurrences = id == decision.id ? decision.runtimeUseOccurrences.map(use -> {
+			id: use.id,
+			planRevision: use.planRevision,
+			ownerId: use.ownerId,
+			requirementId: use.requirementId,
+			domain: use.domain,
+			exactSymbol: use.exactSymbol,
+			role: use.role,
+			order: use.order,
+			source: {
+				file: use.source.file,
+				min: use.source.min,
+				max: use.source.max
+			},
+			profileEligibility: use.profileEligibility.copy(),
+			cardinality: use.cardinality
+		}) : runtimeUseOccurrencesFor(decision, id);
 		return {
 			id: id,
 			occurrenceId: decision.occurrenceId,
@@ -480,7 +607,8 @@ class OcamlAnonymousStructureContract {
 			runtimeModule: decision.runtimeModule,
 			runtimeReadOperation: decision.runtimeReadOperation,
 			runtimeOperation: decision.runtimeOperation,
-			runtimeRequirementIds: id == decision.id ? decision.runtimeRequirementIds.copy() : runtimeRequirementIds(id, decision.kind),
+			runtimeRequirementIds: runtimeRequirementIds,
+			runtimeUseOccurrences: runtimeUseOccurrences,
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

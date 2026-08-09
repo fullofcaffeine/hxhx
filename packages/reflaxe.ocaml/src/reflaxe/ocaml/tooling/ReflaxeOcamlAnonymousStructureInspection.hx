@@ -14,6 +14,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureField;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureOperation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Validated anonymous-object inventory returned to the public inspector. */
 typedef InspectionAnonymousStructureInventory = {
@@ -156,6 +157,28 @@ class ReflaxeOcamlAnonymousStructureInspection {
 		final sourceMax = requiredInt(source, "max");
 		if (sourceMin < 0 || sourceMax < sourceMin)
 			throw "Anonymous operation has an invalid source span.";
+		final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence> = [
+			for (entry in requiredArray(value, "runtimeUseOccurrences")) {
+				final useSource = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					planRevision: requiredSha256Revision(entry, "planRevision"),
+					ownerId: requiredString(entry, "ownerId"),
+					requirementId: requiredString(entry, "requirementId"),
+					domain: cast requiredString(entry, "domain"),
+					exactSymbol: requiredString(entry, "exactSymbol"),
+					role: requiredString(entry, "role"),
+					order: requiredInt(entry, "order"),
+					source: {
+						file: requiredString(useSource, "file"),
+						min: requiredInt(useSource, "min"),
+						max: requiredInt(useSource, "max")
+					},
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					cardinality: requiredInt(entry, "cardinality")
+				};
+			}
+		];
 		return {
 			id: requiredString(value, "id"),
 			occurrenceId: requiredString(value, "occurrenceId"),
@@ -188,6 +211,7 @@ class ReflaxeOcamlAnonymousStructureInspection {
 			runtimeReadOperation: optionalString(value, "runtimeReadOperation"),
 			runtimeOperation: requiredString(value, "runtimeOperation"),
 			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: runtimeUseOccurrences,
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			functionId: requiredString(value, "functionId"),
@@ -261,6 +285,23 @@ class ReflaxeOcamlAnonymousStructureInspection {
 			runtimeReadOperation: decision.runtimeReadOperation,
 			runtimeOperation: decision.runtimeOperation,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

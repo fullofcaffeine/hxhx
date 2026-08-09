@@ -25,6 +25,7 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
+import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax.OcamlAnonymousStructureMaterialization;
 import reflaxe.ocaml.ast.OcamlArrayLiteralSyntax;
 import reflaxe.ocaml.ast.OcamlBytesAccessSyntax;
 import reflaxe.ocaml.ast.OcamlBytesMutationSyntax;
@@ -49,6 +50,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
@@ -326,6 +328,93 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/** Creates one request-local checker for an anonymous-object source operation. */
+	function anonymousRuntimeAuthority(operation:OcamlAnonymousStructureOperationDecision):OcamlRuntimeUseAuthority {
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: operation.functionId,
+			programRevision: operation.programRevision,
+			bodyRevision: operation.bodyRevision,
+			pipelineRevision: operation.pipelineRevision
+		};
+		final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		return new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile, ctx.runtimeRequirementsByIds(operation.runtimeRequirementIds),
+			operation.runtimeUseOccurrences);
+	}
+
+	/**
+		Checks every private-runtime subtree produced for anonymous-object syntax.
+
+		A literal has separate create and field-initializer operations. Keeping one
+		authority per operation prevents an initializer from consuming another
+		field's permission while still returning one complete Haxe expression.
+	**/
+	function reconcileAnonymousMaterialization(materialization:OcamlAnonymousStructureMaterialization, authorities:Map<String, OcamlRuntimeUseAuthority>,
+			position:Position):OcamlExpr {
+		return try {
+			final reconciled:Map<String, Bool> = [];
+			for (runtimeOperation in materialization.runtimeOperations) {
+				if (reconciled.exists(runtimeOperation.operationId))
+					throw 'operation "${runtimeOperation.operationId}" returned more than one runtime subtree';
+				final authority = authorities.get(runtimeOperation.operationId);
+				if (authority == null)
+					throw 'operation "${runtimeOperation.operationId}" returned syntax without its runtime authority';
+				authority.reconcileExpression(runtimeOperation.expression);
+				reconciled.set(runtimeOperation.operationId, true);
+			}
+			for (operationId in authorities.keys())
+				if (!reconciled.exists(operationId))
+					throw 'operation "$operationId" created runtime identifiers without returning its checked subtree';
+			materialization.expression;
+		} catch (error:Dynamic) {
+			anonymousStructureInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Builds one literal and reconciles create and initializer permissions separately. */
+	function buildAnonymousLiteral(plan:OcamlAnonymousStructureLiteralPlan, fields:Array<{name:String, expr:TypedExpr}>, position:Position):OcamlExpr {
+		final authorities:Map<String, OcamlRuntimeUseAuthority> = [];
+		final materialization = try {
+			OcamlAnonymousStructureSyntax.buildLiteral(plan, fields, buildExpr, freshTmp, operation -> {
+				if (authorities.exists(operation.id))
+					throw 'operation "${operation.id}" requested more than one runtime authority';
+				final authority = anonymousRuntimeAuthority(operation);
+				authorities.set(operation.id, authority);
+				authority;
+			});
+		} catch (error:Dynamic) {
+			return anonymousStructureInvariant(Std.string(error), position);
+		}
+		return reconcileAnonymousMaterialization(materialization, authorities, position);
+	}
+
+	/** Builds one read and checks only the runtime subtree inserted for that read. */
+	function buildAnonymousRead(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, position:Position):OcamlExpr {
+		final authority = anonymousRuntimeAuthority(operation);
+		final materialization = OcamlAnonymousStructureSyntax.buildRead(operation, receiver, buildExpr, freshTmp, authority);
+		final authorities:Map<String, OcamlRuntimeUseAuthority> = [];
+		authorities.set(operation.id, authority);
+		return reconcileAnonymousMaterialization(materialization, authorities, position);
+	}
+
+	/** Builds one write and checks only the runtime subtree inserted for that write. */
+	function buildAnonymousWrite(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, value:TypedExpr, position:Position):OcamlExpr {
+		final authority = anonymousRuntimeAuthority(operation);
+		final materialization = OcamlAnonymousStructureSyntax.buildWrite(operation, receiver, value, buildExpr, freshTmp, authority);
+		final authorities:Map<String, OcamlRuntimeUseAuthority> = [];
+		authorities.set(operation.id, authority);
+		return reconcileAnonymousMaterialization(materialization, authorities, position);
+	}
+
+	/** Builds one `Int +=` write and checks its read, addition, and write helpers. */
+	function buildAnonymousCompoundWrite(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, value:TypedExpr, position:Position):OcamlExpr {
+		final authority = anonymousRuntimeAuthority(operation);
+		final materialization = OcamlAnonymousStructureSyntax.buildCompoundWrite(operation, receiver, value, buildExpr, freshTmp, authority);
+		final authorities:Map<String, OcamlRuntimeUseAuthority> = [];
+		authorities.set(operation.id, authority);
+		return reconcileAnonymousMaterialization(materialization, authorities, position);
 	}
 
 	/**
@@ -2592,21 +2681,20 @@ class OcamlBuilder {
 		final plannedReflectCompareCall = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForCall(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
-				OcamlAnonymousStructureSyntax.buildLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), buildExpr,
-					freshTmp);
+				buildAnonymousLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), e.pos);
 			case _ if (anonymousLiteralCandidate):
 				anonymousStructureInvariant("an admitted object literal reached syntax without its validated structure and initialization plan", e.pos);
 			case TField(receiver, FAnon(_))
 				if (plannedAnonymousOperation != null && plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.ReadField):
-				OcamlAnonymousStructureSyntax.buildRead(plannedAnonymousOperation, receiver, buildExpr, freshTmp);
+				buildAnonymousRead(plannedAnonymousOperation, receiver, e.pos);
 			case TBinop(OpAssign, {expr: TField(receiver, FAnon(_))}, value)
 				if (plannedAnonymousOperation != null
 					&& plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.WriteField):
-				OcamlAnonymousStructureSyntax.buildWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
+				buildAnonymousWrite(plannedAnonymousOperation, receiver, value, e.pos);
 			case TBinop(OpAssignOp(OpAdd), {expr: TField(receiver, FAnon(_))}, value)
 				if (plannedAnonymousOperation != null
 					&& plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.CompoundWriteField):
-				OcamlAnonymousStructureSyntax.buildCompoundWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
+				buildAnonymousCompoundWrite(plannedAnonymousOperation, receiver, value, e.pos);
 			case _ if (plannedAnonymousOperation != null):
 				anonymousStructureInvariant('anonymous operation "${plannedAnonymousOperation.id}" no longer matches its typed expression', e.pos);
 			case TField(receiver, FAnon(_)) if (plannedStructuralField != null):

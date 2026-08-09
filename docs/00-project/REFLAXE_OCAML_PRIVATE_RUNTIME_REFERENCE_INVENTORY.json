@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.37",
+  "reviewBead": "haxe_ocaml-0uwin.38",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.37",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.38",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,15 +15,14 @@
     }
   ],
   "counts": {
-    "total": 411,
+    "total": 408,
     "byDomain": {
-      "expression": 381,
+      "expression": 378,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
     },
     "byMigrationFamily": {
-      "anonymous-structure-syntax": 3,
       "builder-anon": 19,
       "builder-array": 49,
       "builder-boolean-carriers": 30,
@@ -49,38 +48,8 @@
       "string-representation-materializer": 1
     }
   },
-  "inventoryRevision": "b30255b46656208b7e3723c1f3d98896b2a7d7995e13c4b960fee3e319d1fa03",
+  "inventoryRevision": "f45094909bc962c0b10660ed9b81be96d6f38a0612454bd22791195d26bf8cdd",
   "entries": [
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 1,
-      "migrationFamily": "anonymous-structure-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.box_bool",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "anonymous-structure-syntax"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.unbox_bool_or_obj",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "anonymous-structure-syntax"
-    },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",

@@ -17,19 +17,20 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 
 /**
 	Checks the complete decision boundary for ordinary anonymous objects.
 
 	A successful fixture proves that one direct literal and its unchanged local
-		alias receive deterministic create, initialization, read, plain-write,
-		`Int +=`, carrier, and runtime-support decisions before OCaml syntax is
-		built. Parameters,
-	reassigned locals, iterators, key/value pairs, `sys.FileStat`, and
-	method-bearing shapes remain outside that boundary, so a matching field list
-	alone cannot select the generic `HxAnon` representation. A literal created
-	inside a `switch` case also proves that Haxe's internal pattern marker does
-	not hide source expressions that still need target plans.
+	alias receive deterministic create, initialization, read, plain-write,
+	`Int +=`, carrier, and runtime-support decisions before OCaml syntax is
+	built. Parameters, reassigned locals, iterators, key/value pairs,
+	`sys.FileStat`, and method-bearing shapes remain outside that boundary, so a
+	matching field list alone cannot select the generic `HxAnon` representation.
+	A literal created inside a `switch` case also proves that Haxe's internal
+	pattern marker does not hide source expressions that still need target plans.
 **/
 class AnonymousStructurePlanFixture {
 	static inline final PROGRAM_REVISION = "program:anonymous-structure-fixture";
@@ -74,6 +75,10 @@ class AnonymousStructurePlanFixture {
 			&& compoundWrites[0].fieldOperator == OcamlAnonymousStructureFieldOperator.IntAdd
 			&& compoundWrites[0].runtimeReadOperation == "get",
 			"Bool should use the distinct runtime box while Int keeps its exact direct carrier");
+		var runtimeUseCount = 0;
+		for (operation in operations)
+			runtimeUseCount += operation.runtimeUseOccurrences.length;
+		assertTrue(runtimeUseCount == 11, 'the admitted operations should name all eleven private runtime identifiers they insert, received $runtimeUseCount');
 
 		first.requirePlanBinding(binding);
 		first.requireRepresentations(registry);
@@ -87,19 +92,22 @@ class AnonymousStructurePlanFixture {
 		for (operation in operations)
 			OcamlAnonymousStructureRuntimeRequirementRecorder.record(ledger, operation);
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == operations.length + 1,
-			"each anonymous operation should explain HxAnon, while Int += should additionally explain HxInt arithmetic");
+		assertTrue(requirements.length == operations.length + 3,
+			"each anonymous operation should explain HxAnon, two Bool stores should explain HxRuntime, and Int += should explain HxInt arithmetic");
 		for (requirement in requirements) {
 			final anonymousReason = requirement.semanticCapability == OcamlAnonymousStructureContract.RUNTIME_CAPABILITY
 				&& requirement.rootModules.join(",") == OcamlAnonymousStructureContract.RUNTIME_MODULE;
 			final intAddReason = requirement.semanticCapability == OcamlAnonymousStructureContract.INT32_ADD_CAPABILITY
 				&& requirement.rootModules.join(",") == OcamlAnonymousStructureContract.INT32_ADD_MODULE;
-			assertTrue(anonymousReason || intAddReason,
-				"each anonymous operation should select HxAnon, and its admitted Int += should also select checked HxInt arithmetic");
+			final boolCarrierReason = requirement.semanticCapability == OcamlAnonymousStructureContract.BOOL_CARRIER_CAPABILITY
+				&& requirement.rootModules.join(",") == "HxRuntime";
+			assertTrue(anonymousReason || intAddReason || boolCarrierReason,
+				"each anonymous operation should select HxAnon, while Bool conversion and Int += select their exact direct runtime roots");
 		}
 
 		requireWriteSyntaxOrder(admittedBody, first, registry);
 		requireCompoundWriteSyntaxOrder(admittedBody, first, registry);
+		requireBoolReadRuntimeUses(registry);
 		requireUnowned("parameterOnly", 0, 0, registry);
 		requireUnowned("reassigned", 1, 4, registry);
 		requireUnowned("keyValuePair", 0, 0, registry);
@@ -160,8 +168,51 @@ class AnonymousStructurePlanFixture {
 		missingArithmeticRuntime.runtimeRequirementIds.pop();
 		expectFailure("missing compound arithmetic runtime", "wrong-runtime", () -> new OcamlAnonymousStructurePlan(structures, [missingArithmeticRuntime]));
 
+		final missingRuntimeUse = clone(compoundWrites[0]);
+		missingRuntimeUse.runtimeUseOccurrences.pop();
+		expectFailure("missing compound runtime use", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [missingRuntimeUse]));
+		final wrongRuntimeSymbol = clone(writes[0]);
+		Reflect.setField(wrongRuntimeSymbol.runtimeUseOccurrences[0], "exactSymbol", "HxAnon.get");
+		expectFailure("wrong write runtime symbol", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [wrongRuntimeSymbol]));
+		final reorderedRuntimeUses = clone(compoundWrites[0]);
+		final firstRuntimeUse = reorderedRuntimeUses.runtimeUseOccurrences[0];
+		reorderedRuntimeUses.runtimeUseOccurrences[0] = reorderedRuntimeUses.runtimeUseOccurrences[1];
+		reorderedRuntimeUses.runtimeUseOccurrences[1] = firstRuntimeUse;
+		expectFailure("reordered compound runtime uses", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [reorderedRuntimeUses]));
+		final duplicateRuntimeUse = clone(writes[0]);
+		duplicateRuntimeUse.runtimeUseOccurrences.push(clone(duplicateRuntimeUse.runtimeUseOccurrences[0]));
+		expectFailure("duplicate write runtime use", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [duplicateRuntimeUse]));
+		final staleRuntimeUse = clone(reads[0]);
+		Reflect.setField(staleRuntimeUse.runtimeUseOccurrences[0], "planRevision", "sha256:" + StringTools.lpad("", "0", 64));
+		expectFailure("stale read runtime use", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [staleRuntimeUse]));
+		final wrongProfileAuthority = runtimeAuthorityFor(writes[0], "unsupported-profile");
+		expectFailure("wrong runtime profile", "not eligible",
+			() -> wrongProfileAuthority.expressionIdentifier(writes[0].runtimeUseOccurrences[0].id, writes[0].runtimeUseOccurrences[0].planRevision,
+				writes[0].runtimeUseOccurrences[0].exactSymbol));
+		final plainRuntimeAuthority = runtimeAuthorityFor(reads[0], "portable");
+		expectFailure("plain private runtime call", "plain private runtime reference",
+			() -> plainRuntimeAuthority.reconcileExpression(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
+				OcamlExpr.EIdent("value"),
+				OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CString("count"))
+			])));
+
 		trace("REFLAXE_OCAML_ANONYMOUS_STRUCTURE_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	/** Proves the outer Bool unbox and nested field lookup occur in target-tree order. */
+	static function requireBoolReadRuntimeUses(registry:OcamlRepresentationRegistry):Void {
+		final name = "boolRead";
+		final body = requireBody(requireField(name));
+		final plan = new OcamlAnonymousStructurePlanner(functionBinding(name), registry).plan(body);
+		final reads = plan.operations().filter(operation -> operation.kind == OcamlAnonymousStructureOperationKind.ReadField);
+		assertTrue(reads.length == 1, 'the Boolean read case should own one field read, received ${reads.length}');
+		final read = reads[0];
+		assertTrue(read.runtimeRequirementIds.length == 2
+			&& read.runtimeUseOccurrences.length == 2
+			&& read.runtimeUseOccurrences[0].exactSymbol == "HxRuntime.unbox_bool_or_obj"
+			&& read.runtimeUseOccurrences[1].exactSymbol == "HxAnon.get",
+			"the Boolean read should first unbox the field result and then contain its nested HxAnon lookup in target-tree order");
 	}
 
 	/**
@@ -191,17 +242,19 @@ class AnonymousStructurePlanFixture {
 		if (operation == null)
 			throw "the count-field Int += write should have a validated operation";
 		var suffix = 0;
-		final syntax = OcamlAnonymousStructureSyntax.buildCompoundWrite(operation, pieces.receiver, pieces.value, expression -> {
+		final runtimeAuthority = runtimeAuthorityFor(operation, "portable");
+		final materialization = OcamlAnonymousStructureSyntax.buildCompoundWrite(operation, pieces.receiver, pieces.value, expression -> {
 			if (expression == pieces.receiver)
 				return OcamlExpr.EIdent("receiver-source");
 			if (expression == pieces.value)
 				return OcamlExpr.EIdent("value-source");
 			throw "anonymous compound-write syntax requested an unexpected source expression";
-		}, prefix -> prefix + "_" + suffix++);
-		final preservesOrder = switch (syntax) {
+		}, prefix -> prefix + "_" + suffix++, runtimeAuthority);
+		runtimeAuthority.reconcileExpression(materialization.runtimeOperations[0].expression);
+		final preservesOrder = switch (materialization.expression) {
 			case ELet(_, EIdent("receiver-source"),
-				ELet(_, EApp(EField(EIdent("Obj"), "obj"), [_]),
-					ELet(_, EIdent("value-source"), ELet(_, EApp(EField(EIdent("HxInt"), "add"), _), ESeq(_), false), false), false),
+				ELet(_, EApp(EField(EIdent("Obj"), "obj"), [_]), ELet(_, EIdent("value-source"), ELet(_, EApp(ERuntimeIdent(_), _), ESeq(_), false), false),
+					false),
 				false):
 				true;
 			case _:
@@ -237,14 +290,16 @@ class AnonymousStructurePlanFixture {
 		if (operation == null)
 			throw "the enabled-field write should have a validated operation";
 		var suffix = 0;
-		final syntax = OcamlAnonymousStructureSyntax.buildWrite(operation, pieces.receiver, pieces.value, expression -> {
+		final runtimeAuthority = runtimeAuthorityFor(operation, "portable");
+		final materialization = OcamlAnonymousStructureSyntax.buildWrite(operation, pieces.receiver, pieces.value, expression -> {
 			if (expression == pieces.receiver)
 				return OcamlExpr.EIdent("receiver-source");
 			if (expression == pieces.value)
 				return OcamlExpr.EIdent("value-source");
 			throw "anonymous write syntax requested an unexpected source expression";
-		}, prefix -> prefix + "_" + suffix++);
-		final preservesOrder = switch (syntax) {
+		}, prefix -> prefix + "_" + suffix++, runtimeAuthority);
+		runtimeAuthority.reconcileExpression(materialization.runtimeOperations[0].expression);
+		final preservesOrder = switch (materialization.expression) {
 			case ELet(_, EIdent("receiver-source"), ELet(_, EIdent("value-source"), ESeq(_), false), false):
 				true;
 			case _:
@@ -361,6 +416,18 @@ class AnonymousStructurePlanFixture {
 			bodyRevision: BODY_REVISION + ":" + name,
 			pipelineRevision: PIPELINE_REVISION
 		};
+	}
+
+	/** Builds the same request-local runtime checker used by production syntax. */
+	static function runtimeAuthorityFor(operation:OcamlAnonymousStructureOperationDecision, activeProfile:String):OcamlRuntimeUseAuthority {
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: operation.functionId,
+			programRevision: operation.programRevision,
+			bodyRevision: operation.bodyRevision,
+			pipelineRevision: operation.pipelineRevision
+		};
+		return new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(binding), activeProfile,
+			OcamlAnonymousStructureRuntimeRequirementRecorder.requirements(operation), operation.runtimeUseOccurrences);
 	}
 
 	static function assertTrue(condition:Bool, message:String):Void {
