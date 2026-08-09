@@ -19,21 +19,26 @@ const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 if (report.schemaVersion !== 68) {
-	throw new Error(`Expected lowering schema 67, received ${report.schemaVersion}`)
+	throw new Error(`Expected lowering schema 68, received ${report.schemaVersion}`)
 }
-if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v1') {
+if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v2') {
 	throw new Error(`Unexpected Reflect.compare plan model: ${report.reflectCompareModel}`)
 }
-if (report.reflectCompareCount !== 10 || report.reflectCompare.length !== 10) {
-	throw new Error(`Expected ten typed Reflect.compare decisions, received ${report.reflectCompareCount}`)
+if (report.reflectCompareCount !== 16 || report.reflectCompare.length !== 16) {
+	throw new Error(`Expected sixteen typed Reflect.compare decisions, received ${report.reflectCompareCount}`)
 }
 const domains = report.reflectCompare.map(decision => decision.domain).sort()
-if (JSON.stringify(domains) !== JSON.stringify(['float', 'float', 'float', 'int', 'int', 'string', 'string', 'string', 'string', 'string'])) {
+if (JSON.stringify(domains) !== JSON.stringify([
+	'float', 'float', 'float',
+	'int', 'int',
+	'nullable-string', 'nullable-string', 'nullable-string', 'nullable-string', 'nullable-string', 'nullable-string',
+	'string', 'string', 'string', 'string', 'string'
+])) {
 	throw new Error(`Unexpected Reflect.compare domains: ${JSON.stringify(domains)}`)
 }
 for (const decision of report.reflectCompare) {
-	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v1:${decision.domain}`
-		|| !['ocaml-function-plans-v82', 'ocaml-standalone-expression-plans-v3'].includes(decision.pipelineRevision)) {
+	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
+		|| !['ocaml-function-plans-v83', 'ocaml-standalone-expression-plans-v4'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 }
@@ -62,9 +67,9 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 45
 	|| !report.summary?.valid
-	|| report.summary.reflectCompareCount !== 10
-	|| report.lowering?.reflectCompare?.length !== 10) {
-	throw new Error('Public inspection did not preserve the ten typed Reflect.compare decisions')
+	|| report.summary.reflectCompareCount !== 16
+	|| report.lowering?.reflectCompare?.length !== 16) {
+	throw new Error('Public inspection did not preserve the sixteen typed Reflect.compare decisions')
 }
 NODE
 
@@ -75,7 +80,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-report.reflectCompare[0].proofId = 'ocaml-reflect-compare-intrinsic-v1:invalid'
+report.reflectCompare[0].proofId = 'ocaml-reflect-compare-intrinsic-v2:invalid'
 report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.reflectCompare)).digest('hex')}`
 fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 NODE

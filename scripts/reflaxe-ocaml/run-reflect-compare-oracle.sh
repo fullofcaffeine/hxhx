@@ -33,4 +33,4 @@ diff -u "$EXPECTED_INTERP_JS" "$OUT_DIR/interp.stdout"
 diff -u "$EXPECTED_INTERP_JS" "$OUT_DIR/js.stdout"
 diff -u "$EXPECTED_NEKO" "$OUT_DIR/neko.stdout"
 
-echo "REFLAXE_OCAML_REFLECT_COMPARE_ORACLE:PASS routes=3 stable_cases=15 target_variant_cases=4"
+echo "REFLAXE_OCAML_REFLECT_COMPARE_ORACLE:PASS routes=3 stable_cases=19 target_variant_cases=8"

@@ -85,11 +85,11 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v1";
-	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v82";
+	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v2";
+	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v83";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v15";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -225,7 +225,7 @@ class ReflaxeOcamlInspection {
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
-			lines.push('[PASS] Reflect.compare: ${report.lowering.reflectCompare.length} exact Int, Float, or String comparison${report.lowering.reflectCompare.length == 1 ? "" : "s"} selected before OCaml syntax.');
+			lines.push('[PASS] Reflect.compare: ${report.lowering.reflectCompare.length} typed Int, Float, String, or nullable-String comparison${report.lowering.reflectCompare.length == 1 ? "" : "s"} selected before OCaml syntax.');
 			lines.push('[PASS] Function results: ${report.lowering.functionResultBoundaries.length} emitted function completion boundar${report.lowering.functionResultBoundaries.length == 1 ? "y" : "ies"} validated independently from call receivers and arguments.');
 			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
@@ -1487,7 +1487,7 @@ class ReflaxeOcamlInspection {
 				throw 'Reflect.compare report contains duplicate identity "${decision.id}".';
 			if (decision.sourceFile.length == 0 || decision.sourceMin < 0 || decision.sourceMax < decision.sourceMin)
 				throw 'Reflect.compare decision "${decision.id}" has an invalid source span.';
-			if (decision.domain != "int" && decision.domain != "float" && decision.domain != "string")
+			if (decision.domain != "int" && decision.domain != "float" && decision.domain != "string" && decision.domain != "nullable-string")
 				throw 'Reflect.compare decision "${decision.id}" has unsupported domain "${decision.domain}".';
 			if (decision.proofId != REFLECT_COMPARE_PROOF_ID_PREFIX + decision.domain || decision.proofClaim.length == 0)
 				throw 'Reflect.compare decision "${decision.id}" has an incomplete domain proof.';

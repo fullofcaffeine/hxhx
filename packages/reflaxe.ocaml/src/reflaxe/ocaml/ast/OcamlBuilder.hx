@@ -930,9 +930,10 @@ class OcamlBuilder {
 		Builds the comparator selected for one resolved standard function value.
 
 		For example, contextual typing turns `names.sort(Reflect.compare)` into a
-		String comparator before this builder runs. The generated closure therefore
-		uses only String operations; it never receives `Obj.t` values and never asks
-		OCaml to compare arbitrary runtime objects.
+		String comparator before this builder runs. An explicit `Null<String>`
+		context selects a separate null-aware String comparator. Both generated
+		closures use only the target's String carrier; neither receives `Obj.t`
+		values nor asks OCaml to compare arbitrary runtime objects.
 	**/
 	function buildPlannedReflectCompareFunction(decision:OcamlReflectCompareDecision, position:Position):OcamlExpr {
 		try {
@@ -949,7 +950,7 @@ class OcamlBuilder {
 		final parameterType = switch (decision.domain) {
 			case Int: OcamlTypeExpr.TIdent("int");
 			case Float: OcamlTypeExpr.TIdent("float");
-			case String: OcamlTypeExpr.TIdent("string");
+			case String, NullableString: OcamlTypeExpr.TIdent("string");
 		}
 		final body = switch (decision.domain) {
 			case Int:
@@ -964,6 +965,11 @@ class OcamlBuilder {
 				final bothNull = OcamlExpr.EBinop(OcamlBinop.And, leftNull, rightNull);
 				final oneNull = OcamlExpr.EBinop(OcamlBinop.Or, leftNull, rightNull);
 				OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch"), ordered));
+			case NullableString:
+				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
+				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
+				OcamlExpr.EIf(leftNull, OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EConst(OcamlConst.CInt(-1))),
+					OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(1)), ordered));
 		}
 		return OcamlExpr.EFun([
 			OcamlPat.PAnnot(OcamlPat.PVar(leftName), parameterType),

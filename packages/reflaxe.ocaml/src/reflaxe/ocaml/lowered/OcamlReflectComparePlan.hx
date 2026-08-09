@@ -16,6 +16,7 @@ enum abstract OcamlReflectCompareDomain(String) from String to String {
 	final Int = "int";
 	final Float = "float";
 	final String = "string";
+	final NullableString = "nullable-string";
 }
 
 /**
@@ -48,8 +49,8 @@ typedef OcamlReflectCompareDecision = {
 	requests.
 **/
 class OcamlReflectComparePlan {
-	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v1";
-	public static inline final PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v1:";
+	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v2";
+	public static inline final PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
 
 	final byExpression:ObjectMap<TypedExpr, OcamlReflectCompareDecision>;
 	final bySource:StringMap<Array<OcamlReflectCompareDecision>>;
@@ -285,7 +286,7 @@ class OcamlReflectComparePlanner {
 	}
 
 	static function unsupported(typeDescription:String):Dynamic {
-		throw 'reflaxe.ocaml [ocaml-reflect-compare:unsupported-domain]: resolved Reflect.compare has unsupported contextual type $typeDescription; the first native contract accepts only exact (Int, Int), (Float, Float), or (String, String) operands';
+		throw 'reflaxe.ocaml [ocaml-reflect-compare:unsupported-domain]: resolved Reflect.compare has unsupported contextual type $typeDescription; the typed native contract accepts exact (Int, Int), (Float, Float), (String, String), or explicitly nullable String operands';
 	}
 
 	static function domainFor(type:Type):Null<OcamlReflectCompareDomain> {
@@ -299,6 +300,10 @@ class OcamlReflectComparePlanner {
 					OcamlReflectCompareDomain.Float;
 				} else if (OcamlRepresentationRegistry.isExactString(left) && OcamlRepresentationRegistry.isExactString(right)) {
 					OcamlReflectCompareDomain.String;
+				} else if (isStringCarrier(left)
+					&& isStringCarrier(right)
+					&& (OcamlRepresentationRegistry.isExactNullString(left) || OcamlRepresentationRegistry.isExactNullString(right))) {
+					OcamlReflectCompareDomain.NullableString;
 				} else {
 					null;
 				}
@@ -319,13 +324,30 @@ class OcamlReflectComparePlanner {
 			return null;
 		final left = arguments[0].t;
 		final right = arguments[1].t;
+		final contextualDomain = domainFor(callee.t);
+		if (contextualDomain == OcamlReflectCompareDomain.NullableString && isStringCarrier(left) && isStringCarrier(right))
+			return OcamlReflectCompareDomain.NullableString;
 		if (OcamlRepresentationRegistry.isExactInt(left) && OcamlRepresentationRegistry.isExactInt(right))
 			return OcamlReflectCompareDomain.Int;
 		if (OcamlRepresentationRegistry.isExactFloat(left) && OcamlRepresentationRegistry.isExactFloat(right))
 			return OcamlReflectCompareDomain.Float;
 		if (OcamlRepresentationRegistry.isExactString(left) && OcamlRepresentationRegistry.isExactString(right))
 			return OcamlReflectCompareDomain.String;
+		if (isStringCarrier(left)
+			&& isStringCarrier(right)
+			&& (OcamlRepresentationRegistry.isExactNullString(left) || OcamlRepresentationRegistry.isExactNullString(right)))
+			return OcamlReflectCompareDomain.NullableString;
 		return null;
+	}
+
+	/**
+		Returns whether a comparison operand uses the target's nullable String
+		carrier. Direct `String` and explicit core `Null<String>` have the same
+		runtime values, but the latter remains visible here so the plan can select
+		the nullable ordering contract without admitting typedefs or `Dynamic`.
+	**/
+	static function isStringCarrier(type:Type):Bool {
+		return OcamlRepresentationRegistry.isExactString(type) || OcamlRepresentationRegistry.isExactNullString(type);
 	}
 
 	static function proofClaim(domain:OcamlReflectCompareDomain):String {
@@ -336,6 +358,8 @@ class OcamlReflectComparePlanner {
 				"The resolved standard comparator has exact Float operands. It rejects NaN deterministically, treats signed zero as equal, and orders all remaining finite or infinite values numerically.";
 			case String:
 				"The resolved standard comparator has exact String operands. It treats two Haxe null sentinels as equal, rejects a one-null pair, and otherwise compares non-null strings lexicographically.";
+			case NullableString:
+				"The resolved standard comparator has an explicit Null<String> context. It orders the Haxe null sentinel before non-null text and otherwise compares strings lexicographically, giving the OCaml target a deterministic total order for Haxe's target-defined one-null case.";
 		}
 	}
 }

@@ -8,6 +8,7 @@
 **/
 class Main {
 	static final compareStrings:(String, String) -> Int = Reflect.compare;
+	static final compareNullableStrings:(Null<String>, Null<String>) -> Int = Reflect.compare;
 
 	static function sign(value:Int):Int
 		return value < 0 ? -1 : (value > 0 ? 1 : 0);
@@ -32,6 +33,16 @@ class Main {
 		}
 	}
 
+	/**
+		Matches the compiler-scale inventory check that exposed the missing domain.
+
+		The right operand is concrete String, while the guarded previous value is
+		explicitly `Null<String>`. The target must keep that contextual type rather
+		than widening the comparison to Dynamic.
+	**/
+	static function guardedOutOfOrder(previous:Null<String>, current:String):Int
+		return previous != null && Reflect.compare(previous, current) >= 0 ? 1 : 0;
+
 	static function main():Void {
 		final strings = ["c", "a", "b"];
 		strings.sort(Reflect.compare);
@@ -54,6 +65,18 @@ class Main {
 		Sys.println("direct.float=" + sign(Reflect.compare(Math.POSITIVE_INFINITY, 0.0)));
 		Sys.println("direct.string=" + sign(Reflect.compare("same", "same")));
 		Sys.println("static.string=" + sign(compareStrings("a", "b")));
+		final absent:Null<String> = null;
+		final present:Null<String> = "value";
+		Sys.println("nullable.direct.absent.absent=" + sign(Reflect.compare(absent, absent)));
+		Sys.println("nullable.direct.absent.present=" + sign(Reflect.compare(absent, "value")));
+		Sys.println("nullable.direct.present.absent=" + sign(Reflect.compare(present, absent)));
+		Sys.println("nullable.direct.present.present=" + sign(Reflect.compare(present, "value")));
+		Sys.println("nullable.callback.absent.absent=" + sign(compareNullableStrings(absent, absent)));
+		Sys.println("nullable.callback.absent.present=" + sign(compareNullableStrings(absent, present)));
+		Sys.println("nullable.callback.present.absent=" + sign(compareNullableStrings(present, absent)));
+		Sys.println("nullable.callback.present.present=" + sign(compareNullableStrings(present, present)));
+		Sys.println("nullable.guarded.absent=" + guardedOutOfOrder(absent, "value"));
+		Sys.println("nullable.guarded.reverse=" + guardedOutOfOrder("z", "a"));
 		final nullString:String = cast null;
 		Sys.println("string.null.null=" + sign(Reflect.compare(nullString, nullString)));
 		Sys.println("float.nan=" + captureNaNFailure());

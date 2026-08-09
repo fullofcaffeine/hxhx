@@ -25,6 +25,27 @@ class Main {
 		return names.join(",");
 	}
 
+	/**
+	 * Records explicit nullable-String behavior without treating it as a
+	 * language-wide ordering guarantee. Haxe 4.3.7 guarantees only the
+	 * both-null result; each target may choose its own one-null result.
+	 */
+	static function nullableStringResults():Array<String> {
+		final absent:Null<String> = null;
+		final present:Null<String> = "value";
+		final compareNullable:(Null<String>, Null<String>) -> Int = Reflect.compare;
+		return [
+			"nullable.direct.absent.absent=" + sign(Reflect.compare(absent, absent)),
+			"nullable.direct.absent.present=" + sign(Reflect.compare(absent, "value")),
+			"nullable.direct.present.absent=" + sign(Reflect.compare(present, absent)),
+			"nullable.direct.present.present=" + sign(Reflect.compare(present, "value")),
+			"nullable.callback.absent.absent=" + sign(compareNullable(absent, absent)),
+			"nullable.callback.absent.present=" + sign(compareNullable(absent, present)),
+			"nullable.callback.present.absent=" + sign(compareNullable(present, absent)),
+			"nullable.callback.present.present=" + sign(compareNullable(present, present))
+		];
+	}
+
 	static function main():Void {
 		final dynamicInts:Array<Dynamic> = [1, 2];
 		final dynamicStrings:Array<Dynamic> = ["a", "b"];
@@ -47,5 +68,7 @@ class Main {
 		printLine("dynamic.int.lt=" + sign(Reflect.compare(dynamicInts[0], dynamicInts[1])));
 		printLine("dynamic.string.lt=" + sign(Reflect.compare(dynamicStrings[0], dynamicStrings[1])));
 		printLine("callback.strings=" + callbackResult());
+		for (result in nullableStringResults())
+			printLine(result);
 	}
 }

@@ -1,0 +1,23 @@
+Command:
+  PORTABLE_FIXTURE_ALLOWLIST=reflect_compare_typed PORTABLE_JOBS=1 \
+    bash scripts/test-portable.sh
+
+Expected pre-fix failure:
+  reflaxe.ocaml [ocaml-reflect-compare:unsupported-domain]: resolved
+  Reflect.compare has unsupported contextual type
+  (a : Null<String>, b : Null<String>) -> Int called with
+  (Null<String>, String)
+
+Why this is the intended red state:
+  The focused fixture now includes the same guarded previous-path comparison
+  that stopped the compiler-scale hxhx workload. The final Haxe type keeps the
+  nullable previous value and concrete current String visible. The existing
+  target accepts only exact Int, Float, or String pairs, so it rejects the
+  scenario before generating OCaml.
+
+Independent expected behavior:
+  The pinned Haxe 4.3.7 oracle runs direct and stored-function cases on the
+  interpreter, JavaScript, and Neko. It confirms both-null equality and records
+  that one-null ordering differs by target, as the public API permits. The
+  target fix selects an explicit null-first total order for its new nullable
+  String domain; it does not present that choice as a cross-target Haxe rule.
