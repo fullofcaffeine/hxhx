@@ -19,9 +19,9 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
-import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
 import reflaxe.ocaml.ast.OcamlArrayLiteralSyntax;
 import reflaxe.ocaml.ast.OcamlBytesAccessSyntax;
@@ -32,6 +32,8 @@ import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax;
 import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax.OcamlIMapInterfaceSyntaxServices;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanPart;
+import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanResult;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlStructuralFieldSyntax;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
@@ -124,8 +126,6 @@ import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 	must not define a newly supported language family.
 **/
 class OcamlBuilder {
-	static final injectionPrinter = new OcamlASTPrinter();
-
 	public final ctx:CompilationContext;
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
 	public final emitSourceMap:Bool;
@@ -1726,36 +1726,37 @@ class OcamlBuilder {
 		}
 	}
 
-	static function renderInjectionExpr(expr:OcamlExpr):String {
-		return injectionPrinter.printExpr(expr);
+	/** Converts a checked placeholder plan without rendering any typed expression early. */
+	static function buildRawInjection(plan:Array<OcamlRawInterpolationPlanPart>, args:Array<OcamlExpr>):OcamlExpr {
+		final parts:Array<OcamlRawPart> = [];
+		for (part in plan) {
+			switch (part) {
+				case AuthoredText(value):
+					parts.push(RawText(value));
+				case TypedArgument(index):
+					parts.push(RawExpression(args[index]));
+			}
+		}
+		return OcamlExpr.ERawInterpolated(parts);
 	}
 
-	static function expandRawInjection(template:String, args:Array<OcamlExpr>):String {
-		if (template == null)
-			return "";
-		var lastMatchPosition:Null<{pos:Int, len:Int}> = null;
-		final rendered = new StringBuf();
-		~/{(\d+)}/g.map(template, function(ereg) {
-			final lastPos = lastMatchPosition == null ? 0 : lastMatchPosition.pos + lastMatchPosition.len;
-			lastMatchPosition = ereg.matchedPos();
-			if (lastMatchPosition.pos != lastPos) {
-				rendered.add(template.substring(lastPos, lastMatchPosition.pos));
-			}
+	static function rawInjectionFailure(message:String, pos:Position):Void {
+		#if macro
+		Context.error("reflaxe.ocaml: " + message + ".", pos);
+		#else
+		throw "reflaxe.ocaml: " + message + ".";
+		#end
+	}
 
-			final expressionIndex = Std.parseInt(ereg.matched(1));
-			if (expressionIndex != null && expressionIndex >= 0 && expressionIndex < args.length) {
-				rendered.add(renderInjectionExpr(args[expressionIndex]));
-			} else {
-				rendered.add(ereg.matched(0));
-			}
-			return "";
-		});
-
-		if (lastMatchPosition == null) {
-			return template;
-		}
-		rendered.add(template.substring(lastMatchPosition.pos + lastMatchPosition.len));
-		return rendered.toString();
+	/** Rejects user-authored code that tries to impersonate a compiler-owned runtime module. */
+	static function validateRawOcamlText(text:String, pos:Position):Void {
+		final privateNames = OcamlCodeIdentifierScanner.scan(text).filter(OcamlCodeIdentifierScanner.isPrivateRuntimeIdentifier);
+		if (privateNames.length == 0)
+			return;
+		final message = "raw __ocaml__ text cannot name compiler-private runtime identifier "
+			+ privateNames[0]
+			+ "; use a typed Haxe expression or supported extern instead";
+		rawInjectionFailure(message, pos);
 	}
 
 	#if macro
@@ -2818,14 +2819,20 @@ class OcamlBuilder {
 								final a = unwrap(args[0]);
 								switch (a.expr) {
 									case TConst(TString(s)):
+										validateRawOcamlText(s, a.pos);
 										if (args.length == 1) {
 											OcamlExpr.ERaw(s);
 										} else {
-											final compiledArgs = new Array<OcamlExpr>();
-											for (i in 1...args.length) {
-												compiledArgs.push(buildExpr(args[i]));
+											switch (OcamlRawInterpolationPlan.create(s, args.length - 1)) {
+												case Invalid(message):
+													rawInjectionFailure(message, a.pos);
+													OcamlExpr.EConst(OcamlConst.CUnit);
+												case Planned(plan):
+													final compiledArgs = new Array<OcamlExpr>();
+													for (i in 1...args.length)
+														compiledArgs.push(buildExpr(args[i]));
+													buildRawInjection(plan, compiledArgs);
 											}
-											OcamlExpr.ERaw(expandRawInjection(s, compiledArgs));
 										}
 									case _:
 										#if macro
@@ -7668,6 +7675,19 @@ class OcamlBuilder {
 				exprMentionsIdent(inner, target);
 			case EConst(_), ERaw(_):
 				false;
+			case ERawInterpolated(parts):
+				var found = false;
+				for (part in parts) {
+					switch (part) {
+						case RawText(_):
+						case RawExpression(child):
+							if (exprMentionsIdent(child, target)) {
+								found = true;
+								break;
+							}
+					}
+				}
+				found;
 			case EIdent(name):
 				name == target;
 			case ERuntimeIdent(reference):

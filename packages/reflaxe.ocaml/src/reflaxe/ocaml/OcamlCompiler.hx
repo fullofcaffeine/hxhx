@@ -37,6 +37,7 @@ import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
@@ -1955,6 +1956,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 						false;
 					case ERaw(_):
 						false;
+					case ERawInterpolated(parts):
+						var found = false;
+						for (part in parts) {
+							switch (part) {
+								case RawText(_):
+								case RawExpression(child):
+									if (exprMentionsIdent(child, target)) {
+										found = true;
+										break;
+									}
+							}
+						}
+						found;
 					case ERaise(exn):
 						exprMentionsIdent(exn, target);
 					case ELet(_, value, body, _): exprMentionsIdent(value, target) || exprMentionsIdent(body, target);
@@ -4819,6 +4833,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 					visit(inner);
 				case EConst(_):
 				case ERaw(_):
+				case ERawInterpolated(parts):
+					for (part in parts)
+						switch (part) {
+							case RawText(_):
+							case RawExpression(child):
+								visit(child);
+						}
 				case EAnnot(expr, _):
 					visit(expr);
 				case ERaise(exn):

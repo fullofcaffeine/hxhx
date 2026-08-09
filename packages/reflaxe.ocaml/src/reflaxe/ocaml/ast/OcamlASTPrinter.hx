@@ -1,6 +1,7 @@
 package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 
 using StringTools;
@@ -95,7 +96,7 @@ class OcamlASTPrinter {
 			switch (current) {
 				case EPos(_, inner):
 					current = inner;
-				case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
+				case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_), ERawInterpolated(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
 					return PREC_ATOM;
 				case EField(_, _):
 					return PREC_FIELD;
@@ -149,6 +150,17 @@ class OcamlASTPrinter {
 				work.push(EmitText(printConst(constant)));
 			case EIdent(name), ERaw(name):
 				work.push(EmitText(name));
+			case ERawInterpolated(parts):
+				var index = parts.length;
+				while (index > 0) {
+					index--;
+					switch (parts[index]) {
+						case RawText(value):
+							work.push(EmitText(value));
+						case RawExpression(child):
+							work.push(EmitExpression(child, PREC_TOP, indentation));
+					}
+				}
 			case ERuntimeIdent(reference):
 				work.push(EmitText(reference.exactSymbol));
 			case EPos(position, inner):

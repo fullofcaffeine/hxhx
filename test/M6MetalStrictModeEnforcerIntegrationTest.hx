@@ -47,7 +47,8 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 		};
 	}
 
-	static function compileFixture(fixtureName:String, defines:Array<String>):CompileInvocationResult {
+	/** Runs target syntax construction only when a case must test the backend boundary itself. */
+	static function compileFixture(fixtureName:String, defines:Array<String>, generateOutput:Bool = false):CompileInvocationResult {
 		final outDir = ".tmp/m6_metal_enforcer_out_" + fixtureName + "_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(outDir);
 		final classPath = "test/fixtures/m6_metal_strict_enforcer/" + fixtureName + "/src";
@@ -56,7 +57,6 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 			classPath,
 			"-main",
 			"Main",
-			"--no-output",
 			"-lib",
 			"reflaxe.ocaml",
 			"-D",
@@ -68,6 +68,8 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 			"-D",
 			"no_traces"
 		];
+		if (!generateOutput)
+			args.push("--no-output");
 		for (defineValue in defines) {
 			args.push("-D");
 			args.push(defineValue);
@@ -82,6 +84,10 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 	static function main():Void {
 		final portableInjection = compileFixture("injection", ["ocaml_profile=portable"]);
 		assertTrue(portableInjection.exitCode == 0, "portable profile should allow __ocaml__ injection");
+
+		final portablePrivateRuntimeInjection = compileFixture("private_runtime_injection", ["ocaml_profile=portable"], true);
+		assertTrue(portablePrivateRuntimeInjection.exitCode != 0, "portable raw OCaml should reject compiler-private runtime names");
+		assertContains(combinedOutput(portablePrivateRuntimeInjection), "HxRuntime", "private runtime injection failure should name the rejected identifier");
 
 		final portableNativeSurfaceWarn = compileFixture("portable_native_surface", ["ocaml_profile=portable"]);
 		assertTrue(portableNativeSurfaceWarn.exitCode == 0, "portable native-surface warn policy should compile");

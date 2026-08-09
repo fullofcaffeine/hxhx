@@ -65,8 +65,9 @@ class RuntimeUsageCollector {
 		OcamlASTTraversal.walkExprPre(expr, current -> switch (current) {
 			case EIdent(name): markQualifiedName(name, markModule);
 			case ERuntimeIdent(reference): markQualifiedName(reference.exactSymbol, markModule);
-			case EConst(_), ERaw(_), EPos(_, _), ERaise(_), ELet(_, _, _, _), EFun(_, _), EApp(_, _), EAppArgs(_, _), EBinop(_, _, _), EUnop(_, _),
-				EIf(_, _, _), EMatch(_, _), ETry(_, _), ESeq(_), EWhile(_, _), EList(_), ERecord(_), EField(_, _), EAssign(_, _, _), ETuple(_), EAnnot(_, _):
+			case EConst(_), ERaw(_), ERawInterpolated(_), EPos(_, _), ERaise(_), ELet(_, _, _, _), EFun(_, _), EApp(_, _), EAppArgs(_, _), EBinop(_, _, _),
+				EUnop(_, _), EIf(_, _, _), EMatch(_, _), ETry(_, _), ESeq(_), EWhile(_, _), EList(_), ERecord(_), EField(_, _), EAssign(_, _, _), ETuple(_),
+				EAnnot(_, _):
 		}, current -> switch (current) {
 			case PConstructor(name, _): markQualifiedName(name, markModule);
 			case PAny, PVar(_), PConst(_), PTuple(_), POr(_), PRecord(_), PAnnot(_, _):

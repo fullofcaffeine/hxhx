@@ -2,6 +2,7 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.ast.OcamlCodeIdentifierScanner;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
@@ -201,13 +202,14 @@ class OcamlCheckedGeneratedText {
 			}
 		}
 
-		final forgedMarkers = scanCodeIdentifiers(literalsOnly.toString()).filter(identifier -> identifier.startsWith(MARKER_PREFIX)
-			|| identifier.startsWith(LEGACY_MARKER_PREFIX)
-			|| identifier.startsWith(PROGRAM_IDENTIFIER_MARKER_PREFIX));
+		final forgedMarkers = OcamlCodeIdentifierScanner.scan(literalsOnly.toString())
+			.filter(identifier -> identifier.startsWith(MARKER_PREFIX)
+				|| identifier.startsWith(LEGACY_MARKER_PREFIX)
+				|| identifier.startsWith(PROGRAM_IDENTIFIER_MARKER_PREFIX));
 		if (forgedMarkers.length > 0)
 			throw 'Checked generated text for $ownerId contains reserved generated-text placeholder ${forgedMarkers[0]} in an unchecked literal.';
-		final codeIdentifiers = scanCodeIdentifiers(sanitized.toString());
-		final privateNames = codeIdentifiers.filter(isPrivateRuntimeName);
+		final codeIdentifiers = OcamlCodeIdentifierScanner.scan(sanitized.toString());
+		final privateNames = codeIdentifiers.filter(OcamlCodeIdentifierScanner.isPrivateRuntimeIdentifier);
 		if (privateNames.length > 0)
 			throw 'Checked generated text for $ownerId contains private runtime name ${privateNames[0]} in an unchecked literal.';
 		final observedMarkers = codeIdentifiers.filter(identifier -> markerIds.contains(identifier));
@@ -267,75 +269,6 @@ class OcamlCheckedGeneratedText {
 			|| normalized.indexOf("../") >= 0)
 			throw 'Checked generated text $label must be a logical identity, not a machine-local path.';
 		return normalized;
-	}
-
-	static function isIdentifierStart(code:Int):Bool {
-		return (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code) || code == "_".code;
-	}
-
-	static function isIdentifierPart(code:Int):Bool {
-		return isIdentifierStart(code) || (code >= "0".code && code <= "9".code) || code == "'".code;
-	}
-
-	static function isPrivateRuntimeName(identifier:String):Bool {
-		if (identifier.length < 3 || !identifier.startsWith("Hx"))
-			return false;
-		final third = identifier.fastCodeAt(2);
-		return third >= "A".code && third <= "Z".code;
-	}
-
-	/** Returns identifiers that occur in OCaml code, excluding strings and nested comments. */
-	static function scanCodeIdentifiers(text:String):Array<String> {
-		final out:Array<String> = [];
-		var index = 0;
-		var inString = false;
-		var commentDepth = 0;
-		while (index < text.length) {
-			final code = text.fastCodeAt(index);
-			final next = index + 1 < text.length ? text.fastCodeAt(index + 1) : -1;
-			if (commentDepth > 0) {
-				if (code == "(".code && next == "*".code) {
-					commentDepth++;
-					index += 2;
-				} else if (code == "*".code && next == ")".code) {
-					commentDepth--;
-					index += 2;
-				} else {
-					index++;
-				}
-				continue;
-			}
-			if (inString) {
-				if (code == "\\".code) {
-					index += 2;
-				} else {
-					if (code == '"'.code)
-						inString = false;
-					index++;
-				}
-				continue;
-			}
-			if (code == "(".code && next == "*".code) {
-				commentDepth = 1;
-				index += 2;
-				continue;
-			}
-			if (code == '"'.code) {
-				inString = true;
-				index++;
-				continue;
-			}
-			if (isIdentifierStart(code)) {
-				final start = index;
-				index++;
-				while (index < text.length && isIdentifierPart(text.fastCodeAt(index)))
-					index++;
-				out.push(text.substring(start, index));
-				continue;
-			}
-			index++;
-		}
-		return out;
 	}
 }
 #end

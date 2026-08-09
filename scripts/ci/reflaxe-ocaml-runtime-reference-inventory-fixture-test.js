@@ -32,6 +32,8 @@ class FixtureSyntax {
     final getToken = checked.legacyRuntimeToken("legacy:get", "HxArray.get");
     checked.addRuntimeUse("checked:set", revision, "HxArray.set");
     final unqualifiedRaw = ERaw(otherCode);
+    final unqualifiedInterpolated = ERawInterpolated(parts);
+    final qualifiedInterpolated = OcamlExpr.ERawInterpolated(parts);
     return OcamlExpr.ERaw(userCode);
   }
 }
@@ -48,8 +50,16 @@ assert.deepStrictEqual(records.map(record => [record.domain, record.construction
 	['generated-text', 'addLegacyRuntimeUse', 'HxType.register_class_ctor'],
 	['generated-text', 'legacyRuntimeToken', 'HxArray.get'],
 	['raw-boundary', 'ERaw', null],
+	['raw-boundary', 'ERawInterpolated', null],
+	['raw-boundary', 'OcamlExpr.ERawInterpolated', null],
 	['raw-boundary', 'OcamlExpr.ERaw', null],
 ])
+
+const traversalRebuild = discoverFromSourceMap(new Map([[
+	'packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlASTTraversal.hx',
+	'class OcamlASTTraversal { static function rebuild(parts) return ERawInterpolated(parts); }',
+]]))
+assert.deepStrictEqual(traversalRebuild, [], 'structural traversal rebuild must not be counted as a new raw boundary')
 
 const first = buildInventory(records, 'haxe_ocaml-fixture')
 const second = buildInventory(discoverFromSourceMap(sourceMap(baselineSource)), 'haxe_ocaml-fixture')

@@ -17,8 +17,10 @@ import haxe.macro.Expr;
 	What
 	- `OcamlInjection.__ocaml__(code, args...)` expands to
 	  `untyped __ocaml__(code, ...args)`.
-	- Callers can use `{0}`, `{1}`, ... placeholders; backend lowering is responsible for rendering
-	  the referenced expressions into OCaml source.
+	- Callers can use `{0}`, `{1}`, ... placeholders. The backend keeps each referenced expression
+	  as typed target syntax until the final printer runs. This matters when an argument uses a
+	  compiler-owned runtime helper: normal runtime authorization still sees that use instead of
+	  losing it inside an early-rendered string.
 **/
 class OcamlInjection {
 	public static macro function __ocaml__(code:String, args:Array<Expr>):Expr {

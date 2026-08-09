@@ -4,6 +4,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlDebugPos;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -103,6 +104,11 @@ class OcamlASTTraversalTest {
 			OcamlExpr.EIdent("ident_leaf"),
 			runtimeIdentifierExpression(),
 			OcamlExpr.ERaw("raw_leaf"),
+			OcamlExpr.ERawInterpolated([
+				OcamlRawPart.RawText("raw_interpolation("),
+				OcamlRawPart.RawExpression(OcamlExpr.EIdent("interpolated_child")),
+				OcamlRawPart.RawText(")")
+			]),
 			OcamlExpr.EPos(debugPosition, OcamlExpr.EIdent("position_child")),
 			OcamlExpr.ERaise(OcamlExpr.EIdent("raise_child")),
 			OcamlExpr.ELet("binding", OcamlExpr.EIdent("let_value"), OcamlExpr.EIdent("let_body"), false),
@@ -187,6 +193,7 @@ class OcamlASTTraversalTest {
 			"if_condition",
 			"if_else",
 			"if_then",
+			"interpolated_child",
 			"labelled_argument",
 			"labelled_function",
 			"let_body",
@@ -251,7 +258,11 @@ class OcamlASTTraversalTest {
 						OcamlTypeExpr.TApp("HxType.t", [OcamlTypeExpr.TIdent("HxNested.t")]))
 				}
 			]),
-			OcamlExpr.ERaw("HxRaw.hidden")
+			OcamlExpr.ERaw("HxRaw.hidden"),
+			OcamlExpr.ERawInterpolated([
+				OcamlRawPart.RawText("HxRawText.hidden "),
+				OcamlRawPart.RawExpression(runtimeIdentifierExpression())
+			])
 		]);
 		final items:Array<OcamlModuleItem> = [
 			OcamlModuleItem.ILet([{name: "value", expr: expression}], false),
@@ -264,6 +275,7 @@ class OcamlASTTraversalTest {
 		final actual = [for (moduleName in modules.keys()) moduleName];
 		actual.sort(compareStrings);
 		final expected = [
+			"HxArray",
 			"HxDecl",
 			"HxFn",
 			"HxGuard",
@@ -277,6 +289,7 @@ class OcamlASTTraversalTest {
 		expected.sort(compareStrings);
 		assertArrayEquals(expected, actual, "runtime usage through shared traversal");
 		assertTrue(!modules.exists("HxRaw"), "raw OCaml text must remain opaque to structural runtime collection");
+		assertTrue(!modules.exists("HxRawText"), "authored interpolation text must remain opaque to structural runtime collection");
 	}
 
 	static function verifyDeepWalkIsStackSafe():Void {

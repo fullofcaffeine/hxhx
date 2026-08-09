@@ -1,8 +1,12 @@
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlRawInterpolationPlan;
+import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanPart;
+import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanResult;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
@@ -10,6 +14,62 @@ class OcamlASTPrinterTest {
 	static function assertEq(expected:String, actual:String, label:String):Void {
 		if (expected != actual) {
 			throw label + "\n--- expected ---\n" + expected + "\n--- actual ---\n" + actual;
+		}
+	}
+
+	/** Proves that a raw template cannot discard or duplicate one typed expression. */
+	static function verifyRawInterpolationPlan():Void {
+		switch (OcamlRawInterpolationPlan.create("before {0} middle {1} after", 2)) {
+			case Planned([
+				AuthoredText("before "),
+				TypedArgument(0),
+				AuthoredText(" middle "),
+				TypedArgument(1),
+				AuthoredText(" after")
+			]):
+			case other:
+				throw "valid raw interpolation plan changed: " + Std.string(other);
+		}
+
+		for (testCase in [
+			{
+				label: "duplicate",
+				template: "{0} + {0}",
+				arguments: 1,
+				expected: "exactly once; found 2"
+			},
+			{
+				label: "discarded",
+				template: "constant",
+				arguments: 1,
+				expected: "exactly once; found 0"
+			},
+			{
+				label: "out of range",
+				template: "{1}",
+				arguments: 1,
+				expected: "no matching typed argument"
+			},
+			{
+				label: "joined before",
+				template: "H{0}",
+				arguments: 1,
+				expected: "separated from authored identifier text"
+			},
+			{
+				label: "joined after",
+				template: "{0}xRuntime",
+				arguments: 1,
+				expected: "separated from authored identifier text"
+			}
+		]) {
+			switch (OcamlRawInterpolationPlan.create(testCase.template, testCase.arguments)) {
+				case Invalid(message) if (message.indexOf(testCase.expected) >= 0):
+				case Invalid(message):
+					throw testCase.label + " raw interpolation error changed: " + message;
+				case Planned(_):
+					throw testCase.label + " raw interpolation unexpectedly succeeded";
+			}
 		}
 	}
 
@@ -34,6 +94,7 @@ class OcamlASTPrinterTest {
 		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
 		verifyDeepExpressionPrintingIsStackSafe(p);
+		verifyRawInterpolationPlan();
 
 		// const + escaping
 		assertEq("\"a\\n\\t\\\\\\\"b\"", p.printExpr(OcamlExpr.EConst(OcamlConst.CString("a\n\t\\\"b"))), "string escape");
@@ -42,6 +103,11 @@ class OcamlASTPrinterTest {
 		assertEq("let x = 1 in x", p.printExpr(OcamlExpr.ELet("x", OcamlExpr.EConst(OcamlConst.CInt(1)), OcamlExpr.EIdent("x"), false)), "let-in");
 		assertEq("HxArray.set", p.printExpr(OcamlASTTraversalTest.runtimeIdentifierExpression()),
 			"checked runtime identifier prints the exact planned symbol without printer decisions");
+		assertEq("(ignore visible_child)", p.printExpr(OcamlExpr.ERawInterpolated([
+			OcamlRawPart.RawText("(ignore "),
+			OcamlRawPart.RawExpression(OcamlExpr.EIdent("visible_child")),
+			OcamlRawPart.RawText(")")
+		])), "raw interpolation prints authored text around a structured expression child");
 
 		// application + arg parens for low-precedence expressions
 		assertEq("f (let x = 1 in x)", p.printExpr(OcamlExpr.EApp(OcamlExpr.EIdent("f"), [
