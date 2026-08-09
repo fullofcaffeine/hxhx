@@ -38,6 +38,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
+	public static inline final TYPE_REGISTRY_OPTIONAL_STRING_NULL = "compiler-type-registry-optional-string-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
 	public static inline final TYPE_REGISTRY_DYNAMIC_STRING = "compiler-type-registry-dynamic-string";
 	public static inline final HXHX_BACKEND_PLUGIN_HOST = "hxhx-backend-plugin-host";
@@ -564,6 +565,18 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-reflection-optional-arguments-v1",
 					module: "HxRuntime",
 					explanation: "Missing optional reflection arguments use the target runtime representation of Haxe null."
+				};
+			case TYPE_REGISTRY_OPTIONAL_STRING_NULL:
+				{
+					id: "compiler:generated:HxTypeRegistry:optional-string-null",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:emit-reflection-optional-string-null",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-reflection-optional-string-arguments-v1",
+					module: "HxString",
+					explanation: "Missing optional exact String reflection arguments use the checked HxString null sentinel."
 				};
 			case TYPE_REGISTRY_RUNTIME_UNBOX:
 				{

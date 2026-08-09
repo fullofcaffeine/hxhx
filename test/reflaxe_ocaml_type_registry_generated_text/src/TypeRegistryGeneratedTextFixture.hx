@@ -6,6 +6,8 @@ import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryCl
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEmptyConstructor;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEnumLayout;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryProgramIdentifier;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryRuntimeUse;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 using StringTools;
 
@@ -36,7 +38,7 @@ class TypeRegistryGeneratedTextFixture {
 			throw '$label should have failed.';
 	}
 
-	static function emitter():OcamlTypeRegistryBaseEmitter {
+	static function emitter(includeConstructorUses:Bool = true):OcamlTypeRegistryBaseEmitter {
 		final layouts:Array<OcamlTypeRegistryEnumLayout> = [
 			{
 				enumName: "demo.Choice",
@@ -76,8 +78,21 @@ class TypeRegistryGeneratedTextFixture {
 			{id: "program:empty-constructor-module:0", exactIdentifier: "HxDemoFoo"},
 			{id: "program:empty-constructor-function:0", exactIdentifier: "foo___empty"}
 		];
+		final constructorRuntimeUses:Array<OcamlTypeRegistryRuntimeUse> = [
+			{id: "constructor:register", exactSymbol: "HxType.register_class_ctor", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY},
+			{id: "constructor:array-type", exactSymbol: "HxArray.t", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
+			{id: "constructor:array-length", exactSymbol: "HxArray.length", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
+			{id: "constructor:bool", exactSymbol: "HxRuntime.unbox_bool_or_obj", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX},
+			{id: "constructor:array-get", exactSymbol: "HxArray.get", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
+			{id: "constructor:null", exactSymbol: "HxRuntime.hx_null", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL},
+			{
+				id: "constructor:string-null",
+				exactSymbol: "HxString.hx_null_string",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_STRING_NULL
+			}
+		];
 		return new OcamlTypeRegistryBaseEmitter("portable", "program:fixture:v1", true, ["demo.Foo"], ["demo.Choice"], layouts, emptyConstructors, fields,
-			supers, tags, programIdentifiers);
+			supers, tags, programIdentifiers, includeConstructorUses ? constructorRuntimeUses : []);
 	}
 
 	static function validAndExplicitlyPartial():Void {
@@ -85,14 +100,24 @@ class TypeRegistryGeneratedTextFixture {
 		generated.emitHeader();
 		generated.emitClassAndEnumIdentities();
 		generated.emitEnumLayouts();
-		generated.addLegacyLiteral("  ");
-		generated.addLegacyRuntimeUse("legacy:class-constructor", "HxType.register_class_ctor");
-		generated.addLegacyLiteral(" \"demo.Foo\" legacy_ctor;\n");
+		final register = generated.runtimeToken("constructor:register", "HxType.register_class_ctor");
+		final arrayType = generated.runtimeToken("constructor:array-type", "HxArray.t");
+		final arrayLength = generated.runtimeToken("constructor:array-length", "HxArray.length");
+		final arrayGet = generated.runtimeToken("constructor:array-get", "HxArray.get");
+		final boolUnbox = generated.runtimeToken("constructor:bool", "HxRuntime.unbox_bool_or_obj");
+		final dynamicNull = generated.runtimeToken("constructor:null", "HxRuntime.hx_null");
+		final stringNull = generated.runtimeToken("constructor:string-null", "HxString.hx_null_string");
+		generated.addTemplate("  " + register + " \"demo.Foo\" (fun (args : Obj.t " + arrayType + ") ->\n");
+		generated.addTemplate("    let len = " + arrayLength + " args in\n");
+		generated.addTemplate("    let enabled = " + boolUnbox + " ((" + arrayGet + " args 0)) in\n");
+		generated.addTemplate("    let payload = " + dynamicNull + " in\n");
+		generated.addTemplate("    let label = " + stringNull + " in\n");
+		generated.addLiteral("    ignore (enabled, payload, label, len));\n");
 		generated.emitEmptyConstructors();
 		generated.emitClassFields();
-		generated.addLegacyLiteral("  ");
+		generated.addLiteral("  ");
 		generated.addLegacyRuntimeUse("legacy:dynamic-stringifier", "HxDynamic.register_class_stringifier");
-		generated.addLegacyLiteral(" \"demo.Foo\" legacy_stringifier;\n");
+		generated.addLiteral(" \"demo.Foo\" legacy_stringifier;\n");
 		generated.emitClassSupers();
 		generated.emitClassTags();
 		generated.emitFooter();
@@ -108,7 +133,12 @@ class TypeRegistryGeneratedTextFixture {
 			"  ignore (HxType.class_ \"demo.Foo\");",
 			"  ignore (HxType.enum_ \"demo.Choice\");",
 			"  HxType.register_enum_ctor_layout \"demo.Choice\" \"Some\" 1 (HxType.EnumBlock 0);",
-			"  HxType.register_class_ctor \"demo.Foo\" legacy_ctor;",
+			"  HxType.register_class_ctor \"demo.Foo\" (fun (args : Obj.t HxArray.t) ->",
+			"    let len = HxArray.length args in",
+			"    let enabled = HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) in",
+			"    let payload = HxRuntime.hx_null in",
+			"    let label = HxString.hx_null_string in",
+			"    ignore (enabled, payload, label, len));",
 			"  HxType.register_class_empty_ctor \"demo.Foo\" (fun () -> Obj.repr (HxDemoFoo.foo___empty ()));",
 			"  HxType.register_class_instance_fields \"demo.Foo\" [ \"name\" ];",
 			"  HxType.register_class_static_fields \"demo.Foo\" [ \"create\" ];",
@@ -119,9 +149,8 @@ class TypeRegistryGeneratedTextFixture {
 			""
 		].join("\n");
 		assertTrue(record.content == expected, "type-registry generated bytes changed");
-		assertTrue(record.orderedUseIds.length == 10, "the fixture should authorize exactly ten base runtime uses");
-		assertTrue(record.legacyUseIds.join(",") == "legacy:class-constructor,legacy:dynamic-stringifier",
-			"unfinished runtime calls should remain explicit and ordered");
+		assertTrue(record.orderedUseIds.length == 17, "the fixture should authorize ten base and seven constructor runtime uses");
+		assertTrue(record.legacyUseIds.join(",") == "legacy:dynamic-stringifier", "unfinished runtime calls should remain explicit and ordered");
 		for (legacyId in record.legacyUseIds)
 			assertTrue(!record.orderedUseIds.contains(legacyId), "legacy runtime use was incorrectly counted as checked authority");
 		assertTrue(record.programIdentifierIds.join(",") == "program:empty-constructor-module:0,program:empty-constructor-function:0",
@@ -133,11 +162,11 @@ class TypeRegistryGeneratedTextFixture {
 	}
 
 	static function legacyTextCannotHidePrivateCalls():Void {
-		final directLiteral = emitter();
+		final directLiteral = emitter(false);
 		directLiteral.emitHeader();
 		directLiteral.emitClassAndEnumIdentities();
 		directLiteral.emitEnumLayouts();
-		directLiteral.addLegacyLiteral("  HxType.register_class_ctor \"demo.Foo\" legacy_ctor;\n");
+		directLiteral.addLiteral("  HxType.register_class_ctor \"demo.Foo\" legacy_ctor;\n");
 		directLiteral.emitEmptyConstructors();
 		directLiteral.emitClassFields();
 		directLiteral.emitClassSupers();
@@ -145,13 +174,13 @@ class TypeRegistryGeneratedTextFixture {
 		directLiteral.emitFooter();
 		expectFailure("unmarked legacy call", "private runtime name HxType", () -> directLiteral.seal());
 
-		final hiddenInString = emitter();
+		final hiddenInString = emitter(false);
 		hiddenInString.emitHeader();
 		hiddenInString.emitClassAndEnumIdentities();
 		hiddenInString.emitEnumLayouts();
-		hiddenInString.addLegacyLiteral("  let hidden = \"");
+		hiddenInString.addLiteral("  let hidden = \"");
 		hiddenInString.addLegacyRuntimeUse("legacy:hidden", "HxType.register_class_ctor");
-		hiddenInString.addLegacyLiteral("\" in ignore hidden;\n");
+		hiddenInString.addLiteral("\" in ignore hidden;\n");
 		hiddenInString.emitEmptyConstructors();
 		hiddenInString.emitClassFields();
 		hiddenInString.emitClassSupers();
@@ -165,8 +194,15 @@ class TypeRegistryGeneratedTextFixture {
 		invalidProgramIdentifier.emitEnumLayouts();
 		expectFailure("invalid program identifier", "has no planned program identifier program:invalid", () -> {
 			final invalidToken = invalidProgramIdentifier.programIdentifierToken("program:invalid", "Bad.Name");
-			invalidProgramIdentifier.addLegacyTemplate("  " + invalidToken + "\n");
+			invalidProgramIdentifier.addTemplate("  " + invalidToken + "\n");
 		});
+
+		final wrongRuntimeSymbol = emitter();
+		wrongRuntimeSymbol.emitHeader();
+		wrongRuntimeSymbol.emitClassAndEnumIdentities();
+		wrongRuntimeSymbol.emitEnumLayouts();
+		expectFailure("wrong constructor runtime symbol", "expected HxArray.get",
+			() -> wrongRuntimeSymbol.runtimeToken("constructor:array-get", "HxArray.set"));
 	}
 
 	static function main():Void {

@@ -181,6 +181,7 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_STRING_NULL);
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "sys.io.Stdio::sys.io._Stdio.NativeHxStdio.read_byte", source,
 			"HxStdio.read_byte");
@@ -203,7 +204,7 @@ class RuntimeRequirementLedgerFixture {
 		final standardIMapTarget = standardIMapToStringTarget();
 		ledger.recordStandardIMapCall("call:imap-to-string", source, ["metal", "portable"], standardIMapTarget);
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 25,
+		assertTrue(requirements.length == 26,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "call:imap-to-string:runtime:haxe-array", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
@@ -218,6 +219,9 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(stringRequirement.sourceKind == OcamlRuntimeRequirementSourceKind.RepresentationDecision
 			&& stringRequirement.cause == OcamlRuntimeRequirementCause.RepresentationDecision,
 			"the exact String sentinel should identify its sealed representation as the cause");
+		final reflectedStringNullRequirement = requirementById(requirements, "compiler:generated:HxTypeRegistry:optional-string-null");
+		assertTrue(reflectedStringNullRequirement.rootModules.join(",") == "HxString",
+			"the generated registry's optional String sentinel should have its own exact HxString requirement");
 		assertTrue(stringRequirement.sourceId == stringRepresentation.id + "@" + stringRepresentation.revision,
 			"the String requirement should bind the exact representation revision");
 		assertTrue(stringRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType

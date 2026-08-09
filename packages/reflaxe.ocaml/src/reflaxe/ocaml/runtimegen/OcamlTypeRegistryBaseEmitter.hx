@@ -2,12 +2,14 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.runtimegen.OcamlCheckedGeneratedText.OcamlCheckedGeneratedTextRecord;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 using StringTools;
 
 private enum OcamlTypeRegistryTemplateToken {
+	RuntimeUse(id:String, exactSymbol:String);
 	LegacyRuntimeUse(id:String, exactSymbol:String);
 	ProgramIdentifier(id:String, exactIdentifier:String);
 }
@@ -53,6 +55,13 @@ typedef OcamlTypeRegistryProgramIdentifier = {
 	final exactIdentifier:String;
 }
 
+/** One planned constructor-time runtime call and the capability that explains it. */
+typedef OcamlTypeRegistryRuntimeUse = {
+	final id:String;
+	final exactSymbol:String;
+	final capability:String;
+}
+
 /**
 	Emits the checked base metadata in `HxTypeRegistry.ml`.
 
@@ -61,10 +70,10 @@ typedef OcamlTypeRegistryProgramIdentifier = {
 	Each private `HxType` identifier is created from a planned runtime-use record,
 	so a plain string cannot silently add, remove, or reorder these calls.
 
-	Reflection constructor adapters and Dynamic stringifiers are still owned by
-	follow-up migrations. They may be inserted only through the explicitly named
-	legacy methods between the checked sections. Such calls remain inventory debt
-	and do not appear in the record's checked `orderedUseIds`.
+	Reflection constructor adapters use the same checked occurrence model in their
+	final emitted order. Dynamic stringifiers are still owned by a follow-up
+	migration and may use only the explicitly named legacy methods. Those calls
+	remain inventory debt and do not appear in the checked `orderedUseIds`.
 **/
 class OcamlTypeRegistryBaseEmitter {
 	public static inline final OWNER_ID = "compiler-generated:HxTypeRegistry";
@@ -83,6 +92,7 @@ class OcamlTypeRegistryBaseEmitter {
 	final classTags:Array<OcamlTypeRegistryClassTags>;
 	final programIdentifiersById:Map<String, String> = [];
 	final consumedProgramIdentifiers:Map<String, Bool> = [];
+	final runtimeUsesById:Map<String, OcamlTypeRegistryRuntimeUse> = [];
 	final templateTokens:Map<String, OcamlTypeRegistryTemplateToken> = [];
 	var nextTemplateToken:Int = 0;
 	var phase:Int = 0;
@@ -90,7 +100,7 @@ class OcamlTypeRegistryBaseEmitter {
 	public function new(activeProfile:String, programRevision:String, useLineDirectives:Bool, classNames:Array<String>, enumNames:Array<String>,
 			enumLayouts:Array<OcamlTypeRegistryEnumLayout>, emptyConstructors:Array<OcamlTypeRegistryEmptyConstructor>,
 			classFields:Array<OcamlTypeRegistryClassFields>, classSupers:Array<OcamlTypeRegistryClassSuper>, classTags:Array<OcamlTypeRegistryClassTags>,
-			programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier>) {
+			programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier>, runtimeUses:Array<OcamlTypeRegistryRuntimeUse>) {
 		this.useLineDirectives = useLineDirectives;
 		this.classNames = copyStrings(classNames);
 		this.enumNames = copyStrings(enumNames);
@@ -125,6 +135,16 @@ class OcamlTypeRegistryBaseEmitter {
 				throw 'HxTypeRegistry repeats planned program identifier ${entry.id}.';
 			programIdentifiersById.set(entry.id, entry.exactIdentifier);
 		}
+		final plannedRuntimeUses:Array<OcamlTypeRegistryRuntimeUse> = runtimeUses == null ? [] : runtimeUses.map(use -> ({
+			id: use.id,
+			exactSymbol: use.exactSymbol,
+			capability: use.capability
+		} : OcamlTypeRegistryRuntimeUse));
+		for (use in plannedRuntimeUses) {
+			if (runtimeUsesById.exists(use.id))
+				throw 'HxTypeRegistry repeats planned constructor runtime use ${use.id}.';
+			runtimeUsesById.set(use.id, use);
+		}
 
 		final revisionInputs = [programRevision, activeProfile, Std.string(useLineDirectives)];
 		for (name in this.classNames)
@@ -149,11 +169,24 @@ class OcamlTypeRegistryBaseEmitter {
 			revisionInputs.push("tags:" + entry.className + ":" + entry.tags.join(","));
 		for (entry in plannedProgramIdentifiers)
 			revisionInputs.push("program-identifier:" + entry.id + ":" + entry.exactIdentifier);
+		for (use in plannedRuntimeUses)
+			revisionInputs.push("constructor-runtime-use:" + [use.id, use.exactSymbol, use.capability].join(":"));
 
 		planRevision = OcamlCheckedGeneratedText.revision(OWNER_ID, revisionInputs);
-		final requirement = OcamlRuntimeRequirementLedger.requirementForCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
-		checked = new OcamlCheckedGeneratedText(OWNER_ID, planRevision, activeProfile, [requirement],
-			plannedOccurrences(requirement.id, requirement.profileEligibility));
+		final requirements:Array<OcamlRuntimeRequirement> = [];
+		final requirementsByCapability:Map<String, OcamlRuntimeRequirement> = [];
+		function requireCapability(capability:String):Void {
+			if (requirementsByCapability.exists(capability))
+				return;
+			final requirement = OcamlRuntimeRequirementLedger.requirementForCompilerInfrastructure(capability);
+			requirementsByCapability.set(capability, requirement);
+			requirements.push(requirement);
+		}
+		requireCapability(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
+		for (use in plannedRuntimeUses)
+			requireCapability(use.capability);
+		checked = new OcamlCheckedGeneratedText(OWNER_ID, planRevision, activeProfile, requirements,
+			plannedOccurrences(requirementsByCapability, plannedRuntimeUses));
 	}
 
 	/** Starts the exact generated module and its `init` function. */
@@ -199,40 +232,49 @@ class OcamlTypeRegistryBaseEmitter {
 	}
 
 	/**
-		Adds ordinary text around a deferred private-runtime call.
+		Adds ordinary OCaml syntax between checked placeholders.
 
 		The complete-file scanner still rejects any private `Hx...` name placed in
-		this text. The private name itself must use `addLegacyRuntimeUse`.
+		this text. A migrated name must use `runtimeToken`; only the explicitly
+		deferred Dynamic stringifier may use `addLegacyRuntimeUse`.
 	**/
-	public function addLegacyLiteral(value:String):Void {
-		requireLegacyPhase();
+	public function addLiteral(value:String):Void {
+		requireTemplatePhase();
 		checked.addLiteral(value);
 	}
 
 	/** Adds an inventoried private-runtime placeholder without claiming authority. */
 	public function addLegacyRuntimeUse(id:String, exactSymbol:String):Void {
-		requireLegacyPhase();
+		requireTemplatePhase();
 		checked.addLegacyRuntimeUse(id, exactSymbol);
 	}
 
 	/**
-		Creates a temporary token for a private runtime name inside a larger legacy
-		expression assembled by the caller.
+		Creates a temporary token for the still-unmigrated Dynamic stringifier call.
 
-		The caller must pass the resulting text to `addLegacyTemplate`. This keeps
-		every private name explicit at the Haxe call site while allowing unfinished
-		constructor code to preserve its current byte layout.
+		The caller must pass the resulting text to `addTemplate`. This keeps
+		the remaining private name explicit at the Haxe call site without treating it
+		as checked authority. Delete this method with the stringifier migration.
 	**/
 	public function legacyRuntimeToken(id:String, exactSymbol:String):String {
-		requireLegacyPhase();
+		requireTemplatePhase();
 		final token = "ReflaxeTypeRegistryTemplateToken" + Std.string(nextTemplateToken++);
 		templateTokens.set(token, LegacyRuntimeUse(id, exactSymbol));
 		return token;
 	}
 
+	/** Creates one token from a constructor runtime use planned before emission began. */
+	public function runtimeToken(id:String, exactSymbol:String):String {
+		requireTemplatePhase();
+		validateRuntimeUse(id, exactSymbol);
+		final token = "ReflaxeTypeRegistryTemplateToken" + Std.string(nextTemplateToken++);
+		templateTokens.set(token, RuntimeUse(id, exactSymbol));
+		return token;
+	}
+
 	/** Creates a token only when its stable role and exact program identifier were planned at construction. */
 	public function programIdentifierToken(id:String, exactIdentifier:String):String {
-		requireLegacyPhase();
+		requireTemplatePhase();
 		validateProgramIdentifier(id, exactIdentifier);
 		final token = "ReflaxeTypeRegistryTemplateToken" + Std.string(nextTemplateToken++);
 		templateTokens.set(token, ProgramIdentifier(id, exactIdentifier));
@@ -240,10 +282,10 @@ class OcamlTypeRegistryBaseEmitter {
 	}
 
 	/** Replaces temporary runtime and program-identifier tokens in exact text order. */
-	public function addLegacyTemplate(value:String):Void {
-		requireLegacyPhase();
+	public function addTemplate(value:String):Void {
+		requireTemplatePhase();
 		if (value == null)
-			throw "HxTypeRegistry cannot add a null legacy template.";
+			throw "HxTypeRegistry cannot add a null generated template.";
 		var rest = value;
 		while (true) {
 			var nextToken:Null<String> = null;
@@ -264,6 +306,8 @@ class OcamlTypeRegistryBaseEmitter {
 				throw 'HxTypeRegistry template token $nextToken appears more than once in one template.';
 			checked.addLiteral(rest.substring(0, nextIndex));
 			switch (planned) {
+				case RuntimeUse(id, exactSymbol):
+					checked.addRuntimeUse(id, planRevision, exactSymbol);
 				case LegacyRuntimeUse(id, exactSymbol):
 					checked.addLegacyRuntimeUse(id, exactSymbol);
 				case ProgramIdentifier(id, exactIdentifier):
@@ -350,14 +394,18 @@ class OcamlTypeRegistryBaseEmitter {
 		return checked.seal();
 	}
 
-	function plannedOccurrences(requirementId:String, profileEligibility:Array<String>):Array<OcamlRuntimeUseOccurrence> {
+	function plannedOccurrences(requirementsByCapability:Map<String, OcamlRuntimeRequirement>,
+			constructorRuntimeUses:Array<OcamlTypeRegistryRuntimeUse>):Array<OcamlRuntimeUseOccurrence> {
 		final occurrences:Array<OcamlRuntimeUseOccurrence> = [];
-		function add(role:String, index:Int, exactSymbol:String):Void {
+		function add(id:String, role:String, exactSymbol:String, capability:String):Void {
+			final requirement = requirementsByCapability.get(capability);
+			if (requirement == null)
+				throw 'HxTypeRegistry runtime use $id has no requirement for capability $capability.';
 			occurrences.push({
-				id: runtimeUseId(role, index),
+				id: id,
 				planRevision: planRevision,
 				ownerId: OWNER_ID,
-				requirementId: requirementId,
+				requirementId: requirement.id,
 				domain: OcamlRuntimeUseDomain.GeneratedText,
 				exactSymbol: exactSymbol,
 				role: role,
@@ -367,30 +415,35 @@ class OcamlTypeRegistryBaseEmitter {
 					min: 0,
 					max: 0
 				},
-				profileEligibility: profileEligibility.copy(),
+				profileEligibility: requirement.profileEligibility.copy(),
 				cardinality: 1
 			});
 		}
 		for (index in 0...classNames.length)
-			add("class-identity", index, "HxType.class_");
+			add(runtimeUseId("class-identity", index), "class-identity", "HxType.class_", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		for (index in 0...enumNames.length)
-			add("enum-identity", index, "HxType.enum_");
+			add(runtimeUseId("enum-identity", index), "enum-identity", "HxType.enum_", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		for (index in 0...enumLayouts.length) {
-			add("enum-layout", index, "HxType.register_enum_ctor_layout");
-			add("enum-representation", index, enumLayouts[index].carriesPayload ? "HxType.EnumBlock" : "HxType.EnumImmediate");
+			add(runtimeUseId("enum-layout", index), "enum-layout", "HxType.register_enum_ctor_layout", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
+			add(runtimeUseId("enum-representation", index), "enum-representation",
+				enumLayouts[index].carriesPayload ? "HxType.EnumBlock" : "HxType.EnumImmediate", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		}
+		for (use in constructorRuntimeUses)
+			add(use.id, "reflection-constructor", use.exactSymbol, use.capability);
 		for (index in 0...emptyConstructors.length)
-			add("empty-constructor", index, "HxType.register_class_empty_ctor");
+			add(runtimeUseId("empty-constructor", index), "empty-constructor", "HxType.register_class_empty_ctor", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		for (index in 0...classFields.length) {
-			add("instance-fields", index, "HxType.register_class_instance_fields");
-			add("static-fields", index, "HxType.register_class_static_fields");
+			add(runtimeUseId("instance-fields", index), "instance-fields", "HxType.register_class_instance_fields",
+				OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
+			add(runtimeUseId("static-fields", index), "static-fields", "HxType.register_class_static_fields", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		}
 		for (index in 0...classSupers.length) {
-			add("class-super-register", index, "HxType.register_class_super");
-			add("class-super-value", index, "HxType.class_");
+			add(runtimeUseId("class-super-register", index), "class-super-register", "HxType.register_class_super",
+				OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
+			add(runtimeUseId("class-super-value", index), "class-super-value", "HxType.class_", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		}
 		for (index in 0...classTags.length)
-			add("class-tags", index, "HxType.register_class_tags");
+			add(runtimeUseId("class-tags", index), "class-tags", "HxType.register_class_tags", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 		return occurrences;
 	}
 
@@ -414,9 +467,17 @@ class OcamlTypeRegistryBaseEmitter {
 			throw 'HxTypeRegistry program identifier $id expected $planned, received $exactIdentifier.';
 	}
 
-	function requireLegacyPhase():Void {
+	function validateRuntimeUse(id:String, exactSymbol:String):Void {
+		final planned = runtimeUsesById.get(id);
+		if (planned == null)
+			throw 'HxTypeRegistry has no planned constructor runtime use $id.';
+		if (planned.exactSymbol != exactSymbol)
+			throw 'HxTypeRegistry constructor runtime use $id expected ${planned.exactSymbol}, received $exactSymbol.';
+	}
+
+	function requireTemplatePhase():Void {
 		if (phase != 3 && phase != 5)
-			throw 'HxTypeRegistry legacy chunks may appear only after enum layouts or class fields; current phase is $phase.';
+			throw 'HxTypeRegistry generated templates may appear only after enum layouts or class fields; current phase is $phase.';
 	}
 
 	function requireNoPendingTemplateTokens(nextSection:String):Void {
