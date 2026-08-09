@@ -1576,6 +1576,22 @@ class OcamlBuilder {
 			return buildNullBoolWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
 		if (representation != null && representation.semanticTypeId == "Dynamic")
 			return buildDynamicWrite(localId, rhs);
+		if (currentIMapInterfacePlan != null) {
+			final storageAlias = try {
+				currentIMapInterfacePlan.storageAliasFor(rhs, lhsType);
+			} catch (error:Dynamic) {
+				return callPlanInvariant(Std.string(error), rhs.pos);
+			}
+			if (storageAlias != null) {
+				// Haxe's standard Map abstract sometimes introduces an `IMap`-typed
+				// temporary even though every later use calls the raw String/Int/Object
+				// map runtime directly. The sealed alias proves that closed use pattern
+				// for this exact local, so keep its initializer in the same raw carrier.
+				// Ordinary source-level Map-to-IMap assignments are not admitted here;
+				// they continue through the dispatch-record conversion below.
+				return buildExpr(rhs);
+			}
+		}
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
@@ -2342,6 +2358,7 @@ class OcamlBuilder {
 		final bytesReadOccurrence = OcamlBytesReadPlan.admittedOccurrence(e);
 		final plannedBytesRead = currentBytesReadPlan == null
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
+		final plannedIMapStorageAliasUse = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.storageAliasUseFor(e);
 		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
 		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
@@ -2394,6 +2411,12 @@ class OcamlBuilder {
 				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes producer reached syntax without its sealed occurrence plan", e.pos);
+			case TLocal(local) if (plannedIMapStorageAliasUse != null):
+				buildRawStorageAliasLocal(local);
+			case TCast(inner, _) if (plannedIMapStorageAliasUse != null):
+				buildExpr(inner);
+			case _ if (plannedIMapStorageAliasUse != null):
+				callPlanInvariant('standard Map storage alias "${plannedIMapStorageAliasUse.id}" no longer matches its sealed local occurrence', e.pos);
 			case TCall(callee, arguments) if (plannedIMapInterfaceCall != null):
 				buildPlannedIMapInterfaceCall(plannedIMapInterfaceCall, callee, arguments, e.pos);
 			case TCall(_, _) if (iMapInterfaceCallCandidate):
@@ -5146,6 +5169,15 @@ class OcamlBuilder {
 	}
 
 	function buildLocal(v:TVar, ?position:Position):OcamlExpr {
+		if (position != null && currentIMapInterfacePlan != null) {
+			final storageAlias = try {
+				currentIMapInterfacePlan.storageAliasUseForLocal(v.id, position);
+			} catch (error:Dynamic) {
+				return callPlanInvariant(Std.string(error), position);
+			}
+			if (storageAlias != null)
+				return buildRawStorageAliasLocal(v);
+		}
 		final name = renameVar(v.name);
 		final isRef = isRefLocalId(v.id);
 		if (!isRef) {
@@ -5160,6 +5192,12 @@ class OcamlBuilder {
 				return deref;
 		}
 		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [deref]);
+	}
+
+	/** Reads one local in the raw standard-Map carrier proven by the IMap plan. */
+	function buildRawStorageAliasLocal(v:TVar):OcamlExpr {
+		final value = OcamlExpr.EIdent(renameVar(v.name));
+		return isRefLocalId(v.id) ? OcamlExpr.EUnop(OcamlUnop.Deref, value) : value;
 	}
 
 	inline function isNullableStdArrayType(t:Type):Bool {
@@ -6201,6 +6239,18 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		// A standard `Map` inline expansion can pass its hidden `IMap` local to a
+		// target-owned raw-map operation. The sealed alias proves this exact argument
+		// occurrence, so the ordinary class/interface cast must not re-box it.
+		if (currentIMapInterfacePlan != null) {
+			final storageAlias = try {
+				currentIMapInterfacePlan.storageAliasUseFor(rhs);
+			} catch (error:Dynamic) {
+				return callPlanInvariant(Std.string(error), rhs.pos);
+			}
+			if (storageAlias != null)
+				return buildExpr(rhs);
+		}
 		if (isExactIMapType(lhsType)) {
 			// Haxe may give a constructor expression its expected interface type. The
 			// typed `TNew` node still names the concrete class that will exist at
@@ -7942,13 +7992,21 @@ class OcamlBuilder {
 
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
+		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
 		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
-		if (nestedDisposition != null)
+		if (nestedDisposition != null) {
+			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
+			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
 			currentFunctionPlanBinding = nestedDisposition.binding;
+		} else {
+			// A nested body without a planning disposition must not inherit the
+			// enclosing function's occurrence-indexed IMap decisions.
+			currentIMapInterfacePlan = null;
+		}
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		final needsReturnCatch = nestedPlan == null ? containsNestedReturnInFunctionBody(tfunc.expr) : nestedPlan.controls.hasReturnTransfers();
@@ -8018,6 +8076,7 @@ class OcamlBuilder {
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
+		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);

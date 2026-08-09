@@ -9,6 +9,8 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversio
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceMethodDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceSpan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasUseDecision;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
@@ -16,25 +18,32 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringi
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceMethod;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapStorageAlias;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapStorageAliasUse;
 
 /** Validated `IMap` conversion and dispatch inventory returned by inspection. */
 typedef InspectionIMapInterfaceInventory = {
 	final revision:String;
 	final conversions:Array<InspectionIMapInterfaceConversion>;
 	final calls:Array<InspectionIMapInterfaceCall>;
+	final storageAliases:Array<InspectionIMapStorageAlias>;
 }
 
 /**
 	Validates saved `IMap` evidence without consulting generated OCaml text.
 
 	A concrete standard map and a user class can both become `IMap<K, V>`, but
-	they do not share the same storage. The lowering report therefore records the
-	exact conversion at each boundary and records later interface calls separately.
-	This reader reconstructs those plain decisions, applies the same contract used
-	before code generation, and recomputes the inventory digest. Edited, missing,
-	or stale evidence makes inspection fail instead of presenting a plausible cast.
+	they do not share the same storage. The report records each ordinary conversion,
+	each interface call, and each closed standard-library expansion that can keep
+	raw Map storage. This reader reconstructs those plain decisions, applies the
+	same contract used before code generation, and recomputes the inventory digest.
+	Edited, missing, or stale evidence makes inspection fail.
 **/
 class ReflaxeOcamlIMapInterfaceInspection {
+	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v79";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v14";
+	static inline final NESTED_FUNCTION_ID_MARKER = "|nested-function|";
+
 	/** Reads and validates every concrete-to-interface conversion and interface call. */
 	public static function inspect(value:Dynamic):InspectionIMapInterfaceInventory {
 		final model = requiredString(value, "iMapInterfaceModel");
@@ -54,17 +63,25 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			throw 'IMap interface call count is $callCount but the inventory contains ${rawCalls.length} entries.';
 		final calls = [for (entry in rawCalls) call(entry)];
 		validateOrderedCalls(calls);
+
+		final rawStorageAliases = requiredArray(value, "iMapStorageAliases");
+		final storageAliasCount = requiredInt(value, "iMapStorageAliasCount");
+		if (rawStorageAliases.length != storageAliasCount)
+			throw 'IMap storage-alias count is $storageAliasCount but the inventory contains ${rawStorageAliases.length} entries.';
+		final storageAliases = [for (entry in rawStorageAliases) storageAlias(entry)];
+		validateOrderedStorageAliases(storageAliases);
 		validateRetainedSurface(conversions, calls);
 
 		final revision = requiredSha256Revision(value, "iMapInterfaceRevision");
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify({conversions: conversions, calls: calls}));
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify({conversions: conversions, calls: calls, storageAliases: storageAliases}));
 		if (revision != expectedRevision)
 			throw 'IMap interface report revision is $revision but its validated inventory produces $expectedRevision.';
 
 		return {
 			revision: revision,
 			conversions: conversions.map(inspectionConversion),
-			calls: calls.map(inspectionCall)
+			calls: calls.map(inspectionCall),
+			storageAliases: storageAliases.map(inspectionStorageAlias)
 		};
 	}
 
@@ -72,8 +89,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		for (index in 0...conversions.length) {
 			final current = conversions[index];
 			OcamlIMapInterfaceContract.requireConversion(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v78")
-				throw 'IMap interface conversion "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
+			requireSupportedFunctionBinding(current.id, current.functionId, current.pipelineRevision, "conversion");
 			if (index > 0 && Reflect.compare(conversions[index - 1].id, current.id) >= 0)
 				throw 'The IMap interface conversion inventory is not in strict identity order at "${current.id}".';
 		}
@@ -83,11 +99,33 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		for (index in 0...calls.length) {
 			final current = calls[index];
 			OcamlIMapInterfaceContract.requireCall(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v78")
-				throw 'IMap interface call "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
+			requireSupportedFunctionBinding(current.id, current.functionId, current.pipelineRevision, "call");
 			if (index > 0 && Reflect.compare(calls[index - 1].id, current.id) >= 0)
 				throw 'The IMap interface call inventory is not in strict identity order at "${current.id}".';
 		}
+	}
+
+	static function validateOrderedStorageAliases(storageAliases:Array<OcamlIMapStorageAliasDecision>):Void {
+		for (index in 0...storageAliases.length) {
+			final current = storageAliases[index];
+			OcamlIMapInterfaceContract.requireStorageAlias(current);
+			requireSupportedFunctionBinding(current.id, current.functionId, current.pipelineRevision, "storage alias");
+			if (index > 0 && Reflect.compare(storageAliases[index - 1].id, current.id) >= 0)
+				throw 'The IMap storage-alias inventory is not in strict identity order at "${current.id}".';
+		}
+	}
+
+	/**
+		Checks that each report decision names the pipeline for its real function scope.
+
+		An ordinary method uses the root pipeline. A function literal has the nested
+		marker in its stable function ID and must use the nested pipeline. Accepting
+		either version without this match could let a copied parent plan look valid.
+	**/
+	static function requireSupportedFunctionBinding(id:String, functionId:String, pipelineRevision:String, kind:String):Void {
+		final expected = functionId.indexOf(NESTED_FUNCTION_ID_MARKER) >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : ROOT_FUNCTION_PIPELINE_REVISION;
+		if (pipelineRevision != expected)
+			throw 'IMap interface $kind "$id" belongs to pipeline "$pipelineRevision", but function "$functionId" requires "$expected".';
 	}
 
 	/**
@@ -162,6 +200,35 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		};
 	}
 
+	static function storageAlias(value:Dynamic):OcamlIMapStorageAliasDecision {
+		final source = sourceSpan(value, "storage alias");
+		return {
+			id: requiredString(value, "id"),
+			source: source,
+			sourceSemanticTypeId: requiredString(value, "sourceSemanticTypeId"),
+			preservedCarrierTypeId: requiredString(value, "preservedCarrierTypeId"),
+			targetSemanticTypeId: requiredString(value, "targetSemanticTypeId"),
+			keySemanticTypeId: requiredString(value, "keySemanticTypeId"),
+			valueSemanticTypeId: requiredString(value, "valueSemanticTypeId"),
+			standardKeyKind: cast(requiredString(value, "standardKeyKind"), OcamlStandardIMapKeyKind),
+			uses: [for (entry in requiredArray(value, "uses")) storageAliasUse(entry)],
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function storageAliasUse(value:Dynamic):OcamlIMapStorageAliasUseDecision {
+		return {
+			source: sourceSpan(value, "storage alias use"),
+			nativeOperation: requiredString(value, "nativeOperation"),
+			carrierTypeId: requiredString(value, "carrierTypeId")
+		};
+	}
+
 	static function method(value:Dynamic):OcamlIMapInterfaceMethodDecision {
 		return {
 			name: requiredString(value, "name"),
@@ -220,6 +287,38 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
+		};
+	}
+
+	static function inspectionStorageAlias(decision:OcamlIMapStorageAliasDecision):InspectionIMapStorageAlias {
+		return {
+			id: decision.id,
+			sourceFile: decision.source.file,
+			sourceMin: decision.source.min,
+			sourceMax: decision.source.max,
+			sourceSemanticTypeId: decision.sourceSemanticTypeId,
+			preservedCarrierTypeId: decision.preservedCarrierTypeId,
+			targetSemanticTypeId: decision.targetSemanticTypeId,
+			keySemanticTypeId: decision.keySemanticTypeId,
+			valueSemanticTypeId: decision.valueSemanticTypeId,
+			standardKeyKind: decision.standardKeyKind,
+			uses: decision.uses.map(inspectionStorageAliasUse),
+			proofId: decision.proofId,
+			proofClaim: decision.proofClaim,
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+	}
+
+	static function inspectionStorageAliasUse(decision:OcamlIMapStorageAliasUseDecision):InspectionIMapStorageAliasUse {
+		return {
+			sourceFile: decision.source.file,
+			sourceMin: decision.source.min,
+			sourceMax: decision.source.max,
+			nativeOperation: decision.nativeOperation,
+			carrierTypeId: decision.carrierTypeId
 		};
 	}
 

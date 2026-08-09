@@ -5,22 +5,31 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 66
+if (report.schemaVersion !== 67
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
-if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
-	|| report.iMapInterfaceConversionCount !== 3
-	|| report.iMapInterfaceCallCount !== 53
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v2'
+	|| report.iMapInterfaceConversionCount !== 5
+	|| report.iMapInterfaceCallCount !== 55
+	|| report.iMapStorageAliasCount !== 6
 	|| report.calls?.some(call => call.kind === 'standard-imap-method')) {
 	throw new Error('the IMap fixture did not hard-cut standard maps to the shared interface adapter')
 }
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
-	call.pipelineRevision !== 'ocaml-function-plans-v78'
+	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
+		? 'ocaml-nested-function-plans-v14'
+		: 'ocaml-function-plans-v79')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
+}
+const nestedCalls = calls.filter(call => call.functionId.includes('|nested-function|'))
+if (nestedCalls.length !== 1
+	|| nestedCalls[0].operation !== 'exists'
+	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v14') {
+	throw new Error('the nested function did not keep its exact IMap interface call plan')
 }
 const operations = new Set(calls.map(call => call.operation))
 for (const operation of [
@@ -39,6 +48,13 @@ for (const operation of [
 		throw new Error(`the IMap fixture did not cover ${operation}`)
 }
 const conversions = report.iMapInterfaceConversions
+const nestedConversions = conversions.filter(conversion => conversion.functionId.includes('|nested-function|'))
+if (nestedConversions.length !== 1
+	|| nestedConversions[0].role !== 'local-initializer'
+	|| nestedConversions[0].sourceKind !== 'standard-string-map'
+	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v14') {
+	throw new Error('the nested function did not keep its exact concrete-to-IMap conversion plan')
+}
 const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKind))
 if (![...['string', 'int', 'object-identity']].every(kind => keyKinds.has(kind))
 	|| conversions.some(conversion =>
@@ -46,6 +62,36 @@ if (![...['string', 'int', 'object-identity']].every(kind => keyKinds.has(kind))
 		|| conversion.methods.length !== 10
 		|| conversion.targetCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)')) {
 	throw new Error('the IMap fixture did not preserve all three proven standard storage carriers')
+}
+const ordinaryAbstractConversion = conversions.find(conversion => conversion.sourceKind === 'standard-string-map-abstract')
+if (!ordinaryAbstractConversion
+	|| ordinaryAbstractConversion.sourceSemanticTypeId !== 'Map<String, Int>'
+	|| ordinaryAbstractConversion.targetCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)') {
+	throw new Error('an ordinary source Map assigned to IMap did not keep the interface adapter')
+}
+const storageAliases = report.iMapStorageAliases
+const expectedAliases = [
+	{nested: false, kind: 'string', key: 'String', value: 'Int', carrier: 'HxMap.string_map', operation: 'set_string'},
+	{nested: true, kind: 'string', key: 'String', value: 'Int', carrier: 'HxMap.string_map', operation: 'exists_string'},
+	{nested: false, kind: 'int', key: 'Int', value: 'String', carrier: 'HxMap.int_map', operation: 'set_int'},
+	{nested: true, kind: 'int', key: 'Int', value: 'String', carrier: 'HxMap.int_map', operation: 'exists_int'},
+	{nested: false, kind: 'object-identity', key: '_Main.ObjectKey', value: 'Int', carrier: 'HxMap.obj_map', operation: 'set_object'},
+	{nested: true, kind: 'object-identity', key: '_Main.ObjectKey', value: 'Int', carrier: 'HxMap.obj_map', operation: 'exists_object'}
+]
+for (const expected of expectedAliases) {
+	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
+		&& candidate.standardKeyKind === expected.kind)
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v14' : 'ocaml-function-plans-v79'
+	if (!alias
+		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
+		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`
+		|| alias.preservedCarrierTypeId !== expected.carrier
+		|| alias.pipelineRevision !== expectedPipeline
+		|| alias.uses.length !== 1
+		|| alias.uses[0].carrierTypeId !== expected.carrier
+		|| alias.uses[0].nativeOperation !== expected.operation) {
+		throw new Error(`the IMap fixture did not seal the ${expected.nested ? 'nested' : 'root'} ${expected.kind} Map storage alias`)
+	}
 }
 for (const conversion of conversions) {
 	const expectedRequirementIds = conversion.runtimeCapabilities.map(capability => `${conversion.id}:runtime:${capability}`)
@@ -56,7 +102,7 @@ for (const conversion of conversions) {
 	}
 }
 const formatted = conversions.filter(conversion => conversion.valueStringifier !== null)
-if (formatted.length !== 3
+if (formatted.length !== 5
 	|| formatted.some(conversion =>
 		!conversion.runtimeCapabilities.includes('haxe-array')
 		|| (!conversion.runtimeCapabilities.includes('haxe-string-text')
@@ -96,10 +142,11 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| !report.summary?.valid
-	|| report.summary.iMapInterfaceConversionCount !== 3
-	|| report.summary.iMapInterfaceCallCount !== 53) {
+	|| report.summary.iMapInterfaceConversionCount !== 5
+	|| report.summary.iMapInterfaceCallCount !== 55
+	|| report.summary.iMapStorageAliasCount !== 6) {
 	throw new Error('reflaxe.ocaml inspection did not preserve the sealed standard IMap adapters')
 }
 NODE
@@ -112,7 +159,8 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 report.iMapInterfaceConversions[0].sourceCarrierTypeId = 'HxMap.wrong_map'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
-	calls: report.iMapInterfaceCalls
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
 })).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
@@ -132,6 +180,88 @@ fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a corrupted standard IMap runtime requirement" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const crypto = require('crypto')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const nested = report.iMapInterfaceConversions.find(conversion => conversion.functionId.includes('|nested-function|'))
+if (!nested)
+	throw new Error('the IMap fixture has no nested conversion to corrupt')
+nested.pipelineRevision = 'ocaml-function-plans-v79'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
+})).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a nested IMap conversion labeled as a root-function decision" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const crypto = require('crypto')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+report.iMapStorageAliases[0].preservedCarrierTypeId = 'HxMap.int_map'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
+})).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a storage alias with the wrong raw carrier" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const crypto = require('crypto')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+report.iMapStorageAliases[0].uses[0].nativeOperation = 'exists_int'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
+})).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a storage alias consumed by the wrong native Map operation" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const crypto = require('crypto')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const nested = report.iMapStorageAliases.find(alias => alias.functionId.includes('|nested-function|'))
+if (!nested)
+	throw new Error('the IMap fixture has no nested storage alias to corrupt')
+nested.pipelineRevision = 'ocaml-function-plans-v79'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
+})).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted a nested storage alias labeled as a root-function decision" >&2
 	exit 1
 fi
 

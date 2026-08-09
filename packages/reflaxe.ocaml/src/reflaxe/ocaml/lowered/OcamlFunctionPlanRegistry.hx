@@ -48,6 +48,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary.OcamlFunctionResultBoun
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
@@ -126,6 +127,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final ?functionResultBoundary:OcamlFunctionResultBoundaryPlan;
 	final controls:OcamlControlPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
+	final imapInterfaces:OcamlIMapInterfacePlan;
 }
 
 /**
@@ -151,6 +153,7 @@ typedef OcamlNestedFunctionIdentity = {
 **/
 typedef OcamlNestedFunctionSyntaxDisposition = {
 	final binding:OcamlFunctionPlanBinding;
+	final imapInterfaces:OcamlIMapInterfacePlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 }
 
@@ -198,6 +201,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final bodyExternalLocals:Array<TVar>;
 	final observedBodyRevision:String;
 	final occurrenceId:String;
+	final imapInterfaces:OcamlIMapInterfacePlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 	final deferredReason:Null<String>;
 }
@@ -224,8 +228,8 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v78";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v12";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v79";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v14";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/**
@@ -327,16 +331,18 @@ class OcamlFunctionPlanRegistry {
 		request fails instead of guessing.
 	**/
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
-			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, reason:String):Void {
+			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, reason:String):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
+		imapInterfaces.requirePlanBinding(identity.binding);
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
 			bodyExternalLocals: bodyExternalLocals.copy(),
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: identity.occurrenceId,
+			imapInterfaces: imapInterfaces,
 			plan: null,
 			deferredReason: reason
 		}, localIdentities.ownerId);
@@ -373,6 +379,7 @@ class OcamlFunctionPlanRegistry {
 		}
 		plan.controls.requirePlanBinding(plan.binding);
 		plan.arrayLiteralProducers.requirePlanBinding(plan.binding);
+		plan.imapInterfaces.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
 		// The planner omits unsupported transfers and catch chains. Validate both
@@ -400,7 +407,8 @@ class OcamlFunctionPlanRegistry {
 			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
 			functionResultBoundary: OcamlFunctionResultBoundary.copy(functionResultBoundary),
 			controls: plan.controls,
-			arrayLiteralProducers: plan.arrayLiteralProducers
+			arrayLiteralProducers: plan.arrayLiteralProducers,
+			imapInterfaces: plan.imapInterfaces
 		};
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(plan.binding),
@@ -408,6 +416,7 @@ class OcamlFunctionPlanRegistry {
 			bodyExternalLocals: bodyExternalLocals.copy(),
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: plan.occurrenceId,
+			imapInterfaces: plan.imapInterfaces,
 			plan: stored,
 			deferredReason: null
 		}, localIdentities.ownerId);
@@ -509,6 +518,7 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: a function literal in parent "${parentBinding.functionId}" changed from ${record.observedBodyRevision} to $observedBodyRevision after planning';
 		return {
 			binding: copyBinding(record.binding),
+			imapInterfaces: record.imapInterfaces,
 			plan: record.plan
 		};
 	}
@@ -1111,6 +1121,9 @@ class OcamlFunctionPlanRegistry {
 		for (sealed in sealedFunctions)
 			for (conversion in sealed.plan.imapInterfaces.conversions())
 				out.push(conversion);
+		for (nested in nestedFunctionsByFunctionId)
+			for (conversion in nested.imapInterfaces.conversions())
+				out.push(conversion);
 		out.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return out;
 	}
@@ -1121,6 +1134,22 @@ class OcamlFunctionPlanRegistry {
 		for (sealed in sealedFunctions)
 			for (call in sealed.plan.imapInterfaces.calls())
 				out.push(call);
+		for (nested in nestedFunctionsByFunctionId)
+			for (call in nested.imapInterfaces.calls())
+				out.push(call);
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
+	}
+
+	/** Returns every closed standard-Map storage alias in stable identity order. */
+	public function iMapStorageAliases():Array<OcamlIMapStorageAliasDecision> {
+		final out:Array<OcamlIMapStorageAliasDecision> = [];
+		for (sealed in sealedFunctions)
+			for (alias in sealed.plan.imapInterfaces.storageAliases())
+				out.push(alias);
+		for (nested in nestedFunctionsByFunctionId)
+			for (alias in nested.imapInterfaces.storageAliases())
+				out.push(alias);
 		out.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return out;
 	}

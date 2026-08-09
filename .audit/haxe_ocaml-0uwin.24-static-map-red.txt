@@ -1,0 +1,47 @@
+Focused red evidence for haxe_ocaml-0uwin.24
+Candidate base commit: 8f667bd2262a73ec37fd6af7fbd324bd1d53bcba
+Working tree: uncommitted focused implementation and fixture changes are included in the Oracle bundle.
+
+Command:
+PORTABLE_FIXTURE_ALLOWLIST=imap_runtime_boundary bash scripts/test-portable.sh
+
+Expected reason for the focused red state:
+The fixture uses a static Map<String, Int> field inside a nested function. Haxe's
+typed program expands a standard Map operation through a hidden IMap-typed local,
+but the target has no sealed representation decision for that hidden local.
+
+Observed diagnostic:
+src/Main.hx:130: characters 3-12 :
+reflaxe.ocaml [ocaml-imap-interface:missing-conversion]:
+src/Main.hx:4010:4019 has no sealed conversion from Map<String, Int>
+(typed occurrence Map<String, Int>) to haxe.IMap<String, Int>
+
+Relevant typed-program excerpt from the Haxe pretty dump:
+static function runNested() {
+    {
+        var this1 = Main.forwarded;
+        HxMap.set_string(cast cast this1, "nested", 8);
+    };
+    var hasKey = function(key:String) {
+        var concrete = new HxMap();
+        HxMap.set_string(cast concrete, key, 7);
+        var map = concrete;
+        return map.exists(key) && Main.forwarded != null && {
+            var this1 = Main.forwarded;
+            HxMap.exists_string(cast cast this1, key);
+        };
+    };
+}
+
+Compiler-scale observation that led to the reduction:
+packages/hxhx-core/src/EmitterStage.hx:1106 uses
+currentKnownModuleNames.exists(name), where currentKnownModuleNames is a static
+Map<String, Bool>. The compiler-scale target run progressed past the earlier
+nested-plan failure and then reported the same Map-to-IMap missing-conversion
+shape for source bytes 43266:43289 (currentKnownModuleNames).
+
+Rejected experiment:
+Changing the target NativeHxMap helper's parameter type to Map<K,V>, and then to
+an opaque native-storage type with checked accessors, did not remove the hidden
+IMap temporary. Those changes were fully reverted; the Oracle should not treat
+them as candidate implementation.

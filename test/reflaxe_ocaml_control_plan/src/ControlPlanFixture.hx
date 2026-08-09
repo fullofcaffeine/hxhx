@@ -42,6 +42,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
@@ -94,6 +95,11 @@ class ControlPlanFixture {
 			parentBinding: parent,
 			binding: binding
 		};
+	}
+
+	/** Builds an explicit empty IMap plan for a nested ownership fixture. */
+	static function emptyIMapInterfacePlan(planBinding:OcamlFunctionPlanBinding):OcamlIMapInterfacePlan {
+		return new OcamlIMapInterfacePlan(planBinding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap());
 	}
 
 	static function binding(?bodyRevision:String = "body:control-fixture"):OcamlFunctionPlanBinding {
@@ -636,7 +642,8 @@ class ControlPlanFixture {
 				binding: planBinding,
 				callableBoundary: nestedBoundary(planBinding),
 				controls: controls,
-				arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([])
+				arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([]),
+				imapInterfaces: emptyIMapInterfacePlan(planBinding)
 			}
 		};
 	}
@@ -1301,12 +1308,12 @@ class ControlPlanFixture {
 		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
 		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
 		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
-			"fixture explicitly defers one observed literal");
+			emptyIMapInterfacePlan(deferredBinding), "fixture explicitly defers one observed literal");
 		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
 		expectThrows("duplicate-occurrence",
 			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
-				deferredIdentities, "fixture duplicate"));
+				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), "fixture duplicate"));
 		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
 		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
 		final staleParent:OcamlFunctionPlanBinding = {
@@ -1348,7 +1355,8 @@ class ControlPlanFixture {
 			binding: admittedBinding,
 			callableBoundary: nestedBoundary(admittedBinding),
 			controls: admittedControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(admittedBinding)
 		};
 		final noncanonicalIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedExpression);
 		final noncanonicalOccurrence = noncanonicalIdentities.requireFunctionOccurrence(admittedExpression);
@@ -1365,7 +1373,8 @@ class ControlPlanFixture {
 			binding: noncanonicalBinding,
 			callableBoundary: nestedBoundary(noncanonicalBinding),
 			controls: noncanonicalControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(noncanonicalBinding)
 		};
 		expectThrows("foreign-root-identities",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, noncanonicalBinding.bodyRevision, noncanonicalPlan,
@@ -1382,7 +1391,8 @@ class ControlPlanFixture {
 			binding: wrongNestedBinding,
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(wrongNestedBinding)
 		};
 		expectThrows("binding-mismatch",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, wrongNestedBindingPlan,
@@ -1399,12 +1409,25 @@ class ControlPlanFixture {
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("stale-root-binding",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, staleRootPlan,
 				admittedIdentities));
 		expectThrows("conflicting-root-binding", () -> nestedRegistry.registerRootIdentityPlan(staleRootParent, admittedIdentities));
+		final rootIMapSubstitution:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: admittedPlan.occurrenceId,
+			parentBinding: admittedPlan.parentBinding,
+			binding: admittedPlan.binding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: admittedPlan.arrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(nestedParent)
+		};
+		expectThrows("ocaml-imap-interface:stale-plan",
+			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, rootIMapSubstitution,
+				admittedIdentities));
 		nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan, admittedIdentities);
 		final sealedAdmittedPlan = nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent);
 		if (sealedAdmittedPlan == null)
@@ -1423,7 +1446,8 @@ class ControlPlanFixture {
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("missing-identity",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1434,7 +1458,8 @@ class ControlPlanFixture {
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("foreign-occurrence",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1459,7 +1484,8 @@ class ControlPlanFixture {
 			binding: ordinaryImpostorBinding,
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(ordinaryImpostorBinding)
 		};
 		expectThrows("foreign-root-identities",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1494,7 +1520,8 @@ class ControlPlanFixture {
 			binding: impostorRootBinding,
 			callableBoundary: nestedBoundary(impostorRootBinding),
 			controls: impostorRootControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(impostorRootBinding)
 		};
 		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
 			impostorRootIdentities);
@@ -1531,7 +1558,8 @@ class ControlPlanFixture {
 			binding: crossRootChildBinding,
 			callableBoundary: nestedBoundary(crossRootChildBinding),
 			controls: crossRootChildControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(crossRootChildBinding)
 		};
 		expectThrows("foreign-parent-occurrence",
 			() -> nestedRegistry.sealNestedFunction(crossRootChildExpression, crossRootChildExternalLocals, crossRootChildBinding.bodyRevision,
@@ -1587,7 +1615,7 @@ class ControlPlanFixture {
 		deferredChildRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
 		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
 		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
-			siblingChild.binding.bodyRevision, siblingIdentities, "fixture child uses the older result path");
+			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), "fixture child uses the older result path");
 		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
@@ -1624,7 +1652,8 @@ class ControlPlanFixture {
 			deferredParentIdentities);
 		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
 		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
-			deferredParentBinding.bodyRevision, deferredParentIdentities, "fixture outer function uses the older result path");
+			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding),
+			"fixture outer function uses the older result path");
 		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
 			"control:return:deferred-parent-child");
 		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.externalLocals, representedChild.binding.bodyRevision,
@@ -1681,7 +1710,8 @@ class ControlPlanFixture {
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding, "Bool"),
 			controls: mismatchedControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("return-boundary-mismatch",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan,
@@ -1698,7 +1728,8 @@ class ControlPlanFixture {
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedThrowControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan,
@@ -1712,7 +1743,8 @@ class ControlPlanFixture {
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedLoopControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan,
@@ -1779,7 +1811,8 @@ class ControlPlanFixture {
 			binding: caughtBinding,
 			callableBoundary: nestedBoundary(caughtBinding),
 			controls: caughtControls,
-			arrayLiteralProducers: noArrayLiteralProducers
+			arrayLiteralProducers: noArrayLiteralProducers,
+			imapInterfaces: emptyIMapInterfacePlan(caughtBinding)
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(caughtExpression, caughtExternalLocals, caughtBinding.bodyRevision, caughtPlan, caughtIdentities));

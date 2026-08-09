@@ -551,6 +551,42 @@ typedef InspectionIMapInterfaceCall = {
 	final pipelineRevision:String;
 }
 
+/** One target-owned native Map operation that consumes a proven raw-storage alias. */
+typedef InspectionIMapStorageAliasUse = {
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final nativeOperation:String;
+	final carrierTypeId:String;
+}
+
+/**
+	One compiler-created `IMap` local that safely keeps its standard Map storage.
+
+	This is not a general `Map` to `IMap` conversion. Every recorded local is a
+	closed expansion created by the Haxe standard library, and every read goes
+	directly to a matching target-owned native Map operation.
+**/
+typedef InspectionIMapStorageAlias = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final sourceSemanticTypeId:String;
+	final preservedCarrierTypeId:String;
+	final targetSemanticTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final standardKeyKind:String;
+	final uses:Array<InspectionIMapStorageAliasUse>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -817,6 +853,7 @@ typedef InspectionLowering = {
 	final iMapInterfaceRevision:Null<String>;
 	final iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>;
 	final iMapInterfaceCalls:Array<InspectionIMapInterfaceCall>;
+	final iMapStorageAliases:Array<InspectionIMapStorageAlias>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
 	final containerElementRequiredConversionRevision:Null<String>;
@@ -872,6 +909,7 @@ typedef InspectionSummary = {
 	final structuralFieldCount:Int;
 	final iMapInterfaceConversionCount:Int;
 	final iMapInterfaceCallCount:Int;
+	final iMapStorageAliasCount:Int;
 	final localConversionCount:Int;
 	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;

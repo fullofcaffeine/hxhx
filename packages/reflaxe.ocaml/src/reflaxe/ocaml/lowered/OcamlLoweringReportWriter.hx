@@ -45,6 +45,7 @@ import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64Representat
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
@@ -65,7 +66,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 66;
+	public static inline final SCHEMA_VERSION = 67;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -142,9 +143,9 @@ class OcamlLoweringReportWriter {
 			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
 			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
 			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
-			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, reflectCompare:Array<OcamlReflectCompareDecision>,
-			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
-			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			iMapStorageAliases:Array<OcamlIMapStorageAliasDecision>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			reflectCompare:Array<OcamlReflectCompareDecision>, functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>,
+			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
 			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
@@ -272,6 +273,15 @@ class OcamlLoweringReportWriter {
 			if (iMapInterfaceCallIds.exists(call.id))
 				throw 'IMap interface call identity "${call.id}" occurs more than once.';
 			iMapInterfaceCallIds.set(call.id, true);
+		}
+		final sortedIMapStorageAliases = iMapStorageAliases.copy();
+		sortedIMapStorageAliases.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final iMapStorageAliasIds:Map<String, Bool> = [];
+		for (alias in sortedIMapStorageAliases) {
+			OcamlIMapInterfacePlan.requireStorageAliasDecision(alias);
+			if (iMapStorageAliasIds.exists(alias.id))
+				throw 'IMap storage-alias identity "${alias.id}" occurs more than once.';
+			iMapStorageAliasIds.set(alias.id, true);
 		}
 		for (entry in sorted) {
 			final domain = switch (entry.place.kind) {
@@ -732,7 +742,8 @@ class OcamlLoweringReportWriter {
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
 		final canonicalIMapInterfaces = haxe.Json.stringify({
 			conversions: sortedIMapInterfaceConversions,
-			calls: sortedIMapInterfaceCalls
+			calls: sortedIMapInterfaceCalls,
+			storageAliases: sortedIMapStorageAliases
 		});
 		final canonicalCalls = haxe.Json.stringify({
 			calls: sortedCalls,
@@ -789,6 +800,8 @@ class OcamlLoweringReportWriter {
 			iMapInterfaceConversions: sortedIMapInterfaceConversions,
 			iMapInterfaceCallCount: sortedIMapInterfaceCalls.length,
 			iMapInterfaceCalls: sortedIMapInterfaceCalls,
+			iMapStorageAliasCount: sortedIMapStorageAliases.length,
+			iMapStorageAliases: sortedIMapStorageAliases,
 			localConversionModel: "typed-ocaml-local-carrier-conversions-v3",
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,

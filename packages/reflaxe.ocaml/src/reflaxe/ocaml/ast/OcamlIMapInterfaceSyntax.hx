@@ -94,7 +94,7 @@ class OcamlIMapInterfaceSyntax {
 		return switch (materialization.decision.sourceKind) {
 			case UserImplementation:
 				buildUserAdapter(materialization, value, services);
-			case StandardStringMap, StandardIntMap, StandardObjectMap:
+			case StandardStringMap, StandardIntMap, StandardObjectMap, StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract:
 				buildStandardAdapter(materialization, value, services);
 			case _:
 				throw 'IMap conversion "${materialization.decision.id}" has an unsupported source kind';

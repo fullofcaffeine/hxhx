@@ -16,6 +16,10 @@ private class ObjectKey {
 	dispatch for arbitrary user-defined `IMap` implementations.
 **/
 class Main {
+	static var forwarded:Map<String, Int> = [];
+	static var forwardedInts:Map<Int, String> = [];
+	static var forwardedObjects:Map<ObjectKey, Int> = [];
+
 	static function compareText(left:String, right:String):Int {
 		return left < right ? -1 : (left > right ? 1 : 0);
 	}
@@ -123,10 +127,38 @@ class Main {
 		emit("object.clear=" + !map.keyValueIterator().hasNext());
 	}
 
+	/** Proves that a function literal owns its own IMap decisions and standard Map aliases. */
+	static function runNested():Void {
+		forwarded.set("nested", 8);
+		forwardedInts.set(4, "four");
+		final forwardedObject = new ObjectKey(2);
+		forwardedObjects.set(forwardedObject, 6);
+		final hasKey = function(key:String):Bool {
+			final concrete = new haxe.ds.StringMap<Int>();
+			concrete.set(key, 7);
+			final map:IMap<String, Int> = concrete;
+			return map.exists(key)
+				&& forwarded != null
+				&& forwarded.exists(key)
+				&& forwardedInts.exists(4)
+				&& forwardedObjects.exists(forwardedObject);
+		};
+		emit("nested.exists=" + hasKey("nested"));
+
+		// A source-level Map crossing into IMap is a real interface boundary. It
+		// must still receive the dispatch adapter; only Haxe's closed native-map
+		// expansion temporary may keep raw target storage.
+		final standard:Map<String, Int> = [];
+		standard.set("boxed", 9);
+		final boxed:IMap<String, Int> = standard;
+		emit("nested.mapInterface=" + boxed.exists("boxed"));
+	}
+
 	static function main():Void {
 		runStrings(new haxe.ds.StringMap<Int>());
 		runInts(new haxe.ds.IntMap<String>());
 		final first = new ObjectKey(1);
 		runObjects(new haxe.ds.ObjectMap<ObjectKey, Int>(), first, new ObjectKey(1));
+		runNested();
 	}
 }

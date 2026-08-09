@@ -10,6 +10,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructure;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureOperation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceConversion;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapStorageAlias;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
@@ -86,8 +87,8 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v1";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v78";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v12";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v79";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v14";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -118,7 +119,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 43,
+			schemaVersion: 44,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -146,6 +147,7 @@ class ReflaxeOcamlInspection {
 				structuralFieldCount: lowering.structuralFields.length,
 				iMapInterfaceConversionCount: lowering.iMapInterfaceConversions.length,
 				iMapInterfaceCallCount: lowering.iMapInterfaceCalls.length,
+				iMapStorageAliasCount: lowering.iMapStorageAliases.length,
 				localConversionCount: lowering.localConversions.length,
 				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
@@ -204,7 +206,7 @@ class ReflaxeOcamlInspection {
 			for (field in report.lowering.structuralFields) {
 				lines.push('  - ${field.sourceFile} bytes ${field.sourceMin}-${field.sourceMax} ${field.fieldName}: ${field.operation} via ${field.runtimeModule}.${field.runtimeOperation}');
 			}
-			lines.push('[PASS] IMap interfaces: ${report.lowering.iMapInterfaceConversions.length} concrete-to-interface conversion${report.lowering.iMapInterfaceConversions.length == 1 ? "" : "s"} and ${report.lowering.iMapInterfaceCalls.length} interface call${report.lowering.iMapInterfaceCalls.length == 1 ? "" : "s"} were validated before target syntax.');
+			lines.push('[PASS] IMap interfaces: ${report.lowering.iMapInterfaceConversions.length} concrete-to-interface conversion${report.lowering.iMapInterfaceConversions.length == 1 ? "" : "s"}, ${report.lowering.iMapInterfaceCalls.length} interface call${report.lowering.iMapInterfaceCalls.length == 1 ? "" : "s"}, and ${report.lowering.iMapStorageAliases.length} closed standard Map storage alias${report.lowering.iMapStorageAliases.length == 1 ? "" : "es"} were validated before target syntax.');
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
@@ -401,6 +403,7 @@ class ReflaxeOcamlInspection {
 					iMapInterfaceRevision: null,
 					iMapInterfaceConversions: [],
 					iMapInterfaceCalls: [],
+					iMapStorageAliases: [],
 					localConversionRevision: null,
 					localConversions: [],
 					containerElementRequiredConversionRevision: null,
@@ -435,8 +438,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 66) {
-						throw 'Unsupported lowering report schema $version; expected 66.';
+					if (version != 67) {
+						throw 'Unsupported lowering report schema $version; expected 67.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -491,6 +494,7 @@ class ReflaxeOcamlInspection {
 						iMapInterfaceRevision: iMapInterfaces.revision,
 						iMapInterfaceConversions: iMapInterfaces.conversions,
 						iMapInterfaceCalls: iMapInterfaces.calls,
+						iMapStorageAliases: iMapInterfaces.storageAliases,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
 						containerElementRequiredConversionRevision: requiredSha256Revision(value, "containerElementRequiredConversionRevision"),
@@ -518,7 +522,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${reflectCompare.length} typed Reflect.compare decision${reflectCompare.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${iMapInterfaces.storageAliases.length} closed standard Map storage alias${iMapInterfaces.storageAliases.length == 1 ? "" : "es"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${reflectCompare.length} typed Reflect.compare decision${reflectCompare.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -3890,6 +3894,7 @@ class ReflaxeOcamlInspection {
 			iMapInterfaceRevision: null,
 			iMapInterfaceConversions: [],
 			iMapInterfaceCalls: [],
+			iMapStorageAliases: [],
 			localConversionRevision: null,
 			localConversions: [],
 			containerElementRequiredConversionRevision: null,

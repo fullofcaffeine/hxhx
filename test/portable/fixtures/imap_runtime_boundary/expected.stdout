@@ -27,3 +27,5 @@ object.remove=true:false
 object.copy=7:8
 object.text=true
 object.clear=true
+nested.exists=true
+nested.mapInterface=true

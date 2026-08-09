@@ -18,8 +18,8 @@ node - "$report" <<'NODE'
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-if (report.schemaVersion !== 66) {
-	throw new Error(`Expected lowering schema 66, received ${report.schemaVersion}`)
+if (report.schemaVersion !== 67) {
+	throw new Error(`Expected lowering schema 67, received ${report.schemaVersion}`)
 }
 if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v1') {
 	throw new Error(`Unexpected Reflect.compare plan model: ${report.reflectCompareModel}`)
@@ -33,7 +33,7 @@ if (JSON.stringify(domains) !== JSON.stringify(['float', 'float', 'float', 'int'
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v1:${decision.domain}`
-		|| !['ocaml-function-plans-v78', 'ocaml-standalone-expression-plans-v3'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v79', 'ocaml-standalone-expression-plans-v3'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 }
@@ -60,7 +60,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| !report.summary?.valid
 	|| report.summary.reflectCompareCount !== 10
 	|| report.lowering?.reflectCompare?.length !== 10) {

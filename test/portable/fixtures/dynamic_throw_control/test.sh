@@ -29,7 +29,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 66
+if (report.schemaVersion !== 67
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v21') {
 	fail('unexpected Dynamic throw report schema or control model')
 }
@@ -42,7 +42,7 @@ if (controls.length !== 2) {
 }
 for (const control of controls) {
 	const payload = control.payload
-	if (control.pipelineRevision !== 'ocaml-function-plans-v78'
+	if (control.pipelineRevision !== 'ocaml-function-plans-v79'
 		|| control.proofId !== 'dynamic-carrier-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -86,7 +86,7 @@ const actualCrossings = dynamicCalls.map(call => {
 expectedCrossings.sort((left, right) => left.join('|').localeCompare(right.join('|')))
 if (JSON.stringify(actualCrossings) !== JSON.stringify(expectedCrossings)
 	|| dynamicCalls.some(call =>
-		call.pipelineRevision !== 'ocaml-function-plans-v78'
+		call.pipelineRevision !== 'ocaml-function-plans-v79'
 		|| call.arguments?.[0]?.outputSemanticTypeId !== 'Dynamic'
 		|| call.arguments?.[0]?.outputCarrierTypeId !== 'Obj.t'
 		|| call.arguments?.[0]?.outputRepresentationId !== 'representation:Dynamic:internal-value')) {
@@ -121,7 +121,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const dynamicThrows = report.lowering.controls.filter(item =>
 	item.payload?.inputSemanticTypeId === 'Dynamic')
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| report.summary.valid !== true
 	|| dynamicThrows.length !== 2
 	|| dynamicThrows.some(item =>

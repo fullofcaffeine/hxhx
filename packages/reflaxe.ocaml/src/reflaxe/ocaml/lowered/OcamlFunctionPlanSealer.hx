@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Position;
+import haxe.macro.Type;
 import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
@@ -292,13 +293,25 @@ class OcamlFunctionPlanSealer {
 						parentBinding: lexicalParentBinding,
 						binding: nestedBinding
 					};
+					final nestedResultType:Type = switch (TypeTools.follow(tfunc.t)) {
+						case TFun(_, result): result;
+						case result: result;
+					};
+					// IMap conversion and dispatch are independent of whether the nested
+					// function's return/control behavior has moved to its typed plan. Plan
+					// this exact body now so syntax never reuses the enclosing function's
+					// conversions or guesses an adapter from a type name.
+					final imapInterfaces = new OcamlIMapInterfacePlanner(context, nestedBinding).plan(tfunc.expr, nestedResultType);
+					imapInterfaces.requirePlanBinding(nestedBinding);
+					for (conversion in imapInterfaces.conversions())
+						context.recordIMapInterfaceRuntimeRequirements(conversion);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
 					final childParentBinding = nestedBinding;
 					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null) {
-						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
+						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
 							"The typed function literal is outside the existing represented-result callable boundary.");
 					} else {
 						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
@@ -320,6 +333,7 @@ class OcamlFunctionPlanSealer {
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
+								imapInterfaces,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.");
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
@@ -331,7 +345,8 @@ class OcamlFunctionPlanSealer {
 								callableBoundary: boundary,
 								functionResultBoundary: functionResultBoundary,
 								controls: controls,
-								arrayLiteralProducers: arrayLiteralProducers
+								arrayLiteralProducers: arrayLiteralProducers,
+								imapInterfaces: imapInterfaces
 							};
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}

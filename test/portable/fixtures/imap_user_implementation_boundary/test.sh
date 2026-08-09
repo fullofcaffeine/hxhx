@@ -5,12 +5,14 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 66
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
+if (report.schemaVersion !== 67
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v2'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
 	|| report.iMapInterfaceConversionCount !== 6
-	|| report.iMapInterfaceCallCount !== 25) {
+	|| report.iMapInterfaceCallCount !== 25
+	|| report.iMapStorageAliasCount !== 0
+	|| report.iMapStorageAliases?.length !== 0) {
 	throw new Error('the fixture did not produce the complete current IMap interface inventory')
 }
 if (report.calls?.some(call => call.kind === 'standard-imap-method'))
@@ -77,7 +79,7 @@ for (const operation of ['set', 'get', 'exists', 'remove', 'keys', 'iterator', '
 		throw new Error(`the interface-call inventory does not exercise ${operation}`)
 }
 for (const call of report.iMapInterfaceCalls) {
-	if (call.pipelineRevision !== 'ocaml-function-plans-v78'
+	if (call.pipelineRevision !== 'ocaml-function-plans-v79'
 		|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 		|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`) {
 		throw new Error(`interface call ${call.id} has a stale or conflicting receiver boundary`)
@@ -140,10 +142,11 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 6
-	|| report.summary.iMapInterfaceCallCount !== 25) {
+	|| report.summary.iMapInterfaceCallCount !== 25
+	|| report.summary.iMapStorageAliasCount !== 0) {
 	throw new Error('reflaxe.ocaml inspection did not preserve the complete IMap interface inventory')
 }
 NODE
@@ -186,7 +189,8 @@ switch (mutation) {
 }
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
 	conversions: report.iMapInterfaceConversions,
-	calls: report.iMapInterfaceCalls
+	calls: report.iMapInterfaceCalls,
+	storageAliases: report.iMapStorageAliases
 })).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE

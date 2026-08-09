@@ -18,6 +18,9 @@ enum abstract OcamlIMapInterfaceSourceKind(String) from String to String {
 	final StandardStringMap = "standard-string-map";
 	final StandardIntMap = "standard-int-map";
 	final StandardObjectMap = "standard-object-map";
+	final StandardStringMapAbstract = "standard-string-map-abstract";
+	final StandardIntMapAbstract = "standard-int-map-abstract";
+	final StandardObjectMapAbstract = "standard-object-map-abstract";
 	final UserImplementation = "user-implementation";
 }
 
@@ -90,6 +93,41 @@ typedef OcamlIMapInterfaceCallDecision = {
 	final pipelineRevision:String;
 }
 
+/** One approved raw-storage use of a compiler-generated `Map` expansion local. */
+typedef OcamlIMapStorageAliasUseDecision = {
+	final source:OcamlIMapInterfaceSourceSpan;
+	final nativeOperation:String;
+	final carrierTypeId:String;
+}
+
+/**
+	A closed standard-library expansion that may keep native Map storage.
+
+	Haxe's multi-type `Map<K,V>` abstract can introduce an `IMap<K,V>` local while
+	inlining a concrete standard Map operation. This decision does not make
+	`IMap` use raw storage generally. It proves that every read of this one local
+	is immediately consumed by the matching target-authored `NativeHxMap`
+	operation, so building an interface dispatch record would be both unnecessary
+	and the wrong carrier for the following call.
+**/
+typedef OcamlIMapStorageAliasDecision = {
+	final id:String;
+	final source:OcamlIMapInterfaceSourceSpan;
+	final sourceSemanticTypeId:String;
+	final preservedCarrierTypeId:String;
+	final targetSemanticTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final standardKeyKind:OcamlStandardIMapKeyKind;
+	final uses:Array<OcamlIMapStorageAliasUseDecision>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /**
 	Pure validation contract shared by target planning and saved-report inspection.
 
@@ -98,12 +136,14 @@ typedef OcamlIMapInterfaceCallDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v1";
+	public static inline final MODEL = "typed-imap-interface-adapter-v2";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
+	public static inline final STORAGE_ALIAS_PROOF_ID = "typed-standard-map-storage-alias-v1";
 	public static inline final TARGET_CARRIER_ID = "Obj.t(haxe_Constraints.imap_t)";
 	public static inline final CONVERSION_PROOF_CLAIM = "The final typed Haxe occurrence converts either a canonical standard Map declaration or a class proven to implement the exact haxe.Constraints.IMap<K,V> interface into one dispatch record. Standard storage and user methods remain distinct; a key type never proves the runtime receiver implementation.";
 	public static inline final CALL_PROOF_CLAIM = "The final typed Haxe call resolves to one method on the exact haxe.Constraints.IMap<K,V> declaration. The receiver is already the sealed interface carrier, so target syntax evaluates it once, evaluates arguments in source order, and invokes only the recorded dispatch field.";
+	public static inline final STORAGE_ALIAS_PROOF_CLAIM = "The final typed local has exact haxe.Constraints.IMap<K,V> type and an exact haxe.ds.Map<K,V> initializer. Every read of that local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.";
 
 	public static final REQUIRED_METHODS = [
 		"get",
@@ -213,6 +253,43 @@ class OcamlIMapInterfaceContract {
 		}
 	}
 
+	/** Rejects a storage alias that does not prove one closed standard Map expansion. */
+	public static function requireStorageAlias(decision:OcamlIMapStorageAliasDecision):Void {
+		if (decision == null
+			|| decision.id.length == 0
+			|| decision.source.file.length == 0
+			|| decision.source.min < 0
+			|| decision.source.max < decision.source.min
+			|| decision.keySemanticTypeId.length == 0
+			|| decision.valueSemanticTypeId.length == 0
+			|| decision.sourceSemanticTypeId != 'Map<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
+			|| decision.targetSemanticTypeId != 'haxe.IMap<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
+			|| decision.preservedCarrierTypeId != OcamlStandardIMapCallContract.carrierId(decision.standardKeyKind)
+			|| !OcamlStandardIMapCallContract.keyKindMatchesSemanticType(decision.standardKeyKind, decision.keySemanticTypeId)
+			|| decision.uses.length == 0
+			|| decision.proofId != STORAGE_ALIAS_PROOF_ID
+			|| decision.proofClaim != STORAGE_ALIAS_PROOF_CLAIM
+			|| decision.functionId.length == 0
+			|| decision.programRevision.length == 0
+			|| decision.bodyRevision.length == 0
+			|| decision.pipelineRevision.length == 0) {
+			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias]: storage alias has incomplete type, source, use, proof, or revision facts";
+		}
+		var previousUse = "";
+		for (use in decision.uses) {
+			final useIdentity = '${use.source.file}:${use.source.min}:${use.source.max}:${use.nativeOperation}';
+			if (use.source.file.length == 0
+				|| use.source.min < 0
+				|| use.source.max < use.source.min
+				|| use.carrierTypeId != decision.preservedCarrierTypeId
+				|| !validNativeStorageOperation(use.nativeOperation, decision.standardKeyKind)
+				|| (previousUse.length > 0 && Reflect.compare(previousUse, useIdentity) >= 0)) {
+				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias]: storage alias "${decision.id}" has an invalid, duplicate, or reordered native use';
+			}
+			previousUse = useIdentity;
+		}
+	}
+
 	/** Stable runtime-requirement identities owned by one conversion occurrence. */
 	public static function runtimeRequirementIds(decision:OcamlIMapInterfaceConversionDecision):Array<String> {
 		requireConversion(decision);
@@ -229,9 +306,9 @@ class OcamlIMapInterfaceContract {
 
 	static function standardKeyKind(sourceKind:OcamlIMapInterfaceSourceKind):Null<OcamlStandardIMapKeyKind> {
 		return switch (sourceKind) {
-			case StandardStringMap: OcamlStandardIMapKeyKind.StringKey;
-			case StandardIntMap: OcamlStandardIMapKeyKind.IntKey;
-			case StandardObjectMap: OcamlStandardIMapKeyKind.ObjectIdentityKey;
+			case StandardStringMap, StandardStringMapAbstract: OcamlStandardIMapKeyKind.StringKey;
+			case StandardIntMap, StandardIntMapAbstract: OcamlStandardIMapKeyKind.IntKey;
+			case StandardObjectMap, StandardObjectMapAbstract: OcamlStandardIMapKeyKind.ObjectIdentityKey;
 			case UserImplementation: null;
 			case _: throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: unsupported IMap conversion source kind "$sourceKind"';
 		}
@@ -241,9 +318,23 @@ class OcamlIMapInterfaceContract {
 		return switch (sourceKind) {
 			case StandardStringMap, StandardIntMap: 'HxMap<$valueSemanticTypeId>';
 			case StandardObjectMap: 'HxMap<$keySemanticTypeId, $valueSemanticTypeId>';
+			case StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract: 'Map<$keySemanticTypeId, $valueSemanticTypeId>';
 			case UserImplementation: throw "reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: user IMap implementations have no standard source carrier";
 			case _: throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: unsupported IMap conversion source kind "$sourceKind"';
 		}
+	}
+
+	static function validNativeStorageOperation(operation:String, keyKind:OcamlStandardIMapKeyKind):Bool {
+		final suffix = switch (keyKind) {
+			case StringKey: "string";
+			case IntKey: "int";
+			case ObjectIdentityKey: "object";
+			case _: return false;
+		};
+		if (!StringTools.endsWith(operation, "_" + suffix))
+			return false;
+		final prefix = operation.substr(0, operation.length - suffix.length - 1);
+		return ["set", "get", "exists", "remove", "clear", "copy", "keys", "values", "pairs"].indexOf(prefix) >= 0;
 	}
 
 	static function operationForMethod(name:String):Null<OcamlStandardIMapOperation> {
