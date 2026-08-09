@@ -201,9 +201,12 @@ class BytesMain {
 		final orderedFast = Bytes.fastGet(orderedData("fast-data", orderedDataAlias), orderedInt("fast-position", 1));
 		if (orderedFast != "b".charCodeAt(0) || evaluationOrder.join(",") != "data-receiver,fast-data,fast-position")
 			throw "Bytes getData/fastGet evaluation order changed";
-		final declaredShort = new Bytes(1, data);
-		if (declaredShort.length != 1 || declaredShort.toString() != "a")
-			throw "explicit Bytes length was not preserved";
+		evaluationOrder.resize(0);
+		final declaredShort = new Bytes(orderedInt("constructor-length", 1), orderedData("constructor-data", data));
+		if (declaredShort.length != 1
+			|| declaredShort.toString() != "a"
+			|| evaluationOrder.join(",") != "constructor-length,constructor-data")
+			throw "explicit Bytes length or constructor evaluation order changed";
 		declaredShort.set(0, "z".charCodeAt(0));
 		final dataAlias = Bytes.ofData(data);
 		if (dataAlias.length != 3 || dataAlias.toString() != "zbc" || Bytes.fastGet(data, 0) != "z".charCodeAt(0))

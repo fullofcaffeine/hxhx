@@ -257,6 +257,11 @@ class OcamlRuntimeUseAuthority {
 			|| name == "HxBytes.getString"
 			|| name == "HxBytes.toString"
 			|| name == "HxBytes.toHex"
+			|| name == "HxBytes.create"
+			|| name == "HxBytes.alloc"
+			|| name == "HxBytes.ofString"
+			|| name == "HxBytes.ofData"
+			|| name == "HxBytes.ofHex"
 			|| name == "HxRuntime.nullable_int_unwrap"
 			|| name == "HxRuntime.is_null"
 			|| name == "HxRuntime.hx_throw_typed";

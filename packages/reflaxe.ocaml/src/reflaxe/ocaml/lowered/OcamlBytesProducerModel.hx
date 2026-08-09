@@ -2,8 +2,12 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** The supported Haxe operation that produces one non-null `haxe.io.Bytes`. */
 enum abstract OcamlBytesProducerKind(String) from String to String {
@@ -47,6 +51,7 @@ typedef OcamlBytesProducerDecision = {
 	final sourceFieldName:String;
 	final argumentCount:Int;
 	final argumentEvaluationOrder:Array<Int>;
+	final argumentRuntimeUse:Array<Bool>;
 	final encoding:OcamlBytesEncodingKind;
 	final constructionPolicy:OcamlBytesConstructionPolicy;
 	final resultSemanticTypeId:String;
@@ -55,6 +60,7 @@ typedef OcamlBytesProducerDecision = {
 	final resultRepresentationId:String;
 	final resultRepresentationRevision:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -68,8 +74,72 @@ class OcamlBytesProducerContract {
 	public static inline final SEMANTIC_TYPE_ID = OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID;
 	public static inline final RESULT_NULLABILITY = "non-null";
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-producer";
-	public static inline final PROOF_ID = "non-null-haxe-bytes-producer-v2";
-	public static inline final PROOF_CLAIM = "This exact supported operation returns a non-null Haxe Bytes value carried by one explicit-length/native-data HxBytes.t container; the construction policy fixes how those facts are obtained, and the claim ends at the producer result.";
+	public static inline final PROOF_ID = "non-null-haxe-bytes-producer-v3";
+	public static inline final PROOF_CLAIM = "This exact supported operation evaluates each runtime argument once in Haxe source order, then calls one sealed HxBytes producer and returns a non-null Haxe Bytes value carried by one explicit-length/native-data HxBytes.t container. A supported encoding selector is a compile-time choice, not a runtime argument; the claim ends at the producer result.";
+
+	/** Returns the occurrence-local requirement for one exact Bytes producer. */
+	public static function runtimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/** Returns the private runtime function selected by the producer kind. */
+	public static function runtimeOperation(kind:OcamlBytesProducerKind):String {
+		return switch (kind) {
+			case Constructor: "create";
+			case Alloc: "alloc";
+			case OfString: "ofString";
+			case OfData: "ofData";
+			case OfHex: "ofHex";
+		}
+	}
+
+	/**
+		Marks which source arguments exist when the generated OCaml executes.
+
+		The optional `Bytes.ofString` encoding is already a checked constant in the
+		compiler decision. It selects behavior at compile time and is not evaluated
+		again or passed through the runtime call.
+	**/
+	public static function argumentRuntimeUseFor(kind:OcamlBytesProducerKind, argumentCount:Int):Array<Bool> {
+		return [
+			for (index in 0...argumentCount)
+				kind != OcamlBytesProducerKind.OfString || index == 0
+		];
+	}
+
+	/** Builds the one exact private name that producer syntax must consume. */
+	public static function runtimeUseOccurrenceFor(decisionId:String, source:OcamlLoweredSourceSpan, kind:OcamlBytesProducerKind,
+			binding:OcamlFunctionPlanBinding):OcamlRuntimeUseOccurrence {
+		return {
+			id: decisionId + ":runtime-use:produce-bytes",
+			planRevision: OcamlRuntimeUseModel.planRevision(binding),
+			ownerId: decisionId,
+			requirementId: runtimeRequirementId(decisionId),
+			domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+			exactSymbol: "HxBytes." + runtimeOperation(kind),
+			role: "produce-bytes",
+			order: 0,
+			source: {
+				file: source.file,
+				min: source.min,
+				max: source.max
+			},
+			profileEligibility: ["metal", "portable"],
+			cardinality: 1
+		};
+	}
+
+	/** Recomputes the private-runtime authority expected from one decision. */
+	public static function runtimeUseOccurrencesFor(decision:OcamlBytesProducerDecision):Array<OcamlRuntimeUseOccurrence> {
+		return [
+			runtimeUseOccurrenceFor(decision.id, decision.source, decision.kind, {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			})
+		];
+	}
 
 	/** Computes the deterministic identity shared by planning and validation. */
 	public static function idFor(functionId:String, programRevision:String, bodyRevision:String, pipelineRevision:String, source:OcamlLoweredSourceSpan,
@@ -98,6 +168,7 @@ class OcamlBytesProducerContract {
 		if (decision == null)
 			throw "reflaxe.ocaml [ocaml-bytes:invalid-producer]: Bytes producer decision is null";
 		final expectedOrder = [for (index in 0...decision.argumentCount) index];
+		final expectedRuntimeUse = argumentRuntimeUseFor(decision.kind, decision.argumentCount);
 		final expectedField = switch (decision.kind) {
 			case Constructor: "new";
 			case Alloc: "alloc";
@@ -136,9 +207,10 @@ class OcamlBytesProducerContract {
 			|| decision.calleeId != expectedCalleeId
 			|| decision.argumentCount != expectedArgumentCount
 			|| decision.argumentEvaluationOrder.join(",") != expectedOrder.join(",")
+			|| decision.argumentRuntimeUse.join(",") != expectedRuntimeUse.join(",")
 			|| decision.constructionPolicy != expectedConstructionPolicy
 			|| decision.runtimeRequirementIds.length != 1
-			|| decision.runtimeRequirementIds[0] != decision.id + ":runtime:" + RUNTIME_CAPABILITY
+			|| decision.runtimeRequirementIds[0] != runtimeRequirementId(decision.id)
 			|| decision.functionId.length == 0
 			|| decision.programRevision.length == 0
 			|| decision.bodyRevision.length == 0
@@ -147,6 +219,30 @@ class OcamlBytesProducerContract {
 		}
 		if ((decision.kind == OcamlBytesProducerKind.OfString) != (decision.encoding != OcamlBytesEncodingKind.NotApplicable))
 			throw 'reflaxe.ocaml [ocaml-bytes:invalid-encoding]: producer "${decision.id}" has an invalid encoding decision';
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-producer-runtime-use]: producer "${decision.id}" does not own its exact private runtime call';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-producer-runtime-use]: producer "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
 	}
 }
 #end

@@ -41,7 +41,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	**/
 	public static function recordProducer(ledger:OcamlRuntimeRequirementLedger, decision:OcamlBytesProducerDecision):Void {
 		OcamlBytesProducerContract.requireDecision(decision);
-		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_PRODUCER;
+		final requirementId = OcamlBytesProducerContract.runtimeRequirementId(decision.id);
 		if (decision.runtimeRequirementIds[0] != requirementId)
 			throw 'Bytes producer "${decision.id}" does not name its exact runtime requirement.';
 		ledger.record({
@@ -56,7 +56,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
 				id: OcamlBytesProducerContract.SEMANTIC_TYPE_ID
 			},
-			implementationFeature: "haxe-bytes-producer-v2",
+			implementationFeature: "haxe-bytes-producer-v3",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes using ${decision.constructionPolicy}; nullable storage, receivers, indexing, and mutation require separate decisions.'

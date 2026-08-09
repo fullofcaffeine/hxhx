@@ -57,6 +57,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
@@ -376,6 +377,35 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/**
+		Builds one Bytes-producing call from the compiler's completed decision.
+
+		The decision names both the runtime arguments and the one private `HxBytes`
+		function the call may use. Syntax binds runtime arguments in Haxe order, then
+		the request-local authority checks the private identifier before printing.
+	**/
+	function buildBytesProducer(decision:OcamlBytesProducerDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+			final materialization = OcamlBytesProducerSyntax.build(decision, arguments, buildExpr, freshTmp, runtimeAuthority);
+			// Argument expressions can contain helper calls owned by other decisions.
+			// Check only the one private identifier this producer inserted.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeReferences));
+			materialization.expression;
+		} catch (error:Dynamic) {
+			bytesProducerInvariant(Std.string(error), position);
+		}
 	}
 
 	function bytesMutationInvariant(message:String, position:Position):Dynamic {
@@ -2596,9 +2626,9 @@ class OcamlBuilder {
 			case _ if (bytesMutationOccurrence != null):
 				bytesMutationInvariant("an admitted mutating Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, arguments) if (plannedBytesProducer != null):
-				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
+				buildBytesProducer(plannedBytesProducer, arguments, e.pos);
 			case TCall(_, arguments) if (plannedBytesProducer != null):
-				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
+				buildBytesProducer(plannedBytesProducer, arguments, e.pos);
 			case _ if (plannedBytesRead != null && bytesReadOccurrence != null):
 				buildBytesRead(plannedBytesRead, bytesReadOccurrence.receiver, bytesReadOccurrence.arguments, e.pos);
 			case _ if (bytesReadOccurrence != null):

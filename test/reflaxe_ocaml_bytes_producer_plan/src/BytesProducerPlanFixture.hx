@@ -51,49 +51,65 @@ class BytesProducerPlanFixture {
 				kind: OcamlBytesProducerKind.Constructor,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
 				constructionPolicy: OcamlBytesConstructionPolicy.ExplicitLengthAliasedData,
-				argumentCount: 2
+				argumentCount: 2,
+				argumentRuntimeUse: [true, true],
+				runtimeSymbol: "HxBytes.create"
 			},
 			"alloc" => {
 				kind: OcamlBytesProducerKind.Alloc,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 1
+				argumentCount: 1,
+				argumentRuntimeUse: [true],
+				runtimeSymbol: "HxBytes.alloc"
 			},
 			"ofStringDefault" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.Omitted,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 1
+				argumentCount: 1,
+				argumentRuntimeUse: [true],
+				runtimeSymbol: "HxBytes.ofString"
 			},
 			"ofStringExplicitNull" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.ExplicitNull,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 2
+				argumentCount: 2,
+				argumentRuntimeUse: [true, false],
+				runtimeSymbol: "HxBytes.ofString"
 			},
 			"ofStringUtf8" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.UTF8,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 2
+				argumentCount: 2,
+				argumentRuntimeUse: [true, false],
+				runtimeSymbol: "HxBytes.ofString"
 			},
 			"ofStringRawNative" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.RawNative,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 2
+				argumentCount: 2,
+				argumentRuntimeUse: [true, false],
+				runtimeSymbol: "HxBytes.ofString"
 			},
 			"ofData" => {
 				kind: OcamlBytesProducerKind.OfData,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthAliasedData,
-				argumentCount: 1
+				argumentCount: 1,
+				argumentRuntimeUse: [true],
+				runtimeSymbol: "HxBytes.ofData"
 			},
 			"ofHex" => {
 				kind: OcamlBytesProducerKind.OfHex,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
 				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
-				argumentCount: 1
+				argumentCount: 1,
+				argumentRuntimeUse: [true],
+				runtimeSymbol: "HxBytes.ofHex"
 			}
 		];
 
@@ -118,6 +134,7 @@ class BytesProducerPlanFixture {
 				|| decision.encoding != contract.encoding
 				|| decision.constructionPolicy != contract.constructionPolicy
 				|| decision.argumentCount != contract.argumentCount
+				|| decision.argumentRuntimeUse.join(",") != contract.argumentRuntimeUse.join(",")
 				|| decision.resultSemanticTypeId != OcamlBytesProducerContract.SEMANTIC_TYPE_ID
 				|| decision.resultCarrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
 				|| decision.resultNullability != OcamlBytesProducerContract.RESULT_NULLABILITY
@@ -129,6 +146,12 @@ class BytesProducerPlanFixture {
 				|| decision.bodyRevision != binding.bodyRevision
 				|| decision.pipelineRevision != binding.pipelineRevision) {
 				Context.error('Bytes producer case "$name" disagrees with its typed producer contract.', field.pos);
+			}
+			if (decision.runtimeUseOccurrences.length != 1
+				|| decision.runtimeUseOccurrences[0].exactSymbol != contract.runtimeSymbol
+				|| decision.runtimeUseOccurrences[0].role != "produce-bytes"
+				|| decision.runtimeUseOccurrences[0].requirementId != decision.runtimeRequirementIds[0]) {
+				Context.error('Bytes producer case "$name" did not seal its exact private runtime call.', field.pos);
 			}
 			final occurrence = producerOccurrence(body);
 			if (occurrence == null)
@@ -159,6 +182,11 @@ class BytesProducerPlanFixture {
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {kind: OcamlBytesProducerKind.Alloc})]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {argumentCount: 1})]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {constructionPolicy: cast "invalid-policy"})]));
+		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {argumentRuntimeUse: []})]));
+		expectThrows("invalid-producer-runtime-use", () -> new OcamlBytesProducerPlan([copy(sample, {runtimeUseOccurrences: []})]));
+		final wrongSymbolUses = sample.runtimeUseOccurrences.map(use -> Reflect.copy(use));
+		Reflect.setField(wrongSymbolUses[0], "exactSymbol", "HxBytes.notAProducer");
+		expectThrows("invalid-producer-runtime-use", () -> new OcamlBytesProducerPlan([copy(sample, {runtimeUseOccurrences: wrongSymbolUses})]));
 		expectThrows("invalid-producer",
 			() -> OcamlBytesRuntimeRequirementRecorder.recordProducer(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-producer", () -> new OcamlBytesProducerPlan([sample]).requirePlanBinding({
@@ -310,6 +338,7 @@ class BytesProducerPlanFixture {
 			sourceFieldName: decision.sourceFieldName,
 			argumentCount: decision.argumentCount,
 			argumentEvaluationOrder: decision.argumentEvaluationOrder.copy(),
+			argumentRuntimeUse: decision.argumentRuntimeUse.copy(),
 			encoding: decision.encoding,
 			constructionPolicy: decision.constructionPolicy,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
@@ -318,6 +347,7 @@ class BytesProducerPlanFixture {
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> Reflect.copy(use)),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

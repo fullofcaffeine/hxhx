@@ -162,6 +162,11 @@ class RuntimeUseAuthorityFixture {
 			"HxBytes.getString",
 			"HxBytes.toString",
 			"HxBytes.toHex",
+			"HxBytes.create",
+			"HxBytes.alloc",
+			"HxBytes.ofString",
+			"HxBytes.ofData",
+			"HxBytes.ofHex",
 			"HxRuntime.nullable_int_unwrap",
 			"HxRuntime.is_null",
 			"HxRuntime.hx_throw_typed"

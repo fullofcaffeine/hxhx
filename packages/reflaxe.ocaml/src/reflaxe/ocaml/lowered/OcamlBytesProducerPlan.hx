@@ -212,6 +212,7 @@ class OcamlBytesProducerPlan {
 			decision.sourceFieldName,
 			Std.string(decision.argumentCount),
 			decision.argumentEvaluationOrder.join(","),
+			decision.argumentRuntimeUse.map(value -> Std.string(value)).join(","),
 			(decision.encoding : String),
 			(decision.constructionPolicy : String),
 			decision.resultSemanticTypeId,
@@ -220,6 +221,21 @@ class OcamlBytesProducerPlan {
 			decision.resultRepresentationId,
 			decision.resultRepresentationRevision,
 			decision.runtimeRequirementIds.join(","),
+			decision.runtimeUseOccurrences.map(use -> [
+				use.id,
+				use.planRevision,
+				use.ownerId,
+				use.requirementId,
+				(use.domain : String),
+				use.exactSymbol,
+				use.role,
+				Std.string(use.order),
+				use.source.file,
+				Std.string(use.source.min),
+				Std.string(use.source.max),
+				use.profileEligibility.join(","),
+				Std.string(use.cardinality)
+			].join(":")).join(","),
 			decision.proofId,
 			decision.proofClaim,
 			decision.functionId,
@@ -240,6 +256,7 @@ class OcamlBytesProducerPlan {
 			sourceFieldName: decision.sourceFieldName,
 			argumentCount: decision.argumentCount,
 			argumentEvaluationOrder: decision.argumentEvaluationOrder.copy(),
+			argumentRuntimeUse: decision.argumentRuntimeUse.copy(),
 			encoding: decision.encoding,
 			constructionPolicy: decision.constructionPolicy,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
@@ -248,6 +265,23 @@ class OcamlBytesProducerPlan {
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -327,6 +361,7 @@ class OcamlBytesProducerPlanner {
 		}
 		final id = OcamlBytesProducerContract.idFor(binding.functionId, binding.programRevision, binding.bodyRevision, binding.pipelineRevision, source, kind,
 			operation.calleeId, argumentCount, encoding, resultRepresentation.id, resultRepresentation.revision, constructionPolicy);
+		final argumentRuntimeUse = OcamlBytesProducerContract.argumentRuntimeUseFor(kind, argumentCount);
 		return {
 			id: id,
 			source: source,
@@ -337,6 +372,7 @@ class OcamlBytesProducerPlanner {
 			sourceFieldName: operation.fieldName,
 			argumentCount: argumentCount,
 			argumentEvaluationOrder: [for (index in 0...argumentCount) index],
+			argumentRuntimeUse: argumentRuntimeUse,
 			encoding: encoding,
 			constructionPolicy: constructionPolicy,
 			resultSemanticTypeId: OcamlBytesProducerContract.SEMANTIC_TYPE_ID,
@@ -344,7 +380,8 @@ class OcamlBytesProducerPlanner {
 			resultNullability: OcamlBytesProducerContract.RESULT_NULLABILITY,
 			resultRepresentationId: resultRepresentation.id,
 			resultRepresentationRevision: resultRepresentation.revision,
-			runtimeRequirementIds: [id + ":runtime:" + OcamlBytesProducerContract.RUNTIME_CAPABILITY],
+			runtimeRequirementIds: [OcamlBytesProducerContract.runtimeRequirementId(id)],
+			runtimeUseOccurrences: [OcamlBytesProducerContract.runtimeUseOccurrenceFor(id, source, kind, binding)],
 			proofId: OcamlBytesProducerContract.PROOF_ID,
 			proofClaim: OcamlBytesProducerContract.PROOF_CLAIM,
 			functionId: binding.functionId,
