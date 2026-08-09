@@ -25,7 +25,7 @@ for (const consumer of consumers) {
 		|| target.runtimeFunction !== (target.operation === 'has-next' ? 'hasNext' : 'next')
 		|| target.receiverCarrierTypeId !== 'HxIterator.t'
 		|| consumer.evaluationSchedule?.map(step => step.kind).join(',') !== 'materialize-receiver,invoke-callee'
-		|| consumer.pipelineRevision !== 'ocaml-function-plans-v81') {
+		|| consumer.pipelineRevision !== 'ocaml-function-plans-v82') {
 		throw new Error(`structural Iterator consumer ${consumer.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === consumer.id)
@@ -53,7 +53,7 @@ for (const method of methodValues) {
 		|| method.runtimeModule !== 'HxIterator'
 		|| method.runtimeOperation !== method.fieldName
 		|| method.evaluationSchedule?.join(',') !== 'materialize-receiver,capture-method'
-		|| method.pipelineRevision !== 'ocaml-function-plans-v81') {
+		|| method.pipelineRevision !== 'ocaml-function-plans-v82') {
 		throw new Error(`Iterator method value ${method.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === method.id)

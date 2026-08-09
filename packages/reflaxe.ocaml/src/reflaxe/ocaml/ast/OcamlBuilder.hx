@@ -158,6 +158,17 @@ class OcamlBuilder {
 	**/
 	var currentLocalPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 
+	/**
+		Identifies the root function that sealed the active assignment plans.
+
+		One root planning pass records every supported assignment and update in its
+		complete tree of nested functions. A nested function still installs its own
+		behavior binding for calls and control flow. Keeping this second binding lets
+		syntax request the exact root-owned assignment without pretending that a
+		nested behavior plan created it.
+	**/
+	var currentPlacePlanBinding:Null<OcamlFunctionPlanBinding> = null;
+
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
 	// `ref` locals whose initializer is `null` (or omitted and null-defaulted).
@@ -1700,7 +1711,7 @@ class OcamlBuilder {
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
 			return placeLoweringInvariant("a final place marker has no stable origin identity", expression.pos);
-		final binding = currentFunctionPlanBinding;
+		final binding = currentPlacePlanBinding;
 		if (binding == null)
 			return placeLoweringInvariant('origin "$originId" reached syntax construction outside a sealed function body', expression.pos);
 		return switch (placeAssignmentLowerer.lower(originId, binding, buildExpr, freshTmp)) {
@@ -7775,6 +7786,7 @@ class OcamlBuilder {
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLocalPlanBinding = currentLocalPlanBinding;
+		final previousPlacePlanBinding = currentPlacePlanBinding;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousStructuralFieldPlan = currentStructuralFieldPlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
@@ -7790,6 +7802,7 @@ class OcamlBuilder {
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
 		currentLocalPlanBinding = functionPlan.binding;
+		currentPlacePlanBinding = functionPlan.binding;
 		functionPlan.bytesAccesses.requireRepresentations(representationRegistry);
 		functionPlan.bytesMutations.requireRepresentations(representationRegistry);
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
@@ -7969,6 +7982,7 @@ class OcamlBuilder {
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLocalPlanBinding = previousLocalPlanBinding;
+		currentPlacePlanBinding = previousPlacePlanBinding;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentStructuralFieldPlan = previousStructuralFieldPlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;

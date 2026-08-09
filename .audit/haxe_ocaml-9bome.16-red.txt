@@ -1,0 +1,31 @@
+Command:
+  PORTABLE_FIXTURE_ALLOWLIST=nested_place_array_simple_assign PORTABLE_JOBS=1 bash scripts/test-portable.sh
+
+Observed before implementation:
+  src/Main.hx:46: characters 12-39 : reflaxe.ocaml [ocaml-lowering:place-invariant]: origin "place:35701300256dc9dd025b8197" belongs to function/body/pipeline Main|Main|static|function|exercise|generics:0|->Int/12:4489182e8f839fa68086d7c4e3e2cba5a531ca7d83f602c29e07b56cc5abbbe6/ocaml-function-plans-v81, not Main|Main|static|function|exercise|generics:0|->Int|nested-function|dd3502e8e49e26ff173c8311|nested-function|c280926d5ffa0e262a71de7d/0:3385ed8c2cf3f687aa89e5f752785db4e67ec84fa55a3f36c88f426b51970081/ocaml-nested-function-plans-v15
+
+Independent Haxe 4.3.7 behavior oracle:
+  test/portable/fixtures/nested_place_array_simple_assign/run-haxe-oracle.sh
+  HAXE_4_3_7_NESTED_PLACE_ARRAY_ASSIGN_ORACLE:PASS
+
+Observed stock target behavior:
+  - interp and JavaScript: result=7, final=7, calls=1,1,1, events=array,index,rhs
+  - Neko: result=7, final=7, calls=1,1,1, events=index,array,rhs
+  - Python: result=7, final=7, calls=2,2,1, events=array,index,rhs,array,index
+
+Accepted reflaxe.ocaml behavior:
+  The existing place-evaluation contract follows the Haxe 4.3.7 interpreter
+  and JavaScript source order. Neko and Python differences remain explicit
+  oracle evidence and do not authorize target-specific fallback behavior.
+
+Final Haxe 4.3.7 typed-program facts:
+  - exercise():Int contains outer():Int
+  - outer():Int contains inner():Int
+  - inner():Int returns receiver()[index()] = rhs()
+  - the array assignment is the value returned as Int
+
+Expected failure reason:
+  Final planning walks the complete exercise() tree and registers the marked
+  assignment under exercise()'s root binding. Syntax enters inner(), switches
+  to its nested behavior binding, and asks for the same root-owned place plan
+  with the wrong function/body/pipeline identity.

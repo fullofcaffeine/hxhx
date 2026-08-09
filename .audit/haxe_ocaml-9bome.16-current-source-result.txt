@@ -1,0 +1,31 @@
+Command:
+  npm run test:m14:hih-complete-numeric-literals:current-source
+
+Candidate:
+  source head d3c4d8e6fead436d2bd29dd804257c8a73d40529, dirty=1
+
+Result:
+  - JavaScript complete numeric-literal check passed.
+  - The Stage0 current-source build ran for 631 seconds.
+  - It passed the previous nested place-plan ownership failure at
+    packages/hxhx-core/src/EmitterStage.hx:8066.
+  - It stopped later with an evaluator stack overflow rethrown from the
+    Reflaxe generation lifecycle.
+
+Next fail-closed diagnostic:
+  Uncaught exception Stack overflow
+  ReflectCompiler.hx:249: throw cause
+  ReflectCompiler.hx:204: called from here
+  ReflectCompiler.hx:152: called from here
+  ReflectCompiler.hx:141: called from here
+
+Pinned Reflaxe source:
+  reflaxe 4.0.0-beta content
+  ad25a8ba52adf48a7bf69c5311b274f1c9417ba6, src/reflaxe/ReflectCompiler.hx
+
+Disposition:
+  This is later and independent from the completed place-plan ownership fix.
+  ReflectCompiler line 249 only rethrows the original failure, so the next
+  task must first localize which target-generation phase exhausted the stack.
+  Preserve this exact failure and route it to a follow-up Bead rather than
+  guessing from the wrapper frame.
