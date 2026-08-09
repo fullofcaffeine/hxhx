@@ -275,6 +275,14 @@ class OcamlBytesReadPlan {
 			decision.resultRepresentationRevision,
 			decision.resultNullability,
 			decision.runtimeRequirementIds.join(","),
+			decision.runtimeUseOccurrences.map(use -> [
+				use.id,
+				use.planRevision,
+				use.requirementId,
+				use.exactSymbol,
+				use.role,
+				Std.string(use.order)
+			].join(":")).join(","),
 			decision.proofId,
 			decision.proofClaim,
 			decision.functionId,
@@ -318,6 +326,23 @@ class OcamlBytesReadPlan {
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			resultNullability: decision.resultNullability,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -449,6 +474,7 @@ class OcamlBytesReadPlanner {
 			resultRepresentationRevision: resultRepresentation.revision,
 			resultNullability: OcamlBytesReadContract.RESULT_NULLABILITY,
 			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: OcamlBytesReadContract.PROOF_ID,
 			proofClaim: OcamlBytesReadContract.PROOF_CLAIM,
 			functionId: binding.functionId,
@@ -502,8 +528,7 @@ class OcamlBytesReadPlanner {
 	}
 
 	static function copyWithIdentity(decision:OcamlBytesReadDecision, id:String):OcamlBytesReadDecision {
-		final runtimeRequirementId = id + ":runtime:" + OcamlBytesReadContract.RUNTIME_CAPABILITY;
-		return {
+		final identified:OcamlBytesReadDecision = {
 			id: id,
 			source: decision.source,
 			kind: decision.kind,
@@ -535,7 +560,8 @@ class OcamlBytesReadPlanner {
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			resultNullability: decision.resultNullability,
-			runtimeRequirementIds: [runtimeRequirementId],
+			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -543,6 +569,10 @@ class OcamlBytesReadPlanner {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
+		final completed:Dynamic = identified;
+		Reflect.setField(completed, "runtimeRequirementIds", OcamlBytesReadContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(completed, "runtimeUseOccurrences", OcamlBytesReadContract.runtimeUseOccurrencesFor(identified));
+		return cast completed;
 	}
 }
 #end

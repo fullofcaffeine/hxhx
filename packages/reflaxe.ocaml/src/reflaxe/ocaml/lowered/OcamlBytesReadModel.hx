@@ -5,6 +5,9 @@ import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** One exact read-only operation on the Haxe standard-library Bytes surface. */
 enum abstract OcamlBytesReadKind(String) from String to String {
@@ -72,6 +75,7 @@ typedef OcamlBytesReadDecision = {
 	final resultRepresentationRevision:String;
 	final resultNullability:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -83,6 +87,7 @@ typedef OcamlBytesReadDecision = {
 /** Closed facts shared by Bytes read planning, syntax, and runtime reporting. */
 class OcamlBytesReadContract {
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-read";
+	public static inline final NULLABLE_RECEIVER_RUNTIME_CAPABILITY = "haxe-bytes-read-nullable-receiver";
 	public static inline final RESULT_NULLABILITY = "non-null";
 	public static inline final COMPILE_TIME_ENCODING_CARRIER = "compile-time-encoding-selector";
 	public static inline final PROOF_ID = "exact-haxe-bytes-read-v1";
@@ -134,6 +139,70 @@ class OcamlBytesReadContract {
 		}
 	}
 
+	/** Returns the occurrence-local requirement for the final `HxBytes` read. */
+	public static function runtimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/** Returns the requirement for a checked `Null<Bytes>` receiver conversion. */
+	public static function nullableReceiverRuntimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + NULLABLE_RECEIVER_RUNTIME_CAPABILITY;
+	}
+
+	/** Returns every direct runtime root selected by one read decision. */
+	public static function runtimeRequirementIdsFor(decision:OcamlBytesReadDecision):Array<String> {
+		final result = [runtimeRequirementId(decision.id)];
+		if (decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes)
+			result.push(nullableReceiverRuntimeRequirementId(decision.id));
+		return result;
+	}
+
+	/**
+		Builds the exact private names that syntax must use for this read.
+
+		A nullable receiver is checked and throws before the final read call. Raw
+		receiver and argument expressions are owned by their own decisions and are
+		not duplicated here.
+	**/
+	public static function runtimeUseOccurrencesFor(decision:OcamlBytesReadDecision):Array<OcamlRuntimeUseOccurrence> {
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final result = new Array<OcamlRuntimeUseOccurrence>();
+
+		function add(requirementId:String, exactSymbol:String, role:String):Void {
+			result.push({
+				id: decision.id + ":runtime-use:" + role,
+				planRevision: planRevision,
+				ownerId: decision.id,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: exactSymbol,
+				role: role,
+				order: result.length,
+				source: {
+					file: decision.source.file,
+					min: decision.source.min,
+					max: decision.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
+
+		if (decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes) {
+			final requirementId = nullableReceiverRuntimeRequirementId(decision.id);
+			add(requirementId, "HxRuntime.is_null", "check-null-receiver");
+			add(requirementId, "HxRuntime.hx_throw_typed", "throw-null-receiver");
+		}
+		add(runtimeRequirementId(decision.id), "HxBytes." + fieldName(decision.kind), "read-bytes");
+		return result;
+	}
+
 	/** Returns the exact represented result family for one read. */
 	public static function resultKind(kind:OcamlBytesReadKind):OcamlBytesReadResultKind {
 		return switch (kind) {
@@ -180,8 +249,7 @@ class OcamlBytesReadContract {
 			|| decision.argumentRuntimeUse.length != decision.argumentCount
 			|| decision.resultKind != expectedResultKind
 			|| decision.resultNullability != RESULT_NULLABILITY
-			|| decision.runtimeRequirementIds.length != 1
-			|| decision.runtimeRequirementIds[0] != decision.id + ":runtime:" + RUNTIME_CAPABILITY
+			|| decision.runtimeRequirementIds.join(",") != runtimeRequirementIdsFor(decision).join(",")
 			|| decision.proofId != PROOF_ID
 			|| decision.proofClaim != PROOF_CLAIM
 			|| decision.functionId.length == 0
@@ -193,6 +261,30 @@ class OcamlBytesReadContract {
 		requireReceiver(decision);
 		requireArguments(decision);
 		requireResult(decision);
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-read-runtime-use]: read "${decision.id}" does not own every private runtime use';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-read-runtime-use]: read "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
 	}
 
 	static function requireReceiver(decision:OcamlBytesReadDecision):Void {

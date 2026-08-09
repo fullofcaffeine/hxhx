@@ -156,7 +156,15 @@ class RuntimeUseAuthorityFixture {
 			"HxBytes.getData",
 			"HxBytes.fastGet",
 			"HxBytes.requireMultiByteInt",
-			"HxRuntime.nullable_int_unwrap"
+			"HxBytes.length",
+			"HxBytes.sub",
+			"HxBytes.compare",
+			"HxBytes.getString",
+			"HxBytes.toString",
+			"HxBytes.toHex",
+			"HxRuntime.nullable_int_unwrap",
+			"HxRuntime.is_null",
+			"HxRuntime.hx_throw_typed"
 		]) {
 			final separator = symbol.indexOf(".");
 			final moduleName = symbol.substr(0, separator);

@@ -144,6 +144,8 @@ class M6BytesIntegrationTest {
 		final requirementReport = sys.io.File.getContent(requirementReportPath);
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-read"', "Bytes read runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-read-v1"', "Bytes read runtime explanation");
+		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-read-nullable-receiver"', "nullable Bytes receiver runtime capability");
+		assertContains(requirementReport, '"implementationFeature": "haxe-nullable-bytes-receiver-v1"', "nullable Bytes receiver runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-access"', "Bytes access runtime capability");

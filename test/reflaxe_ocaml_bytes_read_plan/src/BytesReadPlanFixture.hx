@@ -87,6 +87,14 @@ class BytesReadPlanFixture {
 				|| decision.pipelineRevision != binding.pipelineRevision) {
 				Context.error('Bytes read case "$name" disagrees with its typed read contract.', field.pos);
 			}
+			final expectedRuntimeSymbols = decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes ? [
+				"HxRuntime.is_null",
+				"HxRuntime.hx_throw_typed",
+				"HxBytes." + OcamlBytesReadContract.fieldName(decision.kind)
+			] : ["HxBytes." + OcamlBytesReadContract.fieldName(decision.kind)];
+			final actualRuntimeSymbols = decision.runtimeUseOccurrences.map(occurrence -> occurrence.exactSymbol);
+			if (actualRuntimeSymbols.join(",") != expectedRuntimeSymbols.join(","))
+				Context.error('Bytes read case "$name" does not own its exact private runtime names in evaluation order.', field.pos);
 			final occurrence = readOccurrence(body);
 			if (occurrence == null || first.requireFor(occurrence, representations).id != decision.id)
 				Context.error('Bytes read case "$name" did not resolve its exact sealed occurrence.', field.pos);
@@ -113,13 +121,21 @@ class BytesReadPlanFixture {
 		for (decision in allDecisions)
 			OcamlBytesRuntimeRequirementRecorder.recordRead(ledger, decision);
 		final requirements = ledger.requirementsSorted();
-		if (requirements.length != allDecisions.length)
-			Context.error('Expected ${allDecisions.length} Bytes read requirements, received ${requirements.length}.', Context.currentPos());
+		final nullableDecisionCount = allDecisions.filter(decision -> decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes)
+			.length;
+		final expectedRequirementCount = allDecisions.length + nullableDecisionCount;
+		if (requirements.length != expectedRequirementCount)
+			Context.error('Expected $expectedRequirementCount Bytes read requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_READ
-				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
-				|| requirement.rootModules.length != 1
-				|| requirement.rootModules[0] != "HxBytes") {
+			final validRead = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_READ
+				&& requirement.subject.id == OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+				&& requirement.rootModules.length == 1
+				&& requirement.rootModules[0] == "HxBytes";
+			final validNullableReceiver = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_READ_NULLABLE_RECEIVER
+				&& requirement.subject.id == OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID
+				&& requirement.rootModules.length == 1
+				&& requirement.rootModules[0] == "HxRuntime";
+			if (!validRead && !validNullableReceiver) {
 				Context.error('Runtime requirement "${requirement.id}" does not select the exact HxBytes read contract.', Context.currentPos());
 			}
 		}
@@ -133,6 +149,19 @@ class BytesReadPlanFixture {
 		expectThrows("conflicting-read", () -> new OcamlBytesReadPlan([sample, reseal(sample, {bodyRevision: sample.bodyRevision + ":conflict"})]));
 		expectThrows("invalid-read", () -> new OcamlBytesReadPlan([copy(sample, {kind: OcamlBytesReadKind.Sub})]));
 		expectThrows("invalid-read", () -> new OcamlBytesReadPlan([copy(sample, {argumentCount: sample.argumentCount + 1})]));
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([copy(sample, {runtimeUseOccurrences: []})]));
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([
+			copy(sample, {runtimeUseOccurrences: [sample.runtimeUseOccurrences[0], sample.runtimeUseOccurrences[0]]})
+		]));
+		final wrongReadUse:Dynamic = Reflect.copy(sample.runtimeUseOccurrences[0]);
+		Reflect.setField(wrongReadUse, "exactSymbol", "HxBytes.sub");
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([copy(sample, {runtimeUseOccurrences: [wrongReadUse]})]));
+		final staleReadUse:Dynamic = Reflect.copy(sample.runtimeUseOccurrences[0]);
+		Reflect.setField(staleReadUse, "planRevision", "sha256:stale-read-runtime-use");
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([copy(sample, {runtimeUseOccurrences: [staleReadUse]})]));
+		final wrongProfileReadUse:Dynamic = Reflect.copy(sample.runtimeUseOccurrences[0]);
+		Reflect.setField(wrongProfileReadUse, "profileEligibility", ["metal"]);
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([copy(sample, {runtimeUseOccurrences: [wrongProfileReadUse]})]));
 		expectThrows("invalid-read-receiver", () -> new OcamlBytesReadPlan([
 			reseal(sample, {receiverRepresentationId: "representation:Dynamic:internal-value"})
 		]));
@@ -144,6 +173,9 @@ class BytesReadPlanFixture {
 				&& decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes);
 		if (nullableSample == null)
 			Context.error("The Bytes read fixture has no nullable receiver decision.", Context.currentPos());
+		final reorderedNullableUses = nullableSample.runtimeUseOccurrences.copy();
+		reorderedNullableUses.reverse();
+		expectThrows("invalid-read-runtime-use", () -> new OcamlBytesReadPlan([copy(nullableSample, {runtimeUseOccurrences: reorderedNullableUses})]));
 		expectThrows("invalid-read-receiver-conversion", () -> new OcamlBytesReadPlan([
 			reseal(nullableSample, {receiverInputRepresentationId: sample.receiverInputRepresentationId})
 		]));
@@ -286,7 +318,8 @@ class BytesReadPlanFixture {
 		final changed:OcamlBytesReadDecision = cast value;
 		final id = OcamlBytesReadContract.idFor(changed);
 		Reflect.setField(value, "id", id);
-		Reflect.setField(value, "runtimeRequirementIds", [id + ":runtime:" + OcamlBytesReadContract.RUNTIME_CAPABILITY]);
+		Reflect.setField(value, "runtimeRequirementIds", OcamlBytesReadContract.runtimeRequirementIdsFor(cast value));
+		Reflect.setField(value, "runtimeUseOccurrences", OcamlBytesReadContract.runtimeUseOccurrencesFor(cast value));
 		return cast value;
 	}
 

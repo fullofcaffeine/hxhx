@@ -251,7 +251,15 @@ class OcamlRuntimeUseAuthority {
 			|| name == "HxBytes.getData"
 			|| name == "HxBytes.fastGet"
 			|| name == "HxBytes.requireMultiByteInt"
-			|| name == "HxRuntime.nullable_int_unwrap";
+			|| name == "HxBytes.length"
+			|| name == "HxBytes.sub"
+			|| name == "HxBytes.compare"
+			|| name == "HxBytes.getString"
+			|| name == "HxBytes.toString"
+			|| name == "HxBytes.toHex"
+			|| name == "HxRuntime.nullable_int_unwrap"
+			|| name == "HxRuntime.is_null"
+			|| name == "HxRuntime.hx_throw_typed";
 	}
 }
 #end

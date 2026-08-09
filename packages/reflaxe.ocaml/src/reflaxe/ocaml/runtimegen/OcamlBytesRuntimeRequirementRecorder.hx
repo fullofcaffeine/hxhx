@@ -30,6 +30,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	public static inline final HAXE_BYTES_ACCESS_NULLABLE_INT = OcamlBytesAccessContract.NULLABLE_INT_RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
+	public static inline final HAXE_BYTES_READ_NULLABLE_RECEIVER = OcamlBytesReadContract.NULLABLE_RECEIVER_RUNTIME_CAPABILITY;
 
 	/**
 		Records why one sealed non-null Bytes producer needs `HxBytes`.
@@ -177,7 +178,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	**/
 	public static function recordRead(ledger:OcamlRuntimeRequirementLedger, decision:OcamlBytesReadDecision):Void {
 		OcamlBytesReadContract.requireDecision(decision);
-		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_READ;
+		final requirementId = OcamlBytesReadContract.runtimeRequirementId(decision.id);
 		if (decision.runtimeRequirementIds[0] != requirementId)
 			throw 'Bytes read "${decision.id}" does not name its exact runtime requirement.';
 		ledger.record({
@@ -195,8 +196,30 @@ class OcamlBytesRuntimeRequirementRecorder {
 			implementationFeature: "haxe-bytes-read-v1",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
-			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its ${decision.receiverConversion} conversion, and argument evaluation order. Exact Null<haxe.io.Bytes> may cross one checked receiver conversion; writes, indexed access, other nullable materialization, and Float results require separate decisions.'
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its ${decision.receiverConversion} conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.'
 		});
+		if (decision.runtimeRequirementIds.length == 2) {
+			final nullableRequirementId = OcamlBytesReadContract.nullableReceiverRuntimeRequirementId(decision.id);
+			if (decision.runtimeRequirementIds[1] != nullableRequirementId)
+				throw 'Bytes read "${decision.id}" does not name its exact nullable receiver runtime requirement.';
+			ledger.record({
+				id: nullableRequirementId,
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_BYTES_READ_NULLABLE_RECEIVER,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID
+				},
+				implementationFeature: "haxe-nullable-bytes-receiver-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: ["metal", "portable"],
+				explanation: 'The sealed ${decision.calleeId} read receives exact Null<haxe.io.Bytes>, so HxRuntime tests the materialized receiver and throws the typed Null Access value before any read argument is evaluated.'
+			});
+		}
 	}
 }
 #end

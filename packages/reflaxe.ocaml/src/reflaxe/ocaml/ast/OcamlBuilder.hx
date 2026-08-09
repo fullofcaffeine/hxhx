@@ -58,6 +58,7 @@ import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
@@ -459,6 +460,33 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/**
+		Builds one read-only Bytes call from its completed compiler decision.
+
+		The decision names the nullable-receiver checks, when needed, and the final
+		`HxBytes` call. Only those identifiers are reconciled here because nested
+		receiver and argument expressions remain owned by their own decisions.
+	**/
+	function buildBytesRead(decision:OcamlBytesReadDecision, receiver:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+			final materialization = OcamlBytesReadSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
+			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeReferences));
+			materialization.expression;
+		} catch (error:Dynamic) {
+			bytesReadInvariant(Std.string(error), position);
+		}
 	}
 
 	function controlPlanInvariant(message:String, position:Position):Dynamic {
@@ -2572,7 +2600,7 @@ class OcamlBuilder {
 			case TCall(_, arguments) if (plannedBytesProducer != null):
 				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
 			case _ if (plannedBytesRead != null && bytesReadOccurrence != null):
-				OcamlBytesReadSyntax.build(plannedBytesRead, bytesReadOccurrence.receiver, bytesReadOccurrence.arguments, buildExpr, freshTmp);
+				buildBytesRead(plannedBytesRead, bytesReadOccurrence.receiver, bytesReadOccurrence.arguments, e.pos);
 			case _ if (bytesReadOccurrence != null):
 				bytesReadInvariant("an admitted read-only Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):

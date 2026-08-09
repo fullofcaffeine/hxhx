@@ -6,6 +6,19 @@ import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadKind;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadReceiverConversion;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+
+/**
+	Returns the generated read and only the private helper identifiers it added.
+
+	Receiver and argument expressions can contain helpers owned by other compiler
+	decisions, so the caller reconciles this smaller list instead of claiming the
+	whole generated expression for the read decision.
+**/
+typedef OcamlBytesReadMaterialization = {
+	final expression:OcamlExpr;
+	final runtimeReferences:Array<OcamlExpr>;
+}
 
 /**
 	Constructs OCaml syntax from one already-validated Bytes read decision.
@@ -18,14 +31,17 @@ import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadReceiverConversio
 **/
 class OcamlBytesReadSyntax {
 	public static function build(decision:OcamlBytesReadDecision, receiver:TypedExpr, arguments:Array<TypedExpr>, buildExpression:TypedExpr->OcamlExpr,
-			freshName:String->String):OcamlExpr {
+			freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlBytesReadMaterialization {
 		OcamlBytesReadContract.requireDecision(decision);
+		if (runtimeAuthority == null)
+			throw 'reflaxe.ocaml [ocaml-bytes:missing-read-runtime-authority]: read "${decision.id}" cannot construct private runtime identifiers';
 		if (arguments.length != decision.argumentCount)
 			throw 'reflaxe.ocaml [ocaml-bytes:read-syntax-arity-mismatch]: read "${decision.id}" expected ${decision.argumentCount} arguments but received ${arguments.length}';
 		if (!decision.hasReceiver)
 			throw 'reflaxe.ocaml [ocaml-bytes:read-syntax-receiver-mismatch]: read "${decision.id}" received the wrong receiver shape';
 
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
+		final runtimeReferences:Array<OcamlExpr> = [];
 		var receiverValue:Null<OcamlExpr> = null;
 		final argumentValues:Array<Null<OcamlExpr>> = [for (_ in 0...decision.argumentCount) null];
 		for (slot in decision.evaluationOrder) {
@@ -40,7 +56,10 @@ class OcamlBytesReadSyntax {
 						receiverValue = input;
 					case RequireNonNullBytes:
 						final receiverName = freshName("bytes_receiver");
-						materialized.push({name: receiverName, value: requireNonNullBytes(input)});
+						final converted = requireNonNullBytes(decision, input, runtimeAuthority);
+						runtimeReferences.push(converted.isNullReference);
+						runtimeReferences.push(converted.throwReference);
+						materialized.push({name: receiverName, value: converted.expression});
 						receiverValue = OcamlExpr.EIdent(receiverName);
 				}
 			} else {
@@ -66,28 +85,30 @@ class OcamlBytesReadSyntax {
 			for (index in 0...argumentValues.length)
 				if (decision.argumentRuntimeUse[index]) argumentValues[index]
 		];
-		final call = switch (decision.kind) {
+		final callArguments = switch (decision.kind) {
 			case Length:
-				hxBytesCall("length", [requiredReceiver(decision, receiverArgument)]);
+				[requiredReceiver(decision, receiverArgument)];
 			case Sub:
-				hxBytesCall("sub", [requiredReceiver(decision, receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 2)));
+				[requiredReceiver(decision, receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 2));
 			case Compare:
-				hxBytesCall("compare", [requiredReceiver(decision, receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 1)));
+				[requiredReceiver(decision, receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 1));
 			case GetString:
-				hxBytesCall("getString",
-					[requiredReceiver(decision,
-						receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 2)).concat([OcamlExpr.EConst(OcamlConst.CUnit)]));
+				[requiredReceiver(decision,
+					receiverArgument)].concat(requiredArguments(decision, runtimeArguments, 2)).concat([OcamlExpr.EConst(OcamlConst.CUnit)]);
 			case ToString:
-				hxBytesCall("toString", [requiredReceiver(decision, receiverArgument), OcamlExpr.EConst(OcamlConst.CUnit)]);
+				[requiredReceiver(decision, receiverArgument), OcamlExpr.EConst(OcamlConst.CUnit)];
 			case ToHex:
-				hxBytesCall("toHex", [requiredReceiver(decision, receiverArgument), OcamlExpr.EConst(OcamlConst.CUnit)]);
+				[requiredReceiver(decision, receiverArgument), OcamlExpr.EConst(OcamlConst.CUnit)];
 		}
+		final callReference = runtimeIdentifier(decision, runtimeAuthority, "read-bytes", "HxBytes." + OcamlBytesReadContract.fieldName(decision.kind));
+		runtimeReferences.push(callReference);
+		final call = OcamlExpr.EApp(callReference, callArguments);
 		var out = call;
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
-		return out;
+		return {expression: out, runtimeReferences: runtimeReferences};
 	}
 
 	static function requiredReceiver(decision:OcamlBytesReadDecision, receiver:Null<OcamlExpr>):OcamlExpr {
@@ -107,21 +128,35 @@ class OcamlBytesReadSyntax {
 		];
 	}
 
-	static function hxBytesCall(field:String, arguments:Array<OcamlExpr>):OcamlExpr {
-		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), field), arguments);
+	static function runtimeIdentifier(decision:OcamlBytesReadDecision, authority:OcamlRuntimeUseAuthority, role:String, exactSymbol:String):OcamlExpr {
+		final matches = decision.runtimeUseOccurrences.filter(use -> use.role == role);
+		if (matches.length != 1 || matches[0].exactSymbol != exactSymbol)
+			throw 'reflaxe.ocaml [ocaml-bytes:wrong-read-runtime-use]: read "${decision.id}" has no exact $role/$exactSymbol occurrence';
+		final use = matches[0];
+		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
 	}
 
-	static function requireNonNullBytes(input:OcamlExpr):OcamlExpr {
+	static function requireNonNullBytes(decision:OcamlBytesReadDecision, input:OcamlExpr, authority:OcamlRuntimeUseAuthority):{
+		expression:OcamlExpr,
+		isNullReference:OcamlExpr,
+		throwReference:OcamlExpr
+	} {
 		final represented = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [input]);
-		final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [represented]);
-		final throwNullAccess = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [
+		final isNullReference = runtimeIdentifier(decision, authority, "check-null-receiver", "HxRuntime.is_null");
+		final throwReference = runtimeIdentifier(decision, authority, "throw-null-receiver", "HxRuntime.hx_throw_typed");
+		final isNull = OcamlExpr.EApp(isNullReference, [represented]);
+		final throwNullAccess = OcamlExpr.EApp(throwReference, [
 			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
 			OcamlExpr.EList([
 				OcamlExpr.EConst(OcamlConst.CString("String")),
 				OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
 			])
 		]);
-		return OcamlExpr.EIf(isNull, throwNullAccess, input);
+		return {
+			expression: OcamlExpr.EIf(isNull, throwNullAccess, input),
+			isNullReference: isNullReference,
+			throwReference: throwReference
+		};
 	}
 }
 #end
