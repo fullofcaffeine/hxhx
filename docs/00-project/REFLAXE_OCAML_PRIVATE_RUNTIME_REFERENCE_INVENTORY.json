@@ -1,0 +1,4514 @@
+{
+  "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
+  "model": "source-level-legacy-reference-migration-inventory",
+  "authority": "migration-inventory-only",
+  "reviewBead": "haxe_ocaml-0uwin.27",
+  "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
+  "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.27",
+  "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
+  "megaFileRisks": [
+    {
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "migrationFamily": "builder-mega-file",
+      "rule": "Move semantic-family construction into focused modules; do not centralize occurrence migration in OcamlBuilder."
+    }
+  ],
+  "counts": {
+    "total": 445,
+    "byDomain": {
+      "expression": 398,
+      "generated-text": 17,
+      "pattern": 15,
+      "raw-boundary": 2,
+      "type": 13
+    },
+    "byMigrationFamily": {
+      "anonymous-structure-syntax": 3,
+      "array-literal-syntax": 2,
+      "builder-anon": 19,
+      "builder-array": 49,
+      "builder-boolean-carriers": 30,
+      "builder-boot-array": 1,
+      "builder-control-transfer": 29,
+      "builder-dynamic": 5,
+      "builder-dynamic-runtime": 3,
+      "builder-enum": 27,
+      "builder-exceptions": 6,
+      "builder-int": 60,
+      "builder-iterator": 2,
+      "builder-nullable-carriers": 67,
+      "builder-raw-boundary": 2,
+      "builder-reflect": 9,
+      "builder-runtime-tags": 10,
+      "builder-string": 25,
+      "builder-type": 28,
+      "bytes-access-syntax": 3,
+      "bytes-mutation-syntax": 2,
+      "bytes-producer-syntax": 5,
+      "bytes-read-syntax": 3,
+      "compiler-core": 13,
+      "compiler-generated-modules": 16,
+      "field-representation-materializer": 1,
+      "imap-interface-syntax": 12,
+      "place-assignment": 6,
+      "plugin-build-generated-text": 1,
+      "standard-map-carrier-model": 3,
+      "string-representation-materializer": 1,
+      "structural-field-syntax": 2
+    }
+  },
+  "inventoryRevision": "5b84cf1f9a977460fe2c2263ec9ce851839bb98fd27fa626aea160fabc847f26",
+  "entries": [
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxInt.add::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "anonymous-structure-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "anonymous-structure-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlAnonymousStructureSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "anonymous-structure-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlArrayLiteralSyntax.hx::expression::EField(EIdent)::HxArray.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlArrayLiteralSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "array-literal-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlArrayLiteralSyntax.hx::expression::EField(EIdent)::HxArray.push::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlArrayLiteralSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "array-literal-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return_void::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_null::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 1,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.hx_throw_typed_rtti::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.hx_throw_typed_rtti",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_break::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_continue::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_continue::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return_void::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return_void::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_throw_typed",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_exception::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_exception",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_continue::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.isNull::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.isNull",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.isNull::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.isNull",
+      "rootModule": "HxString",
+      "ordinal": 2,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.isNull::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.isNull",
+      "rootModule": "HxString",
+      "ordinal": 3,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.isNull::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.isNull",
+      "rootModule": "HxString",
+      "ordinal": 4,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_throw",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.push::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_null::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_throw_typed",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxIterator.of_array::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxIterator.of_array",
+      "rootModule": "HxIterator",
+      "ordinal": 1,
+      "migrationFamily": "builder-iterator"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 6,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 7,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxBootArray.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBootArray.create",
+      "rootModule": "HxBootArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-boot-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.class_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enum_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enum_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 8,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 9,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::10",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 10,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::11",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 11,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::12",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 12,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_float_unwrap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_float_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_bool_unwrap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_bool_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::raw-boundary::OcamlExpr.ERaw::opaque::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "raw-boundary",
+      "construction": "OcamlExpr.ERaw",
+      "symbol": null,
+      "rootModule": null,
+      "ordinal": 1,
+      "migrationFamily": "builder-raw-boundary"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::raw-boundary::OcamlExpr.ERaw::opaque::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "raw-boundary",
+      "construction": "OcamlExpr.ERaw",
+      "symbol": null,
+      "rootModule": null,
+      "ordinal": 2,
+      "migrationFamily": "builder-raw-boundary"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getClass::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getClass",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 6,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 2,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 3,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_null::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_boxed_bool::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_boxed_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.name_opt::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.name_opt",
+      "rootModule": "HxEnum",
+      "ordinal": 1,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enum_::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enum_",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getClass::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getClass",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_null::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.class_::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getClassName::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getClassName",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getEnumName::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getEnumName",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getSuperClass::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getSuperClass",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enum_::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enum_",
+      "rootModule": "HxType",
+      "ordinal": 3,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getEnum::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getEnum",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getInstanceFields::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getInstanceFields",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getClassFields::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getClassFields",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.getEnumConstructs::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.getEnumConstructs",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::13",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 13,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::14",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 14,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enumConstructor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enumConstructor",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enumParameters::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enumParameters",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.resolveClass::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.resolveClass",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.resolveEnum::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.resolveEnum",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.createInstance::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.createInstance",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.createEmptyInstance::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.createEmptyInstance",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 3,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 4,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::15",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 15,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::16",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 16,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.createEnum::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.createEnum",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 5,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 6,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::17",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 17,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::18",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 18,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.createEnumIndex::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.createEnumIndex",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.enum_eq::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.enum_eq",
+      "rootModule": "HxEnum",
+      "ordinal": 1,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 7,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.push::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 8,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 2,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.callMethod::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.callMethod",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isFunction::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.isFunction",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EIdent::HxReflect::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxReflect",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.has::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.has",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.fields::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.fields",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.delete::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.delete",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.copy::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.copy",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.compare::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.compare",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isObject::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.isObject",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isEnumValue::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.isEnumValue",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.same_closure::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.same_closure",
+      "rootModule": "HxReflect",
+      "ordinal": 1,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.same_closure::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.same_closure",
+      "rootModule": "HxReflect",
+      "ordinal": 2,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.fromCharCode::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.fromCharCode",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::19",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 19,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_boxed_bool::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_boxed_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::20",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 20,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_boxed_bool::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_boxed_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::21",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 21,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_boxed_bool::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_boxed_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::22",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 22,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.isOfType::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.isOfType",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.isOfType::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.isOfType",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.isOfType::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.isOfType",
+      "rootModule": "HxType",
+      "ordinal": 3,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.urlEncode::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.urlEncode",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.urlDecode::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.urlDecode",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.concat::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.concat",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.join::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.join",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.toString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.toString",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.push::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 3,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.pop::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.pop",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.shift::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.shift",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.reverse::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.reverse",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.unshift::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.unshift",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.insert::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.insert",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.remove::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.remove",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.contains::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.contains",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.indexOf::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.indexOf",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 3,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.lastIndexOf::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.lastIndexOf",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.copy::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.copy",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.map",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.filter::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.filter",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.resize::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.resize",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.sort::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.sort",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.splice::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.splice",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 4,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 5,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.slice::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.slice",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.toUpperCase::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toUpperCase",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.toLowerCase::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toLowerCase",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.charAt::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.charAt",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.charCodeAt::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.charCodeAt",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 6,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.indexOf::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.indexOf",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.length::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.length",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.lastIndexOf::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.lastIndexOf",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.split::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.split",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.substr::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.substr",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.length::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.length",
+      "rootModule": "HxString",
+      "ordinal": 2,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.substring::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.substring",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.toString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toString",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::23",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 23,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::24",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 24,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 4,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.create::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 9,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.push::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 4,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.callMethod::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxReflect.callMethod",
+      "rootModule": "HxReflect",
+      "ordinal": 2,
+      "migrationFamily": "builder-reflect"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::25",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 25,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::26",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 26,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_continue::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_continue::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_break::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 3,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 3,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::type::TApp::HxIterator.t::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxIterator.t",
+      "rootModule": "HxIterator",
+      "ordinal": 1,
+      "migrationFamily": "builder-iterator"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.create",
+      "rootModule": "HxAnon",
+      "ordinal": 1,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 2,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 7,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 5,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 6,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.hx_throw_typed_rtti::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.hx_throw_typed_rtti",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 6,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 7,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 8,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 9,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::27",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 27,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.tags_has::10",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.tags_has",
+      "rootModule": "HxRuntime",
+      "ordinal": 10,
+      "migrationFamily": "builder-runtime-tags"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::28",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 28,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 6,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.unbox_or_obj",
+      "rootModule": "HxEnum",
+      "ordinal": 1,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_break::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_break",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_continue::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_continue::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_continue",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return_void::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return_void::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_throw_typed",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_exception::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_exception",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-exceptions"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::29",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 29,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxType.enumIndex::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.enumIndex",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "builder-type"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxDynamic.toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 1,
+      "migrationFamily": "builder-dynamic"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxDynamic.toStdString::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 2,
+      "migrationFamily": "builder-dynamic"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxDynamic.toStdString::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 3,
+      "migrationFamily": "builder-dynamic"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toStdString",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_toStdString",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_float_toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_float_toStdString",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_bool_toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_bool_toStdString",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxDynamic.toStdString::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 4,
+      "migrationFamily": "builder-dynamic"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxDynamic.toStdString::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 5,
+      "migrationFamily": "builder-dynamic"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::30",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 30,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::31",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 31,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.toStdString::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toStdString",
+      "rootModule": "HxString",
+      "ordinal": 2,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::32",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 32,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::33",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 33,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.resize::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.resize",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 3,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 4,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.set::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.set",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.sub::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.sub",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.mul::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.mul",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.div::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.div",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.rem::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.rem",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logand::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logand",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logor",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logxor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logxor",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shl::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shl",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shr::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shr",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.ushr::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.ushr",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.sub::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.sub",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.mul::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.mul",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.div::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.div",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.rem::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.rem",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logand::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logand",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logor::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logor",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logxor::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logxor",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shl::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shl",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shr::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shr",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.ushr::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.ushr",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.sub::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.sub",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.mul::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.mul",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.div::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.div",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.rem::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.rem",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logand::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logand",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logor::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logor",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logxor::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logxor",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shl::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shl",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shr::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shr",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.ushr::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.ushr",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 4,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.sub::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.sub",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.mul::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.mul",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.div::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.div",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.rem::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.rem",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logand::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logand",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logor::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logor",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logxor::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logxor",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shl::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shl",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shr::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shr",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.ushr::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.ushr",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.set::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.set",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.sub::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.sub",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.mul::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.mul",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.div::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.div",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.rem::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.rem",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logand::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logand",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logor::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logor",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.logxor::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.logxor",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shl::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shl",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.shr::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.shr",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.ushr::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.ushr",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 8,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 7,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 8,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.dynamic_equals::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.dynamic_equals",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-dynamic-runtime"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.equals::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.equals",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 9,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 9,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::10",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 10,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.dynamic_equals::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.dynamic_equals",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-dynamic-runtime"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.equals::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.equals",
+      "rootModule": "HxString",
+      "ordinal": 2,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::34",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 34,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::35",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 35,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::36",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 36,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 7,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::11",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 11,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::10",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 10,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::12",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 12,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::37",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 37,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::38",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 38,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::39",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 39,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::40",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 40,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::13",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 13,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::14",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 14,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::11",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 11,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::41",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 41,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::12",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 12,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::42",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 42,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::43",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 43,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::15",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 15,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::16",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 16,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::13",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 13,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::44",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 44,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::14",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 14,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::17",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 17,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::18",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 18,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.create::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.create",
+      "rootModule": "HxAnon",
+      "ordinal": 2,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::45",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 45,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 5,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::19",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 19,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::20",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 20,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::15",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 15,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.unbox_or_obj",
+      "rootModule": "HxEnum",
+      "ordinal": 2,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 8,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::16",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 16,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::46",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 46,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.box_if_needed::21",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.box_if_needed",
+      "rootModule": "HxEnum",
+      "ordinal": 21,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.unbox_or_obj",
+      "rootModule": "HxEnum",
+      "ordinal": 3,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.lognot::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.lognot",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.neg::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.neg",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.is_null::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 6,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 4,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.set",
+      "rootModule": "HxAnon",
+      "ordinal": 6,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 5,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.set::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.set",
+      "rootModule": "HxArray",
+      "ordinal": 3,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 7,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxInt.add::8",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 8,
+      "migrationFamily": "builder-int"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.get::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.get",
+      "rootModule": "HxArray",
+      "ordinal": 6,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.set::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.set",
+      "rootModule": "HxArray",
+      "ordinal": 4,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_return::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 5,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 7,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_bool_unwrap::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_bool_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return_void::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return_void",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_return::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "pattern",
+      "construction": "PConstructor",
+      "symbol": "HxRuntime.Hx_return",
+      "rootModule": "HxRuntime",
+      "ordinal": 4,
+      "migrationFamily": "builder-control-transfer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::47",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 47,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.dynamic_equals::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.dynamic_equals",
+      "rootModule": "HxRuntime",
+      "ordinal": 3,
+      "migrationFamily": "builder-dynamic-runtime"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::48",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 48,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.fromCharCode::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.fromCharCode",
+      "rootModule": "HxString",
+      "ordinal": 2,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxArray.length::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 6,
+      "migrationFamily": "builder-array"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.length::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.length",
+      "rootModule": "HxString",
+      "ordinal": 3,
+      "migrationFamily": "builder-string"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 5,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 6,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::7",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxAnon.get",
+      "rootModule": "HxAnon",
+      "ordinal": 7,
+      "migrationFamily": "builder-anon"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::9",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 9,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.unbox_or_obj",
+      "rootModule": "HxEnum",
+      "ordinal": 4,
+      "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::49",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 49,
+      "migrationFamily": "builder-nullable-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::10",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 10,
+      "migrationFamily": "builder-boolean-carriers"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "bytes-access-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EField(EIdent)::HxBytes.requireMultiByteInt::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.requireMultiByteInt",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-access-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx::expression::EIdent::HxBytes::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesAccessSyntax.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxBytes",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-access-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesMutationSyntax.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesMutationSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.nullable_int_unwrap",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "bytes-mutation-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesMutationSyntax.hx::expression::EIdent::HxBytes::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesMutationSyntax.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxBytes",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-mutation-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.create",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-producer-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.alloc::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.alloc",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-producer-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.ofString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.ofString",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-producer-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.ofData::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.ofData",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-producer-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx::expression::EField(EIdent)::HxBytes.ofHex::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesProducerSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxBytes.ofHex",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-producer-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx::expression::EIdent::HxBytes::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxBytes",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "bytes-read-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx::expression::EField(EIdent)::HxRuntime.is_null::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.is_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "bytes-read-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBytesReadSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_throw_typed",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "bytes-read-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EIdent::HxMap::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxMap",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxIterator.of_array::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxIterator.of_array",
+      "rootModule": "HxIterator",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxType.class_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxIterator.next::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxIterator.next",
+      "rootModule": "HxIterator",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxArray.push::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.push",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxIterator.hasNext::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxIterator.hasNext",
+      "rootModule": "HxIterator",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxArray.join::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.join",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxIterator.of_array::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxIterator.of_array",
+      "rootModule": "HxIterator",
+      "ordinal": 2,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxArray.create::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxArray.create",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxString.toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.toStdString",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx::expression::EField(EIdent)::HxDynamic.toStdString::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlIMapInterfaceSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxDynamic.toStdString",
+      "rootModule": "HxDynamic",
+      "ordinal": 1,
+      "migrationFamily": "imap-interface-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx::expression::EField(EIdent)::HxRuntime.unbox_bool_or_obj::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.unbox_bool_or_obj",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "structural-field-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlStructuralFieldSyntax.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.box_bool",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "structural-field-syntax"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFieldRepresentationMaterializer.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFieldRepresentationMaterializer.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "field-representation-materializer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 1,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 2,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 3,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::4",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 4,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::5",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 5,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::6",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxInt.add",
+      "rootModule": "HxInt",
+      "ordinal": 6,
+      "migrationFamily": "place-assignment"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx::type::TApp::HxMap.string_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.string_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "standard-map-carrier-model"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx::type::TApp::HxMap.int_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.int_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "standard-map-carrier-model"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx::type::TApp::HxMap.obj_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.obj_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "standard-map-carrier-model"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStringRepresentationMaterializer.hx::expression::EField(EIdent)::HxString.hx_null_string::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStringRepresentationMaterializer.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxString.hx_null_string",
+      "rootModule": "HxString",
+      "ordinal": 1,
+      "migrationFamily": "string-representation-materializer"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxType.class_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxType.class_::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.class_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.enum_::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.enum_",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_enum_ctor_layout::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_enum_ctor_layout",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.t::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_enum_ctor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_enum_ctor",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.length::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.t::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_ctor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_ctor",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxArray.length::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxArray.length",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_empty_ctor::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_empty_ctor",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_instance_fields::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_instance_fields",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_static_fields::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_static_fields",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxDynamic.register_class_stringifier::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxDynamic.register_class_stringifier",
+      "rootModule": "HxDynamic",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.class_::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.class_",
+      "rootModule": "HxType",
+      "ordinal": 2,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_super::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_super",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::generated-text::lines.push::HxType.register_class_tags::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxType.register_class_tags",
+      "rootModule": "HxType",
+      "ordinal": 1,
+      "migrationFamily": "compiler-generated-modules"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxMap.string_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.string_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxMap.obj_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.obj_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxMap.int_map::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.int_map",
+      "rootModule": "HxMap",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxMap.obj_map::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.obj_map",
+      "rootModule": "HxMap",
+      "ordinal": 2,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxMap.obj_map::3",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxMap.obj_map",
+      "rootModule": "HxMap",
+      "ordinal": 3,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxArray.t::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TIdent::HxBytes.t::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TIdent",
+      "symbol": "HxBytes.t",
+      "rootModule": "HxBytes",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TApp::HxArray.t::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TApp",
+      "symbol": "HxArray.t",
+      "rootModule": "HxArray",
+      "ordinal": 2,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::type::TIdent::HxBytes.t::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "type",
+      "construction": "TIdent",
+      "symbol": "HxBytes.t",
+      "rootModule": "HxBytes",
+      "ordinal": 2,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxRuntime.hx_null::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxRuntime.hx_null",
+      "rootModule": "HxRuntime",
+      "ordinal": 2,
+      "migrationFamily": "compiler-core"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/DuneProjectEmitter.hx::generated-text::lines.push::HxHxBackendPluginHost.register_provider_type::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/DuneProjectEmitter.hx",
+      "domain": "generated-text",
+      "construction": "lines.push",
+      "symbol": "HxHxBackendPluginHost.register_provider_type",
+      "rootModule": "HxHxBackendPluginHost",
+      "ordinal": 1,
+      "migrationFamily": "plugin-build-generated-text"
+    }
+  ]
+}

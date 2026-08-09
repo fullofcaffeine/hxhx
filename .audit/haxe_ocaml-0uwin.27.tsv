@@ -1,0 +1,9 @@
+ts	phase	decision	why	evidence	result
+2026-08-09T13:09:00Z	need-check	confirmed no existing private-runtime inventory guard	RuntimeUsageCollector reports module names but does not freeze Haxe source constructors	package.json and repository search	task still needed
+2026-08-09T13:15:00Z	discovery	inventoried direct structured constructors plus generated-text and raw boundaries	these are the current source locations that can bypass future per-use authority	deterministic source scanner	445 entries across 15 owners
+2026-08-09T13:18:00Z	model	kept the inventory line-number independent	unrelated line movement should not create snapshot churn; failures can still report current lines	stable path/domain/construction/symbol/ordinal IDs	clean-repeat revision stable
+2026-08-09T13:20:00Z	ownership	split the large builder surface into semantic migration families	372 entries in OcamlBuilder are a mega-file risk and cannot be one useful migration task	manifest family counts	32 bounded families plus explicit mega-file rule
+2026-08-09T13:23:00Z	guard	required an explicit review Bead for snapshot writes	the required guard must never refresh its own expected output during CI	--write --review-bead contract	silent refresh rejected
+2026-08-09T13:25:00Z	negative-proof	added a same-symbol growth fixture	a second HxArray.set must be reported even though the module and symbol already exist	fixture test	new owner line and symbol reported
+2026-08-09T13:28:00Z	verification	repeated explicit regeneration and compared file digests	the inventory must be byte-deterministic before it can serve as a reviewed migration snapshot	SHA-256 before and after --write	identical
+2026-08-09T13:29:00Z	verification	ran focused guard, JSON parsing, shell syntax, path privacy, risk routing, and product-surface checks	these are the lowest faithful owners for a CI inventory guard and its claim boundaries	local commands	all passed
