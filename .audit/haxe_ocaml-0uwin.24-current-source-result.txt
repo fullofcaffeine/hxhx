@@ -1,0 +1,17 @@
+Command:
+npm run test:m14:hih-complete-numeric-literals:current-source
+
+Source:
+be972848d34348fcabeb731bf7c6739fc6854a1e
+
+Observed result:
+- The JavaScript numeric-literal check passed.
+- The current-source stage0 build passed the earlier nested IMap conversion.
+- The build also passed the standard Map storage-alias case in currentKnownModuleNames.
+- After 361 seconds, it reached a separate nullable standard Map boundary in fallbackLocalFunctionSig.
+
+Next diagnostic:
+../hxhx-core/src/EmitterStage.hx:3373: characters 22-46 : reflaxe.ocaml [ocaml-call:plan-invariant]: reflaxe.ocaml [ocaml-imap-interface:missing-conversion]: external-source/src/EmitterStage.hx:151476:151500 has no sealed conversion from Null<Map<String, EmitterCallSig>> (typed occurrence Null<Map<String, EmitterCallSig>>) to haxe.IMap<String, EmitterCallSig>
+
+Claim:
+This result satisfies the advancement gate for haxe_ocaml-0uwin.24. It does not prove that the complete compiler-scale build passes.
