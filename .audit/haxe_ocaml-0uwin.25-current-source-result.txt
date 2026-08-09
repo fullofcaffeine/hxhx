@@ -1,0 +1,20 @@
+Command:
+npm run test:m14:hih-complete-numeric-literals:current-source
+
+Source:
+a2851867abb609b3a8b45c272951293fa230c0a6
+
+Observed result:
+- The JavaScript numeric-literal check passed.
+- The working tree was clean when the current-source build started.
+- The Stage0 generation ran for 391 seconds before the next fail-closed target diagnostic.
+- The build passed the former Null<Map<String, EmitterCallSig>> to IMap boundary in fallbackLocalFunctionSig.
+
+Next diagnostic:
+../hxhx-core/src/EmitterStage.hx:7778: characters 62-97 : reflaxe.ocaml [ocaml-lowering:local-storage-invariant]: local lexical-local-v1:543be35ae27df18024e70cf28a867905aa12375655341316c13c54510ed8f99b has no sealed assignment conversion for occurrence "local-conversion:3b26ec60b871ee80f3bf51007b9f9a40"
+
+Source shape at the next frontier:
+final count = returnExceptionNameCounts.exists(base) ? returnExceptionNameCounts.get(base) : 0;
+
+Claim:
+This result satisfies the advancement gate for haxe_ocaml-0uwin.25. It does not prove that the complete compiler-scale build passes. The next error belongs to local representation and assignment planning, not the nullable standard Map-to-IMap conversion closed by this task.
