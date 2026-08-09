@@ -69,6 +69,7 @@ import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEm
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEnumLayout;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryProgramIdentifier;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryRuntimeUse;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryRuntimeUseSection;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
@@ -3467,9 +3468,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final dynamicStringifierNames = [for (name in ctx.dynamicStringifierByFullName.keys()) name];
 			dynamicStringifierNames.sort(Reflect.compare);
 			final programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier> = [];
-			final constructorRuntimeUses:Array<OcamlTypeRegistryRuntimeUse> = [];
+			final runtimeUses:Array<OcamlTypeRegistryRuntimeUse> = [];
 			function addConstructorRuntimeUse(id:String, exactSymbol:String, capability:String):Void {
-				constructorRuntimeUses.push({id: id, exactSymbol: exactSymbol, capability: capability});
+				runtimeUses.push({
+					id: id,
+					exactSymbol: exactSymbol,
+					capability: capability,
+					section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+				});
 			}
 			function planConstructorArgumentRuntimeUses(t:Type, optional:Bool, useIdPrefix:String):Void {
 				final targetType = ocamlTypeExprFromHaxeType(t);
@@ -3544,13 +3550,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final stringifier = ctx.dynamicStringifierByFullName.get(name);
 				if (stringifier == null)
 					continue;
-				final useId = "legacy:dynamic-stringifier:" + name;
+				final useId = "dynamic-stringifier:" + name;
 				programIdentifiers.push({id: useId + ":program-module", exactIdentifier: moduleIdToOcamlModuleName(stringifier.moduleId)});
 				programIdentifiers.push({id: useId + ":program-method", exactIdentifier: stringifier.targetMethodName});
+				runtimeUses.push({
+					id: useId,
+					exactSymbol: "HxDynamic.register_class_stringifier",
+					capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_STRING,
+					section: OcamlTypeRegistryRuntimeUseSection.DynamicStringifier
+				});
 			}
 
 			final typeRegistry = new OcamlTypeRegistryBaseEmitter(artifactProfile, revision.id, useLineDirectives, classNames, enumNames, enumLayouts,
-				emptyConstructors, classFields, classSupers, classTags, programIdentifiers, constructorRuntimeUses);
+				emptyConstructors, classFields, classSupers, classTags, programIdentifiers, runtimeUses);
 			typeRegistry.emitHeader();
 
 			function ocamlExprForDynArgToExpected(t:Type, objExpr:String, useIdPrefix:String):String {
@@ -3708,8 +3720,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 					if (stringifier == null)
 						continue;
 					final moduleName = moduleIdToOcamlModuleName(stringifier.moduleId);
-					final useId = "legacy:dynamic-stringifier:" + name;
-					final registerStringifier = typeRegistry.legacyRuntimeToken(useId, "HxDynamic.register_class_stringifier");
+					final useId = "dynamic-stringifier:" + name;
+					final registerStringifier = typeRegistry.runtimeToken(useId, "HxDynamic.register_class_stringifier");
 					final programModule = typeRegistry.programIdentifierToken(useId + ":program-module", moduleName);
 					final programMethod = typeRegistry.programIdentifierToken(useId + ":program-method", stringifier.targetMethodName);
 					typeRegistry.addTemplate("  " + registerStringifier + " " + ocamlStringLiteral(name) + " (fun value -> " + programModule + "."

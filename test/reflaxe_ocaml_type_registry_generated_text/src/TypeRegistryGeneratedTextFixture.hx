@@ -7,6 +7,7 @@ import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEm
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryEnumLayout;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryProgramIdentifier;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryRuntimeUse;
+import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryRuntimeUseSection;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 using StringTools;
@@ -14,9 +15,9 @@ using StringTools;
 /**
 	Checks the Haxe-owned generator for the base reflection registry.
 
-	The fixture includes two deliberately unfinished runtime calls between the
-	checked base sections. Those calls stay visible as migration debt; they must
-	not appear in the list of runtime uses that already have semantic authority.
+	The fixture checks constructor adapters and Dynamic stringifier registration
+	between the base metadata sections. Every private runtime identifier must have
+	one planned use before the complete generated file can be published.
 **/
 class TypeRegistryGeneratedTextFixture {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -38,7 +39,7 @@ class TypeRegistryGeneratedTextFixture {
 			throw '$label should have failed.';
 	}
 
-	static function emitter(includeConstructorUses:Bool = true):OcamlTypeRegistryBaseEmitter {
+	static function emitter(includeConstructorUses:Bool = true, ?stringifierUseIds:Array<String>):OcamlTypeRegistryBaseEmitter {
 		final layouts:Array<OcamlTypeRegistryEnumLayout> = [
 			{
 				enumName: "demo.Choice",
@@ -74,28 +75,70 @@ class TypeRegistryGeneratedTextFixture {
 				tags: ["demo.Base", "demo.Foo"]
 			}
 		];
+		final plannedStringifierUseIds = stringifierUseIds == null ? ["dynamic-stringifier:demo.Foo"] : stringifierUseIds;
 		final programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier> = [
 			{id: "program:empty-constructor-module:0", exactIdentifier: "HxDemoFoo"},
 			{id: "program:empty-constructor-function:0", exactIdentifier: "foo___empty"}
 		];
-		final constructorRuntimeUses:Array<OcamlTypeRegistryRuntimeUse> = [
-			{id: "constructor:register", exactSymbol: "HxType.register_class_ctor", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY},
-			{id: "constructor:array-type", exactSymbol: "HxArray.t", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
-			{id: "constructor:array-length", exactSymbol: "HxArray.length", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
-			{id: "constructor:bool", exactSymbol: "HxRuntime.unbox_bool_or_obj", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX},
-			{id: "constructor:array-get", exactSymbol: "HxArray.get", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS},
-			{id: "constructor:null", exactSymbol: "HxRuntime.hx_null", capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL},
+		final runtimeUses:Array<OcamlTypeRegistryRuntimeUse> = includeConstructorUses ? [
+			{
+				id: "constructor:register",
+				exactSymbol: "HxType.register_class_ctor",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
+			{
+				id: "constructor:array-type",
+				exactSymbol: "HxArray.t",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
+			{
+				id: "constructor:array-length",
+				exactSymbol: "HxArray.length",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
+			{
+				id: "constructor:bool",
+				exactSymbol: "HxRuntime.unbox_bool_or_obj",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
+			{
+				id: "constructor:array-get",
+				exactSymbol: "HxArray.get",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
+			{
+				id: "constructor:null",
+				exactSymbol: "HxRuntime.hx_null",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
+			},
 			{
 				id: "constructor:string-null",
 				exactSymbol: "HxString.hx_null_string",
-				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_STRING_NULL
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_STRING_NULL,
+				section: OcamlTypeRegistryRuntimeUseSection.ReflectionConstructor
 			}
-		];
+		] : [];
+		for (useId in plannedStringifierUseIds) {
+			runtimeUses.push({
+				id: useId,
+				exactSymbol: "HxDynamic.register_class_stringifier",
+				capability: OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_STRING,
+				section: OcamlTypeRegistryRuntimeUseSection.DynamicStringifier
+			});
+			programIdentifiers.push({id: useId + ":program-module", exactIdentifier: "HxDemoFoo"});
+			programIdentifiers.push({id: useId + ":program-method", exactIdentifier: "foo_to_string"});
+		}
 		return new OcamlTypeRegistryBaseEmitter("portable", "program:fixture:v1", true, ["demo.Foo"], ["demo.Choice"], layouts, emptyConstructors, fields,
-			supers, tags, programIdentifiers, includeConstructorUses ? constructorRuntimeUses : []);
+			supers, tags, programIdentifiers, runtimeUses);
 	}
 
-	static function validAndExplicitlyPartial():Void {
+	static function validAndFullyChecked():Void {
 		final generated = emitter();
 		generated.emitHeader();
 		generated.emitClassAndEnumIdentities();
@@ -115,9 +158,17 @@ class TypeRegistryGeneratedTextFixture {
 		generated.addLiteral("    ignore (enabled, payload, label, len));\n");
 		generated.emitEmptyConstructors();
 		generated.emitClassFields();
-		generated.addLiteral("  ");
-		generated.addLegacyRuntimeUse("legacy:dynamic-stringifier", "HxDynamic.register_class_stringifier");
-		generated.addLiteral(" \"demo.Foo\" legacy_stringifier;\n");
+		final stringifierUseId = "dynamic-stringifier:demo.Foo";
+		final registerStringifier = generated.runtimeToken(stringifierUseId, "HxDynamic.register_class_stringifier");
+		final programModule = generated.programIdentifierToken(stringifierUseId + ":program-module", "HxDemoFoo");
+		final programMethod = generated.programIdentifierToken(stringifierUseId + ":program-method", "foo_to_string");
+		generated.addTemplate("  "
+			+ registerStringifier
+			+ " \"demo.Foo\" (fun value -> "
+			+ programModule
+			+ "."
+			+ programMethod
+			+ " (Obj.obj value) ());\n");
 		generated.emitClassSupers();
 		generated.emitClassTags();
 		generated.emitFooter();
@@ -142,51 +193,39 @@ class TypeRegistryGeneratedTextFixture {
 			"  HxType.register_class_empty_ctor \"demo.Foo\" (fun () -> Obj.repr (HxDemoFoo.foo___empty ()));",
 			"  HxType.register_class_instance_fields \"demo.Foo\" [ \"name\" ];",
 			"  HxType.register_class_static_fields \"demo.Foo\" [ \"create\" ];",
-			"  HxDynamic.register_class_stringifier \"demo.Foo\" legacy_stringifier;",
+			"  HxDynamic.register_class_stringifier \"demo.Foo\" (fun value -> HxDemoFoo.foo_to_string (Obj.obj value) ());",
 			"  HxType.register_class_super \"demo.Foo\" (HxType.class_ \"demo.Base\");",
 			"  HxType.register_class_tags \"demo.Foo\" [ \"demo.Base\"; \"demo.Foo\" ];",
 			"  ()",
 			""
 		].join("\n");
 		assertTrue(record.content == expected, "type-registry generated bytes changed");
-		assertTrue(record.orderedUseIds.length == 17, "the fixture should authorize ten base and seven constructor runtime uses");
-		assertTrue(record.legacyUseIds.join(",") == "legacy:dynamic-stringifier", "unfinished runtime calls should remain explicit and ordered");
-		for (legacyId in record.legacyUseIds)
-			assertTrue(!record.orderedUseIds.contains(legacyId), "legacy runtime use was incorrectly counted as checked authority");
-		assertTrue(record.programIdentifierIds.join(",") == "program:empty-constructor-module:0,program:empty-constructor-function:0",
-			"program-owned identifiers should remain separate from runtime authority");
+		assertTrue(record.orderedUseIds.length == 18, "the fixture should authorize base, constructor, and Dynamic stringifier runtime uses");
+		assertTrue(record.legacyUseIds.length == 0, "the complete type registry should contain no generated-text legacy uses");
+		assertTrue(record.programIdentifierIds.join(",") == [
+			"program:empty-constructor-module:0",
+			"program:empty-constructor-function:0",
+			"dynamic-stringifier:demo.Foo:program-module",
+			"dynamic-stringifier:demo.Foo:program-method"
+		].join(","), "program-owned identifiers should remain separate from runtime authority");
 		for (programId in record.programIdentifierIds) {
 			assertTrue(!record.orderedUseIds.contains(programId), "program identifier was incorrectly counted as checked runtime authority");
 			assertTrue(!record.legacyUseIds.contains(programId), "program identifier was incorrectly counted as legacy runtime debt");
 		}
 	}
 
-	static function legacyTextCannotHidePrivateCalls():Void {
-		final directLiteral = emitter(false);
+	static function uncheckedCodeCannotAddPrivateCalls():Void {
+		final directLiteral = emitter(false, []);
 		directLiteral.emitHeader();
 		directLiteral.emitClassAndEnumIdentities();
 		directLiteral.emitEnumLayouts();
-		directLiteral.addLiteral("  HxType.register_class_ctor \"demo.Foo\" legacy_ctor;\n");
+		directLiteral.addLiteral("  HxType.register_class_ctor \"demo.Foo\" unchecked_ctor;\n");
 		directLiteral.emitEmptyConstructors();
 		directLiteral.emitClassFields();
 		directLiteral.emitClassSupers();
 		directLiteral.emitClassTags();
 		directLiteral.emitFooter();
-		expectFailure("unmarked legacy call", "private runtime name HxType", () -> directLiteral.seal());
-
-		final hiddenInString = emitter(false);
-		hiddenInString.emitHeader();
-		hiddenInString.emitClassAndEnumIdentities();
-		hiddenInString.emitEnumLayouts();
-		hiddenInString.addLiteral("  let hidden = \"");
-		hiddenInString.addLegacyRuntimeUse("legacy:hidden", "HxType.register_class_ctor");
-		hiddenInString.addLiteral("\" in ignore hidden;\n");
-		hiddenInString.emitEmptyConstructors();
-		hiddenInString.emitClassFields();
-		hiddenInString.emitClassSupers();
-		hiddenInString.emitClassTags();
-		hiddenInString.emitFooter();
-		expectFailure("legacy marker in string", "is not an OCaml code identifier", () -> hiddenInString.seal());
+		expectFailure("unchecked private call", "private runtime name HxType", () -> directLiteral.seal());
 
 		final invalidProgramIdentifier = emitter();
 		invalidProgramIdentifier.emitHeader();
@@ -203,11 +242,35 @@ class TypeRegistryGeneratedTextFixture {
 		wrongRuntimeSymbol.emitEnumLayouts();
 		expectFailure("wrong constructor runtime symbol", "expected HxArray.get",
 			() -> wrongRuntimeSymbol.runtimeToken("constructor:array-get", "HxArray.set"));
+
+		final wrongStringifierSymbol = emitter(false);
+		wrongStringifierSymbol.emitHeader();
+		wrongStringifierSymbol.emitClassAndEnumIdentities();
+		wrongStringifierSymbol.emitEnumLayouts();
+		expectFailure("wrong Dynamic stringifier symbol", "expected HxDynamic.register_class_stringifier",
+			() -> wrongStringifierSymbol.runtimeToken("dynamic-stringifier:demo.Foo", "HxDynamic.register_value_stringifier"));
+
+		final reordered = emitter(false, ["dynamic-stringifier:first", "dynamic-stringifier:second"]);
+		reordered.emitHeader();
+		reordered.emitClassAndEnumIdentities();
+		reordered.emitEnumLayouts();
+		reordered.emitEmptyConstructors();
+		reordered.emitClassFields();
+		for (useId in ["dynamic-stringifier:second", "dynamic-stringifier:first"]) {
+			final register = reordered.runtimeToken(useId, "HxDynamic.register_class_stringifier");
+			final moduleName = reordered.programIdentifierToken(useId + ":program-module", "HxDemoFoo");
+			final methodName = reordered.programIdentifierToken(useId + ":program-method", "foo_to_string");
+			reordered.addTemplate("  " + register + " \"demo.Foo\" (fun value -> " + moduleName + "." + methodName + " (Obj.obj value) ());\n");
+		}
+		reordered.emitClassSupers();
+		reordered.emitClassTags();
+		reordered.emitFooter();
+		expectFailure("reordered Dynamic stringifiers", "runtime use order", () -> reordered.seal());
 	}
 
 	static function main():Void {
-		validAndExplicitlyPartial();
-		legacyTextCannotHidePrivateCalls();
+		validAndFullyChecked();
+		uncheckedCodeCannotAddPrivateCalls();
 		Sys.println("TYPE_REGISTRY_GENERATED_TEXT:PASS");
 	}
 }
