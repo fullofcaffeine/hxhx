@@ -54,6 +54,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProd
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
+import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
@@ -381,6 +382,37 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/**
+		Builds one Bytes mutation from the compiler's completed decision.
+
+		The decision lists each private runtime helper the generated expression may
+		call. Syntax must consume those exact entries, in order, before printing;
+		otherwise compilation fails instead of silently introducing an unplanned
+		`HxBytes` or `HxRuntime` dependency.
+	**/
+	function buildBytesMutation(decision:OcamlBytesMutationDecision, receiver:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+			final materialization = OcamlBytesMutationSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
+			// Receiver and argument expressions can contain helper calls owned by
+			// other compiler decisions. Check only the identifiers inserted for this
+			// mutation so each decision remains responsible for its own calls.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeReferences));
+			materialization.expression;
+		} catch (error:Dynamic) {
+			bytesMutationInvariant(Std.string(error), position);
+		}
 	}
 
 	function bytesAccessInvariant(message:String, position:Position):Dynamic {
@@ -2502,7 +2534,7 @@ class OcamlBuilder {
 			case _ if (bytesAccessOccurrence != null):
 				bytesAccessInvariant("an admitted Bytes access reached syntax without its sealed occurrence plan", e.pos);
 			case _ if (plannedBytesMutation != null && bytesMutationOccurrence != null):
-				OcamlBytesMutationSyntax.build(plannedBytesMutation, bytesMutationOccurrence.receiver, bytesMutationOccurrence.arguments, buildExpr, freshTmp);
+				buildBytesMutation(plannedBytesMutation, bytesMutationOccurrence.receiver, bytesMutationOccurrence.arguments, e.pos);
 			case _ if (bytesMutationOccurrence != null):
 				bytesMutationInvariant("an admitted mutating Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, arguments) if (plannedBytesProducer != null):

@@ -233,7 +233,10 @@ class OcamlRuntimeUseAuthority {
 			|| name == "HxRuntime.box_bool"
 			|| name == "HxRuntime.unbox_bool_or_obj"
 			|| name == "HxIterator.hasNext"
-			|| name == "HxIterator.next";
+			|| name == "HxIterator.next"
+			|| name == "HxBytes.fill"
+			|| name == "HxBytes.blit"
+			|| name == "HxRuntime.nullable_int_unwrap";
 	}
 }
 #end

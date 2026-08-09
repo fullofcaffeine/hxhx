@@ -218,6 +218,14 @@ class OcamlBytesMutationPlan {
 			(decision.resultKind : String),
 			decision.resultSemanticTypeId,
 			decision.runtimeRequirementIds.join(","),
+			decision.runtimeUseOccurrences.map(use -> [
+				use.id,
+				use.planRevision,
+				use.requirementId,
+				use.exactSymbol,
+				use.role,
+				Std.string(use.order)
+			].join(":")).join(","),
 			decision.proofId,
 			decision.proofClaim,
 			decision.functionId,
@@ -259,6 +267,23 @@ class OcamlBytesMutationPlan {
 			resultKind: decision.resultKind,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -376,6 +401,7 @@ class OcamlBytesMutationPlanner {
 			resultKind: OcamlBytesMutationResultKind.EffectOnlyVoid,
 			resultSemanticTypeId: OcamlBytesMutationContract.VOID_SEMANTIC_TYPE_ID,
 			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: OcamlBytesMutationContract.PROOF_ID,
 			proofClaim: OcamlBytesMutationContract.PROOF_CLAIM,
 			functionId: binding.functionId,
@@ -390,7 +416,7 @@ class OcamlBytesMutationPlanner {
 	}
 
 	static function copyWithIdentity(decision:OcamlBytesMutationDecision, id:String):OcamlBytesMutationDecision {
-		return {
+		final identified:OcamlBytesMutationDecision = {
 			id: id,
 			source: decision.source,
 			kind: decision.kind,
@@ -420,7 +446,8 @@ class OcamlBytesMutationPlanner {
 			valuePolicy: decision.valuePolicy,
 			resultKind: decision.resultKind,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
-			runtimeRequirementIds: [id + ":runtime:" + OcamlBytesMutationContract.RUNTIME_CAPABILITY],
+			runtimeRequirementIds: [],
+			runtimeUseOccurrences: [],
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -428,6 +455,10 @@ class OcamlBytesMutationPlanner {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
+		final completed:Dynamic = identified;
+		Reflect.setField(completed, "runtimeRequirementIds", OcamlBytesMutationContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(completed, "runtimeUseOccurrences", OcamlBytesMutationContract.runtimeUseOccurrencesFor(identified));
+		return cast completed;
 	}
 }
 #end

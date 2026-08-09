@@ -4,6 +4,9 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** One exact mutating operation on the Haxe standard-library Bytes surface. */
 enum abstract OcamlBytesMutationKind(String) from String to String {
@@ -78,6 +81,7 @@ typedef OcamlBytesMutationDecision = {
 	final resultKind:OcamlBytesMutationResultKind;
 	final resultSemanticTypeId:String;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -89,6 +93,7 @@ typedef OcamlBytesMutationDecision = {
 /** Closed facts shared by Bytes mutation planning, syntax, and runtime reporting. */
 class OcamlBytesMutationContract {
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-mutation";
+	public static inline final NULLABLE_INT_RUNTIME_CAPABILITY = "haxe-bytes-mutation-nullable-int";
 	public static inline final DESTINATION_POLICY = "mutate-receiver-range-only";
 	public static inline final BOUNDS_POLICY = "validate-all-ranges-before-mutation";
 	public static inline final VOID_SEMANTIC_TYPE_ID = "Void";
@@ -169,6 +174,68 @@ class OcamlBytesMutationContract {
 		}
 	}
 
+	/** Returns the direct HxBytes requirement for one mutation decision. */
+	public static function runtimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/** Returns the direct HxRuntime requirement for nullable integer inputs. */
+	public static function nullableIntRuntimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + NULLABLE_INT_RUNTIME_CAPABILITY;
+	}
+
+	/** Returns every direct runtime root selected by one mutation. */
+	public static function runtimeRequirementIdsFor(decision:OcamlBytesMutationDecision):Array<String> {
+		final result = [runtimeRequirementId(decision.id)];
+		if (Lambda.exists(decision.argumentConversions, conversion -> conversion == OcamlBytesMutationArgumentConversion.RequireNonNullInt))
+			result.push(nullableIntRuntimeRequirementId(decision.id));
+		return result;
+	}
+
+	/**
+		Builds the exact private-runtime names target syntax must consume.
+
+		Nullable argument conversions run while arguments are evaluated. The final
+		HxBytes call runs after every argument has been materialized, so its use is
+		last in this owner-local order.
+	**/
+	public static function runtimeUseOccurrencesFor(decision:OcamlBytesMutationDecision):Array<OcamlRuntimeUseOccurrence> {
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final result = new Array<OcamlRuntimeUseOccurrence>();
+
+		function add(requirementId:String, exactSymbol:String, role:String):Void {
+			result.push({
+				id: decision.id + ":runtime-use:" + role,
+				planRevision: planRevision,
+				ownerId: decision.id,
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: exactSymbol,
+				role: role,
+				order: result.length,
+				source: {
+					file: decision.source.file,
+					min: decision.source.min,
+					max: decision.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			});
+		}
+
+		for (index in 0...decision.argumentConversions.length)
+			if (decision.argumentConversions[index] == OcamlBytesMutationArgumentConversion.RequireNonNullInt)
+				add(nullableIntRuntimeRequirementId(decision.id), "HxRuntime.nullable_int_unwrap", 'unwrap-argument:$index');
+		add(runtimeRequirementId(decision.id), "HxBytes." + fieldName(decision.kind), "mutate-bytes");
+		return result;
+	}
+
 	/** Rejects incomplete, stale-shaped, or internally conflicting mutation facts. */
 	public static function requireDecision(decision:OcamlBytesMutationDecision):Void {
 		if (decision == null)
@@ -207,8 +274,7 @@ class OcamlBytesMutationContract {
 			|| decision.valuePolicy != valuePolicy(decision.kind)
 			|| decision.resultKind != OcamlBytesMutationResultKind.EffectOnlyVoid
 			|| decision.resultSemanticTypeId != VOID_SEMANTIC_TYPE_ID
-			|| decision.runtimeRequirementIds.length != 1
-			|| decision.runtimeRequirementIds[0] != decision.id + ":runtime:" + RUNTIME_CAPABILITY
+			|| decision.runtimeRequirementIds.join(",") != runtimeRequirementIdsFor(decision).join(",")
 			|| decision.proofId != PROOF_ID
 			|| decision.proofClaim != PROOF_CLAIM
 			|| decision.functionId.length == 0
@@ -218,6 +284,30 @@ class OcamlBytesMutationContract {
 			throw 'reflaxe.ocaml [ocaml-bytes:invalid-mutation]: mutation "${decision.id}" does not match the sealed Bytes mutation contract';
 		}
 		requireArguments(decision);
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-mutation-runtime-use]: mutation "${decision.id}" does not own every private runtime use';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality) {
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-mutation-runtime-use]: mutation "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+		}
 	}
 
 	static function requireArguments(decision:OcamlBytesMutationDecision):Void {

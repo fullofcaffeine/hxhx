@@ -124,15 +124,24 @@ class RuntimeUseAuthorityFixture {
 		expectFailure("stale final token", "stale runtime use", () -> staleOwner.reconcileExpression(OcamlExpr.ERuntimeIdent(staleReference)));
 	}
 
-	/** Proves every migrated structural-field helper rejects an unmarked call. */
-	static function structuralFieldPlainReferencesFail():Void {
+	/**
+		Proves that each migrated private helper rejects an ordinary unmarked call.
+
+		An unmarked call has no link back to the compiler decision that authorized
+		it. Rejecting it here prevents generated syntax from introducing a helper
+		that was absent from the sealed runtime-use inventory.
+	**/
+	static function migratedPrivatePlainReferencesFail():Void {
 		for (symbol in [
 			"HxAnon.get",
 			"HxAnon.set",
 			"HxRuntime.box_bool",
 			"HxRuntime.unbox_bool_or_obj",
 			"HxIterator.hasNext",
-			"HxIterator.next"
+			"HxIterator.next",
+			"HxBytes.fill",
+			"HxBytes.blit",
+			"HxRuntime.nullable_int_unwrap"
 		]) {
 			final separator = symbol.indexOf(".");
 			final moduleName = symbol.substr(0, separator);
@@ -155,7 +164,7 @@ class RuntimeUseAuthorityFixture {
 		duplicateSameSymbolUseFails();
 		constructionFailures();
 		reconciliationFailures();
-		structuralFieldPlainReferencesFail();
+		migratedPrivatePlainReferencesFail();
 		exactRequirementRoot();
 		assertTrue(true, "runtime use authority fixture completed");
 		Sys.println("RUNTIME_USE_AUTHORITY:PASS");

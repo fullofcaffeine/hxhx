@@ -83,6 +83,12 @@ class BytesMutationPlanFixture {
 			} else if (Lambda.exists(decision.argumentConversions, conversion -> conversion != OcamlBytesMutationArgumentConversion.Identity)) {
 				Context.error('Exact Bytes mutation case "$name" unexpectedly selected an argument conversion.', field.pos);
 			}
+			final expectedUses = name == "fillNullableValue" ? 2 : 1;
+			if (decision.runtimeUseOccurrences.length != expectedUses
+				|| decision.runtimeUseOccurrences[expectedUses - 1].exactSymbol != "HxBytes." + OcamlBytesMutationContract.fieldName(kind)
+				|| (name == "fillNullableValue" && decision.runtimeUseOccurrences[0].exactSymbol != "HxRuntime.nullable_int_unwrap")) {
+				Context.error('Bytes mutation case "$name" has no exact private-runtime use inventory.', field.pos);
+			}
 			final occurrence = mutationOccurrence(body);
 			if (occurrence == null || first.requireFor(occurrence, representations).id != decision.id)
 				Context.error('Bytes mutation case "$name" did not resolve its exact sealed occurrence.', field.pos);
@@ -99,12 +105,16 @@ class BytesMutationPlanFixture {
 		for (decision in decisions)
 			OcamlBytesRuntimeRequirementRecorder.recordMutation(ledger, decision);
 		final requirements = ledger.requirementsSorted();
-		if (requirements.length != decisions.length)
-			Context.error('Expected ${decisions.length} Bytes mutation requirements, received ${requirements.length}.', Context.currentPos());
+		if (requirements.length != decisions.length + 1)
+			Context.error('Expected ${decisions.length + 1} Bytes mutation requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_MUTATION
-				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
-				|| requirement.rootModules.join(",") != "HxBytes") {
+			final mutationRequirement = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_MUTATION
+				&& requirement.subject.id == OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+				&& requirement.rootModules.join(",") == "HxBytes";
+			final nullableRequirement = requirement.semanticCapability == OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_MUTATION_NULLABLE_INT
+				&& requirement.subject.id == "Null<Int>"
+				&& requirement.rootModules.join(",") == "HxRuntime";
+			if (!mutationRequirement && !nullableRequirement) {
 				Context.error('Runtime requirement "${requirement.id}" does not select the exact HxBytes mutation contract.', Context.currentPos());
 			}
 		}
@@ -113,6 +123,9 @@ class BytesMutationPlanFixture {
 			&& decision.functionId == "BytesMutationCases.blit");
 		if (sample == null)
 			Context.error("The Bytes mutation fixture has no blit decision.", Context.currentPos());
+		final nullableSample = Lambda.find(decisions, decision -> decision.functionId == "BytesMutationCases.fillNullableValue");
+		if (nullableSample == null)
+			Context.error("The Bytes mutation fixture has no nullable fill decision.", Context.currentPos());
 		expectThrows("duplicate-mutation", () -> new OcamlBytesMutationPlan([sample, sample]));
 		expectThrows("conflicting-mutation", () -> new OcamlBytesMutationPlan([sample, reseal(sample, {bodyRevision: sample.bodyRevision + ":conflict"})]));
 		expectThrows("invalid-mutation", () -> new OcamlBytesMutationPlan([copy(sample, {kind: OcamlBytesMutationKind.Fill})]));
@@ -121,6 +134,13 @@ class BytesMutationPlanFixture {
 		expectThrows("invalid-mutation-conversion",
 			() -> new OcamlBytesMutationPlan([reseal(sample, {argumentInputSemanticTypeIds: ["Int", "Int", "Int", "Int"]})]));
 		expectThrows("invalid-mutation", () -> new OcamlBytesMutationPlan([reseal(sample, {overlapPolicy: OcamlBytesMutationOverlapPolicy.NotApplicable})]));
+		expectThrows("invalid-mutation-runtime-use", () -> new OcamlBytesMutationPlan([copy(sample, {runtimeUseOccurrences: []})]));
+		final wrongRuntimeUse:Dynamic = Reflect.copy(sample.runtimeUseOccurrences[0]);
+		Reflect.setField(wrongRuntimeUse, "exactSymbol", "HxBytes.get");
+		expectThrows("invalid-mutation-runtime-use", () -> new OcamlBytesMutationPlan([copy(sample, {runtimeUseOccurrences: [wrongRuntimeUse]})]));
+		final reversedRuntimeUses = nullableSample.runtimeUseOccurrences.copy();
+		reversedRuntimeUses.reverse();
+		expectThrows("invalid-mutation-runtime-use", () -> new OcamlBytesMutationPlan([copy(nullableSample, {runtimeUseOccurrences: reversedRuntimeUses})]));
 		expectThrows("invalid-mutation",
 			() -> OcamlBytesRuntimeRequirementRecorder.recordMutation(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-mutation", () -> new OcamlBytesMutationPlan([sample]).requirePlanBinding({
@@ -210,7 +230,9 @@ class BytesMutationPlanFixture {
 		final changed:OcamlBytesMutationDecision = cast value;
 		final id = OcamlBytesMutationContract.idFor(changed);
 		Reflect.setField(value, "id", id);
-		Reflect.setField(value, "runtimeRequirementIds", [id + ":runtime:" + OcamlBytesMutationContract.RUNTIME_CAPABILITY]);
+		final identified:OcamlBytesMutationDecision = cast value;
+		Reflect.setField(value, "runtimeRequirementIds", OcamlBytesMutationContract.runtimeRequirementIdsFor(identified));
+		Reflect.setField(value, "runtimeUseOccurrences", OcamlBytesMutationContract.runtimeUseOccurrencesFor(identified));
 		return cast value;
 	}
 

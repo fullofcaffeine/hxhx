@@ -6,6 +6,19 @@ import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationArgumentC
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationContract;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationKind;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+
+/**
+	Returns both the generated mutation and its compiler-owned helper identifiers.
+
+	The caller checks the identifier list against the mutation decision before
+	printing. Keeping the list separate avoids claiming helper calls that belong
+	to nested receiver or argument expressions.
+**/
+typedef OcamlBytesMutationMaterialization = {
+	final expression:OcamlExpr;
+	final runtimeReferences:Array<OcamlExpr>;
+}
 
 /**
 	Constructs OCaml syntax from one already-validated Bytes mutation decision.
@@ -15,12 +28,15 @@ import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationKind;
 **/
 class OcamlBytesMutationSyntax {
 	public static function build(decision:OcamlBytesMutationDecision, receiver:TypedExpr, arguments:Array<TypedExpr>, buildExpression:TypedExpr->OcamlExpr,
-			freshName:String->String):OcamlExpr {
+			freshName:String->String, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlBytesMutationMaterialization {
 		OcamlBytesMutationContract.requireDecision(decision);
+		if (runtimeAuthority == null)
+			throw 'reflaxe.ocaml [ocaml-bytes:missing-mutation-runtime-authority]: mutation "${decision.id}" cannot construct private runtime identifiers';
 		if (arguments.length != decision.argumentCount)
 			throw 'reflaxe.ocaml [ocaml-bytes:mutation-syntax-arity-mismatch]: mutation "${decision.id}" expected ${decision.argumentCount} arguments but received ${arguments.length}';
 
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
+		final runtimeReferences:Array<OcamlExpr> = [];
 		var receiverValue:Null<OcamlExpr> = null;
 		final argumentValues:Array<Null<OcamlExpr>> = [for (_ in 0...decision.argumentCount) null];
 		for (slot in decision.evaluationOrder) {
@@ -39,7 +55,9 @@ class OcamlBytesMutationSyntax {
 					case Identity:
 						input;
 					case RequireNonNullInt:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [input]);
+						final runtimeReference = runtimeIdentifier(decision, runtimeAuthority, 'unwrap-argument:$slot', "HxRuntime.nullable_int_unwrap");
+						runtimeReferences.push(runtimeReference);
+						OcamlExpr.EApp(runtimeReference, [input]);
 				}
 				materialized.push({name: name, value: converted});
 				argumentValues[slot] = OcamlExpr.EIdent(name);
@@ -59,12 +77,22 @@ class OcamlBytesMutationSyntax {
 			case Fill: "fill";
 			case Blit: "blit";
 		}
-		var out = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), field), callArguments);
+		final callReference = runtimeIdentifier(decision, runtimeAuthority, "mutate-bytes", "HxBytes." + field);
+		runtimeReferences.push(callReference);
+		var out = OcamlExpr.EApp(callReference, callArguments);
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
-		return out;
+		return {expression: out, runtimeReferences: runtimeReferences};
+	}
+
+	static function runtimeIdentifier(decision:OcamlBytesMutationDecision, authority:OcamlRuntimeUseAuthority, role:String, exactSymbol:String):OcamlExpr {
+		final matches = decision.runtimeUseOccurrences.filter(use -> use.role == role);
+		if (matches.length != 1 || matches[0].exactSymbol != exactSymbol)
+			throw 'reflaxe.ocaml [ocaml-bytes:wrong-mutation-runtime-use]: mutation "${decision.id}" has no exact $role/$exactSymbol occurrence';
+		final use = matches[0];
+		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
 	}
 
 	static function required(decision:OcamlBytesMutationDecision, value:Null<OcamlExpr>, label:String):OcamlExpr {

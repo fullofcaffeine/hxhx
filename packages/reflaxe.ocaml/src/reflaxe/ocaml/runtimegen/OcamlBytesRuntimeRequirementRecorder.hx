@@ -25,6 +25,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlBytesRuntimeRequirementRecorder {
 	public static inline final HAXE_BYTES_MUTATION = OcamlBytesMutationContract.RUNTIME_CAPABILITY;
+	public static inline final HAXE_BYTES_MUTATION_NULLABLE_INT = OcamlBytesMutationContract.NULLABLE_INT_RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_ACCESS = OcamlBytesAccessContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
@@ -69,7 +70,7 @@ class OcamlBytesRuntimeRequirementRecorder {
 	**/
 	public static function recordMutation(ledger:OcamlRuntimeRequirementLedger, decision:OcamlBytesMutationDecision):Void {
 		OcamlBytesMutationContract.requireDecision(decision);
-		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_MUTATION;
+		final requirementId = OcamlBytesMutationContract.runtimeRequirementId(decision.id);
 		if (decision.runtimeRequirementIds[0] != requirementId)
 			throw 'Bytes mutation "${decision.id}" does not name its exact runtime requirement.';
 		ledger.record({
@@ -89,6 +90,28 @@ class OcamlBytesRuntimeRequirementRecorder {
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation mutates one exact haxe.io.Bytes destination through HxBytes after fixing receiver and argument evaluation, range validation, ${decision.overlapPolicy} overlap, and ${decision.valuePolicy} byte behavior; the call returns effect-only Void and does not authorize other write families.'
 		});
+		if (decision.runtimeRequirementIds.length == 2) {
+			final nullableRequirementId = OcamlBytesMutationContract.nullableIntRuntimeRequirementId(decision.id);
+			if (decision.runtimeRequirementIds[1] != nullableRequirementId)
+				throw 'Bytes mutation "${decision.id}" does not name its exact nullable Int runtime requirement.';
+			ledger.record({
+				id: nullableRequirementId,
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_BYTES_MUTATION_NULLABLE_INT,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Null<Int>"
+				},
+				implementationFeature: "haxe-nullable-int-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: ["metal", "portable"],
+				explanation: 'The sealed ${decision.calleeId} mutation receives a nullable integer where HxBytes requires an exact Int, so HxRuntime rejects null before the selected mutation runs.'
+			});
+		}
 	}
 
 	/**

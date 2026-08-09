@@ -1,9 +1,20 @@
 import haxe.Json;
+import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.tooling.ReflaxeOcamlInspection;
 
 class M6BytesIntegrationTest {
+	/**
+		Updates the report's outer checksum after a test deliberately changes one
+		representation. Without this step, inspection stops at the checksum and
+		never reaches the deeper carrier rule that the test is meant to exercise.
+	**/
+	static function refreshRepresentationRevision(report:Dynamic):Void {
+		final representations:Array<Dynamic> = cast Reflect.field(report, "representations");
+		Reflect.setField(report, "representationRevision", "sha256:" + Sha256.encode(Json.stringify(representations)));
+	}
+
 	static function assertContains(haystack:String, needle:String, label:String):Void {
 		if (haystack.indexOf(needle) < 0) {
 			throw label + ": expected to find '" + needle + "'";
@@ -174,16 +185,18 @@ class M6BytesIntegrationTest {
 		if (inspection.lowering.status != "present" || !inspection.summary.valid)
 			throw "public inspection rejected valid exact Int64 or Float representations";
 		Reflect.setField(int64Representation, "nominalLayoutRevision", "sha256:" + StringTools.lpad("", "0", 64));
+		refreshRepresentationRevision(loweringReport);
 		sys.io.File.saveContent(loweringReportPath, Json.stringify(loweringReport, null, "  ") + "\n");
 		final corruptedInspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
 		sys.io.File.saveContent(loweringReportPath, loweringReportText);
 		if (corruptedInspection.lowering.status != "invalid"
 			|| corruptedInspection.lowering.message.indexOf("sealed exact Int64 nominal value carrier") < 0) {
-			throw "public inspection accepted a corrupted Int64 carrier layout";
+			throw 'public inspection accepted a corrupted Int64 carrier layout: status=${corruptedInspection.lowering.status} message=${corruptedInspection.lowering.message}';
 		}
 		Reflect.setField(int64Representation, "nominalLayoutRevision", OcamlInt64RepresentationContract.LAYOUT_REVISION);
 		final floatProof:Dynamic = Reflect.field(floatRepresentation, "proof");
 		Reflect.setField(floatProof, "id", "corrupted-float-proof");
+		refreshRepresentationRevision(loweringReport);
 		sys.io.File.saveContent(loweringReportPath, Json.stringify(loweringReport, null, "  ") + "\n");
 		final corruptedFloatInspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
 		sys.io.File.saveContent(loweringReportPath, loweringReportText);
