@@ -155,11 +155,60 @@ if (familyFor(stdioWriteString, 'return')?.status !== 'admitted'
 	|| report.callableBoundaries.some(boundary => boundary.functionId === stdioWriteString.functionId)) {
 	fail('OcamlStdio writeString did not receive a payloadless result without receiver, argument, or call admission')
 }
-if (familyFor(stdioReadBytes, 'throw')?.status !== 'blocked'
-	|| familyFor(stdioReadBytes, 'throw')?.blockers[0]?.code !== 'throw-value-unrepresented'
-	|| familyFor(stdioReadBytes, 'throw')?.blockers[0]?.semanticTypeId !== 'haxe.io.Eof'
+const stdioReadBytesThrow = familyFor(stdioReadBytes, 'throw')
+const eofRepresentation = report.representations.find(item =>
+	item.id === 'representation:haxe.io.Eof:internal-value')
+const eofThrows = report.controls.filter(control =>
+	control.functionId === stdioReadBytes?.functionId
+	&& control.kind === 'throw'
+	&& control.payload?.inputSemanticTypeId === 'haxe.io.Eof')
+const eofThrow = eofThrows[0]
+const eofPayload = eofThrow?.payload
+const eofNominal = eofPayload?.nominalRepresentation
+if (stdioReadBytesThrow?.status !== 'admitted'
+	|| stdioReadBytesThrow.occurrenceCount !== 1
+	|| stdioReadBytesThrow.decisionCount !== 1
+	|| stdioReadBytesThrow.blockers.length !== 0
+	|| eofThrows.length !== 1
+	|| eofThrow.functionId !== stdioReadBytes.functionId
+	|| eofThrow.source.file !== 'packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx'
+	|| eofThrow.source.max < eofThrow.source.min
+	|| eofThrow.effect !== 'raise-haxe-value'
+	|| eofThrow.targetKind !== 'haxe-exception-channel'
+	|| eofThrow.targetId !== 'control-target:haxe-exception-channel:v1'
+	|| eofThrow.mechanism !== 'runtime-typed-haxe-exception-signal'
+	|| eofThrow.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-exception-signal-v1'
+	|| eofThrow.runtimeTags.join(',') !== 'Dynamic'
+	|| eofThrow.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
+	|| eofThrow.profileEligibility.join(',') !== 'metal,portable'
+	|| eofThrow.proofId !== 'exact-monomorphic-class-throw-control-v1'
+	|| eofPayload == null
+	|| eofRepresentation == null
+	|| eofPayload.inputSemanticTypeId !== 'haxe.io.Eof'
+	|| eofPayload.inputCarrierTypeId !== 't'
+	|| eofPayload.inputRepresentationId !== eofRepresentation.id
+	|| eofPayload.representationRevision !== eofRepresentation.revision
+	|| eofPayload.outputSemanticTypeId !== 'haxe.io.Eof'
+	|| eofPayload.outputCarrierTypeId !== 't'
+	|| eofPayload.outputRepresentationId !== eofRepresentation.id
+	|| eofPayload.signalCarrierTypeId !== 'Obj.t'
+	|| eofPayload.conversion !== 'box-nominal-throw-carrier'
+	|| eofPayload.proofId !== eofThrow.proofId
+	|| eofRepresentation.semanticTypeId !== 'haxe.io.Eof'
+	|| eofRepresentation.carrierTypeId !== 't'
+	|| eofRepresentation.nominalTargetModuleName !== 'Haxe_io_Eof'
+	|| eofRepresentation.nominalTargetTypeName !== 't'
+	|| eofRepresentation.boxingPolicy !== 'nullable-nominal-record-carrier'
+	|| eofRepresentation.nullPolicy !== 'runtime-sentinel'
+	|| eofRepresentation.profileEligibility.join(',') !== 'metal,portable'
+	|| !sha256.test(eofRepresentation.nominalLayoutRevision)
+	|| eofRepresentation.proof?.id !== `whole-program-monomorphic-nominal-record-v1:${eofRepresentation.nominalLayoutRevision}`
+	|| eofNominal?.targetModuleName !== eofRepresentation.nominalTargetModuleName
+	|| eofNominal?.targetTypeName !== eofRepresentation.nominalTargetTypeName
+	|| eofNominal?.layoutRevision !== eofRepresentation.nominalLayoutRevision
+	|| eofNominal?.representationProofId !== eofRepresentation.proof?.id
 	|| familyFor(stdioWriteBytes, 'throw')?.status !== 'not-needed') {
-	fail('the instance result slice accidentally changed the separate Eof throw boundary')
+	fail('OcamlStdio readBytes did not retain its exact Eof throw while writeBytes remained throw-free')
 }
 
 const stringToolsSource = fs.readFileSync('out/StringTools.ml', 'utf8')
@@ -687,7 +736,9 @@ if (!/Obj\.obj __ret_\d+ : bool/.test(boolBody)) {
 const nullableStringStart = source.indexOf('let nullableStringCarrier =')
 const nullableStringEnd = source.indexOf('\nlet nestedClosure =', nullableStringStart)
 const nullableStringBody = source.slice(nullableStringStart, nullableStringEnd)
-if (!nullableStringBody.includes('Obj.repr (HxString.hx_null_string)')
+const boxesNullString = nullableStringBody.includes('Obj.repr HxString.hx_null_string')
+	|| nullableStringBody.includes('Obj.repr (HxString.hx_null_string)')
+if (!boxesNullString
 	|| !/Obj\.obj __ret_\d+ : string/.test(nullableStringBody)) {
 	fail('the exact-String boundary did not preserve the existing runtime null-sentinel carrier')
 }
