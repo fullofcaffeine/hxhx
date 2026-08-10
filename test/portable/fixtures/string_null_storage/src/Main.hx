@@ -19,10 +19,17 @@ class Main {
 		return value == null ? "null" : value == "" ? "empty" : value;
 	}
 
+	static function makeStringCallback():Int->String {
+		return value -> 'value=$value';
+	}
+
 	static function main():Void {
 		final state = new StringState();
 		var local:String;
 		local = "local";
+		var readableBeforeWrite:String = null;
+		final localDefault = classify(readableBeforeWrite);
+		readableBeforeWrite = "after";
 		final beforeWrites = [
 			classify(state.omitted),
 			classify(state.empty),
@@ -31,7 +38,10 @@ class Main {
 			classify(empty),
 			classify(explicitNull),
 			classify(echo(omitted)),
-			local
+			local,
+			localDefault,
+			readableBeforeWrite,
+			makeStringCallback()(1)
 		];
 		state.omitted = "instance-written";
 		final result = beforeWrites.concat([classify(state.omitted)]).join("|");

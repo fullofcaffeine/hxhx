@@ -7552,43 +7552,50 @@ class OcamlBuilder {
 							hasBase = true;
 						}
 					} else {
-						final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForLocal(v.id, v.t, e.pos);
-						final localType = localCarrierType(v.id, v.t, e.pos);
-						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
 						final isMutable = localRequiresRef(v.id, e.pos);
+						final shouldBind = isMutable || isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
 
-						if (!isMutable) {
-							final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
-							if (!shouldBind) {
-								if (init != null) {
-									wraps.push({
-										kind: "seq",
-										name: null,
-										expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [initExpr])
-									});
+						// Haxe can type a generated local as a declaration followed by an
+						// assignment. If no read occurs before that assignment, no program
+						// behavior can observe an initial value. Do not construct a String
+						// null sentinel or another default that final OCaml will discard.
+						if (init != null || shouldBind) {
+							final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForLocal(v.id, v.t, e.pos);
+							final localType = localCarrierType(v.id, v.t, e.pos);
+							final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
+
+							if (!isMutable) {
+								if (!shouldBind) {
+									if (init != null) {
+										wraps.push({
+											kind: "seq",
+											name: null,
+											expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [initExpr])
+										});
+									}
+								} else {
+									refLocals.remove(v.id);
+									weakRefLocals.remove(v.id);
+									objRefLocals.remove(v.id);
+									wraps.push({kind: "let", name: renameVar(v.name), expr: initExpr});
 								}
 							} else {
-								refLocals.remove(v.id);
-								weakRefLocals.remove(v.id);
-								objRefLocals.remove(v.id);
-								wraps.push({kind: "let", name: renameVar(v.name), expr: initExpr});
+								refLocals.set(v.id, true);
+								weakRefLocals.set(v.id, (init == null || isNullInitializer(init)) && isFunctionType(v.t));
+								final slotType = localType;
+								final isObjSlot = switch (slotType) {
+									case TIdent(name):
+										name == "Obj.t";
+									case _:
+										false;
+								}
+								objRefLocals.set(v.id, isObjSlot);
+								wraps.push({
+									kind: "let",
+									name: renameVar(v.name),
+									expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr])
+								});
 							}
-						} else {
-							refLocals.set(v.id, true);
-							weakRefLocals.set(v.id, (init == null || isNullInitializer(init)) && isFunctionType(v.t));
-							final slotType = localType;
-							final isObjSlot = switch (slotType) {
-								case TIdent(name):
-									name == "Obj.t";
-								case _:
-									false;
-							}
-							objRefLocals.set(v.id, isObjSlot);
-							wraps.push({
-								kind: "let",
-								name: renameVar(v.name),
-								expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr])
-							});
 						}
 
 						if (isLast) {

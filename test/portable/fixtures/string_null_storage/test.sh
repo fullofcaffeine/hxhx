@@ -28,6 +28,14 @@ if grep -Eq 'Obj.magic.*HxRuntime.hx_null' "$source_file"; then
 	echo "An admitted exact String occurrence emitted a fresh unsafe null cast instead of the runtime-owned sentinel" >&2
 	exit 1
 fi
+if ! grep -Eq '^let makeStringCallback = fun \(\) -> fun value -> "value=" \^ string_of_int value$' "$source_file"; then
+	echo "The nested String callback did not remove its unobservable generated result default" >&2
+	exit 1
+fi
+if ! grep -Eq 'readableBeforeWrite = \(HxString\.hx_null_string : string\)' "$source_file"; then
+	echo "A String local read before assignment lost its observable Haxe null default" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('node:fs')
@@ -96,11 +104,11 @@ if (!instanceAssignment
 
 const stringCalls = report.calls.filter(call =>
 	call.arguments.some(argument => argument.outputSemanticTypeId === 'String')
-	|| call.result.outputSemanticTypeId === 'String')
+	|| call.result?.outputSemanticTypeId === 'String')
 if (stringCalls.length === 0)
 	fail('no exact String call boundary was admitted')
 for (const call of stringCalls) {
-	for (const value of call.arguments.concat([call.result])) {
+	for (const value of call.arguments.concat(call.result == null ? [] : [call.result])) {
 		if (value.inputSemanticTypeId === 'String' || value.outputSemanticTypeId === 'String') {
 			if (value.inputCarrierTypeId !== 'string'
 				|| value.outputCarrierTypeId !== 'string'

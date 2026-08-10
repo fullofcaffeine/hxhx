@@ -118,12 +118,12 @@ class ArrayMain {
 		return [1, 2, 3];
 	}
 
-	static function makeMapCallback():Int->Float {
+	static function makeMapCallback():Int->String {
 		callOrder.push("callback");
 		return value -> {
 			mapCallbackCalls++;
 			callOrder.push('map:$value');
-			value + 0.5;
+			'value=$value';
 		};
 	}
 
@@ -423,10 +423,10 @@ class ArrayMain {
 			throw "map";
 		callOrder = [];
 		mapCallbackCalls = 0;
-		final mappedFloatsFromInts = makeCallbackReceiver().map(makeMapCallback());
-		if (mappedFloatsFromInts.length != 3
-			|| mappedFloatsFromInts[0] != 1.5
-			|| mappedFloatsFromInts[2] != 3.5
+		final mappedStringsFromInts = makeCallbackReceiver().map(makeMapCallback());
+		if (mappedStringsFromInts.length != 3
+			|| mappedStringsFromInts[0] != "value=1"
+			|| mappedStringsFromInts[2] != "value=3"
 			|| mapCallbackCalls != 3
 			|| callOrder.join(",") != "receiver,callback,map:1,map:2,map:3")
 			throw "map_type_change_order_or_callback";
