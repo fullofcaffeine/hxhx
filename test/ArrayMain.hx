@@ -14,6 +14,8 @@ private class ArrayEqualityBox {
 **/
 class ArrayMain {
 	static var callOrder:Array<String> = [];
+	static var sortReceiverValue:Array<Int> = [];
+	static var sortComparatorCalls = 0;
 
 	static function makeReceiver():Array<Int> {
 		callOrder.push("receiver");
@@ -93,6 +95,20 @@ class ArrayMain {
 	static function makeSliceEnd():Int {
 		callOrder.push("end");
 		return 2;
+	}
+
+	static function makeSortReceiver():Array<Int> {
+		callOrder.push("receiver");
+		sortReceiverValue = [3, 1, 2];
+		return sortReceiverValue;
+	}
+
+	static function makeSortComparator():(Int, Int) -> Int {
+		callOrder.push("comparator");
+		return (left, right) -> {
+			sortComparatorCalls++;
+			left - right;
+		};
 	}
 
 	static function main() {
@@ -310,6 +326,28 @@ class ArrayMain {
 		sorted.sort((x, y) -> x - y);
 		if (sorted[0] != 1 || sorted[2] != 3)
 			throw "sort";
+		callOrder = [];
+		sortComparatorCalls = 0;
+		makeSortReceiver().sort(makeSortComparator());
+		if (callOrder.join(",") != "receiver,comparator" || sortReceiverValue.join(",") != "1,2,3" || sortComparatorCalls == 0)
+			throw "sort_order_mutation_or_callback";
+		sortComparatorCalls = 0;
+		final emptySort:Array<Int> = [];
+		emptySort.sort((left, right) -> {
+			sortComparatorCalls++;
+			left - right;
+		});
+		final singleSort = [1];
+		singleSort.sort((left, right) -> {
+			sortComparatorCalls++;
+			left - right;
+		});
+		if (sortComparatorCalls != 0 || emptySort.length != 0 || singleSort.join(",") != "1")
+			throw "sort_empty_or_single";
+		final sortedObjects = [new ArrayEqualityBox(3), new ArrayEqualityBox(1), new ArrayEqualityBox(2)];
+		sortedObjects.sort((left, right) -> left.value - right.value);
+		if (sortedObjects[0].value != 1 || sortedObjects[1].value != 2 || sortedObjects[2].value != 3)
+			throw "sort_objects";
 
 		final sortedFloats = [Math.POSITIVE_INFINITY, -0.0, 4.5, Math.NEGATIVE_INFINITY];
 		sortedFloats.sort((x, y) -> x < y ? -1 : (x > y ? 1 : 0));

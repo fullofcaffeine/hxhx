@@ -29,6 +29,7 @@ enum abstract OcamlStandardArrayOperation(String) from String to String {
 	final LastIndexOfDefault = "lastIndexOfDefault";
 	final Slice = "slice";
 	final SliceDefault = "sliceDefault";
+	final Sort = "sort";
 }
 
 /** Whether a standard Array operation returns a Haxe value or only an effect. */
@@ -63,7 +64,7 @@ typedef OcamlStandardArrayCallTarget = {
 
 /** Selects and validates the admitted direct standard-Array calls. */
 class OcamlStandardArrayCallContract {
-	public static inline final PROOF_ID = "standard-array-typed-target-call-v6";
+	public static inline final PROOF_ID = "standard-array-typed-target-call-v7";
 	public static inline final ARGUMENT_COMPATIBILITY_PROOF_ID = "haxe-typed-array-argument-compatible-v1";
 	public static inline final RUNTIME_CAPABILITY = "haxe-array";
 	public static inline final PROOF_CLAIM = "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. This proof does not admit other Array methods or user-defined classes with the same field names.";
@@ -95,7 +96,10 @@ class OcamlStandardArrayCallContract {
 		final expectedArrayType = 'Array<$elementSemanticTypeId>';
 		final receiverSemanticTypeId = TypeTools.toString(receiver.t);
 		final resultSemanticTypeId = TypeTools.toString(resultType);
-		final argumentSemanticTypeIds = arguments.map(argument -> TypeTools.toString(argument.t));
+		if (operation == OcamlStandardArrayOperation.Sort && !sortComparatorMatches(arguments[0].t, elementSemanticTypeId))
+			return null;
+		final argumentSemanticTypeIds = operation == OcamlStandardArrayOperation.Sort ? [sortComparatorSemanticTypeId(elementSemanticTypeId)] : arguments.map(argument ->
+			TypeTools.toString(argument.t));
 		final parameterSemanticTypeIds = expectedParameterSemanticTypeIds(operation, elementSemanticTypeId);
 		if (receiverSemanticTypeId != expectedArrayType
 			|| !sourceArgumentsMatch(operation, argumentSemanticTypeIds, parameterSemanticTypeIds)
@@ -173,6 +177,7 @@ class OcamlStandardArrayCallContract {
 			case IndexOf | IndexOfDefault: "indexOf";
 			case LastIndexOf | LastIndexOfDefault: "lastIndexOf";
 			case Slice | SliceDefault: "slice";
+			case Sort: "sort";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -180,7 +185,7 @@ class OcamlStandardArrayCallContract {
 	/** Returns the Haxe call-result form fixed by one admitted operation. */
 	public static function resultKind(operation:OcamlStandardArrayOperation):OcamlStandardArrayResultKind {
 		return switch (operation) {
-			case Unshift | Reverse | Insert | Resize: OcamlStandardArrayResultKind.EffectOnlyVoid;
+			case Unshift | Reverse | Insert | Resize | Sort: OcamlStandardArrayResultKind.EffectOnlyVoid;
 			case Concat | Copy | Push | Pop | Shift | Remove | Contains | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault | Slice |
 				SliceDefault:
 				OcamlStandardArrayResultKind.Value;
@@ -203,7 +208,7 @@ class OcamlStandardArrayCallContract {
 		return switch (operation) {
 			case Pop | Shift | Reverse: true;
 			case Concat | Copy | Push | Unshift | Insert | Remove | Contains | Resize | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault |
-				Slice | SliceDefault:
+				Slice | SliceDefault | Sort:
 				false;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -278,6 +283,7 @@ class OcamlStandardArrayCallContract {
 			case ["lastIndexOf", 2]: OcamlStandardArrayOperation.LastIndexOf;
 			case ["slice", 1]: OcamlStandardArrayOperation.SliceDefault;
 			case ["slice", 2]: OcamlStandardArrayOperation.Slice;
+			case ["sort", 1]: OcamlStandardArrayOperation.Sort;
 			case _: null;
 		}
 	}
@@ -293,6 +299,7 @@ class OcamlStandardArrayCallContract {
 			case IndexOfDefault | LastIndexOfDefault: [elementSemanticTypeId];
 			case Slice: ["Int", "Null<Int>"];
 			case SliceDefault: ["Int"];
+			case Sort: [sortComparatorSemanticTypeId(elementSemanticTypeId)];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -317,6 +324,7 @@ class OcamlStandardArrayCallContract {
 			case IndexOf | LastIndexOf: sourceArguments[1] == "Int" || sourceArguments[1] == "Null<Int>";
 			case Slice: sourceArguments[0] == "Int" && (sourceArguments[1] == "Int" || sourceArguments[1] == "Null<Int>");
 			case SliceDefault: sourceArguments[0] == "Int";
+			case Sort: sourceArguments[0] == parameters[0];
 			case Push | Unshift | Remove | Contains | IndexOfDefault | LastIndexOfDefault: true;
 			case Copy | Pop | Shift | Reverse: true;
 			case _: false;
@@ -334,8 +342,27 @@ class OcamlStandardArrayCallContract {
 			case Splice: 'Array<$elementSemanticTypeId>';
 			case IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: "Int";
 			case Slice | SliceDefault: 'Array<$elementSemanticTypeId>';
+			case Sort: "Void";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
+
+	static function sortComparatorSemanticTypeId(elementSemanticTypeId:String):String {
+		return '($elementSemanticTypeId,$elementSemanticTypeId)->Int';
+	}
+
+	#if macro
+	static function sortComparatorMatches(type:Type, elementSemanticTypeId:String):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TFun(arguments, result):
+				arguments.length == 2
+				&& TypeTools.toString(TypeTools.follow(arguments[0].t)) == elementSemanticTypeId
+				&& TypeTools.toString(TypeTools.follow(arguments[1].t)) == elementSemanticTypeId
+				&& TypeTools.toString(TypeTools.follow(result)) == "Int";
+			case _:
+				false;
+		}
+	}
+	#end
 }
 #end

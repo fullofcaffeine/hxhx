@@ -1032,6 +1032,7 @@ class CallPlanFixture {
 			case IndexOfDefault | LastIndexOfDefault: ["Int"];
 			case Slice: ["Int", "Null<Int>"];
 			case SliceDefault: ["Int"];
+			case Sort: ["(Int,Int)->Int"];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
@@ -1045,6 +1046,7 @@ class CallPlanFixture {
 			case Splice: "Array<Int>";
 			case IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: "Int";
 			case Slice | SliceDefault: "Array<Int>";
+			case Sort: "Void";
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
 		return {
@@ -1686,6 +1688,7 @@ class CallPlanFixture {
 		final selectedArrayLastIndexOfDefault = standardArrayCall(caller, OcamlStandardArrayOperation.LastIndexOfDefault);
 		final selectedArraySlice = standardArrayCall(caller, OcamlStandardArrayOperation.Slice);
 		final selectedArraySliceDefault = standardArrayCall(caller, OcamlStandardArrayOperation.SliceDefault);
+		final selectedArraySort = standardArrayCall(caller, OcamlStandardArrayOperation.Sort);
 		OcamlCallPlan.requireCall(selectedArrayConcat);
 		OcamlCallPlan.requireCall(selectedArrayCopy);
 		OcamlCallPlan.requireCall(selectedArrayPush);
@@ -1704,6 +1707,7 @@ class CallPlanFixture {
 		OcamlCallPlan.requireCall(selectedArrayLastIndexOfDefault);
 		OcamlCallPlan.requireCall(selectedArraySlice);
 		OcamlCallPlan.requireCall(selectedArraySliceDefault);
+		OcamlCallPlan.requireCall(selectedArraySort);
 		final standardArrayPlan = new OcamlCallPlan([
 			selectedArrayConcat,
 			selectedArrayCopy,
@@ -1722,7 +1726,8 @@ class CallPlanFixture {
 			selectedArrayIndexOfDefault,
 			selectedArrayLastIndexOfDefault,
 			selectedArraySlice,
-			selectedArraySliceDefault
+			selectedArraySliceDefault,
+			selectedArraySort
 		]);
 		final copiedArrayConcat = standardArrayPlan.decisions().filter(call -> call.id == STANDARD_ARRAY_CONCAT_CALL_ID)[0];
 		if (copiedArrayConcat.standardArrayTarget == null)
@@ -1865,6 +1870,16 @@ class CallPlanFixture {
 			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(sliceDefaultRuntimeUse).exactSymbol != "HxArray.slice_default") {
 			Context.error("Defaulted Array.slice did not seal its omitted-end runtime form and Array result.", Context.currentPos());
 		}
+		final copiedArraySort = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-sort-fixture")[0];
+		final sortRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-sort-fixture");
+		if (copiedArraySort.standardArrayTarget.parameterSemanticTypeIds.join(",") != "(Int,Int)->Int"
+			|| copiedArraySort.standardArrayTarget.argumentSemanticTypeIds.join(",") != "(Int,Int)->Int"
+			|| copiedArraySort.standardArrayTarget.resultSemanticTypeId != "Void"
+			|| copiedArraySort.resultKind != OcamlCallResultKind.EffectOnlyVoid
+			|| sortRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(sortRuntimeUse).exactSymbol != "HxArray.sort") {
+			Context.error("Array.sort did not seal its comparator, Void result, and exact runtime occurrence.", Context.currentPos());
+		}
 		final wrongArrayRuntime = copyCall(copiedArrayConcat);
 		Reflect.setField(wrongArrayRuntime.standardArrayTarget, "runtimeFunction", "copy");
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntime));
@@ -1915,6 +1930,9 @@ class CallPlanFixture {
 		final wrongArrayDefaultSliceRuntime = copyCall(copiedArraySliceDefault);
 		Reflect.setField(wrongArrayDefaultSliceRuntime.standardArrayTarget, "runtimeFunction", "slice");
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayDefaultSliceRuntime));
+		final wrongArraySortComparator = copyCall(copiedArraySort);
+		Reflect.setField(wrongArraySortComparator.standardArrayTarget, "argumentSemanticTypeIds", ["(Int,Int)->Float"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArraySortComparator));
 		final missingArrayReceiver = copyCall(copiedArrayConcat, null, null, null, null, null, copiedArrayConcat.evaluationSchedule.slice(1));
 		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingArrayReceiver));
 		final missingArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);

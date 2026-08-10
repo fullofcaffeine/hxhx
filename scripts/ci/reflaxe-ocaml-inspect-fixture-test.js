@@ -116,7 +116,7 @@ try {
 			&& target.runtimeModule === 'HxArray'
 			&& [
 				'concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice',
-				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default', 'slice', 'slice_default'
+				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default', 'slice', 'slice_default', 'sort'
 			].includes(target.runtimeFunction)
 	}))
 	const resizeCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'resize')
@@ -174,6 +174,19 @@ try {
 			&& target.resultSemanticTypeId.startsWith('Array<')
 			&& target.resultKind === 'value'
 			&& call.resultKind === 'value'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const sortCalls = standardArrayCalls.filter(call => call.standardArrayTarget.operation === 'sort')
+	assert(sortCalls.every(call => {
+		const target = call.standardArrayTarget
+		const comparator = `(${target.elementSemanticTypeId},${target.elementSemanticTypeId})->Int`
+		return call.sourceFieldName === 'sort'
+			&& target.runtimeFunction === 'sort'
+			&& target.parameterSemanticTypeIds.join(',') === comparator
+			&& target.argumentSemanticTypeIds.join(',') === comparator
+			&& target.resultSemanticTypeId === 'Void'
+			&& target.resultKind === 'effect-only-void'
+			&& call.resultKind === 'effect-only-void'
 			&& target.runtimeTakesUnitArgument === false
 	}))
 	assert(report.lowering.calls.some(call =>

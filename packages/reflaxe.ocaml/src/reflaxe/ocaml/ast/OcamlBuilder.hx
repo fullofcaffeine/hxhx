@@ -4278,9 +4278,6 @@ class OcamlBuilder {
 														case "filter":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "filter"),
 																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "sort":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "sort"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case _:
 															#if macro
 															guardrailError("reflaxe.ocaml (M6): unsupported Array method '" + cf.name
