@@ -21,7 +21,7 @@ const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 if (report.schemaVersion !== 69) {
 	throw new Error(`Expected lowering schema 69, received ${report.schemaVersion}`)
 }
-if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v2') {
+if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v3') {
 	throw new Error(`Unexpected Reflect.compare plan model: ${report.reflectCompareModel}`)
 }
 if (report.reflectCompareCount !== 16 || report.reflectCompare.length !== 16) {
@@ -40,6 +40,22 @@ for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
 		|| !['ocaml-function-plans-v84', 'ocaml-standalone-expression-plans-v4'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
+	}
+	const exceptional = decision.domain === 'float' || decision.domain === 'string'
+	const expectedRequirementId = `${decision.id}:runtime:haxe-reflect-compare-failure`
+	if (JSON.stringify(decision.runtimeRequirementIds) !== JSON.stringify(exceptional ? [expectedRequirementId] : [])) {
+		throw new Error(`Reflect.compare has the wrong exceptional runtime requirement: ${JSON.stringify(decision)}`)
+	}
+	if (!Array.isArray(decision.runtimeUseOccurrences)
+		|| decision.runtimeUseOccurrences.length !== (exceptional ? 1 : 0)
+		|| (exceptional && (decision.runtimeUseOccurrences[0].requirementId !== expectedRequirementId
+			|| decision.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.hx_throw'
+			|| decision.runtimeUseOccurrences[0].role !== 'throw-invalid-comparison'))) {
+		throw new Error(`Reflect.compare lacks its exact exceptional runtime use: ${JSON.stringify(decision)}`)
+	}
+	if (exceptional && !report.runtimeRequirements.some(requirement => requirement.id === expectedRequirementId
+		&& requirement.rootModules?.join(',') === 'HxRuntime')) {
+		throw new Error(`Reflect.compare runtime requirement is missing from the request ledger: ${expectedRequirementId}`)
 	}
 }
 NODE
@@ -94,6 +110,36 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 fi
 if ! grep -Fq "incomplete domain proof" "$invalid_log"; then
 	echo "Public inspection did not explain the false Reflect.compare domain proof" >&2
+	cat "$invalid_log" >&2
+	exit 1
+fi
+cp "$original_report" "$report"
+
+# A report digest cannot turn a different private helper into valid compiler
+# authority. Change the exact symbol, refresh the surrounding inventory digest,
+# and require inspection to reject the contradiction against the sealed domain.
+node - "$report" <<'NODE'
+const crypto = require('crypto')
+const fs = require('fs')
+const reportPath = process.argv[2]
+const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+const exceptional = report.reflectCompare.find(decision => decision.runtimeUseOccurrences?.length === 1)
+if (!exceptional)
+	throw new Error('Missing exceptional Reflect.compare decision for corruption check')
+exceptional.runtimeUseOccurrences[0].exactSymbol = 'HxRuntime.hx_throw_typed'
+report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.reflectCompare)).digest('hex')}`
+fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output out --require-lowering --json >"$invalid_log" 2>&1; then
+	echo "Public inspection accepted a conflicting Reflect.compare runtime helper" >&2
+	exit 1
+fi
+if ! grep -Fq "stale or conflicting exceptional runtime-use evidence" "$invalid_log"; then
+	echo "Public inspection did not explain the conflicting Reflect.compare runtime helper" >&2
 	cat "$invalid_log" >&2
 	exit 1
 fi

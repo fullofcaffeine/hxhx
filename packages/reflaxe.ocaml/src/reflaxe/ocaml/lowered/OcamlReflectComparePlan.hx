@@ -10,6 +10,9 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** The concrete Haxe value family selected for one `Reflect.compare` value. */
 enum abstract OcamlReflectCompareDomain(String) from String to String {
@@ -32,6 +35,8 @@ typedef OcamlReflectCompareDecision = {
 	final id:String;
 	final source:OcamlLoweredSourceSpan;
 	final domain:OcamlReflectCompareDomain;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -49,8 +54,9 @@ typedef OcamlReflectCompareDecision = {
 	requests.
 **/
 class OcamlReflectComparePlan {
-	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v2";
+	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v3";
 	public static inline final PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
+	public static inline final FAILURE_RUNTIME_CAPABILITY = "haxe-reflect-compare-failure";
 
 	final byExpression:ObjectMap<TypedExpr, OcamlReflectCompareDecision>;
 	final bySource:StringMap<Array<OcamlReflectCompareDecision>>;
@@ -164,6 +170,69 @@ class OcamlReflectComparePlan {
 			|| decision.proofId != PROOF_ID_PREFIX + (decision.domain : String)) {
 			throw "reflaxe.ocaml [ocaml-reflect-compare:invalid-plan]: a comparator decision is incomplete or has an unknown proof";
 		}
+		final expectedRequirements = runtimeRequirementIdsFor(decision.id, decision.domain);
+		if (decision.runtimeRequirementIds.join(",") != expectedRequirements.join(","))
+			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-requirement]: comparator "${decision.id}" has a stale or conflicting exceptional runtime requirement';
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-use]: comparator "${decision.id}" has an incomplete exceptional runtime-use inventory';
+		for (index in 0...expectedUses.length) {
+			final actual = decision.runtimeUseOccurrences[index];
+			final expected = expectedUses[index];
+			if (actual.id != expected.id
+				|| actual.planRevision != expected.planRevision
+				|| actual.ownerId != expected.ownerId
+				|| actual.requirementId != expected.requirementId
+				|| actual.domain != expected.domain
+				|| actual.exactSymbol != expected.exactSymbol
+				|| actual.role != expected.role
+				|| actual.order != expected.order
+				|| actual.source.file != expected.source.file
+				|| actual.source.min != expected.source.min
+				|| actual.source.max != expected.source.max
+				|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+				|| actual.cardinality != expected.cardinality)
+				throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-use]: comparator "${decision.id}" has a stale, reordered, or conflicting exceptional runtime use';
+		}
+	}
+
+	/** Returns the runtime requirement owned only by exceptional comparison domains. */
+	public static function runtimeRequirementIdsFor(id:String, domain:OcamlReflectCompareDomain):Array<String> {
+		return switch (domain) {
+			case Float, String: [id + ":runtime:" + FAILURE_RUNTIME_CAPABILITY];
+			case Int, NullableString: [];
+		}
+	}
+
+	/** Returns the exact private throw name inserted by one exceptional comparator. */
+	public static function runtimeUseOccurrencesFor(decision:OcamlReflectCompareDecision):Array<OcamlRuntimeUseOccurrence> {
+		if (decision.domain != Float && decision.domain != String)
+			return [];
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		return [
+			{
+				id: decision.id + ":runtime-use:throw-invalid-comparison",
+				planRevision: OcamlRuntimeUseModel.planRevision(binding),
+				ownerId: decision.id,
+				requirementId: decision.runtimeRequirementIds[0],
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxRuntime.hx_throw",
+				role: "throw-invalid-comparison",
+				order: 0,
+				source: {
+					file: decision.source.file,
+					min: decision.source.min,
+					max: decision.source.max
+				},
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			}
+		];
 	}
 
 	static function copyDecision(decision:OcamlReflectCompareDecision):OcamlReflectCompareDecision {
@@ -175,6 +244,24 @@ class OcamlReflectComparePlan {
 				max: decision.source.max
 			},
 			domain: decision.domain,
+			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -212,28 +299,44 @@ class OcamlReflectComparePlanner {
 			planned.set(current, true);
 			final source = OcamlLoweredOrigin.sourceSpan(current.pos);
 			final proofId = OcamlReflectComparePlan.PROOF_ID_PREFIX + (domain : String);
+			final id = "reflect-compare:" + Sha256.encode([
+				binding.functionId,
+				binding.programRevision,
+				binding.bodyRevision,
+				binding.pipelineRevision,
+				Std.string(entries.length),
+				source.file,
+				Std.string(source.min),
+				Std.string(source.max),
+				(domain : String)
+			].join("\u001f")).substr(0, 24);
+			final base:OcamlReflectCompareDecision = {
+				id: id,
+				source: source,
+				domain: domain,
+				runtimeRequirementIds: OcamlReflectComparePlan.runtimeRequirementIdsFor(id, domain),
+				runtimeUseOccurrences: [],
+				proofId: proofId,
+				proofClaim: proofClaim(domain),
+				functionId: binding.functionId,
+				programRevision: binding.programRevision,
+				bodyRevision: binding.bodyRevision,
+				pipelineRevision: binding.pipelineRevision
+			};
 			entries.push({
 				expression: current,
 				decision: {
-					id: "reflect-compare:" + Sha256.encode([
-						binding.functionId,
-						binding.programRevision,
-						binding.bodyRevision,
-						binding.pipelineRevision,
-						Std.string(entries.length),
-						source.file,
-						Std.string(source.min),
-						Std.string(source.max),
-						(domain : String)
-					].join("\u001f")).substr(0, 24),
-					source: source,
-					domain: domain,
-					proofId: proofId,
-					proofClaim: proofClaim(domain),
-					functionId: binding.functionId,
-					programRevision: binding.programRevision,
-					bodyRevision: binding.bodyRevision,
-					pipelineRevision: binding.pipelineRevision
+					id: base.id,
+					source: base.source,
+					domain: base.domain,
+					runtimeRequirementIds: base.runtimeRequirementIds,
+					runtimeUseOccurrences: OcamlReflectComparePlan.runtimeUseOccurrencesFor(base),
+					proofId: base.proofId,
+					proofClaim: base.proofClaim,
+					functionId: base.functionId,
+					programRevision: base.programRevision,
+					bodyRevision: base.bodyRevision,
+					pipelineRevision: base.pipelineRevision
 				}
 			});
 		}

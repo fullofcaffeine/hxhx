@@ -67,6 +67,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_ARRAY = "haxe-array";
 	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
 	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
+	public static inline final HAXE_REFLECT_COMPARE_FAILURE = "haxe-reflect-compare-failure";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];

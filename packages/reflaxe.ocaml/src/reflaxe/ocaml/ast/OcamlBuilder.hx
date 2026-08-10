@@ -122,6 +122,7 @@ import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /**
 	Converts Haxe's final typed expressions into OCaml syntax.
@@ -1241,6 +1242,15 @@ class OcamlBuilder {
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final runtimeAuthority = new OcamlRuntimeUseAuthority(planRevision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 		final leftName = freshTmp("reflect_left");
 		final rightName = freshTmp("reflect_right");
 		final left = OcamlExpr.EIdent(leftName);
@@ -1258,29 +1268,39 @@ class OcamlBuilder {
 			case Float:
 				final leftNaN = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Float"), "is_nan"), [left]);
 				final rightNaN = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Float"), "is_nan"), [right]);
-				OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Or, leftNaN, rightNaN), reflectCompareFailure("unordered-nan"), ordered);
+				OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Or, leftNaN, rightNaN),
+					reflectCompareFailure("unordered-nan", runtimeAuthority, decision.runtimeUseOccurrences[0], planRevision), ordered);
 			case String:
 				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
 				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
 				final bothNull = OcamlExpr.EBinop(OcamlBinop.And, leftNull, rightNull);
 				final oneNull = OcamlExpr.EBinop(OcamlBinop.Or, leftNull, rightNull);
-				OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch"), ordered));
+				OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)),
+					OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch", runtimeAuthority, decision.runtimeUseOccurrences[0], planRevision), ordered));
 			case NullableString:
 				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
 				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
 				OcamlExpr.EIf(leftNull, OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EConst(OcamlConst.CInt(-1))),
 					OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(1)), ordered));
 		}
-		return OcamlExpr.EFun([
+		final comparator = OcamlExpr.EFun([
 			OcamlPat.PAnnot(OcamlPat.PVar(leftName), parameterType),
 			OcamlPat.PAnnot(OcamlPat.PVar(rightName), parameterType)
 		], body);
+		runtimeAuthority.reconcileExpression(comparator);
+		return comparator;
 	}
 
-	/** Produces a catchable Haxe error for an exceptional admitted value. */
-	function reflectCompareFailure(reason:String):OcamlExpr {
+	/**
+		Builds the catchable Haxe error selected by one typed comparator.
+
+		The supplied occurrence belongs to that exact comparator decision. The
+		authority rejects a different helper name, owner, plan revision, or a second
+		use before the structured expression can be printed.
+	**/
+	function reflectCompareFailure(reason:String, authority:OcamlRuntimeUseAuthority, use:OcamlRuntimeUseOccurrence, planRevision:String):OcamlExpr {
 		final message = 'reflaxe.ocaml [ocaml-reflect-compare:$reason]';
-		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw"), [
+		return OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, planRevision, use.exactSymbol)), [
 			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString(message))])
 		]);
 	}

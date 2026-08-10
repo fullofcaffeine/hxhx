@@ -156,6 +156,8 @@ class OcamlFunctionPlanSealer {
 			context.recordIMapStorageAliasRuntimeRequirements(alias);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
+		for (decision in reflectCompare.decisions())
+			context.recordReflectCompareRuntimeRequirements(decision);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,

@@ -53,6 +53,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlFamilyAdmission;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 
 using StringTools;
 
@@ -86,7 +87,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v2";
+	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v84";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
@@ -474,7 +475,7 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						iMapInterfaces.storageAliases, callInventory.calls, controls);
+						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, controls);
 					{
 						status: "present",
 						required: required,
@@ -1522,6 +1523,35 @@ class ReflaxeOcamlInspection {
 				|| (decision.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
 					&& decision.pipelineRevision != STANDALONE_EXPRESSION_PIPELINE_REVISION))
 				throw 'Reflect.compare decision "${decision.id}" has an invalid plan binding.';
+			final exceptional = decision.domain == "float" || decision.domain == "string";
+			final requirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
+			if (decision.runtimeRequirementIds.join(",") != (exceptional ? requirementId : ""))
+				throw 'Reflect.compare decision "${decision.id}" has an invalid exceptional runtime requirement.';
+			if (decision.runtimeUseOccurrences.length != (exceptional ? 1 : 0))
+				throw 'Reflect.compare decision "${decision.id}" has an invalid exceptional runtime-use inventory.';
+			if (exceptional) {
+				final occurrence = decision.runtimeUseOccurrences[0];
+				final expectedPlanRevision = OcamlRuntimeUseModel.planRevision({
+					functionId: decision.functionId,
+					programRevision: decision.programRevision,
+					bodyRevision: decision.bodyRevision,
+					pipelineRevision: decision.pipelineRevision
+				});
+				if (occurrence.id != decision.id + ":runtime-use:throw-invalid-comparison"
+					|| occurrence.planRevision != expectedPlanRevision
+					|| occurrence.ownerId != decision.id
+					|| occurrence.requirementId != requirementId
+					|| (occurrence.domain : String) != "expression-identifier"
+						|| occurrence.exactSymbol != "HxRuntime.hx_throw"
+						|| occurrence.role != "throw-invalid-comparison"
+						|| occurrence.order != 0
+						|| occurrence.source.file != decision.sourceFile
+						|| occurrence.source.min != decision.sourceMin
+						|| occurrence.source.max != decision.sourceMax
+						|| occurrence.profileEligibility.join(",") != "metal,portable"
+						|| occurrence.cardinality != 1)
+					throw 'Reflect.compare decision "${decision.id}" has stale or conflicting exceptional runtime-use evidence.';
+			}
 			ids.set(decision.id, true);
 		}
 		decisions.sort((left, right) -> compareStrings(left.id, right.id));
@@ -1536,6 +1566,8 @@ class ReflaxeOcamlInspection {
 			sourceMin: requiredInt(source, "min"),
 			sourceMax: requiredInt(source, "max"),
 			domain: requiredString(value, "domain"),
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: loweredPlanRuntimeUseOccurrences(value),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			functionId: requiredString(value, "functionId"),
@@ -3325,7 +3357,8 @@ class ReflaxeOcamlInspection {
 			arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>, localConversions:Array<InspectionLocalConversion>,
 			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
 			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
-			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
+			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, reflectCompare:Array<InspectionReflectCompare>,
+			controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -3791,6 +3824,36 @@ class ReflaxeOcamlInspection {
 				}
 				referenced.set(requirementId, true);
 			}
+		}
+		for (decision in reflectCompare) {
+			if (decision.runtimeRequirementIds.length == 0)
+				continue;
+			final requirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Reflect.compare decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if ((decision.domain != "float" && decision.domain != "string")
+				|| decision.runtimeRequirementIds.length != 1
+				|| decision.runtimeRequirementIds[0] != requirementId
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != decision.id
+				|| requiredString(source, "file") != decision.sourceFile
+				|| requiredInt(source, "min") != decision.sourceMin
+				|| requiredInt(source, "max") != decision.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-reflect-compare-failure"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != decision.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != "Reflect.compare:" + decision.domain
+				|| requiredString(requirement, "implementationFeature") != "haxe-typed-throw-v1"
+				|| roots.join(",") != "HxRuntime"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+				throw 'Reflect.compare decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed exceptional path.';
+			}
+			referenced.set(requirementId, true);
 		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))

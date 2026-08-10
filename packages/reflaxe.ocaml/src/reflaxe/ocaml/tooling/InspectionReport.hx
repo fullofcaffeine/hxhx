@@ -653,6 +653,8 @@ typedef InspectionReflectCompare = {
 	final sourceMin:Int;
 	final sourceMax:Int;
 	final domain:String;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;

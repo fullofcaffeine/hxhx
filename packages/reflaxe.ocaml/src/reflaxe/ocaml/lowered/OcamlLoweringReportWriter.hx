@@ -55,6 +55,7 @@ import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorde
 import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlReflectCompareRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
 /**
@@ -583,6 +584,17 @@ class OcamlLoweringReportWriter {
 			requirementById.set(requirement.id, requirement);
 		}
 		final includedRequirementIds:Map<String, Bool> = [];
+		for (decision in reflectCompare) {
+			OcamlReflectComparePlan.requireDecision(decision);
+			for (expected in OcamlReflectCompareRuntimeRequirementRecorder.requirementsFor(decision)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Reflect.compare decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Reflect.compare decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (representation in sortedRepresentations) {
 			for (expected in OcamlRuntimeRequirementLedger.requirementsForRepresentationDecision(representation)) {
 				final recorded = requirementById.get(expected.id);

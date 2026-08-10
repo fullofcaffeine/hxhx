@@ -26,12 +26,18 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+#if macro
+import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
+#end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlCallRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
+#if (macro || reflaxe_runtime)
+import reflaxe.ocaml.runtimegen.OcamlReflectCompareRuntimeRequirementRecorder;
+#end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 #end
@@ -513,6 +519,11 @@ class CompilationContext {
 	/** Records runtime support selected by one nullable standard-Map storage alias. */
 	public function recordIMapStorageAliasRuntimeRequirements(decision:OcamlIMapStorageAliasDecision):Void {
 		runtimeRequirements.recordIMapStorageAlias(decision);
+	}
+
+	/** Records runtime support selected by one exceptional typed `Reflect.compare`. */
+	public function recordReflectCompareRuntimeRequirements(decision:OcamlReflectCompareDecision):Void {
+		OcamlReflectCompareRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */
