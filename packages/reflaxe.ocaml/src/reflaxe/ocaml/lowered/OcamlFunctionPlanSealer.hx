@@ -332,6 +332,14 @@ class OcamlFunctionPlanSealer {
 						context.recordIMapInterfaceRuntimeRequirements(conversion);
 					for (alias in imapInterfaces.storageAliases())
 						context.recordIMapStorageAliasRuntimeRequirements(alias);
+					// Array reads belong to the nested body even when its return and catch
+					// behavior still uses the older path. Seal them independently so a simple
+					// iterator closure cannot inherit its parent's decisions or reach syntax
+					// without an exact HxArray.get owner.
+					final arrayReads = new OcamlArrayReadPlanner(nestedBinding).plan(tfunc.expr);
+					arrayReads.requirePlanBinding(nestedBinding);
+					for (decision in arrayReads.decisions())
+						context.recordArrayReadRuntimeRequirements(decision);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
@@ -339,7 +347,7 @@ class OcamlFunctionPlanSealer {
 					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
-							"The typed function literal is outside the existing represented-result callable boundary.");
+							arrayReads, "The typed function literal is outside the existing represented-result callable boundary.");
 					} else {
 						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
 						// A nested function can read a local declared by its enclosing function.
@@ -351,8 +359,6 @@ class OcamlFunctionPlanSealer {
 						final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
 						arrayLiteralProducers.requirePlanBinding(nestedBinding);
 						arrayLiteralProducers.requireRepresentations(representations);
-						final arrayReads = new OcamlArrayReadPlanner(nestedBinding).plan(tfunc.expr);
-						arrayReads.requirePlanBinding(nestedBinding);
 						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
 							arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
 						requireCompleteCatchCoverage(controls, expression.pos);
@@ -363,7 +369,7 @@ class OcamlFunctionPlanSealer {
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
-								imapInterfaces,
+								imapInterfaces, arrayReads,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.");
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
@@ -381,8 +387,6 @@ class OcamlFunctionPlanSealer {
 							};
 							for (decision in arrayLiteralProducers.decisions())
 								context.recordArrayLiteralRuntimeRequirements(decision);
-							for (decision in arrayReads.decisions())
-								context.recordArrayReadRuntimeRequirements(decision);
 							for (chain in controls.catchChains())
 								context.recordCatchChainRuntimeRequirements(chain);
 							for (decision in controls.decisions())

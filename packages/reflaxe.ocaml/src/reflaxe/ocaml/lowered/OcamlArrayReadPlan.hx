@@ -117,6 +117,14 @@ class OcamlArrayReadPlan {
 		};
 	}
 
+	/** Returns true only when the receiver is statically a standard Haxe Array. */
+	public static function hasStandardArrayReceiver(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TArray(receiver, _): arrayElementSemanticTypeId(receiver.t) != null;
+			case _: false;
+		};
+	}
+
 	static function arrayElementSemanticTypeId(type:Type):Null<String> {
 		return switch (TypeTools.follow(type)) {
 			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" ? TypeTools.toString(elementType) : null;

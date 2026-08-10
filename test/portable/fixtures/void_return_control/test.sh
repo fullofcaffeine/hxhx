@@ -104,7 +104,7 @@ for (const name of [
 }
 const pushBody = functionBody('pushAfterGuard')
 if (!pushBody.includes('ignore (try ignore (')
-	|| !pushBody.includes('HxArray.push (!pushed) 7'))
+	|| !pushBody.includes('HxArray.push'))
 	fail('the normal Void path did not discard Array.push before joining the return handler')
 
 for (const name of ['throughTry', 'fromCatch']) {

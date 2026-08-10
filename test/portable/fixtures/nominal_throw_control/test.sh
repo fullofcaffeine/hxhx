@@ -30,10 +30,14 @@ function fail(message) {
 if (report.schemaVersion !== 79
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v5'
-	|| report.controlCatchCount !== report.controlCatches.length
-	|| report.controlCatchCount !== 4) {
+	|| report.controlCatchCount !== report.controlCatches.length) {
 	fail('unexpected nominal throw/catch report schema, model, or inventory')
 }
+
+const mainCatchChains = report.controlCatches.filter(chain =>
+	chain.functionId.startsWith('Main|Main|'))
+if (mainCatchChains.length !== 4)
+	fail(`expected four Main catch chains, got ${mainCatchChains.length}`)
 
 const representation = report.representations.find(item =>
 	item.id === 'representation:Box:internal-value')
@@ -83,7 +87,7 @@ for (const functionName of throwFunctions) {
 }
 
 let nominalClauseCount = 0
-for (const chain of report.controlCatches) {
+for (const chain of mainCatchChains) {
 	if (chain.proofId !== 'represented-value-catch-control-v5'
 		|| chain.pipelineRevision !== 'ocaml-function-plans-v95') {
 		fail(`catch chain ${chain.id} does not use the represented-value proof`)
@@ -139,9 +143,12 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.clauses)
 	.filter(clause => clause.semanticTypeId === 'Box')
+const mainCatchChains = report.lowering.controlCatches.filter(chain =>
+	chain.functionId.startsWith('Main|Main|'))
 if (report.schemaVersion !== 45
 	|| report.summary.valid !== true
-	|| report.summary.controlCatchCount !== 4
+	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
+	|| mainCatchChains.length !== 4
 	|| nominalClauses.length !== 4
 	|| nominalClauses.some(clause =>
 		clause.conversion !== 'recover-nominal-value'

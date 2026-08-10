@@ -5036,6 +5036,39 @@ class OcamlBuilder {
 					currentLoopTargetIds.pop();
 				}
 
+				if (!normalWhile) {
+					var iterationBody = builtBody;
+					var breakCase:Null<OcamlMatchCase> = null;
+					if (needsControl) {
+						final continueCase:OcamlMatchCase = {
+							pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+							guard: null,
+							expr: OcamlExpr.EConst(OcamlConst.CUnit)
+						};
+						breakCase = {
+							pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+							guard: null,
+							expr: OcamlExpr.EConst(OcamlConst.CUnit)
+						};
+						// Keep the try expression inside one function argument. This prevents
+						// the following condition from becoming part of the exception handler.
+						iterationBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
+					}
+
+					// A recursive tail call represents the source body once in generated
+					// syntax. Runtime-use receipts can therefore keep one occurrence per
+					// source call while execution still repeats the body until the condition
+					// becomes false. A caught continue proceeds to that condition check.
+					final loopName = freshTmp("do_while_loop");
+					final repeat = OcamlExpr.EApp(OcamlExpr.EIdent(loopName), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					final loopBody = OcamlExpr.ESeq([
+						iterationBody,
+						OcamlExpr.EIf(condExpr, repeat, OcamlExpr.EConst(OcamlConst.CUnit))
+					]);
+					final loop = OcamlExpr.ELet(loopName, OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], loopBody), repeat, true);
+					return breakCase == null ? loop : OcamlExpr.ETry(loop, [breakCase]);
+				}
+
 				if (needsControl) {
 					final continueCase:OcamlMatchCase = {
 						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
@@ -5051,24 +5084,10 @@ class OcamlBuilder {
 					final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
 					final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
 					final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
-
-					if (!normalWhile) {
-						// do { body } while (cond): execute body once, then behave like a while loop.
-						//
-						// Control-flow:
-						// - `continue` skips to the condition check (handled by `bodyWithContinue`).
-						// - `break` exits the loop without evaluating `cond` (handled by outer try).
-						return OcamlExpr.ETry(OcamlExpr.ESeq([bodyWithContinue, loopExpr]), [breakCase]);
-					}
-
 					return loopExpr;
 				}
 
-				if (!normalWhile) {
-					OcamlExpr.ESeq([builtBody, OcamlExpr.EWhile(condExpr, builtBody)]);
-				} else {
-					OcamlExpr.EWhile(condExpr, builtBody);
-				}
+				OcamlExpr.EWhile(condExpr, builtBody);
 			case TSwitch(scrutinee, cases, edef):
 				#if macro
 				final log = ctx.profileLogLine;
@@ -5116,6 +5135,11 @@ class OcamlBuilder {
 					switch (idxUnwrapped.expr) {
 						case _ if (idxString != null):
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [arrObjExpr, OcamlExpr.EConst(OcamlConst.CString(idxString))]);
+						case _ if (!OcamlArrayReadPlan.hasStandardArrayReceiver(e)):
+							// Dynamic bracket access is outside the standard Array-read
+							// contract. Preserve its existing compatibility path until a
+							// separate typed Dynamic-access plan owns that behavior.
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [arrExpr, buildExpr(idx)]);
 						case _:
 							arrayReadInvariant("a numeric bracket read reached legacy syntax without a standard Array decision", e.pos);
 					}
@@ -8373,7 +8397,10 @@ class OcamlBuilder {
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
 		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
-		currentArrayReadPlan = nestedPlan == null ? null : nestedPlan.arrayReads;
+		// Array-read ownership is independent from the optional represented-return
+		// plan. Every observed nested body has its own exact decisions, including
+		// iterator closures that do not contain an early return.
+		currentArrayReadPlan = nestedDisposition == null ? null : nestedDisposition.arrayReads;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;

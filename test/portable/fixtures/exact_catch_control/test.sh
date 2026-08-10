@@ -221,7 +221,8 @@ const callbackEnd = source.indexOf('\nlet callbackVoidResult =', callbackStart)
 const callbackBody = source.slice(callbackStart, callbackEnd)
 if (callbackStart < 0
 	|| callbackEnd < 0
-	|| !callbackBody.includes('ignore (HxArray.push')) {
+	|| !callbackBody.includes('ignore (try ignore (')
+	|| !callbackBody.includes('HxArray.push')) {
 	fail('the Void callback catch did not discard Array.push\'s generated integer result')
 }
 const typedVoidStart = source.indexOf('let captureProductionTypes =')
@@ -229,7 +230,8 @@ const typedVoidEnd = source.indexOf('\nlet typedVoidResult =', typedVoidStart)
 const typedVoidBody = source.slice(typedVoidStart, typedVoidEnd)
 if (typedVoidStart < 0
 	|| typedVoidEnd < 0
-	|| !typedVoidBody.includes('ignore (HxArray.push')
+	|| !typedVoidBody.includes('ignore (try ignore (')
+	|| !typedVoidBody.includes('HxArray.push')
 	|| !typedVoidBody.includes('HxEnum.unbox_or_obj "haxe.io.Error"')) {
 	fail('the enum-backed Void catch did not preserve its sealed payload recovery and branch-result policy')
 }
@@ -238,7 +240,8 @@ const directVoidEnd = source.indexOf('\nlet directVoidResult =', directVoidStart
 const directVoidBody = source.slice(directVoidStart, directVoidEnd)
 if (directVoidStart < 0
 	|| directVoidEnd < 0
-	|| !directVoidBody.includes('ignore (HxArray.remove')) {
+	|| !directVoidBody.includes('ignore (try ignore (')
+	|| !directVoidBody.includes('HxArray.remove')) {
 	fail('the direct Void catch did not discard Array.remove\'s generated Boolean result')
 }
 NODE

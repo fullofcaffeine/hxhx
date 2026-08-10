@@ -122,7 +122,8 @@ const constructorBoundaries = (report.callableBoundaries ?? []).filter(boundary 
 	boundary.kind === 'direct-haxe-constructor'
 	&& boundary.sourceTypeName === 'Counter')
 const instanceBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
-	boundary.kind === 'direct-instance-haxe-method')
+	boundary.kind === 'direct-instance-haxe-method'
+	&& boundary.sourceTypeName === 'Counter')
 if (constructorBoundaries.length !== 1
 	|| constructorBoundaries[0].sourceTypeName !== 'Counter'
 	|| constructorBoundaries[0].sourceFieldName !== 'new'

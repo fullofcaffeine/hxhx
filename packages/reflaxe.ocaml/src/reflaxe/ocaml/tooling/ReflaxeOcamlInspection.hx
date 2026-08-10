@@ -3942,6 +3942,33 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		for (call in calls) {
+			for (argument in call.arguments) {
+				if (argument.conversion != "box-exact-bool-to-dynamic")
+					continue;
+				final requirementId = '${call.id}:runtime:haxe-call-bool-carrier:argument:${argument.index}';
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'Call "${call.id}" refers to missing Boolean carrier requirement "$requirementId".';
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != call.id
+					|| requiredString(source, "file") != call.sourceFile
+					|| requiredInt(source, "min") != call.sourceMin
+					|| requiredInt(source, "max") != call.sourceMax
+					|| requiredString(requirement, "semanticCapability") != "haxe-call-bool-carrier"
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != call.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != "Bool"
+					|| requiredString(requirement, "implementationFeature") != "haxe-boolean-carrier-v1"
+					|| roots.join(",") != "HxRuntime"
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+					throw 'Call "${call.id}" Boolean carrier requirement "$requirementId" disagrees with its sealed argument conversion.';
+				}
+				referenced.set(requirementId, true);
+			}
 			final arrayTarget = call.standardArrayTarget;
 			if (arrayTarget != null) {
 				final capability = "haxe-array";

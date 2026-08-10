@@ -158,6 +158,7 @@ typedef OcamlNestedFunctionIdentity = {
 typedef OcamlNestedFunctionSyntaxDisposition = {
 	final binding:OcamlFunctionPlanBinding;
 	final imapInterfaces:OcamlIMapInterfacePlan;
+	final arrayReads:OcamlArrayReadPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 }
 
@@ -207,6 +208,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final observedBodyRevision:String;
 	final occurrenceId:String;
 	final imapInterfaces:OcamlIMapInterfacePlan;
+	final arrayReads:OcamlArrayReadPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 	final deferredReason:Null<String>;
 }
@@ -336,11 +338,13 @@ class OcamlFunctionPlanRegistry {
 		request fails instead of guessing.
 	**/
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
-			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, reason:String):Void {
+			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
+			reason:String):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
 		imapInterfaces.requirePlanBinding(identity.binding);
+		arrayReads.requirePlanBinding(identity.binding);
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
@@ -348,6 +352,7 @@ class OcamlFunctionPlanRegistry {
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: identity.occurrenceId,
 			imapInterfaces: imapInterfaces,
+			arrayReads: arrayReads,
 			plan: null,
 			deferredReason: reason
 		}, localIdentities.ownerId);
@@ -424,6 +429,7 @@ class OcamlFunctionPlanRegistry {
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: plan.occurrenceId,
 			imapInterfaces: plan.imapInterfaces,
+			arrayReads: plan.arrayReads,
 			plan: stored,
 			deferredReason: null
 		}, localIdentities.ownerId);
@@ -526,6 +532,7 @@ class OcamlFunctionPlanRegistry {
 		return {
 			binding: copyBinding(record.binding),
 			imapInterfaces: record.imapInterfaces,
+			arrayReads: record.arrayReads,
 			plan: record.plan
 		};
 	}

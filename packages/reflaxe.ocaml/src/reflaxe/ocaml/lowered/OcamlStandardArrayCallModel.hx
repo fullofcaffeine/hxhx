@@ -97,7 +97,12 @@ class OcamlStandardArrayCallContract {
 			return null;
 		final elementSemanticTypeId = TypeTools.toString(parameters[0]);
 		final expectedArrayType = 'Array<$elementSemanticTypeId>';
-		final receiverSemanticTypeId = TypeTools.toString(receiver.t);
+		// The resolved field owner is the standard Array declaration. Use that
+		// canonical type instead of the receiver's source alias, such as the
+		// NativeRest<T> typedef used by haxe.Rest. The field identity and exact
+		// Array parameter still prevent a user-defined `copy` method from entering
+		// this target family.
+		final receiverSemanticTypeId = expectedArrayType;
 		final resultSemanticTypeId = TypeTools.toString(resultType);
 		final resultElementSemanticTypeId = operation == OcamlStandardArrayOperation.Map ? arrayElementSemanticTypeId(resultType) : null;
 		if (operation == OcamlStandardArrayOperation.Map && resultElementSemanticTypeId == null)

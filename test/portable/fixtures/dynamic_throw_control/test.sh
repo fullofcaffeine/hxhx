@@ -159,4 +159,36 @@ if ! grep -Fq "invalid Dynamic exception carrier" "$INVALID_LOG"; then
 	exit 1
 fi
 
+# Reset the copied output before changing a different owner. This case proves
+# that the inspector checks the Bool argument requirement itself. A valid outer
+# digest must not let a requirement select the wrong private runtime module.
+rm -rf "$INVALID_OUTPUT"
+cp -R out "$INVALID_OUTPUT"
+node - "$INVALID_OUTPUT/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const requirement = report.runtimeRequirements.find(item =>
+	item.semanticCapability === 'haxe-call-bool-carrier')
+if (requirement == null)
+	throw new Error('missing Bool-to-Dynamic call requirement to corrupt')
+requirement.rootModules = ['HxArray']
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+	"$INVALID_OUTPUT/ocaml_lowering_report.json"
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output "$INVALID_OUTPUT" --require-lowering --json \
+	>"$INVALID_LOG" 2>&1; then
+	echo "The inspector accepted a Bool-to-Dynamic call requirement with the wrong runtime module" >&2
+	exit 1
+fi
+if ! grep -Fq "Boolean carrier requirement" "$INVALID_LOG"; then
+	echo "The inspector rejected the corrupted Bool call requirement for an unexpected reason" >&2
+	cat "$INVALID_LOG" >&2
+	exit 1
+fi
+
 echo "DYNAMIC_THROW_CONTROL:PASS throws=2 runtime_values=5 null_dynamic_only=1"
