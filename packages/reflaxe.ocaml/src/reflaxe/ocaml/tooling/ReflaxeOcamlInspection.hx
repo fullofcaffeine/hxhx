@@ -90,7 +90,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v88";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v89";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -441,8 +441,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 73) {
-						throw 'Unsupported lowering report schema $version; expected 73.';
+					if (version != 74) {
+						throw 'Unsupported lowering report schema $version; expected 74.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1595,7 +1595,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v22")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v23")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1709,12 +1709,16 @@ class ReflaxeOcamlInspection {
 			case "shift": "shift";
 			case "unshift": "unshift";
 			case "reverse": "reverse";
+			case "insert": "insert";
+			case "remove": "remove";
+			case "contains": "contains";
 			case _: throw 'Standard Array call "${call.id}" has unsupported operation "${target.operation}".';
 		}
 		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
 		final expectedParameters = switch (target.operation) {
 			case "concat": [expectedArrayType];
-			case "push" | "unshift": [target.elementSemanticTypeId];
+			case "push" | "unshift" | "remove" | "contains": [target.elementSemanticTypeId];
+			case "insert": ["Int", target.elementSemanticTypeId];
 			case "copy" | "pop" | "shift" | "reverse": [];
 			case _: [];
 		};
@@ -1722,14 +1726,18 @@ class ReflaxeOcamlInspection {
 			case "concat" | "copy": expectedArrayType;
 			case "push": "Int";
 			case "pop" | "shift": 'Null<${target.elementSemanticTypeId}>';
-			case "unshift" | "reverse": "Void";
+			case "unshift" | "reverse" | "insert": "Void";
+			case "remove" | "contains": "Bool";
 			case _: "";
 		};
-		final expectedResultKind = target.operation == "unshift" || target.operation == "reverse" ? "effect-only-void" : "value";
+		final expectedResultKind = target.operation == "unshift"
+			|| target.operation == "reverse"
+			|| target.operation == "insert" ? "effect-only-void" : "value";
 		final expectedRuntimeTakesUnit = target.operation == "pop" || target.operation == "shift" || target.operation == "reverse";
 		final sourceArgumentsMatch = target.argumentSemanticTypeIds.length == expectedParameters.length
 			&& !Lambda.exists(target.argumentSemanticTypeIds, argument -> argument.length == 0)
-			&& (target.operation != "concat" || target.argumentSemanticTypeIds[0] == expectedParameters[0]);
+			&& (target.operation != "concat" || target.argumentSemanticTypeIds[0] == expectedParameters[0])
+			&& (target.operation != "insert" || target.argumentSemanticTypeIds[0] == "Int");
 		if (call.calleeId != 'Array|Array::$expectedField'
 			|| call.sourceModuleId != "Array"
 			|| call.sourceTypeName != "Array"
@@ -1751,7 +1759,7 @@ class ReflaxeOcamlInspection {
 			|| target.runtimeFunction != expectedField
 			|| target.runtimeTakesUnitArgument != expectedRuntimeTakesUnit
 			|| target.runtimeCapabilities.join(",") != "haxe-array"
-			|| target.proofId != "standard-array-typed-target-call-v2"
+			|| target.proofId != "standard-array-typed-target-call-v3"
 			|| call.proofId != target.proofId
 			|| call.proofClaim != target.proofClaim
 			|| call.profileEligibility.join(",") != "metal,portable") {

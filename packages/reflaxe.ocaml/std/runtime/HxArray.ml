@@ -79,6 +79,12 @@ let raw_kind_of (raw : Obj.t) : raw_kind =
 let is_non_null_raw (raw : Obj.t) : bool =
   raw != hx_null
 
+(* Haxe compares primitive and string values by value, but class instances and
+   other objects by identity. OCaml's generic [=] is structural, so using it
+   here would make two separate same-shaped Haxe objects look equal. *)
+let haxe_equals (left : 'a) (right : 'a) : bool =
+  HxRuntime.dynamic_equals (Obj.repr left) (Obj.repr right)
+
 let storage_capacity (store : storage) : int =
   match store with
   | ObjStore data -> Stdlib.Array.length data
@@ -537,7 +543,7 @@ let remove (a : 'a t) (x : 'a) : bool =
     let rec find i =
       if i >= a.length then
         -1
-      else if Obj.obj (Stdlib.Array.get data i) = x then
+      else if haxe_equals (Obj.obj (Stdlib.Array.get data i)) x then
         i
       else
         find (i + 1)
@@ -735,7 +741,7 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
       let rec loop i =
         if i >= len then
           -1
-        else if get a i = x then
+        else if haxe_equals (get a i) x then
           i
         else
           loop (i + 1)
@@ -768,7 +774,7 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
         let rec loop i =
           if i < 0 then
             -1
-          else if get a i = x then
+          else if haxe_equals (get a i) x then
             i
           else
             loop (i - 1)

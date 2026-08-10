@@ -82,6 +82,7 @@ class M6ArrayIntegrationTest {
 		assertContains(content, "HxArray.slice", "slice");
 		assertContains(content, "HxArray.concat", "concat");
 		assertContains(content, "HxArray.copy", "copy");
+		assertContains(content, "HxArray.remove", "remove");
 		assertContains(content, "HxArray.contains", "contains");
 		assertContains(content, "HxArray.indexOf", "indexOf");
 		assertContains(content, "HxArray.lastIndexOf", "lastIndexOf");

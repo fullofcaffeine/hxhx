@@ -1,3 +1,11 @@
+private class ArrayEqualityBox {
+	public final value:Int;
+
+	public function new(value:Int) {
+		this.value = value;
+	}
+}
+
 /**
 	Exercises Array behavior through both upstream Haxe and generated OCaml.
 
@@ -25,6 +33,21 @@ class ArrayMain {
 	static function makePairReceiver():Array<Int> {
 		callOrder.push("receiver");
 		return [7, 6];
+	}
+
+	static function makeInsertPosition():Int {
+		callOrder.push("position");
+		return 1;
+	}
+
+	static function makeInsertValue():Int {
+		callOrder.push("value");
+		return 8;
+	}
+
+	static function makeMatchingArgument():Int {
+		callOrder.push("argument");
+		return 7;
 	}
 
 	static function main() {
@@ -68,6 +91,12 @@ class ArrayMain {
 		a.insert(0, 9);
 		if (a[0] != 9)
 			throw "insert";
+		final insertion = [1, 3];
+		insertion.insert(1, 2);
+		insertion.insert(-1, 9);
+		insertion.insert(99, 4);
+		if (insertion.join(",") != "1,2,9,3,4")
+			throw "insert_normalized_positions";
 
 		final removed = a.splice(0, 1);
 		if (removed.length != 1)
@@ -129,10 +158,37 @@ class ArrayMain {
 		if (callOrder.join(",") != "receiver")
 			throw "reverse_receiver_once";
 
+		callOrder = [];
+		makePairReceiver().insert(makeInsertPosition(), makeInsertValue());
+		if (callOrder.join(",") != "receiver,position,value")
+			throw "insert_order";
+
+		callOrder = [];
+		if (!makeReceiver().remove(makeMatchingArgument()) || callOrder.join(",") != "receiver,argument")
+			throw "remove_order_or_result";
+
+		callOrder = [];
+		if (!makeReceiver().contains(makeMatchingArgument()) || callOrder.join(",") != "receiver,argument")
+			throw "contains_order_or_result";
+
 		if (!b.contains(3))
 			throw "contains_true";
 		if (b.contains(999))
 			throw "contains_false";
+
+		final repeated = [1, 2, 1];
+		if (!repeated.remove(1) || repeated.join(",") != "2,1")
+			throw "remove_first_match";
+		if (repeated.remove(9) || repeated.join(",") != "2,1")
+			throw "remove_missing";
+
+		final identityValue = new ArrayEqualityBox(1);
+		final equalShape = new ArrayEqualityBox(1);
+		final identityValues = [identityValue];
+		if (!identityValues.contains(identityValue) || identityValues.contains(equalShape))
+			throw "contains_object_identity";
+		if (identityValues.remove(equalShape) || identityValues.length != 1)
+			throw "remove_object_identity";
 
 		if (b.indexOf(3) != 2)
 			throw "indexof";
@@ -183,6 +239,9 @@ class ArrayMain {
 		deoptimizedFloats.push("x");
 		if (deoptimizedFloats[0] != 1.5 || deoptimizedFloats[1] != 2.5 || deoptimizedFloats[2] != "x")
 			throw "float_deopt";
+		deoptimizedFloats.insert(1, "middle");
+		if (!deoptimizedFloats.contains("middle") || !deoptimizedFloats.remove("middle") || deoptimizedFloats.contains("middle"))
+			throw "dynamic_insert_membership_remove";
 
 		final strArr = ["a", "b", "c"];
 		if (strArr.join("-") != "a-b-c")

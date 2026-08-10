@@ -1024,7 +1024,8 @@ class CallPlanFixture {
 	static function standardArrayTarget(operation:OcamlStandardArrayOperation):OcamlStandardArrayCallTarget {
 		final argumentSemanticTypeIds = switch (operation) {
 			case Concat: ["Array<Int>"];
-			case Push | Unshift: ["Int"];
+			case Push | Unshift | Remove | Contains: ["Int"];
+			case Insert: ["Int", "Int"];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
@@ -1032,7 +1033,8 @@ class CallPlanFixture {
 			case Concat | Copy: "Array<Int>";
 			case Push: "Int";
 			case Pop | Shift: "Null<Int>";
-			case Unshift | Reverse: "Void";
+			case Unshift | Reverse | Insert: "Void";
+			case Remove | Contains: "Bool";
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
 		return {
@@ -1663,6 +1665,9 @@ class CallPlanFixture {
 		final selectedArrayShift = standardArrayCall(caller, OcamlStandardArrayOperation.Shift);
 		final selectedArrayUnshift = standardArrayCall(caller, OcamlStandardArrayOperation.Unshift);
 		final selectedArrayReverse = standardArrayCall(caller, OcamlStandardArrayOperation.Reverse);
+		final selectedArrayInsert = standardArrayCall(caller, OcamlStandardArrayOperation.Insert);
+		final selectedArrayRemove = standardArrayCall(caller, OcamlStandardArrayOperation.Remove);
+		final selectedArrayContains = standardArrayCall(caller, OcamlStandardArrayOperation.Contains);
 		OcamlCallPlan.requireCall(selectedArrayConcat);
 		OcamlCallPlan.requireCall(selectedArrayCopy);
 		OcamlCallPlan.requireCall(selectedArrayPush);
@@ -1670,6 +1675,9 @@ class CallPlanFixture {
 		OcamlCallPlan.requireCall(selectedArrayShift);
 		OcamlCallPlan.requireCall(selectedArrayUnshift);
 		OcamlCallPlan.requireCall(selectedArrayReverse);
+		OcamlCallPlan.requireCall(selectedArrayInsert);
+		OcamlCallPlan.requireCall(selectedArrayRemove);
+		OcamlCallPlan.requireCall(selectedArrayContains);
 		final standardArrayPlan = new OcamlCallPlan([
 			selectedArrayConcat,
 			selectedArrayCopy,
@@ -1677,9 +1685,12 @@ class CallPlanFixture {
 			selectedArrayPop,
 			selectedArrayShift,
 			selectedArrayUnshift,
-			selectedArrayReverse
+			selectedArrayReverse,
+			selectedArrayInsert,
+			selectedArrayRemove,
+			selectedArrayContains
 		]);
-		final copiedArrayConcat = standardArrayPlan.decisions()[0];
+		final copiedArrayConcat = standardArrayPlan.decisions().filter(call -> call.id == STANDARD_ARRAY_CONCAT_CALL_ID)[0];
 		if (copiedArrayConcat.standardArrayTarget == null)
 			Context.error("The sealed call plan dropped its standard Array target.", Context.currentPos());
 		Reflect.setField(selectedArrayConcat.standardArrayTarget, "runtimeFunction", "copy");
@@ -1701,7 +1712,7 @@ class CallPlanFixture {
 			|| concatRequirements[0].rootModules.join(",") != "HxArray") {
 			Context.error("Array.concat does not own its exact HxArray runtime requirement.", Context.currentPos());
 		}
-		final copiedArrayCopy = standardArrayPlan.decisions()[1];
+		final copiedArrayCopy = standardArrayPlan.decisions().filter(call -> call.id == STANDARD_ARRAY_COPY_CALL_ID)[0];
 		final copyRuntimeUse = standardArrayPlan.runtimeUsePlanFor(STANDARD_ARRAY_COPY_CALL_ID);
 		if (copyRuntimeUse == null
 			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(copyRuntimeUse).exactSymbol != "HxArray.copy"
@@ -1733,6 +1744,33 @@ class CallPlanFixture {
 			|| copiedArrayUnshift.standardArrayTarget.runtimeTakesUnitArgument) {
 			Context.error("Array.unshift did not seal its effect-only Void result and source argument calling convention.", Context.currentPos());
 		}
+		final copiedArrayInsert = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-insert-fixture")[0];
+		final insertRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-insert-fixture");
+		if (copiedArrayInsert.standardArrayTarget.parameterSemanticTypeIds.join(",") != "Int,Int"
+			|| copiedArrayInsert.standardArrayTarget.argumentSemanticTypeIds.join(",") != "Int,Int"
+			|| copiedArrayInsert.standardArrayTarget.resultSemanticTypeId != "Void"
+			|| copiedArrayInsert.resultKind != OcamlCallResultKind.EffectOnlyVoid
+			|| copiedArrayInsert.standardArrayTarget.runtimeTakesUnitArgument
+			|| insertRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(insertRuntimeUse).exactSymbol != "HxArray.insert") {
+			Context.error("Array.insert did not seal its position, value, Void result, and exact runtime occurrence.", Context.currentPos());
+		}
+		final copiedArrayRemove = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-remove-fixture")[0];
+		final removeRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-remove-fixture");
+		if (copiedArrayRemove.standardArrayTarget.resultSemanticTypeId != "Bool"
+			|| copiedArrayRemove.resultKind != OcamlCallResultKind.Value
+			|| removeRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(removeRuntimeUse).exactSymbol != "HxArray.remove") {
+			Context.error("Array.remove did not seal its element, Bool result, and exact runtime occurrence.", Context.currentPos());
+		}
+		final copiedArrayContains = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-contains-fixture")[0];
+		final containsRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-contains-fixture");
+		if (copiedArrayContains.standardArrayTarget.resultSemanticTypeId != "Bool"
+			|| copiedArrayContains.resultKind != OcamlCallResultKind.Value
+			|| containsRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(containsRuntimeUse).exactSymbol != "HxArray.contains") {
+			Context.error("Array.contains did not seal its element, Bool result, and exact runtime occurrence.", Context.currentPos());
+		}
 		final wrongArrayRuntime = copyCall(copiedArrayConcat);
 		Reflect.setField(wrongArrayRuntime.standardArrayTarget, "runtimeFunction", "copy");
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntime));
@@ -1762,6 +1800,9 @@ class CallPlanFixture {
 		final wrongArrayRuntimeUnit = copyCall(copiedArrayPush);
 		Reflect.setField(wrongArrayRuntimeUnit.standardArrayTarget, "runtimeTakesUnitArgument", true);
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntimeUnit));
+		final wrongArrayInsertPosition = copyCall(copiedArrayInsert);
+		Reflect.setField(wrongArrayInsertPosition.standardArrayTarget, "argumentSemanticTypeIds", ["Float", "Int"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayInsertPosition));
 		final missingArrayReceiver = copyCall(copiedArrayConcat, null, null, null, null, null, copiedArrayConcat.evaluationSchedule.slice(1));
 		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingArrayReceiver));
 		final missingArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);

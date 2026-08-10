@@ -4272,15 +4272,6 @@ class OcamlBuilder {
 														case "toString" if (args.length == 0):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "toString"),
 																[buildExpr(objExpr), buildArrayJoinStringifier(objExpr, e.pos)]);
-														case "insert":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "insert"),
-																[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]);
-														case "remove":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "remove"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "contains":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "contains"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case "indexOf":
 															final fromExpr = if (args.length > 1) {
 																final unwrapped = unwrap(args[1]);

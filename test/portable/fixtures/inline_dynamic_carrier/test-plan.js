@@ -19,7 +19,7 @@ const generatedTypeRegistry = fs.readFileSync('out/HxTypeRegistry.ml', 'utf8')
 const repositoryRoot = path.resolve(__dirname, '../../../..')
 
 assert.equal(report.schemaVersion, 73)
-assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v22')
+assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v23')
 assert.equal(
 	report.representationScope,
 	'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15',
@@ -92,7 +92,7 @@ for (const operation of dynamicUnsafeOperations) {
 	assert(expectedProof, `Unexpected Dynamic unsafe operation ${operation.operation}`)
 	assert.equal(operation.proofId, expectedProof)
 	assert.equal(operation.outputCarrierTypeId, 'Obj.t')
-	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v88')
+	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v89')
 }
 
 const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
@@ -100,7 +100,7 @@ const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
 )
 assert.equal(dynamicCallableBoundaries.length, 2)
 for (const boundary of dynamicCallableBoundaries) {
-	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v88')
+	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v89')
 	assert.equal(boundary.arguments.length, 1)
 	assert.deepEqual(boundary.arguments[0], {
 		parameterOptional: false,
