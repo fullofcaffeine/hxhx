@@ -28,20 +28,23 @@ class OcamlCheckedGeneratedTextRecord {
 	public final ownerId:String;
 	public final planRevision:String;
 	public var orderedUseIds(get, never):Array<String>;
+	public var runtimeReferences(get, never):Array<OcamlRuntimeReference>;
 	public var legacyUseIds(get, never):Array<String>;
 	public var programIdentifierIds(get, never):Array<String>;
 	public final content:String;
 	public final contentHash:String;
 
 	final orderedUseIdsValue:Array<String>;
+	final runtimeReferencesValue:Array<OcamlRuntimeReference>;
 	final legacyUseIdsValue:Array<String>;
 	final programIdentifierIdsValue:Array<String>;
 
-	private function new(ownerId:String, planRevision:String, orderedUseIds:Array<String>, legacyUseIds:Array<String>, programIdentifierIds:Array<String>,
-			content:String, contentHash:String) {
+	private function new(ownerId:String, planRevision:String, orderedUseIds:Array<String>, runtimeReferences:Array<OcamlRuntimeReference>,
+			legacyUseIds:Array<String>, programIdentifierIds:Array<String>, content:String, contentHash:String) {
 		this.ownerId = ownerId;
 		this.planRevision = planRevision;
 		this.orderedUseIdsValue = orderedUseIds.copy();
+		this.runtimeReferencesValue = runtimeReferences.copy();
 		this.legacyUseIdsValue = legacyUseIds.copy();
 		this.programIdentifierIdsValue = programIdentifierIds.copy();
 		this.content = content;
@@ -50,6 +53,10 @@ class OcamlCheckedGeneratedTextRecord {
 
 	function get_orderedUseIds():Array<String> {
 		return orderedUseIdsValue.copy();
+	}
+
+	function get_runtimeReferences():Array<OcamlRuntimeReference> {
+		return runtimeReferencesValue.copy();
 	}
 
 	function get_legacyUseIds():Array<String> {
@@ -86,13 +93,13 @@ class OcamlCheckedGeneratedText {
 	var sealed:Bool = false;
 
 	public function new(ownerId:String, planRevision:String, activeProfile:String, requirements:Array<OcamlRuntimeRequirement>,
-			occurrences:Array<OcamlRuntimeUseOccurrence>) {
+			occurrences:Array<OcamlRuntimeUseOccurrence>, ?finalOutputAuthority:OcamlFinalRuntimeUseAuthority) {
 		this.ownerId = requiredLogicalId(ownerId, "generated-text owner");
 		this.planRevision = requiredLogicalId(planRevision, "generated-text plan revision");
 		for (occurrence in occurrences)
 			if (occurrence.ownerId != this.ownerId)
 				throw 'Checked generated text use ${occurrence.id} belongs to ${occurrence.ownerId}; expected ${this.ownerId}.';
-		this.authority = new OcamlRuntimeUseAuthority(planRevision, activeProfile, requirements, occurrences);
+		this.authority = new OcamlRuntimeUseAuthority(planRevision, activeProfile, requirements, occurrences, finalOutputAuthority);
 	}
 
 	/** Creates a deterministic plan identity from logical, path-safe inputs. */
@@ -218,8 +225,8 @@ class OcamlCheckedGeneratedText {
 
 		final exactContent = content.toString();
 		final orderedUseIds = runtimeReferences.map(reference -> reference.id);
-		final record = new OcamlCheckedGeneratedTextRecord(ownerId, planRevision, orderedUseIds, legacyUseIds, programIdentifierIds, exactContent,
-			"sha256:" + Sha256.encode(exactContent));
+		final record = new OcamlCheckedGeneratedTextRecord(ownerId, planRevision, orderedUseIds, runtimeReferences, legacyUseIds, programIdentifierIds,
+			exactContent, "sha256:" + Sha256.encode(exactContent));
 		verify(record);
 		return record;
 	}
@@ -234,10 +241,18 @@ class OcamlCheckedGeneratedText {
 		if (record.contentHash != expectedHash)
 			throw 'Checked generated text content hash mismatch for ${record.ownerId}: expected $expectedHash, received ${record.contentHash}.';
 		final seen:Map<String, Bool> = [];
-		for (id in record.orderedUseIds) {
+		final orderedUseIds = record.orderedUseIds;
+		final runtimeReferences = record.runtimeReferences;
+		if (runtimeReferences.length != orderedUseIds.length)
+			throw 'Checked generated text record ${record.ownerId} lost hidden runtime reference facts.';
+		for (index in 0...orderedUseIds.length) {
+			final id = orderedUseIds[index];
 			final stableId = requiredLogicalId(id, "generated-text runtime use identity");
 			if (seen.exists(stableId))
 				throw 'Checked generated text record ${record.ownerId} repeats runtime use $stableId.';
+			final reference = runtimeReferences[index];
+			if (reference.id != stableId || reference.planRevision != record.planRevision || reference.ownerId != record.ownerId)
+				throw 'Checked generated text record ${record.ownerId} has stale hidden runtime reference $stableId.';
 			seen.set(stableId, true);
 		}
 		for (id in record.legacyUseIds) {

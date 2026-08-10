@@ -58,7 +58,8 @@ class OcamlPlaceAssignmentLowerer {
 			emit:OcamlRuntimeReference->OcamlIntAdditionEmission):OcamlExpr {
 		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
-		final authority = new OcamlRuntimeUseAuthority(planRevision, activeProfile, context.runtimeRequirementsByIds(requirementIds), occurrences);
+		final authority = new OcamlRuntimeUseAuthority(planRevision, activeProfile, context.runtimeRequirementsByIds(requirementIds), occurrences,
+			context.finalRuntimeUses);
 		final occurrence = occurrences[0];
 		final reference = authority.expressionIdentifier(occurrence.id, planRevision, occurrence.exactSymbol);
 		final emission = emit(reference);
@@ -272,7 +273,7 @@ class OcamlPlaceAssignmentLowerer {
 					final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 					final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 					final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-						context.runtimeRequirementsByIds(plan.runtimeRequirementIds), plan.runtimeUseOccurrences);
+						context.runtimeRequirementsByIds(plan.runtimeRequirementIds), plan.runtimeUseOccurrences, context.finalRuntimeUses);
 					final runtimeUse = plan.runtimeUseOccurrences[0];
 					final runtimeStoreReference = runtimeAuthority.expressionIdentifier(runtimeUse.id, runtimePlanRevision, runtimeUse.exactSymbol);
 					final emission = OcamlPlaceAssignmentEmitter.emitArraySimple(plan, runtimeStoreReference, buildExpr, freshTemporary);

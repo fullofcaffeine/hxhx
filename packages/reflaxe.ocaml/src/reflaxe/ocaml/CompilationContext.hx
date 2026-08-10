@@ -29,6 +29,7 @@ import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 #end
 
 /**
@@ -432,6 +433,14 @@ class CompilationContext {
 	#if (macro || reflaxe_runtime || eval)
 	/** Source-rooted explanations recorded where OCaml compatibility support is chosen. **/
 	public final runtimeRequirements = new OcamlRuntimeRequirementLedger();
+
+	/**
+		Counts authorized private-runtime uses in the complete target output.
+
+		Local lowerers prove why one helper is allowed. This request-owned ledger
+		then proves that assembly printed each allowed occurrence exactly once.
+	**/
+	public final finalRuntimeUses = new OcamlFinalRuntimeUseAuthority();
 	#end
 
 	/** Sealed semantic place decisions retained for deterministic inspection. */
@@ -473,8 +482,9 @@ class CompilationContext {
 
 	#if (macro || reflaxe_runtime || eval)
 	/** Starts a fresh runtime-requirement ledger for one normalized program revision. **/
-	public function beginRuntimeRequirementProgram(programRevision:String):Void {
+	public function beginRuntimeRequirementProgram(programRevision:String, activeProfile:String):Void {
 		runtimeRequirements.beginProgram(programRevision);
+		finalRuntimeUses.beginProgram(programRevision, activeProfile);
 	}
 
 	/** Records the runtime capabilities already sealed into one place-lowering plan. **/

@@ -124,11 +124,13 @@ if [ "$(haxe --version)" != "4.3.7" ]; then
 	echo "This oracle fixture requires upstream Haxe 4.3.7" >&2
 	exit 1
 fi
-haxe -cp src -main Main -js out/oracle.js
-node out/oracle.js >out/oracle.js.stdout
-haxe -cp src -main Main -neko out/oracle.n
-neko out/oracle.n >out/oracle.neko.stdout
-diff -u expected.stdout out/oracle.js.stdout
-diff -u expected.stdout out/oracle.neko.stdout
+oracle_dir="$(mktemp -d "${TMPDIR:-/tmp}/string-null-storage-oracle.XXXXXX")"
+trap 'rm -rf "$oracle_dir"' EXIT
+haxe -cp src -main Main -js "$oracle_dir/oracle.js"
+node "$oracle_dir/oracle.js" >"$oracle_dir/oracle.js.stdout"
+haxe -cp src -main Main -neko "$oracle_dir/oracle.n"
+neko "$oracle_dir/oracle.n" >"$oracle_dir/oracle.neko.stdout"
+diff -u expected.stdout "$oracle_dir/oracle.js.stdout"
+diff -u expected.stdout "$oracle_dir/oracle.neko.stdout"
 
 echo "STRING_NULL_STORAGE_ORACLE_REPORT_AND_SOURCE_SHAPE:PASS"

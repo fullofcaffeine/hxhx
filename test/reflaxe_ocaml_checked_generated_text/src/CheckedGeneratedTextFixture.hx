@@ -1,4 +1,5 @@
 import reflaxe.ocaml.runtimegen.OcamlCheckedGeneratedText;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -76,8 +77,8 @@ class CheckedGeneratedTextFixture {
 		};
 	}
 
-	static function builder(occurrences:Array<OcamlRuntimeUseOccurrence>):OcamlCheckedGeneratedText {
-		return new OcamlCheckedGeneratedText(OWNER_ID, PLAN_REVISION, "portable", [requirement()], occurrences);
+	static function builder(occurrences:Array<OcamlRuntimeUseOccurrence>, ?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlCheckedGeneratedText {
+		return new OcamlCheckedGeneratedText(OWNER_ID, PLAN_REVISION, "portable", [requirement()], occurrences, finalOutput);
 	}
 
 	static function validAndDeterministic():Void {
@@ -160,6 +161,26 @@ class CheckedGeneratedTextFixture {
 		expectFailure("changed hash", "content hash", () -> OcamlCheckedGeneratedText.verify(record));
 	}
 
+	/** Proves that writing one sealed checked-text record twice spends its use twice. */
+	static function finalGeneratedTextOutput():Void {
+		final validOutput = new OcamlFinalRuntimeUseAuthority();
+		validOutput.beginProgram("program:checked-text:valid", "portable");
+		final valid = builder([occurrence("U1", 0)], validOutput);
+		valid.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set");
+		final validRecord = valid.seal();
+		validOutput.observeGeneratedText(validRecord.runtimeReferences);
+		validOutput.finishProgram();
+
+		final duplicateOutput = new OcamlFinalRuntimeUseAuthority();
+		duplicateOutput.beginProgram("program:checked-text:duplicate", "portable");
+		final duplicate = builder([occurrence("U1", 0)], duplicateOutput);
+		duplicate.addRuntimeUse("U1", PLAN_REVISION, "HxArray.set");
+		final duplicateRecord = duplicate.seal();
+		duplicateOutput.observeGeneratedText(duplicateRecord.runtimeReferences);
+		expectFailure("duplicate checked-text output", "duplicate final runtime use U1",
+			() -> duplicateOutput.observeGeneratedText(duplicateRecord.runtimeReferences));
+	}
+
 	static function legacyBridgeRemainsSeparateFromAuthority():Void {
 		final legacy = builder([]);
 		legacy.addLiteral("let legacy = ");
@@ -198,6 +219,7 @@ class CheckedGeneratedTextFixture {
 		validAndDeterministic();
 		corruptionFails();
 		changedHashFails();
+		finalGeneratedTextOutput();
 		legacyBridgeRemainsSeparateFromAuthority();
 		Sys.println("CHECKED_GENERATED_TEXT:PASS");
 	}

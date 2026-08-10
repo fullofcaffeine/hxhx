@@ -106,7 +106,8 @@ class OcamlTypeRegistryBaseEmitter {
 	public function new(activeProfile:String, programRevision:String, useLineDirectives:Bool, classNames:Array<String>, enumNames:Array<String>,
 			enumLayouts:Array<OcamlTypeRegistryEnumLayout>, emptyConstructors:Array<OcamlTypeRegistryEmptyConstructor>,
 			classFields:Array<OcamlTypeRegistryClassFields>, classSupers:Array<OcamlTypeRegistryClassSuper>, classTags:Array<OcamlTypeRegistryClassTags>,
-			programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier>, runtimeUses:Array<OcamlTypeRegistryRuntimeUse>) {
+			programIdentifiers:Array<OcamlTypeRegistryProgramIdentifier>, runtimeUses:Array<OcamlTypeRegistryRuntimeUse>,
+			?finalOutputAuthority:OcamlFinalRuntimeUseAuthority) {
 		this.useLineDirectives = useLineDirectives;
 		this.classNames = copyStrings(classNames);
 		this.enumNames = copyStrings(enumNames);
@@ -193,7 +194,7 @@ class OcamlTypeRegistryBaseEmitter {
 		for (use in plannedRuntimeUses)
 			requireCapability(use.capability);
 		checked = new OcamlCheckedGeneratedText(OWNER_ID, planRevision, activeProfile, requirements,
-			plannedOccurrences(requirementsByCapability, plannedRuntimeUses));
+			plannedOccurrences(requirementsByCapability, plannedRuntimeUses), finalOutputAuthority);
 	}
 
 	/** Starts the exact generated module and its `init` function. */

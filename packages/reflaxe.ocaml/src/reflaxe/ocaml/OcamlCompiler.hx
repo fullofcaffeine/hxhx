@@ -412,7 +412,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
 		staticStoragePlan.beginProgram(revision.id);
-		ctx.beginRuntimeRequirementProgram(revision.id);
+		ctx.beginRuntimeRequirementProgram(revision.id, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
 		#if macro
 		try {
 			OcamlMonomorphicClassPlanner.plan(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, ctx, representationRegistry,
@@ -1032,6 +1032,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			], false));
 		}
 		RuntimeUsageCollector.collectFromModuleItems(items, moduleName -> ctx.markRuntimeModule(moduleName));
+		return printFinalModule(items, "static-storage-prelude:" + moduleId);
+	}
+
+	/**
+		Checks one complete structured output chunk before OCaml text loses hidden IDs.
+
+		The printer still owns formatting only. Permission for a private runtime
+		helper comes from its lowering plan and is counted here before rendering.
+	**/
+	function printFinalModule(items:Array<OcamlModuleItem>, outputUnitId:String):String {
+		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId);
 		return printer.printModule(items);
 	}
 
@@ -1403,7 +1414,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (decision.semanticTypeId != "String")
 			return OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain);
 		final defaultPlan = OcamlStringDefaultPlan.seal(decision, ownerId, ownerRevision, source);
-		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
+		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			ctx.finalRuntimeUses);
 		final materialized = OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain, defaultPlan, authority);
 		authority.reconcileExpression(materialized.implicitDefault);
 		return materialized;
@@ -2397,7 +2409,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// the constructor body used in `create`, but takes `self` explicitly.
 			if (isDispatch) {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-				final ctorBodyForCtor = ensureParamUsage(ctorBody, [selfPat].concat(createParams));
+				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body");
+				final ctorBodyForCtor = ensureParamUsage(copiedCtorBody, [selfPat].concat(createParams));
 				lets.push({
 					name: ctorName,
 					expr: OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]))
@@ -2685,7 +2698,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (profileVerbose && profClassMatch)
 			profileLogLine("reflaxe.ocaml: class_print_begin class=" + profClassName);
 		#end
-		final printed = printer.printModule(items);
+		final printed = printFinalModule(items, "class:" + fullName);
 		final printEndS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
 		out += printed;
 		#if macro
@@ -3640,7 +3653,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			final typeRegistry = new OcamlTypeRegistryBaseEmitter(artifactProfile, revision.id, useLineDirectives, classNames, enumNames, enumLayouts,
-				emptyConstructors, classFields, classSupers, classTags, programIdentifiers, runtimeUses);
+				emptyConstructors, classFields, classSupers, classTags, programIdentifiers, runtimeUses, ctx.finalRuntimeUses);
 			typeRegistry.emitHeader();
 
 			function ocamlExprForDynArgToExpected(t:Type, objExpr:String, useIdPrefix:String):String {
@@ -3832,6 +3845,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			typeRegistry.emitFooter();
 			final typeRegistryRecord = typeRegistry.seal();
 			OcamlCheckedGeneratedText.verify(typeRegistryRecord);
+			ctx.finalRuntimeUses.observeGeneratedText(typeRegistryRecord.runtimeReferences, "checked-generated-text:HxTypeRegistry.ml");
 			output.saveFile("HxTypeRegistry.ml", typeRegistryRecord.content);
 			artifacts.record({
 				path: "HxTypeRegistry.ml",
@@ -3928,7 +3942,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.HXHX_BACKEND_PLUGIN_HOST);
 			nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarations(duneProjectConfig);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
-			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts, revision.id, activeProfile, ctx.runtimeRequirementsSorted());
+			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts, revision.id, activeProfile, ctx.runtimeRequirementsSorted(), ctx.finalRuntimeUses);
 		}
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
@@ -3953,6 +3967,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				modules.push(m);
 			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
 		}
+
+		// All structured modules and checked generated-text files have now crossed
+		// their last identity-preserving boundary. Reject missing or extra private
+		// helpers before the private output transaction can be published.
+		ctx.finalRuntimeUses.finishProgram();
 
 		artifacts.recordFrameworkModules(excludedFrameworkPaths);
 
@@ -4210,7 +4229,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		RuntimeUsageCollector.collectFromModuleItems(items, (moduleName) -> ctx.markRuntimeModule(moduleName));
 
 		var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n\n";
-		out += printer.printModule(items);
+		out += printFinalModule(items, "enum:" + fullName);
 		return out;
 	}
 
@@ -4224,6 +4243,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
 		final e = buildStandaloneExpression(builder, compilerExpressionOwner(expr), expr);
+		ctx.finalRuntimeUses.observeExpression(e, "expression:" + compilerExpressionOwner(expr));
 		return printer.printExpr(e);
 	}
 

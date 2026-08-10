@@ -155,7 +155,7 @@ class DuneProjectEmitter {
 	}
 
 	public static function emit(output:OutputManager, cfg:DuneProjectConfig, artifacts:OcamlArtifactManifestBuilder, programRevision:String,
-			activeProfile:String, runtimeRequirements:Array<OcamlRuntimeRequirement>):Void {
+			activeProfile:String, runtimeRequirements:Array<OcamlRuntimeRequirement>, finalOutputAuthority:OcamlFinalRuntimeUseAuthority):Void {
 		final projectName = cfg.projectName;
 		final exeName = cfg.exeName;
 		final duneLayout = normalizeDuneLayout(cfg.duneLayout);
@@ -179,6 +179,7 @@ class DuneProjectEmitter {
 
 		function saveCheckedGenerated(path:String, record:OcamlCheckedGeneratedTextRecord, kind:OcamlArtifactKind):Void {
 			OcamlCheckedGeneratedText.verify(record);
+			finalOutputAuthority.observeGeneratedText(record.runtimeReferences, "checked-generated-text:" + path);
 			saveGenerated(path, record.content, kind);
 		}
 
@@ -271,7 +272,7 @@ class DuneProjectEmitter {
 					profileEligibility: requirement.profileEligibility,
 					cardinality: 1
 				}
-			]);
+			], finalOutputAuthority);
 			if (useLineDirectives)
 				checked.addLiteral("# 1 \"" + escapeLineDirectivePath(entryFile) + "\"\n");
 			checked.addLiteral("let () =\n");

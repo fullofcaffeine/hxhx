@@ -30,15 +30,18 @@ class OcamlRuntimeUseAuthority {
 	final requirementsById:Map<String, OcamlRuntimeRequirement> = [];
 	final constructed:Map<String, Bool> = [];
 	final receipts:Array<OcamlRuntimeUseReceipt> = [];
+	final finalOutputAuthority:Null<OcamlFinalRuntimeUseAuthority>;
 	var sealed:Bool = false;
 
-	public function new(planRevision:String, activeProfile:String, requirements:Array<OcamlRuntimeRequirement>, occurrences:Array<OcamlRuntimeUseOccurrence>) {
+	public function new(planRevision:String, activeProfile:String, requirements:Array<OcamlRuntimeRequirement>, occurrences:Array<OcamlRuntimeUseOccurrence>,
+			?finalOutputAuthority:OcamlFinalRuntimeUseAuthority) {
 		if (planRevision == null || planRevision.length == 0)
 			throw "Runtime-use authority requires a non-empty plan revision.";
 		if (activeProfile == null || activeProfile.length == 0)
 			throw "Runtime-use authority requires an active target profile.";
 		this.planRevision = planRevision;
 		this.activeProfile = activeProfile;
+		this.finalOutputAuthority = finalOutputAuthority;
 
 		for (requirement in requirements) {
 			if (requirementsById.exists(requirement.id))
@@ -93,10 +96,11 @@ class OcamlRuntimeUseAuthority {
 		if (constructed.exists(id))
 			throw 'Runtime use $id was constructed more than once.';
 		constructed.set(id, true);
-		final result = new OcamlRuntimeReference(id, requestedPlanRevision, domain, exactSymbol);
+		final result = new OcamlRuntimeReference(id, requestedPlanRevision, occurrence.ownerId, domain, exactSymbol);
 		receipts.push({
 			id: id,
 			planRevision: requestedPlanRevision,
+			ownerId: occurrence.ownerId,
 			domain: domain,
 			exactSymbol: exactSymbol
 		});
@@ -184,6 +188,8 @@ class OcamlRuntimeUseAuthority {
 			errors.push('unknown runtime use ${reference.id}');
 		} else if (reference.planRevision != planRevision) {
 			errors.push('stale runtime use ${reference.id}: expected plan $planRevision, received ${reference.planRevision}');
+		} else if (reference.ownerId != occurrence.ownerId) {
+			errors.push('runtime use ${reference.id} has the wrong owner ${reference.ownerId}; expected ${occurrence.ownerId}');
 		} else if (reference.domain != occurrence.domain) {
 			errors.push('runtime use ${reference.id} has the wrong target domain');
 		} else if (reference.exactSymbol != occurrence.exactSymbol) {
@@ -214,6 +220,8 @@ class OcamlRuntimeUseAuthority {
 			errors.push('runtime use order ${observedIds.join(",")} does not match planned owner-local order ${expectedIds.join(",")}');
 		if (errors.length > 0)
 			throw "OCaml runtime-use reconciliation failed: " + errors.join("; ") + ".";
+		if (finalOutputAuthority != null)
+			finalOutputAuthority.acceptReconciledPlan(planRevision, activeProfile, occurrencesInOrder);
 	}
 
 	function validateRequirementForReconciliation(occurrence:OcamlRuntimeUseOccurrence, errors:Array<String>):Void {
@@ -224,7 +232,7 @@ class OcamlRuntimeUseAuthority {
 		}
 	}
 
-	static function isPlainPrivateReference(name:String):Bool {
+	public static function isPlainPrivateReference(name:String):Bool {
 		return name == "HxInt.add"
 			|| name == "HxArray.set"
 			|| name == "HxArray.create"

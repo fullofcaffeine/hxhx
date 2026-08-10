@@ -1,6 +1,8 @@
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
@@ -38,12 +40,12 @@ class RuntimeUseAuthorityFixture {
 			throw '$label should have failed.';
 	}
 
-	static function occurrence(id:String, order:Int, ?symbol:String = "HxArray.set", ?domain:OcamlRuntimeUseDomain,
-			?planRevision:String = PLAN_REVISION):OcamlRuntimeUseOccurrence {
+	static function occurrence(id:String, order:Int, ?symbol:String = "HxArray.set", ?domain:OcamlRuntimeUseDomain, ?planRevision:String = PLAN_REVISION,
+			?ownerId:String = "place:array-simple-assignment"):OcamlRuntimeUseOccurrence {
 		return {
 			id: id,
 			planRevision: planRevision,
-			ownerId: "place:array-simple-assignment",
+			ownerId: ownerId,
 			requirementId: "place:array:runtime:haxe-array-element-set",
 			domain: domain == null ? OcamlRuntimeUseDomain.ExpressionIdentifier : domain,
 			exactSymbol: symbol,
@@ -84,6 +86,160 @@ class RuntimeUseAuthorityFixture {
 		final u2 = checker.expressionIdentifier("U2", PLAN_REVISION, "HxArray.set");
 		expectFailure("duplicate U2 and missing U1", "duplicate runtime use U2; missing runtime use U1",
 			() -> checker.reconcileExpression(OcamlExpr.ESeq([OcamlExpr.ERuntimeIdent(u2), OcamlExpr.ERuntimeIdent(u2)])));
+	}
+
+	/**
+		Proves that local success cannot be reused as permission for two outputs.
+
+		The first check accepts the one expression selected by the lowering plan.
+		The final check sees that compiler assembly placed that same expression in
+		two bindings, so it must reject the second output occurrence before print.
+	**/
+	static function duplicatedReconciledSubtreeFailsFinalOutput():Void {
+		final finalOutput = new OcamlFinalRuntimeUseAuthority();
+		finalOutput.beginProgram("program:runtime-use-fixture:v1", PROFILE);
+		final checker = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], finalOutput);
+		final reference = checker.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set");
+		final expression = OcamlExpr.ERuntimeIdent(reference);
+		checker.reconcileExpression(expression);
+
+		expectFailure("duplicated final subtree", "duplicate final runtime use U1", () -> finalOutput.observeModuleItems([
+			OcamlModuleItem.ILet([{name: "first", expr: expression}, {name: "second", expr: expression}], false)
+		]));
+	}
+
+	static function finalOutputContract():Void {
+		final validOutput = new OcamlFinalRuntimeUseAuthority();
+		validOutput.beginProgram("program:runtime-use-fixture:valid", PROFILE);
+		final validAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0), occurrence("U2", 1)], validOutput);
+		final validU1 = OcamlExpr.ERuntimeIdent(validAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		final validU2 = OcamlExpr.ERuntimeIdent(validAuthority.expressionIdentifier("U2", PLAN_REVISION, "HxArray.set"));
+		validAuthority.reconcileExpression(OcamlExpr.ESeq([validU1, validU2]));
+		validOutput.observeModuleItems([
+			OcamlModuleItem.ILet([{name: "first", expr: validU1}, {name: "second", expr: validU2}], false)
+		]);
+		validOutput.finishProgram();
+
+		final repeatedPlanOutput = new OcamlFinalRuntimeUseAuthority();
+		repeatedPlanOutput.beginProgram("program:runtime-use-fixture:repeated-plan", PROFILE);
+		final firstRepeatedPlan = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], repeatedPlanOutput);
+		final firstRepeatedReference = firstRepeatedPlan.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set");
+		firstRepeatedPlan.reconcileExpression(OcamlExpr.ERuntimeIdent(firstRepeatedReference));
+		final secondRepeatedPlan = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], repeatedPlanOutput);
+		final secondRepeatedReference = secondRepeatedPlan.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set");
+		secondRepeatedPlan.reconcileExpression(OcamlExpr.ERuntimeIdent(secondRepeatedReference));
+		final conflictingPlan = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0, "HxArray.get")], repeatedPlanOutput);
+		final conflictingReference = conflictingPlan.expressionIdentifier("U1", PLAN_REVISION, "HxArray.get");
+		expectFailure("conflicting repeated plan", "registered with conflicting facts",
+			() -> conflictingPlan.reconcileExpression(OcamlExpr.ERuntimeIdent(conflictingReference)));
+		repeatedPlanOutput.observeExpression(OcamlExpr.ERuntimeIdent(firstRepeatedReference));
+		repeatedPlanOutput.finishProgram();
+
+		final copiedOutput = new OcamlFinalRuntimeUseAuthority();
+		copiedOutput.beginProgram("program:runtime-use-fixture:copy", PROFILE);
+		final copiedAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], copiedOutput);
+		final original = OcamlExpr.ERuntimeIdent(copiedAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		copiedAuthority.reconcileExpression(original);
+		final copied = copiedOutput.copyExpressionForOutput(original, "second-binding");
+		copiedOutput.observeModuleItems([
+			OcamlModuleItem.ILet([{name: "original", expr: original}, {name: "copy", expr: copied}], false)
+		]);
+		copiedOutput.finishProgram();
+
+		final nestedCopyOutput = new OcamlFinalRuntimeUseAuthority();
+		nestedCopyOutput.beginProgram("program:runtime-use-fixture:nested-copy", PROFILE);
+		final nestedCopyAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], nestedCopyOutput);
+		final nestedReference = OcamlExpr.ERuntimeIdent(nestedCopyAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		final nestedOriginal = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ESeq([nestedReference])]);
+		nestedCopyAuthority.reconcileExpression(nestedOriginal);
+		final nestedCopy = nestedCopyOutput.copyExpressionForOutput(nestedOriginal, "nested-second-binding");
+		nestedCopyOutput.observeModuleItems([
+			OcamlModuleItem.ILet([
+				{name: "nestedOriginal", expr: nestedOriginal},
+				{name: "nestedCopy", expr: nestedCopy}
+			], false)
+		]);
+		nestedCopyOutput.finishProgram();
+
+		final duplicateCopyOutput = new OcamlFinalRuntimeUseAuthority();
+		duplicateCopyOutput.beginProgram("program:runtime-use-fixture:duplicate-copy", PROFILE);
+		final duplicateCopyAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], duplicateCopyOutput);
+		final duplicateCopyOriginal = OcamlExpr.ERuntimeIdent(duplicateCopyAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		duplicateCopyAuthority.reconcileExpression(duplicateCopyOriginal);
+		final firstCopy = duplicateCopyOutput.copyExpressionForOutput(duplicateCopyOriginal, "second-binding");
+		final secondCopy = duplicateCopyOutput.copyExpressionForOutput(duplicateCopyOriginal, "second-binding");
+		expectFailure("duplicate output-copy occurrence", "duplicate final runtime use U1:output-copy:second-binding",
+			() -> duplicateCopyOutput.observeModuleItems([
+				OcamlModuleItem.ILet([
+					{
+						name: "original",
+						expr: duplicateCopyOriginal
+					},
+					{name: "firstCopy", expr: firstCopy},
+					{name: "secondCopy", expr: secondCopy}
+				], false)
+			]));
+
+		final missingOutput = new OcamlFinalRuntimeUseAuthority();
+		missingOutput.beginProgram("program:runtime-use-fixture:missing", PROFILE);
+		final missingAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], missingOutput);
+		final missingReference = OcamlExpr.ERuntimeIdent(missingAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		missingAuthority.reconcileExpression(missingReference);
+		expectFailure("missing final use", "missing final runtime use U1", missingOutput.finishProgram);
+
+		final orderOutput = new OcamlFinalRuntimeUseAuthority();
+		orderOutput.beginProgram("program:runtime-use-fixture:order", PROFILE);
+		final orderAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0), occurrence("U2", 1)], orderOutput);
+		final orderU1 = OcamlExpr.ERuntimeIdent(orderAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		final orderU2 = OcamlExpr.ERuntimeIdent(orderAuthority.expressionIdentifier("U2", PLAN_REVISION, "HxArray.set"));
+		orderAuthority.reconcileExpression(OcamlExpr.ESeq([orderU1, orderU2]));
+		orderOutput.observeModuleItems([
+			OcamlModuleItem.ILet([{name: "second", expr: orderU2}, {name: "first", expr: orderU1}], false)
+		]);
+		expectFailure("final owner-local order", "final runtime use order", orderOutput.finishProgram);
+
+		final unplannedOutput = new OcamlFinalRuntimeUseAuthority();
+		unplannedOutput.beginProgram("program:runtime-use-fixture:unplanned", PROFILE);
+		final plannedAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], unplannedOutput);
+		final planned = OcamlExpr.ERuntimeIdent(plannedAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		plannedAuthority.reconcileExpression(planned);
+		final otherAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U2", 0)]);
+		final unplanned = OcamlExpr.ERuntimeIdent(otherAuthority.expressionIdentifier("U2", PLAN_REVISION, "HxArray.set"));
+		otherAuthority.reconcileExpression(unplanned);
+		expectFailure("unplanned final use", "unplanned final runtime use U2", () -> unplannedOutput.observeExpression(unplanned));
+
+		final wrongOwnerOutput = finalOutputForCorruption("owner");
+		final wrongOwnerReference = referenceForCorruption(wrongOwnerOutput);
+		Reflect.setField(wrongOwnerReference, "ownerId", "place:other-owner");
+		expectFailure("wrong final owner", "wrong owner", () -> wrongOwnerOutput.observeExpression(OcamlExpr.ERuntimeIdent(cast wrongOwnerReference)));
+
+		final wrongSymbolOutput = finalOutputForCorruption("symbol");
+		final wrongSymbolReference = referenceForCorruption(wrongSymbolOutput);
+		Reflect.setField(wrongSymbolReference, "exactSymbol", "HxArray.get");
+		expectFailure("wrong final symbol", "wrong target symbol",
+			() -> wrongSymbolOutput.observeExpression(OcamlExpr.ERuntimeIdent(cast wrongSymbolReference)));
+
+		final wrongProfileOutput = new OcamlFinalRuntimeUseAuthority();
+		wrongProfileOutput.beginProgram("program:runtime-use-fixture:profile", PROFILE);
+		final wrongProfileAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, "metal", [requirement()], [occurrence("U1", 0)], wrongProfileOutput);
+		final wrongProfileReference = OcamlExpr.ERuntimeIdent(wrongProfileAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		expectFailure("wrong final profile", "does not match request profile", () -> wrongProfileAuthority.reconcileExpression(wrongProfileReference));
+	}
+
+	static function finalOutputForCorruption(label:String):OcamlFinalRuntimeUseAuthority {
+		final output = new OcamlFinalRuntimeUseAuthority();
+		output.beginProgram('program:runtime-use-fixture:$label', PROFILE);
+		return output;
+	}
+
+	static function referenceForCorruption(finalOutput:OcamlFinalRuntimeUseAuthority):Dynamic {
+		// Production references are immutable and strongly typed. This test returns
+		// Dynamic only so Reflect can simulate a corrupted boundary object that
+		// ordinary Haxe code cannot construct.
+		final checker = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], finalOutput);
+		final reference = checker.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set");
+		checker.reconcileExpression(OcamlExpr.ERuntimeIdent(reference));
+		return reference;
 	}
 
 	static function constructionFailures():Void {
@@ -191,6 +347,8 @@ class RuntimeUseAuthorityFixture {
 	static function main():Void {
 		validSameSymbolUses();
 		duplicateSameSymbolUseFails();
+		duplicatedReconciledSubtreeFailsFinalOutput();
+		finalOutputContract();
 		constructionFailures();
 		reconciliationFailures();
 		migratedPrivatePlainReferencesFail();

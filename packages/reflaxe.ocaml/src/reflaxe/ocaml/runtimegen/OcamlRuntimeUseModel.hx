@@ -39,6 +39,7 @@ typedef OcamlRuntimeUseOccurrence = {
 typedef OcamlRuntimeUseReceipt = {
 	final id:String;
 	final planRevision:String;
+	final ownerId:String;
 	final domain:OcamlRuntimeUseDomain;
 	final exactSymbol:String;
 }
@@ -52,15 +53,18 @@ typedef OcamlRuntimeUseReceipt = {
 	Haxe behavior or allow the printer to choose another symbol.
 **/
 @:allow(reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority)
+@:allow(reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority)
 class OcamlRuntimeReference {
 	public final id:String;
 	public final planRevision:String;
+	public final ownerId:String;
 	public final domain:OcamlRuntimeUseDomain;
 	public final exactSymbol:String;
 
-	private function new(id:String, planRevision:String, domain:OcamlRuntimeUseDomain, exactSymbol:String) {
+	private function new(id:String, planRevision:String, ownerId:String, domain:OcamlRuntimeUseDomain, exactSymbol:String) {
 		this.id = id;
 		this.planRevision = planRevision;
+		this.ownerId = ownerId;
 		this.domain = domain;
 		this.exactSymbol = exactSymbol;
 	}

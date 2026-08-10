@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
@@ -91,10 +92,11 @@ class OcamlStringDefaultPlan {
 	}
 
 	/** Creates the single request-local authority that consumes this plan. */
-	public static function authority(decision:OcamlStringDefaultDecision, activeProfile:String):OcamlRuntimeUseAuthority {
+	public static function authority(decision:OcamlStringDefaultDecision, activeProfile:String,
+			?finalOutputAuthority:OcamlFinalRuntimeUseAuthority):OcamlRuntimeUseAuthority {
 		if (decision == null)
 			throw "reflaxe.ocaml [ocaml-string-default:missing-plan]: String null materialization requires an owner-bound plan";
-		return new OcamlRuntimeUseAuthority(decision.revision, activeProfile, [decision.requirement], [decision.runtimeUse]);
+		return new OcamlRuntimeUseAuthority(decision.revision, activeProfile, [decision.requirement], [decision.runtimeUse], finalOutputAuthority);
 	}
 
 	static function revisionFor(id:String, ownerId:String, ownerRevision:String, source:OcamlLoweredSourceSpan, representation:OcamlRepresentationDecision,

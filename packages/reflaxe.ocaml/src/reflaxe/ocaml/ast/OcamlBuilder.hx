@@ -342,7 +342,7 @@ class OcamlBuilder {
 		final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 		return new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile, ctx.runtimeRequirementsByIds(operation.runtimeRequirementIds),
-			operation.runtimeUseOccurrences);
+			operation.runtimeUseOccurrences, ctx.finalRuntimeUses);
 	}
 
 	/**
@@ -452,7 +452,7 @@ class OcamlBuilder {
 			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final materialization = OcamlStructuralFieldSyntax.build(decision, receiver, value, buildExpr, freshTmp, runtimeAuthority);
 			// The receiver and assigned value can contain separately planned work.
 			// Reconcile only the completed call subtree created for this field.
@@ -489,7 +489,7 @@ class OcamlBuilder {
 			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final materialization = OcamlBytesProducerSyntax.build(decision, arguments, buildExpr, freshTmp, runtimeAuthority);
 			// Argument expressions can contain helper calls owned by other decisions.
 			// Check only the one private identifier this producer inserted.
@@ -527,7 +527,7 @@ class OcamlBuilder {
 			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final materialization = OcamlBytesMutationSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
 			// Receiver and argument expressions can contain helper calls owned by
 			// other compiler decisions. Check only the identifiers inserted for this
@@ -565,7 +565,7 @@ class OcamlBuilder {
 			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final materialization = OcamlBytesAccessSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
 			// Receiver and argument expressions can contain helper calls owned by
 			// other decisions. Check only the identifiers this access inserted.
@@ -602,7 +602,7 @@ class OcamlBuilder {
 			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final materialization = OcamlBytesReadSyntax.build(decision, receiver, arguments, buildExpr, freshTmp, runtimeAuthority);
 			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(materialization.runtimeReferences));
 			materialization.expression;
@@ -999,8 +999,9 @@ class OcamlBuilder {
 					position);
 		};
 		final nativeTags = OcamlExpr.EList(chain.targetNativeRuntimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
-		final nativeHandler = buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(nativeExceptionVariable)]),
-			nativeTags, nativeFallback);
+		final nativeHandler = ctx.finalRuntimeUses.copyExpressionForOutput(buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+			[OcamlExpr.EIdent(nativeExceptionVariable)]), nativeTags, nativeFallback),
+			"target-native-catch-channel");
 		final nativeCase:OcamlMatchCase = {
 			pat: OcamlPat.PVar(nativeExceptionVariable),
 			guard: null,
@@ -1483,7 +1484,7 @@ class OcamlBuilder {
 						final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
 						final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 						final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
-							ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences);
+							ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 						final materialization = OcamlArrayLiteralSyntax.build(decision, items, buildExpr, freshTmp, runtimeAuthority);
 						// Element expressions can contain independently owned compiler work.
 						// Reconcile only this literal's actual create and push call subtrees.
@@ -1646,7 +1647,7 @@ class OcamlBuilder {
 			};
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(binding),
 				OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
-				ctx.runtimeRequirementsByIds(OcamlIMapInterfacePlan.runtimeRequirementIds(decision)), decision.runtimeUseOccurrences);
+				ctx.runtimeRequirementsByIds(OcamlIMapInterfacePlan.runtimeRequirementIds(decision)), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 			final syntax = OcamlIMapInterfaceSyntax.buildConversion(materialization, value, iMapInterfaceSyntaxServices(), runtimeAuthority);
 			// The source value and user-method bodies can contain separately planned
 			// work. Check only the private names inserted by this adapter conversion.
@@ -5198,8 +5199,15 @@ class OcamlBuilder {
 
 					final ocamlExnVar = freshTmp("exn");
 					final ocamlFallback = OcamlExpr.ERaise(OcamlExpr.EIdent(ocamlExnVar));
-					final ocamlHandlerExpr = buildCatchChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(ocamlExnVar)]),
-						OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("OcamlExn"))]), ocamlFallback);
+					// This older route rebuilds each Haxe catch body for both the typed-Haxe
+					// and native-OCaml exception channels. The second target expression must
+					// therefore receive new runtime-use identities before both channels are
+					// placed in the final function. It does not gain permission by repeating
+					// the same Haxe source position or helper name.
+					final ocamlHandlerExpr = ctx.finalRuntimeUses.copyExpressionForOutput(buildCatchChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"),
+						"repr"), [OcamlExpr.EIdent(ocamlExnVar)]),
+						OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("OcamlExn"))]), ocamlFallback),
+						"legacy-target-native-catch-channel");
 					final ocamlExnCase:OcamlMatchCase = {
 						pat: OcamlPat.PVar(ocamlExnVar),
 						guard: null,
@@ -5647,7 +5655,8 @@ class OcamlBuilder {
 		final decision = representationRegistry.selectExactString(domain);
 		final ownerId = binding.functionId + ":" + ownerRole + ":" + source.file + ":" + source.min + ":" + source.max;
 		final defaultPlan = OcamlStringDefaultPlan.seal(decision, ownerId, OcamlRuntimeUseModel.planRevision(binding), source);
-		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
+		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			ctx.finalRuntimeUses);
 		final materialized = OcamlStringRepresentationMaterializer.materializeDefault(decision, domain, defaultPlan, authority);
 		authority.reconcileExpression(materialized.implicitDefault);
 		return materialized.implicitDefault;
