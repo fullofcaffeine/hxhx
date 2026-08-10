@@ -28,7 +28,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 74
+if (report.schemaVersion !== 75
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
@@ -116,7 +116,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v89'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v90'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== (expectedRepresentation.get(payload.inputSemanticTypeId)
@@ -162,8 +162,8 @@ for (const { chain, clause } of wrapperClauses) {
 		|| clause.nominalRepresentation !== null
 		|| clause.proofId !== 'represented-value-catch-control-v5'
 		|| chain.proofId !== 'represented-value-catch-control-v5'
-		|| clause.pipelineRevision !== 'ocaml-function-plans-v89'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v89') {
+		|| clause.pipelineRevision !== 'ocaml-function-plans-v90'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v90') {
 		fail(`wrapper catch clause ${clause.id} has an incomplete sealed policy`)
 	}
 }

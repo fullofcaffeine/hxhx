@@ -4309,15 +4309,9 @@ class OcamlBuilder {
 														case "filter":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "filter"),
 																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "resize":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "resize"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case "sort":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "sort"),
 																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "splice":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "splice"),
-																[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]);
 														case "slice":
 															final endExpr = if (args.length > 1) {
 																final unwrapped = unwrap(args[1]);

@@ -12,7 +12,7 @@ node - "$main_source" "$report_file" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
-if (report.schemaVersion !== 74 || report.callModel !== 'typed-ocaml-directional-call-boundary-v23') {
+if (report.schemaVersion !== 75 || report.callModel !== 'typed-ocaml-directional-call-boundary-v24') {
 	throw new Error('expected the current typed-call report model')
 }
 

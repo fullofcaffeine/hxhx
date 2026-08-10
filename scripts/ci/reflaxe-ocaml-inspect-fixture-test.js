@@ -114,7 +114,28 @@ try {
 		const target = call.standardArrayTarget
 		return call.kind === 'standard-array-method'
 			&& target.runtimeModule === 'HxArray'
-			&& ['concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse'].includes(target.runtimeFunction)
+			&& ['concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice'].includes(target.runtimeFunction)
+	}))
+	const resizeCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'resize')
+	assert(resizeCalls.length > 0)
+	assert(resizeCalls.every(call => {
+		const target = call.standardArrayTarget
+		return target.parameterSemanticTypeIds.join(',') === 'Int'
+			&& target.argumentSemanticTypeIds.join(',') === 'Int'
+			&& target.resultSemanticTypeId === 'Void'
+			&& target.resultKind === 'effect-only-void'
+			&& call.resultKind === 'effect-only-void'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const spliceCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'splice')
+	assert(spliceCalls.every(call => {
+		const target = call.standardArrayTarget
+		return target.parameterSemanticTypeIds.join(',') === 'Int,Int'
+			&& target.argumentSemanticTypeIds.join(',') === 'Int,Int'
+			&& target.resultSemanticTypeId.startsWith('Array<')
+			&& target.resultKind === 'value'
+			&& call.resultKind === 'value'
+			&& target.runtimeTakesUnitArgument === false
 	}))
 	assert(report.lowering.calls.some(call =>
 		call.arguments.length === 0

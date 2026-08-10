@@ -18,7 +18,7 @@ node - "$report" <<'NODE'
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-if (report.schemaVersion !== 74) {
+if (report.schemaVersion !== 75) {
 	throw new Error(`Expected lowering schema 69, received ${report.schemaVersion}`)
 }
 if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v3') {
@@ -38,7 +38,7 @@ if (JSON.stringify(domains) !== JSON.stringify([
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
-		|| !['ocaml-function-plans-v89', 'ocaml-standalone-expression-plans-v4'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v90', 'ocaml-standalone-expression-plans-v4'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 	const exceptional = decision.domain === 'float' || decision.domain === 'string'

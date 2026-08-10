@@ -1026,6 +1026,8 @@ class CallPlanFixture {
 			case Concat: ["Array<Int>"];
 			case Push | Unshift | Remove | Contains: ["Int"];
 			case Insert: ["Int", "Int"];
+			case Resize: ["Int"];
+			case Splice: ["Int", "Int"];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
@@ -1035,6 +1037,8 @@ class CallPlanFixture {
 			case Pop | Shift: "Null<Int>";
 			case Unshift | Reverse | Insert: "Void";
 			case Remove | Contains: "Bool";
+			case Resize: "Void";
+			case Splice: "Array<Int>";
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
 		return {
@@ -1668,6 +1672,8 @@ class CallPlanFixture {
 		final selectedArrayInsert = standardArrayCall(caller, OcamlStandardArrayOperation.Insert);
 		final selectedArrayRemove = standardArrayCall(caller, OcamlStandardArrayOperation.Remove);
 		final selectedArrayContains = standardArrayCall(caller, OcamlStandardArrayOperation.Contains);
+		final selectedArrayResize = standardArrayCall(caller, OcamlStandardArrayOperation.Resize);
+		final selectedArraySplice = standardArrayCall(caller, OcamlStandardArrayOperation.Splice);
 		OcamlCallPlan.requireCall(selectedArrayConcat);
 		OcamlCallPlan.requireCall(selectedArrayCopy);
 		OcamlCallPlan.requireCall(selectedArrayPush);
@@ -1678,6 +1684,8 @@ class CallPlanFixture {
 		OcamlCallPlan.requireCall(selectedArrayInsert);
 		OcamlCallPlan.requireCall(selectedArrayRemove);
 		OcamlCallPlan.requireCall(selectedArrayContains);
+		OcamlCallPlan.requireCall(selectedArrayResize);
+		OcamlCallPlan.requireCall(selectedArraySplice);
 		final standardArrayPlan = new OcamlCallPlan([
 			selectedArrayConcat,
 			selectedArrayCopy,
@@ -1688,7 +1696,9 @@ class CallPlanFixture {
 			selectedArrayReverse,
 			selectedArrayInsert,
 			selectedArrayRemove,
-			selectedArrayContains
+			selectedArrayContains,
+			selectedArrayResize,
+			selectedArraySplice
 		]);
 		final copiedArrayConcat = standardArrayPlan.decisions().filter(call -> call.id == STANDARD_ARRAY_CONCAT_CALL_ID)[0];
 		if (copiedArrayConcat.standardArrayTarget == null)
@@ -1771,6 +1781,26 @@ class CallPlanFixture {
 			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(containsRuntimeUse).exactSymbol != "HxArray.contains") {
 			Context.error("Array.contains did not seal its element, Bool result, and exact runtime occurrence.", Context.currentPos());
 		}
+		final copiedArrayResize = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-resize-fixture")[0];
+		final resizeRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-resize-fixture");
+		if (copiedArrayResize.standardArrayTarget.parameterSemanticTypeIds.join(",") != "Int"
+			|| copiedArrayResize.standardArrayTarget.argumentSemanticTypeIds.join(",") != "Int"
+			|| copiedArrayResize.standardArrayTarget.resultSemanticTypeId != "Void"
+			|| copiedArrayResize.resultKind != OcamlCallResultKind.EffectOnlyVoid
+			|| resizeRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(resizeRuntimeUse).exactSymbol != "HxArray.resize") {
+			Context.error("Array.resize did not seal its Int length, Void result, and exact runtime occurrence.", Context.currentPos());
+		}
+		final copiedArraySplice = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-splice-fixture")[0];
+		final spliceRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-splice-fixture");
+		if (copiedArraySplice.standardArrayTarget.parameterSemanticTypeIds.join(",") != "Int,Int"
+			|| copiedArraySplice.standardArrayTarget.argumentSemanticTypeIds.join(",") != "Int,Int"
+			|| copiedArraySplice.standardArrayTarget.resultSemanticTypeId != "Array<Int>"
+			|| copiedArraySplice.resultKind != OcamlCallResultKind.Value
+			|| spliceRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(spliceRuntimeUse).exactSymbol != "HxArray.splice") {
+			Context.error("Array.splice did not seal its Int range, Array result, and exact runtime occurrence.", Context.currentPos());
+		}
 		final wrongArrayRuntime = copyCall(copiedArrayConcat);
 		Reflect.setField(wrongArrayRuntime.standardArrayTarget, "runtimeFunction", "copy");
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntime));
@@ -1803,6 +1833,12 @@ class CallPlanFixture {
 		final wrongArrayInsertPosition = copyCall(copiedArrayInsert);
 		Reflect.setField(wrongArrayInsertPosition.standardArrayTarget, "argumentSemanticTypeIds", ["Float", "Int"]);
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayInsertPosition));
+		final wrongArrayResizeLength = copyCall(copiedArrayResize);
+		Reflect.setField(wrongArrayResizeLength.standardArrayTarget, "argumentSemanticTypeIds", ["Float"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayResizeLength));
+		final wrongArraySpliceLength = copyCall(copiedArraySplice);
+		Reflect.setField(wrongArraySpliceLength.standardArrayTarget, "parameterSemanticTypeIds", ["Int", "Float"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArraySpliceLength));
 		final missingArrayReceiver = copyCall(copiedArrayConcat, null, null, null, null, null, copiedArrayConcat.evaluationSchedule.slice(1));
 		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingArrayReceiver));
 		final missingArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);

@@ -21,6 +21,8 @@ enum abstract OcamlStandardArrayOperation(String) from String to String {
 	final Insert = "insert";
 	final Remove = "remove";
 	final Contains = "contains";
+	final Resize = "resize";
+	final Splice = "splice";
 }
 
 /** Whether a standard Array operation returns a Haxe value or only an effect. */
@@ -55,7 +57,7 @@ typedef OcamlStandardArrayCallTarget = {
 
 /** Selects and validates the admitted direct standard-Array calls. */
 class OcamlStandardArrayCallContract {
-	public static inline final PROOF_ID = "standard-array-typed-target-call-v3";
+	public static inline final PROOF_ID = "standard-array-typed-target-call-v4";
 	public static inline final ARGUMENT_COMPATIBILITY_PROOF_ID = "haxe-typed-array-argument-compatible-v1";
 	public static inline final RUNTIME_CAPABILITY = "haxe-array";
 	public static inline final PROOF_CLAIM = "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. This proof does not admit other Array methods or user-defined classes with the same field names.";
@@ -160,6 +162,8 @@ class OcamlStandardArrayCallContract {
 			case Insert: "insert";
 			case Remove: "remove";
 			case Contains: "contains";
+			case Resize: "resize";
+			case Splice: "splice";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -167,8 +171,8 @@ class OcamlStandardArrayCallContract {
 	/** Returns the Haxe call-result form fixed by one admitted operation. */
 	public static function resultKind(operation:OcamlStandardArrayOperation):OcamlStandardArrayResultKind {
 		return switch (operation) {
-			case Unshift | Reverse | Insert: OcamlStandardArrayResultKind.EffectOnlyVoid;
-			case Concat | Copy | Push | Pop | Shift | Remove | Contains: OcamlStandardArrayResultKind.Value;
+			case Unshift | Reverse | Insert | Resize: OcamlStandardArrayResultKind.EffectOnlyVoid;
+			case Concat | Copy | Push | Pop | Shift | Remove | Contains | Splice: OcamlStandardArrayResultKind.Value;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -182,7 +186,7 @@ class OcamlStandardArrayCallContract {
 	public static function runtimeTakesUnitArgument(operation:OcamlStandardArrayOperation):Bool {
 		return switch (operation) {
 			case Pop | Shift | Reverse: true;
-			case Concat | Copy | Push | Unshift | Insert | Remove | Contains: false;
+			case Concat | Copy | Push | Unshift | Insert | Remove | Contains | Resize | Splice: false;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -248,6 +252,8 @@ class OcamlStandardArrayCallContract {
 			case ["insert", 2]: OcamlStandardArrayOperation.Insert;
 			case ["remove", 1]: OcamlStandardArrayOperation.Remove;
 			case ["contains", 1]: OcamlStandardArrayOperation.Contains;
+			case ["resize", 1]: OcamlStandardArrayOperation.Resize;
+			case ["splice", 2]: OcamlStandardArrayOperation.Splice;
 			case _: null;
 		}
 	}
@@ -257,6 +263,8 @@ class OcamlStandardArrayCallContract {
 			case Concat: ['Array<$elementSemanticTypeId>'];
 			case Push | Unshift | Remove | Contains: [elementSemanticTypeId];
 			case Insert: ["Int", elementSemanticTypeId];
+			case Resize: ["Int"];
+			case Splice: ["Int", "Int"];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -276,6 +284,8 @@ class OcamlStandardArrayCallContract {
 		return switch (operation) {
 			case Concat: sourceArguments[0] == parameters[0];
 			case Insert: sourceArguments[0] == "Int";
+			case Resize: sourceArguments[0] == "Int";
+			case Splice: sourceArguments[0] == "Int" && sourceArguments[1] == "Int";
 			case Push | Unshift | Remove | Contains: true;
 			case Copy | Pop | Shift | Reverse: true;
 			case _: false;
@@ -289,6 +299,8 @@ class OcamlStandardArrayCallContract {
 			case Pop | Shift: 'Null<$elementSemanticTypeId>';
 			case Unshift | Reverse | Insert: "Void";
 			case Remove | Contains: "Bool";
+			case Resize: "Void";
+			case Splice: 'Array<$elementSemanticTypeId>';
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}

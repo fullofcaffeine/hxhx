@@ -50,6 +50,21 @@ class ArrayMain {
 		return 7;
 	}
 
+	static function makeResizeLength():Int {
+		callOrder.push("length");
+		return 1;
+	}
+
+	static function makeSplicePosition():Int {
+		callOrder.push("position");
+		return 0;
+	}
+
+	static function makeSpliceLength():Int {
+		callOrder.push("length");
+		return 1;
+	}
+
 	static function main() {
 		final a = [];
 
@@ -103,6 +118,18 @@ class ArrayMain {
 			throw "splice_len";
 		if (removed[0] != 9)
 			throw "splice_val";
+		final normalizedSplice = [1, 2, 3, 4];
+		final normalizedRemoved = normalizedSplice.splice(-2, 10);
+		if (normalizedRemoved.join(",") != "3,4" || normalizedSplice.join(",") != "1,2")
+			throw "splice_normalized_range";
+
+		final resized:Array<Null<Int>> = [1, 2];
+		resized.resize(4);
+		if (resized.length != 4 || resized[0] != 1 || resized[1] != 2 || resized[2] != null || resized[3] != null)
+			throw "resize_grow_null_fill";
+		resized.resize(1);
+		if (resized.length != 1 || resized[0] != 1)
+			throw "resize_shrink";
 
 		final b = [1, 2, 3, 4];
 		final c = b.slice(1, 3);
@@ -170,6 +197,16 @@ class ArrayMain {
 		callOrder = [];
 		if (!makeReceiver().contains(makeMatchingArgument()) || callOrder.join(",") != "receiver,argument")
 			throw "contains_order_or_result";
+
+		callOrder = [];
+		makePairReceiver().resize(makeResizeLength());
+		if (callOrder.join(",") != "receiver,length")
+			throw "resize_order";
+
+		callOrder = [];
+		final orderedSplice = makePairReceiver().splice(makeSplicePosition(), makeSpliceLength());
+		if (callOrder.join(",") != "receiver,position,length" || orderedSplice.join(",") != "7")
+			throw "splice_order_or_result";
 
 		if (!b.contains(3))
 			throw "contains_true";
