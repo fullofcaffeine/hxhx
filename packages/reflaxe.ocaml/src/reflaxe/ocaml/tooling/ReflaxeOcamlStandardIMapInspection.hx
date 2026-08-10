@@ -55,6 +55,8 @@ class ReflaxeOcamlStandardIMapInspection {
 			case "haxe-array": {feature: "haxe-array-v1", root: "HxArray"};
 			case "haxe-string-text": {feature: "haxe-string-text-v1", root: "HxString"};
 			case "haxe-dynamic-text": {feature: "haxe-dynamic-text-v1", root: "HxDynamic"};
+			case "haxe-type-reflection": {feature: "haxe-type-reflection-v1", root: "HxType"};
+			case "haxe-runtime-core": {feature: "haxe-runtime-core-v1", root: "HxRuntime"};
 			case _: throw 'Unsupported standard IMap runtime capability "$capability".';
 		}
 	}

@@ -94,6 +94,8 @@ class OcamlStandardIMapCallContract {
 	public static inline final ARRAY_RUNTIME_CAPABILITY = "haxe-array";
 	public static inline final STRING_TEXT_RUNTIME_CAPABILITY = "haxe-string-text";
 	public static inline final DYNAMIC_TEXT_RUNTIME_CAPABILITY = "haxe-dynamic-text";
+	public static inline final TYPE_RUNTIME_CAPABILITY = "haxe-type-reflection";
+	public static inline final CORE_RUNTIME_CAPABILITY = "haxe-runtime-core";
 
 	#if macro
 	/** Returns whether this is the exact upstream `haxe.Constraints.IMap`. */
@@ -303,7 +305,11 @@ class OcamlStandardIMapCallContract {
 		and whichever string conversion helpers its key and value types require.
 	**/
 	public static function adapterRuntimeCapabilities(keySemanticTypeId:String, valueSemanticTypeId:String):Array<String> {
-		return runtimeCapabilities(true, true, stringifierForSemanticTypeId(keySemanticTypeId), stringifierForSemanticTypeId(valueSemanticTypeId));
+		final out = runtimeCapabilities(true, true, stringifierForSemanticTypeId(keySemanticTypeId), stringifierForSemanticTypeId(valueSemanticTypeId));
+		out.push(TYPE_RUNTIME_CAPABILITY);
+		if (keySemanticTypeId == "Bool" || valueSemanticTypeId == "Bool")
+			out.push(CORE_RUNTIME_CAPABILITY);
+		return out;
 	}
 
 	/** Returns the exact source-interface field represented by one operation. */

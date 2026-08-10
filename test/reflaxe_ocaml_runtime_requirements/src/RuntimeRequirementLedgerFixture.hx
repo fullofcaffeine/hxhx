@@ -114,7 +114,7 @@ class RuntimeRequirementLedgerFixture {
 		facts does not accidentally require the active Reflaxe compiler request.
 	**/
 	static function standardStringMapInterfaceConversion(runtimeCapabilities:Array<String>):OcamlIMapInterfaceConversionDecision {
-		return {
+		final base:OcamlIMapInterfaceConversionDecision = {
 			id: "imap-interface-conversion:runtime-fixture",
 			source: {file: "src/Main.hx", min: 20, max: 36},
 			role: OcamlIMapInterfaceConversionRole.CallArgument,
@@ -131,12 +131,101 @@ class RuntimeRequirementLedgerFixture {
 			valueStringifier: OcamlStandardIMapCallContract.stringifierForSemanticTypeId("Int"),
 			methods: [],
 			runtimeCapabilities: runtimeCapabilities,
+			runtimeUseOccurrences: [],
 			proofId: OcamlIMapInterfaceContract.CONVERSION_PROOF_ID,
 			proofClaim: OcamlIMapInterfaceContract.CONVERSION_PROOF_CLAIM,
 			functionId: "Main|Main|static|main",
 			programRevision: "program:runtime-fixture",
 			bodyRevision: "body:runtime-fixture",
 			pipelineRevision: "pipeline:runtime-fixture"
+		};
+		return {
+			id: base.id,
+			source: base.source,
+			role: base.role,
+			roleIdentity: base.roleIdentity,
+			sourceKind: base.sourceKind,
+			sourceSemanticTypeId: base.sourceSemanticTypeId,
+			sourceCarrierTypeId: base.sourceCarrierTypeId,
+			targetSemanticTypeId: base.targetSemanticTypeId,
+			targetCarrierTypeId: base.targetCarrierTypeId,
+			keySemanticTypeId: base.keySemanticTypeId,
+			valueSemanticTypeId: base.valueSemanticTypeId,
+			standardKeyKind: base.standardKeyKind,
+			keyStringifier: base.keyStringifier,
+			valueStringifier: base.valueStringifier,
+			methods: base.methods,
+			runtimeCapabilities: base.runtimeCapabilities,
+			runtimeUseOccurrences: runtimeCapabilities.contains(OcamlStandardIMapCallContract.TYPE_RUNTIME_CAPABILITY) ? OcamlIMapInterfaceContract.runtimeUseOccurrencesFor(base) : [],
+			proofId: base.proofId,
+			proofClaim: base.proofClaim,
+			functionId: base.functionId,
+			programRevision: base.programRevision,
+			bodyRevision: base.bodyRevision,
+			pipelineRevision: base.pipelineRevision
+		};
+	}
+
+	/** Builds a user-defined IMap adapter whose retained setter receives a Bool key. */
+	static function userBoolMapInterfaceConversion():OcamlIMapInterfaceConversionDecision {
+		final methods = [
+			{
+				name: "set",
+				sourceOwnerModuleId: "fixture.UserBoolMap",
+				sourceOwnerTypeName: "UserBoolMap",
+				argumentSemanticTypeIds: ["Bool", "Int"],
+				resultSemanticTypeId: "Void"
+			}
+		];
+		final base:OcamlIMapInterfaceConversionDecision = {
+			id: "imap-interface-conversion:user-bool-runtime-fixture",
+			source: {file: "src/Main.hx", min: 40, max: 72},
+			role: OcamlIMapInterfaceConversionRole.CallArgument,
+			roleIdentity: "call-argument:1",
+			sourceKind: OcamlIMapInterfaceSourceKind.UserImplementation,
+			sourceSemanticTypeId: "fixture.UserBoolMap",
+			sourceCarrierTypeId: "Fixture_UserBoolMap.t",
+			targetSemanticTypeId: "haxe.IMap<Bool, Int>",
+			targetCarrierTypeId: OcamlIMapInterfaceContract.TARGET_CARRIER_ID,
+			keySemanticTypeId: "Bool",
+			valueSemanticTypeId: "Int",
+			standardKeyKind: null,
+			keyStringifier: null,
+			valueStringifier: null,
+			methods: methods,
+			runtimeCapabilities: OcamlIMapInterfaceContract.adapterRuntimeCapabilities(OcamlIMapInterfaceSourceKind.UserImplementation, "Bool", "Int", methods),
+			runtimeUseOccurrences: [],
+			proofId: OcamlIMapInterfaceContract.CONVERSION_PROOF_ID,
+			proofClaim: OcamlIMapInterfaceContract.CONVERSION_PROOF_CLAIM,
+			functionId: "Main|Main|static|main",
+			programRevision: "program:user-bool-runtime-fixture",
+			bodyRevision: "body:user-bool-runtime-fixture",
+			pipelineRevision: "pipeline:user-bool-runtime-fixture"
+		};
+		return {
+			id: base.id,
+			source: base.source,
+			role: base.role,
+			roleIdentity: base.roleIdentity,
+			sourceKind: base.sourceKind,
+			sourceSemanticTypeId: base.sourceSemanticTypeId,
+			sourceCarrierTypeId: base.sourceCarrierTypeId,
+			targetSemanticTypeId: base.targetSemanticTypeId,
+			targetCarrierTypeId: base.targetCarrierTypeId,
+			keySemanticTypeId: base.keySemanticTypeId,
+			valueSemanticTypeId: base.valueSemanticTypeId,
+			standardKeyKind: base.standardKeyKind,
+			keyStringifier: base.keyStringifier,
+			valueStringifier: base.valueStringifier,
+			methods: base.methods,
+			runtimeCapabilities: base.runtimeCapabilities,
+			runtimeUseOccurrences: OcamlIMapInterfaceContract.runtimeUseOccurrencesFor(base),
+			proofId: base.proofId,
+			proofClaim: base.proofClaim,
+			functionId: base.functionId,
+			programRevision: base.programRevision,
+			bodyRevision: base.bodyRevision,
+			pipelineRevision: base.pipelineRevision
 		};
 	}
 
@@ -163,6 +252,16 @@ class RuntimeRequirementLedgerFixture {
 		final iMapRequirements = OcamlRuntimeRequirementLedger.requirementsForIMapInterfaceConversion(standardStringMapInterfaceConversion(exactIMapCapabilities));
 		assertTrue(iMapRequirements.length == exactIMapCapabilities.length,
 			"a saved IMap conversion should expand through the framework-free validation contract");
+		final userBoolConversion = userBoolMapInterfaceConversion();
+		final userBoolRequirements = OcamlRuntimeRequirementLedger.requirementsForIMapInterfaceConversion(userBoolConversion);
+		assertTrue(userBoolRequirements.length == 2
+			&& userBoolRequirements[0].rootModules.join(",") == "HxType"
+			&& userBoolRequirements[1].rootModules.join(",") == "HxRuntime",
+			"a user IMap adapter with a Bool argument should own its type marker and checked Boolean unbox helper");
+		assertTrue(userBoolConversion.runtimeUseOccurrences.length == 2
+			&& userBoolConversion.runtimeUseOccurrences[0].exactSymbol == "HxType.class_"
+			&& userBoolConversion.runtimeUseOccurrences[1].exactSymbol == "HxRuntime.unbox_bool_or_obj",
+			"the user IMap adapter should record the private names in the order syntax consumes them");
 		final rejectedIMapLedger = new OcamlRuntimeRequirementLedger();
 		rejectedIMapLedger.beginProgram("program:invalid-imap-fixture");
 		expectFailure("invalid saved IMap conversion", "conflicting source kind, method surface, or runtime inventory",

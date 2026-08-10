@@ -9,7 +9,7 @@ if (report.schemaVersion !== 69
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
-if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v4'
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v5'
 	|| report.iMapInterfaceConversionCount !== 5
 	|| report.iMapInterfaceCallCount !== 55
 	|| report.iMapStorageAliasCount !== 6

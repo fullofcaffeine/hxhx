@@ -518,6 +518,18 @@ class OcamlRuntimeRequirementLedger {
 					module: "HxDynamic",
 					explanation: "The sealed standard IMap text adapter uses HxDynamic for the typed fallback that formats a non-primitive key or value through registered Haxe runtime string behavior."
 				};
+			case OcamlStandardIMapCallContract.TYPE_RUNTIME_CAPABILITY:
+				{
+					feature: "haxe-type-reflection-v1",
+					module: "HxType",
+					explanation: "Every generated IMap dispatch record carries the exact haxe.IMap runtime type marker used by Haxe reflection."
+				};
+			case OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY:
+				{
+					feature: "haxe-runtime-core-v1",
+					module: "HxRuntime",
+					explanation: "The sealed IMap adapter converts an erased Boolean argument with the checked Haxe runtime carrier operation selected before syntax."
+				};
 			case _:
 				throw 'Unknown standard IMap runtime capability "$capability".';
 		}

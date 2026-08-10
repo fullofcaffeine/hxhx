@@ -21,6 +21,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceMethod;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapStorageAlias;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapStorageAliasUse;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Validated `IMap` conversion and dispatch inventory returned by inspection. */
 typedef InspectionIMapInterfaceInventory = {
@@ -171,6 +172,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			valueStringifier: cast(optionalString(value, "valueStringifier"), Null<OcamlStandardIMapStringifier>),
 			methods: [for (entry in requiredArray(value, "methods")) method(entry)],
 			runtimeCapabilities: requiredStringArray(value, "runtimeCapabilities"),
+			runtimeUseOccurrences: runtimeUseOccurrences(value),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			functionId: requiredString(value, "functionId"),
@@ -178,6 +180,31 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
 		};
+	}
+
+	static function runtimeUseOccurrences(value:Dynamic):Array<OcamlRuntimeUseOccurrence> {
+		return [
+			for (entry in requiredArray(value, "runtimeUseOccurrences")) {
+				final source = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					planRevision: requiredSha256Revision(entry, "planRevision"),
+					ownerId: requiredString(entry, "ownerId"),
+					requirementId: requiredString(entry, "requirementId"),
+					domain: cast requiredString(entry, "domain"),
+					exactSymbol: requiredString(entry, "exactSymbol"),
+					role: requiredString(entry, "role"),
+					order: requiredInt(entry, "order"),
+					source: {
+						file: requiredString(source, "file"),
+						min: requiredInt(source, "min"),
+						max: requiredInt(source, "max")
+					},
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					cardinality: requiredInt(entry, "cardinality")
+				};
+			}
+		];
 	}
 
 	static function call(value:Dynamic):OcamlIMapInterfaceCallDecision {
@@ -262,6 +289,23 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			valueStringifier: decision.valueStringifier,
 			methods: decision.methods.map(inspectionMethod),
 			runtimeCapabilities: decision.runtimeCapabilities.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

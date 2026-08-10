@@ -5,6 +5,10 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallCon
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Stable source coordinates that contain no live compiler position object. */
 typedef OcamlIMapInterfaceSourceSpan = {
@@ -76,6 +80,7 @@ typedef OcamlIMapInterfaceConversionDecision = {
 	final valueStringifier:Null<OcamlStandardIMapStringifier>;
 	final methods:Array<OcamlIMapInterfaceMethodDecision>;
 	final runtimeCapabilities:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -157,7 +162,7 @@ typedef OcamlIMapStorageAliasDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v4";
+	public static inline final MODEL = "typed-imap-interface-adapter-v5";
 	static inline final LEXICAL_LOCAL_ID_PREFIX = "lexical-local-v1:";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
@@ -208,10 +213,12 @@ class OcamlIMapInterfaceContract {
 		}
 		final expectedKeyKind = standardKeyKind(decision.sourceKind);
 		final standard = expectedKeyKind != null;
+		if (!standard && decision.sourceKind != OcamlIMapInterfaceSourceKind.UserImplementation)
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has an unknown source kind';
 		final expectedKeyStringifier = standard ? OcamlStandardIMapCallContract.stringifierForSemanticTypeId(decision.keySemanticTypeId) : null;
 		final expectedValueStringifier = standard ? OcamlStandardIMapCallContract.stringifierForSemanticTypeId(decision.valueSemanticTypeId) : null;
-		final expectedCapabilities = standard ? OcamlStandardIMapCallContract.adapterRuntimeCapabilities(decision.keySemanticTypeId,
-			decision.valueSemanticTypeId) : [];
+		final expectedCapabilities = adapterRuntimeCapabilities(decision.sourceKind, decision.keySemanticTypeId, decision.valueSemanticTypeId,
+			decision.methods);
 		if (decision.standardKeyKind != expectedKeyKind
 			|| decision.keyStringifier != expectedKeyStringifier
 			|| decision.valueStringifier != expectedValueStringifier
@@ -248,6 +255,11 @@ class OcamlIMapInterfaceContract {
 			if (standard && (method.sourceOwnerModuleId != "haxe.Constraints" || method.sourceOwnerTypeName != "IMap"))
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: standard conversion "${decision.id}" does not attribute its retained method to haxe.Constraints.IMap';
 		}
+		final expectedUses = runtimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedUses.length)
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-runtime-use]: conversion "${decision.id}" has an incomplete private-runtime occurrence inventory';
+		for (index in 0...expectedUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index]);
 	}
 
 	/** Rejects a malformed interface-dispatch record. */
@@ -331,6 +343,127 @@ class OcamlIMapInterfaceContract {
 	public static function runtimeRequirementIds(decision:OcamlIMapInterfaceConversionDecision):Array<String> {
 		requireConversion(decision);
 		return decision.runtimeCapabilities.map(capability -> decision.id + ":runtime:" + capability);
+	}
+
+	/** Returns the exact runtime capability set for one complete adapter. */
+	public static function adapterRuntimeCapabilities(sourceKind:OcamlIMapInterfaceSourceKind, keySemanticTypeId:String, valueSemanticTypeId:String,
+			methods:Array<OcamlIMapInterfaceMethodDecision>):Array<String> {
+		final standard = standardKeyKind(sourceKind) != null;
+		if (standard)
+			return OcamlStandardIMapCallContract.adapterRuntimeCapabilities(keySemanticTypeId, valueSemanticTypeId);
+		final out = [OcamlStandardIMapCallContract.TYPE_RUNTIME_CAPABILITY];
+		if (Lambda.exists(methods, method -> method.argumentSemanticTypeIds.contains("Bool")))
+			out.push(OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY);
+		return out;
+	}
+
+	/** Recomputes the ordered private names inserted by one adapter conversion. */
+	public static function runtimeUseOccurrencesFor(decision:OcamlIMapInterfaceConversionDecision):Array<OcamlRuntimeUseOccurrence> {
+		final planned:Array<{role:String, symbol:String}> = [{role: "type-marker", symbol: "HxType.class_"}];
+		final keyKind = standardKeyKind(decision.sourceKind);
+		for (method in decision.methods) {
+			final operation = operationForMethod(method.name);
+			if (operation == null)
+				continue;
+			for (index in 0...method.argumentSemanticTypeIds.length)
+				if (method.argumentSemanticTypeIds[index] == "Bool")
+					planned.push({role: 'decode-bool:${method.name}:$index', symbol: "HxRuntime.unbox_bool_or_obj"});
+			if (keyKind == null)
+				continue;
+			planned.push({
+				role: 'standard-map:${method.name}',
+				symbol: "HxMap." + OcamlStandardIMapCallContract.runtimeFunction(operation, keyKind)
+			});
+			switch (operation) {
+				case Keys, Values, Pairs:
+					planned.push({role: 'wrap-iterator:${method.name}', symbol: "HxIterator.of_array"});
+				case ToString:
+					planned.push({role: "format-next", symbol: "HxIterator.next"});
+					appendStringifierUse(planned, "format-key", decision.keyStringifier);
+					appendStringifierUse(planned, "format-value", decision.valueStringifier);
+					planned.push({role: "format-push", symbol: "HxArray.push"});
+					planned.push({role: "format-has-next", symbol: "HxIterator.hasNext"});
+					planned.push({role: "format-join", symbol: "HxArray.join"});
+					planned.push({role: "format-of-array", symbol: "HxIterator.of_array"});
+					planned.push({role: "format-create-array", symbol: "HxArray.create"});
+				case _:
+			}
+		}
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final requirementIds = decision.runtimeCapabilities.map(capability -> decision.id + ":runtime:" + capability);
+		return [
+			for (index in 0...planned.length) {
+				final item = planned[index];
+				final capability = capabilityForSymbol(item.symbol);
+				final capabilityIndex = decision.runtimeCapabilities.indexOf(capability);
+				if (capabilityIndex < 0)
+					throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-runtime-use]: conversion "${decision.id}" has no requirement for ${item.symbol}';
+				{
+					id: '${decision.id}:runtime-use:$index:${item.role}',
+					planRevision: OcamlRuntimeUseModel.planRevision(binding),
+					ownerId: decision.id,
+					requirementId: requirementIds[capabilityIndex],
+					domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+					exactSymbol: item.symbol,
+					role: item.role,
+					order: index,
+					source: {
+						file: decision.source.file,
+						min: decision.source.min,
+						max: decision.source.max
+					},
+					profileEligibility: ["metal", "portable"],
+					cardinality: 1
+				};
+			}
+		];
+	}
+
+	static function appendStringifierUse(planned:Array<{role:String, symbol:String}>, role:String, stringifier:Null<OcamlStandardIMapStringifier>):Void {
+		switch (stringifier) {
+			case ExactString:
+				planned.push({role: role, symbol: "HxString.toStdString"});
+			case DynamicObject:
+				planned.push({role: role, symbol: "HxDynamic.toStdString"});
+			case ExactInt, ExactFloat, ExactBool, null:
+		}
+	}
+
+	static function capabilityForSymbol(symbol:String):String {
+		final root = symbol.substr(0, symbol.indexOf("."));
+		return switch (root) {
+			case "HxMap": OcamlStandardIMapCallContract.MAP_RUNTIME_CAPABILITY;
+			case "HxIterator": OcamlStandardIMapCallContract.ITERATOR_RUNTIME_CAPABILITY;
+			case "HxArray": OcamlStandardIMapCallContract.ARRAY_RUNTIME_CAPABILITY;
+			case "HxString": OcamlStandardIMapCallContract.STRING_TEXT_RUNTIME_CAPABILITY;
+			case "HxDynamic": OcamlStandardIMapCallContract.DYNAMIC_TEXT_RUNTIME_CAPABILITY;
+			case "HxType": OcamlStandardIMapCallContract.TYPE_RUNTIME_CAPABILITY;
+			case "HxRuntime": OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY;
+			case _: throw 'Unknown IMap adapter runtime symbol "$symbol".';
+		}
+	}
+
+	static function requireRuntimeUse(ownerId:String, index:Int, actual:OcamlRuntimeUseOccurrence, expected:OcamlRuntimeUseOccurrence):Void {
+		if (actual == null
+			|| actual.id != expected.id
+			|| actual.planRevision != expected.planRevision
+			|| actual.ownerId != expected.ownerId
+			|| actual.requirementId != expected.requirementId
+			|| actual.domain != expected.domain
+			|| actual.exactSymbol != expected.exactSymbol
+			|| actual.role != expected.role
+			|| actual.order != expected.order
+			|| actual.source.file != expected.source.file
+			|| actual.source.min != expected.source.min
+			|| actual.source.max != expected.source.max
+			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
+			|| actual.cardinality != expected.cardinality)
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-runtime-use]: conversion "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
 	}
 
 	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Bool {

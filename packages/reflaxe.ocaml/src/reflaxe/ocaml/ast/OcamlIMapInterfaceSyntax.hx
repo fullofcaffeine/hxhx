@@ -15,6 +15,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
 /**
 	Target-syntax operations supplied by the request-local OCaml builder.
@@ -30,6 +31,12 @@ typedef OcamlIMapInterfaceSyntaxServices = {
 	final typeExpression:Type->OcamlTypeExpr;
 	final coerceToObjectCarrier:(Type, OcamlExpr) -> OcamlExpr;
 	final userMethodTarget:OcamlIMapInterfaceMethodMaterialization->OcamlExpr;
+}
+
+/** One completed adapter plus only the private names inserted by this syntax owner. */
+typedef OcamlIMapInterfaceConversionSyntax = {
+	final expression:OcamlExpr;
+	final runtimeReferences:Array<OcamlExpr>;
 }
 
 /**
@@ -89,16 +96,18 @@ class OcamlIMapInterfaceSyntax {
 
 	/** Builds one concrete-to-interface adapter selected from the final typed body. */
 	public static function buildConversion(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr,
-			services:OcamlIMapInterfaceSyntaxServices):OcamlExpr {
+			services:OcamlIMapInterfaceSyntaxServices, runtimeAuthority:OcamlRuntimeUseAuthority):OcamlIMapInterfaceConversionSyntax {
 		OcamlIMapInterfacePlan.requireConversionDecision(materialization.decision);
-		return switch (materialization.decision.sourceKind) {
+		final runtimeReferences:Array<OcamlExpr> = [];
+		final expression = switch (materialization.decision.sourceKind) {
 			case UserImplementation:
-				buildUserAdapter(materialization, value, services);
+				buildUserAdapter(materialization, value, services, runtimeAuthority, runtimeReferences);
 			case StandardStringMap, StandardIntMap, StandardObjectMap, StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract:
-				buildStandardAdapter(materialization, value, services);
+				buildStandardAdapter(materialization, value, services, runtimeAuthority, runtimeReferences);
 			case _:
 				throw 'IMap conversion "${materialization.decision.id}" has an unsupported source kind';
 		};
+		return {expression: expression, runtimeReferences: runtimeReferences};
 	}
 
 	/** Converts an erased dispatch result to the carrier fixed by the typed call. */
@@ -119,11 +128,11 @@ class OcamlIMapInterfaceSyntax {
 	}
 
 	/** Builds a record whose closures invoke the original user class methods. */
-	static function buildUserAdapter(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr,
-			services:OcamlIMapInterfaceSyntaxServices):OcamlExpr {
+	static function buildUserAdapter(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr, services:OcamlIMapInterfaceSyntaxServices,
+			runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):OcamlExpr {
 		final receiverName = services.freshName("imap_user_receiver");
 		final receiver = OcamlExpr.EIdent(receiverName);
-		final fields:Array<{name:String, value:OcamlExpr}> = [typeMarkerField()];
+		final fields:Array<{name:String, value:OcamlExpr}> = [typeMarkerField(materialization.decision, runtimeAuthority, runtimeReferences)];
 		for (method in materialization.methods) {
 			final parameterNames = [for (index in 0...method.argumentTypes.length) "a" + index];
 			final parameters:Array<OcamlPat> = [OcamlPat.PAny];
@@ -135,7 +144,8 @@ class OcamlIMapInterfaceSyntax {
 			}
 			final callArguments:Array<OcamlExpr> = [receiver];
 			for (index in 0...parameterNames.length)
-				callArguments.push(decodeArgument(method.argumentTypes[index], OcamlExpr.EIdent(parameterNames[index]), services));
+				callArguments.push(decodeArgument(materialization.decision, 'decode-bool:${method.decision.name}:$index', method.argumentTypes[index],
+					OcamlExpr.EIdent(parameterNames[index]), services, runtimeAuthority, runtimeReferences));
 			if (parameterNames.length == 0)
 				callArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
 			final call = OcamlExpr.EApp(services.userMethodTarget(method), callArguments);
@@ -151,14 +161,14 @@ class OcamlIMapInterfaceSyntax {
 
 	/** Builds the same dispatch surface around one proven standard Map carrier. */
 	static function buildStandardAdapter(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr,
-			services:OcamlIMapInterfaceSyntaxServices):OcamlExpr {
+			services:OcamlIMapInterfaceSyntaxServices, runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):OcamlExpr {
 		final keyKind = materialization.decision.standardKeyKind;
 		if (keyKind == null)
 			throw 'standard IMap conversion "${materialization.decision.id}" has no sealed key carrier';
 		final adapterName = services.freshName("adapt_standard_imap");
 		final receiverName = services.freshName("standard_imap_receiver");
 		final receiver = OcamlExpr.EIdent(receiverName);
-		final fields:Array<{name:String, value:OcamlExpr}> = [typeMarkerField()];
+		final fields:Array<{name:String, value:OcamlExpr}> = [typeMarkerField(materialization.decision, runtimeAuthority, runtimeReferences)];
 		for (operation in materialization.operations) {
 			final argumentTypes = argumentTypes(operation, materialization.keyType, materialization.valueType);
 			final parameterNames = [for (index in 0...argumentTypes.length) "a" + index];
@@ -171,15 +181,21 @@ class OcamlIMapInterfaceSyntax {
 			}
 			final runtimeArguments:Array<OcamlExpr> = [receiver];
 			for (index in 0...argumentTypes.length)
-				runtimeArguments.push(decodeArgument(argumentTypes[index], OcamlExpr.EIdent(parameterNames[index]), services));
-			final runtimeCall = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), OcamlStandardIMapCallContract.runtimeFunction(operation, keyKind)),
+				runtimeArguments.push(decodeArgument(materialization.decision,
+					'decode-bool:${OcamlStandardIMapCallContract.sourceFieldName(operation)}:$index', argumentTypes[index],
+					OcamlExpr.EIdent(parameterNames[index]), services, runtimeAuthority, runtimeReferences));
+			final methodName = OcamlStandardIMapCallContract.sourceFieldName(operation);
+			final runtimeCall = OcamlExpr.EApp(runtimeIdentifier(materialization.decision, 'standard-map:$methodName',
+				"HxMap." + OcamlStandardIMapCallContract.runtimeFunction(operation, keyKind), runtimeAuthority, runtimeReferences),
 				runtimeArguments);
 			final methodBody = switch (operation) {
 				case Get:
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [runtimeCall]);
 				case Keys, Values, Pairs:
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "of_array"), [runtimeCall])
+						OcamlExpr.EApp(runtimeIdentifier(materialization.decision, 'wrap-iterator:$methodName', "HxIterator.of_array", runtimeAuthority,
+							runtimeReferences),
+							[runtimeCall])
 					]);
 				case Copy:
 					OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [runtimeCall]);
@@ -188,7 +204,8 @@ class OcamlIMapInterfaceSyntax {
 					final valueStringifier = materialization.decision.valueStringifier;
 					if (keyStringifier == null || valueStringifier == null)
 						throw 'standard IMap conversion "${materialization.decision.id}" has no sealed text conversion';
-					formatStandardEntries(runtimeCall, keyStringifier, valueStringifier, services.freshName);
+					formatStandardEntries(materialization.decision, runtimeCall, keyStringifier, valueStringifier, services.freshName, runtimeAuthority,
+						runtimeReferences);
 				case Set, Exists, Remove, Clear:
 					runtimeCall;
 				case _:
@@ -216,20 +233,27 @@ class OcamlIMapInterfaceSyntax {
 	}
 
 	/** Produces the runtime type marker shared by every dispatch record. */
-	static function typeMarkerField():{name:String, value:OcamlExpr} {
+	static function typeMarkerField(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision,
+			runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):{
+		name:String,
+		value:OcamlExpr
+	} {
 		return {
 			name: "__hx_type",
-			value: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"), [OcamlExpr.EConst(OcamlConst.CString("haxe.IMap"))])
+			value: OcamlExpr.EApp(runtimeIdentifier(decision, "type-marker", "HxType.class_", runtimeAuthority, runtimeReferences),
+				[OcamlExpr.EConst(OcamlConst.CString("haxe.IMap"))])
 		};
 	}
 
 	/** Converts one erased interface argument to its already-selected OCaml carrier. */
-	static function decodeArgument(type:Type, value:OcamlExpr, services:OcamlIMapInterfaceSyntaxServices):OcamlExpr {
+	static function decodeArgument(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision, role:String, type:Type,
+			value:OcamlExpr, services:OcamlIMapInterfaceSyntaxServices, runtimeAuthority:OcamlRuntimeUseAuthority,
+			runtimeReferences:Array<OcamlExpr>):OcamlExpr {
 		final carrier = services.typeExpression(type);
 		if (isObjectCarrierType(carrier))
 			return value;
 		if (OcamlRepresentationRegistry.isExactBool(type))
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [value]);
+			return OcamlExpr.EApp(runtimeIdentifier(decision, role, "HxRuntime.unbox_bool_or_obj", runtimeAuthority, runtimeReferences), [value]);
 		return OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]), carrier);
 	}
 
@@ -256,8 +280,9 @@ class OcamlIMapInterfaceSyntax {
 	}
 
 	/** Formats standard Map entries with the value-to-text choices saved by planning. */
-	static function formatStandardEntries(pairs:OcamlExpr, keyStringifier:OcamlStandardIMapStringifier, valueStringifier:OcamlStandardIMapStringifier,
-			freshName:String->String):OcamlExpr {
+	static function formatStandardEntries(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision, pairs:OcamlExpr,
+			keyStringifier:OcamlStandardIMapStringifier, valueStringifier:OcamlStandardIMapStringifier, freshName:String->String,
+			runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):OcamlExpr {
 		final iteratorName = freshName("imap_pairs");
 		final entriesName = freshName("imap_entries");
 		final entryName = freshName("imap_entry");
@@ -265,34 +290,41 @@ class OcamlIMapInterfaceSyntax {
 		final iterator = OcamlExpr.EIdent(iteratorName);
 		final entries = OcamlExpr.EIdent(entriesName);
 		final entry = OcamlExpr.EIdent(entryName);
-		final nextEntry = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "next"), [iterator]);
+		final nextEntry = OcamlExpr.EApp(runtimeIdentifier(decision, "format-next", "HxIterator.next", runtimeAuthority, runtimeReferences), [iterator]);
 		final key = OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [entry]);
 		final value = OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [entry]);
-		final text = OcamlExpr.EBinop(OcamlBinop.Concat, stringify(keyStringifier, key),
-			OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EConst(OcamlConst.CString(" => ")), stringify(valueStringifier, value)));
+		final text = OcamlExpr.EBinop(OcamlBinop.Concat, stringify(decision, "format-key", keyStringifier, key, runtimeAuthority, runtimeReferences),
+			OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EConst(OcamlConst.CString(" => ")),
+				stringify(decision, "format-value", valueStringifier, value, runtimeAuthority, runtimeReferences)));
 		final push = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [entries, text])
+			OcamlExpr.EApp(runtimeIdentifier(decision, "format-push", "HxArray.push", runtimeAuthority, runtimeReferences), [entries, text])
 		]);
-		final loop = OcamlExpr.EWhile(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "hasNext"), [iterator]),
+		final loop = OcamlExpr.EWhile(OcamlExpr.EApp(runtimeIdentifier(decision, "format-has-next", "HxIterator.hasNext", runtimeAuthority,
+			runtimeReferences), [iterator]),
 			OcamlExpr.ELet(entryName, nextEntry, push, false));
-		final joined = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"), [
+		final joined = OcamlExpr.EApp(runtimeIdentifier(decision, "format-join", "HxArray.join", runtimeAuthority, runtimeReferences), [
 			entries,
 			OcamlExpr.EConst(OcamlConst.CString(", ")),
 			OcamlExpr.EFun([OcamlPat.PVar(itemName)], OcamlExpr.EIdent(itemName))
 		]);
 		final formatted = OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EConst(OcamlConst.CString("[")),
 			OcamlExpr.EBinop(OcamlBinop.Concat, joined, OcamlExpr.EConst(OcamlConst.CString("]"))));
-		return OcamlExpr.ELet(iteratorName, OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "of_array"), [pairs]),
-			OcamlExpr.ELet(entriesName, OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]),
+		return OcamlExpr.ELet(iteratorName,
+			OcamlExpr.EApp(runtimeIdentifier(decision, "format-of-array", "HxIterator.of_array", runtimeAuthority, runtimeReferences), [pairs]),
+			OcamlExpr.ELet(entriesName,
+				OcamlExpr.EApp(runtimeIdentifier(decision, "format-create-array", "HxArray.create", runtimeAuthority, runtimeReferences),
+					[OcamlExpr.EConst(OcamlConst.CUnit)]),
 				OcamlExpr.ESeq([loop, formatted]), false),
 			false);
 	}
 
 	/** Applies one sealed Haxe value-to-text family. */
-	static function stringify(stringifier:OcamlStandardIMapStringifier, value:OcamlExpr):OcamlExpr {
+	static function stringify(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision, role:String,
+			stringifier:OcamlStandardIMapStringifier, value:OcamlExpr, runtimeAuthority:OcamlRuntimeUseAuthority,
+			runtimeReferences:Array<OcamlExpr>):OcamlExpr {
 		return switch (stringifier) {
 			case ExactString:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"), [value]);
+				OcamlExpr.EApp(runtimeIdentifier(decision, role, "HxString.toStdString", runtimeAuthority, runtimeReferences), [value]);
 			case ExactInt:
 				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [value]);
 			case ExactFloat:
@@ -300,11 +332,21 @@ class OcamlIMapInterfaceSyntax {
 			case ExactBool:
 				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [value]);
 			case DynamicObject:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"),
+				OcamlExpr.EApp(runtimeIdentifier(decision, role, "HxDynamic.toStdString", runtimeAuthority, runtimeReferences),
 					[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value])]);
 			case _:
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-stringifier]: unsupported stringifier "$stringifier"';
 		};
+	}
+
+	static function runtimeIdentifier(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision, role:String,
+			exactSymbol:String, authority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):OcamlExpr {
+		final use = Lambda.find(decision.runtimeUseOccurrences, occurrence -> occurrence.role == role);
+		if (use == null)
+			throw 'IMap conversion "${decision.id}" has no planned runtime use for $role';
+		final reference = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, exactSymbol));
+		runtimeReferences.push(reference);
+		return reference;
 	}
 }
 #end

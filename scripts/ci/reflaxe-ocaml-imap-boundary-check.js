@@ -50,6 +50,8 @@ function checkIMapBoundary({builder, interfacePlan, interfaceSyntax, targetModel
 		'currentIMapInterfacePlan.requireConversion(rhs, lhsType)',
 		'buildPlannedIMapInterfaceConversion',
 		'a concrete value reached an IMap boundary without an active interface-conversion plan',
+		'ctx.runtimeRequirementsByIds(OcamlIMapInterfacePlan.runtimeRequirementIds(decision))',
+		'runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(syntax.runtimeReferences))',
 	])
 
 	requireMarkers(failures, 'OcamlIMapInterfacePlan', interfacePlan, [
@@ -65,12 +67,21 @@ function checkIMapBoundary({builder, interfacePlan, interfaceSyntax, targetModel
 		'mapKeyKindFromType',
 		'mapKeyKindFromIMapExpr',
 		'OcamlStandardMapCarrierContract.kindForClass',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxMap")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxIterator")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxArray")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxString")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxType")',
+		'OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime")',
 	])
 	requireMarkers(failures, 'OcamlIMapInterfaceSyntax', interfaceSyntax, [
 		'OcamlIMapInterfacePlan.requireCallDecision(decision)',
 		'OcamlIMapInterfacePlan.requireConversionDecision(materialization.decision)',
 		'final keyKind = materialization.decision.standardKeyKind',
 		'final operation = OcamlStandardIMapCallContract.operationFor(fieldRef.get().name, arguments.length)',
+		'OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, exactSymbol))',
+		'runtimeReferences.push(reference)',
 	])
 
 	requireMarkers(failures, 'OcamlIMapInterfaceContract', targetModel, [
@@ -78,6 +89,8 @@ function checkIMapBoundary({builder, interfacePlan, interfaceSyntax, targetModel
 		'public static function requireConversion',
 		'public static function requireCall',
 		'public static function runtimeRequirementIds',
+		'public static function runtimeUseOccurrencesFor',
+		'requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index])',
 	])
 
 	return failures

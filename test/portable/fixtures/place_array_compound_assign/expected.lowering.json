@@ -2742,7 +2742,7 @@
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
   "arrayLiteralProducerRevision": "sha256:99e68a52b108d22543dbd36abbd7292c60e644c9d46020f92af8b321d2a049f3",
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v4",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v5",
   "arrayLiteralProducers": [
     {
       "runtimeUseOccurrences": [

@@ -526,6 +526,7 @@ typedef InspectionIMapInterfaceConversion = {
 	final valueStringifier:Null<String>;
 	final methods:Array<InspectionIMapInterfaceMethod>;
 	final runtimeCapabilities:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;

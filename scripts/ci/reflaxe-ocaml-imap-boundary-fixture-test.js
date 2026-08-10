@@ -61,5 +61,26 @@ expectMutation(
 	'// validation removed by mutation fixture',
 	'OcamlIMapInterfaceContract.requireConversion(decision)'
 )
+expectMutation(
+	'missing runtime-reference reconciliation',
+	'builder',
+	'runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(syntax.runtimeReferences))',
+	'// runtime reference reconciliation removed by mutation fixture',
+	'runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(syntax.runtimeReferences))'
+)
+expectMutation(
+	'bypassed saved runtime-use validation',
+	'targetModel',
+	'requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index])',
+	'// saved runtime-use validation removed by mutation fixture',
+	'requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedUses[index])'
+)
+expectMutation(
+	'direct unplanned runtime helper',
+	'interfaceSyntax',
+	'class OcamlIMapInterfaceSyntax {',
+	'class OcamlIMapInterfaceSyntax {\n\tstatic final forbidden = OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "get_string");',
+	'OcamlExpr.EField(OcamlExpr.EIdent("HxMap")'
+)
 
-console.log('REFLAXE_OCAML_IMAP_BOUNDARY_FIXTURES:PASS mutations=5')
+console.log('REFLAXE_OCAML_IMAP_BOUNDARY_FIXTURES:PASS mutations=8')

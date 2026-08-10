@@ -5,591 +5,32 @@
   "anonymousStructureOperations": [
     {
       "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:34042c1cc106899e187440d7:runtime:haxe-anonymous-structure"
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:05418382c9874db3971f749bef1abd2515ea1c1ef4486f902ec8317aa40499da",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:275e1d435fd377200c18f82d",
+          "id": "anonymous-operation:275e1d435fd377200c18f82d:runtime-use:initialize-field",
+          "source": {
+            "min": 1111,
+            "max": 1156,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:275e1d435fd377200c18f82d:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
       ],
-      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:34042c1cc106899e187440d7",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 2,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "className",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:36ce11b9d3bdf5cd500e8d45",
-      "fieldCanonicalOrder": 0
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:34bc3752819a8f9730740f56:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:34bc3752819a8f9730740f56",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 0,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "file",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:e4dffefd212ceb90d9e1255a",
-      "fieldCanonicalOrder": 0
-    },
-    {
-      "resultSemanticTypeId": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
-      "fieldRepresentationRevision": "",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:3e305062d8639ebd3a4b033f:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
-      "evaluationSchedule": [
-        "create-container",
-        "result-container"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "",
-      "resultRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": null,
-      "resultRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:3e305062d8639ebd3a4b033f",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "kind": "create",
-      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": -1,
-      "runtimeOperation": "create",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "",
-      "fieldRepresentationId": "",
-      "fieldName": null,
-      "resultCarrierTypeId": "Obj.t",
-      "occurrenceId": "anonymous-occurrence:261238da44ffa01b885e597b",
-      "fieldCanonicalOrder": -1
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:6e0a219822bb2167a7c69b54:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:6e0a219822bb2167a7c69b54",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 3,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "methodName",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:e0101243c573be8a599e2328",
-      "fieldCanonicalOrder": 3
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:76f26e36daebb6ea66e9616a:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:76f26e36daebb6ea66e9616a",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 2,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "className",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:f4b42adf2a5ba51fdbacbed2",
-      "fieldCanonicalOrder": 0
-    },
-    {
-      "resultSemanticTypeId": "anonymous{file:String,line:Int}",
-      "fieldRepresentationRevision": "",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:822843fc3c9e68703ecde783:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "create-container",
-        "result-container"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "",
-      "resultRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": null,
-      "resultRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:822843fc3c9e68703ecde783",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "kind": "create",
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": -1,
-      "runtimeOperation": "create",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "",
-      "fieldRepresentationId": "",
-      "fieldName": null,
-      "resultCarrierTypeId": "Obj.t",
-      "occurrenceId": "anonymous-occurrence:922d26608ae58577f374be79",
-      "fieldCanonicalOrder": -1
-    },
-    {
-      "resultSemanticTypeId": "Void",
       "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
       "runtimeReadOperation": null,
       "runtimeRequirementIds": [
-        "anonymous-operation:863fed43a871dd3661492b03:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "int",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:863fed43a871dd3661492b03",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 1,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "Int",
-      "fieldRepresentationId": "representation:Int:internal-value",
-      "fieldName": "line",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:208cd682a95f982225c95ec0",
-      "fieldCanonicalOrder": 1
-    },
-    {
-      "resultSemanticTypeId": "anonymous{file:String,line:Int}",
-      "fieldRepresentationRevision": "",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:977595e0969c1eb6b83c3b41:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "create-container",
-        "result-container"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "",
-      "resultRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": null,
-      "resultRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:977595e0969c1eb6b83c3b41",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "kind": "create",
-      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": -1,
-      "runtimeOperation": "create",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "",
-      "fieldRepresentationId": "",
-      "fieldName": null,
-      "resultCarrierTypeId": "Obj.t",
-      "occurrenceId": "anonymous-occurrence:294c2e6530b8e7ba46d587c1",
-      "fieldCanonicalOrder": -1
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:9d64a6d0d04080711ee9b534:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:9d64a6d0d04080711ee9b534",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 0,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "file",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:319d2a521b8eed13bb1763cf",
-      "fieldCanonicalOrder": 0
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:ac5211c48bedb0f2e40defc7:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "int",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:ac5211c48bedb0f2e40defc7",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 1,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "Int",
-      "fieldRepresentationId": "representation:Int:internal-value",
-      "fieldName": "lineNumber",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:a975e6c4160c25ed43087926",
-      "fieldCanonicalOrder": 2
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:b015467bed73b043d51b765b:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:b015467bed73b043d51b765b",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 0,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "fileName",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:e7dfd96e1ec3fb97099f29d4",
-      "fieldCanonicalOrder": 1
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:bf3245aff6e9c1a35ba8e7ef:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "int",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:bf3245aff6e9c1a35ba8e7ef",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 1,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "fieldSemanticTypeId": "Int",
-      "fieldRepresentationId": "representation:Int:internal-value",
-      "fieldName": "line",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:4678c764dfa1a476da0edde0",
-      "fieldCanonicalOrder": 1
-    },
-    {
-      "resultSemanticTypeId": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
-      "fieldRepresentationRevision": "",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:c72bf916b08bbde4cdba61a6:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
-      "evaluationSchedule": [
-        "create-container",
-        "result-container"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "",
-      "resultRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": null,
-      "resultRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:c72bf916b08bbde4cdba61a6",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "kind": "create",
-      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": -1,
-      "runtimeOperation": "create",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "",
-      "fieldRepresentationId": "",
-      "fieldName": null,
-      "resultCarrierTypeId": "Obj.t",
-      "occurrenceId": "anonymous-occurrence:88f8e320de79fe2ddadf4d36",
-      "fieldCanonicalOrder": -1
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:d31cf099df07328c6066f697:runtime:haxe-anonymous-structure"
+        "anonymous-operation:275e1d435fd377200c18f82d:runtime:haxe-anonymous-structure"
       ],
       "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
       "evaluationSchedule": [
@@ -602,12 +43,12 @@
       "resultRepresentationId": "",
       "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
       "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
       "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
       "storeConversion": "obj-repr",
       "resultRepresentationRevision": "",
       "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:d31cf099df07328c6066f697",
+      "id": "anonymous-operation:275e1d435fd377200c18f82d",
       "source": {
         "min": 1111,
         "max": 1156,
@@ -621,7 +62,7 @@
       "fieldSourceOrder": 1,
       "runtimeOperation": "set",
       "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
       "fieldSemanticTypeId": "Int",
       "fieldRepresentationId": "representation:Int:internal-value",
       "fieldName": "lineNumber",
@@ -631,10 +72,32 @@
     },
     {
       "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:52d5bc38bcc20aa77a486a5584b49708fe4235a44db4edfb0986f6d8db618bdf",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:3b6789d5cc6fe42c32d46f49",
+          "id": "anonymous-operation:3b6789d5cc6fe42c32d46f49:runtime-use:initialize-field",
+          "source": {
+            "min": 1337,
+            "max": 1382,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:3b6789d5cc6fe42c32d46f49:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
       "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
       "runtimeReadOperation": null,
       "runtimeRequirementIds": [
-        "anonymous-operation:d87165a95002de04fffbe443:runtime:haxe-anonymous-structure"
+        "anonymous-operation:3b6789d5cc6fe42c32d46f49:runtime:haxe-anonymous-structure"
       ],
       "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
       "evaluationSchedule": [
@@ -647,57 +110,12 @@
       "resultRepresentationId": "",
       "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
       "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
       "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
       "storeConversion": "obj-repr",
       "resultRepresentationRevision": "",
       "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:d87165a95002de04fffbe443",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "kind": "initialize-field",
-      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "fieldOperator": null,
-      "pipelineRevision": "ocaml-function-plans-v84",
-      "fieldSourceOrder": 3,
-      "runtimeOperation": "set",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
-      "fieldSemanticTypeId": "String",
-      "fieldRepresentationId": "representation:String:internal-value",
-      "fieldName": "methodName",
-      "resultCarrierTypeId": "",
-      "occurrenceId": "anonymous-occurrence:b264b1bea475b21f21ed6341",
-      "fieldCanonicalOrder": 3
-    },
-    {
-      "resultSemanticTypeId": "Void",
-      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-      "runtimeReadOperation": null,
-      "runtimeRequirementIds": [
-        "anonymous-operation:f6b2602e7c3ae454f2840f3e:runtime:haxe-anonymous-structure"
-      ],
-      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
-      "evaluationSchedule": [
-        "field-value",
-        "box-field-value",
-        "store-field"
-      ],
-      "loadConversion": null,
-      "fieldCarrierTypeId": "string",
-      "resultRepresentationId": "",
-      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "structureRevision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
-      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
-      "storeConversion": "obj-repr",
-      "resultRepresentationRevision": "",
-      "runtimeModule": "HxAnon",
-      "id": "anonymous-operation:f6b2602e7c3ae454f2840f3e",
+      "id": "anonymous-operation:3b6789d5cc6fe42c32d46f49",
       "source": {
         "min": 1337,
         "max": 1382,
@@ -711,21 +129,955 @@
       "fieldSourceOrder": 0,
       "runtimeOperation": "set",
       "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "structureId": "anonymous-structure:7c27775b9ddb0bd72368c907",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
       "fieldSemanticTypeId": "String",
       "fieldRepresentationId": "representation:String:internal-value",
       "fieldName": "fileName",
       "resultCarrierTypeId": "",
       "occurrenceId": "anonymous-occurrence:9d5b9366d596017222f8e6f4",
       "fieldCanonicalOrder": 1
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:05418382c9874db3971f749bef1abd2515ea1c1ef4486f902ec8317aa40499da",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:6104ccca255a74b8ba707946",
+          "id": "anonymous-operation:6104ccca255a74b8ba707946:runtime-use:initialize-field",
+          "source": {
+            "min": 1111,
+            "max": 1156,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:6104ccca255a74b8ba707946:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:6104ccca255a74b8ba707946:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:6104ccca255a74b8ba707946",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 3,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "methodName",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:e0101243c573be8a599e2328",
+      "fieldCanonicalOrder": 3
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:10b3895d4715e41ba0fa89e6680fb6ce6ef84524c70edc5056a466e42e36dd2d",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:665a9d0f64e034333256aa17",
+          "id": "anonymous-operation:665a9d0f64e034333256aa17:runtime-use:initialize-field",
+          "source": {
+            "min": 2583,
+            "max": 2605,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:665a9d0f64e034333256aa17:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:665a9d0f64e034333256aa17:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:665a9d0f64e034333256aa17",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 0,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "file",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:319d2a521b8eed13bb1763cf",
+      "fieldCanonicalOrder": 0
+    },
+    {
+      "resultSemanticTypeId": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:52d5bc38bcc20aa77a486a5584b49708fe4235a44db4edfb0986f6d8db618bdf",
+          "cardinality": 1,
+          "role": "create-container",
+          "ownerId": "anonymous-operation:66f8451299d8892b18d9aa49",
+          "id": "anonymous-operation:66f8451299d8892b18d9aa49:runtime-use:create-container",
+          "source": {
+            "min": 1337,
+            "max": 1382,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.create",
+          "requirementId": "anonymous-operation:66f8451299d8892b18d9aa49:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:66f8451299d8892b18d9aa49:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
+      "evaluationSchedule": [
+        "create-container",
+        "result-container"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "",
+      "resultRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": null,
+      "resultRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:66f8451299d8892b18d9aa49",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "kind": "create",
+      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": -1,
+      "runtimeOperation": "create",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "",
+      "fieldRepresentationId": "",
+      "fieldName": null,
+      "resultCarrierTypeId": "Obj.t",
+      "occurrenceId": "anonymous-occurrence:88f8e320de79fe2ddadf4d36",
+      "fieldCanonicalOrder": -1
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:10b3895d4715e41ba0fa89e6680fb6ce6ef84524c70edc5056a466e42e36dd2d",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:6d1391034c82967463ccb81c",
+          "id": "anonymous-operation:6d1391034c82967463ccb81c:runtime-use:initialize-field",
+          "source": {
+            "min": 2583,
+            "max": 2605,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:6d1391034c82967463ccb81c:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:6d1391034c82967463ccb81c:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "int",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:6d1391034c82967463ccb81c",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 1,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "Int",
+      "fieldRepresentationId": "representation:Int:internal-value",
+      "fieldName": "line",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:208cd682a95f982225c95ec0",
+      "fieldCanonicalOrder": 1
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:05418382c9874db3971f749bef1abd2515ea1c1ef4486f902ec8317aa40499da",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:73584fdc757dc7854b54bd61",
+          "id": "anonymous-operation:73584fdc757dc7854b54bd61:runtime-use:initialize-field",
+          "source": {
+            "min": 1111,
+            "max": 1156,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:73584fdc757dc7854b54bd61:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:73584fdc757dc7854b54bd61:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:73584fdc757dc7854b54bd61",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 0,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "fileName",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:e7dfd96e1ec3fb97099f29d4",
+      "fieldCanonicalOrder": 1
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:52d5bc38bcc20aa77a486a5584b49708fe4235a44db4edfb0986f6d8db618bdf",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:73a9913081a7d9a18e05c0c2",
+          "id": "anonymous-operation:73a9913081a7d9a18e05c0c2:runtime-use:initialize-field",
+          "source": {
+            "min": 1337,
+            "max": 1382,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:73a9913081a7d9a18e05c0c2:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:73a9913081a7d9a18e05c0c2:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "int",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:73a9913081a7d9a18e05c0c2",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 1,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "Int",
+      "fieldRepresentationId": "representation:Int:internal-value",
+      "fieldName": "lineNumber",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:a975e6c4160c25ed43087926",
+      "fieldCanonicalOrder": 2
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:52d5bc38bcc20aa77a486a5584b49708fe4235a44db4edfb0986f6d8db618bdf",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:7a22ee98d8319b643e1ce302",
+          "id": "anonymous-operation:7a22ee98d8319b643e1ce302:runtime-use:initialize-field",
+          "source": {
+            "min": 1337,
+            "max": 1382,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:7a22ee98d8319b643e1ce302:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:7a22ee98d8319b643e1ce302:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:7a22ee98d8319b643e1ce302",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 3,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "methodName",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:b264b1bea475b21f21ed6341",
+      "fieldCanonicalOrder": 3
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:05418382c9874db3971f749bef1abd2515ea1c1ef4486f902ec8317aa40499da",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:7c4490027e628f4a733a90f0",
+          "id": "anonymous-operation:7c4490027e628f4a733a90f0:runtime-use:initialize-field",
+          "source": {
+            "min": 1111,
+            "max": 1156,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:7c4490027e628f4a733a90f0:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:7c4490027e628f4a733a90f0:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:7c4490027e628f4a733a90f0",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 2,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "className",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:f4b42adf2a5ba51fdbacbed2",
+      "fieldCanonicalOrder": 0
+    },
+    {
+      "resultSemanticTypeId": "anonymous{file:String,line:Int}",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:10b3895d4715e41ba0fa89e6680fb6ce6ef84524c70edc5056a466e42e36dd2d",
+          "cardinality": 1,
+          "role": "create-container",
+          "ownerId": "anonymous-operation:805a0ce116ff8f563d591b08",
+          "id": "anonymous-operation:805a0ce116ff8f563d591b08:runtime-use:create-container",
+          "source": {
+            "min": 2583,
+            "max": 2605,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.create",
+          "requirementId": "anonymous-operation:805a0ce116ff8f563d591b08:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:805a0ce116ff8f563d591b08:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "create-container",
+        "result-container"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "",
+      "resultRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": null,
+      "resultRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:805a0ce116ff8f563d591b08",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "kind": "create",
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": -1,
+      "runtimeOperation": "create",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "",
+      "fieldRepresentationId": "",
+      "fieldName": null,
+      "resultCarrierTypeId": "Obj.t",
+      "occurrenceId": "anonymous-occurrence:922d26608ae58577f374be79",
+      "fieldCanonicalOrder": -1
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:a9739919fee0829826d7e9832272fd17a98240627f78275fc30534132273e863",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:9e929609bb79917295bb8863",
+          "id": "anonymous-operation:9e929609bb79917295bb8863:runtime-use:initialize-field",
+          "source": {
+            "min": 3068,
+            "max": 3090,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:9e929609bb79917295bb8863:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:9e929609bb79917295bb8863:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:9e929609bb79917295bb8863",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 0,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "file",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:e4dffefd212ceb90d9e1255a",
+      "fieldCanonicalOrder": 0
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:52d5bc38bcc20aa77a486a5584b49708fe4235a44db4edfb0986f6d8db618bdf",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:c750af6790e1b879184f1faa",
+          "id": "anonymous-operation:c750af6790e1b879184f1faa:runtime-use:initialize-field",
+          "source": {
+            "min": 1337,
+            "max": 1382,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:c750af6790e1b879184f1faa:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:c750af6790e1b879184f1faa:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:886195673fa80415bdb287678349d8e3bbdc2d62546444bfbc5d5144f690cca3",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "string",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:c750af6790e1b879184f1faa",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.io.Output|Output|instance|function|writeByte|generics:0|required:Int->Void",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 2,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "String",
+      "fieldRepresentationId": "representation:String:internal-value",
+      "fieldName": "className",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:36ce11b9d3bdf5cd500e8d45",
+      "fieldCanonicalOrder": 0
+    },
+    {
+      "resultSemanticTypeId": "Void",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:a9739919fee0829826d7e9832272fd17a98240627f78275fc30534132273e863",
+          "cardinality": 1,
+          "role": "initialize-field",
+          "ownerId": "anonymous-operation:d342c79262d6fbfad2ee18e3",
+          "id": "anonymous-operation:d342c79262d6fbfad2ee18e3:runtime-use:initialize-field",
+          "source": {
+            "min": 3068,
+            "max": 3090,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.set",
+          "requirementId": "anonymous-operation:d342c79262d6fbfad2ee18e3:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:d342c79262d6fbfad2ee18e3:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "field-value",
+        "box-field-value",
+        "store-field"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "int",
+      "resultRepresentationId": "",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": "obj-repr",
+      "resultRepresentationRevision": "",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:d342c79262d6fbfad2ee18e3",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "kind": "initialize-field",
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": 1,
+      "runtimeOperation": "set",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "Int",
+      "fieldRepresentationId": "representation:Int:internal-value",
+      "fieldName": "line",
+      "resultCarrierTypeId": "",
+      "occurrenceId": "anonymous-occurrence:4678c764dfa1a476da0edde0",
+      "fieldCanonicalOrder": 1
+    },
+    {
+      "resultSemanticTypeId": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:05418382c9874db3971f749bef1abd2515ea1c1ef4486f902ec8317aa40499da",
+          "cardinality": 1,
+          "role": "create-container",
+          "ownerId": "anonymous-operation:e5841f1b1761ae154b8a80f3",
+          "id": "anonymous-operation:e5841f1b1761ae154b8a80f3:runtime-use:create-container",
+          "source": {
+            "min": 1111,
+            "max": 1156,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.create",
+          "requirementId": "anonymous-operation:e5841f1b1761ae154b8a80f3:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:e5841f1b1761ae154b8a80f3:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:9157fcf4fbf3f45ee75f85ea5f5b56a40b37184ee09394979f3ca6796a28dbe5",
+      "evaluationSchedule": [
+        "create-container",
+        "result-container"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "",
+      "resultRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "structureRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
+      "structureRepresentationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value",
+      "storeConversion": null,
+      "resultRepresentationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:e5841f1b1761ae154b8a80f3",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "kind": "create",
+      "functionId": "haxe.io.Input|Input|instance|function|readByte|generics:0|->Int",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": -1,
+      "runtimeOperation": "create",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
+      "fieldSemanticTypeId": "",
+      "fieldRepresentationId": "",
+      "fieldName": null,
+      "resultCarrierTypeId": "Obj.t",
+      "occurrenceId": "anonymous-occurrence:261238da44ffa01b885e597b",
+      "fieldCanonicalOrder": -1
+    },
+    {
+      "resultSemanticTypeId": "anonymous{file:String,line:Int}",
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:a9739919fee0829826d7e9832272fd17a98240627f78275fc30534132273e863",
+          "cardinality": 1,
+          "role": "create-container",
+          "ownerId": "anonymous-operation:fd72260bb27cf96a813c65b4",
+          "id": "anonymous-operation:fd72260bb27cf96a813c65b4:runtime-use:create-container",
+          "source": {
+            "min": 3068,
+            "max": 3090,
+            "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxAnon.create",
+          "requirementId": "anonymous-operation:fd72260bb27cf96a813c65b4:runtime:haxe-anonymous-structure",
+          "domain": "expression-identifier"
+        }
+      ],
+      "fieldRepresentationRevision": "",
+      "runtimeReadOperation": null,
+      "runtimeRequirementIds": [
+        "anonymous-operation:fd72260bb27cf96a813c65b4:runtime:haxe-anonymous-structure"
+      ],
+      "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
+      "evaluationSchedule": [
+        "create-container",
+        "result-container"
+      ],
+      "loadConversion": null,
+      "fieldCarrierTypeId": "",
+      "resultRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "structureRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "structureRepresentationId": "representation:anonymous{file:String,line:Int}:internal-value",
+      "storeConversion": null,
+      "resultRepresentationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "runtimeModule": "HxAnon",
+      "id": "anonymous-operation:fd72260bb27cf96a813c65b4",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "kind": "create",
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "fieldOperator": null,
+      "pipelineRevision": "ocaml-function-plans-v84",
+      "fieldSourceOrder": -1,
+      "runtimeOperation": "create",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "fieldSemanticTypeId": "",
+      "fieldRepresentationId": "",
+      "fieldName": null,
+      "resultCarrierTypeId": "Obj.t",
+      "occurrenceId": "anonymous-occurrence:294c2e6530b8e7ba46d587c1",
+      "fieldCanonicalOrder": -1
     }
   ],
   "structuralFields": [],
   "reflectCompareCount": 0,
-  "anonymousStructureModel": "ocaml-anonymous-structure-v3",
+  "anonymousStructureModel": "ocaml-anonymous-structure-v4",
   "representationRevision": "sha256:b863e123e9b065df948589e4974ed9abe373e27f1e807e968ef158d9c4d17c54",
   "controlRevision": "sha256:939c99faa3d04e6d51c05343be6acd4317aaef398302467c7f86c62ecf99966e",
-  "anonymousStructureRevision": "sha256:04705962dc2399230fd2f48c0edab1bde4fe5f19a26d6bb3805ab911755e8d83",
+  "anonymousStructureRevision": "sha256:afb32d4789f793fa4a9fa46ac3df75afa47fc11dec213c9569042e697c91c0b1",
   "reflectCompareRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "functionResultBoundaries": [
     {
@@ -1264,10 +1616,10 @@
       "callableBoundaryId": null,
       "anonymousStructure": {
         "representationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-        "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
+        "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
         "structureProofId": "direct-anonymous-runtime-operations-v3",
         "semanticTypeId": "anonymous{file:String,line:Int}",
-        "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
+        "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
         "representationId": "representation:anonymous{file:String,line:Int}:internal-value"
       },
       "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
@@ -1599,10 +1951,10 @@
       "callableBoundaryId": null,
       "anonymousStructure": {
         "representationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-        "structureRevision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
+        "structureRevision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
         "structureProofId": "direct-anonymous-runtime-operations-v3",
         "semanticTypeId": "anonymous{file:String,line:Int}",
-        "structureId": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
+        "structureId": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
         "representationId": "representation:anonymous{file:String,line:Int}:internal-value"
       },
       "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
@@ -2290,7 +2642,7 @@
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
   "arrayLiteralProducerRevision": "sha256:10859071372b640c1ff49ef85a0e2a68a46c15fe53b93ce1b31499754e5abfb7",
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v4",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v5",
   "arrayLiteralProducers": [
     {
       "runtimeUseOccurrences": [
@@ -5626,46 +5978,8 @@
       }
     }
   ],
-  "admittedInputRevision": "sha256:9bfc71368fabc83dc2be1ce090580165b05ccc9154c7fc86517945fd4a09a726",
+  "admittedInputRevision": "sha256:39c3c598113a9af834cea8846b236cef4b223a65c1ff221a6408334d49b9d105",
   "anonymousStructures": [
-    {
-      "carrierTypeId": "Obj.t",
-      "representationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
-      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
-      "fields": [
-        {
-          "carrierTypeId": "string",
-          "representationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
-          "name": "file",
-          "loadConversion": "obj-obj",
-          "storeConversion": "obj-repr",
-          "semanticTypeId": "String",
-          "representationId": "representation:String:internal-value",
-          "canonicalOrder": 0
-        },
-        {
-          "carrierTypeId": "int",
-          "representationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
-          "name": "line",
-          "loadConversion": "obj-obj",
-          "storeConversion": "obj-repr",
-          "semanticTypeId": "Int",
-          "representationId": "representation:Int:internal-value",
-          "canonicalOrder": 1
-        }
-      ],
-      "id": "anonymous-structure:32ff5b24ef0fd8e8d4e04533",
-      "semanticTypeId": "anonymous{file:String,line:Int}",
-      "proofId": "direct-anonymous-runtime-operations-v3",
-      "representationDomain": "internal-value",
-      "aliasingPolicy": "shared-reference-aliases",
-      "nullPolicy": "runtime-sentinel",
-      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
-      "identityPolicy": "reference-identity",
-      "revision": "sha256:521d745ceefc669ed0bb941192a340369e96691df73c85813be43663a8588d27",
-      "mutationPolicy": "mutable-runtime-container",
-      "representationId": "representation:anonymous{file:String,line:Int}:internal-value"
-    },
     {
       "carrierTypeId": "Obj.t",
       "representationRevision": "sha256:bc4a0ffaae1d67c83c98fd9a3347c3de75fd36faf25e0b6fb392f3f5e7712afd",
@@ -5712,7 +6026,7 @@
           "canonicalOrder": 3
         }
       ],
-      "id": "anonymous-structure:7c27775b9ddb0bd72368c907",
+      "id": "anonymous-structure:5a10bda7e4a13c5293bd8e24",
       "semanticTypeId": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
       "proofId": "direct-anonymous-runtime-operations-v3",
       "representationDomain": "internal-value",
@@ -5720,9 +6034,47 @@
       "nullPolicy": "runtime-sentinel",
       "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
       "identityPolicy": "reference-identity",
-      "revision": "sha256:e20742540b3b566a1abb3ef08db70860807b6fafec29db1017407851de7a26ef",
+      "revision": "sha256:165fe21310e86b0f1e1e4121102972c0c2a07d46f1d38f91288ef77a46e7418b",
       "mutationPolicy": "mutable-runtime-container",
       "representationId": "representation:anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}:internal-value"
+    },
+    {
+      "carrierTypeId": "Obj.t",
+      "representationRevision": "sha256:36cb1c0abb6767ddf83521abe590be0f4b5ffea29f0b895bc18f4b7b0660d528",
+      "proofClaim": "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.",
+      "fields": [
+        {
+          "carrierTypeId": "string",
+          "representationRevision": "sha256:4e3e0451d5ec607249ac93006387de973949d464f1b681d2ead71eb174198f38",
+          "name": "file",
+          "loadConversion": "obj-obj",
+          "storeConversion": "obj-repr",
+          "semanticTypeId": "String",
+          "representationId": "representation:String:internal-value",
+          "canonicalOrder": 0
+        },
+        {
+          "carrierTypeId": "int",
+          "representationRevision": "sha256:3e95a858221793245e55f069d4c9e33cb7b6cead77acae8043efd4e71c02f421",
+          "name": "line",
+          "loadConversion": "obj-obj",
+          "storeConversion": "obj-repr",
+          "semanticTypeId": "Int",
+          "representationId": "representation:Int:internal-value",
+          "canonicalOrder": 1
+        }
+      ],
+      "id": "anonymous-structure:f7e4f011fbcb9b3678770b4a",
+      "semanticTypeId": "anonymous{file:String,line:Int}",
+      "proofId": "direct-anonymous-runtime-operations-v3",
+      "representationDomain": "internal-value",
+      "aliasingPolicy": "shared-reference-aliases",
+      "nullPolicy": "runtime-sentinel",
+      "programRevision": "bb1b5878c8d702aa639202e5afd9d5811a4780bb8feabf75f1e5d0d5b7c60f68",
+      "identityPolicy": "reference-identity",
+      "revision": "sha256:25f9bc1216104e2db6fd275fd9d7a62b0b5ec51a1ecaa7119980687d84b38382",
+      "mutationPolicy": "mutable-runtime-container",
+      "representationId": "representation:anonymous{file:String,line:Int}:internal-value"
     }
   ],
   "calls": [
@@ -6444,11 +6796,11 @@
       }
     }
   ],
-  "functionResultBoundaryRevision": "sha256:286e0731297ba56f3fa23264feec161f5a9fe134574f57a82c538c42fc4728d7",
+  "functionResultBoundaryRevision": "sha256:ac4fb8d975f17740baee94ff27a4f5ec5d96bbaeea15dc71e1b335026033598c",
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 10,
-  "runtimeRequirementRevision": "sha256:9ef2f83c1731d929332b1c83e86aeddf9c8740f3a55a2a1c8e5289e8c0b77212",
+  "runtimeRequirementRevision": "sha256:fc46a6372ecf34c9a9ed1241e617ec5bf16ef5aedf23ddfeac105d2ce62fdc40",
   "callRevision": "sha256:9d1b9c833b2fbc016050e41cd6b9af015af0c92c9c574c04f2d711fb0303367b",
   "representedArrayCount": 1,
   "controls": [
@@ -8481,345 +8833,7 @@
       "rootModules": [
         "HxAnon"
       ],
-      "id": "anonymous-operation:34042c1cc106899e187440d7:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "sourceId": "anonymous-occurrence:36ce11b9d3bdf5cd500e8d45",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:34042c1cc106899e187440d7",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:34bc3752819a8f9730740f56:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "sourceId": "anonymous-occurrence:e4dffefd212ceb90d9e1255a",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:34bc3752819a8f9730740f56",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:3e305062d8639ebd3a4b033f:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "sourceId": "anonymous-occurrence:261238da44ffa01b885e597b",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:3e305062d8639ebd3a4b033f",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:6e0a219822bb2167a7c69b54:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "sourceId": "anonymous-occurrence:e0101243c573be8a599e2328",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:6e0a219822bb2167a7c69b54",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:76f26e36daebb6ea66e9616a:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "sourceId": "anonymous-occurrence:f4b42adf2a5ba51fdbacbed2",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:76f26e36daebb6ea66e9616a",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "anonymous{file:String,line:Int}",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:822843fc3c9e68703ecde783:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "sourceId": "anonymous-occurrence:922d26608ae58577f374be79",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:822843fc3c9e68703ecde783",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:863fed43a871dd3661492b03:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "sourceId": "anonymous-occurrence:208cd682a95f982225c95ec0",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:863fed43a871dd3661492b03",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "anonymous{file:String,line:Int}",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:977595e0969c1eb6b83c3b41:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "sourceId": "anonymous-occurrence:294c2e6530b8e7ba46d587c1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:977595e0969c1eb6b83c3b41",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:9d64a6d0d04080711ee9b534:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 2583,
-        "max": 2605,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "sourceId": "anonymous-occurrence:319d2a521b8eed13bb1763cf",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:9d64a6d0d04080711ee9b534",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:ac5211c48bedb0f2e40defc7:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "sourceId": "anonymous-occurrence:a975e6c4160c25ed43087926",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:ac5211c48bedb0f2e40defc7",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:b015467bed73b043d51b765b:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1111,
-        "max": 1156,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
-      },
-      "sourceId": "anonymous-occurrence:e7dfd96e1ec3fb97099f29d4",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:b015467bed73b043d51b765b",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:bf3245aff6e9c1a35ba8e7ef:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 3068,
-        "max": 3090,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "sourceId": "anonymous-occurrence:4678c764dfa1a476da0edde0",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:bf3245aff6e9c1a35ba8e7ef",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:c72bf916b08bbde4cdba61a6:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "sourceId": "anonymous-occurrence:88f8e320de79fe2ddadf4d36",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:c72bf916b08bbde4cdba61a6",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:d31cf099df07328c6066f697:runtime:haxe-anonymous-structure",
+      "id": "anonymous-operation:275e1d435fd377200c18f82d:runtime:haxe-anonymous-structure",
       "source": {
         "min": 1111,
         "max": 1156,
@@ -8830,7 +8844,7 @@
         "metal",
         "portable"
       ],
-      "decisionId": "anonymous-operation:d31cf099df07328c6066f697",
+      "decisionId": "anonymous-operation:275e1d435fd377200c18f82d",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8845,33 +8859,7 @@
       "rootModules": [
         "HxAnon"
       ],
-      "id": "anonymous-operation:d87165a95002de04fffbe443:runtime:haxe-anonymous-structure",
-      "source": {
-        "min": 1337,
-        "max": 1382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
-      },
-      "sourceId": "anonymous-occurrence:b264b1bea475b21f21ed6341",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "anonymous-operation:d87165a95002de04fffbe443",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-anonymous-structure-v1",
-      "subject": {
-        "id": "Void",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-anonymous-structure",
-      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
-      "rootModules": [
-        "HxAnon"
-      ],
-      "id": "anonymous-operation:f6b2602e7c3ae454f2840f3e:runtime:haxe-anonymous-structure",
+      "id": "anonymous-operation:3b6789d5cc6fe42c32d46f49:runtime:haxe-anonymous-structure",
       "source": {
         "min": 1337,
         "max": 1382,
@@ -8882,7 +8870,371 @@
         "metal",
         "portable"
       ],
-      "decisionId": "anonymous-operation:f6b2602e7c3ae454f2840f3e",
+      "decisionId": "anonymous-operation:3b6789d5cc6fe42c32d46f49",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:6104ccca255a74b8ba707946:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "anonymous-occurrence:e0101243c573be8a599e2328",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:6104ccca255a74b8ba707946",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:665a9d0f64e034333256aa17:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "sourceId": "anonymous-occurrence:319d2a521b8eed13bb1763cf",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:665a9d0f64e034333256aa17",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:66f8451299d8892b18d9aa49:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "anonymous-occurrence:88f8e320de79fe2ddadf4d36",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:66f8451299d8892b18d9aa49",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:6d1391034c82967463ccb81c:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "sourceId": "anonymous-occurrence:208cd682a95f982225c95ec0",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:6d1391034c82967463ccb81c",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:73584fdc757dc7854b54bd61:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "anonymous-occurrence:e7dfd96e1ec3fb97099f29d4",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:73584fdc757dc7854b54bd61",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:73a9913081a7d9a18e05c0c2:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "anonymous-occurrence:a975e6c4160c25ed43087926",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:73a9913081a7d9a18e05c0c2",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:7a22ee98d8319b643e1ce302:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "anonymous-occurrence:b264b1bea475b21f21ed6341",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:7a22ee98d8319b643e1ce302",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:7c4490027e628f4a733a90f0:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "anonymous-occurrence:f4b42adf2a5ba51fdbacbed2",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:7c4490027e628f4a733a90f0",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "anonymous{file:String,line:Int}",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:805a0ce116ff8f563d591b08:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 2583,
+        "max": 2605,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "sourceId": "anonymous-occurrence:922d26608ae58577f374be79",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:805a0ce116ff8f563d591b08",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:9e929609bb79917295bb8863:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "sourceId": "anonymous-occurrence:e4dffefd212ceb90d9e1255a",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:9e929609bb79917295bb8863",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:c750af6790e1b879184f1faa:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1337,
+        "max": 1382,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "anonymous-occurrence:36ce11b9d3bdf5cd500e8d45",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:c750af6790e1b879184f1faa",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "Void",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed initialize-field occurrence uses HxAnon.set so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:d342c79262d6fbfad2ee18e3:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "sourceId": "anonymous-occurrence:4678c764dfa1a476da0edde0",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:d342c79262d6fbfad2ee18e3",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "anonymous{className:String,fileName:String,lineNumber:Int,methodName:String}",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:e5841f1b1761ae154b8a80f3:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 1111,
+        "max": 1156,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "anonymous-occurrence:261238da44ffa01b885e597b",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:e5841f1b1761ae154b8a80f3",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-anonymous-structure-v1",
+      "subject": {
+        "id": "anonymous{file:String,line:Int}",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-anonymous-structure",
+      "explanation": "The sealed create occurrence uses HxAnon.create so one mutable anonymous object preserves Haxe field lookup, assignment, reference identity, aliases, and source-order evaluation.",
+      "rootModules": [
+        "HxAnon"
+      ],
+      "id": "anonymous-operation:fd72260bb27cf96a813c65b4:runtime:haxe-anonymous-structure",
+      "source": {
+        "min": 3068,
+        "max": 3090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "sourceId": "anonymous-occurrence:294c2e6530b8e7ba46d587c1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "anonymous-operation:fd72260bb27cf96a813c65b4",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9382,6 +9734,28 @@
   ],
   "plans": [
     {
+      "runtimeUseOccurrences": [
+        {
+          "planRevision": "sha256:dd858714c62929b3e0e83f71e37dac5146ec1e46b9400be4bcaa7980cadaa25a",
+          "cardinality": 1,
+          "role": "store",
+          "ownerId": "place:2ec87ed9e163efbae5e983b6:array-simple-assignment",
+          "id": "place:2ec87ed9e163efbae5e983b6:runtime-use:array-set",
+          "source": {
+            "min": 451,
+            "max": 478,
+            "file": "src/Main.hx"
+          },
+          "order": 3,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.set",
+          "requirementId": "place:2ec87ed9e163efbae5e983b6:runtime:haxe-array-element-set",
+          "domain": "expression-identifier"
+        }
+      ],
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
         "place:2ec87ed9e163efbae5e983b6:runtime:haxe-array-element-set"

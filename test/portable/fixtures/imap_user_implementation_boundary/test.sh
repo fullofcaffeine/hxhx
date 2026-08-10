@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (report.schemaVersion !== 69
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v4'
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v5'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
 	|| report.iMapInterfaceConversionCount !== 6
@@ -36,10 +36,17 @@ if (userConversions.length !== 3)
 for (const conversion of userConversions) {
 	if (conversion.targetCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 		|| conversion.standardKeyKind !== null
-		|| conversion.runtimeCapabilities.length !== 0
+		|| conversion.runtimeCapabilities.join(',') !== 'haxe-type-reflection'
+		|| conversion.runtimeUseOccurrences?.length !== 1
+		|| conversion.runtimeUseOccurrences[0].role !== 'type-marker'
+		|| conversion.runtimeUseOccurrences[0].exactSymbol !== 'HxType.class_'
 		|| conversion.methods.length !== Object.keys(expectedMethods).length) {
 		throw new Error(`user conversion ${conversion.id} does not preserve the checked interface surface`)
 	}
+	const requirementIds = conversion.runtimeCapabilities.map(capability => `${conversion.id}:runtime:${capability}`)
+	const actualIds = report.runtimeRequirements.filter(requirement => requirement.decisionId === conversion.id).map(requirement => requirement.id)
+	if (requirementIds.join(',') !== actualIds.join(','))
+		throw new Error(`user conversion ${conversion.id} does not own its exact runtime requirements`)
 	for (const method of conversion.methods) {
 		const expected = expectedMethods[method.name]
 		if (!expected
@@ -175,6 +182,9 @@ switch (mutation) {
 		conversion.methods.find(method => method.name === 'set').argumentSemanticTypeIds[0] = 'Int'
 		break
 	}
+	case 'wrong-source-kind':
+		report.iMapInterfaceConversions[0].sourceKind = 'unowned-map-source'
+		break
 	case 'missing-retained-method':
 		report.iMapInterfaceConversions[0].methods.pop()
 		break
@@ -183,6 +193,28 @@ switch (mutation) {
 		break
 	case 'wrong-runtime-owner':
 		report.runtimeRequirements.find(item => item.id.endsWith(':runtime:haxe-map')).rootModules = ['HxIterator']
+		break
+	case 'wrong-runtime-use-owner':
+		report.iMapInterfaceConversions[0].runtimeUseOccurrences[0].ownerId = 'imap-interface-conversion:other'
+		break
+	case 'wrong-runtime-use-symbol':
+		report.iMapInterfaceConversions[0].runtimeUseOccurrences[0].exactSymbol = 'HxType.enum_'
+		break
+	case 'duplicate-runtime-use-order': {
+		const conversion = report.iMapInterfaceConversions.find(item => item.runtimeUseOccurrences.length > 1)
+		if (!conversion)
+			throw new Error('fixture has no multi-use IMap conversion to reorder')
+		conversion.runtimeUseOccurrences[1].order = 0
+		break
+	}
+	case 'duplicate-runtime-use':
+		report.iMapInterfaceConversions[0].runtimeUseOccurrences.push({...report.iMapInterfaceConversions[0].runtimeUseOccurrences[0]})
+		break
+	case 'stale-runtime-use-plan':
+		report.iMapInterfaceConversions[0].runtimeUseOccurrences[0].planRevision = `sha256:${'0'.repeat(64)}`
+		break
+	case 'wrong-runtime-use-profile':
+		report.iMapInterfaceConversions[0].runtimeUseOccurrences[0].profileEligibility = ['portable']
 		break
 	default:
 		throw new Error(`unknown mutation ${mutation}`)
@@ -210,8 +242,15 @@ expect_inspection_rejection missing-conversion
 expect_inspection_rejection wrong-receiver-carrier
 expect_inspection_rejection wrong-value-type
 expect_inspection_rejection wrong-key-type
+expect_inspection_rejection wrong-source-kind
 expect_inspection_rejection missing-retained-method
 expect_inspection_rejection stale-call
 expect_inspection_rejection wrong-runtime-owner
+expect_inspection_rejection wrong-runtime-use-owner
+expect_inspection_rejection wrong-runtime-use-symbol
+expect_inspection_rejection duplicate-runtime-use-order
+expect_inspection_rejection duplicate-runtime-use
+expect_inspection_rejection stale-runtime-use-plan
+expect_inspection_rejection wrong-runtime-use-profile
 
 echo "IMAP_USER_IMPLEMENTATION_BOUNDARY:PASS"

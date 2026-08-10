@@ -327,6 +327,9 @@ class OcamlIMapInterfacePlan {
 				method.resultSemanticTypeId
 			].join(":")).join(","),
 			decision.runtimeCapabilities.join(","),
+			decision.runtimeUseOccurrences.map(use ->
+				'${use.id}:${use.planRevision}:${use.ownerId}:${use.requirementId}:${use.exactSymbol}:${use.role}:${use.order}')
+				.join(","),
 			decision.proofId,
 			decision.functionId,
 			decision.programRevision,
@@ -407,6 +410,23 @@ class OcamlIMapInterfacePlan {
 			valueStringifier: decision.valueStringifier,
 			methods: decision.methods.map(copyMethod),
 			runtimeCapabilities: decision.runtimeCapabilities.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -1106,8 +1126,11 @@ class OcamlIMapInterfacePlanner {
 		final sourceCarrier = context.ocamlModuleNameForModuleId(sourceClass.module)
 			+ "."
 			+ context.scopedInstanceTypeName(sourceClass.module, sourceClass.name);
+		final methodDecisions = methods.map(method -> method.decision);
 		final decision = conversionDecision(value, sourceType, role, roleIdentity, OcamlIMapInterfaceSourceKind.UserImplementation, sourceClass,
-			sourceCarrier, keyType, valueType, null, methods.map(method -> method.decision), []);
+			sourceCarrier, keyType, valueType, null, methodDecisions,
+			OcamlIMapInterfaceContract.adapterRuntimeCapabilities(OcamlIMapInterfaceSourceKind.UserImplementation, semanticTypeId(keyType),
+				semanticTypeId(valueType), methodDecisions));
 		return {
 			decision: decision,
 			keyType: keyType,
@@ -1138,7 +1161,7 @@ class OcamlIMapInterfacePlanner {
 			keySemanticTypeId,
 			valueSemanticTypeId
 		].join("|");
-		return {
+		final base:OcamlIMapInterfaceConversionDecision = {
 			id: "imap-interface-conversion:" + Sha256.encode(fingerprint).substr(0, 24),
 			source: source,
 			role: role,
@@ -1155,12 +1178,38 @@ class OcamlIMapInterfacePlanner {
 			valueStringifier: standardKeyKind == null ? null : OcamlStandardIMapCallContract.stringifierForSemanticTypeId(valueSemanticTypeId),
 			methods: methods,
 			runtimeCapabilities: runtimeCapabilities,
+			runtimeUseOccurrences: [],
 			proofId: OcamlIMapInterfacePlan.CONVERSION_PROOF_ID,
 			proofClaim: OcamlIMapInterfacePlan.CONVERSION_PROOF_CLAIM,
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,
 			pipelineRevision: binding.pipelineRevision
+		};
+		return {
+			id: base.id,
+			source: base.source,
+			role: base.role,
+			roleIdentity: base.roleIdentity,
+			sourceKind: base.sourceKind,
+			sourceSemanticTypeId: base.sourceSemanticTypeId,
+			sourceCarrierTypeId: base.sourceCarrierTypeId,
+			targetSemanticTypeId: base.targetSemanticTypeId,
+			targetCarrierTypeId: base.targetCarrierTypeId,
+			keySemanticTypeId: base.keySemanticTypeId,
+			valueSemanticTypeId: base.valueSemanticTypeId,
+			standardKeyKind: base.standardKeyKind,
+			keyStringifier: base.keyStringifier,
+			valueStringifier: base.valueStringifier,
+			methods: base.methods,
+			runtimeCapabilities: base.runtimeCapabilities,
+			runtimeUseOccurrences: OcamlIMapInterfaceContract.runtimeUseOccurrencesFor(base),
+			proofId: base.proofId,
+			proofClaim: base.proofClaim,
+			functionId: base.functionId,
+			programRevision: base.programRevision,
+			bodyRevision: base.bodyRevision,
+			pipelineRevision: base.pipelineRevision
 		};
 	}
 

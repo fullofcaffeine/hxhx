@@ -1634,7 +1634,21 @@ class OcamlBuilder {
 	/** Materializes one concrete-to-interface conversion selected from the final typed body. */
 	function buildPlannedIMapInterfaceConversion(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr):OcamlExpr {
 		return try {
-			OcamlIMapInterfaceSyntax.buildConversion(materialization, value, iMapInterfaceSyntaxServices());
+			final decision = materialization.decision;
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(binding),
+				OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				ctx.runtimeRequirementsByIds(OcamlIMapInterfacePlan.runtimeRequirementIds(decision)), decision.runtimeUseOccurrences);
+			final syntax = OcamlIMapInterfaceSyntax.buildConversion(materialization, value, iMapInterfaceSyntaxServices(), runtimeAuthority);
+			// The source value and user-method bodies can contain separately planned
+			// work. Check only the private names inserted by this adapter conversion.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ESeq(syntax.runtimeReferences));
+			syntax.expression;
 		} catch (error:Dynamic) {
 			callPlanInvariant(Std.string(error), value.pos);
 		}
