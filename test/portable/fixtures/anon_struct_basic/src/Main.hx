@@ -4,6 +4,11 @@ private typedef BasicAnon = {
 	var flag:Bool;
 }
 
+private typedef MatchSpan = {
+	var pos:Int;
+	var len:Int;
+}
+
 class Main {
 	static var events:Array<String> = [];
 
@@ -38,6 +43,11 @@ class Main {
 		return value;
 	}
 
+	/** Returns a typed object through a call, matching Regex.matchedPos(). */
+	static function matchSpan():MatchSpan {
+		return {pos: 1, len: 1};
+	}
+
 	static function main() {
 		#if anon_overflow_probe
 		var overflow = {value: 2147483647};
@@ -67,5 +77,14 @@ class Main {
 
 		var f = {inc: function(x:Int) return x + 1};
 		println(Std.string(f.inc(1)));
+
+		// This is the small form used by haxe.Template: a typed List keeps the
+		// object representation, while the field value performs separate compiler
+		// work. The outer literal must validate only the helpers it inserts itself.
+		var tokens = new List<{p:String, s:Bool}>();
+		var data = "abc";
+		var span = matchSpan();
+		tokens.add({p: data.substr(0, span.pos), s: true});
+		println("template-shape:" + tokens.length);
 	}
 }

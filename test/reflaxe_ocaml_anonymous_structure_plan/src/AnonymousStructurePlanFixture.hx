@@ -5,7 +5,9 @@ import haxe.macro.Expr;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
+import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax.OcamlAnonymousStructureMaterialization;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureFieldOperator;
@@ -107,6 +109,7 @@ class AnonymousStructurePlanFixture {
 
 		requireWriteSyntaxOrder(admittedBody, first, registry);
 		requireCompoundWriteSyntaxOrder(admittedBody, first, registry);
+		requireLiteralRuntimeSubtreeIsolation(admittedBody, first, registry);
 		requireBoolReadRuntimeUses(registry);
 		requireUnowned("parameterOnly", 0, 0, registry);
 		requireUnowned("reassigned", 1, 4, registry);
@@ -174,6 +177,9 @@ class AnonymousStructurePlanFixture {
 		final wrongRuntimeSymbol = clone(writes[0]);
 		Reflect.setField(wrongRuntimeSymbol.runtimeUseOccurrences[0], "exactSymbol", "HxAnon.get");
 		expectFailure("wrong write runtime symbol", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [wrongRuntimeSymbol]));
+		final wrongRuntimeOwner = clone(writes[0]);
+		Reflect.setField(wrongRuntimeOwner.runtimeUseOccurrences[0], "ownerId", "anonymous-operation:wrong-owner");
+		expectFailure("wrong write runtime owner", "wrong-runtime-use", () -> new OcamlAnonymousStructurePlan(structures, [wrongRuntimeOwner]));
 		final reorderedRuntimeUses = clone(compoundWrites[0]);
 		final firstRuntimeUse = reorderedRuntimeUses.runtimeUseOccurrences[0];
 		reorderedRuntimeUses.runtimeUseOccurrences[0] = reorderedRuntimeUses.runtimeUseOccurrences[1];
@@ -198,6 +204,112 @@ class AnonymousStructurePlanFixture {
 
 		trace("REFLAXE_OCAML_ANONYMOUS_STRUCTURE_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	/**
+		Checks that one literal initializer owns only the helpers it inserts.
+
+		The fake field value contains a plain `HxAnon.get`, representing nested
+		compiler work that is checked by another migration boundary. The generated
+		expression must retain that child, while the initializer's exact helper call
+		contains only its own `HxAnon.set` and optional Boolean boxing helper.
+		Missing, duplicated, or reordered outer helpers still fail.
+	**/
+	static function requireLiteralRuntimeSubtreeIsolation(body:TypedExpr, plan:OcamlAnonymousStructurePlan, registry:OcamlRepresentationRegistry):Void {
+		var literal:Null<TypedExpr> = null;
+		function findLiteral(expression:TypedExpr):Void {
+			if (literal == null && OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(expression))
+				literal = expression;
+			TypedExprTools.iter(expression, findLiteral);
+		}
+		findLiteral(body);
+		final typedLiteral = literal;
+		if (typedLiteral == null)
+			throw "the admitted case should contain one direct anonymous literal";
+		final fields = switch (typedLiteral.expr) {
+			case TObjectDecl(values): values;
+			case _: throw "the admitted anonymous literal changed typed shape";
+		}
+		final literalPlan = plan.requireLiteral(typedLiteral, registry);
+
+		function buildCandidate():{
+			materialization:OcamlAnonymousStructureMaterialization,
+			authorities:Map<String, OcamlRuntimeUseAuthority>
+		} {
+			var suffix = 0;
+			final authorities:Map<String, OcamlRuntimeUseAuthority> = [];
+			final materialization = OcamlAnonymousStructureSyntax.buildLiteral(literalPlan, fields,
+				_ -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
+					OcamlExpr.EIdent("nested-value"),
+					OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CString("field"))
+				]), prefix -> prefix + "_" + suffix++, operation -> {
+					final authority = runtimeAuthorityFor(operation, "portable");
+					authorities.set(operation.id, authority);
+					authority;
+				});
+			return {materialization: materialization, authorities: authorities};
+		}
+
+		function reconcile(candidate:{
+			materialization:OcamlAnonymousStructureMaterialization,
+			authorities:Map<String, OcamlRuntimeUseAuthority>
+		}):Void {
+			for (runtimeOperation in candidate.materialization.runtimeOperations) {
+				final authority = candidate.authorities.get(runtimeOperation.operationId);
+				if (authority == null)
+					throw 'missing test authority for ${runtimeOperation.operationId}';
+				authority.reconcileExpression(runtimeOperation.expression);
+			}
+		}
+
+		function plainAnonymousGetCount(expression:OcamlExpr):Int {
+			var count = 0;
+			OcamlASTTraversal.walkExprPre(expression, current -> switch (current) {
+				case EField(EIdent("HxAnon"), "get"): count++;
+				case _:
+			}, _ -> {}, _ -> {});
+			return count;
+		}
+
+		final valid = buildCandidate();
+		assertTrue(plainAnonymousGetCount(valid.materialization.expression) == fields.length,
+			"the printed literal should retain each independently built field expression");
+		for (runtimeOperation in valid.materialization.runtimeOperations)
+			assertTrue(plainAnonymousGetCount(runtimeOperation.expression) == 0, "an outer initializer's helper call should not claim nested field work");
+		reconcile(valid);
+
+		final missing = buildCandidate();
+		final missingOperation = missing.materialization.runtimeOperations[1];
+		missing.materialization.runtimeOperations[1] = {
+			operationId: missingOperation.operationId,
+			expression: OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CUnit)
+		};
+		expectFailure("missing literal initializer runtime use", "missing runtime use", () -> reconcile(missing));
+
+		final duplicate = buildCandidate();
+		final duplicateOperation = duplicate.materialization.runtimeOperations[1];
+		duplicate.materialization.runtimeOperations[1] = {
+			operationId: duplicateOperation.operationId,
+			expression: OcamlExpr.ESeq([duplicateOperation.expression, duplicateOperation.expression])
+		};
+		expectFailure("duplicate literal initializer runtime use", "duplicate runtime use", () -> reconcile(duplicate));
+
+		final reordered = buildCandidate();
+		final boolInitializerIndex = Lambda.findIndex(literalPlan.initializers, operation -> operation.storeConversion == "box-bool");
+		if (boolInitializerIndex < 0)
+			throw "the admitted literal should contain one Boolean initializer";
+		final boolIndex = boolInitializerIndex + 1;
+		final boolOperation = reordered.materialization.runtimeOperations[boolIndex];
+		final reversed = switch (boolOperation.expression) {
+			case EApp(storeIdentifier, [container, field, EApp(boxIdentifier, [value])]):
+				OcamlExpr.ESeq([
+					OcamlExpr.EApp(boxIdentifier, [value]),
+					OcamlExpr.EApp(storeIdentifier, [container, field, value])
+				]);
+			case _: throw "the Boolean initializer should expose one store containing one box helper";
+		}
+		reordered.materialization.runtimeOperations[boolIndex] = {operationId: boolOperation.operationId, expression: reversed};
+		expectFailure("reordered literal initializer runtime uses", "runtime use order", () -> reconcile(reordered));
 	}
 
 	/** Proves the outer Bool unbox and nested field lookup occur in target-tree order. */

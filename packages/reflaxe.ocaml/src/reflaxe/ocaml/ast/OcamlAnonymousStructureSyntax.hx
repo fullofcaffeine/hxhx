@@ -11,13 +11,19 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructur
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructureLiteralPlan;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
-/** One operation-owned subtree whose private identifiers must be reconciled. */
+/**
+	One operation-owned helper call whose private identifiers must be checked.
+
+	The same expression value is also present in the generated OCaml tree. A
+	nested source value is evaluated into a local first, so helpers inside that
+	value remain outside this operation-owned call.
+**/
 typedef OcamlAnonymousStructureRuntimeOperation = {
 	final operationId:String;
 	final expression:OcamlExpr;
 }
 
-/** The generated expression and the private-runtime subtrees inserted into it. */
+/** The generated expression and the exact helper calls placed inside it. */
 typedef OcamlAnonymousStructureMaterialization = {
 	final expression:OcamlExpr;
 	final runtimeOperations:Array<OcamlAnonymousStructureRuntimeOperation>;
@@ -65,14 +71,17 @@ class OcamlAnonymousStructureSyntax {
 				throw 'reflaxe.ocaml [ocaml-anonymous:literal-syntax-order]: source field "${fields[index].name}" does not match initializer ${operation.id} at order $index';
 			}
 			final runtimeAuthority = runtimeAuthorityFor(operation);
-			final stored = storeValue(operation, buildExpression(fields[index].expr), runtimeAuthority);
-			final call = OcamlExpr.EApp(runtimeIdentifier(operation, runtimeAuthority, "initialize-field",
-				operation.runtimeModule + "." + operation.runtimeOperation), [
-					OcamlExpr.EIdent(containerName),
-					OcamlExpr.EConst(OcamlConst.CString(fields[index].name)),
-					stored
-				]);
-			steps.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [call]));
+			final fieldValueName = freshName("anonymous_field_value");
+			final fieldValue = buildExpression(fields[index].expr);
+			final stored = storeValue(operation, OcamlExpr.EIdent(fieldValueName), runtimeAuthority);
+			final storeIdentifier = runtimeIdentifier(operation, runtimeAuthority, "initialize-field",
+				operation.runtimeModule + "." + operation.runtimeOperation);
+			final call = OcamlExpr.EApp(storeIdentifier, [
+				OcamlExpr.EIdent(containerName),
+				OcamlExpr.EConst(OcamlConst.CString(fields[index].name)),
+				stored
+			]);
+			steps.push(OcamlExpr.ELet(fieldValueName, fieldValue, OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [call]), false));
 			runtimeOperations.push({operationId: operation.id, expression: call});
 		}
 		steps.push(OcamlExpr.EIdent(containerName));

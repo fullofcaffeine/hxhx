@@ -197,13 +197,14 @@ if (runtimeReport.authorityStatus !== 'partial'
 }
 
 if (!/let __anonymous_value_[0-9]+ = HxAnon\.create \(\)/.test(source)
-	|| !/HxRuntime\.box_bool \(let __call_arg_0_[0-9]+ = "field-flag"/.test(source)
+	|| !/let __anonymous_field_value_[0-9]+ = let __call_arg_0_[0-9]+ = "field-flag" in let __call_arg_1_[0-9]+ = false in markedBool __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in ignore \(HxAnon\.set __anonymous_value_[0-9]+ "flag" \(HxRuntime\.box_bool __anonymous_field_value_[0-9]+\)\)/.test(source)
 	|| !/let __anonymous_receiver_[0-9]+ = o in let __anonymous_old_field_value_[0-9]+ = Obj\.obj \(HxAnon\.get __anonymous_receiver_[0-9]+ "a"\) in let __anonymous_field_value_[0-9]+ =/.test(source)
 	|| !/let __anonymous_new_field_value_[0-9]+ = HxInt\.add __anonymous_old_field_value_[0-9]+ __anonymous_field_value_[0-9]+/.test(source)
 	|| !/HxAnon\.set __anonymous_receiver_[0-9]+ "a" \(Obj\.repr __anonymous_new_field_value_[0-9]+\)/.test(source)
 	|| !/let __anonymous_receiver_[0-9]+ = o in let __anonymous_field_value_[0-9]+ = true/.test(source)
-	|| !/HxRuntime\.box_bool __anonymous_field_value_[0-9]+/.test(source)) {
-	fail('generated OCaml did not mechanically consume the planned allocation, Bool carrier, or single-evaluation Int += schedule')
+	|| !/HxRuntime\.box_bool __anonymous_field_value_[0-9]+/.test(source)
+	|| !/let __anonymous_field_value_[0-9]+ = HxString\.substr data 0 \(Obj\.obj \(HxAnon\.get span "pos"\)\) in ignore \(HxAnon\.set __anonymous_value_[0-9]+ "p" \(Obj\.repr __anonymous_field_value_[0-9]+\)\)/.test(source)) {
+	fail('generated OCaml did not mechanically consume the planned allocation, isolated literal field value, Bool carrier, or single-evaluation Int += schedule')
 }
 NODE
 

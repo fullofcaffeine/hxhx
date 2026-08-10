@@ -345,11 +345,13 @@ class OcamlBuilder {
 	}
 
 	/**
-		Checks every private-runtime subtree produced for anonymous-object syntax.
+		Checks each anonymous operation's own private-runtime helper calls.
 
 		A literal has separate create and field-initializer operations. Keeping one
 		authority per operation prevents an initializer from consuming another
-		field's permission while still returning one complete Haxe expression.
+		field's permission while still returning one complete Haxe expression. A
+		field value is evaluated before the initializer's helper call, so the exact
+		call checked here does not include compiler work owned by that field value.
 	**/
 	function reconcileAnonymousMaterialization(materialization:OcamlAnonymousStructureMaterialization, authorities:Map<String, OcamlRuntimeUseAuthority>,
 			position:Position):OcamlExpr {
