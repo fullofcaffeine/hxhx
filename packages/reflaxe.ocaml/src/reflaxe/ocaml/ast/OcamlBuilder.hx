@@ -4272,12 +4272,6 @@ class OcamlBuilder {
 														case "toString" if (args.length == 0):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "toString"),
 																[buildExpr(objExpr), buildArrayJoinStringifier(objExpr, e.pos)]);
-														case "map":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "map"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "filter":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "filter"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case _:
 															#if macro
 															guardrailError("reflaxe.ocaml (M6): unsupported Array method '" + cf.name

@@ -91,6 +91,10 @@ class Main {
 		Sys.println("float=" + floatValue);
 		final floatPostfixResult = floatValue++;
 		Sys.println("float_postfix=" + floatPostfixResult + " final=" + floatValue);
+
+		final mapped = [1, 2, 3].map(value -> value + 0.5);
+		final filtered = [1, 2, 3, 4].filter(value -> value % 2 == 0);
+		Sys.println("mapped=" + mapped.join(",") + " filtered=" + filtered.join(","));
 	}
 }
 

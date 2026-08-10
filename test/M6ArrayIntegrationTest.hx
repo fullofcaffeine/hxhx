@@ -88,6 +88,8 @@ class M6ArrayIntegrationTest {
 		assertContains(content, "HxArray.lastIndexOf", "lastIndexOf");
 		assertContains(content, "HxArray.reverse", "reverse");
 		assertContains(content, "HxArray.sort", "sort");
+		assertContains(content, "HxArray.map", "map");
+		assertContains(content, "HxArray.filter", "filter");
 		assertContains(content, "HxArray.join", "join");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.

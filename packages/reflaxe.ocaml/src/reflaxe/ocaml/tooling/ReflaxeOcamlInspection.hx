@@ -90,7 +90,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v93";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v94";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -441,8 +441,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 78) {
-						throw 'Unsupported lowering report schema $version; expected 78.';
+					if (version != 79) {
+						throw 'Unsupported lowering report schema $version; expected 79.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1595,7 +1595,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v27")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v28")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1718,9 +1718,12 @@ class ReflaxeOcamlInspection {
 			case "lastIndexOf" | "lastIndexOfDefault": "lastIndexOf";
 			case "slice" | "sliceDefault": "slice";
 			case "sort": "sort";
+			case "map": "map";
+			case "filter": "filter";
 			case _: throw 'Standard Array call "${call.id}" has unsupported operation "${target.operation}".';
 		}
 		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
+		final expectedResultElement = target.operation == "map" ? target.resultElementSemanticTypeId : null;
 		final expectedParameters = switch (target.operation) {
 			case "concat": [expectedArrayType];
 			case "push" | "unshift" | "remove" | "contains": [target.elementSemanticTypeId];
@@ -1732,6 +1735,8 @@ class ReflaxeOcamlInspection {
 			case "slice": ["Int", "Null<Int>"];
 			case "sliceDefault": ["Int"];
 			case "sort": ['(${target.elementSemanticTypeId},${target.elementSemanticTypeId})->Int'];
+			case "map": ['(${target.elementSemanticTypeId})->$expectedResultElement'];
+			case "filter": ['(${target.elementSemanticTypeId})->Bool'];
 			case "copy" | "pop" | "shift" | "reverse": [];
 			case _: [];
 		};
@@ -1746,6 +1751,8 @@ class ReflaxeOcamlInspection {
 			case "indexOf" | "indexOfDefault" | "lastIndexOf" | "lastIndexOfDefault": "Int";
 			case "slice" | "sliceDefault": expectedArrayType;
 			case "sort": "Void";
+			case "map": 'Array<$expectedResultElement>';
+			case "filter": expectedArrayType;
 			case _: "";
 		};
 		final expectedResultKind = target.operation == "unshift"
@@ -1768,7 +1775,11 @@ class ReflaxeOcamlInspection {
 				|| target.argumentSemanticTypeIds[0] == "Int"
 				&& (target.argumentSemanticTypeIds[1] == "Int" || target.argumentSemanticTypeIds[1] == "Null<Int>"))
 			&& (target.operation != "sliceDefault" || target.argumentSemanticTypeIds[0] == "Int")
-			&& (target.operation != "sort" || target.argumentSemanticTypeIds[0] == expectedParameters[0]);
+			&& (target.operation != "sort" || target.argumentSemanticTypeIds[0] == expectedParameters[0])
+			&& (target.operation != "map" || target.argumentSemanticTypeIds[0] == expectedParameters[0])
+			&& (target.operation != "filter" || target.argumentSemanticTypeIds[0] == expectedParameters[0]);
+		final resultElementMatches = target.operation == "map" ? target.resultElementSemanticTypeId != null
+			&& target.resultElementSemanticTypeId.length > 0 : target.resultElementSemanticTypeId == null;
 		final expectedRuntimeFunction = switch (target.operation) {
 			case "indexOfDefault": "indexOf_default";
 			case "lastIndexOfDefault": "lastIndexOf_default";
@@ -1786,6 +1797,7 @@ class ReflaxeOcamlInspection {
 			|| call.standardIMapTarget != null
 			|| call.structuralIteratorTarget != null
 			|| target.receiverSemanticTypeId != expectedArrayType
+			|| !resultElementMatches
 			|| target.parameterSemanticTypeIds.join("\n") != expectedParameters.join("\n")
 			|| !sourceArgumentsMatch
 			|| target.argumentCompatibilityProofIds.length != expectedParameters.length
@@ -1796,7 +1808,7 @@ class ReflaxeOcamlInspection {
 			|| target.runtimeFunction != expectedRuntimeFunction
 			|| target.runtimeTakesUnitArgument != expectedRuntimeTakesUnit
 			|| target.runtimeCapabilities.join(",") != "haxe-array"
-			|| target.proofId != "standard-array-typed-target-call-v7"
+			|| target.proofId != "standard-array-typed-target-call-v8"
 			|| call.proofId != target.proofId
 			|| call.proofClaim != target.proofClaim
 			|| call.profileEligibility.join(",") != "metal,portable") {
@@ -2218,6 +2230,7 @@ class ReflaxeOcamlInspection {
 			parameterSemanticTypeIds: requiredStringArray(target, "parameterSemanticTypeIds"),
 			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
 			argumentCompatibilityProofIds: requiredStringArray(target, "argumentCompatibilityProofIds"),
+			resultElementSemanticTypeId: requiredNullableString(target, "resultElementSemanticTypeId"),
 			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
 			resultKind: requiredString(target, "resultKind"),
 			runtimeModule: requiredString(target, "runtimeModule"),
@@ -4311,6 +4324,14 @@ class ReflaxeOcamlInspection {
 			throw 'Expected optional string field "$name".';
 		}
 		return cast result;
+	}
+
+	/** Reads a schema field that must be present but may explicitly contain null. */
+	static function requiredNullableString(value:Dynamic, name:String):Null<String> {
+		if (!Reflect.hasField(value, name)) {
+			throw 'Expected nullable string field "$name".';
+		}
+		return optionalString(value, name);
 	}
 
 	static function optionalInt(value:Dynamic, name:String):Null<Int> {

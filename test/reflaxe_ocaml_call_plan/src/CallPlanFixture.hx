@@ -1033,6 +1033,8 @@ class CallPlanFixture {
 			case Slice: ["Int", "Null<Int>"];
 			case SliceDefault: ["Int"];
 			case Sort: ["(Int,Int)->Int"];
+			case Map: ["(Int)->String"];
+			case Filter: ["(Int)->Bool"];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
@@ -1047,6 +1049,8 @@ class CallPlanFixture {
 			case IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: "Int";
 			case Slice | SliceDefault: "Array<Int>";
 			case Sort: "Void";
+			case Map: "Array<String>";
+			case Filter: "Array<Int>";
 			case _: throw 'Unsupported standard Array fixture operation "$operation".';
 		};
 		return {
@@ -1056,6 +1060,7 @@ class CallPlanFixture {
 			parameterSemanticTypeIds: argumentSemanticTypeIds.copy(),
 			argumentSemanticTypeIds: argumentSemanticTypeIds,
 			argumentCompatibilityProofIds: argumentSemanticTypeIds.map(_ -> OcamlStandardArrayCallContract.ARGUMENT_COMPATIBILITY_PROOF_ID),
+			resultElementSemanticTypeId: operation == OcamlStandardArrayOperation.Map ? "String" : null,
 			resultSemanticTypeId: resultSemanticTypeId,
 			resultKind: OcamlStandardArrayCallContract.resultKind(operation),
 			runtimeModule: "HxArray",
@@ -1689,6 +1694,8 @@ class CallPlanFixture {
 		final selectedArraySlice = standardArrayCall(caller, OcamlStandardArrayOperation.Slice);
 		final selectedArraySliceDefault = standardArrayCall(caller, OcamlStandardArrayOperation.SliceDefault);
 		final selectedArraySort = standardArrayCall(caller, OcamlStandardArrayOperation.Sort);
+		final selectedArrayMap = standardArrayCall(caller, OcamlStandardArrayOperation.Map);
+		final selectedArrayFilter = standardArrayCall(caller, OcamlStandardArrayOperation.Filter);
 		OcamlCallPlan.requireCall(selectedArrayConcat);
 		OcamlCallPlan.requireCall(selectedArrayCopy);
 		OcamlCallPlan.requireCall(selectedArrayPush);
@@ -1708,6 +1715,8 @@ class CallPlanFixture {
 		OcamlCallPlan.requireCall(selectedArraySlice);
 		OcamlCallPlan.requireCall(selectedArraySliceDefault);
 		OcamlCallPlan.requireCall(selectedArraySort);
+		OcamlCallPlan.requireCall(selectedArrayMap);
+		OcamlCallPlan.requireCall(selectedArrayFilter);
 		final standardArrayPlan = new OcamlCallPlan([
 			selectedArrayConcat,
 			selectedArrayCopy,
@@ -1727,7 +1736,9 @@ class CallPlanFixture {
 			selectedArrayLastIndexOfDefault,
 			selectedArraySlice,
 			selectedArraySliceDefault,
-			selectedArraySort
+			selectedArraySort,
+			selectedArrayMap,
+			selectedArrayFilter
 		]);
 		final copiedArrayConcat = standardArrayPlan.decisions().filter(call -> call.id == STANDARD_ARRAY_CONCAT_CALL_ID)[0];
 		if (copiedArrayConcat.standardArrayTarget == null)
@@ -1880,6 +1891,28 @@ class CallPlanFixture {
 			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(sortRuntimeUse).exactSymbol != "HxArray.sort") {
 			Context.error("Array.sort did not seal its comparator, Void result, and exact runtime occurrence.", Context.currentPos());
 		}
+		final copiedArrayMap = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-map-fixture")[0];
+		final mapRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-map-fixture");
+		if (copiedArrayMap.standardArrayTarget.parameterSemanticTypeIds.join(",") != "(Int)->String"
+			|| copiedArrayMap.standardArrayTarget.argumentSemanticTypeIds.join(",") != "(Int)->String"
+			|| copiedArrayMap.standardArrayTarget.resultElementSemanticTypeId != "String"
+			|| copiedArrayMap.standardArrayTarget.resultSemanticTypeId != "Array<String>"
+			|| copiedArrayMap.resultKind != OcamlCallResultKind.Value
+			|| mapRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(mapRuntimeUse).exactSymbol != "HxArray.map") {
+			Context.error("Array.map did not seal its callback, changed result element, Array result, and exact runtime occurrence.", Context.currentPos());
+		}
+		final copiedArrayFilter = standardArrayPlan.decisions().filter(call -> call.id == "call:standard-array-filter-fixture")[0];
+		final filterRuntimeUse = standardArrayPlan.runtimeUsePlanFor("call:standard-array-filter-fixture");
+		if (copiedArrayFilter.standardArrayTarget.parameterSemanticTypeIds.join(",") != "(Int)->Bool"
+			|| copiedArrayFilter.standardArrayTarget.argumentSemanticTypeIds.join(",") != "(Int)->Bool"
+			|| copiedArrayFilter.standardArrayTarget.resultElementSemanticTypeId != null
+			|| copiedArrayFilter.standardArrayTarget.resultSemanticTypeId != "Array<Int>"
+			|| copiedArrayFilter.resultKind != OcamlCallResultKind.Value
+			|| filterRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(filterRuntimeUse).exactSymbol != "HxArray.filter") {
+			Context.error("Array.filter did not seal its Boolean callback, preserved Array result, and exact runtime occurrence.", Context.currentPos());
+		}
 		final wrongArrayRuntime = copyCall(copiedArrayConcat);
 		Reflect.setField(wrongArrayRuntime.standardArrayTarget, "runtimeFunction", "copy");
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntime));
@@ -1933,6 +1966,21 @@ class CallPlanFixture {
 		final wrongArraySortComparator = copyCall(copiedArraySort);
 		Reflect.setField(wrongArraySortComparator.standardArrayTarget, "argumentSemanticTypeIds", ["(Int,Int)->Float"]);
 		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArraySortComparator));
+		final wrongArrayMapCallback = copyCall(copiedArrayMap);
+		Reflect.setField(wrongArrayMapCallback.standardArrayTarget, "argumentSemanticTypeIds", ["(Int)->Bool"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayMapCallback));
+		final wrongArrayMapResultElement = copyCall(copiedArrayMap);
+		Reflect.setField(wrongArrayMapResultElement.standardArrayTarget, "resultElementSemanticTypeId", "Bool");
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayMapResultElement));
+		final missingArrayMapResultElement = copyCall(copiedArrayMap);
+		Reflect.setField(missingArrayMapResultElement.standardArrayTarget, "resultElementSemanticTypeId", null);
+		expectThrows("needs one exact result element type", () -> OcamlCallPlan.requireCall(missingArrayMapResultElement));
+		final wrongArrayFilterCallback = copyCall(copiedArrayFilter);
+		Reflect.setField(wrongArrayFilterCallback.standardArrayTarget, "parameterSemanticTypeIds", ["(Int)->Int"]);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayFilterCallback));
+		final unexpectedArrayFilterResultElement = copyCall(copiedArrayFilter);
+		Reflect.setField(unexpectedArrayFilterResultElement.standardArrayTarget, "resultElementSemanticTypeId", "Int");
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(unexpectedArrayFilterResultElement));
 		final missingArrayReceiver = copyCall(copiedArrayConcat, null, null, null, null, null, copiedArrayConcat.evaluationSchedule.slice(1));
 		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingArrayReceiver));
 		final missingArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);

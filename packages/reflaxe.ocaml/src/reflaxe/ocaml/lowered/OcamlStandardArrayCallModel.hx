@@ -30,6 +30,8 @@ enum abstract OcamlStandardArrayOperation(String) from String to String {
 	final Slice = "slice";
 	final SliceDefault = "sliceDefault";
 	final Sort = "sort";
+	final Map = "map";
+	final Filter = "filter";
 }
 
 /** Whether a standard Array operation returns a Haxe value or only an effect. */
@@ -52,6 +54,7 @@ typedef OcamlStandardArrayCallTarget = {
 	final parameterSemanticTypeIds:Array<String>;
 	final argumentSemanticTypeIds:Array<String>;
 	final argumentCompatibilityProofIds:Array<String>;
+	final resultElementSemanticTypeId:Null<String>;
 	final resultSemanticTypeId:String;
 	final resultKind:OcamlStandardArrayResultKind;
 	final runtimeModule:String;
@@ -64,10 +67,10 @@ typedef OcamlStandardArrayCallTarget = {
 
 /** Selects and validates the admitted direct standard-Array calls. */
 class OcamlStandardArrayCallContract {
-	public static inline final PROOF_ID = "standard-array-typed-target-call-v7";
+	public static inline final PROOF_ID = "standard-array-typed-target-call-v8";
 	public static inline final ARGUMENT_COMPATIBILITY_PROOF_ID = "haxe-typed-array-argument-compatible-v1";
 	public static inline final RUNTIME_CAPABILITY = "haxe-array";
-	public static inline final PROOF_CLAIM = "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. This proof does not admit other Array methods or user-defined classes with the same field names.";
+	public static inline final PROOF_CLAIM = "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.";
 
 	#if macro
 	/** Returns whether a class is the root Haxe `Array<T>` declaration. */
@@ -96,14 +99,26 @@ class OcamlStandardArrayCallContract {
 		final expectedArrayType = 'Array<$elementSemanticTypeId>';
 		final receiverSemanticTypeId = TypeTools.toString(receiver.t);
 		final resultSemanticTypeId = TypeTools.toString(resultType);
+		final resultElementSemanticTypeId = operation == OcamlStandardArrayOperation.Map ? arrayElementSemanticTypeId(resultType) : null;
+		if (operation == OcamlStandardArrayOperation.Map && resultElementSemanticTypeId == null)
+			return null;
 		if (operation == OcamlStandardArrayOperation.Sort && !sortComparatorMatches(arguments[0].t, elementSemanticTypeId))
 			return null;
-		final argumentSemanticTypeIds = operation == OcamlStandardArrayOperation.Sort ? [sortComparatorSemanticTypeId(elementSemanticTypeId)] : arguments.map(argument ->
-			TypeTools.toString(argument.t));
-		final parameterSemanticTypeIds = expectedParameterSemanticTypeIds(operation, elementSemanticTypeId);
+		if (operation == OcamlStandardArrayOperation.Map
+			&& !unaryCallbackMatches(arguments[0].t, elementSemanticTypeId, resultElementSemanticTypeId))
+			return null;
+		if (operation == OcamlStandardArrayOperation.Filter && !unaryCallbackMatches(arguments[0].t, elementSemanticTypeId, "Bool"))
+			return null;
+		final argumentSemanticTypeIds = switch (operation) {
+			case Sort: [sortComparatorSemanticTypeId(elementSemanticTypeId)];
+			case Map: [unaryCallbackSemanticTypeId(elementSemanticTypeId, resultElementSemanticTypeId)];
+			case Filter: [unaryCallbackSemanticTypeId(elementSemanticTypeId, "Bool")];
+			case _: arguments.map(argument -> TypeTools.toString(argument.t));
+		};
+		final parameterSemanticTypeIds = expectedParameterSemanticTypeIds(operation, elementSemanticTypeId, resultElementSemanticTypeId);
 		if (receiverSemanticTypeId != expectedArrayType
 			|| !sourceArgumentsMatch(operation, argumentSemanticTypeIds, parameterSemanticTypeIds)
-			|| resultSemanticTypeId != expectedResultSemanticTypeId(operation, elementSemanticTypeId)) {
+			|| resultSemanticTypeId != expectedResultSemanticTypeId(operation, elementSemanticTypeId, resultElementSemanticTypeId)) {
 			return null;
 		}
 		final target:OcamlStandardArrayCallTarget = {
@@ -113,6 +128,7 @@ class OcamlStandardArrayCallContract {
 			parameterSemanticTypeIds: parameterSemanticTypeIds,
 			argumentSemanticTypeIds: argumentSemanticTypeIds,
 			argumentCompatibilityProofIds: arguments.map(_ -> ARGUMENT_COMPATIBILITY_PROOF_ID),
+			resultElementSemanticTypeId: resultElementSemanticTypeId,
 			resultSemanticTypeId: resultSemanticTypeId,
 			resultKind: resultKind(operation),
 			runtimeModule: "HxArray",
@@ -139,14 +155,17 @@ class OcamlStandardArrayCallContract {
 		if (target == null)
 			throw "reflaxe.ocaml [ocaml-array-call:invalid-plan]: standard Array target must not be null";
 		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
-		final expectedParameters = expectedParameterSemanticTypeIds(target.operation, target.elementSemanticTypeId);
+		final expectedMappedElement = target.operation == OcamlStandardArrayOperation.Map ? target.resultElementSemanticTypeId : null;
+		final expectedParameters = expectedParameterSemanticTypeIds(target.operation, target.elementSemanticTypeId, expectedMappedElement);
 		if (target.elementSemanticTypeId.length == 0
+			|| (target.operation == OcamlStandardArrayOperation.Map ? target.resultElementSemanticTypeId == null
+				|| target.resultElementSemanticTypeId.length == 0 : target.resultElementSemanticTypeId != null)
 			|| target.receiverSemanticTypeId != expectedArrayType
 			|| target.parameterSemanticTypeIds.join("\n") != expectedParameters.join("\n")
 			|| !sourceArgumentsMatch(target.operation, target.argumentSemanticTypeIds, expectedParameters)
 			|| target.argumentCompatibilityProofIds.length != expectedParameters.length
 			|| Lambda.exists(target.argumentCompatibilityProofIds, proofId -> proofId != ARGUMENT_COMPATIBILITY_PROOF_ID)
-			|| target.resultSemanticTypeId != expectedResultSemanticTypeId(target.operation, target.elementSemanticTypeId)
+			|| target.resultSemanticTypeId != expectedResultSemanticTypeId(target.operation, target.elementSemanticTypeId, expectedMappedElement)
 			|| target.resultKind != resultKind(target.operation)
 			|| target.runtimeModule != "HxArray"
 			|| target.runtimeFunction != runtimeFunction(target.operation)
@@ -178,6 +197,8 @@ class OcamlStandardArrayCallContract {
 			case LastIndexOf | LastIndexOfDefault: "lastIndexOf";
 			case Slice | SliceDefault: "slice";
 			case Sort: "sort";
+			case Map: "map";
+			case Filter: "filter";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -187,7 +208,7 @@ class OcamlStandardArrayCallContract {
 		return switch (operation) {
 			case Unshift | Reverse | Insert | Resize | Sort: OcamlStandardArrayResultKind.EffectOnlyVoid;
 			case Concat | Copy | Push | Pop | Shift | Remove | Contains | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault | Slice |
-				SliceDefault:
+				SliceDefault | Map | Filter:
 				OcamlStandardArrayResultKind.Value;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -208,7 +229,7 @@ class OcamlStandardArrayCallContract {
 		return switch (operation) {
 			case Pop | Shift | Reverse: true;
 			case Concat | Copy | Push | Unshift | Insert | Remove | Contains | Resize | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault |
-				Slice | SliceDefault | Sort:
+				Slice | SliceDefault | Sort | Map | Filter:
 				false;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -232,6 +253,7 @@ class OcamlStandardArrayCallContract {
 			target.parameterSemanticTypeIds.join(","),
 			target.argumentSemanticTypeIds.join(","),
 			target.argumentCompatibilityProofIds.join(","),
+			target.resultElementSemanticTypeId ?? "no-result-element",
 			target.resultSemanticTypeId,
 			(target.resultKind : String),
 			target.runtimeModule,
@@ -252,6 +274,7 @@ class OcamlStandardArrayCallContract {
 			parameterSemanticTypeIds: target.parameterSemanticTypeIds.copy(),
 			argumentSemanticTypeIds: target.argumentSemanticTypeIds.copy(),
 			argumentCompatibilityProofIds: target.argumentCompatibilityProofIds.copy(),
+			resultElementSemanticTypeId: target.resultElementSemanticTypeId,
 			resultSemanticTypeId: target.resultSemanticTypeId,
 			resultKind: target.resultKind,
 			runtimeModule: target.runtimeModule,
@@ -284,11 +307,14 @@ class OcamlStandardArrayCallContract {
 			case ["slice", 1]: OcamlStandardArrayOperation.SliceDefault;
 			case ["slice", 2]: OcamlStandardArrayOperation.Slice;
 			case ["sort", 1]: OcamlStandardArrayOperation.Sort;
+			case ["map", 1]: OcamlStandardArrayOperation.Map;
+			case ["filter", 1]: OcamlStandardArrayOperation.Filter;
 			case _: null;
 		}
 	}
 
-	static function expectedParameterSemanticTypeIds(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String):Array<String> {
+	static function expectedParameterSemanticTypeIds(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String,
+			resultElementSemanticTypeId:Null<String>):Array<String> {
 		return switch (operation) {
 			case Concat: ['Array<$elementSemanticTypeId>'];
 			case Push | Unshift | Remove | Contains: [elementSemanticTypeId];
@@ -300,6 +326,11 @@ class OcamlStandardArrayCallContract {
 			case Slice: ["Int", "Null<Int>"];
 			case SliceDefault: ["Int"];
 			case Sort: [sortComparatorSemanticTypeId(elementSemanticTypeId)];
+			case Map:
+				if (resultElementSemanticTypeId == null)
+					throw "reflaxe.ocaml [ocaml-array-call:invalid-plan]: Array.map needs one exact result element type";
+				[unaryCallbackSemanticTypeId(elementSemanticTypeId, resultElementSemanticTypeId)];
+			case Filter: [unaryCallbackSemanticTypeId(elementSemanticTypeId, "Bool")];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -324,14 +355,15 @@ class OcamlStandardArrayCallContract {
 			case IndexOf | LastIndexOf: sourceArguments[1] == "Int" || sourceArguments[1] == "Null<Int>";
 			case Slice: sourceArguments[0] == "Int" && (sourceArguments[1] == "Int" || sourceArguments[1] == "Null<Int>");
 			case SliceDefault: sourceArguments[0] == "Int";
-			case Sort: sourceArguments[0] == parameters[0];
+			case Sort | Map | Filter: sourceArguments[0] == parameters[0];
 			case Push | Unshift | Remove | Contains | IndexOfDefault | LastIndexOfDefault: true;
 			case Copy | Pop | Shift | Reverse: true;
 			case _: false;
 		}
 	}
 
-	static function expectedResultSemanticTypeId(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String):String {
+	static function expectedResultSemanticTypeId(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String,
+			resultElementSemanticTypeId:Null<String>):String {
 		return switch (operation) {
 			case Concat | Copy: 'Array<$elementSemanticTypeId>';
 			case Push: "Int";
@@ -343,6 +375,11 @@ class OcamlStandardArrayCallContract {
 			case IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: "Int";
 			case Slice | SliceDefault: 'Array<$elementSemanticTypeId>';
 			case Sort: "Void";
+			case Map:
+				if (resultElementSemanticTypeId == null)
+					throw "reflaxe.ocaml [ocaml-array-call:invalid-plan]: Array.map needs one exact result element type";
+				'Array<$resultElementSemanticTypeId>';
+			case Filter: 'Array<$elementSemanticTypeId>';
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -351,16 +388,37 @@ class OcamlStandardArrayCallContract {
 		return '($elementSemanticTypeId,$elementSemanticTypeId)->Int';
 	}
 
+	static function unaryCallbackSemanticTypeId(inputSemanticTypeId:String, resultSemanticTypeId:String):String {
+		return '($inputSemanticTypeId)->$resultSemanticTypeId';
+	}
+
 	#if macro
 	static function sortComparatorMatches(type:Type, elementSemanticTypeId:String):Bool {
 		return switch (TypeTools.follow(type)) {
 			case TFun(arguments, result):
 				arguments.length == 2
-				&& TypeTools.toString(TypeTools.follow(arguments[0].t)) == elementSemanticTypeId
-				&& TypeTools.toString(TypeTools.follow(arguments[1].t)) == elementSemanticTypeId
-				&& TypeTools.toString(TypeTools.follow(result)) == "Int";
+				&& TypeTools.toString(arguments[0].t) == elementSemanticTypeId
+				&& TypeTools.toString(arguments[1].t) == elementSemanticTypeId
+				&& TypeTools.toString(result) == "Int";
 			case _:
 				false;
+		}
+	}
+
+	static function unaryCallbackMatches(type:Type, inputSemanticTypeId:String, resultSemanticTypeId:String):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TFun(arguments, result): arguments.length == 1 && TypeTools.toString(arguments[0].t) == inputSemanticTypeId && TypeTools.toString(result) == resultSemanticTypeId;
+			case _:
+				false;
+		}
+	}
+
+	static function arrayElementSemanticTypeId(type:Type):Null<String> {
+		return switch (TypeTools.follow(type)) {
+			case TInst(classRef, parameters) if (isArrayClass(classRef.get()) && parameters.length == 1):
+				TypeTools.toString(parameters[0]);
+			case _:
+				null;
 		}
 	}
 	#end

@@ -114,9 +114,12 @@ try {
 		const target = call.standardArrayTarget
 		return call.kind === 'standard-array-method'
 			&& target.runtimeModule === 'HxArray'
+			&& (target.operation === 'map'
+				? typeof target.resultElementSemanticTypeId === 'string' && target.resultElementSemanticTypeId.length > 0
+				: target.resultElementSemanticTypeId === null)
 			&& [
 				'concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice',
-				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default', 'slice', 'slice_default', 'sort'
+				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default', 'slice', 'slice_default', 'sort', 'map', 'filter'
 			].includes(target.runtimeFunction)
 	}))
 	const resizeCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'resize')
@@ -187,6 +190,34 @@ try {
 			&& target.resultSemanticTypeId === 'Void'
 			&& target.resultKind === 'effect-only-void'
 			&& call.resultKind === 'effect-only-void'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const mapCalls = standardArrayCalls.filter(call => call.standardArrayTarget.operation === 'map')
+	assert(mapCalls.length > 0)
+	assert(mapCalls.every(call => {
+		const target = call.standardArrayTarget
+		const callback = `(${target.elementSemanticTypeId})->${target.resultElementSemanticTypeId}`
+		return call.sourceFieldName === 'map'
+			&& target.runtimeFunction === 'map'
+			&& target.parameterSemanticTypeIds.join(',') === callback
+			&& target.argumentSemanticTypeIds.join(',') === callback
+			&& target.resultSemanticTypeId === `Array<${target.resultElementSemanticTypeId}>`
+			&& target.resultKind === 'value'
+			&& call.resultKind === 'value'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const filterCalls = standardArrayCalls.filter(call => call.standardArrayTarget.operation === 'filter')
+	assert(filterCalls.length > 0)
+	assert(filterCalls.every(call => {
+		const target = call.standardArrayTarget
+		const callback = `(${target.elementSemanticTypeId})->Bool`
+		return call.sourceFieldName === 'filter'
+			&& target.runtimeFunction === 'filter'
+			&& target.parameterSemanticTypeIds.join(',') === callback
+			&& target.argumentSemanticTypeIds.join(',') === callback
+			&& target.resultSemanticTypeId === `Array<${target.elementSemanticTypeId}>`
+			&& target.resultKind === 'value'
+			&& call.resultKind === 'value'
 			&& target.runtimeTakesUnitArgument === false
 	}))
 	assert(report.lowering.calls.some(call =>
@@ -571,6 +602,17 @@ try {
 	const corruptStandardArrayReport = JSON.parse(corruptStandardArrayResult.stdout)
 	assert.strictEqual(corruptStandardArrayReport.lowering.status, 'invalid')
 	assert(corruptStandardArrayReport.lowering.message.includes('disagrees with its source declaration, typed target, runtime, or proof'))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const missingArrayResultElementValue = JSON.parse(loweringBytes)
+	const missingArrayResultElement = missingArrayResultElementValue.calls.find(call => call.standardArrayTarget != null)
+	assert(missingArrayResultElement)
+	delete missingArrayResultElement.standardArrayTarget.resultElementSemanticTypeId
+	fs.writeFileSync(loweringPath, JSON.stringify(missingArrayResultElementValue, null, 2) + '\n')
+	const missingArrayResultElementResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(missingArrayResultElementResult.status, 1)
+	const missingArrayResultElementReport = JSON.parse(missingArrayResultElementResult.stdout)
+	assert.strictEqual(missingArrayResultElementReport.lowering.status, 'invalid')
+	assert(missingArrayResultElementReport.lowering.message.includes('Expected nullable string field "resultElementSemanticTypeId"'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const missingUnsafeValue = JSON.parse(loweringBytes)
 	const removedUnsafe = missingUnsafeValue.unsafeOperations.pop()

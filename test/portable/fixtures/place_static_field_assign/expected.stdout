@@ -19,3 +19,4 @@ qualified_postfix_decrement=14 final=13 events=
 qualified_prefix_decrement=12 final=12 events=
 float=2.
 float_postfix=2. final=3.
+mapped=1.5,2.5,3.5 filtered=2,4

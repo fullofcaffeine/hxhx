@@ -16,6 +16,8 @@ class ArrayMain {
 	static var callOrder:Array<String> = [];
 	static var sortReceiverValue:Array<Int> = [];
 	static var sortComparatorCalls = 0;
+	static var mapCallbackCalls = 0;
+	static var filterCallbackCalls = 0;
 
 	static function makeReceiver():Array<Int> {
 		callOrder.push("receiver");
@@ -108,6 +110,29 @@ class ArrayMain {
 		return (left, right) -> {
 			sortComparatorCalls++;
 			left - right;
+		};
+	}
+
+	static function makeCallbackReceiver():Array<Int> {
+		callOrder.push("receiver");
+		return [1, 2, 3];
+	}
+
+	static function makeMapCallback():Int->Float {
+		callOrder.push("callback");
+		return value -> {
+			mapCallbackCalls++;
+			callOrder.push('map:$value');
+			value + 0.5;
+		};
+	}
+
+	static function makeFilterCallback():Int->Bool {
+		callOrder.push("callback");
+		return value -> {
+			filterCallbackCalls++;
+			callOrder.push('filter:$value');
+			value % 2 == 1;
 		};
 	}
 
@@ -396,10 +421,60 @@ class ArrayMain {
 		final mapped = b.map(v -> v * 2);
 		if (mapped.length != 4 || mapped[0] != 2 || mapped[3] != 8)
 			throw "map";
+		callOrder = [];
+		mapCallbackCalls = 0;
+		final mappedFloatsFromInts = makeCallbackReceiver().map(makeMapCallback());
+		if (mappedFloatsFromInts.length != 3
+			|| mappedFloatsFromInts[0] != 1.5
+			|| mappedFloatsFromInts[2] != 3.5
+			|| mapCallbackCalls != 3
+			|| callOrder.join(",") != "receiver,callback,map:1,map:2,map:3")
+			throw "map_type_change_order_or_callback";
 
 		final filtered = b.filter(v -> v % 2 == 0);
 		if (filtered.length != 2 || filtered[0] != 2 || filtered[1] != 4)
 			throw "filter";
+		callOrder = [];
+		filterCallbackCalls = 0;
+		final filteredInts = makeCallbackReceiver().filter(makeFilterCallback());
+		if (filteredInts.join(",") != "1,3"
+			|| filterCallbackCalls != 3
+			|| callOrder.join(",") != "receiver,callback,filter:1,filter:2,filter:3")
+			throw "filter_order_or_callback";
+
+		mapCallbackCalls = 0;
+		filterCallbackCalls = 0;
+		final emptyCallbacks:Array<Int> = [];
+		if (emptyCallbacks.map(value -> {
+			mapCallbackCalls++;
+			value;
+		}).length != 0
+			|| emptyCallbacks.filter(value -> {
+				filterCallbackCalls++;
+				true;
+			}).length != 0
+			|| mapCallbackCalls != 0
+			|| filterCallbackCalls != 0)
+			throw "map_filter_empty_callback";
+
+		final mapFilterSource = [1, 2, 3];
+		mapFilterSource.map(value -> value + 1);
+		mapFilterSource.filter(value -> value > 1);
+		if (mapFilterSource.join(",") != "1,2,3")
+			throw "map_filter_source_mutation";
+
+		final mappedFloats = [1.5, 2.5].map(value -> value + 0.5);
+		if (mappedFloats.length != 2 || mappedFloats[0] != 2.0 || mappedFloats[1] != 3.0)
+			throw "map_float_storage";
+		final filteredStrings = ["a", "bb", "c"].filter(value -> value.length == 1);
+		if (filteredStrings.join(",") != "a,c")
+			throw "filter_string_storage";
+		final mappedNullable:Array<Int> = ([null, 2] : Array<Null<Int>>).map(value -> value == null ? -1 : value);
+		if (mappedNullable.join(",") != "-1,2")
+			throw "map_nullable_storage";
+		final filteredObjects = [new ArrayEqualityBox(1), new ArrayEqualityBox(2)].filter(value -> value.value == 2);
+		if (filteredObjects.length != 1 || filteredObjects[0].value != 2)
+			throw "filter_object_storage";
 
 		final mixed:Array<Dynamic> = [];
 		mixed.push(1);
