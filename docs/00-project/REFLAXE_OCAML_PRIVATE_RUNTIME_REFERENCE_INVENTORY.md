@@ -26,11 +26,11 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 386 legacy entries:
+The current reviewed baseline contains 385 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 356 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 355 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured types | 13 | Direct `TIdent` or `TApp` construction containing a private runtime type. |
 | Structured patterns | 15 | Direct private runtime constructors in OCaml patterns. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |

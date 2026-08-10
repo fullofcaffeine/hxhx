@@ -149,9 +149,10 @@ class OcamlRuntimeUseAuthority {
 		OcamlASTTraversal.walkExprPre(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
 				observeReference(reference, observedIds, counts, errors);
-			case EIdent(name) if (isPlainPrivateReference(name)):
+			case EIdent(name) if (isPlainPrivateReference(name) || isPlannedExactReference(name)):
 				errors.push('plain private runtime reference $name');
-			case EField(EIdent(moduleName), field) if (isPlainPrivateReference(moduleName + "." + field)):
+			case EField(EIdent(moduleName), field) if (isPlainPrivateReference(moduleName + "." + field)
+				|| isPlannedExactReference(moduleName + "." + field)):
 				errors.push('plain private runtime reference $moduleName.$field');
 			case _:
 		}, _ -> {}, _ -> {});
@@ -230,6 +231,20 @@ class OcamlRuntimeUseAuthority {
 		} catch (error:Dynamic) {
 			errors.push(Std.string(error));
 		}
+	}
+
+	/**
+		Reports whether this sealed plan owns the exact plain name being inspected.
+
+		Some private names still have legacy sites that are not migrated yet, so they
+		cannot enter the global reserved-name list all at once. A plan can still reject
+		an unproven plain copy of its own symbol without changing those unrelated sites.
+	**/
+	function isPlannedExactReference(name:String):Bool {
+		for (occurrence in occurrencesInOrder)
+			if (occurrence.exactSymbol == name)
+				return true;
+		return false;
 	}
 
 	public static function isPlainPrivateReference(name:String):Bool {

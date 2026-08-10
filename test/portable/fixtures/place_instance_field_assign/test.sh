@@ -63,6 +63,8 @@ const decision = report.representations.find(item => item.id === 'representation
 const boolDecision = report.representations.find(item => item.id === 'representation:Bool:instance-field')
 const nullableIntDecision = report.representations.find(item => item.id === 'representation:Null<Int>:instance-field')
 const nullableBoolDecision = report.representations.find(item => item.id === 'representation:Null<Bool>:instance-field')
+const nullableDefaultRequirements = report.runtimeRequirements.filter(item =>
+	item.semanticCapability === 'haxe-nullable-primitive-field-default')
 const boolAssignment = report.plans.find(item =>
 	item.nodeKind === 'simple-assignment'
 	&& item.semanticTypeId === 'Bool'
@@ -90,6 +92,16 @@ if (!nullableIntDecision
 	|| nullableBoolDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
 	|| nullableIntDecision.id === nullableBoolDecision.id) {
 	throw new Error('the lowering report did not preserve distinct exact nullable primitive field/default decisions')
+}
+if (nullableDefaultRequirements.length !== 2
+	|| nullableDefaultRequirements.some(item =>
+		item.sourceKind !== 'representation-decision'
+		|| item.implementationFeature !== 'haxe-nullable-primitive-field-default-v1'
+		|| item.rootModules?.join(',') !== 'HxRuntime'
+		|| item.profileEligibility?.join(',') !== 'metal,portable')
+	|| !nullableDefaultRequirements.some(item => item.decisionId === nullableIntDecision.id)
+	|| !nullableDefaultRequirements.some(item => item.decisionId === nullableBoolDecision.id)) {
+	throw new Error('each nullable primitive instance-field representation must explain its HxRuntime null default')
 }
 if (intMutations.length === 0
 	|| intMutations.some(item => item.runtimeUseOccurrences?.length !== 1

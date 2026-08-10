@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.46",
+  "reviewBead": "haxe_ocaml-0uwin.47",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.46",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.47",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 386,
+    "total": 385,
     "byDomain": {
-      "expression": 356,
+      "expression": 355,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -40,11 +40,10 @@
       "builder-string": 25,
       "builder-type": 28,
       "compiler-core": 13,
-      "field-representation-materializer": 1,
       "standard-map-carrier-model": 3
     }
   },
-  "inventoryRevision": "fdbb68ada50877782cacec2d82321eaaeb483b115f381d00029a9e364db0ebd8",
+  "inventoryRevision": "c9ef75d8d741175e8c14806e1b2b5ebe8af8ebed2f038f4eb920a2ef6b9a2e38",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -3735,16 +3734,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 10,
       "migrationFamily": "builder-boolean-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFieldRepresentationMaterializer.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFieldRepresentationMaterializer.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.hx_null",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "field-representation-materializer"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx::type::TApp::HxMap.string_map::1",

@@ -4,11 +4,10 @@ package reflaxe.ocaml.lowered;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
-import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
-import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan.OcamlNullablePrimitiveFieldDefaultDecision;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan.OcamlStringDefaultDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
@@ -73,26 +72,30 @@ class OcamlFieldRepresentationMaterializer {
 		};
 	}
 
+	/** Returns the exact nullable primitive field carrier without claiming a value. */
+	public static function carrierForExactNullablePrimitive(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):OcamlTypeExpr {
+		OcamlNullablePrimitiveFieldDefaultPlan.requireRepresentation(decision, expectedDomain);
+		return OcamlTypeExpr.TIdent("Obj.t");
+	}
+
 	/**
-		Returns one exact nullable primitive field carrier and implicit null.
+		Returns one owner-bound nullable primitive field carrier and implicit null.
 
 		`Null<Int>` and `Null<Bool>` deliberately remain separate semantic
-		decisions even though both mechanically use `Obj.t`.
+		decisions even though both mechanically use `Obj.t`. The shared carrier
+		decision is not permission to print a null sentinel: the concrete field
+		default plan and request-local authority grant that one occurrence.
 	**/
-	public static function materializeExactNullablePrimitive(decision:OcamlRepresentationDecision,
-			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
-		requireFieldDomain(decision, expectedDomain);
-		final admittedSemanticType = decision.semanticTypeId == "Null<Int>" || decision.semanticTypeId == "Null<Bool>";
-		if (!admittedSemanticType
-			|| decision.carrierTypeId != "Obj.t"
-			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
-			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier
-			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel) {
-			throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-decision]: representation ${decision.id} must select exact Null<Int> or Null<Bool> -> Obj.t with runtime-sentinel null, nullable-primitive boxing, and runtime-null-sentinel default, but selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} with ${decision.nullPolicy}, ${decision.boxingPolicy}, and ${decision.implicitDefaultPolicy}';
-		}
+	public static function materializeExactNullablePrimitive(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain,
+			defaultPlan:OcamlNullablePrimitiveFieldDefaultDecision, authority:OcamlRuntimeUseAuthority):OcamlFieldRepresentationMaterialization {
+		final carrierType = carrierForExactNullablePrimitive(decision, expectedDomain);
+		OcamlNullablePrimitiveFieldDefaultPlan.requireDecision(defaultPlan, decision);
+		if (authority == null)
+			throw 'reflaxe.ocaml [ocaml-nullable-field-default:missing-runtime-authority]: default plan "${defaultPlan.id}" cannot construct the private runtime null sentinel';
+		final reference = authority.expressionIdentifier(defaultPlan.runtimeUse.id, defaultPlan.revision, OcamlNullablePrimitiveFieldDefaultPlan.EXACT_SYMBOL);
 		return {
-			carrierType: OcamlTypeExpr.TIdent("Obj.t"),
-			implicitDefault: OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+			carrierType: carrierType,
+			implicitDefault: OcamlExpr.ERuntimeIdent(reference)
 		};
 	}
 
@@ -122,7 +125,7 @@ class OcamlFieldRepresentationMaterializer {
 		return switch (decision.semanticTypeId) {
 			case "Int": materializeExactInt(decision, expectedDomain).carrierType;
 			case "Bool": materializeExactBool(decision, expectedDomain).carrierType;
-			case "Null<Int>", "Null<Bool>": materializeExactNullablePrimitive(decision, expectedDomain).carrierType;
+			case "Null<Int>", "Null<Bool>": carrierForExactNullablePrimitive(decision, expectedDomain);
 			case "String": OcamlStringRepresentationMaterializer.carrierType(decision, expectedDomain);
 			case other:
 				throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-family]: no represented field carrier exists for $other';
@@ -138,7 +141,8 @@ class OcamlFieldRepresentationMaterializer {
 			?stringDefaultPlan:OcamlStringDefaultDecision, ?stringRuntimeAuthority:OcamlRuntimeUseAuthority):OcamlFieldRepresentationMaterialization {
 		return switch (decision.semanticTypeId) {
 			case "Int", "Bool": materializeDirectPrimitive(decision, expectedDomain);
-			case "Null<Int>", "Null<Bool>": materializeExactNullablePrimitive(decision, expectedDomain);
+			case "Null<Int>", "Null<Bool>":
+				throw 'reflaxe.ocaml [ocaml-field-representation:owner-required]: ${decision.semanticTypeId} defaults require materializeExactNullablePrimitive with a concrete field owner';
 			case "String":
 				final materialized = OcamlStringRepresentationMaterializer.materializeDefault(decision, expectedDomain, stringDefaultPlan,
 					stringRuntimeAuthority);

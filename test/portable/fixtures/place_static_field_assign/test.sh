@@ -4,10 +4,22 @@ set -euo pipefail
 source_file="out/Main.ml"
 external_source_file="out/ExternalHolder.ml"
 report_file="out/ocaml_lowering_report.json"
+oracle_dir="$(mktemp -d)"
+trap 'rm -rf "$oracle_dir"' EXIT
 if [ ! -f "$source_file" ] || [ ! -f "$external_source_file" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated static-field source or lowering report" >&2
 	exit 1
 fi
+
+# Installed Haxe 4.3.7 is the independent behavior oracle. Its eval target
+# exposes omitted non-null Int/Bool statics as null and formats whole-number
+# Floats differently, while this target's separately tested carrier policy uses
+# zero/false and OCaml Float formatting. Exclude only those known target-policy
+# lines; the nullable defaults and every mutation/result must still agree.
+haxe -cp src --run Main >"$oracle_dir/eval.stdout"
+grep -vE '^(omitted=|omitted_bool=|float=|float_postfix=)' expected.stdout >"$oracle_dir/expected-comparable.stdout"
+grep -vE '^(omitted=|omitted_bool=|float=|float_postfix=)' "$oracle_dir/eval.stdout" >"$oracle_dir/eval-comparable.stdout"
+diff -u "$oracle_dir/expected-comparable.stdout" "$oracle_dir/eval-comparable.stdout"
 
 declaration_count="$(grep -c '^let sameModuleValue = ref ' "$source_file" || true)"
 if [ "$declaration_count" -ne 1 ]; then
@@ -72,6 +84,8 @@ const decision = report.representations.find(item => item.id === 'representation
 const boolDecision = report.representations.find(item => item.id === 'representation:Bool:static-field')
 const nullableIntDecision = report.representations.find(item => item.id === 'representation:Null<Int>:static-field')
 const nullableBoolDecision = report.representations.find(item => item.id === 'representation:Null<Bool>:static-field')
+const nullableDefaultRequirements = report.runtimeRequirements.filter(item =>
+	item.semanticCapability === 'haxe-nullable-primitive-field-default')
 const stringDecision = report.representations.find(item => item.id === 'representation:String:static-field')
 const external = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omitted')
 const externalBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedBool')
@@ -126,6 +140,16 @@ if (!nullableIntDecision
 	|| sameModuleNullableInt.declarationSite !== 'module-prelude'
 	|| sameModuleNullableInt.representationId !== nullableIntDecision.id) {
 	throw new Error('the lowering report did not preserve exact nullable primitive static carrier/default decisions')
+}
+if (nullableDefaultRequirements.length !== 2
+	|| nullableDefaultRequirements.some(item =>
+		item.sourceKind !== 'representation-decision'
+		|| item.implementationFeature !== 'haxe-nullable-primitive-field-default-v1'
+		|| item.rootModules?.join(',') !== 'HxRuntime'
+		|| item.profileEligibility?.join(',') !== 'metal,portable')
+	|| !nullableDefaultRequirements.some(item => item.decisionId === nullableIntDecision.id)
+	|| !nullableDefaultRequirements.some(item => item.decisionId === nullableBoolDecision.id)) {
+	throw new Error('each nullable primitive static-field representation must explain its HxRuntime null default')
 }
 if (!stringDecision
 	|| stringDecision.carrierTypeId !== 'string'

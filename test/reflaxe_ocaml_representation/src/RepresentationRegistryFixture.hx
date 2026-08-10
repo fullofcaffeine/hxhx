@@ -5,6 +5,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
+import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlDirectArraySourceIdentity;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
@@ -20,6 +21,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /** Focused executable checks for the program-wide OCaml representation registry. */
 class RepresentationRegistryFixture {
@@ -507,10 +509,26 @@ class RepresentationRegistryFixture {
 		expectFailure("wrong String default domain", "wrong-domain",
 			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringStaticField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
 				OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
-		final nullableInstanceMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableInstanceField,
-			OcamlRepresentationDomain.InstanceField);
-		final nullableBoolStaticMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableBoolStaticField,
-			OcamlRepresentationDomain.StaticField);
+		final nullableInstanceDefaultPlan = OcamlNullablePrimitiveFieldDefaultPlan.seal(nullableInstanceField, "fixture:instance-field:nullable-int",
+			"fixture-owner-revision", {
+				file: "RepresentationRegistryFixture.hx",
+				min: 3,
+				max: 4
+			});
+		final nullableInstanceDefaultAuthority = OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable");
+		final nullableInstanceMaterialization = OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField,
+			OcamlRepresentationDomain.InstanceField, nullableInstanceDefaultPlan, nullableInstanceDefaultAuthority);
+		nullableInstanceDefaultAuthority.reconcileExpression(nullableInstanceMaterialization.implicitDefault);
+		final nullableBoolStaticDefaultPlan = OcamlNullablePrimitiveFieldDefaultPlan.seal(nullableBoolStaticField, "fixture:static-field:nullable-bool",
+			"fixture-owner-revision", {
+				file: "RepresentationRegistryFixture.hx",
+				min: 5,
+				max: 6
+			});
+		final nullableBoolStaticDefaultAuthority = OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableBoolStaticDefaultPlan, "portable");
+		final nullableBoolStaticMaterialization = OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableBoolStaticField,
+			OcamlRepresentationDomain.StaticField, nullableBoolStaticDefaultPlan, nullableBoolStaticDefaultAuthority);
+		nullableBoolStaticDefaultAuthority.reconcileExpression(nullableBoolStaticMaterialization.implicitDefault);
 		final nullableCarrierIsObj = switch (nullableInstanceMaterialization.carrierType) {
 			case TIdent("Obj.t"): true;
 			case _: false;
@@ -520,11 +538,11 @@ class RepresentationRegistryFixture {
 			case _: false;
 		}
 		final nullableDefaultIsSentinel = switch (nullableInstanceMaterialization.implicitDefault) {
-			case EField(EIdent("HxRuntime"), "hx_null"): true;
+			case ERuntimeIdent(reference): reference.exactSymbol == "HxRuntime.hx_null";
 			case _: false;
 		}
 		final nullableBoolDefaultIsSentinel = switch (nullableBoolStaticMaterialization.implicitDefault) {
-			case EField(EIdent("HxRuntime"), "hx_null"): true;
+			case ERuntimeIdent(reference): reference.exactSymbol == "HxRuntime.hx_null";
 			case _: false;
 		}
 		assertTrue(nullableCarrierIsObj
@@ -533,6 +551,61 @@ class RepresentationRegistryFixture {
 			&& nullableBoolDefaultIsSentinel
 			&& nullableInstanceField.id != nullableBoolInstanceField.id,
 			"nullable Int and Bool fields should share mechanical Obj.t/null syntax while retaining distinct semantic decisions");
+		assertTrue(nullableInstanceDefaultPlan.ownerId == "fixture:instance-field:nullable-int"
+			&& nullableInstanceDefaultPlan.representationId == nullableInstanceField.id
+			&& nullableInstanceDefaultPlan.semanticTypeId == "Null<Int>"
+			&& nullableInstanceDefaultPlan.requirement.semanticCapability == OcamlRuntimeRequirementLedger.NULLABLE_PRIMITIVE_FIELD_DEFAULT
+			&& nullableInstanceDefaultPlan.requirement.rootModules.join(",") == "HxRuntime"
+			&& nullableInstanceDefaultPlan.runtimeUse.ownerId == nullableInstanceDefaultPlan.id
+			&& nullableInstanceDefaultPlan.runtimeUse.exactSymbol == "HxRuntime.hx_null"
+			&& nullableInstanceDefaultPlan.runtimeUse.cardinality == 1,
+			"one concrete nullable primitive field default should own one exact HxRuntime null occurrence and requirement");
+		final nullableCarrierOnly = OcamlFieldRepresentationMaterializer.carrierForRepresentedField(nullableBoolInstanceField,
+			OcamlRepresentationDomain.InstanceField);
+		assertTrue(switch (nullableCarrierOnly) {
+			case TIdent("Obj.t"): true;
+			case _: false;
+		},
+			"a carrier-only nullable field query should need no default plan or runtime authority");
+		final duplicateNullableAuthority = OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable");
+		OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+			nullableInstanceDefaultPlan, duplicateNullableAuthority);
+		expectFailure("duplicate nullable field default", "constructed more than once",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				nullableInstanceDefaultPlan, duplicateNullableAuthority));
+		expectFailure("missing nullable field default plan", "missing-plan",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast null, OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable")));
+		expectFailure("missing nullable field default authority", "missing-runtime-authority",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				nullableInstanceDefaultPlan, cast null));
+		final staleNullablePlan:Dynamic = Reflect.copy(nullableInstanceDefaultPlan);
+		Reflect.setField(staleNullablePlan, "revision", "sha256:" + StringTools.lpad("", "0", 64));
+		expectFailure("stale nullable field default", "stale-plan",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast staleNullablePlan, OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable")));
+		final wrongNullableOwner:Dynamic = Reflect.copy(nullableInstanceDefaultPlan);
+		Reflect.setField(wrongNullableOwner, "ownerId", "fixture:instance-field:other");
+		expectFailure("wrong nullable field default owner", "stale-plan",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast wrongNullableOwner, OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable")));
+		final wrongNullableSymbol:Dynamic = Reflect.copy(nullableInstanceDefaultPlan);
+		final wrongNullableRuntimeUse:Dynamic = Reflect.copy(nullableInstanceDefaultPlan.runtimeUse);
+		Reflect.setField(wrongNullableRuntimeUse, "exactSymbol", "HxRuntime.is_null");
+		Reflect.setField(wrongNullableSymbol, "runtimeUse", wrongNullableRuntimeUse);
+		expectFailure("wrong nullable field default symbol", "stale-plan",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast wrongNullableSymbol, OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable")));
+		final wrongNullableProfileAuthority = OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "unsupported-profile");
+		expectFailure("wrong nullable field default profile", "not eligible",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField,
+				nullableInstanceDefaultPlan, wrongNullableProfileAuthority));
+		final plainNullableAuthority = OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable");
+		expectFailure("plain nullable field default reference", "plain private runtime reference",
+			() -> plainNullableAuthority.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")));
+		expectFailure("wrong nullable field default domain", "wrong-domain",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableStaticField, OcamlRepresentationDomain.InstanceField,
+				nullableInstanceDefaultPlan, OcamlNullablePrimitiveFieldDefaultPlan.authority(nullableInstanceDefaultPlan, "portable")));
 		assertTrue(registry.require(mutable.id, "program:representation-fixture").revision == mutable.revision,
 			"an exact-program lookup should return the selected decision");
 
@@ -571,15 +644,15 @@ class RepresentationRegistryFixture {
 		expectFailure("wrong Bool semantic family", "unsupported-family",
 			() -> OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(wrongBoolSemantic, OcamlRepresentationDomain.StaticField));
 		expectFailure("wrong nullable field domain", "wrong-domain",
-			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableMutable, OcamlRepresentationDomain.InstanceField));
+			() -> OcamlFieldRepresentationMaterializer.carrierForExactNullablePrimitive(nullableMutable, OcamlRepresentationDomain.InstanceField));
 		Reflect.setField(nullableInstanceField, "carrierTypeId", "int");
 		expectFailure("wrong nullable field carrier", "unsupported-decision",
-			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField));
+			() -> OcamlFieldRepresentationMaterializer.carrierForExactNullablePrimitive(nullableInstanceField, OcamlRepresentationDomain.InstanceField));
 		assertTrue(registry.require(nullableInstanceField.id, "program:representation-fixture").carrierTypeId == "Obj.t",
 			"mutating a returned nullable field carrier must not change the retained decision");
 		Reflect.setField(nullableBoolStaticField, "implicitDefaultPolicy", OcamlRepresentationImplicitDefaultPolicy.NotAdmitted);
 		expectFailure("wrong nullable field default", "unsupported-decision",
-			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableBoolStaticField, OcamlRepresentationDomain.StaticField));
+			() -> OcamlFieldRepresentationMaterializer.carrierForExactNullablePrimitive(nullableBoolStaticField, OcamlRepresentationDomain.StaticField));
 		expectFailure("wrong String field domain", "wrong-domain",
 			() -> OcamlStringRepresentationMaterializer.carrierType(stringMutable, OcamlRepresentationDomain.InstanceField));
 		Reflect.setField(stringInstanceField, "carrierTypeId", "Obj.t");

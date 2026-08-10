@@ -92,6 +92,7 @@ import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepr
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
+import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -1405,20 +1406,30 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/**
 		Constructs one represented field default from the field or storage decision that owns it.
 
-		Exact String defaults refer to a private runtime sentinel. The owner-bound
-		plan below grants that reference only to this emitted field occurrence; a
-		shared representation choice cannot act as permission for the whole program.
+		Exact String and nullable primitive defaults refer to private runtime
+		sentinels. The owner-bound plans below grant each reference only to this
+		emitted field occurrence; a shared representation choice cannot act as
+		permission for the whole program.
 	**/
 	function materializeRepresentedFieldDefault(decision:OcamlRepresentationDecision, domain:OcamlRepresentationDomain, ownerId:String, ownerRevision:String,
 			source:OcamlLoweredSourceSpan):OcamlFieldRepresentationMaterialization {
-		if (decision.semanticTypeId != "String")
-			return OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain);
-		final defaultPlan = OcamlStringDefaultPlan.seal(decision, ownerId, ownerRevision, source);
-		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
-			ctx.finalRuntimeUses);
-		final materialized = OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain, defaultPlan, authority);
-		authority.reconcileExpression(materialized.implicitDefault);
-		return materialized;
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		return switch (decision.semanticTypeId) {
+			case "String":
+				final defaultPlan = OcamlStringDefaultPlan.seal(decision, ownerId, ownerRevision, source);
+				final authority = OcamlStringDefaultPlan.authority(defaultPlan, activeProfile, ctx.finalRuntimeUses);
+				final materialized = OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain, defaultPlan, authority);
+				authority.reconcileExpression(materialized.implicitDefault);
+				materialized;
+			case "Null<Int>", "Null<Bool>":
+				final defaultPlan = OcamlNullablePrimitiveFieldDefaultPlan.seal(decision, ownerId, ownerRevision, source);
+				final authority = OcamlNullablePrimitiveFieldDefaultPlan.authority(defaultPlan, activeProfile, ctx.finalRuntimeUses);
+				final materialized = OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(decision, domain, defaultPlan, authority);
+				authority.reconcileExpression(materialized.implicitDefault);
+				materialized;
+			case _:
+				OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, domain);
+		}
 	}
 
 	/** Names a static-storage occurrence when no typed expression owns its declaration site. */

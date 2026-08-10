@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
@@ -37,6 +38,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final ARRAY_LITERAL_CONSTRUCTION = "haxe-array-literal-construction";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
+	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
@@ -298,13 +300,53 @@ class OcamlRuntimeRequirementLedger {
 		representation.
 
 		Exact Haxe `String` uses the canonical null value owned by `HxString` in
-		every selected domain. Ordinary values and array elements have different
-		proof IDs because `HxArray` owns slot mutation, but both require the same
-		null-sentinel runtime module before packaging.
+		every selected domain. Exact `Null<Int>` and `Null<Bool>` field decisions
+		use the canonical `HxRuntime` null value for their implicit initializer.
+		Carrier-only local decisions do not claim that field default.
 	**/
 	public static function requirementsForRepresentationDecision(decision:OcamlRepresentationDecision):Array<OcamlRuntimeRequirement> {
 		if (decision == null)
 			throw "OCaml runtime requirement representation decision must not be null.";
+		final selectsNullablePrimitiveFieldDefault = (decision.domain == OcamlRepresentationDomain.InstanceField
+			|| decision.domain == OcamlRepresentationDomain.StaticField)
+			&& (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier
+				|| decision.proof.id == "nullable-int-obj-carrier-v2"
+				|| decision.proof.id == "nullable-bool-obj-carrier-v2");
+		if (selectsNullablePrimitiveFieldDefault) {
+			final exactSemantic = decision.semanticTypeId == "Null<Int>" || decision.semanticTypeId == "Null<Bool>";
+			final expectedProof = decision.semanticTypeId == "Null<Int>" ? "nullable-int-obj-carrier-v2" : "nullable-bool-obj-carrier-v2";
+			if (!exactSemantic
+				|| decision.carrierTypeId != "Obj.t"
+				|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+				|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier
+				|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel
+				|| decision.proof.id != expectedProof) {
+				throw 'Representation decision "${decision.id}" does not match the sealed nullable primitive field-default contract.';
+			}
+			return [
+				normalize({
+					id: decision.id + ":runtime:" + NULLABLE_PRIMITIVE_FIELD_DEFAULT,
+					sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+					sourceId: decision.id + "@" + decision.revision,
+					source: {
+						file: "compiler-decision/representation/" + decision.domain,
+						min: 0,
+						max: 0
+					},
+					semanticCapability: NULLABLE_PRIMITIVE_FIELD_DEFAULT,
+					cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+					decisionId: decision.id,
+					subject: {
+						kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+						id: decision.semanticTypeId
+					},
+					implementationFeature: "haxe-nullable-primitive-field-default-v1",
+					rootModules: ["HxRuntime"],
+					profileEligibility: decision.profileEligibility,
+					explanation: 'The sealed ${decision.semanticTypeId} field representation starts field storage at Haxe null through the canonical HxRuntime.hx_null value before any explicit initializer runs; this requirement owns no other nullable carrier crossing.'
+				})
+			];
+		}
 		final selectsExactStringSentinel = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
 			|| decision.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
 			|| decision.proof.id == "nullable-string-array-element-carrier-v1";
