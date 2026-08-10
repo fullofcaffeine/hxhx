@@ -89,7 +89,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v85";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v86";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -440,8 +440,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 70) {
-						throw 'Unsupported lowering report schema $version; expected 70.';
+					if (version != 71) {
+						throw 'Unsupported lowering report schema $version; expected 71.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -710,9 +710,10 @@ class ReflaxeOcamlInspection {
 
 		Admitted control lists alone are not complete evidence: an empty list could
 		mean either that the function needed no transfer or that one unsupported
-		occurrence forced the entire family onto the older builder path. This reader
-		requires the planner's explicit distinction and binds it back to every
-		reported transfer, loop target, and catch chain.
+		occurrence blocked the family. This reader requires the planner's explicit
+		distinction and binds it back to every reported transfer, loop target, and
+		catch chain. Compilation now rejects blocked non-empty catches; return, loop,
+		and throw families retain their separate migration status.
 	**/
 	static function inspectControlAdmissions(value:Dynamic, controls:Array<InspectionControl>, targets:Array<InspectionControlLoopTarget>,
 			catches:Array<InspectionControlCatchChain>):Array<OcamlControlAdmissionSnapshot> {
@@ -850,7 +851,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v22")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v23")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -1217,7 +1218,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
-		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v4")
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v5")
 			throw "Unsupported control catch-chain report model.";
 		final rawChains = requiredArray(value, "controlCatches");
 		if (rawChains.length != requiredInt(value, "controlCatchCount"))
@@ -1245,7 +1246,7 @@ class ReflaxeOcamlInspection {
 				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
 				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
 				|| chain.reason.length == 0
-				|| chain.proofId != "represented-value-catch-control-v4"
+				|| chain.proofId != "represented-value-catch-control-v5"
 				|| chain.proofClaim.length == 0
 				|| chain.functionId.length == 0
 				|| chain.programRevision.length == 0
@@ -1265,7 +1266,7 @@ class ReflaxeOcamlInspection {
 					|| clause.signalCarrierTypeId != "Obj.t"
 					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
 					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
-					|| clause.proofId != "represented-value-catch-control-v4"
+					|| clause.proofId != "represented-value-catch-control-v5"
 					|| clause.proofClaim.length == 0
 					|| clause.functionId != chain.functionId
 					|| clause.programRevision != chain.programRevision
@@ -1313,14 +1314,25 @@ class ReflaxeOcamlInspection {
 							throw 'haxe.ValueException control catch clause "${clause.id}" has an invalid wrapper-selection contract.';
 						}
 					case _:
-						final nominal = clause.nominalRepresentation;
-						if (nominal == null
-							|| clause.matchPolicy != "exact-runtime-tag"
-							|| clause.runtimeTag != clause.semanticTypeId
-							|| clause.conversion != "recover-nominal-value"
-							|| !validControlNominalRepresentation(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, nominal,
-								representationById)) {
-							throw 'Monomorphic-class control catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof.';
+						if (StringTools.startsWith(clause.outputRepresentationId, "control-representation:enum-catch-v1:")) {
+							if (clause.outputCarrierTypeId != "haxe-enum-native-variant-carrier-v1:" + clause.semanticTypeId
+								|| clause.outputRepresentationId != "control-representation:enum-catch-v1:" + clause.semanticTypeId
+								|| clause.matchPolicy != "exact-runtime-tag"
+								|| clause.runtimeTag != clause.semanticTypeId
+								|| clause.conversion != "recover-enum-value"
+								|| clause.nominalRepresentation != null) {
+								throw 'Enum control catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion.';
+							}
+						} else {
+							final nominal = clause.nominalRepresentation;
+							if (nominal == null
+								|| clause.matchPolicy != "exact-runtime-tag"
+								|| clause.runtimeTag != clause.semanticTypeId
+								|| clause.conversion != "recover-nominal-value"
+								|| !validControlNominalRepresentation(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
+									nominal, representationById)) {
+								throw 'Monomorphic-class control catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof.';
+							}
 						}
 				}
 				clauseIds.set(clause.id, true);

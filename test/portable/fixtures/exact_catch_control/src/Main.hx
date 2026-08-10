@@ -1,3 +1,14 @@
+#if exact_catch_unrepresented_negative
+private class GenericCatchError<T> extends haxe.Exception {
+	public final value:T;
+
+	public function new(value:T) {
+		this.value = value;
+		super("generic catch fixture");
+	}
+}
+#end
+
 class Main {
 	static function throwInt():Void {
 		throw 41;
@@ -156,9 +167,9 @@ class Main {
 	/**
 	 * Repeats the production output-transaction catch order.
 	 *
-	 * `haxe.io.Error` is not yet part of the exact catch-matching plan, so this
-	 * chain deliberately uses the older matching path. Its already-known `Void`
-	 * branch-result rule must still reach generated syntax.
+	 * The sealed chain records the native enum carrier for `haxe.io.Error`, the
+	 * Haxe exception-wrapper rule, and the final String carrier before generated
+	 * OCaml is built. Its `Void` branch-result rule must reach syntax unchanged.
 	 */
 	static function captureProductionTypes(action:() -> Void, problems:Array<String>):Void {
 		try {
@@ -172,10 +183,10 @@ class Main {
 		}
 	}
 
-	static function legacyVoidResult():String {
+	static function typedVoidResult():String {
 		final problems = new Array<String>();
-		captureProductionTypes(() -> throw haxe.io.Error.Custom("legacy"), problems);
-		return "legacyVoid=" + problems.join("|");
+		captureProductionTypes(() -> throw haxe.io.Error.Custom("typed"), problems);
+		return "typedVoid=" + problems.join("|");
 	}
 
 	/**
@@ -211,7 +222,26 @@ class Main {
 		return "valueResult=" + value;
 	}
 
+	#if exact_catch_unrepresented_negative
+	/**
+		Exercises the hard-cut failure for a catch type with no sealed carrier.
+
+		The generic exception is valid Haxe but intentionally outside the admitted
+		monomorphic-class catch set. The test invokes this function only in a separate
+		negative compile and requires the planner to stop before target syntax can
+		invent matching or payload recovery.
+	**/
+	static function unsupportedCatch():Void {
+		try {
+			throw new GenericCatchError<String>("blocked");
+		} catch (_:GenericCatchError<Dynamic>) {}
+	}
+	#end
+
 	static function main():Void {
+		#if exact_catch_unrepresented_negative
+		unsupportedCatch();
+		#end
 		Sys.println([
 			orderedBool(),
 			exactFirst(),
@@ -222,7 +252,7 @@ class Main {
 			independentAdmission(),
 			targetNativeFailure(),
 			callbackVoidResult(),
-			legacyVoidResult(),
+			typedVoidResult(),
 			directVoidResult(),
 			valueProducingCatch()
 		].join(","));

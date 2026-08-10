@@ -16,8 +16,10 @@ enum abstract OcamlControlAdmissionFamily(String) to String {
 
 	`not-needed` means the final function body had no transfer in that family that
 	required the private control channel. `blocked` means at least one occurrence
-	existed, but the typed planner could not represent the complete family, so the
-	older builder path remains responsible for that function.
+	existed, but the typed planner could not represent the complete family. Return,
+	loop, and throw migrations may still route such a family through their older
+	implementation. A non-empty catch is stricter: function sealing rejects it, so
+	it cannot fall through to target syntax without one complete catch chain.
 **/
 enum abstract OcamlControlAdmissionStatus(String) to String {
 	var NotNeeded = "not-needed";

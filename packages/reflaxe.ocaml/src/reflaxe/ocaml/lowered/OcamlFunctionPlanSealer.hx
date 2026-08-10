@@ -32,6 +32,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
+import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
@@ -168,6 +169,7 @@ class OcamlFunctionPlanSealer {
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
 			arrayLiteralProducers).plan(data.expr, functionResultBoundary);
+		requireCompleteCatchCoverage(controls, data.expr.pos);
 		for (chain in controls.catchChains())
 			context.recordCatchChainRuntimeRequirements(chain);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
@@ -272,9 +274,10 @@ class OcamlFunctionPlanSealer {
 		that names lexical locals, so zero-argument and argument-taking functions share
 		one identity model. The typed expression remains only a request-local lookup
 		key; target plans retain the stable identity and never retain another host
-		object for cross-request reuse. A nested function is admitted only when the
-		planner represented every return, loop transfer, throw, and catch occurrence;
-		otherwise syntax keeps using the explicit legacy disposition for that literal.
+		object for cross-request reuse. A nested function gets a complete behavior
+		plan only when the planner represented every return, loop transfer, and throw.
+		A blocked non-empty catch is never deferred: sealing fails before syntax so a
+		nested function cannot reintroduce the removed catch compiler.
 	**/
 	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan,
 			localRepresentations:OcamlLocalRepresentationPlan):Void {
@@ -341,6 +344,7 @@ class OcamlFunctionPlanSealer {
 						arrayLiteralProducers.requireRepresentations(representations);
 						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
 							arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
+						requireCompleteCatchCoverage(controls, expression.pos);
 						// An unsupported transfer or catch is omitted from the admitted lists.
 						// Compare both the family flags and the observed catch count so one valid
 						// return cannot make a partly represented closure look complete.
@@ -419,6 +423,29 @@ class OcamlFunctionPlanSealer {
 		return tfunc.args.map(argument -> argument.v).concat(captures);
 	}
 
+	/**
+		Rejects a non-empty source catch before OCaml syntax when no sealed chain exists.
+
+		A sealed chain fixes source order, runtime tags, payload recovery, private
+		control propagation, and unmatched rethrow behavior. Letting syntax rebuild
+		any of those decisions would restore the duplicate catch compiler removed by
+		the hard cut. An empty typed `try` has no source clause and needs no chain.
+	**/
+	static function requireCompleteCatchCoverage(controls:OcamlControlPlan, position:Position):Void {
+		final admission = controls.admission;
+		if (admission == null)
+			fail("the control plan has no complete admission snapshot", position);
+		for (catchAdmission in admission.catches) {
+			if (catchAdmission.status != OcamlControlAdmissionStatus.Blocked)
+				continue;
+			final onlyEmpty = catchAdmission.blockers.length == 1 && catchAdmission.blockers[0].code == "catch-chain-empty";
+			if (!onlyEmpty) {
+				final blocker = catchAdmission.blockers.length == 0 ? "no blocker was recorded" : catchAdmission.blockers[0].message;
+				fail('non-empty catch "${catchAdmission.occurrenceId}" reached the hard-cut boundary without a sealed chain: $blocker', position);
+			}
+		}
+	}
+
 	function validateControlRepresentationReferences(controls:OcamlControlPlan, programRevision:String, position:Position):Void {
 		for (control in controls.decisions()) {
 			final payload = control.payload;
@@ -460,7 +487,9 @@ class OcamlFunctionPlanSealer {
 		}
 		for (chain in controls.catchChains()) {
 			for (clause in chain.clauses) {
-				if (clause.semanticTypeId == "Dynamic" || OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause))
+				if (clause.semanticTypeId == "Dynamic"
+					|| OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)
+					|| OcamlControlPlan.isAdmittedEnumCatchClause(clause))
 					continue;
 				validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, programRevision,
 					'control catch clause "${clause.id}" output', position);

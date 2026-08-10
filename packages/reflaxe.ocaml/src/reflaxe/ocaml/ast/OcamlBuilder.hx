@@ -957,6 +957,13 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpression]);
 					case RecoverNominalValue:
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+					case RecoverEnumValue:
+						final runtimeTag = clause.runtimeTag;
+						if (runtimeTag == null)
+							return controlPlanInvariant('enum catch clause "${clause.id}" has no sealed runtime tag', position);
+						final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
+							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
 					case PreserveDynamicCarrier:
 						valueExpression;
 					case PreserveOrWrapHaxeException:
@@ -5108,213 +5115,21 @@ class OcamlBuilder {
 				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tagExpr]);
 			case TTry(tryExpr, catches):
-				var branchResultDisposition:Null<reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultDisposition> = null;
-				if (currentControlPlan != null) {
+				if (catches.length == 0) {
+					buildExpr(tryExpr);
+				} else {
+					if (currentControlPlan == null)
+						return controlPlanInvariant("a non-empty typed catch reached syntax without a sealed function control plan", e.pos);
 					if (!currentControlPlan.hasCatchDispositionFor(e))
-						return controlPlanInvariant("a typed try reached syntax without an explicit admitted or legacy catch disposition", e.pos);
-					branchResultDisposition = try {
-						currentControlPlan.catchBranchResultDispositionFor(e);
-					} catch (error:Dynamic) {
-						return controlPlanInvariant(Std.string(error), e.pos);
-					}
+						return controlPlanInvariant("a non-empty typed catch reached syntax without an exact catch occurrence", e.pos);
 					final catchChain = try {
 						currentControlPlan.catchChainFor(e);
 					} catch (error:Dynamic) {
 						return controlPlanInvariant(Std.string(error), e.pos);
 					}
-					if (catchChain != null)
-						return buildPlannedCatchChain(catchChain, tryExpr, catches, e.pos);
-				}
-				if (catches.length == 0) {
-					final builtTry = buildExpr(tryExpr);
-					branchResultDisposition == null ? builtTry : applyCatchBranchResultPolicy(branchResultDisposition.tryBodyResultPolicy, builtTry,
-						branchResultDisposition.occurrenceId, e.pos);
-				} else {
-					final builtTry = branchResultDisposition == null ? buildExpr(tryExpr) : applyCatchBranchResultPolicy(branchResultDisposition.tryBodyResultPolicy,
-						buildExpr(tryExpr), branchResultDisposition.occurrenceId, e.pos);
-
-					inline function isDynamicCatchType(t:Type):Bool {
-						return switch (followNoAbstracts(t)) {
-							case TDynamic(_): true;
-							case _: false;
-						}
-					}
-
-					inline function isHaxeExceptionCatchType(t:Type):Bool {
-						return switch (followNoAbstracts(unwrapNullType(t))) {
-							case TInst(cRef, _): final c = cRef.get(); c.pack.length == 1 && c.pack[0] == "haxe" && c.name == "Exception";
-							case _:
-								false;
-						}
-					}
-
-					inline function isHaxeValueExceptionCatchType(t:Type):Bool {
-						return switch (followNoAbstracts(unwrapNullType(t))) {
-							case TInst(cRef, _): final c = cRef.get(); c.pack.length == 1 && c.pack[0] == "haxe" && c.name == "ValueException";
-							case _:
-								false;
-						}
-					}
-
-					function buildCatchChain(valueExpr:OcamlExpr, tagsExpr:OcamlExpr, fallback:OcamlExpr):OcamlExpr {
-						var current = fallback;
-						for (i in 0...catches.length) {
-							final c = catches[catches.length - 1 - i];
-							final catchVarName = renameVar(c.v.name);
-
-							final isDynamic = isDynamicCatchType(c.v.t);
-							final isHaxeException = isHaxeExceptionCatchType(c.v.t);
-							final isHaxeValueException = isHaxeValueExceptionCatchType(c.v.t);
-							final isEnumCatch = switch (followNoAbstracts(unwrapNullType(c.v.t))) {
-								case TEnum(_, _): true;
-								case _: false;
-							}
-							final isBoolCatch = isBoolType(c.v.t);
-							final tag = catchTagForType(c.v.t);
-							if (!isDynamic && !isHaxeException && !isHaxeValueException && tag == null) {
-								#if macro
-								guardrailError("reflaxe.ocaml (M10): typed catch is not supported for this type yet; use `catch (e:Dynamic)` as a fallback for now.",
-									e.pos);
-								#end
-							}
-
-							final cond:OcamlExpr = if (isDynamic) {
-								OcamlExpr.EConst(OcamlConst.CBool(true));
-							} else if (isHaxeException) {
-								// `haxe.Exception` is a wildcard catch in Haxe: it must catch any thrown value.
-								OcamlExpr.EConst(OcamlConst.CBool(true));
-							} else if (isHaxeValueException) {
-								// `haxe.ValueException` catches values which do *not* extend `haxe.Exception`,
-								// plus explicitly thrown `ValueException` instances.
-								//
-								// This matches upstream behavior where `throw 123` can be caught as either
-								// `ValueException` or `Int`.
-								final isValueExn = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
-								final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
-								OcamlExpr.EBinop(OcamlBinop.Or, isValueExn, OcamlExpr.EUnop(OcamlUnop.Not, isAnyException));
-							} else if (tag != null) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString(tag))]);
-							} else {
-								OcamlExpr.EConst(OcamlConst.CBool(false));
-							}
-
-							var body = buildExpr(c.expr);
-							if (branchResultDisposition != null) {
-								final sourceIndex = catches.length - 1 - i;
-								body = applyCatchBranchResultPolicy(branchResultDisposition.clauseBodyResultPolicies[sourceIndex], body,
-									branchResultDisposition.occurrenceId + ":clause:" + sourceIndex, e.pos);
-							}
-							final boundValue:OcamlExpr = if (isDynamic) {
-								valueExpr;
-							} else if (isHaxeException) {
-								// If the thrown payload already extends `haxe.Exception`, bind it directly.
-								// Otherwise, wrap it as `haxe.ValueException` (with `native != null`) so
-								// `haxe.Exception.stack` captures the exception stack.
-								final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
-								final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpr]);
-								final hxNullAsException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
-									[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
-								final mkValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-									[valueExpr, hxNullAsException, valueExpr]);
-								final asExceptionWrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [mkValueException]);
-								OcamlExpr.EIf(isAnyException, asException, asExceptionWrapped);
-							} else if (isHaxeValueException) {
-								// For non-Exception throws, wrap as `ValueException` so `catch(e:ValueException)`
-								// works even if the throw site is not explicitly `new ValueException(...)`.
-								final isValueExn = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
-								final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpr]);
-								final hxNullAsException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
-									[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
-								final mkValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-									[valueExpr, hxNullAsException, valueExpr]);
-								OcamlExpr.EIf(isValueExn, asValueException, mkValueException);
-							} else if (isBoolCatch) {
-								// Booleans might be carried as boxed `Obj.t` in dynamic contexts.
-								// Unbox if needed; fall back to `Obj.obj` for typed `throw true` (immediate).
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpr]);
-							} else if (isEnumCatch && tag != null) {
-								final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
-									[OcamlExpr.EConst(OcamlConst.CString(tag)), valueExpr]);
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
-							} else {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpr]);
-							};
-							// Always bind the catch variable.
-							// Also force a use via `ignore` to avoid unused-binding warnings under `-warn-error`.
-							final annotatedBoundValue = OcamlExpr.EAnnot(boundValue, typeExprFromHaxeType(c.v.t));
-							body = OcamlExpr.ELet(catchVarName, annotatedBoundValue, OcamlExpr.ESeq([
-								OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(catchVarName)]),
-								body
-							]), false);
-
-							current = OcamlExpr.EIf(cond, body, current);
-						}
-						return current;
-					}
-
-					final breakCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
-						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"))
-					};
-					final continueCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
-						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"))
-					};
-					final returnVar = freshTmp("ret");
-					final returnCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
-						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVar)]))
-					};
-					final voidReturnCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
-						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"))
-					};
-
-					final hxValVar = freshTmp("exn_v");
-					final hxTagsVar = freshTmp("exn_tags");
-					final hxFallback = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"),
-						[OcamlExpr.EIdent(hxValVar), OcamlExpr.EIdent(hxTagsVar)]);
-					final hxHandlerExpr = buildCatchChain(OcamlExpr.EIdent(hxValVar), OcamlExpr.EIdent(hxTagsVar), hxFallback);
-					final hxExceptionCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_exception", [OcamlPat.PVar(hxValVar), OcamlPat.PVar(hxTagsVar)]),
-						guard: null,
-						expr: hxHandlerExpr
-					};
-
-					final ocamlExnVar = freshTmp("exn");
-					final ocamlFallback = OcamlExpr.ERaise(OcamlExpr.EIdent(ocamlExnVar));
-					// This older route rebuilds each Haxe catch body for both the typed-Haxe
-					// and native-OCaml exception channels. The second target expression must
-					// therefore receive new runtime-use identities before both channels are
-					// placed in the final function. It does not gain permission by repeating
-					// the same Haxe source position or helper name.
-					final ocamlHandlerExpr = ctx.finalRuntimeUses.copyExpressionForOutput(buildCatchChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"),
-						"repr"), [OcamlExpr.EIdent(ocamlExnVar)]),
-						OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("OcamlExn"))]), ocamlFallback),
-						"legacy-target-native-catch-channel");
-					final ocamlExnCase:OcamlMatchCase = {
-						pat: OcamlPat.PVar(ocamlExnVar),
-						guard: null,
-						expr: ocamlHandlerExpr
-					};
-
-					OcamlExpr.ETry(builtTry, [
-						breakCase,
-						continueCase,
-						returnCase,
-						voidReturnCase,
-						hxExceptionCase,
-						ocamlExnCase
-					]);
+					if (catchChain == null)
+						return controlPlanInvariant("a non-empty typed catch reached syntax without its admitted sealed chain", e.pos);
+					buildPlannedCatchChain(catchChain, tryExpr, catches, e.pos);
 				}
 			case TReturn(ret):
 				if (currentControlPlan != null && currentControlPlan.returnFamilyAdmitted) {

@@ -31,8 +31,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 70
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v22') {
+if (report.schemaVersion !== 71
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23') {
 	fail('unexpected enum throw report schema or control model')
 }
 
@@ -49,7 +49,7 @@ for (const functionName of expectedFunctions) {
 	const control = controls.find(item => item.functionId.includes(`|function|${functionName}|`))
 	const payload = control?.payload
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v85'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v86'
 		|| control.proofId !== 'exact-enum-constructor-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic,Signal'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'

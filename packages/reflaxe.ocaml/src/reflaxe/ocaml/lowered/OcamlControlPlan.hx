@@ -117,6 +117,7 @@ enum abstract OcamlCatchPayloadConversion(String) from String to String {
 	final RecoverExactValue = "recover-exact-value";
 	final RecoverCheckedBool = "recover-checked-bool";
 	final RecoverNominalValue = "recover-nominal-value";
+	final RecoverEnumValue = "recover-enum-value";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
 	final PreserveOrWrapHaxeException = "preserve-or-wrap-haxe-exception";
 	final PreserveOrWrapHaxeValueException = "preserve-or-wrap-haxe-value-exception";
@@ -334,9 +335,11 @@ typedef OcamlCatchChainDecision = {
 /**
 	Request-local disposition for every final typed `try` node.
 
-	`chainId = null` records an explicit legacy disposition. The stable
-	occurrence identity and source participate in the plan revision, so removing
-	an admitted chain cannot silently look like intended fallback behavior.
+	`chainId = null` records that planning found no admitted chain. This remains
+	useful for reporting an empty or blocked occurrence, but it is not permission
+	for syntax to rebuild a non-empty catch: the function sealer rejects that case.
+	The stable occurrence identity and source participate in the plan revision, so
+	removing an admitted chain cannot silently look like an unobserved expression.
 **/
 typedef OcamlCatchChainOccurrence = {
 	final expression:TypedExpr;
@@ -350,9 +353,10 @@ typedef OcamlCatchChainOccurrence = {
 /**
 	How every completed branch of one exact typed `try` reaches its result type.
 
-	This record remains available when catch matching still uses the older path.
-	The OCaml syntax builder may consume these policies, but it cannot infer them
-	from target expressions or change which catch clause receives an exception.
+	The admitted catch chain carries the same policies; this detached view lets
+	validation compare the exact typed `try` occurrence with that chain. OCaml
+	syntax cannot infer a policy from target expressions or change which catch
+	clause receives an exception.
 **/
 typedef OcamlCatchBranchResultDisposition = {
 	final occurrenceId:String;
@@ -386,7 +390,7 @@ class OcamlControlPlan {
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
 	public static inline final HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID = "exact-haxe-exception-wrapper-throw-control-v1";
 	public static inline final EXACT_ENUM_THROW_PROOF_ID = "exact-enum-constructor-throw-control-v1";
-	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v4";
+	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v5";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
@@ -398,6 +402,7 @@ class OcamlControlPlan {
 	public static inline final HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID = "control-representation:haxe.Exception:runtime-wrapper-v1";
 	public static inline final HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID = "control-representation:haxe.ValueException:runtime-wrapper-v1";
 	public static inline final ENUM_THROW_CONTROL_REPRESENTATION_PREFIX = "control-representation:enum-direct-v1:";
+	public static inline final ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX = "control-representation:enum-catch-v1:";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
@@ -572,7 +577,7 @@ class OcamlControlPlan {
 			if (indexedCatchOccurrenceIds.exists(occurrence.occurrenceId))
 				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-occurrence]: catch occurrence "${occurrence.occurrenceId}" appears more than once';
 			if (catchDispositionByExpression.exists(occurrence.expression))
-				throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-occurrence]: one typed try node has more than one admitted or legacy disposition';
+				throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-occurrence]: one typed try node has more than one planned disposition';
 			if (occurrence.chainId != null) {
 				final chain = catchChainsById.get(occurrence.chainId);
 				if (chain == null)
@@ -597,7 +602,7 @@ class OcamlControlPlan {
 			normalizedCatchOccurrenceFingerprints.push([
 				occurrence.occurrenceId,
 				sourceKey(occurrence.source),
-				occurrence.chainId ?? "legacy-catch-chain",
+				occurrence.chainId ?? "unadmitted-catch-chain",
 				(occurrence.tryBodyResultPolicy : String),
 				occurrence.clauseBodyResultPolicies.map(policy -> (policy : String)).join(",")
 			].join("|"));
@@ -628,7 +633,7 @@ class OcamlControlPlan {
 				Lambda.count(ordered, decision -> decision.kind == OcamlControlTransferKind.Throw));
 			if (this.admission.catches.length != catchOccurrenceFingerprints.length
 				|| Lambda.count(this.admission.catches, entry -> entry.status == OcamlControlAdmissionStatus.Admitted) != orderedCatchChains.length) {
-				throw 'reflaxe.ocaml [ocaml-control-admission:catch-mismatch]: snapshot "${this.admission.id}" disagrees with its admitted and legacy catch occurrences';
+				throw 'reflaxe.ocaml [ocaml-control-admission:catch-mismatch]: snapshot "${this.admission.id}" disagrees with its admitted and unadmitted catch occurrences';
 			}
 		}
 		revision = "sha256:" + Sha256.encode([
@@ -684,13 +689,14 @@ class OcamlControlPlan {
 	}
 
 	/**
-		Returns how many `try` expressions the planner classified, including ones
-		that deliberately remain on the older catch path.
+		Returns how many `try` expressions the planner classified, including empty
+		or blocked occurrences that have no admitted chain.
 
 		This differs from `catchChains().length`: that list contains only admitted
 		catch plans. A caller defining a catch-free slice must also reject an
-		explicit legacy disposition, because either form means the function contains
-		a `try` expression.
+		unadmitted occurrence, because either form means the function contains a
+		`try` expression. Function sealing separately rejects blocked non-empty
+		catches before syntax.
 	**/
 	public function catchOccurrenceCount():Int {
 		return catchOccurrenceFingerprints.length;
@@ -759,7 +765,7 @@ class OcamlControlPlan {
 	public function catchChainFor(expression:TypedExpr):Null<OcamlCatchChainDecision> {
 		if (hasCatchOccurrenceIndex) {
 			if (!catchDispositionByExpression.exists(expression))
-				throw 'reflaxe.ocaml [ocaml-control:missing-catch-disposition]: typed try occurrence has no admitted or legacy catch disposition';
+				throw 'reflaxe.ocaml [ocaml-control:missing-catch-disposition]: typed try occurrence has no planned catch disposition';
 			final chainId = catchChainIdByExpression.get(expression);
 			if (chainId == null)
 				return null;
@@ -1157,6 +1163,10 @@ class OcamlControlPlan {
 				if (!isAdmittedNominalCatchClause(clause)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: nominal catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof';
 				}
+			case _ if (StringTools.startsWith(clause.outputRepresentationId, ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX)):
+				if (!isAdmittedEnumCatchClause(clause)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: enum catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion';
+				}
 			case "Dynamic":
 				if (clause.outputCarrierTypeId != "Obj.t"
 					|| clause.outputRepresentationId != DYNAMIC_CONTROL_REPRESENTATION_ID
@@ -1445,6 +1455,18 @@ class OcamlControlPlan {
 			&& nominal.representationProofId == "whole-program-monomorphic-nominal-record-v1:" + nominal.layoutRevision;
 	}
 
+	/** Reports whether one exact ordinary Haxe enum catch preserves its native variant carrier. */
+	public static function isAdmittedEnumCatchClause(clause:OcamlCatchClauseDecision):Bool {
+		final expectedCarrier = OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + clause.semanticTypeId;
+		return clause.semanticTypeId.length > 0
+			&& clause.outputCarrierTypeId == expectedCarrier
+			&& clause.outputRepresentationId == ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX + clause.semanticTypeId
+			&& clause.matchPolicy == OcamlCatchMatchPolicy.ExactRuntimeTag
+			&& clause.runtimeTag == clause.semanticTypeId
+			&& clause.conversion == OcamlCatchPayloadConversion.RecoverEnumValue
+			&& clause.nominalRepresentation == null;
+	}
+
 	/**
 		Reports whether one catch-only Haxe exception wrapper contract is exact.
 
@@ -1518,6 +1540,11 @@ class OcamlControlPlan {
 	/** Returns the control-only representation identity for one direct enum throw. */
 	public static function enumThrowRepresentationId(semanticTypeId:String):String {
 		return ENUM_THROW_CONTROL_REPRESENTATION_PREFIX + semanticTypeId;
+	}
+
+	/** Returns the catch-only representation identity for one ordinary Haxe enum. */
+	public static function enumCatchRepresentationId(semanticTypeId:String):String {
+		return ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX + semanticTypeId;
 	}
 
 	/**
@@ -1750,7 +1777,17 @@ class OcamlControlPlan {
 				}
 			case "haxe.Exception",
 				"haxe.ValueException": haxeExceptionWrapperTypeId(type) == clause.semanticTypeId && isAdmittedHaxeExceptionCatchClause(clause);
-			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type); semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause);
+			case _:
+				final enumIdentity = OcamlEnumDynamicCarrier.fromType(type);
+				if (enumIdentity != null) {
+					enumIdentity.semanticTypeId == clause.semanticTypeId
+					&& enumIdentity.carrierTypeId == clause.outputCarrierTypeId
+					&& isAdmittedEnumCatchClause(clause);
+				} else {
+					final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type);
+					semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause)
+					;
+				}
 		}
 	}
 
@@ -2293,7 +2330,7 @@ class OcamlControlPlanner {
 							privateControlPolicy: OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals,
 							runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
 							profileEligibility: ["metal", "portable"],
-							reason: "This complete source catch chain has represented primitive, monomorphic-class, Haxe exception-wrapper, or Dynamic matching and payload binding fixed before OCaml syntax.",
+							reason: "This complete source catch chain has represented primitive, ordinary-enum, monomorphic-class, Haxe exception-wrapper, or Dynamic matching and payload binding fixed before OCaml syntax.",
 							proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 							proofClaim: proofClaim,
 							functionId: binding.functionId,
@@ -2478,6 +2515,18 @@ class OcamlControlPlanner {
 				runtimeTag: representation.semanticTypeId,
 				conversion: OcamlCatchPayloadConversion.RecoverNominalValue,
 				nominalRepresentation: nominalRepresentation
+			};
+		}
+		final enumIdentity = OcamlEnumDynamicCarrier.fromType(type);
+		if (enumIdentity != null) {
+			return {
+				semanticTypeId: enumIdentity.semanticTypeId,
+				outputCarrierTypeId: enumIdentity.carrierTypeId,
+				outputRepresentationId: OcamlControlPlan.enumCatchRepresentationId(enumIdentity.semanticTypeId),
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: enumIdentity.semanticTypeId,
+				conversion: OcamlCatchPayloadConversion.RecoverEnumValue,
+				nominalRepresentation: null
 			};
 		}
 		return switch (haxe.macro.TypeTools.follow(type)) {

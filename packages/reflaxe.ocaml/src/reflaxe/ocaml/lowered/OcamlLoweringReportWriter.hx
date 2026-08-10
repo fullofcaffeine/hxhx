@@ -67,7 +67,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 70;
+	public static inline final SCHEMA_VERSION = 71;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -519,7 +519,9 @@ class OcamlLoweringReportWriter {
 			if (!controlAdmissionByFunction.exists(chain.functionId))
 				throw 'Control catch chain "${chain.id}" has no complete function-admission snapshot.';
 			for (clause in chain.clauses) {
-				if (clause.semanticTypeId != "Dynamic" && !OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)) {
+				if (clause.semanticTypeId != "Dynamic"
+					&& !OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)
+					&& !OcamlControlPlan.isAdmittedEnumCatchClause(clause)) {
 					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control catch clause "${clause.id}" output');
 				}
@@ -866,11 +868,11 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
 			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v22",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v23",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
-			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v4",
+			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v5",
 			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
 			controlCatchCount: sortedCatchChains.length,
 			controlCatches: sortedCatchChains,

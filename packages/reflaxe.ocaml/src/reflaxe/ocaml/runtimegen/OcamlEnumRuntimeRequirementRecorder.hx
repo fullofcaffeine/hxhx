@@ -6,6 +6,8 @@ import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementRole;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchClauseDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -27,6 +29,10 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 	exact Haxe expression that required it.
 **/
 class OcamlEnumRuntimeRequirementRecorder {
+	public static inline final CATCH_RUNTIME_CAPABILITY = "haxe-enum-catch-payload-recovery-v1";
+	public static inline final CATCH_RUNTIME_FEATURE = "enum-catch-unbox-or-object";
+	public static inline final CATCH_RUNTIME_OPERATION = "unbox_or_obj";
+
 	/** Builds the one runtime requirement owned by an admitted conversion. */
 	public static function requirement(conversion:OcamlLocalConversionDecision):OcamlRuntimeRequirement {
 		if (conversion.conversion != OcamlLocalCarrierConversion.BoxExactEnumToDynamic
@@ -139,6 +145,39 @@ class OcamlEnumRuntimeRequirementRecorder {
 	/** Adds one direct enum-constructor throw to the request-owned runtime ledger. */
 	public static function recordThrow(ledger:OcamlRuntimeRequirementLedger, decision:OcamlControlDecision):Void {
 		ledger.record(throwRequirement(decision));
+	}
+
+	/**
+		Builds the runtime reason for recovering one enum-valued catch variable.
+
+		The catch planner has already fixed the enum name and native variant carrier.
+		This record makes runtime packaging include `HxEnum.unbox_or_obj` even when the
+		program receives the enum through native code and has no typed enum throw that
+		would independently select `HxEnum`.
+	**/
+	public static function catchRequirement(chain:OcamlCatchChainDecision, clause:OcamlCatchClauseDecision):OcamlRuntimeRequirement {
+		OcamlControlPlan.requireCatchChain(chain);
+		if (!OcamlControlPlan.isAdmittedEnumCatchClause(clause)
+			|| Lambda.count(chain.clauses, candidate -> candidate.id == clause.id) != 1) {
+			throw 'reflaxe.ocaml [ocaml-enum:wrong-runtime-catch]: catch clause "${clause.id}" is not one sealed enum clause in chain "${chain.id}"';
+		}
+		return {
+			id: clause.id + ":runtime:" + CATCH_RUNTIME_CAPABILITY,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: clause.id,
+			source: clause.source,
+			semanticCapability: CATCH_RUNTIME_CAPABILITY,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: clause.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: clause.semanticTypeId
+			},
+			implementationFeature: CATCH_RUNTIME_FEATURE,
+			rootModules: [OcamlEnumDynamicCarrier.RUNTIME_MODULE],
+			profileEligibility: chain.profileEligibility,
+			explanation: 'The sealed catch recovers ${clause.semanticTypeId} from the private exception payload by calling ${OcamlEnumDynamicCarrier.RUNTIME_MODULE}.$CATCH_RUNTIME_OPERATION with the already-fixed enum name.'
+		};
 	}
 }
 #end

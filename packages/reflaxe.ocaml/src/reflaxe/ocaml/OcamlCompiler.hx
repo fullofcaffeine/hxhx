@@ -339,6 +339,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		return false;
 	}
+
+	/**
+		Selects declarations allowed to publish an exact nominal record layout.
+
+		Application classes remain the general admitted set. `haxe.io.Eof` is the
+		one standard-library exception added here because its declaration is a
+		concrete, fieldless, non-generic leaf and portable library code catches that
+		exact value. It still passes the shared monomorphic-class checks; this
+		exception only lets the planner inspect the declaration instead of asking
+		target syntax to rediscover its generated record type.
+	**/
+	static function isAdmittedMonomorphicClass(classType:ClassType):Bool {
+		final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
+		return fullName == "haxe.io.Eof" || (!isPosInHaxeStd(classType.pos) && !isPosInReflaxeOcaml(classType.pos));
+	}
 	#end
 
 	public function new() {
@@ -417,7 +432,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		try {
 			OcamlMonomorphicClassPlanner.plan(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, ctx, representationRegistry,
-				classType -> !isPosInHaxeStd(classType.pos) && !isPosInReflaxeOcaml(classType.pos));
+				isAdmittedMonomorphicClass);
 			planCallableDeclarations(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, revision.id);
 			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
 		} catch (error:Dynamic) {

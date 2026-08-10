@@ -336,16 +336,16 @@ class OcamlRuntimeRequirementLedger {
 
 	#if macro
 	/**
-		Returns the runtime reason selected by one complete Haxe catch chain.
+		Returns the runtime reasons selected by one complete Haxe catch chain.
 
 		The catch plan already fixes the Haxe exception input and the unmatched
-		rethrow behavior. This record only connects that typed decision to the
-		`HxRuntime` module that implements the signal; it does not infer a dependency
-		from the generated OCaml pattern or call.
+		rethrow behavior. The first record connects that decision to `HxRuntime`.
+		An enum clause adds its own `HxEnum` payload-recovery record. Neither reason
+		is inferred from the generated OCaml pattern or call.
 	**/
 	public static function requirementsForCatchChain(chain:OcamlCatchChainDecision):Array<OcamlRuntimeRequirement> {
 		OcamlControlPlan.requireCatchChain(chain);
-		return [
+		final requirements = [
 			normalize({
 				id: OcamlCatchRuntimeUseContract.requirementId(chain),
 				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
@@ -364,6 +364,11 @@ class OcamlRuntimeRequirementLedger {
 				explanation: "The sealed Haxe catch chain receives one typed Haxe exception signal and rethrows the same payload and runtime tags when no source catch clause matches."
 			})
 		];
+		for (clause in chain.clauses) {
+			if (OcamlControlPlan.isAdmittedEnumCatchClause(clause))
+				requirements.push(normalize(OcamlEnumRuntimeRequirementRecorder.catchRequirement(chain, clause)));
+		}
+		return requirements;
 	}
 
 	/** Records the runtime dependency selected by one complete Haxe catch chain. */

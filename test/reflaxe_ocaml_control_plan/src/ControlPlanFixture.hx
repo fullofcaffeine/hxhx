@@ -400,6 +400,37 @@ class ControlPlanFixture {
 		};
 	}
 
+	/** Builds the sealed native-variant contract used by an ordinary Haxe enum catch. */
+	static function enumCatchClause(id:String, min:Int, order:Int, variableName:String, semanticTypeId:String):OcamlCatchClauseDecision {
+		final clause = catchClause(id, min, order, variableName, semanticTypeId);
+		Reflect.setField(clause, "outputCarrierTypeId", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + semanticTypeId);
+		Reflect.setField(clause, "outputRepresentationId", OcamlControlPlan.enumCatchRepresentationId(semanticTypeId));
+		Reflect.setField(clause, "conversion", OcamlCatchPayloadConversion.RecoverEnumValue);
+		return clause;
+	}
+
+	/**
+		Builds a class catch whose target record layout was fixed by whole-program planning.
+
+		This is the focused equivalent of `haxe.io.Eof` in the portable fixture. The
+		layout digest makes a stale module or target type fail before syntax can bind
+		the catch variable.
+	**/
+	static function nominalCatchClause(id:String, min:Int, order:Int, variableName:String, semanticTypeId:String):OcamlCatchClauseDecision {
+		final clause = catchClause(id, min, order, variableName, semanticTypeId);
+		final layoutRevision = "sha256:" + StringTools.lpad("", "e", 64);
+		Reflect.setField(clause, "outputCarrierTypeId", "t");
+		Reflect.setField(clause, "outputRepresentationId", 'representation:$semanticTypeId:internal-value');
+		Reflect.setField(clause, "conversion", OcamlCatchPayloadConversion.RecoverNominalValue);
+		Reflect.setField(clause, "nominalRepresentation", {
+			targetModuleName: "Fixture_Eof",
+			targetTypeName: "t",
+			layoutRevision: layoutRevision,
+			representationProofId: "whole-program-monomorphic-nominal-record-v1:" + layoutRevision
+		});
+		return clause;
+	}
+
 	/**
 		Builds the dedicated control-only contract for Haxe exception wrappers.
 
@@ -649,7 +680,7 @@ class ControlPlanFixture {
 		};
 	}
 
-	/** Finds the first `try` node so a legacy catch disposition can be indexed exactly. */
+	/** Finds the first `try` node so an unadmitted catch occurrence can be indexed exactly. */
 	static function firstTry(expression:TypedExpr):TypedExpr {
 		var result:Null<TypedExpr> = null;
 		function visit(current:TypedExpr):Void {
@@ -722,6 +753,8 @@ class ControlPlanFixture {
 		final stringCatch = catchClause("control-catch-clause:string", 340, 3, "asString", "String");
 		final dynamicCatch = catchClause("control-catch-clause:dynamic", 350, 4, "asDynamic", "Dynamic");
 		final exactCatchChain = catchChain("control-catch-chain:exact", [intCatch, floatCatch, boolCatch, stringCatch, dynamicCatch]);
+		final enumCatch = enumCatchClause("control-catch-clause:enum", 355, 0, "asSignal", "fixture.Signal");
+		final nominalCatch = nominalCatchClause("control-catch-clause:nominal", 356, 0, "asEof", "fixture.Eof");
 		final valueExceptionCatch = haxeExceptionCatchClause("control-catch-clause:value-exception", 350, 0, "asValueException", true);
 		final exceptionCatch = haxeExceptionCatchClause("control-catch-clause:exception", 360, 1, "asException", false);
 		final haxeExceptionCatchChain = catchChain("control-catch-chain:haxe-exception", [valueExceptionCatch, exceptionCatch]);
@@ -856,6 +889,21 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireCatchChain(haxeExceptionCatchChain);
 		for (clause in haxeExceptionCatchChain.clauses)
 			OcamlControlPlan.requireCatchClause(clause);
+		OcamlControlPlan.requireCatchClause(enumCatch);
+		OcamlControlPlan.requireCatchClause(nominalCatch);
+		final enumCatchChain = catchChain("control-catch-chain:enum", [enumCatch]);
+		final enumCatchRuntimeLedger = new OcamlRuntimeRequirementLedger();
+		enumCatchRuntimeLedger.beginProgram(enumCatchChain.programRevision);
+		enumCatchRuntimeLedger.recordCatchChain(enumCatchChain);
+		final enumCatchRequirements = enumCatchRuntimeLedger.requirementsSorted();
+		final enumRecoveryRequirements = enumCatchRequirements.filter(requirement ->
+			requirement.semanticCapability == OcamlEnumRuntimeRequirementRecorder.CATCH_RUNTIME_CAPABILITY);
+		if (enumCatchRequirements.length != 2
+			|| enumRecoveryRequirements.length != 1
+			|| enumRecoveryRequirements[0].subject.id != "fixture.Signal"
+			|| enumRecoveryRequirements[0].rootModules.join(",") != "HxEnum") {
+			throw "An enum-only catch did not publish its exact HxEnum payload-recovery requirement";
+		}
 
 		final missingId = returnDecision("", 50);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [missingId]));
@@ -1032,6 +1080,16 @@ class ControlPlanFixture {
 		expectThrows("invalid-catch-clause",
 			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
 				[catchChain("control-catch-chain:bad-float-carrier", [badFloatCarrier])]));
+		final badEnumCarrier = enumCatchClause("control-catch-clause:bad-enum-carrier", 351, 0, "asSignal", "fixture.Signal");
+		Reflect.setField(badEnumCarrier, "outputCarrierTypeId", "Obj.t");
+		expectThrows("invalid-catch-clause",
+			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
+				[catchChain("control-catch-chain:bad-enum-carrier", [badEnumCarrier])]));
+		final badNominalLayout = nominalCatchClause("control-catch-clause:bad-nominal-layout", 352, 0, "asEof", "fixture.Eof");
+		Reflect.setField(badNominalLayout.nominalRepresentation, "targetTypeName", "stale_t");
+		expectThrows("invalid-catch-clause",
+			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
+				[catchChain("control-catch-chain:bad-nominal-layout", [badNominalLayout])]));
 		final badCatchConversion = catchChain("control-catch-chain:bad-conversion", [
 			catchClause("control-catch-clause:bad-conversion", 350, 0, "asBool", "Bool", null, OcamlCatchPayloadConversion.RecoverExactValue)
 		]);
@@ -1246,21 +1304,21 @@ class ControlPlanFixture {
 			catchOccurrence(typedTries[0], "control-catch-occurrence:missing-results", typedCatchSource, null,
 				OcamlCatchBranchResultPolicy.PreserveTypedResult, [])
 		]));
-		final indexedLegacyCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
-			catchOccurrence(typedTries[0], "control-catch-occurrence:legacy", typedCatchSource, null,
+		final indexedUnadmittedCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
+			catchOccurrence(typedTries[0], "control-catch-occurrence:unadmitted", typedCatchSource, null,
 				OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit, [
 					for (_ in 0...exactCatchChain.clauses.length)
 						OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit
 				])
 		]);
-		if (!indexedLegacyCatch.hasCatchDispositionFor(typedTries[0]) || indexedLegacyCatch.catchChainFor(typedTries[0]) != null)
-			throw "An explicit legacy catch disposition became an admitted chain";
-		final legacyResults = indexedLegacyCatch.catchBranchResultDispositionFor(typedTries[0]);
-		if (legacyResults.tryBodyResultPolicy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit
-			|| Lambda.exists(legacyResults.clauseBodyResultPolicies, policy -> policy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit))
-			throw "An explicit legacy catch disposition lost its sealed Void result policies";
+		if (!indexedUnadmittedCatch.hasCatchDispositionFor(typedTries[0]) || indexedUnadmittedCatch.catchChainFor(typedTries[0]) != null)
+			throw "An explicitly unadmitted catch occurrence became an admitted chain";
+		final unadmittedResults = indexedUnadmittedCatch.catchBranchResultDispositionFor(typedTries[0]);
+		if (unadmittedResults.tryBodyResultPolicy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit
+			|| Lambda.exists(unadmittedResults.clauseBodyResultPolicies, policy -> policy != OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit))
+			throw "An explicitly unadmitted catch occurrence lost its typed Void result policies";
 		expectThrows("missing-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
-			catchOccurrence(typedTries[0], "control-catch-occurrence:legacy-only", typedCatchSource, null)
+			catchOccurrence(typedTries[0], "control-catch-occurrence:unadmitted-only", typedCatchSource, null)
 		]));
 		expectThrows("duplicate-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
 			catchOccurrence(typedTries[0], "control-catch-occurrence:duplicate", typedCatchSource, exactCatchChain.id, exactCatchChain.tryBodyResultPolicy,
