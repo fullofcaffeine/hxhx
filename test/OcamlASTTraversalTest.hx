@@ -42,6 +42,33 @@ class OcamlASTTraversalTest {
 		return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier("traversal:runtime-use:array-set", "plan:traversal", "HxArray.set"));
 	}
 
+	/** Builds a checked pattern token so constructor coverage uses the production boundary. */
+	public static function runtimeConstructorPattern():OcamlPat {
+		final source:OcamlLoweredSourceSpan = {file: "Traversal.hx", min: 9, max: 10};
+		final requirementId = "traversal-pattern:runtime:haxe-array-element-set";
+		final authority = new OcamlRuntimeUseAuthority("plan:traversal-pattern", "portable", [
+			OcamlRuntimeRequirementLedger.requirementForPlaceCapability("traversal-pattern", "traversal-pattern", "traversal-pattern", source, "Int",
+				requirementId)
+		], [
+			{
+				id: "traversal-pattern:runtime-use:constructor",
+				planRevision: "plan:traversal-pattern",
+				ownerId: "traversal-pattern",
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.PatternConstructor,
+				exactSymbol: "HxArray.ObjStore",
+				role: "pattern",
+				order: 0,
+				source: source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			}
+		]);
+		return OcamlPat.PRuntimeConstructor(authority.patternIdentifier("traversal-pattern:runtime-use:constructor", "plan:traversal-pattern",
+			"HxArray.ObjStore"),
+			[OcamlPat.PVar("runtime_pattern_arg")]);
+	}
+
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
 			throw message;
@@ -87,6 +114,7 @@ class OcamlASTTraversalTest {
 			OcamlPat.PTuple([OcamlPat.PVar("pattern_tuple")]),
 			OcamlPat.POr([OcamlPat.PVar("pattern_or_left"), OcamlPat.PVar("pattern_or_right")]),
 			OcamlPat.PConstructor("PatternCtor", [OcamlPat.PVar("pattern_constructor_arg")]),
+			runtimeConstructorPattern(),
 			OcamlPat.PRecord([
 				{
 					name: "field",

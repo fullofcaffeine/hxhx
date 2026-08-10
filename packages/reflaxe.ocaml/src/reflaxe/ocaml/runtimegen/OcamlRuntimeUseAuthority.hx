@@ -3,6 +3,7 @@ package reflaxe.ocaml.runtimegen;
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -71,6 +72,11 @@ class OcamlRuntimeUseAuthority {
 	/** Creates one expression identifier after checking all sealed facts. */
 	public function expressionIdentifier(id:String, requestedPlanRevision:String, exactSymbol:String):OcamlRuntimeReference {
 		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.ExpressionIdentifier, exactSymbol);
+	}
+
+	/** Creates one pattern constructor after checking all sealed catch-use facts. */
+	public function patternIdentifier(id:String, requestedPlanRevision:String, exactSymbol:String):OcamlRuntimeReference {
+		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.PatternConstructor, exactSymbol);
 	}
 
 	/** Creates one generated-text placeholder after checking all sealed facts. */
@@ -155,7 +161,13 @@ class OcamlRuntimeUseAuthority {
 				|| isPlannedExactReference(moduleName + "." + field)):
 				errors.push('plain private runtime reference $moduleName.$field');
 			case _:
-		}, _ -> {}, _ -> {});
+		}, current -> switch (current) {
+			case PRuntimeConstructor(reference, _):
+				observeReference(reference, observedIds, counts, errors);
+			case PConstructor(name, _) if (isPlainPrivateReference(name) || isPlannedExactReference(name)):
+				errors.push('plain private runtime reference $name');
+			case _:
+		}, _ -> {});
 		finishReconciliation(observedIds, counts, errors);
 	}
 

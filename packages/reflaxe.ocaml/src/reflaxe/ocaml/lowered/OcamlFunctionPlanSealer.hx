@@ -164,6 +164,8 @@ class OcamlFunctionPlanSealer {
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
 			arrayLiteralProducers).plan(data.expr, functionResultBoundary);
+		for (chain in controls.catchChains())
+			context.recordCatchChainRuntimeRequirements(chain);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
@@ -357,6 +359,8 @@ class OcamlFunctionPlanSealer {
 							};
 							for (decision in arrayLiteralProducers.decisions())
 								context.recordArrayLiteralRuntimeRequirements(decision);
+							for (chain in controls.catchChains())
+								context.recordCatchChainRuntimeRequirements(chain);
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}
 					}

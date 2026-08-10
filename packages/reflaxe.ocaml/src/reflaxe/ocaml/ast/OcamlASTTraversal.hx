@@ -109,6 +109,9 @@ class OcamlASTTraversal {
 			case PConstructor(name, args):
 				final mappedArgs = mapArrayPreservingIdentity(args, mapPattern);
 				mappedArgs == args ? pattern : PConstructor(name, mappedArgs);
+			case PRuntimeConstructor(reference, args):
+				final mappedArgs = mapArrayPreservingIdentity(args, mapPattern);
+				mappedArgs == args ? pattern : PRuntimeConstructor(reference, mappedArgs);
 			case PRecord(fields):
 				final mappedFields = mapArrayPreservingIdentity(fields, field -> {
 					final mappedPattern = mapPattern(field.pat);

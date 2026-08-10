@@ -7,6 +7,11 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+#if macro
+import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+#end
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
@@ -294,6 +299,45 @@ class OcamlRuntimeRequirementLedger {
 		for (requirement in requirementsForArrayLiteralProducer(decision))
 			record(requirement);
 	}
+
+	#if macro
+	/**
+		Returns the runtime reason selected by one complete Haxe catch chain.
+
+		The catch plan already fixes the Haxe exception input and the unmatched
+		rethrow behavior. This record only connects that typed decision to the
+		`HxRuntime` module that implements the signal; it does not infer a dependency
+		from the generated OCaml pattern or call.
+	**/
+	public static function requirementsForCatchChain(chain:OcamlCatchChainDecision):Array<OcamlRuntimeRequirement> {
+		OcamlControlPlan.requireCatchChain(chain);
+		return [
+			normalize({
+				id: OcamlCatchRuntimeUseContract.requirementId(chain),
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: chain.id,
+				source: chain.source,
+				semanticCapability: chain.runtimeCapabilityId,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: chain.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "haxe.Exception"
+				},
+				implementationFeature: "haxe-typed-catch-signal-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: chain.profileEligibility,
+				explanation: "The sealed Haxe catch chain receives one typed Haxe exception signal and rethrows the same payload and runtime tags when no source catch clause matches."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one complete Haxe catch chain. */
+	public function recordCatchChain(chain:OcamlCatchChainDecision):Void {
+		for (requirement in requirementsForCatchChain(chain))
+			record(requirement);
+	}
+	#end
 
 	/**
 		Returns the closed runtime requirements implied by one sealed program

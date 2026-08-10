@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
+REQUIREMENTS_FILE="out/ocaml_runtime_requirement_report.json"
 REPORT_COPY="$(mktemp)"
 MANIFEST_FILE="out/ocaml_artifact_manifest.json"
 MANIFEST_COPY="$(mktemp)"
@@ -11,15 +12,16 @@ INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
 trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
 
-if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
-	echo "Missing generated exact-catch source or lowering report" >&2
+if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$REQUIREMENTS_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
+	echo "Missing generated exact-catch source, lowering report, runtime-requirement report, or manifest" >&2
 	exit 1
 fi
 
-node - "$SOURCE_FILE" "$REPORT_FILE" <<'NODE'
+node - "$SOURCE_FILE" "$REPORT_FILE" "$REQUIREMENTS_FILE" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
+const requirements = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))
 const sha256 = /^sha256:[0-9a-f]{64}$/
 const rawSha256 = /^[0-9a-f]{64}$/
 const bodyRevision = /^[0-9]+:[0-9a-f]{64}$/
@@ -40,6 +42,18 @@ const catches = report.controlCatches.filter(chain =>
 	chain.functionId.startsWith('Main|Main|'))
 if (catches.length !== 13) {
 	fail(`expected 13 exact primitive/Dynamic catch chains, got ${catches.length}`)
+}
+const catchRequirements = requirements.requirements.filter(requirement =>
+	requirement.semanticCapability === 'hxhx-runtime:typed-haxe-catch-chain-v1'
+	&& catches.some(chain => chain.id === requirement.decisionId))
+if (catchRequirements.length !== catches.length
+	|| catchRequirements.some(requirement =>
+		requirement.sourceKind !== 'haxe-expression'
+		|| requirement.cause !== 'lowering-decision'
+		|| requirement.rootModules.join(',') !== 'HxRuntime'
+		|| requirement.sourceId !== requirement.decisionId
+		|| requirement.id !== `${requirement.decisionId}:runtime:hxhx-runtime:typed-haxe-catch-chain-v1`)) {
+	fail('the real catch chains did not each publish one exact HxRuntime requirement')
 }
 if (catches.some(chain =>
 	chain.functionId.includes('|function|independentAdmission|')

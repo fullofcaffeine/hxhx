@@ -50,6 +50,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -895,6 +896,20 @@ class OcamlBuilder {
 		}
 		if (chain.clauses.length != catches.length)
 			return controlPlanInvariant('catch chain "${chain.id}" has ${chain.clauses.length} clauses, but the typed try has ${catches.length}', position);
+		final runtimeUsePlan = try {
+			final selected = OcamlCatchRuntimeUseContract.forChain(chain);
+			OcamlCatchRuntimeUseContract.requireForChain(chain, selected);
+			selected;
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final runtimeAuthority = try {
+			new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile, ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds),
+				runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
 
 		final syntax:Array<{variableName:String, variableType:OcamlTypeExpr, body:OcamlExpr}> = [];
 		for (index in 0...catches.length) {
@@ -1005,17 +1020,31 @@ class OcamlBuilder {
 		final haxeTagsVariable = freshTmp("exn_tags");
 		final haxeFallback = switch (chain.haxeUnmatchedPolicy) {
 			case RethrowHaxeExceptionSignal:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"),
+				final occurrence = OcamlCatchRuntimeUseContract.rethrowOccurrence(runtimeUsePlan);
+				OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision,
+					occurrence.exactSymbol)),
 					[OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable)]);
 			case _:
 				return controlPlanInvariant('catch chain "${chain.id}" selected invalid Haxe unmatched policy ${chain.haxeUnmatchedPolicy}', position);
 		};
 		final haxeHandler = buildChain(OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable), haxeFallback);
+		final patternOccurrence = OcamlCatchRuntimeUseContract.patternOccurrence(runtimeUsePlan);
 		final haxeCase:OcamlMatchCase = {
-			pat: OcamlPat.PConstructor("HxRuntime.Hx_exception", [OcamlPat.PVar(haxeValueVariable), OcamlPat.PVar(haxeTagsVariable)]),
+			pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(patternOccurrence.id, runtimeUsePlan.planRevision,
+				patternOccurrence.exactSymbol),
+				[OcamlPat.PVar(haxeValueVariable), OcamlPat.PVar(haxeTagsVariable)]),
 			guard: null,
 			expr: haxeHandler
 		};
+		try {
+			// This small tree contains only the two names owned by this catch plan.
+			// Catch bodies can carry references owned by other plans, so their local
+			// checks stay separate. Final output checking still walks the complete
+			// returned try expression and proves that these exact two IDs survived.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [{pat: haxeCase.pat, guard: null, expr: haxeFallback}]));
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
 
 		final nativeExceptionVariable = freshTmp("exn");
 		final nativeFallback = switch (chain.targetNativeUnmatchedPolicy) {

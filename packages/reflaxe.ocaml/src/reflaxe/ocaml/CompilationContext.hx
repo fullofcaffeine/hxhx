@@ -22,6 +22,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecisi
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
@@ -550,6 +551,17 @@ class CompilationContext {
 	**/
 	public function recordArrayLiteralRuntimeRequirements(decision:OcamlArrayLiteralProducerDecision):Void {
 		runtimeRequirements.recordArrayLiteralProducer(decision);
+	}
+
+	/**
+		Records why one sealed catch chain needs the private Haxe exception signal.
+
+		The control planner has already selected both exception input channels and
+		unmatched behavior. This request-local handoff makes runtime packaging follow
+		that decision instead of scanning the generated pattern and rethrow call.
+	**/
+	public function recordCatchChainRuntimeRequirements(chain:OcamlCatchChainDecision):Void {
+		runtimeRequirements.recordCatchChain(chain);
 	}
 
 	/**

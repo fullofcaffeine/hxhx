@@ -4903,7 +4903,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case PRecord(fields):
 					for (f in fields)
 						collectPatNames(f.pat, acc);
-				case PConstructor(_, args):
+				case PConstructor(_, args), PRuntimeConstructor(_, args):
 					for (a in args)
 						collectPatNames(a, acc);
 				case POr(items):

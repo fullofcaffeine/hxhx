@@ -103,6 +103,8 @@ class OcamlASTPrinterTest {
 		assertEq("let x = 1 in x", p.printExpr(OcamlExpr.ELet("x", OcamlExpr.EConst(OcamlConst.CInt(1)), OcamlExpr.EIdent("x"), false)), "let-in");
 		assertEq("HxArray.set", p.printExpr(OcamlASTTraversalTest.runtimeIdentifierExpression()),
 			"checked runtime identifier prints the exact planned symbol without printer decisions");
+		assertEq("HxArray.ObjStore runtime_pattern_arg", p.printPat(OcamlASTTraversalTest.runtimeConstructorPattern()),
+			"checked runtime pattern prints the exact planned constructor without printer decisions");
 		assertEq("(ignore visible_child)", p.printExpr(OcamlExpr.ERawInterpolated([
 			OcamlRawPart.RawText("(ignore "),
 			OcamlRawPart.RawExpression(OcamlExpr.EIdent("visible_child")),

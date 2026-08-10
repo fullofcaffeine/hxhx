@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.47",
+  "reviewBead": "haxe_ocaml-0uwin.48",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.47",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.48",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,10 +15,10 @@
     }
   ],
   "counts": {
-    "total": 385,
+    "total": 383,
     "byDomain": {
-      "expression": 355,
-      "pattern": 15,
+      "expression": 354,
+      "pattern": 14,
       "raw-boundary": 2,
       "type": 13
     },
@@ -30,7 +30,7 @@
       "builder-dynamic": 3,
       "builder-dynamic-runtime": 3,
       "builder-enum": 27,
-      "builder-exceptions": 6,
+      "builder-exceptions": 4,
       "builder-int": 60,
       "builder-iterator": 2,
       "builder-nullable-carriers": 68,
@@ -43,7 +43,7 @@
       "standard-map-carrier-model": 3
     }
   },
-  "inventoryRevision": "c9ef75d8d741175e8c14806e1b2b5ebe8af8ebed2f038f4eb920a2ef6b9a2e38",
+  "inventoryRevision": "cdb69679790829100ab9d6970dd4ac2722bf6404b4d6c977ce66ced049a85bee",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -336,26 +336,6 @@
       "migrationFamily": "builder-control-transfer"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.hx_throw_typed",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-exceptions"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_exception::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "pattern",
-      "construction": "PConstructor",
-      "symbol": "HxRuntime.Hx_exception",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-exceptions"
-    },
-    {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::2",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
@@ -486,13 +466,13 @@
       "migrationFamily": "builder-nullable-carriers"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxRuntime.hx_throw_typed",
       "rootModule": "HxRuntime",
-      "ordinal": 2,
+      "ordinal": 1,
       "migrationFamily": "builder-exceptions"
     },
     {
@@ -2176,23 +2156,23 @@
       "migrationFamily": "builder-control-transfer"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::3",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_throw_typed::2",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxRuntime.hx_throw_typed",
       "rootModule": "HxRuntime",
-      "ordinal": 3,
+      "ordinal": 2,
       "migrationFamily": "builder-exceptions"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_exception::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_exception::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "pattern",
       "construction": "PConstructor",
       "symbol": "HxRuntime.Hx_exception",
       "rootModule": "HxRuntime",
-      "ordinal": 2,
+      "ordinal": 1,
       "migrationFamily": "builder-exceptions"
     },
     {

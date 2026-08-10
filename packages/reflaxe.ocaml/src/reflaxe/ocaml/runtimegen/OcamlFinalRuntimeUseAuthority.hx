@@ -4,6 +4,7 @@ package reflaxe.ocaml.runtimegen;
 import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
@@ -92,44 +93,57 @@ class OcamlFinalRuntimeUseAuthority {
 		final copiedSourceKeys:Map<String, Bool> = [];
 		final copiedExpression = OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
-				final sourceExpected = expectedByKey.get(occurrenceKey(reference.planRevision, reference.id));
-				if (sourceExpected == null)
-					throw 'Cannot copy unplanned final runtime use ${reference.id} for output role $stableRole.';
-				final source = sourceExpected.occurrence;
-				if (reference.ownerId != source.ownerId
-					|| reference.domain != source.domain
-					|| reference.exactSymbol != source.exactSymbol)
-					throw 'Cannot copy corrupted final runtime use ${reference.id} for output role $stableRole.';
-				copiedSourceKeys.set(occurrenceKey(reference.planRevision, reference.id), true);
-				final copied:OcamlRuntimeUseOccurrence = {
-					id: source.id + ":output-copy:" + stableRole,
-					planRevision: source.planRevision,
-					ownerId: source.ownerId + ":output-copy:" + stableRole,
-					requirementId: source.requirementId,
-					domain: source.domain,
-					exactSymbol: source.exactSymbol,
-					role: source.role + ":output-copy:" + stableRole,
-					order: source.order,
-					source: {
-						file: source.source.file,
-						min: source.source.min,
-						max: source.source.max
-					},
-					profileEligibility: source.profileEligibility.copy(),
-					cardinality: source.cardinality
-				};
-				registerExpected(copied.planRevision, sourceExpected.activeProfile, copied);
-				ERuntimeIdent(new OcamlRuntimeReference(copied.id, copied.planRevision, copied.ownerId, copied.domain, copied.exactSymbol));
+				ERuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys));
 			case _:
 				current;
-		}, pattern -> pattern, type -> type);
+		}, pattern -> switch (pattern) {
+			case PRuntimeConstructor(reference, args):
+				PRuntimeConstructor(copyReferenceForOutput(reference, stableRole, copiedSourceKeys), args);
+			case _:
+				pattern;
+		}, type -> type);
 		OcamlASTTraversal.walkExprPre(copiedExpression, current -> switch (current) {
 			case ERuntimeIdent(reference):
 				if (copiedSourceKeys.exists(occurrenceKey(reference.planRevision,
 					reference.id))) throw 'Final runtime-use output copy $stableRole retained original occurrence ${reference.id}.';
 			case _:
-		}, _ -> {}, _ -> {});
+		}, current -> switch (current) {
+			case PRuntimeConstructor(reference, _):
+				if (copiedSourceKeys.exists(occurrenceKey(reference.planRevision,
+					reference.id))) throw 'Final runtime-use output copy $stableRole retained original occurrence ${reference.id}.';
+			case _:
+		}, _ -> {});
 		return copiedExpression;
+	}
+
+	/** Copies one already-accepted private name into a separately counted output site. */
+	function copyReferenceForOutput(reference:OcamlRuntimeReference, stableRole:String, copiedSourceKeys:Map<String, Bool>):OcamlRuntimeReference {
+		final sourceExpected = expectedByKey.get(occurrenceKey(reference.planRevision, reference.id));
+		if (sourceExpected == null)
+			throw 'Cannot copy unplanned final runtime use ${reference.id} for output role $stableRole.';
+		final source = sourceExpected.occurrence;
+		if (reference.ownerId != source.ownerId || reference.domain != source.domain || reference.exactSymbol != source.exactSymbol)
+			throw 'Cannot copy corrupted final runtime use ${reference.id} for output role $stableRole.';
+		copiedSourceKeys.set(occurrenceKey(reference.planRevision, reference.id), true);
+		final copied:OcamlRuntimeUseOccurrence = {
+			id: source.id + ":output-copy:" + stableRole,
+			planRevision: source.planRevision,
+			ownerId: source.ownerId + ":output-copy:" + stableRole,
+			requirementId: source.requirementId,
+			domain: source.domain,
+			exactSymbol: source.exactSymbol,
+			role: source.role + ":output-copy:" + stableRole,
+			order: source.order,
+			source: {
+				file: source.source.file,
+				min: source.source.min,
+				max: source.source.max
+			},
+			profileEligibility: source.profileEligibility.copy(),
+			cardinality: source.cardinality
+		};
+		registerExpected(copied.planRevision, sourceExpected.activeProfile, copied);
+		return new OcamlRuntimeReference(copied.id, copied.planRevision, copied.ownerId, copied.domain, copied.exactSymbol);
 	}
 
 	/** Observes every runtime reference in one complete structured module. */
@@ -153,7 +167,11 @@ class OcamlFinalRuntimeUseAuthority {
 			case ERuntimeIdent(reference):
 				observeReference(reference, location);
 			case _:
-		}, _ -> {}, _ -> {});
+		}, current -> switch (current) {
+			case PRuntimeConstructor(reference, _):
+				observeReference(reference, location);
+			case _:
+		}, _ -> {});
 	}
 
 	/** Observes the hidden references retained by one checked generated-text record. */

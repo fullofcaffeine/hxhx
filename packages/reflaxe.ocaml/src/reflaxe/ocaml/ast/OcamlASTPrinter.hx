@@ -535,22 +535,26 @@ class OcamlASTPrinter {
 			case POr(items):
 				items.map(printPat).join(" | ");
 			case PConstructor(name, args):
-				if (name == "[]" && args.length == 0) {
-					"[]";
-				} else if (name == "::" && args.length == 2) {
-					printPatCtx(args[0], true) + " :: " + printPatCtx(args[1], true);
-				} else if (args.length == 0) {
-					name;
-				} else if (args.length == 1) {
-					name + " " + printPatCtx(args[0], true);
-				} else {
-					name + " (" + args.map(printPat).join(", ") + ")";
-				}
+				printConstructorPattern(name, args);
+			case PRuntimeConstructor(reference, args):
+				printConstructorPattern(reference.exactSymbol, args);
 			case PRecord(fields):
 				"{ " + fields.map(f -> f.name + " = " + printPat(f.pat)).join("; ") + " }";
 			case PAnnot(pat, typ):
 				"(" + printPat(pat) + " : " + printType(typ) + ")";
 		}
+	}
+
+	function printConstructorPattern(name:String, args:Array<OcamlPat>):String {
+		if (name == "[]" && args.length == 0)
+			return "[]";
+		if (name == "::" && args.length == 2)
+			return printPatCtx(args[0], true) + " :: " + printPatCtx(args[1], true);
+		if (args.length == 0)
+			return name;
+		if (args.length == 1)
+			return name + " " + printPatCtx(args[0], true);
+		return name + " (" + args.map(printPat).join(", ") + ")";
 	}
 
 	function printPatCtx(p:OcamlPat, inApp:Bool):String {
@@ -560,7 +564,7 @@ class OcamlASTPrinter {
 
 	function needsPatParensInApp(p:OcamlPat):Bool {
 		return switch (p) {
-			case PConstructor(_, _): true;
+			case PConstructor(_, _), PRuntimeConstructor(_, _): true;
 			case PRecord(_): true;
 			case PTuple(_): true;
 			case POr(_): true;

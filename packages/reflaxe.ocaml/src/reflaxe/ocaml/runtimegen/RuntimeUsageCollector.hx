@@ -70,6 +70,7 @@ class RuntimeUsageCollector {
 				EAnnot(_, _):
 		}, current -> switch (current) {
 			case PConstructor(name, _): markQualifiedName(name, markModule);
+			case PRuntimeConstructor(reference, _): markQualifiedName(reference.exactSymbol, markModule);
 			case PAny, PVar(_), PConst(_), PTuple(_), POr(_), PRecord(_), PAnnot(_, _):
 		}, current -> switch (current) {
 			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
