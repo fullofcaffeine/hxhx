@@ -321,7 +321,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 76 || report.callModel !== 'typed-ocaml-directional-call-boundary-v25') {
+if (report.schemaVersion !== 77 || report.callModel !== 'typed-ocaml-directional-call-boundary-v26') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -460,7 +460,7 @@ if (!checkedResultBoundary
 	|| checkedResult.proofId !== 'nullable-int-call-checked-unbox-v1'
 	|| typeof checkedResultBoundary.bodyRevision !== 'string'
 	|| typeof checkedResultBoundary.programRevision !== 'string'
-	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v91') {
+	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v92') {
 	throw new Error('the callable boundary did not seal the checked Null<Int>-to-Int result crossing')
 }
 if (checkedResultCalls.length !== 2 || checkedResultCalls.some(call =>
@@ -522,7 +522,7 @@ if (!allPathBoundary
 	|| !isIdentity(allPathBoundary.arguments[0], 'String', 'string')
 	|| !isIdentity(allPathBoundary.result, 'Null<Int>', 'Obj.t')
 	|| !allPathBoundary.reason?.includes('Every path in its final typed body exits through sealed return control')
-	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v91'
+	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v92'
 	|| typeof allPathBoundary.bodyRevision !== 'string'
 	|| typeof allPathBoundary.programRevision !== 'string') {
 	throw new Error('the all-path nullable function did not retain one declared callable result boundary')

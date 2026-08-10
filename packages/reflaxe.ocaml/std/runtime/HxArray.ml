@@ -568,7 +568,7 @@ let normalize_slice_pos (len : int) (pos : int) : int =
   else
     pos
 
-let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
+let slice (a : 'a t) (pos : int) (end_ : 'b) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
@@ -599,6 +599,12 @@ let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
       promote_obj_store_if_possible out;
       out
     )
+
+(* The typed Haxe plan selects this entry only when the optional end was
+   omitted. Reading the received Array's length here prevents generated syntax
+   from evaluating a side-effecting receiver expression a second time. *)
+let slice_default (a : 'a t) (pos : int) : 'a t =
+  slice a pos (length a)
 
 let splice (a : 'a t) (pos : int) (len : int) : 'a t =
   match unwrap_or_empty a with

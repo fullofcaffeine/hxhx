@@ -15,7 +15,7 @@ const sourceConversions = report.localConversions.filter(conversion =>
 if (sourceConversions.length === 0
 	|| sourceConversions.some(conversion =>
 		conversion.functionId.includes('|nested-function|')
-		|| conversion.pipelineRevision !== 'ocaml-function-plans-v91')) {
+		|| conversion.pipelineRevision !== 'ocaml-function-plans-v92')) {
 	throw new Error('nested local conversions did not retain their whole-tree root plan owner')
 }
 

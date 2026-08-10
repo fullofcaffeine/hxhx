@@ -90,7 +90,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v91";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v92";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -441,8 +441,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 76) {
-						throw 'Unsupported lowering report schema $version; expected 76.';
+					if (version != 77) {
+						throw 'Unsupported lowering report schema $version; expected 77.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1595,7 +1595,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v25")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v26")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1716,6 +1716,7 @@ class ReflaxeOcamlInspection {
 			case "splice": "splice";
 			case "indexOf" | "indexOfDefault": "indexOf";
 			case "lastIndexOf" | "lastIndexOfDefault": "lastIndexOf";
+			case "slice" | "sliceDefault": "slice";
 			case _: throw 'Standard Array call "${call.id}" has unsupported operation "${target.operation}".';
 		}
 		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
@@ -1727,6 +1728,8 @@ class ReflaxeOcamlInspection {
 			case "splice": ["Int", "Int"];
 			case "indexOf" | "lastIndexOf": [target.elementSemanticTypeId, "Null<Int>"];
 			case "indexOfDefault" | "lastIndexOfDefault": [target.elementSemanticTypeId];
+			case "slice": ["Int", "Null<Int>"];
+			case "sliceDefault": ["Int"];
 			case "copy" | "pop" | "shift" | "reverse": [];
 			case _: [];
 		};
@@ -1739,6 +1742,7 @@ class ReflaxeOcamlInspection {
 			case "resize": "Void";
 			case "splice": expectedArrayType;
 			case "indexOf" | "indexOfDefault" | "lastIndexOf" | "lastIndexOfDefault": "Int";
+			case "slice" | "sliceDefault": expectedArrayType;
 			case _: "";
 		};
 		final expectedResultKind = target.operation == "unshift"
@@ -1755,10 +1759,15 @@ class ReflaxeOcamlInspection {
 			&& (target.operation != "indexOf"
 				&& target.operation != "lastIndexOf"
 				|| target.argumentSemanticTypeIds[1] == "Int"
-				|| target.argumentSemanticTypeIds[1] == "Null<Int>");
+				|| target.argumentSemanticTypeIds[1] == "Null<Int>")
+			&& (target.operation != "slice"
+				|| target.argumentSemanticTypeIds[0] == "Int"
+				&& (target.argumentSemanticTypeIds[1] == "Int" || target.argumentSemanticTypeIds[1] == "Null<Int>"))
+			&& (target.operation != "sliceDefault" || target.argumentSemanticTypeIds[0] == "Int");
 		final expectedRuntimeFunction = switch (target.operation) {
 			case "indexOfDefault": "indexOf_default";
 			case "lastIndexOfDefault": "lastIndexOf_default";
+			case "sliceDefault": "slice_default";
 			case _: expectedField;
 		}
 		if (call.calleeId != 'Array|Array::$expectedField'
@@ -1782,7 +1791,7 @@ class ReflaxeOcamlInspection {
 			|| target.runtimeFunction != expectedRuntimeFunction
 			|| target.runtimeTakesUnitArgument != expectedRuntimeTakesUnit
 			|| target.runtimeCapabilities.join(",") != "haxe-array"
-			|| target.proofId != "standard-array-typed-target-call-v5"
+			|| target.proofId != "standard-array-typed-target-call-v6"
 			|| call.proofId != target.proofId
 			|| call.proofClaim != target.proofClaim
 			|| call.profileEligibility.join(",") != "metal,portable") {

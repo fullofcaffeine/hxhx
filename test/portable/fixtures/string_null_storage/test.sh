@@ -38,9 +38,9 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 76
+if (report.schemaVersion !== 77
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v25') {
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v26') {
 	fail('unexpected lowering report, representation, or call-model version')
 }
 

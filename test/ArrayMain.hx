@@ -80,6 +80,21 @@ class ArrayMain {
 		return 1;
 	}
 
+	static function makeSliceReceiver():Array<Int> {
+		callOrder.push("receiver");
+		return [7, 6, 5];
+	}
+
+	static function makeSlicePosition():Int {
+		callOrder.push("position");
+		return 1;
+	}
+
+	static function makeSliceEnd():Int {
+		callOrder.push("end");
+		return 2;
+	}
+
 	static function main() {
 		final a = [];
 
@@ -154,6 +169,22 @@ class ArrayMain {
 			throw "slice0";
 		if (c[1] != 3)
 			throw "slice1";
+		final sliceValues = [0, 1, 2, 3];
+		if (sliceValues.slice(1).join(",") != "1,2,3"
+			|| sliceValues.slice(1, null).join(",") != "1,2,3"
+			|| sliceValues.slice(-3, -1).join(",") != "1,2"
+			|| sliceValues.slice(-99, 99).join(",") != "0,1,2,3"
+			|| sliceValues.slice(3, 1).length != 0
+			|| sliceValues.slice(99).length != 0
+			|| sliceValues.join(",") != "0,1,2,3")
+			throw "slice_ranges_or_source_mutation";
+		callOrder = [];
+		if (makeSliceReceiver().slice(makeSlicePosition()).join(",") != "6,5" || callOrder.join(",") != "receiver,position")
+			throw "slice_default_receiver_once";
+		callOrder = [];
+		if (makeSliceReceiver().slice(makeSlicePosition(), makeSliceEnd()).join(",") != "6"
+			|| callOrder.join(",") != "receiver,position,end")
+			throw "slice_order";
 
 		final d = b.concat([5, 6]);
 		if (d.length != 6)

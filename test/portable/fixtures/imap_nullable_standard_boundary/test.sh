@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 76
+if (report.schemaVersion !== 77
 	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 0
 	|| report.iMapInterfaceCallCount !== 0
@@ -28,7 +28,7 @@ for (const [kind, facts] of expected) {
 		|| alias.nullPolicy !== 'check-null-and-unbox'
 		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
 		|| alias.runtimeRequirementIds?.join(',') !== `${alias.id}:runtime:haxe-runtime-core`
-		|| alias.pipelineRevision !== 'ocaml-function-plans-v91'
+		|| alias.pipelineRevision !== 'ocaml-function-plans-v92'
 		|| alias.runtimeUseOccurrences?.length !== 2
 		|| alias.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.is_null'
 		|| alias.runtimeUseOccurrences[0].role !== 'check-null'

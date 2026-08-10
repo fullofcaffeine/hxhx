@@ -33,7 +33,7 @@
     {
       "module": "HxArray",
       "scope": "application",
-      "files": [{ "path": "HxArray.ml", "sha256": "626868738e169881c3ec6477a494061231a139649aefd7cbdae80d7de0e842a9" }],
+      "files": [{ "path": "HxArray.ml", "sha256": "a3dd9cef810d9495315dd9bf4da659cf4b509350ca86bde389f9080848511883" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

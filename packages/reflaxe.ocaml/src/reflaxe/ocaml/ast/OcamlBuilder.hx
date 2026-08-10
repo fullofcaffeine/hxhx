@@ -4281,21 +4281,6 @@ class OcamlBuilder {
 														case "sort":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "sort"),
 																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "slice":
-															final endExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"),
-																			[buildExpr(objExpr)]);
-																	case _:
-																		buildExpr(args[1]);
-																}
-															} else {
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(objExpr)]);
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "slice"),
-																[buildExpr(objExpr), buildExpr(args[0]), endExpr]);
 														case _:
 															#if macro
 															guardrailError("reflaxe.ocaml (M6): unsupported Array method '" + cf.name

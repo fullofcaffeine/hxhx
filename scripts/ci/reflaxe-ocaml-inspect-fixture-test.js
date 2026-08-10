@@ -116,7 +116,7 @@ try {
 			&& target.runtimeModule === 'HxArray'
 			&& [
 				'concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice',
-				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default'
+				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default', 'slice', 'slice_default'
 			].includes(target.runtimeFunction)
 	}))
 	const resizeCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'resize')
@@ -157,6 +157,21 @@ try {
 			&& arguments_.length === parameters.length
 			&& (omittedStart || ['Int', 'Null<Int>'].includes(arguments_[1]))
 			&& target.resultSemanticTypeId === 'Int'
+			&& target.resultKind === 'value'
+			&& call.resultKind === 'value'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const sliceCalls = standardArrayCalls.filter(call => ['slice', 'sliceDefault'].includes(call.standardArrayTarget.operation))
+	assert(sliceCalls.every(call => {
+		const target = call.standardArrayTarget
+		const omittedEnd = target.operation === 'sliceDefault'
+		return call.sourceFieldName === 'slice'
+			&& target.runtimeFunction === (omittedEnd ? 'slice_default' : 'slice')
+			&& target.parameterSemanticTypeIds.join(',') === (omittedEnd ? 'Int' : 'Int,Null<Int>')
+			&& target.argumentSemanticTypeIds.length === (omittedEnd ? 1 : 2)
+			&& target.argumentSemanticTypeIds[0] === 'Int'
+			&& (omittedEnd || ['Int', 'Null<Int>'].includes(target.argumentSemanticTypeIds[1]))
+			&& target.resultSemanticTypeId.startsWith('Array<')
 			&& target.resultKind === 'value'
 			&& call.resultKind === 'value'
 			&& target.runtimeTakesUnitArgument === false
