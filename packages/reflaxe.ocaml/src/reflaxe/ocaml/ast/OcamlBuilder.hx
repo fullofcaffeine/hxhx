@@ -4272,37 +4272,6 @@ class OcamlBuilder {
 														case "toString" if (args.length == 0):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "toString"),
 																[buildExpr(objExpr), buildArrayJoinStringifier(objExpr, e.pos)]);
-														case "indexOf":
-															final fromExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		OcamlExpr.EConst(OcamlConst.CInt(0));
-																	case _:
-																		buildExpr(args[1]);
-																}
-															} else {
-																OcamlExpr.EConst(OcamlConst.CInt(0));
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "indexOf"),
-																[buildExpr(objExpr), buildExpr(args[0]), fromExpr]);
-														case "lastIndexOf":
-															final defaultFrom = OcamlExpr.EBinop(OcamlBinop.Sub,
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(objExpr)]),
-																OcamlExpr.EConst(OcamlConst.CInt(1)));
-															final fromExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		defaultFrom;
-																	case _:
-																		buildExpr(args[1]);
-																}
-															} else {
-																defaultFrom;
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "lastIndexOf"),
-																[buildExpr(objExpr), buildExpr(args[0]), fromExpr]);
 														case "map":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "map"),
 																[buildExpr(objExpr), buildExpr(args[0])]);

@@ -60,12 +60,12 @@ let unwrap_or_empty (a : 'a t) : 'a t option =
   else
     Some (Obj.obj o)
 
-let unwrap_optional_int (v : int) (default : int) : int =
-  let raw : Obj.t = Obj.magic v in
+let unwrap_optional_int (v : 'a) (default : int) : int =
+  let raw = Obj.repr v in
   if raw == hx_null then
     default
   else
-    v
+    (Obj.obj raw : int)
 
 let raw_kind_of (raw : Obj.t) : raw_kind =
   if raw == hx_null then
@@ -728,7 +728,7 @@ let normalize_index_of_from (len : int) (fromIndex : int) : int =
   else
     fromIndex
 
-let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+let indexOf (a : 'a t) (x : 'a) (fromIndex : 'b) : int =
   match unwrap_or_empty a with
   | None -> -1
   | Some a ->
@@ -749,16 +749,22 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
       loop start
     )
 
+(* The typed Haxe plan selects this entry only when the optional start was
+   omitted. Keeping the default beside Array storage/search behavior lets the
+   generated call pass its already-evaluated receiver exactly once. *)
+let indexOf_default (a : 'a t) (x : 'a) : int =
+  indexOf a x 0
+
 let normalize_last_index_of_from (len : int) (fromIndex : int) : int =
   if fromIndex < 0 then
     let start = len + fromIndex in
-    if start < 0 then -1 else start
+    if start < 0 then 0 else start
   else if fromIndex >= len then
     len - 1
   else
     fromIndex
 
-let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : 'b) : int =
   match unwrap_or_empty a with
   | None -> -1
   | Some a ->
@@ -782,6 +788,11 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
         loop start
       )
     )
+
+(* See indexOf_default. The length is read from the received Array value, not
+   by evaluating the Haxe receiver expression again in generated syntax. *)
+let lastIndexOf_default (a : 'a t) (x : 'a) : int =
+  lastIndexOf a x (length a - 1)
 
 let contains (a : 'a t) (x : 'a) : bool =
   indexOf a x 0 >= 0

@@ -65,6 +65,21 @@ class ArrayMain {
 		return 1;
 	}
 
+	static function makeSearchReceiver():Array<Int> {
+		callOrder.push("receiver");
+		return [7, 6, 7];
+	}
+
+	static function makeSearchValue():Int {
+		callOrder.push("value");
+		return 7;
+	}
+
+	static function makeSearchStart():Int {
+		callOrder.push("start");
+		return 1;
+	}
+
 	static function main() {
 		final a = [];
 
@@ -208,6 +223,14 @@ class ArrayMain {
 		if (callOrder.join(",") != "receiver,position,length" || orderedSplice.join(",") != "7")
 			throw "splice_order_or_result";
 
+		callOrder = [];
+		if (makeSearchReceiver().lastIndexOf(makeSearchValue()) != 2 || callOrder.join(",") != "receiver,value")
+			throw "last_index_default_receiver_once";
+
+		callOrder = [];
+		if (makeSearchReceiver().indexOf(makeSearchValue(), makeSearchStart()) != 2 || callOrder.join(",") != "receiver,value,start")
+			throw "index_search_order";
+
 		if (!b.contains(3))
 			throw "contains_true";
 		if (b.contains(999))
@@ -227,10 +250,25 @@ class ArrayMain {
 		if (identityValues.remove(equalShape) || identityValues.length != 1)
 			throw "remove_object_identity";
 
-		if (b.indexOf(3) != 2)
-			throw "indexof";
-		if (b.lastIndexOf(3) != 2)
-			throw "lastindexof";
+		final searchValues = [1, 2, 1, 2];
+		if (searchValues.indexOf(1) != 0 || searchValues.indexOf(1, null) != 0 || searchValues.indexOf(1, 1) != 2 || searchValues.indexOf(1, -2) != 2
+			|| searchValues.indexOf(1, -99) != 0 || searchValues.indexOf(1, 99) != -1 || searchValues.indexOf(9) != -1)
+			throw "index_of_ranges";
+		if (searchValues.lastIndexOf(1) != 2
+			|| searchValues.lastIndexOf(1, null) != 2
+			|| searchValues.lastIndexOf(1, 1) != 0
+			|| searchValues.lastIndexOf(1, -2) != 2
+			|| searchValues.lastIndexOf(1, -99) != 0
+			|| searchValues.lastIndexOf(1, 99) != 2
+			|| searchValues.lastIndexOf(9) != -1)
+			throw "last_index_of_ranges";
+		if (empty.indexOf(1) != -1 || empty.lastIndexOf(1) != -1)
+			throw "empty_index_search";
+		if (identityValues.indexOf(identityValue) != 0
+			|| identityValues.indexOf(equalShape) != -1
+			|| identityValues.lastIndexOf(identityValue) != 0
+			|| identityValues.lastIndexOf(equalShape) != -1)
+			throw "index_search_object_identity";
 
 		final rev = b.copy();
 		rev.reverse();

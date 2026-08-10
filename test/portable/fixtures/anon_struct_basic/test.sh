@@ -63,7 +63,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 75
+if (report.schemaVersion !== 76
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v4'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -113,7 +113,7 @@ for (const operation of operations) {
 	]
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v90'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v91'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'

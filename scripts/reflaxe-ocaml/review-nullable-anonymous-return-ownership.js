@@ -55,8 +55,8 @@ let controlCount = 0
 
 for (const reportPath of reportPaths) {
 	const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-	if (report.schemaVersion !== 75)
-		fail(`${reportPath} uses lowering schema ${report.schemaVersion}; expected 75`)
+	if (report.schemaVersion !== 76)
+		fail(`${reportPath} uses lowering schema ${report.schemaVersion}; expected 76`)
 	const boundaries = (report.functionResultBoundaries ?? []).filter(item => item.source === RESULT_SOURCE)
 	const boundaryByFunction = new Map()
 	for (const boundary of boundaries) {

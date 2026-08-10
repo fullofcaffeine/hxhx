@@ -114,7 +114,10 @@ try {
 		const target = call.standardArrayTarget
 		return call.kind === 'standard-array-method'
 			&& target.runtimeModule === 'HxArray'
-			&& ['concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice'].includes(target.runtimeFunction)
+			&& [
+				'concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse', 'resize', 'splice',
+				'indexOf', 'indexOf_default', 'lastIndexOf', 'lastIndexOf_default'
+			].includes(target.runtimeFunction)
 	}))
 	const resizeCalls = standardArrayCalls.filter(call => call.standardArrayTarget.runtimeFunction === 'resize')
 	assert(resizeCalls.length > 0)
@@ -133,6 +136,27 @@ try {
 		return target.parameterSemanticTypeIds.join(',') === 'Int,Int'
 			&& target.argumentSemanticTypeIds.join(',') === 'Int,Int'
 			&& target.resultSemanticTypeId.startsWith('Array<')
+			&& target.resultKind === 'value'
+			&& call.resultKind === 'value'
+			&& target.runtimeTakesUnitArgument === false
+	}))
+	const indexedSearchCalls = standardArrayCalls.filter(call =>
+		['indexOf', 'indexOfDefault', 'lastIndexOf', 'lastIndexOfDefault'].includes(call.standardArrayTarget.operation))
+	assert(indexedSearchCalls.every(call => {
+		const target = call.standardArrayTarget
+		const omittedStart = target.operation.endsWith('Default')
+		const sourceField = target.operation.startsWith('lastIndexOf') ? 'lastIndexOf' : 'indexOf'
+		const expectedRuntime = omittedStart ? `${sourceField}_default` : sourceField
+		const parameters = target.parameterSemanticTypeIds
+		const arguments_ = target.argumentSemanticTypeIds
+		return call.sourceFieldName === sourceField
+			&& target.runtimeFunction === expectedRuntime
+			&& parameters.length === (omittedStart ? 1 : 2)
+			&& parameters[0] === target.elementSemanticTypeId
+			&& (omittedStart || parameters[1] === 'Null<Int>')
+			&& arguments_.length === parameters.length
+			&& (omittedStart || ['Int', 'Null<Int>'].includes(arguments_[1]))
+			&& target.resultSemanticTypeId === 'Int'
 			&& target.resultKind === 'value'
 			&& call.resultKind === 'value'
 			&& target.runtimeTakesUnitArgument === false

@@ -23,6 +23,10 @@ enum abstract OcamlStandardArrayOperation(String) from String to String {
 	final Contains = "contains";
 	final Resize = "resize";
 	final Splice = "splice";
+	final IndexOf = "indexOf";
+	final IndexOfDefault = "indexOfDefault";
+	final LastIndexOf = "lastIndexOf";
+	final LastIndexOfDefault = "lastIndexOfDefault";
 }
 
 /** Whether a standard Array operation returns a Haxe value or only an effect. */
@@ -57,7 +61,7 @@ typedef OcamlStandardArrayCallTarget = {
 
 /** Selects and validates the admitted direct standard-Array calls. */
 class OcamlStandardArrayCallContract {
-	public static inline final PROOF_ID = "standard-array-typed-target-call-v4";
+	public static inline final PROOF_ID = "standard-array-typed-target-call-v5";
 	public static inline final ARGUMENT_COMPATIBILITY_PROOF_ID = "haxe-typed-array-argument-compatible-v1";
 	public static inline final RUNTIME_CAPABILITY = "haxe-array";
 	public static inline final PROOF_CLAIM = "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. This proof does not admit other Array methods or user-defined classes with the same field names.";
@@ -164,6 +168,8 @@ class OcamlStandardArrayCallContract {
 			case Contains: "contains";
 			case Resize: "resize";
 			case Splice: "splice";
+			case IndexOf | IndexOfDefault: "indexOf";
+			case LastIndexOf | LastIndexOfDefault: "lastIndexOf";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -172,21 +178,27 @@ class OcamlStandardArrayCallContract {
 	public static function resultKind(operation:OcamlStandardArrayOperation):OcamlStandardArrayResultKind {
 		return switch (operation) {
 			case Unshift | Reverse | Insert | Resize: OcamlStandardArrayResultKind.EffectOnlyVoid;
-			case Concat | Copy | Push | Pop | Shift | Remove | Contains | Splice: OcamlStandardArrayResultKind.Value;
+			case Concat | Copy | Push | Pop | Shift | Remove | Contains | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault:
+				OcamlStandardArrayResultKind.Value;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
 
 	/** Returns the private runtime function selected by one operation. */
 	public static function runtimeFunction(operation:OcamlStandardArrayOperation):String {
-		return sourceFieldName(operation);
+		return switch (operation) {
+			case IndexOfDefault: "indexOf_default";
+			case LastIndexOfDefault: "lastIndexOf_default";
+			case _: sourceFieldName(operation);
+		}
 	}
 
 	/** Returns whether the private OCaml function needs a trailing `unit`. */
 	public static function runtimeTakesUnitArgument(operation:OcamlStandardArrayOperation):Bool {
 		return switch (operation) {
 			case Pop | Shift | Reverse: true;
-			case Concat | Copy | Push | Unshift | Insert | Remove | Contains | Resize | Splice: false;
+			case Concat | Copy | Push | Unshift | Insert | Remove | Contains | Resize | Splice | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault:
+				false;
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
@@ -254,6 +266,10 @@ class OcamlStandardArrayCallContract {
 			case ["contains", 1]: OcamlStandardArrayOperation.Contains;
 			case ["resize", 1]: OcamlStandardArrayOperation.Resize;
 			case ["splice", 2]: OcamlStandardArrayOperation.Splice;
+			case ["indexOf", 1]: OcamlStandardArrayOperation.IndexOfDefault;
+			case ["indexOf", 2]: OcamlStandardArrayOperation.IndexOf;
+			case ["lastIndexOf", 1]: OcamlStandardArrayOperation.LastIndexOfDefault;
+			case ["lastIndexOf", 2]: OcamlStandardArrayOperation.LastIndexOf;
 			case _: null;
 		}
 	}
@@ -265,6 +281,8 @@ class OcamlStandardArrayCallContract {
 			case Insert: ["Int", elementSemanticTypeId];
 			case Resize: ["Int"];
 			case Splice: ["Int", "Int"];
+			case IndexOf | LastIndexOf: [elementSemanticTypeId, "Null<Int>"];
+			case IndexOfDefault | LastIndexOfDefault: [elementSemanticTypeId];
 			case Copy | Pop | Shift | Reverse: [];
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
@@ -286,7 +304,8 @@ class OcamlStandardArrayCallContract {
 			case Insert: sourceArguments[0] == "Int";
 			case Resize: sourceArguments[0] == "Int";
 			case Splice: sourceArguments[0] == "Int" && sourceArguments[1] == "Int";
-			case Push | Unshift | Remove | Contains: true;
+			case IndexOf | LastIndexOf: sourceArguments[1] == "Int" || sourceArguments[1] == "Null<Int>";
+			case Push | Unshift | Remove | Contains | IndexOfDefault | LastIndexOfDefault: true;
 			case Copy | Pop | Shift | Reverse: true;
 			case _: false;
 		}
@@ -301,6 +320,7 @@ class OcamlStandardArrayCallContract {
 			case Remove | Contains: "Bool";
 			case Resize: "Void";
 			case Splice: 'Array<$elementSemanticTypeId>';
+			case IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: "Int";
 			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
 		}
 	}
