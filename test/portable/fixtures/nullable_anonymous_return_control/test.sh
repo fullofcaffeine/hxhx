@@ -32,6 +32,11 @@ const expectedFunctions = [
 	'haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>',
 	'haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>'
 ]
+// This reviewed identifier is the first 24 hexadecimal characters of SHA-256
+// over "ocaml-anonymous-structure-v4\nanonymous{file:String,line:Int}". The
+// model revision is part of the public report identity, so an intentional model
+// change must update this expectation and review the whole proof chain below.
+const expectedStructureId = 'anonymous-structure:f7e4f011fbcb9b3678770b4a'
 const boundaries = (report.functionResultBoundaries ?? []).filter(boundary =>
 	boundary.source === 'static-nullable-anonymous-declaration')
 if (boundaries.length !== expectedFunctions.length)
@@ -47,7 +52,7 @@ for (const functionId of expectedFunctions) {
 		|| boundary.result?.inputCarrierTypeId !== 'Obj.t'
 		|| boundary.result?.outputCarrierTypeId !== 'Obj.t'
 		|| proof?.semanticTypeId !== 'anonymous{file:String,line:Int}'
-		|| proof.structureId !== 'anonymous-structure:32ff5b24ef0fd8e8d4e04533'
+		|| proof.structureId !== expectedStructureId
 		|| proof.representationId !== 'representation:anonymous{file:String,line:Int}:internal-value'
 		|| !/^sha256:[0-9a-f]{64}$/.test(proof.structureRevision)
 		|| !/^sha256:[0-9a-f]{64}$/.test(proof.representationRevision)) {
