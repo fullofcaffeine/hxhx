@@ -7,6 +7,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 #if macro
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
@@ -334,6 +336,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one direct represented array literal. */
 	public function recordArrayLiteralProducer(decision:OcamlArrayLiteralProducerDecision):Void {
 		for (requirement in requirementsForArrayLiteralProducer(decision))
+			record(requirement);
+	}
+
+	/** Returns the runtime reason selected by one standard Array bracket read. */
+	public static function requirementsForArrayRead(decision:OcamlArrayReadDecision):Array<OcamlRuntimeRequirement> {
+		OcamlArrayReadContract.requireDecision(decision);
+		return [
+			normalize({
+				id: OcamlArrayReadContract.runtimeRequirementId(decision.id),
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: OcamlArrayReadContract.RUNTIME_CAPABILITY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.receiverSemanticTypeId
+				},
+				implementationFeature: "haxe-array-v1",
+				rootModules: ["HxArray"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed Array bracket read evaluates its receiver before its Int index and then reads the selected element once through HxArray."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one standard Array bracket read. */
+	public function recordArrayRead(decision:OcamlArrayReadDecision):Void {
+		for (requirement in requirementsForArrayRead(decision))
 			record(requirement);
 	}
 

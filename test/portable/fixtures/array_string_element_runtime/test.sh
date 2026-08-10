@@ -7,11 +7,9 @@ if [ ! -f "$report_file" ]; then
 	exit 1
 fi
 
-# This program now exercises the first active Array<String> consumer: one direct
-# literal producer. The producer may select its exact descriptor and carrier,
-# but no other compiler family may treat Array<String> as a local, place, call,
-# return, field, catch, or public/native boundary merely because the source type
-# was recognized.
+# This program starts with one direct Array<String> literal producer. Its two
+# resize calls are also explicit typed consumers. Other compiler families must
+# not claim Array<String> merely because they recognize the source type.
 node - "$report_file" <<'NODE'
 const fs = require('node:fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
@@ -19,6 +17,7 @@ const sha256 = /^sha256:[0-9a-f]{64}$/
 
 const descriptors = report.representedArrays.filter(entry => entry.arraySemanticTypeId === 'Array<String>')
 const producers = report.arrayLiteralProducers.filter(entry => entry.arraySemanticTypeId === 'Array<String>')
+const calls = report.calls.filter(entry => entry.standardArrayTarget?.receiverSemanticTypeId === 'Array<String>')
 if (descriptors.length !== 1 || producers.length !== 1) {
 	throw new Error(`expected one literal-owned Array<String> descriptor and producer, got ${descriptors.length} descriptors and ${producers.length} producers`)
 }
@@ -56,14 +55,25 @@ if (requirement?.sourceId !== producer.id
 	|| requirement.rootModules?.join(',') !== 'HxArray') {
 	throw new Error('the direct Array<String> literal did not publish its exact HxArray construction requirement')
 }
+if (calls.length !== 2 || calls.some(call => call.kind !== 'standard-array-method'
+	|| call.sourceFieldName !== 'resize'
+	|| call.standardArrayTarget.operation !== 'resize'
+	|| call.standardArrayTarget.runtimeModule !== 'HxArray'
+	|| call.standardArrayTarget.runtimeFunction !== 'resize'
+	|| call.standardArrayTarget.elementSemanticTypeId !== 'String'
+	|| call.standardArrayTarget.resultKind !== 'effect-only-void'
+	|| call.evaluationSchedule.map(step => step.kind).join(',') !== 'materialize-receiver,materialize-argument,invoke-callee')) {
+	throw new Error('the two Array<String>.resize calls did not retain their exact typed targets and receiver-first schedules')
+}
 for (const [name, value] of Object.entries(report)) {
 	if (Array.isArray(value)
 		&& name !== 'representations'
 		&& name !== 'representedArrays'
 		&& name !== 'arrayLiteralProducers'
+		&& name !== 'calls'
 		&& name !== 'runtimeRequirements'
 		&& value.some(entry => JSON.stringify(entry).includes('Array<String>'))) {
-		throw new Error(`Array<String> escaped the literal-only boundary through report inventory ${name}`)
+		throw new Error(`Array<String> escaped its admitted producer, call, and runtime boundaries through report inventory ${name}`)
 	}
 }
 NODE

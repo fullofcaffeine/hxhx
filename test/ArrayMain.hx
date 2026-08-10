@@ -39,6 +39,11 @@ class ArrayMain {
 		return [7, 6];
 	}
 
+	static function makeReadIndex():Int {
+		callOrder.push("index");
+		return 1;
+	}
+
 	static function makeInsertPosition():Int {
 		callOrder.push("position");
 		return 1;
@@ -149,6 +154,9 @@ class ArrayMain {
 			throw "idx0";
 		if (a[1] != 2)
 			throw "idx1";
+		callOrder = [];
+		if (makePairReceiver()[makeReadIndex()] != 6 || callOrder.join(",") != "receiver,index")
+			throw "index_read_order_or_result";
 
 		a[1] = 3;
 		if (a[1] != 3)

@@ -1608,6 +1608,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordBytesProducerRuntimeRequirements(decision);
 		for (decision in plan.bytesReads.decisions())
 			ctx.recordBytesReadRuntimeRequirements(decision);
+		for (decision in plan.arrayReads.decisions())
+			ctx.recordArrayReadRuntimeRequirements(decision);
 		for (decision in plan.reflectCompare.decisions())
 			ctx.recordReflectCompareRuntimeRequirements(decision);
 		return plan;

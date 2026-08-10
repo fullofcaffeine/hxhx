@@ -56,6 +56,8 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructur
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
+import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
@@ -164,6 +166,7 @@ class OcamlBuilder {
 	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
+	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -588,6 +591,51 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	function arrayReadInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-array-read:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/**
+		Builds one standard Array bracket read from its typed decision.
+
+		For `makeArray()[makeIndex()]`, Haxe evaluates `makeArray()` first and
+		`makeIndex()` second. The temporary bindings preserve that order and prevent
+		either expression from running twice. The runtime authority supplies only the
+		private `HxArray.get` name; nested expressions keep their own decisions.
+	**/
+	function buildArrayRead(decision:OcamlArrayReadDecision, receiver:TypedExpr, index:TypedExpr, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final occurrence = decision.runtimeUseOccurrences[0];
+			final runtimeFunction = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, occurrence.planRevision,
+				occurrence.exactSymbol));
+			// The receiver and index can contain private calls from other plans. Check
+			// only the HxArray.get identifier inserted by this read decision.
+			runtimeAuthority.reconcileExpression(runtimeFunction);
+			final receiverName = freshTmp("array_read_receiver");
+			final indexName = freshTmp("array_read_index");
+			OcamlExpr.ELet(receiverName, buildExpr(receiver), OcamlExpr.ELet(indexName, buildExpr(index), OcamlExpr.EApp(runtimeFunction, [
+				coerceArrayReceiver(OcamlExpr.EIdent(receiverName), receiver),
+				OcamlExpr.EIdent(indexName)
+			]), false), false);
+		} catch (error:Dynamic) {
+			arrayReadInvariant(Std.string(error), position);
+		}
 	}
 
 	/**
@@ -2899,6 +2947,8 @@ class OcamlBuilder {
 		final bytesReadOccurrence = OcamlBytesReadPlan.admittedOccurrence(e);
 		final plannedBytesRead = currentBytesReadPlan == null
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
+		final arrayReadOccurrence = OcamlArrayReadPlan.admittedOccurrence(e);
+		final plannedArrayRead = currentArrayReadPlan == null || arrayReadOccurrence == null ? null : currentArrayReadPlan.requireFor(e);
 		final plannedIMapStorageAliasUse = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.storageAliasUseFor(e);
 		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
 		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
@@ -2947,6 +2997,10 @@ class OcamlBuilder {
 				buildBytesRead(plannedBytesRead, bytesReadOccurrence.receiver, bytesReadOccurrence.arguments, e.pos);
 			case _ if (bytesReadOccurrence != null):
 				bytesReadInvariant("an admitted read-only Bytes operation reached syntax without its sealed occurrence plan", e.pos);
+			case TArray(_, _) if (plannedArrayRead != null && arrayReadOccurrence != null):
+				buildArrayRead(plannedArrayRead, arrayReadOccurrence.receiver, arrayReadOccurrence.index, e.pos);
+			case TArray(_, _) if (arrayReadOccurrence != null):
+				arrayReadInvariant("an admitted standard Array bracket read reached syntax without its sealed decision", e.pos);
 			case TNew(_, _, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
@@ -5063,7 +5117,7 @@ class OcamlBuilder {
 						case _ if (idxString != null):
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [arrObjExpr, OcamlExpr.EConst(OcamlConst.CString(idxString))]);
 						case _:
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [arrExpr, buildExpr(idx)]);
+							arrayReadInvariant("a numeric bracket read reached legacy syntax without a standard Array decision", e.pos);
 					}
 				}
 			case TArrayDecl(items):
@@ -7763,6 +7817,7 @@ class OcamlBuilder {
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
+		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -7776,6 +7831,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
+		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -7787,6 +7843,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
+		currentArrayReadPlan = previousArrayReadPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -7809,6 +7866,7 @@ class OcamlBuilder {
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
+		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -7822,6 +7880,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
+		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -7833,6 +7892,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
+		currentArrayReadPlan = previousArrayReadPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8046,6 +8106,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
+		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
@@ -8069,6 +8130,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = functionPlan.reflectCompare;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
+		currentArrayReadPlan = functionPlan.arrayReads;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
@@ -8242,6 +8304,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
+		currentArrayReadPlan = previousArrayReadPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
@@ -8303,12 +8366,14 @@ class OcamlBuilder {
 
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
+		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
 		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
+		currentArrayReadPlan = nestedPlan == null ? null : nestedPlan.arrayReads;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8387,6 +8452,7 @@ class OcamlBuilder {
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
+		currentArrayReadPlan = previousArrayReadPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;

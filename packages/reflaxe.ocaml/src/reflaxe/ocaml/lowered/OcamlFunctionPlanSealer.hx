@@ -13,6 +13,8 @@ import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
+import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
+import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
@@ -150,6 +152,10 @@ class OcamlFunctionPlanSealer {
 		arrayLiteralProducers.requireRepresentations(representations);
 		for (decision in arrayLiteralProducers.decisions())
 			context.recordArrayLiteralRuntimeRequirements(decision);
+		final arrayReads = new OcamlArrayReadPlanner(binding).plan(data.expr);
+		arrayReads.requirePlanBinding(binding);
+		for (decision in arrayReads.decisions())
+			context.recordArrayReadRuntimeRequirements(decision);
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -263,7 +269,7 @@ class OcamlFunctionPlanSealer {
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
-			structuralFields, arrayLiteralProducers, reflectCompare);
+			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -345,6 +351,8 @@ class OcamlFunctionPlanSealer {
 						final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
 						arrayLiteralProducers.requirePlanBinding(nestedBinding);
 						arrayLiteralProducers.requireRepresentations(representations);
+						final arrayReads = new OcamlArrayReadPlanner(nestedBinding).plan(tfunc.expr);
+						arrayReads.requirePlanBinding(nestedBinding);
 						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
 							arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
 						requireCompleteCatchCoverage(controls, expression.pos);
@@ -368,10 +376,13 @@ class OcamlFunctionPlanSealer {
 								functionResultBoundary: functionResultBoundary,
 								controls: controls,
 								arrayLiteralProducers: arrayLiteralProducers,
+								arrayReads: arrayReads,
 								imapInterfaces: imapInterfaces
 							};
 							for (decision in arrayLiteralProducers.decisions())
 								context.recordArrayLiteralRuntimeRequirements(decision);
+							for (decision in arrayReads.decisions())
+								context.recordArrayReadRuntimeRequirements(decision);
 							for (chain in controls.catchChains())
 								context.recordCatchChainRuntimeRequirements(chain);
 							for (decision in controls.decisions())
