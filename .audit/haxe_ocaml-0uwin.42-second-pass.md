@@ -44,3 +44,19 @@ checks, changing Haxe behavior, or claiming broader anonymous-object support.
 - anonymous-structure plan and corruption checks;
 - runtime-reference inventory, changed-file and repository-wide formatting,
   mega-file, local-path, and diff checks.
+
+## Evidence limits
+
+- The unchanged standalone runtime-authority aggregate was stopped after twelve
+  minutes at full CPU with no phase output. It exited 130 with
+  `Stdlib.Sys.Break`, so this review does not count that command as green. The
+  directly affected anonymous-plan test exercises the same missing, duplicate,
+  order, symbol, owner, profile, and stale-evidence failures at this boundary.
+- `nullable_anonymous_return_control` compiled and ran its native behavior
+  successfully, then failed an unrelated lowering-report assertion about a
+  nullable result boundary. This literal-initializer change does not own that
+  result planner or its report schema, so the failure remains separate rather
+  than being hidden or fixed opportunistically.
+- Oracle review was deliberately skipped. The failing behavior, safe owner, and
+  validation boundary were all reproducible locally, and the implementation
+  converged through a focused red/green test plus a written second pass.
