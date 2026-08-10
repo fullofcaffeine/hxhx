@@ -3522,6 +3522,7 @@ class ReflaxeOcamlInspection {
 			referenced.set(requirementId, true);
 		}
 		for (decision in representation.decisions) {
+			validateNullablePrimitiveFieldDefaultRequirementIfSelected(decision, requirements, referenced);
 			final expectedStringProofId = decision.domain == "array-element" ? "nullable-string-array-element-carrier-v1" : "nullable-string-runtime-sentinel-carrier-v1";
 			final selectsExactStringSentinel = decision.boxingPolicy == "nullable-string-carrier"
 				|| decision.proofId == "nullable-string-runtime-sentinel-carrier-v1"
@@ -3862,6 +3863,58 @@ class ReflaxeOcamlInspection {
 			if (!referenced.exists(requirementId))
 				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
 		return expectedCount;
+	}
+
+	/**
+		Checks the runtime helper claimed by one nullable `Int` or `Bool` field.
+
+		A representation row only says that the field uses an `Obj.t` carrier. The
+		separate runtime-requirement row is what authorizes generated code to use
+		`HxRuntime.hx_null` as that field's initial Haxe value. Inspection treats the
+		requirement as used only after its representation identity, synthetic source,
+		Haxe type, helper module, eligible profiles, and one exact identifier agree.
+	**/
+	static function validateNullablePrimitiveFieldDefaultRequirementIfSelected(decision:InspectionRepresentationDecision, requirements:Map<String, Dynamic>,
+			referenced:Map<String, Bool>):Void {
+		final selected = (decision.domain == "instance-field" || decision.domain == "static-field")
+			&& (decision.boxingPolicy == "nullable-primitive-carrier"
+				|| decision.proofId == "nullable-int-obj-carrier-v2"
+				|| decision.proofId == "nullable-bool-obj-carrier-v2");
+		if (!selected)
+			return;
+		final expectedProofId = decision.semanticTypeId == "Null<Int>" ? "nullable-int-obj-carrier-v2" : "nullable-bool-obj-carrier-v2";
+		if ((decision.semanticTypeId != "Null<Int>" && decision.semanticTypeId != "Null<Bool>")
+			|| decision.carrierTypeId != "Obj.t"
+			|| decision.nullPolicy != "runtime-sentinel"
+			|| decision.boxingPolicy != "nullable-primitive-carrier"
+			|| decision.implicitDefaultPolicy != "runtime-null-sentinel"
+			|| decision.proofId != expectedProofId) {
+			throw 'Representation decision "${decision.id}" does not match the sealed nullable primitive field-default contract.';
+		}
+		final requirementId = decision.id + ":runtime:haxe-nullable-primitive-field-default";
+		final requirement = requirements.get(requirementId);
+		if (requirement == null)
+			throw 'Representation decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+		final source = requiredObject(requirement, "source");
+		final subject = requiredObject(requirement, "subject");
+		final roots = requiredStringArray(requirement, "rootModules");
+		if (requiredString(requirement, "sourceKind") != "representation-decision"
+			|| requiredString(requirement, "sourceId") != decision.id + "@" + decision.revision
+			|| requiredString(source, "file") != "compiler-decision/representation/" + decision.domain
+			|| requiredInt(source, "min") != 0
+			|| requiredInt(source, "max") != 0
+			|| requiredString(requirement, "semanticCapability") != "haxe-nullable-primitive-field-default"
+			|| requiredString(requirement, "cause") != "representation-decision"
+			|| requiredString(requirement, "decisionId") != decision.id
+			|| requiredString(subject, "kind") != "haxe-type"
+			|| requiredString(subject, "id") != decision.semanticTypeId
+			|| requiredString(requirement, "implementationFeature") != "haxe-nullable-primitive-field-default-v1"
+			|| roots.length != 1
+			|| roots[0] != "HxRuntime"
+			|| requiredStringArray(requirement, "profileEligibility").join(",") != decision.profileEligibility.join(",")) {
+			throw 'Representation decision "${decision.id}" runtime requirement "$requirementId" does not match its sealed nullable primitive field default.';
+		}
+		referenced.set(requirementId, true);
 	}
 
 	static function runtimeReasons(value:Dynamic):Array<InspectionRuntimeReason> {

@@ -398,6 +398,23 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
+	const nullablePrimitiveFieldDefaults = lowering.runtimeRequirements.filter(
+		requirement => requirement.semanticCapability === 'haxe-nullable-primitive-field-default')
+	assert.strictEqual(nullablePrimitiveFieldDefaults.length, 2)
+	for (const requirement of nullablePrimitiveFieldDefaults) {
+		const decision = lowering.representations.find(candidate => candidate.id === requirement.decisionId)
+		assert(decision)
+		assert.strictEqual(requirement.sourceKind, 'representation-decision')
+		assert.strictEqual(requirement.sourceId, `${decision.id}@${decision.revision}`)
+		assert.deepStrictEqual(requirement.source, {
+			file: `compiler-decision/representation/${decision.domain}`,
+			min: 0,
+			max: 0
+		})
+		assert.deepStrictEqual(requirement.subject, {kind: 'haxe-type', id: decision.semanticTypeId})
+		assert.deepStrictEqual(requirement.rootModules, ['HxRuntime'])
+		assert.deepStrictEqual(requirement.profileEligibility, decision.profileEligibility)
+	}
 	const removedRequirement = lowering.runtimeRequirements.pop()
 	lowering.runtimeRequirementCount -= 1
 	fs.writeFileSync(loweringPath, JSON.stringify(lowering, null, 2) + '\n')
@@ -446,6 +463,18 @@ try {
 	const corruptStringRequirementReport = JSON.parse(corruptStringRequirementResult.stdout)
 	assert.strictEqual(corruptStringRequirementReport.lowering.status, 'invalid')
 	assert(corruptStringRequirementReport.lowering.message.includes('does not match the sealed exact String dependency'))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const corruptNullableDefaultValue = JSON.parse(loweringBytes)
+	const corruptNullableDefault = corruptNullableDefaultValue.runtimeRequirements.find(
+		requirement => requirement.semanticCapability === 'haxe-nullable-primitive-field-default')
+	assert(corruptNullableDefault)
+	corruptNullableDefault.rootModules = ['HxString']
+	fs.writeFileSync(loweringPath, JSON.stringify(corruptNullableDefaultValue, null, 2) + '\n')
+	const corruptNullableDefaultResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(corruptNullableDefaultResult.status, 1)
+	const corruptNullableDefaultReport = JSON.parse(corruptNullableDefaultResult.stdout)
+	assert.strictEqual(corruptNullableDefaultReport.lowering.status, 'invalid')
+	assert(corruptNullableDefaultReport.lowering.message.includes('does not match its sealed nullable primitive field default'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const missingUnsafeValue = JSON.parse(loweringBytes)
 	const removedUnsafe = missingUnsafeValue.unsafeOperations.pop()
