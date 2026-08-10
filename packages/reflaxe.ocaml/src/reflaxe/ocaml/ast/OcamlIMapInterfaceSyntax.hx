@@ -107,7 +107,28 @@ class OcamlIMapInterfaceSyntax {
 			case _:
 				throw 'IMap conversion "${materialization.decision.id}" has an unsupported source kind';
 		};
-		return {expression: expression, runtimeReferences: runtimeReferences};
+		final finalRuntimeReferences = ownedRuntimeReferencesInFinalOrder(expression, materialization.decision.id);
+		if (finalRuntimeReferences.length != runtimeReferences.length)
+			throw 'IMap conversion "${materialization.decision.id}" lost a private runtime reference while assembling its final expression';
+		return {expression: expression, runtimeReferences: finalRuntimeReferences};
+	}
+
+	/**
+		Returns this adapter's private names in final structured-expression order.
+
+		Helper constructors run while the target tree is assembled, which is not
+		always the order a nested expression is later traversed. Local and final
+		reconciliation must compare the same preorder. References owned by the source
+		expression are deliberately excluded because their own plans validate them.
+	**/
+	static function ownedRuntimeReferencesInFinalOrder(expression:OcamlExpr, ownerId:String):Array<OcamlExpr> {
+		final references:Array<OcamlExpr> = [];
+		OcamlASTTraversal.walkExprPre(expression, current -> switch (current) {
+			case ERuntimeIdent(reference) if (reference.ownerId == ownerId):
+				references.push(current);
+			case _:
+		}, _ -> {}, _ -> {});
+		return references;
 	}
 
 	/** Converts an erased dispatch result to the carrier fixed by the typed call. */

@@ -673,6 +673,16 @@ class OcamlLoweringReportWriter {
 				includedRequirementIds.set(expected.id, true);
 			}
 		}
+		for (alias in sortedIMapStorageAliases) {
+			for (expected in OcamlRuntimeRequirementLedger.requirementsForIMapStorageAlias(alias)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'IMap storage alias "${alias.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'IMap storage alias "${alias.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (call in sortedCalls) {
 			if (call.standardIMapTarget != null) {
 				final expectedIds = OcamlStandardIMapCallContract.runtimeRequirementIds(call.id, call.standardIMapTarget);

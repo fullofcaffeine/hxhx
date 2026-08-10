@@ -271,6 +271,12 @@ class OcamlIMapInterfacePlan {
 		return OcamlIMapInterfaceContract.runtimeRequirementIds(decision);
 	}
 
+	/** Stable runtime-requirement identities owned by one storage alias. */
+	public static function storageAliasRuntimeRequirementIds(decision:OcamlIMapStorageAliasDecision):Array<String> {
+		OcamlIMapInterfaceContract.requireStorageAlias(decision);
+		return decision.runtimeRequirementIds.copy();
+	}
+
 	static function copyBinding(binding:OcamlFunctionPlanBinding):OcamlFunctionPlanBinding {
 		return {
 			functionId: binding.functionId,
@@ -374,6 +380,10 @@ class OcamlIMapInterfacePlan {
 			(decision.standardKeyKind : String),
 			(decision.nullPolicy : String),
 			decision.uses.map(use -> '${use.source.file}:${use.source.min}:${use.source.max}:${use.nativeOperation}:${use.carrierTypeId}').join(","),
+			decision.runtimeRequirementIds.join(","),
+			decision.runtimeUseOccurrences.map(use ->
+				'${use.id}:${use.planRevision}:${use.ownerId}:${use.requirementId}:${use.exactSymbol}:${use.role}:${use.order}')
+				.join(","),
 			decision.proofId,
 			decision.functionId,
 			decision.programRevision,
@@ -477,6 +487,24 @@ class OcamlIMapInterfacePlan {
 			standardKeyKind: decision.standardKeyKind,
 			nullPolicy: decision.nullPolicy,
 			uses: decision.uses.map(copyStorageAliasUse),
+			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -696,8 +724,9 @@ class OcamlIMapInterfacePlanner {
 				(keyKind : String),
 				(candidate.nullPolicy : String)
 			].concat(candidate.uses.map(storageAliasUseIdentity)).join("|");
-			final decision:OcamlIMapStorageAliasDecision = {
-				id: "imap-storage-alias:" + Sha256.encode(fingerprint).substr(0, 24),
+			final id = "imap-storage-alias:" + Sha256.encode(fingerprint).substr(0, 24);
+			final base:OcamlIMapStorageAliasDecision = {
+				id: id,
 				source: source,
 				sourceSemanticTypeId: semanticTypeId(candidate.initializer.t),
 				sourceCarrierTypeId: candidate.sourceCarrierTypeId,
@@ -708,12 +737,35 @@ class OcamlIMapInterfacePlanner {
 				standardKeyKind: keyKind,
 				nullPolicy: candidate.nullPolicy,
 				uses: candidate.uses.map(copyAliasUse),
+				runtimeRequirementIds: OcamlIMapInterfaceContract.storageAliasRuntimeRequirementIds(id, candidate.nullPolicy),
+				runtimeUseOccurrences: [],
 				proofId: OcamlIMapInterfacePlan.STORAGE_ALIAS_PROOF_ID,
 				proofClaim: OcamlIMapInterfacePlan.STORAGE_ALIAS_PROOF_CLAIM,
 				functionId: binding.functionId,
 				programRevision: binding.programRevision,
 				bodyRevision: binding.bodyRevision,
 				pipelineRevision: binding.pipelineRevision
+			};
+			final decision:OcamlIMapStorageAliasDecision = {
+				id: base.id,
+				source: base.source,
+				sourceSemanticTypeId: base.sourceSemanticTypeId,
+				sourceCarrierTypeId: base.sourceCarrierTypeId,
+				preservedCarrierTypeId: base.preservedCarrierTypeId,
+				targetSemanticTypeId: base.targetSemanticTypeId,
+				keySemanticTypeId: base.keySemanticTypeId,
+				valueSemanticTypeId: base.valueSemanticTypeId,
+				standardKeyKind: base.standardKeyKind,
+				nullPolicy: base.nullPolicy,
+				uses: base.uses,
+				runtimeRequirementIds: base.runtimeRequirementIds,
+				runtimeUseOccurrences: OcamlIMapInterfaceContract.storageAliasRuntimeUseOccurrencesFor(base),
+				proofId: base.proofId,
+				proofClaim: base.proofClaim,
+				functionId: base.functionId,
+				programRevision: base.programRevision,
+				bodyRevision: base.bodyRevision,
+				pipelineRevision: base.pipelineRevision
 			};
 			OcamlIMapInterfacePlan.requireStorageAliasDecision(decision);
 			initializers.set(candidate.initializer, decision);

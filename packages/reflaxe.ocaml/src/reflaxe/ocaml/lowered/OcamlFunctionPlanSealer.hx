@@ -152,6 +152,8 @@ class OcamlFunctionPlanSealer {
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
+		for (alias in imapInterfaces.storageAliases())
+			context.recordIMapStorageAliasRuntimeRequirements(alias);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
@@ -314,6 +316,8 @@ class OcamlFunctionPlanSealer {
 					imapInterfaces.requirePlanBinding(nestedBinding);
 					for (conversion in imapInterfaces.conversions())
 						context.recordIMapInterfaceRuntimeRequirements(conversion);
+					for (alias in imapInterfaces.storageAliases())
+						context.recordIMapStorageAliasRuntimeRequirements(alias);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.

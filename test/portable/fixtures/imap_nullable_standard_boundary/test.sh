@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (report.schemaVersion !== 69
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v5'
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 0
 	|| report.iMapInterfaceCallCount !== 0
 	|| report.iMapStorageAliasCount !== 4) {
@@ -25,13 +25,27 @@ for (const [kind, facts] of expected) {
 			|| alias.sourceCarrierTypeId !== 'Obj.t'
 			|| alias.preservedCarrierTypeId !== facts.carrier
 			|| alias.targetSemanticTypeId !== `haxe.IMap<${facts.key}, ${facts.value}>`
-			|| alias.nullPolicy !== 'check-null-and-unbox'
-			|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
-			|| alias.pipelineRevision !== 'ocaml-function-plans-v84'
-			|| alias.uses.length !== 1
-			|| alias.uses[0].carrierTypeId !== facts.carrier
-			|| alias.uses[0].nativeOperation !== facts.operation)) {
+		|| alias.nullPolicy !== 'check-null-and-unbox'
+		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
+		|| alias.runtimeRequirementIds?.join(',') !== `${alias.id}:runtime:haxe-runtime-core`
+		|| alias.pipelineRevision !== 'ocaml-function-plans-v84'
+		|| alias.runtimeUseOccurrences?.length !== 2
+		|| alias.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.is_null'
+		|| alias.runtimeUseOccurrences[0].role !== 'check-null'
+		|| alias.runtimeUseOccurrences[1].exactSymbol !== 'HxRuntime.hx_throw_typed'
+		|| alias.runtimeUseOccurrences[1].role !== 'throw-null-access'
+		|| alias.uses.length !== 1
+		|| alias.uses[0].carrierTypeId !== facts.carrier
+		|| alias.uses[0].nativeOperation !== facts.operation)) {
 		throw new Error(`the ${kind} nullable Map boundary lacks its exact source, carrier, null, or use proof`)
+	}
+}
+for (const alias of report.iMapStorageAliases) {
+	const requirements = report.runtimeRequirements.filter(requirement => requirement.decisionId === alias.id)
+	if (requirements.length !== 1
+		|| requirements[0].id !== `${alias.id}:runtime:haxe-runtime-core`
+		|| requirements[0].rootModules?.join(',') !== 'HxRuntime') {
+		throw new Error(`nullable storage alias ${alias.id} lacks its exact HxRuntime requirement`)
 	}
 }
 

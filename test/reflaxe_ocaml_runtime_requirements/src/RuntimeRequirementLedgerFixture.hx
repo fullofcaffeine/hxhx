@@ -4,6 +4,8 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionRole;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasNullPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
@@ -229,7 +231,82 @@ class RuntimeRequirementLedgerFixture {
 		};
 	}
 
+	/** Builds one report-shaped standard-Map storage alias without compiler objects. */
+	static function standardStringMapStorageAlias(nullPolicy:OcamlIMapStorageAliasNullPolicy):OcamlIMapStorageAliasDecision {
+		final id = "imap-storage-alias:runtime-fixture";
+		final nullable = nullPolicy == OcamlIMapStorageAliasNullPolicy.CheckNullAndUnbox;
+		final base:OcamlIMapStorageAliasDecision = {
+			id: id,
+			source: {file: "src/Main.hx", min: 74, max: 93},
+			sourceSemanticTypeId: nullable ? "Null<Map<String, Int>>" : "Map<String, Int>",
+			sourceCarrierTypeId: nullable ? "Obj.t" : "HxMap.string_map",
+			preservedCarrierTypeId: "HxMap.string_map",
+			targetSemanticTypeId: "haxe.IMap<String, Int>",
+			keySemanticTypeId: "String",
+			valueSemanticTypeId: "Int",
+			standardKeyKind: OcamlStandardIMapKeyKind.StringKey,
+			nullPolicy: nullPolicy,
+			uses: [
+				{
+					source: {file: "src/Main.hx", min: 74, max: 104},
+					nativeOperation: "get_string",
+					carrierTypeId: "HxMap.string_map"
+				}
+			],
+			runtimeRequirementIds: OcamlIMapInterfaceContract.storageAliasRuntimeRequirementIds(id, nullPolicy),
+			runtimeUseOccurrences: [],
+			proofId: OcamlIMapInterfaceContract.STORAGE_ALIAS_PROOF_ID,
+			proofClaim: OcamlIMapInterfaceContract.STORAGE_ALIAS_PROOF_CLAIM,
+			functionId: "Main|Main|static|main",
+			programRevision: "program:storage-alias-runtime-fixture",
+			bodyRevision: "body:storage-alias-runtime-fixture",
+			pipelineRevision: "pipeline:storage-alias-runtime-fixture"
+		};
+		return {
+			id: base.id,
+			source: base.source,
+			sourceSemanticTypeId: base.sourceSemanticTypeId,
+			sourceCarrierTypeId: base.sourceCarrierTypeId,
+			preservedCarrierTypeId: base.preservedCarrierTypeId,
+			targetSemanticTypeId: base.targetSemanticTypeId,
+			keySemanticTypeId: base.keySemanticTypeId,
+			valueSemanticTypeId: base.valueSemanticTypeId,
+			standardKeyKind: base.standardKeyKind,
+			nullPolicy: base.nullPolicy,
+			uses: base.uses,
+			runtimeRequirementIds: base.runtimeRequirementIds,
+			runtimeUseOccurrences: OcamlIMapInterfaceContract.storageAliasRuntimeUseOccurrencesFor(base),
+			proofId: base.proofId,
+			proofClaim: base.proofClaim,
+			functionId: base.functionId,
+			programRevision: base.programRevision,
+			bodyRevision: base.bodyRevision,
+			pipelineRevision: base.pipelineRevision
+		};
+	}
+
 	static function main():Void {
+		final nullableStorageAlias = standardStringMapStorageAlias(OcamlIMapStorageAliasNullPolicy.CheckNullAndUnbox);
+		final storageAliasRequirements = OcamlRuntimeRequirementLedger.requirementsForIMapStorageAlias(nullableStorageAlias);
+		assertTrue(storageAliasRequirements.length == 1
+			&& storageAliasRequirements[0].id == nullableStorageAlias.id + ":runtime:haxe-runtime-core"
+			&& storageAliasRequirements[0].subject.id == "Null<Map<String, Int>>"
+			&& storageAliasRequirements[0].rootModules.join(",") == "HxRuntime",
+			"a nullable storage alias should own one exact HxRuntime requirement");
+		assertTrue(nullableStorageAlias.runtimeUseOccurrences.map(use -> use.exactSymbol).join(",") == "HxRuntime.is_null,HxRuntime.hx_throw_typed",
+			"a nullable storage alias should authorize its null check before its catchable Null Access throw");
+		final nonNullableStorageAlias = standardStringMapStorageAlias(OcamlIMapStorageAliasNullPolicy.NonNullableSource);
+		assertTrue(nonNullableStorageAlias.runtimeRequirementIds.length == 0
+			&& nonNullableStorageAlias.runtimeUseOccurrences.length == 0
+			&& OcamlRuntimeRequirementLedger.requirementsForIMapStorageAlias(nonNullableStorageAlias).length == 0,
+			"a non-null storage alias should remain free of compatibility-runtime work");
+		final corruptedStorageAlias:Dynamic = Reflect.copy(nullableStorageAlias);
+		corruptedStorageAlias.runtimeUseOccurrences = nullableStorageAlias.runtimeUseOccurrences.copy();
+		corruptedStorageAlias.runtimeUseOccurrences[0] = Reflect.copy(nullableStorageAlias.runtimeUseOccurrences[0]);
+		corruptedStorageAlias.runtimeUseOccurrences[0].exactSymbol = "HxRuntime.hx_throw_typed";
+		expectFailure("corrupted storage-alias runtime occurrence", "invalid-runtime-use",
+			() -> OcamlRuntimeRequirementLedger.requirementsForIMapStorageAlias(cast corruptedStorageAlias));
+
 		final macHaxePath = ["", "Users", "alice", "haxe", "versions", "4.3.7", "std", "haxe", "Exception.hx"].join("/");
 		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(macHaxePath) == "haxe-stdlib/haxe/Exception.hx",
 			"upstream Haxe paths should not retain a home-directory prefix");

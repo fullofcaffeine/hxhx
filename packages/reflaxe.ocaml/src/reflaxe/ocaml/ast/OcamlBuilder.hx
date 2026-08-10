@@ -1984,17 +1984,34 @@ class OcamlBuilder {
 			case NonNullableSource:
 				built;
 			case CheckNullAndUnbox:
+				final binding:OcamlFunctionPlanBinding = {
+					functionId: decision.functionId,
+					programRevision: decision.programRevision,
+					bodyRevision: decision.bodyRevision,
+					pipelineRevision: decision.pipelineRevision
+				};
+				final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+				final runtimeAuthority = new OcamlRuntimeUseAuthority(planRevision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+					ctx.runtimeRequirementsByIds(OcamlIMapInterfacePlan.storageAliasRuntimeRequirementIds(decision)), decision.runtimeUseOccurrences,
+					ctx.finalRuntimeUses);
+				final nullCheckUse = decision.runtimeUseOccurrences[0];
+				final nullThrowUse = decision.runtimeUseOccurrences[1];
 				final valueName = freshTmp("nullable_standard_map");
 				final value = OcamlExpr.EIdent(valueName);
-				final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [value]);
+				final isNull = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(nullCheckUse.id, planRevision,
+					nullCheckUse.exactSymbol)), [value]);
 				final recovered = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
-				final throwNullAccess = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
-					OcamlExpr.EList([
-						OcamlExpr.EConst(OcamlConst.CString("String")),
-						OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
-					])
-				]);
+				final throwNullAccess = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(nullThrowUse.id, planRevision,
+					nullThrowUse.exactSymbol)), [
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
+						OcamlExpr.EList([
+							OcamlExpr.EConst(OcamlConst.CString("String")),
+							OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
+						])
+					]);
+				// The source value may contain runtime uses owned by other plans. Reconcile
+				// only the two private names this alias inserts, then compose the result.
+				runtimeAuthority.reconcileExpression(OcamlExpr.ESeq([isNull, throwNullAccess]));
 				OcamlExpr.ELet(valueName, built, OcamlExpr.EIf(isNull, throwNullAccess, recovered), false);
 			case _:
 				callPlanInvariant('reflaxe.ocaml [ocaml-imap-interface:unknown-storage-alias-null-policy]: storage alias "${decision.id}" has unsupported null policy "${decision.nullPolicy}"',

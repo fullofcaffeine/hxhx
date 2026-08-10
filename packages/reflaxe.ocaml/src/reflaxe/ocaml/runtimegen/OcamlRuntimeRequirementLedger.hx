@@ -14,6 +14,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 #end
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -214,6 +215,38 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependencies owned by one concrete-to-interface conversion. */
 	public function recordIMapInterfaceConversion(decision:OcamlIMapInterfaceConversionDecision):Void {
 		for (requirement in requirementsForIMapInterfaceConversion(decision))
+			record(requirement);
+	}
+
+	/** Returns the runtime reason owned by one nullable standard-Map storage alias. */
+	public static function requirementsForIMapStorageAlias(decision:OcamlIMapStorageAliasDecision):Array<OcamlRuntimeRequirement> {
+		OcamlIMapInterfaceContract.requireStorageAlias(decision);
+		if (decision.runtimeRequirementIds.length == 0)
+			return [];
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.sourceSemanticTypeId
+				},
+				implementationFeature: "haxe-runtime-core-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: ["metal", "portable"],
+				explanation: "The sealed nullable standard-Map storage alias uses HxRuntime to test its erased source carrier and raise catchable Haxe Null Access before recovering the exact non-null Map carrier."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one nullable storage alias. */
+	public function recordIMapStorageAlias(decision:OcamlIMapStorageAliasDecision):Void {
+		for (requirement in requirementsForIMapStorageAlias(decision))
 			record(requirement);
 	}
 

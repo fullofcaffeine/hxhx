@@ -242,6 +242,8 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			standardKeyKind: cast(requiredString(value, "standardKeyKind"), OcamlStandardIMapKeyKind),
 			nullPolicy: cast(requiredString(value, "nullPolicy"), OcamlIMapStorageAliasNullPolicy),
 			uses: [for (entry in requiredArray(value, "uses")) storageAliasUse(entry)],
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: runtimeUseOccurrences(value),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			functionId: requiredString(value, "functionId"),
@@ -352,6 +354,24 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			standardKeyKind: decision.standardKeyKind,
 			nullPolicy: decision.nullPolicy,
 			uses: decision.uses.map(inspectionStorageAliasUse),
+			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
+			runtimeUseOccurrences: decision.runtimeUseOccurrences.map(use -> {
+				id: use.id,
+				planRevision: use.planRevision,
+				ownerId: use.ownerId,
+				requirementId: use.requirementId,
+				domain: use.domain,
+				exactSymbol: use.exactSymbol,
+				role: use.role,
+				order: use.order,
+				source: {
+					file: use.source.file,
+					min: use.source.min,
+					max: use.source.max
+				},
+				profileEligibility: use.profileEligibility.copy(),
+				cardinality: use.cardinality
+			}),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

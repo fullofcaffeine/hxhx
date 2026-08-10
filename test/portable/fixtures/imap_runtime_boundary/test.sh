@@ -9,7 +9,7 @@ if (report.schemaVersion !== 69
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
-if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v5'
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 5
 	|| report.iMapInterfaceCallCount !== 55
 	|| report.iMapStorageAliasCount !== 6
@@ -100,6 +100,10 @@ for (const expected of expectedAliases) {
 		|| alias.sourceCarrierTypeId !== expected.carrier
 		|| alias.preservedCarrierTypeId !== expected.carrier
 		|| alias.nullPolicy !== 'non-null-source'
+		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
+		|| alias.runtimeRequirementIds?.length !== 0
+		|| alias.runtimeUseOccurrences?.length !== 0
+		|| report.runtimeRequirements.some(requirement => requirement.decisionId === alias.id)
 		|| alias.pipelineRevision !== expectedPipeline
 		|| alias.uses.length !== 1
 		|| alias.uses[0].carrierTypeId !== expected.carrier
@@ -122,6 +126,36 @@ if (formatted.length !== 5
 		|| (!conversion.runtimeCapabilities.includes('haxe-string-text')
 			&& !conversion.runtimeCapabilities.includes('haxe-dynamic-text')))) {
 	throw new Error('Map.toString was not sealed as typed pair traversal and entry formatting')
+}
+for (const conversion of formatted) {
+	const textRole = conversion.keyStringifier === 'exact-string' || conversion.keyStringifier === 'dynamic-object'
+		? 'format-key'
+		: 'format-value'
+	const expectedRoles = [
+		'type-marker',
+		'standard-map:get',
+		'standard-map:set',
+		'standard-map:exists',
+		'standard-map:remove',
+		'wrap-iterator:keys',
+		'standard-map:keys',
+		'wrap-iterator:iterator',
+		'standard-map:iterator',
+		'wrap-iterator:keyValueIterator',
+		'standard-map:keyValueIterator',
+		'standard-map:copy',
+		'format-of-array',
+		'standard-map:toString',
+		'format-create-array',
+		'format-has-next',
+		'format-next',
+		'format-push',
+		textRole,
+		'format-join',
+		'standard-map:clear'
+	]
+	if (conversion.runtimeUseOccurrences.map(use => use.role).join(',') !== expectedRoles.join(','))
+		throw new Error(`IMap conversion ${conversion.id} does not record final structured-expression order`)
 }
 
 const generated = fs.readFileSync('out/Main.ml', 'utf8')

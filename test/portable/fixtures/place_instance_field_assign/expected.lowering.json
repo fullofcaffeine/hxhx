@@ -3028,7 +3028,7 @@
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
   "arrayLiteralProducerRevision": "sha256:fcac6249f332b489239c4fae84c07f40020f820d5ca68aac2e146c7e88f5cfb8",
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v5",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v6",
   "arrayLiteralProducers": [
     {
       "runtimeUseOccurrences": [

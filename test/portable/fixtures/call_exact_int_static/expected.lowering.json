@@ -6000,7 +6000,7 @@
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 1,
   "arrayLiteralProducerRevision": "sha256:84742e562d24a5926a8ff581eb278eef9660de98c33de2bbbf30aa5ab37d790d",
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v5",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v6",
   "arrayLiteralProducers": [
     {
       "runtimeUseOccurrences": [
@@ -14374,7 +14374,7 @@
     {
       "bodyRevision": "12:4e83d238a98ccf69afc261d6a2b2afa2b17d686985d745ca5b7d64f43af87391",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "add",
       "id": "callable-boundary:4363a89d4af869b4513dbb5b",
       "calleeId": "Arithmetic|Arithmetic::add",
@@ -14436,7 +14436,7 @@
     {
       "bodyRevision": "12:7e77d64d76e2d21bbd63010a487526d4676d938d46d5e35e5aa6baaffe378d0d",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "increment",
       "id": "callable-boundary:24e842556e45d39174ca0a04",
       "calleeId": "Arithmetic|Arithmetic::increment",
@@ -14485,7 +14485,7 @@
     {
       "bodyRevision": "12:630298e744ac5a3874675082da716c9d7eafff41b72f6c72cc9c360b8ccf9ebb",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
       "sourceFieldName": "identityNullable",
       "id": "callable-boundary:83219cd3bef7aaa99dd522d1",
       "calleeId": "BoolCalls|BoolCalls::identityNullable",
@@ -14534,7 +14534,7 @@
     {
       "bodyRevision": "12:1fc7b5aec636641c9f007edb61bf150b8aad8cfcfe49b8d7322856413aa2100e",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Bool] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Bool] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "negate",
       "id": "callable-boundary:1d08c2df696ed7a951f320f2",
       "calleeId": "BoolCalls|BoolCalls::negate",
@@ -14644,7 +14644,7 @@
     {
       "bodyRevision": "12:13a38e6a747f9d249a85d3d94e040901758f9212d6e7c0309d827e394fb4f8f8",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Every path in its final typed body exits through sealed return control, so the declared Null<Int> carrier remains the only callable result boundary.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Every path in its final typed body exits through sealed return control, so the declared Null<Int> carrier remains the only callable result boundary.",
       "sourceFieldName": "allPathNullable",
       "id": "callable-boundary:b2d0a6e9fb7a14d66691c19b",
       "calleeId": "Main|Main::allPathNullable",
@@ -14693,7 +14693,7 @@
     {
       "bodyRevision": "12:7e1e084468ae8b312e4ff0e1043169173d223e4b1aeb4d58c6b757945a8a4a0a",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "checkedArgument",
       "id": "callable-boundary:7f6d791fbed24e15f9651966",
       "calleeId": "Main|Main::checkedArgument",
@@ -14742,7 +14742,7 @@
     {
       "bodyRevision": "12:a271fbf45af1452aafe15d0c61ffd7f3f79dc2f9932e975946d5a3b03fbdbd3b",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Int>, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Int carrier via checked-unbox-nullable-int.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Int>, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Int carrier via checked-unbox-nullable-int.",
       "sourceFieldName": "checkedResult",
       "id": "callable-boundary:cba52b4bdb969fdef002d357",
       "calleeId": "Main|Main::checkedResult",
@@ -14804,7 +14804,7 @@
     {
       "bodyRevision": "12:34ee553acf5e2ff6f669956b657f26cd4f3f6862811e7c11bb897d075fdd2546",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "exactMixedFallback",
       "id": "callable-boundary:72cd63ab00c85e520cf81c57",
       "calleeId": "Main|Main::exactMixedFallback",
@@ -14839,7 +14839,7 @@
     {
       "bodyRevision": "12:331f6d6a8cd5589b60a23ff5dc743aeb7bcf0753c9cbe9c64c1071b51320be6f",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "exactMixedFlag",
       "id": "callable-boundary:04724c8037e177cdc141c850",
       "calleeId": "Main|Main::exactMixedFlag",
@@ -14874,7 +14874,7 @@
     {
       "bodyRevision": "12:77e4c2c70f170606981c77b03c6c415595cb6ee487924b13fac202a02ce1efc1",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "firstValue",
       "id": "callable-boundary:5f95c495e58d3495a38d995a",
       "calleeId": "Main|Main::firstValue",
@@ -14909,7 +14909,7 @@
     {
       "bodyRevision": "12:4454a95517315dcadb1a2093e3d057a3c8ac745812a272c7a849c624b4590bc3",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "main",
       "id": "callable-boundary:822230e902e42cd36e4baea8",
       "calleeId": "Main|Main::main",
@@ -14932,7 +14932,7 @@
     {
       "bodyRevision": "12:cda0a68c7578fa287de029860e10165218ad2b95a9c60aef682b796958e64147",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Int] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "mixedCount",
       "id": "callable-boundary:3c5340709b3da42865559910",
       "calleeId": "Main|Main::mixedCount",
@@ -14994,7 +14994,7 @@
     {
       "bodyRevision": "12:14b6ef1e0520aac7bd23d476e311a6d375a61b4b9a32f638a25f56853b8b7da6",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "mixedDecision",
       "id": "callable-boundary:0476c80980eae1b826a258c2",
       "calleeId": "Main|Main::mixedDecision",
@@ -15056,7 +15056,7 @@
     {
       "bodyRevision": "12:108a7fd56acd91b6c8a83a999157725a5e4eafd8400b7afc168fd44d204c5e59",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "observeExistingMixedFallback",
       "id": "callable-boundary:7bb35b5b0b82a75477106437",
       "calleeId": "Main|Main::observeExistingMixedFallback",
@@ -15105,7 +15105,7 @@
     {
       "bodyRevision": "12:7319cf211fcb6203760b367789422392cb0e4834a7cae8046e7fb3369951e965",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
       "sourceFieldName": "observeExistingMixedFlag",
       "id": "callable-boundary:34c5281fddf740819720093f",
       "calleeId": "Main|Main::observeExistingMixedFlag",
@@ -15154,7 +15154,7 @@
     {
       "bodyRevision": "12:4a2b3a8ad43a72825c81beb352e4df90fbb745db44b95e87278748bb40da16f0",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Bool> body value crosses into the exported Null<Bool> carrier via identity.",
       "sourceFieldName": "observeOptionalBool",
       "id": "callable-boundary:3db25b0f9f8bc95efa970a0c",
       "calleeId": "Main|Main::observeOptionalBool",
@@ -15203,7 +15203,7 @@
     {
       "bodyRevision": "12:e0cc7b27992f85067aae61a94dac30fc810e2b9cecc17cc3265619ae143eeba1",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "observeOptionalInt",
       "id": "callable-boundary:935688f1ca57f81dabf2d1e2",
       "calleeId": "Main|Main::observeOptionalInt",
@@ -15252,7 +15252,7 @@
     {
       "bodyRevision": "12:a79289316596f3742f733dc9d60d507719554f2fb64b3c0df467e74df7eee1cb",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "observedBoolInput",
       "id": "callable-boundary:44203b068462b7886553dbae",
       "calleeId": "Main|Main::observedBoolInput",
@@ -15287,7 +15287,7 @@
     {
       "bodyRevision": "12:db367b2544e45c7c8c98ccdfc8e7354e15c57756cf45043e050a68d1b7fc5393",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "observedNullableInput",
       "id": "callable-boundary:63631a8a403fa9b38c329858",
       "calleeId": "Main|Main::observedNullableInput",
@@ -15322,7 +15322,7 @@
     {
       "bodyRevision": "12:404183c3db8ff637421c2279c8697b3d59e0410b7e32f31d76fb42b227167647",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "optionalBoolSource",
       "id": "callable-boundary:1268d901f34312dd08b2e684",
       "calleeId": "Main|Main::optionalBoolSource",
@@ -15357,7 +15357,7 @@
     {
       "bodyRevision": "12:18a62211269b2b9fccd1556a67f11da202e7f328cf936590b11e5ed3a9aed605",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "optionalIntSource",
       "id": "callable-boundary:40c8af0041b0ab68f0f4d187",
       "calleeId": "Main|Main::optionalIntSource",
@@ -15392,7 +15392,7 @@
     {
       "bodyRevision": "12:b36e2ca8e88514a5b14589abf0688d561b8f0af4913147829860838656a6b5ec",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "optionalStringSource",
       "id": "callable-boundary:6fa74d5fe82554a740586413",
       "calleeId": "Main|Main::optionalStringSource",
@@ -15427,7 +15427,7 @@
     {
       "bodyRevision": "12:aee28c0a01deb19d13b503f9524309e96538d8c0c18a6cd408119d7c127216c5",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String, String] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "recordCheckedString",
       "id": "callable-boundary:2465780f6b611c2e99e30797",
       "calleeId": "Main|Main::recordCheckedString",
@@ -15477,7 +15477,7 @@
     {
       "bodyRevision": "12:8a2fb72c596436e7227f4cdb94845233a025bceebb7abc30a28fb16137c6a974",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Dynamic] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Int carrier via checked-unbox-nullable-int.",
+      "reason": "An ordinary static Haxe method with arguments [Dynamic] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Int carrier via checked-unbox-nullable-int.",
       "sourceFieldName": "requiredDynamicInt",
       "id": "callable-boundary:692ce856200766f27119e046",
       "calleeId": "Main|Main::requiredDynamicInt",
@@ -15526,7 +15526,7 @@
     {
       "bodyRevision": "12:a496f3bc4ebef3c9ed228b4d22e448292390018491ba26feb4f8371349b17d1e",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "secondValue",
       "id": "callable-boundary:e2656cde77b31336988b85a1",
       "calleeId": "Main|Main::secondValue",
@@ -15561,7 +15561,7 @@
     {
       "bodyRevision": "12:0c4488d38e089528f6dd1dad26744b9840d228cbaf5d0bd9ce222ac0f3e26b6b",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "shouldNotRun",
       "id": "callable-boundary:2dd651de18df0a56dd6abadf",
       "calleeId": "Main|Main::shouldNotRun",
@@ -15596,7 +15596,7 @@
     {
       "bodyRevision": "12:9095c712bd2b57404980d1de7d48d305dcf3fb797e9274539c7237f568ebb2d9",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "sourceValue",
       "id": "callable-boundary:f67d0983fe5c7ec8d324310e",
       "calleeId": "Main|Main::sourceValue",
@@ -15631,7 +15631,7 @@
     {
       "bodyRevision": "12:2ebbf8dd412fe39f82a367ab1f3424ad7711a69f710feb00f4d84f17fc310e7d",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "throwingFirst",
       "id": "callable-boundary:055a39a89df7126f2f527af6",
       "calleeId": "Main|Main::throwingFirst",
@@ -15666,7 +15666,7 @@
     {
       "bodyRevision": "12:57b745eb8fe8432f9943226a48c0f2c02137110d8aa70641a066fc5db96804a3",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "voidBoolSource",
       "id": "callable-boundary:b7210fb5a849a858d5e745de",
       "calleeId": "Main|Main::voidBoolSource",
@@ -15701,7 +15701,7 @@
     {
       "bodyRevision": "12:4acb632326aab5fd128240d0688eb1d9b9a7fb592171596379b7b01a408e5056",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "voidIntSource",
       "id": "callable-boundary:8c2976f4ef7a7ab1c0cf9522",
       "calleeId": "Main|Main::voidIntSource",
@@ -15736,7 +15736,7 @@
     {
       "bodyRevision": "12:04a5a5addeb724a6701c0858d93e0384f55ab19edbfc14becce51aba7526e1f1",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "voidStringSource",
       "id": "callable-boundary:0641ee9166d9d418de8bd320",
       "calleeId": "Main|Main::voidStringSource",
@@ -15771,7 +15771,7 @@
     {
       "bodyRevision": "12:a2ba49e999586ba6c4fbc2564c2b3ebd8440b8eb3ee0c3979f8ee00be53dfc20",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int, Null<Bool>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int, Null<Bool>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "choose",
       "id": "callable-boundary:3fa055214546ddb4b052a5f5",
       "calleeId": "MixedCalls|MixedCalls::choose",
@@ -15833,7 +15833,7 @@
     {
       "bodyRevision": "12:6a0b4b79bcccbeb5910ff86756cce9e9f6099c80f9c62cb33e7d853a359fe0ec",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int, Null<Bool>, Bool, Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int, Null<Bool>, Bool, Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "chooseMany",
       "id": "callable-boundary:ff2120de2d89a02be97a668f",
       "calleeId": "MixedCalls|MixedCalls::chooseMany",
@@ -15921,7 +15921,7 @@
     {
       "bodyRevision": "12:6fcf22251334f750a63fa2fb7ebbd70fd143411eca6e334a7aa3bbc0394fb659",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "identity",
       "id": "callable-boundary:9f27402c8f0302b0c110811a",
       "calleeId": "NullableCalls|NullableCalls::identity",
@@ -15970,7 +15970,7 @@
     {
       "bodyRevision": "12:303ac5e9427ac5cf542d9ede7dc86e5e6ec8ae7297e9c06f1f854d96a91a1bbe",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Bool>] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "optionalBool",
       "id": "callable-boundary:762b0d7b639fb32a361e57d0",
       "calleeId": "OptionalCalls|OptionalCalls::optionalBool",
@@ -16019,7 +16019,7 @@
     {
       "bodyRevision": "12:3635712dbfb6cad407b04809a3d7caef007f0ed5f3e31da1a4ff086868a4ee0e",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Null<Int>] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "optionalInt",
       "id": "callable-boundary:d2291822b915b32e1ab96c04",
       "calleeId": "OptionalCalls|OptionalCalls::optionalInt",
@@ -16068,7 +16068,7 @@
     {
       "bodyRevision": "12:7f5ab8582931d21666524b80adc29da5ed0d1d5c5e7da4092af38b456ba5e0ad",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "optionalString",
       "id": "callable-boundary:0a1273baca3ff8c246ca58d3",
       "calleeId": "OptionalCalls|OptionalCalls::optionalString",
@@ -16117,7 +16117,7 @@
     {
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "_quoteUnixArgOcaml",
       "id": "callable-boundary:d3244cb3df9c2f3fe955b834",
       "calleeId": "StringTools|StringTools::_quoteUnixArgOcaml",
@@ -16166,7 +16166,7 @@
     {
       "bodyRevision": "12:1f6ab09622fdcabc61c3737f03a419a797896b5723335391342a338b6505aa2e",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "_quoteWinArgOcaml",
       "id": "callable-boundary:0a38d9228412fb7b6427492d",
       "calleeId": "StringTools|StringTools::_quoteWinArgOcaml",
@@ -16228,7 +16228,7 @@
     {
       "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "_urlDecodeOcaml",
       "id": "callable-boundary:a927727cfffdd186ade4720c",
       "calleeId": "StringTools|StringTools::_urlDecodeOcaml",
@@ -16277,7 +16277,7 @@
     {
       "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "_urlEncodeOcaml",
       "id": "callable-boundary:7d766863c07915d04bd0c802",
       "calleeId": "StringTools|StringTools::_urlEncodeOcaml",
@@ -16326,7 +16326,7 @@
     {
       "bodyRevision": "12:556eedbe025201b539195275c632ae6c6298cc8a214e0553dfb0cdd258ee562c",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, String] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "endsWith",
       "id": "callable-boundary:91cee5cebd738ac2f26dccb2",
       "calleeId": "StringTools|StringTools::endsWith",
@@ -16388,7 +16388,7 @@
     {
       "bodyRevision": "12:39efc1f106b47cb1c653666a5c693420734a233b0bd9a05d4367b22ce12e3b9a",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int, Null<Int>] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [Int, Null<Int>] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "hex",
       "id": "callable-boundary:4b27a2e2bc48f0ec46a19d5a",
       "calleeId": "StringTools|StringTools::hex",
@@ -16450,7 +16450,7 @@
     {
       "bodyRevision": "12:870df52dd893659566917cfe39ad0205d77cb3a4dc4493c9cd5767a685e6e32f",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Null<Bool>] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Null<Bool>] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "htmlEscape",
       "id": "callable-boundary:4bfb0499456b9b19df185027",
       "calleeId": "StringTools|StringTools::htmlEscape",
@@ -16512,7 +16512,7 @@
     {
       "bodyRevision": "12:26df1e66dc071beb11bcd7c41b60b09e78b5c76d1de586fcfc78cf2411b7d047",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "htmlUnescape",
       "id": "callable-boundary:2c703fe8e8278308d197a5b4",
       "calleeId": "StringTools|StringTools::htmlUnescape",
@@ -16561,7 +16561,7 @@
     {
       "bodyRevision": "12:106ef18c7db75bed01d85a26a5dbed78ef0a9363438396c2fcb50b364c48097e",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Int] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Int] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "isSpace",
       "id": "callable-boundary:7fcf57b88318cde6172a49d2",
       "calleeId": "StringTools|StringTools::isSpace",
@@ -16623,7 +16623,7 @@
     {
       "bodyRevision": "12:f3e0a6ad1286659af6eff2cc1b2ebc9723cc3d06bce3c71132c45c2f6e33b681",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String, Int] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String, String, Int] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "lpad",
       "id": "callable-boundary:cb197c20ebb932394159151f",
       "calleeId": "StringTools|StringTools::lpad",
@@ -16698,7 +16698,7 @@
     {
       "bodyRevision": "12:a0e31001ea41d553cad707b8149ae999ebaf892353e48ab6f388dffe7cc13d2a",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "ltrim",
       "id": "callable-boundary:13e02f89c8cee9042b07c22b",
       "calleeId": "StringTools|StringTools::ltrim",
@@ -16747,7 +16747,7 @@
     {
       "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "quoteUnixArg",
       "id": "callable-boundary:124f432adea8898d15f39b20",
       "calleeId": "StringTools|StringTools::quoteUnixArg",
@@ -16796,7 +16796,7 @@
     {
       "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, Bool] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "quoteWinArg",
       "id": "callable-boundary:fd7646a762c98fda0f31d910",
       "calleeId": "StringTools|StringTools::quoteWinArg",
@@ -16858,7 +16858,7 @@
     {
       "bodyRevision": "12:c52809e7d856204d42f34e1d8292c8f2021f19d74006ddfc0ed938868edfafc9",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String, String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, String, String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "replace",
       "id": "callable-boundary:d31c7d988349d0de161e6f87",
       "calleeId": "StringTools|StringTools::replace",
@@ -16933,7 +16933,7 @@
     {
       "bodyRevision": "12:7b3a3fd27050311144bbb22820f9002b46afab87b42e8064e9d952cc664099fb",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String, Int] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String, String, Int] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "rpad",
       "id": "callable-boundary:5cf0dd5434d78edb1304ca9a",
       "calleeId": "StringTools|StringTools::rpad",
@@ -17008,7 +17008,7 @@
     {
       "bodyRevision": "12:935e4eae357c7ec31343c37be5b8859aa33e3d891cc95ca540cfb33c45a2c121",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "rtrim",
       "id": "callable-boundary:873d431a308f45bc0109ef30",
       "calleeId": "StringTools|StringTools::rtrim",
@@ -17057,7 +17057,7 @@
     {
       "bodyRevision": "12:4f469380596a9c4205def47f75f8ca0a1d4b5250179cb60bec984506d179b0fa",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String, String] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String, String] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "startsWith",
       "id": "callable-boundary:f4bf6371bed9b96200b9ea3c",
       "calleeId": "StringTools|StringTools::startsWith",
@@ -17119,7 +17119,7 @@
     {
       "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [String] and result String independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line String body value crosses into the exported String carrier via identity.",
       "sourceFieldName": "trim",
       "id": "callable-boundary:e571994bbf0a0c982f613776",
       "calleeId": "StringTools|StringTools::trim",
@@ -17168,7 +17168,7 @@
     {
       "bodyRevision": "12:74be8d79af3a7a199bcc9e2d27f1b2bebca230516459254697ca90d6a779b504",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "noArguments",
       "id": "callable-boundary:a8dc57d74cc16592068eecf7",
       "calleeId": "VoidCalls|VoidCalls::noArguments",
@@ -17191,7 +17191,7 @@
     {
       "bodyRevision": "12:51f1ba35545f80beec2a69ff845239c9714c67fabf63672640b3110385cf6d82",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [Int, Bool, String] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.",
+      "reason": "An ordinary static Haxe method with arguments [Int, Bool, String] and result effect-only Void independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.",
       "sourceFieldName": "withArguments",
       "id": "callable-boundary:40a4127c1a2db5627f0d8fc2",
       "calleeId": "VoidCalls|VoidCalls::withArguments",
@@ -17254,7 +17254,7 @@
     {
       "bodyRevision": "12:57de0acd619e6bc87282f0da9075c9410c3e05c7f96faab7ec4f5037033bf96c",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "exactCount",
       "id": "callable-boundary:ebda5561c22230af004d340b",
       "calleeId": "ZeroArgCalls|ZeroArgCalls::exactCount",
@@ -17289,7 +17289,7 @@
     {
       "bodyRevision": "12:228e2f1cbc030a6abc91f00af447bc69f0f3e4a3a62a8373829dda8d20888432",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "exactFlag",
       "id": "callable-boundary:05ad38652fd84e568dc35627",
       "calleeId": "ZeroArgCalls|ZeroArgCalls::exactFlag",
@@ -17324,7 +17324,7 @@
     {
       "bodyRevision": "12:f1629f6019a0bbf35717ebcf34af825d493e6550455278e01c2b02fc004e3a49",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Null<Int> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Null<Int> body value crosses into the exported Null<Int> carrier via identity.",
       "sourceFieldName": "nullableCount",
       "id": "callable-boundary:500a7fac30fb9a349a8c569c",
       "calleeId": "ZeroArgCalls|ZeroArgCalls::nullableCount",
@@ -17359,7 +17359,7 @@
     {
       "bodyRevision": "12:ab7547355d01a6b6e947778fb1a887b6c7d44f3bcede32d87e187bccad78a381",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with arguments [] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional. Its final straight-line Bool body value crosses into the exported Null<Bool> carrier via box-exact-bool-to-nullable-bool.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Null<Bool> independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional. Its final straight-line Bool body value crosses into the exported Null<Bool> carrier via box-exact-bool-to-nullable-bool.",
       "sourceFieldName": "nullableFlag",
       "id": "callable-boundary:bcb5bba5a58a23b239d4ac72",
       "calleeId": "ZeroArgCalls|ZeroArgCalls::nullableFlag",
@@ -22746,7 +22746,7 @@
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 75,
   "runtimeRequirementRevision": "sha256:7277465804d0118e0f8dc6b68fe1e5792126c47c433aacff93585dcf114202e9",
-  "callRevision": "sha256:63952f7090573d1daecde56fa09e612ca33c3b4484b8f32903eccd47e237dc24",
+  "callRevision": "sha256:6d28baf5e392fc23a1912d742352fcce32b1a0d4ad8df8dd3d6ddeda7057456f",
   "representedArrayCount": 1,
   "controls": [
     {

@@ -474,7 +474,7 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						callInventory.calls, controls);
+						iMapInterfaces.storageAliases, callInventory.calls, controls);
 					{
 						status: "present",
 						required: required,
@@ -3324,8 +3324,8 @@ class ReflaxeOcamlInspection {
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
 			arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>, localConversions:Array<InspectionLocalConversion>,
 			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
-			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>, calls:Array<InspectionCall>,
-			controls:Array<InspectionControl>):Int {
+			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
+			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -3701,6 +3701,32 @@ class ReflaxeOcamlInspection {
 					|| roots[0] != implementation.root
 					|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
 					throw 'IMap interface conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed adapter.';
+				}
+				referenced.set(requirementId, true);
+			}
+		}
+		for (alias in iMapStorageAliases) {
+			for (requirementId in alias.runtimeRequirementIds) {
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'IMap storage alias "${alias.id}" refers to missing runtime requirement "$requirementId".';
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != alias.id
+					|| requiredString(source, "file") != alias.sourceFile
+					|| requiredInt(source, "min") != alias.sourceMin
+					|| requiredInt(source, "max") != alias.sourceMax
+					|| requiredString(requirement, "semanticCapability") != "haxe-runtime-core"
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != alias.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != alias.sourceSemanticTypeId
+					|| requiredString(requirement, "implementationFeature") != "haxe-runtime-core-v1"
+					|| roots.join(",") != "HxRuntime"
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+					throw 'IMap storage alias "${alias.id}" runtime requirement "$requirementId" disagrees with its sealed nullable carrier policy.';
 				}
 				referenced.set(requirementId, true);
 			}

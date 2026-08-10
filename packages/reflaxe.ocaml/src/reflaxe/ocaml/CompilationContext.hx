@@ -24,6 +24,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDe
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -507,6 +508,11 @@ class CompilationContext {
 	/** Records runtime support selected by one concrete-to-`IMap` adapter. */
 	public function recordIMapInterfaceRuntimeRequirements(decision:OcamlIMapInterfaceConversionDecision):Void {
 		runtimeRequirements.recordIMapInterfaceConversion(decision);
+	}
+
+	/** Records runtime support selected by one nullable standard-Map storage alias. */
+	public function recordIMapStorageAliasRuntimeRequirements(decision:OcamlIMapStorageAliasDecision):Void {
+		runtimeRequirements.recordIMapStorageAlias(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

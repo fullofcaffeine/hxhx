@@ -146,6 +146,8 @@ typedef OcamlIMapStorageAliasDecision = {
 	final standardKeyKind:OcamlStandardIMapKeyKind;
 	final nullPolicy:OcamlIMapStorageAliasNullPolicy;
 	final uses:Array<OcamlIMapStorageAliasUseDecision>;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -162,7 +164,7 @@ typedef OcamlIMapStorageAliasDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v5";
+	public static inline final MODEL = "typed-imap-interface-adapter-v6";
 	static inline final LEXICAL_LOCAL_ID_PREFIX = "lexical-local-v1:";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
@@ -337,6 +339,70 @@ class OcamlIMapInterfaceContract {
 			}
 			previousUse = useIdentity;
 		}
+		final expectedRequirementIds = storageAliasRuntimeRequirementIds(decision.id, decision.nullPolicy);
+		if (decision.runtimeRequirementIds.join(",") != expectedRequirementIds.join(","))
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias-runtime-requirement]: storage alias "${decision.id}" has a stale, missing, or conflicting runtime requirement';
+		final expectedRuntimeUses = storageAliasRuntimeUseOccurrencesFor(decision);
+		if (decision.runtimeUseOccurrences.length != expectedRuntimeUses.length)
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias-runtime-use]: storage alias "${decision.id}" has an incomplete private-runtime occurrence inventory';
+		for (index in 0...expectedRuntimeUses.length)
+			requireRuntimeUse(decision.id, index, decision.runtimeUseOccurrences[index], expectedRuntimeUses[index]);
+	}
+
+	/** Returns the runtime requirements fixed by one storage alias null policy. */
+	public static function storageAliasRuntimeRequirementIds(id:String, nullPolicy:OcamlIMapStorageAliasNullPolicy):Array<String> {
+		if (id == null || id.length == 0)
+			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias-runtime-owner]: storage-alias runtime ownership requires a decision identity";
+		return switch (nullPolicy) {
+			case NonNullableSource: [];
+			case CheckNullAndUnbox: [id + ":runtime:" + OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY];
+			case _: throw 'reflaxe.ocaml [ocaml-imap-interface:unknown-storage-alias-null-policy]: storage alias "$id" has unsupported null policy "$nullPolicy"';
+		};
+	}
+
+	/**
+		Returns the two private runtime names needed by a nullable storage alias.
+
+		The alias decision already owns whether null checking is required. These
+		records only authorize the exact generated identifiers, in their required
+		order; they do not choose the null behavior during syntax construction.
+	**/
+	public static function storageAliasRuntimeUseOccurrencesFor(decision:OcamlIMapStorageAliasDecision):Array<OcamlRuntimeUseOccurrence> {
+		if (decision.nullPolicy == NonNullableSource)
+			return [];
+		final requirementIds = storageAliasRuntimeRequirementIds(decision.id, decision.nullPolicy);
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planned = [
+			{role: "check-null", symbol: "HxRuntime.is_null"},
+			{role: "throw-null-access", symbol: "HxRuntime.hx_throw_typed"}
+		];
+		return [
+			for (index in 0...planned.length) {
+				final item = planned[index];
+				{
+					id: '${decision.id}:runtime-use:$index:${item.role}',
+					planRevision: OcamlRuntimeUseModel.planRevision(binding),
+					ownerId: decision.id,
+					requirementId: requirementIds[0],
+					domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+					exactSymbol: item.symbol,
+					role: item.role,
+					order: index,
+					source: {
+						file: decision.source.file,
+						min: decision.source.min,
+						max: decision.source.max
+					},
+					profileEligibility: ["metal", "portable"],
+					cardinality: 1
+				};
+			}
+		];
 	}
 
 	/** Stable runtime-requirement identities owned by one conversion occurrence. */
@@ -365,28 +431,32 @@ class OcamlIMapInterfaceContract {
 			final operation = operationForMethod(method.name);
 			if (operation == null)
 				continue;
-			for (index in 0...method.argumentSemanticTypeIds.length)
-				if (method.argumentSemanticTypeIds[index] == "Bool")
-					planned.push({role: 'decode-bool:${method.name}:$index', symbol: "HxRuntime.unbox_bool_or_obj"});
-			if (keyKind == null)
+			if (keyKind == null) {
+				for (index in 0...method.argumentSemanticTypeIds.length)
+					if (method.argumentSemanticTypeIds[index] == "Bool")
+						planned.push({role: 'decode-bool:${method.name}:$index', symbol: "HxRuntime.unbox_bool_or_obj"});
 				continue;
-			planned.push({
+			}
+			final standardMapUse = {
 				role: 'standard-map:${method.name}',
 				symbol: "HxMap." + OcamlStandardIMapCallContract.runtimeFunction(operation, keyKind)
-			});
+			};
 			switch (operation) {
 				case Keys, Values, Pairs:
 					planned.push({role: 'wrap-iterator:${method.name}', symbol: "HxIterator.of_array"});
+					planned.push(standardMapUse);
 				case ToString:
+					planned.push({role: "format-of-array", symbol: "HxIterator.of_array"});
+					planned.push(standardMapUse);
+					planned.push({role: "format-create-array", symbol: "HxArray.create"});
+					planned.push({role: "format-has-next", symbol: "HxIterator.hasNext"});
 					planned.push({role: "format-next", symbol: "HxIterator.next"});
+					planned.push({role: "format-push", symbol: "HxArray.push"});
 					appendStringifierUse(planned, "format-key", decision.keyStringifier);
 					appendStringifierUse(planned, "format-value", decision.valueStringifier);
-					planned.push({role: "format-push", symbol: "HxArray.push"});
-					planned.push({role: "format-has-next", symbol: "HxIterator.hasNext"});
 					planned.push({role: "format-join", symbol: "HxArray.join"});
-					planned.push({role: "format-of-array", symbol: "HxIterator.of_array"});
-					planned.push({role: "format-create-array", symbol: "HxArray.create"});
 				case _:
+					planned.push(standardMapUse);
 			}
 		}
 		final binding:OcamlFunctionPlanBinding = {
@@ -463,7 +533,7 @@ class OcamlIMapInterfaceContract {
 			|| actual.source.max != expected.source.max
 			|| actual.profileEligibility.join(",") != expected.profileEligibility.join(",")
 			|| actual.cardinality != expected.cardinality)
-			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-runtime-use]: conversion "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-runtime-use]: IMap runtime owner "$ownerId" has a stale, missing, reordered, or conflicting runtime use at index $index';
 	}
 
 	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Bool {
