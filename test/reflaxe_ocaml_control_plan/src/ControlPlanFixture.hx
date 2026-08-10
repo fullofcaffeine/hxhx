@@ -356,6 +356,7 @@ class ControlPlanFixture {
 		final exact = semanticTypeId != "Dynamic";
 		final carrier = switch (semanticTypeId) {
 			case "Int": "int";
+			case "Float": "float";
 			case "Bool": "bool";
 			case "String": "string";
 			case "Dynamic": "Obj.t";
@@ -716,15 +717,16 @@ class ControlPlanFixture {
 			throw "Throw-family admission accidentally claimed or discarded another control family";
 		}
 		final intCatch = catchClause("control-catch-clause:int", 310, 0, "asInt", "Int");
-		final boolCatch = catchClause("control-catch-clause:bool", 320, 1, "asBool", "Bool");
-		final stringCatch = catchClause("control-catch-clause:string", 330, 2, "asString", "String");
-		final dynamicCatch = catchClause("control-catch-clause:dynamic", 340, 3, "asDynamic", "Dynamic");
-		final exactCatchChain = catchChain("control-catch-chain:exact", [intCatch, boolCatch, stringCatch, dynamicCatch]);
+		final floatCatch = catchClause("control-catch-clause:float", 320, 1, "asFloat", "Float");
+		final boolCatch = catchClause("control-catch-clause:bool", 330, 2, "asBool", "Bool");
+		final stringCatch = catchClause("control-catch-clause:string", 340, 3, "asString", "String");
+		final dynamicCatch = catchClause("control-catch-clause:dynamic", 350, 4, "asDynamic", "Dynamic");
+		final exactCatchChain = catchChain("control-catch-chain:exact", [intCatch, floatCatch, boolCatch, stringCatch, dynamicCatch]);
 		final valueExceptionCatch = haxeExceptionCatchClause("control-catch-clause:value-exception", 350, 0, "asValueException", true);
 		final exceptionCatch = haxeExceptionCatchClause("control-catch-clause:exception", 360, 1, "asException", false);
 		final haxeExceptionCatchChain = catchChain("control-catch-chain:haxe-exception", [valueExceptionCatch, exceptionCatch]);
 		final catchOnly = new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [exactCatchChain]);
-		if (catchOnly.catchChains().length != 1 || catchOnly.catchChains()[0].clauses.length != 4)
+		if (catchOnly.catchChains().length != 1 || catchOnly.catchChains()[0].clauses.length != 5)
 			throw "Exact catch-chain admission lost its source-ordered clauses";
 		final copiedCatchChains = catchOnly.catchChains();
 		copiedCatchChains[0].clauses[0].effects.push(cast "corrupted");
@@ -1025,6 +1027,11 @@ class ControlPlanFixture {
 		expectThrows("invalid-catch-order", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchOrder]));
 		final badCatchTag = catchChain("control-catch-chain:bad-tag", [catchClause("control-catch-clause:bad-tag", 350, 0, "asInt", "Int", "Bool")]);
 		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchTag]));
+		final badFloatCarrier = catchClause("control-catch-clause:bad-float-carrier", 350, 0, "asFloat", "Float");
+		Reflect.setField(badFloatCarrier, "outputCarrierTypeId", "int");
+		expectThrows("invalid-catch-clause",
+			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
+				[catchChain("control-catch-chain:bad-float-carrier", [badFloatCarrier])]));
 		final badCatchConversion = catchChain("control-catch-chain:bad-conversion", [
 			catchClause("control-catch-clause:bad-conversion", 350, 0, "asBool", "Bool", null, OcamlCatchPayloadConversion.RecoverExactValue)
 		]);
@@ -1194,6 +1201,8 @@ class ControlPlanFixture {
 			throw true;
 		} catch (asInt:Int) {
 			Sys.println(Std.string(asInt));
+		} catch (asFloat:Float) {
+			Sys.println(Std.string(asFloat));
 		} catch (asBool:Bool) {
 			Sys.println(Std.string(asBool));
 		} catch (asString:String) {

@@ -91,8 +91,11 @@ class Main {
 	}
 
 	/**
-	 * Proves admission is decided for each `try`, rather than disabling every
-	 * exact catch in a function that also contains an unsupported Float catch.
+	 * Proves each neighboring `try` receives its own sealed catch decision.
+	 *
+	 * Bool and Float use different target carriers, so both clauses must retain
+	 * their own runtime tag, payload conversion, and source owner even though
+	 * they appear in the same Haxe function.
 	 */
 	static function independentAdmission():String {
 		var result = "";
@@ -104,7 +107,7 @@ class Main {
 		try {
 			throw 1.5;
 		} catch (value:Float) {
-			result += "|legacy:" + value;
+			result += "|float:" + value;
 		}
 		return "independent=" + result;
 	}

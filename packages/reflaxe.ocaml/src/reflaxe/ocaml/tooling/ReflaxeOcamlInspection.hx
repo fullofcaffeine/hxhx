@@ -89,7 +89,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v84";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v85";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -440,8 +440,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 69) {
-						throw 'Unsupported lowering report schema $version; expected 69.';
+					if (version != 70) {
+						throw 'Unsupported lowering report schema $version; expected 70.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -850,7 +850,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v21")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v22")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -1217,7 +1217,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
-		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v3")
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v4")
 			throw "Unsupported control catch-chain report model.";
 		final rawChains = requiredArray(value, "controlCatches");
 		if (rawChains.length != requiredInt(value, "controlCatchCount"))
@@ -1245,7 +1245,7 @@ class ReflaxeOcamlInspection {
 				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
 				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
 				|| chain.reason.length == 0
-				|| chain.proofId != "represented-value-catch-control-v3"
+				|| chain.proofId != "represented-value-catch-control-v4"
 				|| chain.proofClaim.length == 0
 				|| chain.functionId.length == 0
 				|| chain.programRevision.length == 0
@@ -1265,7 +1265,7 @@ class ReflaxeOcamlInspection {
 					|| clause.signalCarrierTypeId != "Obj.t"
 					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
 					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
-					|| clause.proofId != "represented-value-catch-control-v3"
+					|| clause.proofId != "represented-value-catch-control-v4"
 					|| clause.proofClaim.length == 0
 					|| clause.functionId != chain.functionId
 					|| clause.programRevision != chain.programRevision
@@ -1276,6 +1276,9 @@ class ReflaxeOcamlInspection {
 				switch (clause.semanticTypeId) {
 					case "Int":
 						validateControlCatchExactSide(clause, "int", "representation:Int:internal-value", "Int", "recover-exact-value", representationById);
+					case "Float":
+						validateControlCatchExactSide(clause, "float", "representation:Float:internal-value", "Float", "recover-exact-value",
+							representationById);
 					case "Bool":
 						validateControlCatchExactSide(clause, "bool", "representation:Bool:internal-value", "Bool", "recover-checked-bool", representationById);
 					case "String":

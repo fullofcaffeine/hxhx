@@ -30,9 +30,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 69
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v21'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
+if (report.schemaVersion !== 70
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v22'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v4'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| !sha256.test(report.controlCatchRevision)) {
 	fail('unexpected exact-catch report schema, model, inventory, or revision')
@@ -40,8 +40,8 @@ if (report.schemaVersion !== 69
 
 const catches = report.controlCatches.filter(chain =>
 	chain.functionId.startsWith('Main|Main|'))
-if (catches.length !== 13) {
-	fail(`expected 13 exact primitive/Dynamic catch chains, got ${catches.length}`)
+if (catches.length !== 14) {
+	fail(`expected 14 exact primitive/Dynamic catch chains, including Float, got ${catches.length}`)
 }
 const catchRequirements = requirements.requirements.filter(requirement =>
 	requirement.semanticCapability === 'hxhx-runtime:typed-haxe-catch-chain-v1'
@@ -55,21 +55,20 @@ if (catchRequirements.length !== catches.length
 		|| requirement.id !== `${requirement.decisionId}:runtime:hxhx-runtime:typed-haxe-catch-chain-v1`)) {
 	fail('the real catch chains did not each publish one exact HxRuntime requirement')
 }
-if (catches.some(chain =>
-	chain.functionId.includes('|function|independentAdmission|')
-	&& chain.clauses.some(clause => clause.semanticTypeId === 'Float'))) {
-	fail('the unsupported Float catch was partially admitted to the exact catch model')
-}
 const independent = catches.filter(chain =>
 	chain.functionId.includes('|function|independentAdmission|'))
-if (independent.length !== 1
-	|| independent[0].clauses.length !== 1
-	|| independent[0].clauses[0].semanticTypeId !== 'Bool') {
-	fail('the supported try beside an unsupported Float try was not admitted independently')
+const independentBool = independent.find(chain => chain.clauses[0]?.semanticTypeId === 'Bool')
+const independentFloat = independent.find(chain => chain.clauses[0]?.semanticTypeId === 'Float')
+if (independent.length !== 2
+	|| independent.some(chain => chain.clauses.length !== 1)
+	|| !independentBool
+	|| !independentFloat) {
+	fail('the neighboring Bool and Float tries were not admitted as independent sealed catch chains')
 }
 
 const expected = {
 	Int: ['Int', 'int', 'representation:Int:internal-value', 'recover-exact-value'],
+	Float: ['Float', 'float', 'representation:Float:internal-value', 'recover-exact-value'],
 	Bool: ['Bool', 'bool', 'representation:Bool:internal-value', 'recover-checked-bool'],
 	String: ['String', 'string', 'representation:String:internal-value', 'recover-exact-value'],
 	Dynamic: [null, 'Obj.t', 'control-representation:Dynamic:runtime-obj-v1', 'preserve-dynamic-carrier']
@@ -85,8 +84,8 @@ for (const chain of catches) {
 		|| chain.targetNativeRuntimeTags.join(',') !== 'OcamlExn'
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
-		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v84'
+		|| chain.proofId !== 'represented-value-catch-control-v4'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v85'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -129,9 +128,13 @@ for (const chain of catches) {
 		ids.add(clause.id)
 	}
 }
-if (independent[0].tryBodyResultPolicy !== 'discard-completed-value-to-unit'
-	|| independent[0].clauses[0].bodyResultPolicy !== 'discard-completed-value-to-unit') {
+if (independentBool.tryBodyResultPolicy !== 'discard-completed-value-to-unit'
+	|| independentBool.clauses[0].bodyResultPolicy !== 'discard-completed-value-to-unit') {
 	fail('the Void try with value-producing branches did not seal its unit-discard policy')
+}
+if (independentFloat.tryBodyResultPolicy !== 'preserve-typed-result'
+	|| independentFloat.clauses[0].bodyResultPolicy !== 'discard-completed-value-to-unit') {
+	fail('the Float try did not preserve its non-completing throw while discarding its completed assignment branch')
 }
 
 const callback = catches.find(chain => chain.functionId.includes('|function|capture|'))
@@ -228,9 +231,9 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 45
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
-	|| report.lowering.controlCatches.length !== 13
+	|| report.lowering.controlCatches.length !== 14
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 13 validated catch-chain decisions')
+	throw new Error('public inspection did not expose the 14 validated catch-chain decisions, including Float')
 }
 NODE
 
@@ -261,4 +264,4 @@ fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
-echo "REFLAXE_OCAML_EXACT_CATCH_CONTROL_FIXTURE:PASS chains=13"
+echo "REFLAXE_OCAML_EXACT_CATCH_CONTROL_FIXTURE:PASS chains=14"

@@ -34,8 +34,8 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 69
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v21'
+if (report.schemaVersion !== 70
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v22'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v2'
@@ -547,7 +547,7 @@ for (const control of returnControls) {
 			|| control.source.max < control.source.min
 			|| !rawSha256.test(control.programRevision)
 			|| !bodyRevision.test(control.bodyRevision)
-			|| control.pipelineRevision !== 'ocaml-function-plans-v84') {
+			|| control.pipelineRevision !== 'ocaml-function-plans-v85') {
 			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 		}
 		ids.add(control.id)
@@ -572,7 +572,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v16'
-			: control.pipelineRevision !== 'ocaml-function-plans-v84')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v85')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -743,7 +743,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v84'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v85'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0

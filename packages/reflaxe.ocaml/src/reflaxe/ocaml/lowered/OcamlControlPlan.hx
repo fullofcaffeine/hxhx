@@ -386,7 +386,7 @@ class OcamlControlPlan {
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
 	public static inline final HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID = "exact-haxe-exception-wrapper-throw-control-v1";
 	public static inline final EXACT_ENUM_THROW_PROOF_ID = "exact-enum-constructor-throw-control-v1";
-	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v3";
+	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v4";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
@@ -1147,6 +1147,8 @@ class OcamlControlPlan {
 		switch (clause.semanticTypeId) {
 			case "Int":
 				requireExactCatchSide(clause, "int", "representation:Int:internal-value", "Int", OcamlCatchPayloadConversion.RecoverExactValue);
+			case "Float":
+				requireExactCatchSide(clause, "float", "representation:Float:internal-value", "Float", OcamlCatchPayloadConversion.RecoverExactValue);
 			case "Bool":
 				requireExactCatchSide(clause, "bool", "representation:Bool:internal-value", "Bool", OcamlCatchPayloadConversion.RecoverCheckedBool);
 			case "String":
@@ -1738,6 +1740,7 @@ class OcamlControlPlan {
 	static function catchTypeMatchesClause(type:Type, clause:OcamlCatchClauseDecision):Bool {
 		return switch (clause.semanticTypeId) {
 			case "Int": OcamlRepresentationRegistry.isExactInt(type);
+			case "Float": OcamlRepresentationRegistry.isExactFloat(type);
 			case "Bool": OcamlRepresentationRegistry.isExactBool(type);
 			case "String": OcamlRepresentationRegistry.isExactString(type);
 			case "Dynamic":
@@ -2401,6 +2404,18 @@ class OcamlControlPlanner {
 				outputRepresentationId: representation.id,
 				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
 				runtimeTag: "Int",
+				conversion: OcamlCatchPayloadConversion.RecoverExactValue,
+				nominalRepresentation: null
+			};
+		}
+		if (OcamlRepresentationRegistry.isExactFloat(type)) {
+			final representation = representations.selectExactFloat(OcamlRepresentationDomain.InternalValue);
+			return {
+				semanticTypeId: "Float",
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: "Float",
 				conversion: OcamlCatchPayloadConversion.RecoverExactValue,
 				nominalRepresentation: null
 			};
