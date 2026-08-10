@@ -274,7 +274,7 @@ class OcamlRuntimeUseAuthority {
 				"HxBytes.setFloat", "HxBytes.getDouble", "HxBytes.setDouble", "HxBytes.getData", "HxBytes.fastGet", "HxBytes.requireMultiByteInt",
 				"HxBytes.length", "HxBytes.sub", "HxBytes.compare", "HxBytes.getString", "HxBytes.toString", "HxBytes.toHex", "HxBytes.create",
 				"HxBytes.alloc", "HxBytes.ofString", "HxBytes.ofData", "HxBytes.ofHex", "HxString.hx_null_string", "HxRuntime.nullable_int_unwrap",
-				"HxRuntime.is_null", "HxRuntime.hx_throw_typed":
+				"HxRuntime.is_null", "HxRuntime.hx_throw_typed", "HxRuntime.tags_has":
 				true;
 			case _:
 				false;

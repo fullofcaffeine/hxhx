@@ -2,17 +2,29 @@ package reflaxe.ocaml.lowered;
 
 #if macro
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchClauseDecision;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
-/**
-	The two private runtime names selected by one complete Haxe catch chain.
+/** The exact reason one catch clause tests the incoming runtime-tag list. */
+enum abstract OcamlCatchRuntimeTagUseRole(String) from String to String {
+	final MatchExactRuntimeTag = "match-exact-runtime-tag";
+	final MatchValueException = "match-value-exception";
+	final MatchAnyException = "match-any-exception";
+	final ConvertAnyException = "convert-any-exception";
+	final ConvertValueException = "convert-value-exception";
+}
 
-	A planned catch has two distinct target-language uses: an OCaml pattern receives
-	the Haxe exception signal, and an OCaml expression rethrows that signal when no
-	Haxe clause matches. This record binds both uses to the same final typed catch,
-	function body, and target pipeline before syntax is built.
+/**
+	The private runtime names selected by one complete Haxe catch chain.
+
+	The OCaml pattern receives the Haxe exception signal. Each typed clause then
+	owns the exact tag tests needed by its match and payload-conversion policies.
+	The final expression rethrows the signal when no clause matches. This record
+	binds every use to the same final typed catch, function body, and target
+	pipeline before syntax is built.
 **/
 typedef OcamlCatchRuntimeUsePlan = {
 	final chainId:String;
@@ -27,8 +39,9 @@ class OcamlCatchRuntimeUseContract {
 	public static inline final RETHROW_ROLE = "unmatched-haxe-exception-rethrow";
 	public static inline final PATTERN_SYMBOL = "HxRuntime.Hx_exception";
 	public static inline final RETHROW_SYMBOL = "HxRuntime.hx_throw_typed";
+	public static inline final RUNTIME_TAG_SYMBOL = "HxRuntime.tags_has";
 
-	/** Returns the one runtime requirement shared by the catch pattern and rethrow. */
+	/** Returns the one runtime requirement shared by the catch pattern, tag tests, and rethrow. */
 	public static function requirementId(chain:OcamlCatchChainDecision):String {
 		return chain.id + ":runtime:" + chain.runtimeCapabilityId;
 	}
@@ -38,7 +51,7 @@ class OcamlCatchRuntimeUseContract {
 		return chainId + ":runtime-use:" + role;
 	}
 
-	/** Derives the two ordered private-runtime uses from a valid catch decision. */
+	/** Derives every ordered private-runtime use from a valid catch decision. */
 	public static function forChain(chain:OcamlCatchChainDecision):OcamlCatchRuntimeUsePlan {
 		OcamlControlPlan.requireCatchChain(chain);
 		final binding:OcamlFunctionPlanBinding = {
@@ -49,10 +62,18 @@ class OcamlCatchRuntimeUseContract {
 		};
 		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final selectedRequirementId = requirementId(chain);
-		final occurrences:Array<OcamlRuntimeUseOccurrence> = [
-			occurrence(chain, planRevision, selectedRequirementId, PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor, PATTERN_SYMBOL, 0),
-			occurrence(chain, planRevision, selectedRequirementId, RETHROW_ROLE, OcamlRuntimeUseDomain.ExpressionIdentifier, RETHROW_SYMBOL, 1)
-		];
+		final occurrences:Array<OcamlRuntimeUseOccurrence> = [];
+		var order = 0;
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor,
+			PATTERN_SYMBOL, order++));
+		for (clause in chain.clauses) {
+			for (role in runtimeTagRoles(clause)) {
+				occurrences.push(occurrence(chain, clause.source, planRevision, selectedRequirementId, runtimeTagRole(clause.id, role),
+					OcamlRuntimeUseDomain.ExpressionIdentifier, RUNTIME_TAG_SYMBOL, order++));
+			}
+		}
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, RETHROW_ROLE, OcamlRuntimeUseDomain.ExpressionIdentifier,
+			RETHROW_SYMBOL, order));
 		return {
 			chainId: chain.id,
 			planRevision: planRevision,
@@ -88,6 +109,11 @@ class OcamlCatchRuntimeUseContract {
 		return occurrenceForRole(plan, RETHROW_ROLE);
 	}
 
+	/** Returns the one checked tag test selected for a clause role. */
+	public static function runtimeTagOccurrence(plan:OcamlCatchRuntimeUsePlan, clauseId:String, role:OcamlCatchRuntimeTagUseRole):OcamlRuntimeUseOccurrence {
+		return occurrenceForRole(plan, runtimeTagRole(clauseId, role));
+	}
+
 	/** Returns a detached plan copy suitable for request handoff and corruption tests. */
 	public static function copy(plan:OcamlCatchRuntimeUsePlan):OcamlCatchRuntimeUsePlan {
 		return {
@@ -98,8 +124,31 @@ class OcamlCatchRuntimeUseContract {
 		};
 	}
 
-	static function occurrence(chain:OcamlCatchChainDecision, planRevision:String, requirementId:String, role:String, domain:OcamlRuntimeUseDomain,
-			exactSymbol:String, order:Int):OcamlRuntimeUseOccurrence {
+	static function runtimeTagRoles(clause:OcamlCatchClauseDecision):Array<OcamlCatchRuntimeTagUseRole> {
+		final roles:Array<OcamlCatchRuntimeTagUseRole> = switch (clause.matchPolicy) {
+			case ExactRuntimeTag: [OcamlCatchRuntimeTagUseRole.MatchExactRuntimeTag];
+			case MatchHaxeValueException: [
+					OcamlCatchRuntimeTagUseRole.MatchValueException,
+					OcamlCatchRuntimeTagUseRole.MatchAnyException
+				];
+			case MatchAll, MatchHaxeException: [];
+		};
+		switch (clause.conversion) {
+			case PreserveOrWrapHaxeException:
+				roles.push(OcamlCatchRuntimeTagUseRole.ConvertAnyException);
+			case PreserveOrWrapHaxeValueException:
+				roles.push(OcamlCatchRuntimeTagUseRole.ConvertValueException);
+			case RecoverExactValue, RecoverCheckedBool, RecoverNominalValue, RecoverEnumValue, PreserveDynamicCarrier:
+		}
+		return roles;
+	}
+
+	static function runtimeTagRole(clauseId:String, role:OcamlCatchRuntimeTagUseRole):String {
+		return 'clause:$clauseId:runtime-tag:$role';
+	}
+
+	static function occurrence(chain:OcamlCatchChainDecision, source:OcamlLoweredSourceSpan, planRevision:String, requirementId:String, role:String,
+			domain:OcamlRuntimeUseDomain, exactSymbol:String, order:Int):OcamlRuntimeUseOccurrence {
 		return {
 			id: runtimeUseId(chain.id, role),
 			planRevision: planRevision,
@@ -110,9 +159,9 @@ class OcamlCatchRuntimeUseContract {
 			role: role,
 			order: order,
 			source: {
-				file: chain.source.file,
-				min: chain.source.min,
-				max: chain.source.max
+				file: source.file,
+				min: source.min,
+				max: source.max
 			},
 			profileEligibility: chain.profileEligibility.copy(),
 			cardinality: 1

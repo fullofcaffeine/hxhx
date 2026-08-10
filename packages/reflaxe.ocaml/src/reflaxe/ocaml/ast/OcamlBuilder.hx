@@ -51,6 +51,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeTagUseRole;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -67,6 +68,7 @@ import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchClauseDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPrivateControlPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchMatchPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPayloadConversion;
@@ -911,6 +913,8 @@ class OcamlBuilder {
 		} catch (error:Dynamic) {
 			return controlPlanInvariant(Std.string(error), position);
 		}
+		final originalTagFunctions:Map<String, OcamlExpr> = [];
+		final tagProofsByClause:Array<Array<OcamlExpr>> = [for (_ in chain.clauses) []];
 
 		final syntax:Array<{variableName:String, variableType:OcamlTypeExpr, body:OcamlExpr}> = [];
 		for (index in 0...catches.length) {
@@ -926,7 +930,26 @@ class OcamlBuilder {
 			});
 		}
 
-		function buildChain(valueExpression:OcamlExpr, tagsExpression:OcamlExpr, fallback:OcamlExpr):OcamlExpr {
+		function runtimeTagTest(clause:OcamlCatchClauseDecision, clauseIndex:Int, role:OcamlCatchRuntimeTagUseRole, tagsExpression:OcamlExpr,
+				runtimeTag:String, copyForNativeChannel:Bool):OcamlExpr {
+			final occurrence = OcamlCatchRuntimeUseContract.runtimeTagOccurrence(runtimeUsePlan, clause.id, role);
+			final key = occurrence.id;
+			final runtimeFunction = if (copyForNativeChannel) {
+				final original = originalTagFunctions.get(key);
+				if (original == null)
+					return controlPlanInvariant('catch clause "${clause.id}" has no original runtime-tag use for role "$role"', position);
+				original;
+			} else {
+				final selected = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision,
+					occurrence.exactSymbol));
+				originalTagFunctions.set(key, selected);
+				tagProofsByClause[clauseIndex].push(selected);
+				selected;
+			}
+			return OcamlExpr.EApp(runtimeFunction, [tagsExpression, OcamlExpr.EConst(OcamlConst.CString(runtimeTag))]);
+		}
+
+		function buildChain(valueExpression:OcamlExpr, tagsExpression:OcamlExpr, fallback:OcamlExpr, copyForNativeChannel:Bool):OcamlExpr {
 			var current = fallback;
 			for (offset in 0...chain.clauses.length) {
 				final index = chain.clauses.length - 1 - offset;
@@ -937,17 +960,16 @@ class OcamlBuilder {
 						final runtimeTag = clause.runtimeTag;
 						if (runtimeTag == null)
 							return controlPlanInvariant('exact catch clause "${clause.id}" has no sealed runtime tag', position);
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString(runtimeTag))]);
+						runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.MatchExactRuntimeTag, tagsExpression, runtimeTag, copyForNativeChannel);
 					case MatchAll:
 						OcamlExpr.EConst(OcamlConst.CBool(true));
 					case MatchHaxeException:
 						OcamlExpr.EConst(OcamlConst.CBool(true));
 					case MatchHaxeValueException:
-						final isValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
-						final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
+						final isValueException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.MatchValueException, tagsExpression,
+							"haxe.ValueException", copyForNativeChannel);
+						final isAnyException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.MatchAnyException, tagsExpression, "haxe.Exception",
+							copyForNativeChannel);
 						OcamlExpr.EBinop(OcamlBinop.Or, isValueException, OcamlExpr.EUnop(OcamlUnop.Not, isAnyException));
 				};
 				final boundValue = switch (clause.conversion) {
@@ -967,8 +989,8 @@ class OcamlBuilder {
 					case PreserveDynamicCarrier:
 						valueExpression;
 					case PreserveOrWrapHaxeException:
-						final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
+						final isAnyException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertAnyException, tagsExpression,
+							"haxe.Exception", copyForNativeChannel);
 						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
@@ -978,8 +1000,8 @@ class OcamlBuilder {
 						]);
 						OcamlExpr.EIf(isAnyException, asException, wrapped);
 					case PreserveOrWrapHaxeValueException:
-						final isValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
-							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
+						final isValueException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertValueException, tagsExpression,
+							"haxe.ValueException", copyForNativeChannel);
 						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
@@ -1035,7 +1057,7 @@ class OcamlBuilder {
 			case _:
 				return controlPlanInvariant('catch chain "${chain.id}" selected invalid Haxe unmatched policy ${chain.haxeUnmatchedPolicy}', position);
 		};
-		final haxeHandler = buildChain(OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable), haxeFallback);
+		final haxeHandler = buildChain(OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable), haxeFallback, false);
 		final patternOccurrence = OcamlCatchRuntimeUseContract.patternOccurrence(runtimeUsePlan);
 		final haxeCase:OcamlMatchCase = {
 			pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(patternOccurrence.id, runtimeUsePlan.planRevision,
@@ -1045,11 +1067,18 @@ class OcamlBuilder {
 			expr: haxeHandler
 		};
 		try {
-			// This small tree contains only the two names owned by this catch plan.
+			// This small tree contains only the names owned by this catch plan.
 			// Catch bodies can carry references owned by other plans, so their local
-			// checks stay separate. Final output checking still walks the complete
-			// returned try expression and proves that these exact two IDs survived.
-			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [{pat: haxeCase.pat, guard: null, expr: haxeFallback}]));
+			// checks stay separate. The projection retains source clause order for tag
+			// tests. Final output checking still walks the complete returned try
+			// expression and proves that these exact IDs survived.
+			final tagProofs:Array<OcamlExpr> = [];
+			for (clauseProofs in tagProofsByClause)
+				for (proof in clauseProofs)
+					tagProofs.push(proof);
+			tagProofs.push(haxeFallback);
+			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit),
+				[{pat: haxeCase.pat, guard: null, expr: OcamlExpr.ESeq(tagProofs)}]));
 		} catch (error:Dynamic) {
 			return controlPlanInvariant(Std.string(error), position);
 		}
@@ -1064,7 +1093,7 @@ class OcamlBuilder {
 		};
 		final nativeTags = OcamlExpr.EList(chain.targetNativeRuntimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
 		final nativeHandler = ctx.finalRuntimeUses.copyExpressionForOutput(buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
-			[OcamlExpr.EIdent(nativeExceptionVariable)]), nativeTags, nativeFallback),
+			[OcamlExpr.EIdent(nativeExceptionVariable)]), nativeTags, nativeFallback, true),
 			"target-native-catch-channel");
 		final nativeCase:OcamlMatchCase = {
 			pat: OcamlPat.PVar(nativeExceptionVariable),
