@@ -9,6 +9,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecisio
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlStringDefaultPlan.OcamlStringDefaultDecision;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
 /** Mechanical OCaml syntax facts derived from one validated field decision. */
 typedef OcamlFieldRepresentationMaterialization = {
@@ -111,17 +113,35 @@ class OcamlFieldRepresentationMaterializer {
 	}
 
 	/**
+		Returns an admitted field carrier without constructing its implicit value.
+
+		Planning and type declaration code uses this path so it cannot accidentally
+		claim a runtime sentinel that will never appear in generated OCaml.
+	**/
+	public static function carrierForRepresentedField(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):OcamlTypeExpr {
+		return switch (decision.semanticTypeId) {
+			case "Int": materializeExactInt(decision, expectedDomain).carrierType;
+			case "Bool": materializeExactBool(decision, expectedDomain).carrierType;
+			case "Null<Int>", "Null<Bool>": materializeExactNullablePrimitive(decision, expectedDomain).carrierType;
+			case "String": OcamlStringRepresentationMaterializer.carrierType(decision, expectedDomain);
+			case other:
+				throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-family]: no represented field carrier exists for $other';
+		}
+	}
+
+	/**
 		Materializes any field family explicitly admitted by the representation registry.
 
 		Unknown families fail rather than falling through to a legacy mapper.
 	**/
-	public static function materializeRepresentedField(decision:OcamlRepresentationDecision,
-			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
+	public static function materializeRepresentedField(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain,
+			?stringDefaultPlan:OcamlStringDefaultDecision, ?stringRuntimeAuthority:OcamlRuntimeUseAuthority):OcamlFieldRepresentationMaterialization {
 		return switch (decision.semanticTypeId) {
 			case "Int", "Bool": materializeDirectPrimitive(decision, expectedDomain);
 			case "Null<Int>", "Null<Bool>": materializeExactNullablePrimitive(decision, expectedDomain);
 			case "String":
-				final materialized = OcamlStringRepresentationMaterializer.materialize(decision, expectedDomain);
+				final materialized = OcamlStringRepresentationMaterializer.materializeDefault(decision, expectedDomain, stringDefaultPlan,
+					stringRuntimeAuthority);
 				{
 					carrierType: materialized.carrierType,
 					implicitDefault: materialized.implicitDefault

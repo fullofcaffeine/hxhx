@@ -18,6 +18,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescr
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 
 /** Focused executable checks for the program-wide OCaml representation registry. */
@@ -436,17 +437,76 @@ class RepresentationRegistryFixture {
 			&& counterCaptured.nominalLayoutRevision == counterInternal.nominalLayoutRevision
 			&& counterCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
 			"one nominal class carrier should serve both an immutable binding and its captured shared cell");
-		final stringMaterialization = OcamlStringRepresentationMaterializer.materialize(stringInstanceField, OcamlRepresentationDomain.InstanceField);
+		final stringDefaultPlan = OcamlStringDefaultPlan.seal(stringInstanceField, "fixture:instance-field:name", "fixture-owner-revision", {
+			file: "RepresentationRegistryFixture.hx",
+			min: 1,
+			max: 2
+		});
+		final stringDefaultAuthority = OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable");
+		final stringMaterialization = OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField,
+			stringDefaultPlan, stringDefaultAuthority);
+		stringDefaultAuthority.reconcileExpression(stringMaterialization.implicitDefault);
 		final stringCarrierIsDirect = switch (stringMaterialization.carrierType) {
 			case TIdent("string"): true;
 			case _: false;
 		}
 		final stringDefaultIsSentinel = switch (stringMaterialization.implicitDefault) {
-			case EField(EIdent("HxString"), "hx_null_string"): true;
+			case ERuntimeIdent(reference): reference.exactSymbol == "HxString.hx_null_string";
 			case _: false;
 		}
 		assertTrue(stringCarrierIsDirect && stringDefaultIsSentinel,
 			"an exact String field should materialize the direct carrier and its proof-backed Haxe null default");
+		assertTrue(stringDefaultPlan.ownerId == "fixture:instance-field:name"
+			&& stringDefaultPlan.representationId == stringInstanceField.id
+			&& stringDefaultPlan.requirement.rootModules.join(",") == "HxString"
+			&& stringDefaultPlan.runtimeUse.ownerId == stringDefaultPlan.id
+			&& stringDefaultPlan.runtimeUse.exactSymbol == "HxString.hx_null_string"
+			&& stringDefaultPlan.runtimeUse.cardinality == 1,
+			"one concrete String default owner should seal one exact HxString sentinel occurrence");
+		final duplicateAuthority = OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable");
+		OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
+			duplicateAuthority);
+		expectFailure("duplicate String default", "constructed more than once",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
+				duplicateAuthority));
+		expectFailure("missing String default plan", "missing-plan",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField, cast null,
+				OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
+		expectFailure("missing String default authority", "missing-runtime-authority",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
+				cast null));
+		final staleStringDefault:Dynamic = Reflect.copy(stringDefaultPlan);
+		Reflect.setField(staleStringDefault, "revision", "sha256:" + StringTools.lpad("", "0", 64));
+		expectFailure("stale String default", "stale-plan",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast staleStringDefault, OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
+		final wrongStringOwner:Dynamic = Reflect.copy(stringDefaultPlan);
+		Reflect.setField(wrongStringOwner, "ownerId", "fixture:instance-field:other");
+		expectFailure("wrong String default owner", "stale-plan",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast wrongStringOwner, OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
+		final wrongStringRepresentation:Dynamic = Reflect.copy(stringDefaultPlan);
+		Reflect.setField(wrongStringRepresentation, "representationId", stringStaticField.id);
+		expectFailure("wrong String default representation", "stale-plan",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast wrongStringRepresentation, OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
+		final wrongStringSymbol:Dynamic = Reflect.copy(stringDefaultPlan);
+		final wrongStringRuntimeUse:Dynamic = Reflect.copy(stringDefaultPlan.runtimeUse);
+		Reflect.setField(wrongStringRuntimeUse, "exactSymbol", "HxString.equals");
+		Reflect.setField(wrongStringSymbol, "runtimeUse", wrongStringRuntimeUse);
+		expectFailure("wrong String default symbol", "stale-plan",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField,
+				cast wrongStringSymbol, OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
+		final wrongProfileAuthority = OcamlStringDefaultPlan.authority(stringDefaultPlan, "unsupported-profile");
+		expectFailure("wrong String default profile", "not eligible",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringInstanceField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
+				wrongProfileAuthority));
+		final plainStringAuthority = OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable");
+		expectFailure("plain String default reference", "plain private runtime reference",
+			() -> plainStringAuthority.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "hx_null_string")));
+		expectFailure("wrong String default domain", "wrong-domain",
+			() -> OcamlStringRepresentationMaterializer.materializeDefault(stringStaticField, OcamlRepresentationDomain.InstanceField, stringDefaultPlan,
+				OcamlStringDefaultPlan.authority(stringDefaultPlan, "portable")));
 		final nullableInstanceMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableInstanceField,
 			OcamlRepresentationDomain.InstanceField);
 		final nullableBoolStaticMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableBoolStaticField,
@@ -521,16 +581,16 @@ class RepresentationRegistryFixture {
 		expectFailure("wrong nullable field default", "unsupported-decision",
 			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableBoolStaticField, OcamlRepresentationDomain.StaticField));
 		expectFailure("wrong String field domain", "wrong-domain",
-			() -> OcamlStringRepresentationMaterializer.materialize(stringMutable, OcamlRepresentationDomain.InstanceField));
+			() -> OcamlStringRepresentationMaterializer.carrierType(stringMutable, OcamlRepresentationDomain.InstanceField));
 		Reflect.setField(stringInstanceField, "carrierTypeId", "Obj.t");
 		expectFailure("wrong String field carrier", "unsupported-decision",
-			() -> OcamlStringRepresentationMaterializer.materialize(stringInstanceField, OcamlRepresentationDomain.InstanceField));
+			() -> OcamlStringRepresentationMaterializer.carrierType(stringInstanceField, OcamlRepresentationDomain.InstanceField));
 		assertTrue(registry.require(stringInstanceField.id, "program:representation-fixture").carrierTypeId == "string",
 			"mutating a returned String carrier must not change the retained decision");
 		final wrongStringProof = registry.require(stringStaticField.id, "program:representation-fixture");
 		Reflect.setField(wrongStringProof.proof, "id", "unreviewed-string-cast");
 		expectFailure("wrong String unsafe proof", "unsupported-decision",
-			() -> OcamlStringRepresentationMaterializer.materialize(wrongStringProof, OcamlRepresentationDomain.StaticField));
+			() -> OcamlStringRepresentationMaterializer.carrierType(wrongStringProof, OcamlRepresentationDomain.StaticField));
 		expectDecisionCorruption("missing String array null policy", stringArrayElement, "invalid-decision",
 			decision -> Reflect.deleteField(decision, "nullPolicy"));
 		expectDecisionCorruption("corrupted String array carrier", stringArrayElement, "stale-decision-snapshot",

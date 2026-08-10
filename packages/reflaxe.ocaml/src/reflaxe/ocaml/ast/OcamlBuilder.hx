@@ -115,6 +115,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecisi
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
+import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
@@ -657,7 +658,7 @@ class OcamlBuilder {
 	}
 
 	/** Mechanically applies one conversion already selected by the call plan. */
-	function buildPlannedCallArgument(value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
+	function buildPlannedCallArgument(callId:String, value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
@@ -676,18 +677,18 @@ class OcamlBuilder {
 				if (!OcamlCallPlan.isExplicitNullExpression(expression))
 					callPlanInvariant('call argument ${value.index} claims an explicit null String conversion for a non-null source expression',
 						expression.pos);
-				exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:$callId:explicit-null:${value.index}', expression.pos);
 		}
 	}
 
 	/** Materializes the selected null carrier for one omitted optional parameter. */
-	function buildPlannedOmittedArgument(value:OcamlCallValuePlan, position:Position):OcamlExpr {
+	function buildPlannedOmittedArgument(callId:String, value:OcamlCallValuePlan, position:Position):OcamlExpr {
 		requireCallValue(value, value.index, 'omitted call argument ${value.index}', position);
 		return switch (value.conversion) {
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
 				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 			case MaterializeOmittedString:
-				exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:$callId:omitted:${value.index}', position);
 			case _:
 				callPlanInvariant('call argument ${value.index} has no sealed omitted-argument conversion', position);
 		}
@@ -1129,7 +1130,7 @@ class OcamlBuilder {
 					final name = freshTmp("call_arg_" + argumentIndex);
 					materialized.push({
 						name: name,
-						value: buildPlannedCallArgument(call.arguments[argumentIndex], arguments[sourceArgumentIndex])
+						value: buildPlannedCallArgument(call.id, call.arguments[argumentIndex], arguments[sourceArgumentIndex])
 					});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.MaterializeOmittedArgument:
@@ -1143,7 +1144,7 @@ class OcamlBuilder {
 					final name = freshTmp("call_arg_" + argumentIndex);
 					materialized.push({
 						name: name,
-						value: buildPlannedOmittedArgument(call.arguments[argumentIndex], position)
+						value: buildPlannedOmittedArgument(call.id, call.arguments[argumentIndex], position)
 					});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.InvokeCallee:
@@ -2338,11 +2339,11 @@ class OcamlBuilder {
 	 * Nullable primitives carry `HxRuntime.hx_null`; everything else keeps
 	 * the existing `Obj.magic hx_null` sentinel behavior.
 	 */
-	function missingOptionalArgValue(t:Type):OcamlExpr {
+	function missingOptionalArgValue(t:Type, ownerRole:String, position:Position):OcamlExpr {
 		if (nullablePrimitiveKind(t) != null)
 			return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 		if (OcamlRepresentationRegistry.isExactString(t))
-			return exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+			return exactStringNullValue(OcamlRepresentationDomain.InternalValue, ownerRole, position);
 		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 	}
 
@@ -2805,7 +2806,7 @@ class OcamlBuilder {
 				if (nullablePrimitiveKind(e.t) != null) {
 					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 				} else if (OcamlRepresentationRegistry.isExactString(e.t)) {
-					exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+					exactStringNullValue(OcamlRepresentationDomain.InternalValue, "null-literal", e.pos);
 				} else {
 					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 				}
@@ -3025,8 +3026,8 @@ class OcamlBuilder {
 
 					final builtArgs:Array<OcamlExpr> = [];
 					if (expectedCtorArgs != null) {
-						inline function hxNullForType(t:Type):OcamlExpr {
-							return missingOptionalArgValue(t);
+						inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+							return missingOptionalArgValue(t, "constructor-optional:" + index, e.pos);
 						}
 
 						for (i in 0...args.length) {
@@ -3039,7 +3040,7 @@ class OcamlBuilder {
 							for (i in args.length...expectedCtorArgs.length) {
 								final ea = expectedCtorArgs[i];
 								if (ea.opt) {
-									builtArgs.push(hxNullForType(ea.t));
+									builtArgs.push(hxNullForType(ea.t, i));
 								} else {
 									#if macro
 									guardrailError("reflaxe.ocaml: new " + cls.name + " is missing required constructor argument '" + ea.name + "'.", e.pos);
@@ -3124,8 +3125,8 @@ class OcamlBuilder {
 										final callFn = (selfMod != null && selfMod == supModName) ? OcamlExpr.EIdent(ctorName) : OcamlExpr.EField(OcamlExpr.EIdent(supModName),
 											ctorName);
 
-										inline function hxNullForType(t:Type):OcamlExpr {
-											return missingOptionalArgValue(t);
+										inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+											return missingOptionalArgValue(t, "super-constructor-optional:" + index, e.pos);
 										}
 
 										final builtArgs = args.map(buildExpr);
@@ -3142,7 +3143,7 @@ class OcamlBuilder {
 															e.pos);
 														#end
 													}
-													callArgs.push(hxNullForType(ea.t));
+													callArgs.push(hxNullForType(ea.t, i));
 												}
 											}
 											// Calling convention: if a ctor has zero Haxe args, represent it as `(... -> unit)` and pass `()`.
@@ -3982,8 +3983,8 @@ class OcamlBuilder {
 														case _: null;
 													}
 											}
-											inline function hxNullForType(t:Type):OcamlExpr {
-												return missingOptionalArgValue(t);
+											inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+												return missingOptionalArgValue(t, "static-call-optional:" + index, e.pos);
 											}
 											final builtArgs:Array<OcamlExpr> = [];
 											if (expectedArgs != null) {
@@ -4016,7 +4017,7 @@ class OcamlBuilder {
 															if (isTypedArrayFromArrayPosDefault) {
 																builtArgs.push(OcamlExpr.EConst(OcamlConst.CInt(0)));
 															} else {
-																builtArgs.push(hxNullForType(ea.t));
+																builtArgs.push(hxNullForType(ea.t, i));
 															}
 														}
 													}
@@ -4282,8 +4283,8 @@ class OcamlBuilder {
 														case TFun(fargs, _): fargs;
 														case _: null;
 													}
-													inline function hxNullForType(t:Type):OcamlExpr {
-														return missingOptionalArgValue(t);
+													inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+														return missingOptionalArgValue(t, "instance-call-optional:" + index, e.pos);
 													}
 													final coercedArgs:Array<OcamlExpr> = [];
 													if (expectedArgs != null) {
@@ -4308,7 +4309,7 @@ class OcamlBuilder {
 																	#end
 																	coercedArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 																} else {
-																	coercedArgs.push(hxNullForType(ea.t));
+																	coercedArgs.push(hxNullForType(ea.t, i));
 																}
 															}
 														}
@@ -4390,8 +4391,8 @@ class OcamlBuilder {
 													case TFun(fargs, _): fargs;
 													case _: null;
 												}
-												inline function hxNullForType(t:Type):OcamlExpr {
-													return missingOptionalArgValue(t);
+												inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+													return missingOptionalArgValue(t, "function-call-optional:" + index, e.pos);
 												}
 												final builtArgs:Array<OcamlExpr> = [];
 												if (expectedArgs != null) {
@@ -4408,7 +4409,7 @@ class OcamlBuilder {
 																#end
 																builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 															} else {
-																builtArgs.push(hxNullForType(ea.t));
+																builtArgs.push(hxNullForType(ea.t, i));
 															}
 														}
 													}
@@ -4460,7 +4461,7 @@ class OcamlBuilder {
 															#end
 															builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 														} else {
-															builtArgs.push(missingOptionalArgValue(ea.t));
+															builtArgs.push(missingOptionalArgValue(ea.t, "enum-constructor-optional:" + i, e.pos));
 														}
 													}
 												}
@@ -4572,8 +4573,8 @@ class OcamlBuilder {
 												case TFun(fargs, _): fargs;
 												case _: null;
 											}
-											inline function hxNullForType(t:Type):OcamlExpr {
-												return missingOptionalArgValue(t);
+											inline function hxNullForType(t:Type, index:Int):OcamlExpr {
+												return missingOptionalArgValue(t, "dynamic-call-optional:" + index, e.pos);
 											}
 											final builtArgs:Array<OcamlExpr> = [];
 											if (expectedArgs != null) {
@@ -4590,7 +4591,7 @@ class OcamlBuilder {
 															#end
 															builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 														} else {
-															builtArgs.push(hxNullForType(ea.t));
+															builtArgs.push(hxNullForType(ea.t, i));
 														}
 													}
 												}
@@ -5581,7 +5582,8 @@ class OcamlBuilder {
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
-		final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForType(v.t);
+		final declarationPosition:Position = init == null ? cast {file: "(unknown)", min: 0, max: 0} : init.pos;
+		final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForType(v.t, "local-default:" + v.id, declarationPosition);
 		final localType = init == null ? typeExprFromHaxeType(v.t) : localCarrierType(v.id, v.t, init.pos);
 		final initExpr = switch (init) {
 			case null:
@@ -5594,7 +5596,6 @@ class OcamlBuilder {
 						initExprRaw;
 				}
 		};
-		final declarationPosition:Position = init == null ? cast {file: "(unknown)", min: 0, max: 0} : init.pos;
 		final isMutable = localRequiresRef(v.id, declarationPosition);
 		if (isMutable) {
 			refLocals.set(v.id, true);
@@ -5629,23 +5630,32 @@ class OcamlBuilder {
 		final representation = plannedLocalRepresentation(localId, position);
 		if (representation != null && representation.semanticTypeId == "String") {
 			return try {
-				OcamlStringRepresentationMaterializer.materialize(representation, representation.domain).implicitDefault;
+				exactStringNullValue(representation.domain, "local-default:" + localId, position);
 			} catch (error:Dynamic) {
 				localStorageInvariant(Std.string(error), position);
 			}
 		}
-		return defaultValueForType(type);
+		return defaultValueForType(type, "local-default:" + localId, position);
 	}
 
 	/** Returns the runtime-owned exact String null after validating its representation domain. */
-	function exactStringNullValue(domain:OcamlRepresentationDomain):OcamlExpr {
+	function exactStringNullValue(domain:OcamlRepresentationDomain, ownerRole:String, position:Position):OcamlExpr {
+		final binding = currentFunctionPlanBinding;
+		if (binding == null)
+			throw 'reflaxe.ocaml [ocaml-string-default:missing-function-owner]: String null "$ownerRole" reached syntax without a sealed function binding';
+		final source = OcamlLoweredOrigin.sourceSpan(position);
 		final decision = representationRegistry.selectExactString(domain);
-		return OcamlStringRepresentationMaterializer.materialize(decision, domain).implicitDefault;
+		final ownerId = binding.functionId + ":" + ownerRole + ":" + source.file + ":" + source.min + ":" + source.max;
+		final defaultPlan = OcamlStringDefaultPlan.seal(decision, ownerId, OcamlRuntimeUseModel.planRevision(binding), source);
+		final authority = OcamlStringDefaultPlan.authority(defaultPlan, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
+		final materialized = OcamlStringRepresentationMaterializer.materializeDefault(decision, domain, defaultPlan, authority);
+		authority.reconcileExpression(materialized.implicitDefault);
+		return materialized.implicitDefault;
 	}
 
-	function defaultValueForType(t:Type):OcamlExpr {
+	function defaultValueForType(t:Type, ownerRole:String, position:Position):OcamlExpr {
 		if (OcamlRepresentationRegistry.isExactString(t))
-			return exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+			return exactStringNullValue(OcamlRepresentationDomain.InternalValue, ownerRole, position);
 		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 
 		return switch (t) {
@@ -6615,7 +6625,7 @@ class OcamlBuilder {
 					if (lhsIsObjCarrier) {
 						OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 					} else if (OcamlRepresentationRegistry.isExactString(lhsType)) {
-						exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+						exactStringNullValue(OcamlRepresentationDomain.InternalValue, "assignment-explicit-null", rhs.pos);
 					} else {
 						OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 					}
