@@ -33,6 +33,12 @@ class M6ArrayIntegrationTest {
 	}
 
 	static function main() {
+		// Upstream Haxe is the independent behavior oracle for the same fixture.
+		// The generated OCaml run below must accept the same source observations.
+		final oracleExitCode = Sys.command("haxe", ["-cp", "test", "--run", "ArrayMain"]);
+		if (oracleExitCode != 0)
+			throw "Haxe Array behavior oracle failed: " + oracleExitCode;
+
 		final outDir = "out_ocaml_m6_array_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(outDir);
 

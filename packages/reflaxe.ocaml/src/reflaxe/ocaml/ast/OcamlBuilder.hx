@@ -117,6 +117,7 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
@@ -1195,6 +1196,8 @@ class OcamlBuilder {
 	function buildPlannedCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
+			if (call.kind == OcamlCallKind.StandardArrayMethod)
+				return buildPlannedStandardArrayCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.StandardIMapMethod)
 				return callPlanInvariant('obsolete standard IMap call "${call.id}" reached syntax after the interface-adapter hard cut', position);
 			if (call.kind == OcamlCallKind.StructuralIteratorMethod)
@@ -1222,6 +1225,8 @@ class OcamlBuilder {
 					targetName);
 			case OcamlCallKind.TypedFunctionValue:
 				null;
+			case OcamlCallKind.StandardArrayMethod:
+				return callPlanInvariant('standard Array call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StandardIMapMethod:
 				return callPlanInvariant('standard IMap call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StructuralIteratorMethod:
@@ -1304,6 +1309,76 @@ class OcamlBuilder {
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
 		return out;
+	}
+
+	/**
+		Renders one standard Array call from its sealed typed target.
+
+		A source call such as `makeArray().concat(makeMore())` evaluates the
+		receiver once, then each argument once in source order. The private
+		`HxArray` function is available only through this call's runtime-use record.
+	**/
+	function buildPlannedStandardArrayCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		final target = call.standardArrayTarget;
+		if (target == null)
+			return callPlanInvariant('standard Array call "${call.id}" has no sealed target', position);
+		final callPlan = currentCallPlan;
+		if (callPlan == null)
+			return callPlanInvariant('standard Array call "${call.id}" reached syntax without its sealed call inventory', position);
+		final runtimeUsePlan = callPlan.runtimeUsePlanFor(call.id);
+		if (runtimeUsePlan == null)
+			return callPlanInvariant('standard Array call "${call.id}" has no exact runtime-use plan', position);
+		if (callee == null)
+			return callPlanInvariant('standard Array call "${call.id}" has no typed receiver occurrence', position);
+		final typedField = switch (callee.expr) {
+			case TField(receiverExpression, FInstance(classRef, parameters, fieldRef)):
+				{
+					receiver: receiverExpression,
+					classType: classRef.get(),
+					parameters: parameters,
+					field: fieldRef.get()
+				};
+			case _:
+				return callPlanInvariant('standard Array call "${call.id}" no longer matches an instance field', position);
+		}
+		final resultType = switch (callee.t) {
+			case TFun(_, result): result;
+			case _:
+				return callPlanInvariant('standard Array call "${call.id}" no longer has a callable field type', position);
+		}
+		if (!OcamlStandardArrayCallContract.matches(target, typedField.classType, typedField.parameters, typedField.field, typedField.receiver, arguments,
+			resultType)) {
+			return callPlanInvariant('standard Array call "${call.id}" disagrees with its final typed occurrence', position);
+		}
+
+		try {
+			OcamlCallRuntimeUseContract.requireForCall(call, runtimeUsePlan);
+			final occurrence = OcamlCallRuntimeUseContract.occurrenceForStandardArray(runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds([occurrence.requirementId]), [occurrence], ctx.finalRuntimeUses);
+			final runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			// Receiver and argument expressions may contain private calls owned by
+			// other plans, so reconcile only the identifier introduced here.
+			authority.reconcileExpression(runtimeFunction);
+			final materialized:Array<{name:String, value:OcamlExpr}> = [];
+			final receiverName = freshTmp("array_receiver");
+			materialized.push({name: receiverName, value: buildExpr(typedField.receiver)});
+			final applicationArguments:Array<OcamlExpr> = [OcamlExpr.EIdent(receiverName)];
+			for (index in 0...arguments.length) {
+				final argumentName = freshTmp('array_arg_$index');
+				materialized.push({name: argumentName, value: buildExpr(arguments[index])});
+				applicationArguments.push(OcamlExpr.EIdent(argumentName));
+			}
+			var out = OcamlExpr.EApp(runtimeFunction, applicationArguments);
+			for (offset in 0...materialized.length) {
+				final binding = materialized[materialized.length - 1 - offset];
+				out = OcamlExpr.ELet(binding.name, binding.value, out, false);
+			}
+			return out;
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), position);
+		}
 	}
 
 	/**
@@ -4186,9 +4261,6 @@ class OcamlBuilder {
 													switch (cf.name) {
 														case "iterator" if (args.length == 0):
 															ocamlIteratorOfArray(buildExpr(objExpr));
-														case "concat":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "concat"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case "join":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"), [
 																buildExpr(objExpr),
@@ -4253,8 +4325,6 @@ class OcamlBuilder {
 															}
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "lastIndexOf"),
 																[buildExpr(objExpr), buildExpr(args[0]), fromExpr]);
-														case "copy":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "copy"), [buildExpr(objExpr)]);
 														case "map":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "map"),
 																[buildExpr(objExpr), buildExpr(args[0])]);

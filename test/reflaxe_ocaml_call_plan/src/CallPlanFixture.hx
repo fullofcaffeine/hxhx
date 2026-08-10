@@ -32,14 +32,19 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.runtimegen.OcamlCallRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 
 using reflaxe.helpers.ClassFieldHelper;
 
@@ -85,6 +90,8 @@ class CallPlanFixture {
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID = "call:optional-string-function-value-fixture";
 	static inline final CONSTRUCTOR_CALLEE_ID = "Counter|Counter::new";
 	static inline final CONSTRUCTOR_CALL_ID = "call:constructor-fixture";
+	static inline final STANDARD_ARRAY_CONCAT_CALL_ID = "call:standard-array-concat-fixture";
+	static inline final STANDARD_ARRAY_COPY_CALL_ID = "call:standard-array-copy-fixture";
 	static inline final STANDARD_IMAP_SET_CALL_ID = "call:standard-imap-set-fixture";
 	static inline final STANDARD_IMAP_TO_STRING_CALL_ID = "call:standard-imap-to-string-fixture";
 
@@ -1013,6 +1020,54 @@ class CallPlanFixture {
 		};
 	}
 
+	static function standardArrayTarget(operation:OcamlStandardArrayOperation):OcamlStandardArrayCallTarget {
+		return {
+			operation: operation,
+			elementSemanticTypeId: "Int",
+			receiverSemanticTypeId: "Array<Int>",
+			argumentSemanticTypeIds: operation == OcamlStandardArrayOperation.Concat ? ["Array<Int>"] : [],
+			resultSemanticTypeId: "Array<Int>",
+			runtimeModule: "HxArray",
+			runtimeFunction: OcamlStandardArrayCallContract.runtimeFunction(operation),
+			runtimeCapabilities: [OcamlStandardArrayCallContract.RUNTIME_CAPABILITY],
+			proofId: OcamlStandardArrayCallContract.PROOF_ID,
+			proofClaim: OcamlStandardArrayCallContract.PROOF_CLAIM
+		};
+	}
+
+	static function standardArrayCall(caller:OcamlFunctionPlanBinding, operation:OcamlStandardArrayOperation):OcamlCallDecision {
+		final target = standardArrayTarget(operation);
+		final id = operation == OcamlStandardArrayOperation.Concat ? STANDARD_ARRAY_CONCAT_CALL_ID : STANDARD_ARRAY_COPY_CALL_ID;
+		final sourceFieldName = OcamlStandardArrayCallContract.sourceFieldName(operation);
+		return {
+			id: id,
+			source: {
+				file: "CallPlanFixture.hx",
+				min: operation == OcamlStandardArrayOperation.Concat ? 48 : 50,
+				max: operation == OcamlStandardArrayOperation.Concat ? 49 : 51
+			},
+			calleeId: 'Array|Array::$sourceFieldName',
+			sourceModuleId: "Array",
+			sourceTypeName: "Array",
+			sourceFieldName: sourceFieldName,
+			kind: OcamlCallKind.StandardArrayMethod,
+			receiver: null,
+			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, target.argumentSemanticTypeIds.length, [], false, true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture standard Array typed target",
+			proofId: target.proofId,
+			proofClaim: target.proofClaim,
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision,
+			standardArrayTarget: target
+		};
+	}
+
 	static function standardIMapCall(caller:OcamlFunctionPlanBinding, operation:OcamlStandardIMapOperation):OcamlCallDecision {
 		final target = standardIMapTarget(operation);
 		final id = operation == OcamlStandardIMapOperation.Set ? STANDARD_IMAP_SET_CALL_ID : STANDARD_IMAP_TO_STRING_CALL_ID;
@@ -1070,7 +1125,9 @@ class CallPlanFixture {
 			programRevision: source.programRevision,
 			bodyRevision: bodyRevision ?? source.bodyRevision,
 			pipelineRevision: source.pipelineRevision,
-			standardIMapTarget: source.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(source.standardIMapTarget)
+			standardArrayTarget: source.standardArrayTarget == null ? null : OcamlStandardArrayCallContract.copy(source.standardArrayTarget),
+			standardIMapTarget: source.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(source.standardIMapTarget),
+			structuralIteratorTarget: source.structuralIteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(source.structuralIteratorTarget)
 		};
 	}
 
@@ -1423,6 +1480,9 @@ class CallPlanFixture {
 
 	public static macro function run():Expr {
 		assertFunctionSyntaxInputUsesOneObservation();
+		final exactArrayType = Context.typeExpr(macro([] : Array<Int>)).t;
+		if (!OcamlStandardArrayCallContract.isArrayType(exactArrayType))
+			Context.error("The standard Array call contract rejected an exact Array<Int> receiver.", Context.currentPos());
 
 		final directReturn = typedFunctionBody(macro function():Int {
 			return 1;
@@ -1577,6 +1637,81 @@ class CallPlanFixture {
 		final plainIntCallPlan = new OcamlCallPlan([call(caller)]);
 		if (plainIntCallPlan.runtimeUsePlanFor(CALL_ID) != null)
 			Context.error("An identity-only Int call unexpectedly owns a private runtime-use plan.", Context.currentPos());
+
+		final selectedArrayConcat = standardArrayCall(caller, OcamlStandardArrayOperation.Concat);
+		final selectedArrayCopy = standardArrayCall(caller, OcamlStandardArrayOperation.Copy);
+		OcamlCallPlan.requireCall(selectedArrayConcat);
+		OcamlCallPlan.requireCall(selectedArrayCopy);
+		final standardArrayPlan = new OcamlCallPlan([selectedArrayConcat, selectedArrayCopy]);
+		final copiedArrayConcat = standardArrayPlan.decisions()[0];
+		if (copiedArrayConcat.standardArrayTarget == null)
+			Context.error("The sealed call plan dropped its standard Array target.", Context.currentPos());
+		Reflect.setField(selectedArrayConcat.standardArrayTarget, "runtimeFunction", "copy");
+		if (copiedArrayConcat.standardArrayTarget.runtimeFunction != "concat")
+			Context.error("The sealed call plan retained a mutable standard Array target.", Context.currentPos());
+		final concatRuntimeUse = standardArrayPlan.runtimeUsePlanFor(STANDARD_ARRAY_CONCAT_CALL_ID);
+		if (concatRuntimeUse == null)
+			Context.error("The sealed Array.concat call has no runtime-use plan.", Context.currentPos());
+		OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, concatRuntimeUse);
+		final concatOccurrence = OcamlCallRuntimeUseContract.occurrenceForStandardArray(concatRuntimeUse);
+		if (concatOccurrence.exactSymbol != "HxArray.concat"
+			|| concatOccurrence.ownerId != STANDARD_ARRAY_CONCAT_CALL_ID
+			|| concatOccurrence.role != "standard-array-operation") {
+			Context.error("Array.concat does not own one exact HxArray.concat occurrence.", Context.currentPos());
+		}
+		final concatRequirements = OcamlCallRuntimeRequirementRecorder.requirements(copiedArrayConcat, concatRuntimeUse);
+		if (concatRequirements.length != 1
+			|| concatRequirements[0].semanticCapability != OcamlStandardArrayCallContract.RUNTIME_CAPABILITY
+			|| concatRequirements[0].rootModules.join(",") != "HxArray") {
+			Context.error("Array.concat does not own its exact HxArray runtime requirement.", Context.currentPos());
+		}
+		final copiedArrayCopy = standardArrayPlan.decisions()[1];
+		final copyRuntimeUse = standardArrayPlan.runtimeUsePlanFor(STANDARD_ARRAY_COPY_CALL_ID);
+		if (copyRuntimeUse == null
+			|| OcamlCallRuntimeUseContract.occurrenceForStandardArray(copyRuntimeUse).exactSymbol != "HxArray.copy"
+			|| OcamlCallRuntimeRequirementRecorder.requirements(copiedArrayCopy, copyRuntimeUse)[0].rootModules.join(",") != "HxArray") {
+			Context.error("Array.copy does not own one exact HxArray.copy occurrence and runtime requirement.", Context.currentPos());
+		}
+		final wrongArrayRuntime = copyCall(copiedArrayConcat);
+		Reflect.setField(wrongArrayRuntime.standardArrayTarget, "runtimeFunction", "copy");
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayRuntime));
+		final wrongArrayArguments = copyCall(copiedArrayConcat);
+		Reflect.setField(wrongArrayArguments.standardArrayTarget, "argumentSemanticTypeIds", []);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayArguments));
+		final wrongArrayOperation = copyCall(copiedArrayConcat);
+		Reflect.setField(wrongArrayOperation.standardArrayTarget, "operation", OcamlStandardArrayOperation.Copy);
+		expectThrows("disagrees with its typed operation", () -> OcamlCallPlan.requireCall(wrongArrayOperation));
+		final missingArrayReceiver = copyCall(copiedArrayConcat, null, null, null, null, null, copiedArrayConcat.evaluationSchedule.slice(1));
+		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingArrayReceiver));
+		final missingArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(missingArrayRuntimeUse, "runtimeUseOccurrences", []);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, missingArrayRuntimeUse));
+		final duplicateArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(duplicateArrayRuntimeUse, "runtimeUseOccurrences", [
+			duplicateArrayRuntimeUse.runtimeUseOccurrences[0],
+			duplicateArrayRuntimeUse.runtimeUseOccurrences[0]
+		]);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, duplicateArrayRuntimeUse));
+		final wrongArrayRuntimeSymbol = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(wrongArrayRuntimeSymbol.runtimeUseOccurrences[0], "exactSymbol", "HxArray.copy");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, wrongArrayRuntimeSymbol));
+		final staleArrayRuntimeUse = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(staleArrayRuntimeUse.runtimeUseOccurrences[0], "planRevision", "sha256:stale");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, staleArrayRuntimeUse));
+		final wrongArrayRuntimeOwner = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(wrongArrayRuntimeOwner.runtimeUseOccurrences[0], "ownerId", "call:other");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, wrongArrayRuntimeOwner));
+		final wrongArrayRuntimeDomain = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(wrongArrayRuntimeDomain.runtimeUseOccurrences[0], "domain", OcamlRuntimeUseDomain.TypeIdentifier);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, wrongArrayRuntimeDomain));
+		final wrongArrayRuntimeProfile = OcamlCallRuntimeUseContract.copy(concatRuntimeUse);
+		Reflect.setField(wrongArrayRuntimeProfile.runtimeUseOccurrences[0], "profileEligibility", ["portable"]);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(copiedArrayConcat, wrongArrayRuntimeProfile));
+		final arrayPlainReferenceAuthority = new OcamlRuntimeUseAuthority(concatRuntimeUse.planRevision, "portable", concatRequirements,
+			concatRuntimeUse.runtimeUseOccurrences);
+		expectThrows("plain private runtime reference",
+			() -> arrayPlainReferenceAuthority.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "concat")));
+
 		final genericClassKey = Context.typeExpr(macro([] : Array<Int>)).t;
 		if (OcamlStandardIMapCallContract.keyKindForType(genericClassKey) != null)
 			Context.error("The standard IMap target admitted a generic class key as object identity.", Context.currentPos());

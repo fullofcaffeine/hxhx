@@ -1,4 +1,16 @@
 class ArrayMain {
+	static var callOrder:Array<String> = [];
+
+	static function makeReceiver():Array<Int> {
+		callOrder.push("receiver");
+		return [7];
+	}
+
+	static function makeConcatArgument():Array<Int> {
+		callOrder.push("argument");
+		return [8];
+	}
+
 	static function main() {
 		final a = [];
 
@@ -59,6 +71,16 @@ class ArrayMain {
 			throw "copy_len";
 		if (copy[0] != b[0])
 			throw "copy_val";
+		copy[0] = 99;
+		if (b[0] == 99)
+			throw "copy_alias";
+
+		callOrder = [];
+		final orderedConcat = makeReceiver().concat(makeConcatArgument());
+		if (callOrder.join(",") != "receiver,argument")
+			throw "concat_order";
+		if (orderedConcat.length != 2 || orderedConcat[0] != 7 || orderedConcat[1] != 8)
+			throw "concat_once";
 
 		if (!b.contains(3))
 			throw "contains_true";

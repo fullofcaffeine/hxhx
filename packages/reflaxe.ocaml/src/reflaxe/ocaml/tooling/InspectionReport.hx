@@ -420,6 +420,20 @@ typedef InspectionCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
+/** The exact standard Array operation selected before OCaml syntax. */
+typedef InspectionStandardArrayCallTarget = {
+	final operation:String;
+	final elementSemanticTypeId:String;
+	final receiverSemanticTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final runtimeModule:String;
+	final runtimeFunction:String;
+	final runtimeCapabilities:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+}
+
 /**
 	The standard Haxe `IMap` carrier and operation selected before OCaml syntax.
 
@@ -620,6 +634,7 @@ typedef InspectionCall = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final standardArrayTarget:Null<InspectionStandardArrayCallTarget>;
 	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 	final structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
 }

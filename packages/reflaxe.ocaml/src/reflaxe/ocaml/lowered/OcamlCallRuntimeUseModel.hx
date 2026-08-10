@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
@@ -26,6 +27,7 @@ typedef OcamlCallRuntimeUsePlan = {
 /** Builds and validates runtime-use ownership derived from a sealed call. */
 class OcamlCallRuntimeUseContract {
 	public static inline final HAXE_BOOL_CARRIER_CAPABILITY = "haxe-call-bool-carrier";
+	public static inline final HAXE_ARRAY_CALL_CAPABILITY = "haxe-array";
 
 	/** Returns the exact requirement identity for one Boolean argument slot. */
 	public static function requirementId(callId:String, argumentIndex:Int):String {
@@ -37,6 +39,11 @@ class OcamlCallRuntimeUseContract {
 		return '$callId:runtime-use:box-dynamic-bool-argument:$argumentIndex';
 	}
 
+	/** Returns the exact runtime-use identity for one standard Array operation. */
+	public static function standardArrayRuntimeUseId(callId:String):String {
+		return '$callId:runtime-use:standard-array-operation';
+	}
+
 	/**
 		Derives the companion plan after the ordinary typed-call contract is valid.
 
@@ -45,7 +52,8 @@ class OcamlCallRuntimeUseContract {
 	**/
 	public static function forCall(call:OcamlCallDecision):Null<OcamlCallRuntimeUsePlan> {
 		final boxedBoolArguments = call.arguments.filter(argument -> argument.conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic);
-		if (boxedBoolArguments.length == 0)
+		final standardArrayTarget = call.standardArrayTarget;
+		if (boxedBoolArguments.length == 0 && standardArrayTarget == null)
 			return null;
 		OcamlCallPlan.requireCall(call);
 		final binding:OcamlFunctionPlanBinding = {
@@ -71,6 +79,27 @@ class OcamlCallRuntimeUseContract {
 				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
 				exactSymbol: "HxRuntime.box_bool",
 				role: role,
+				order: occurrences.length,
+				source: {
+					file: call.source.file,
+					min: call.source.min,
+					max: call.source.max
+				},
+				profileEligibility: call.profileEligibility.copy(),
+				cardinality: 1
+			});
+		}
+		if (standardArrayTarget != null) {
+			final selectedRequirementId = OcamlStandardArrayCallContract.runtimeRequirementId(call.id, standardArrayTarget);
+			requirementIds.push(selectedRequirementId);
+			occurrences.push({
+				id: standardArrayRuntimeUseId(call.id),
+				planRevision: planRevision,
+				ownerId: call.id,
+				requirementId: selectedRequirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: '${standardArrayTarget.runtimeModule}.${standardArrayTarget.runtimeFunction}',
+				role: "standard-array-operation",
 				order: occurrences.length,
 				source: {
 					file: call.source.file,
@@ -125,6 +154,14 @@ class OcamlCallRuntimeUseContract {
 		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == role);
 		if (matches.length != 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} runtime uses for argument $argumentIndex';
+		return copyOccurrence(matches[0]);
+	}
+
+	/** Returns the one private runtime function selected by a standard Array call. */
+	public static function occurrenceForStandardArray(plan:OcamlCallRuntimeUsePlan):OcamlRuntimeUseOccurrence {
+		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == "standard-array-operation");
+		if (matches.length != 1)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} standard Array runtime uses';
 		return copyOccurrence(matches[0]);
 	}
 

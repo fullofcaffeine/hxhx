@@ -18,12 +18,28 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 	packaging why that exact call needs `HxRuntime`.
 **/
 class OcamlCallRuntimeRequirementRecorder {
-	/** Builds one direct-root requirement for each authorized argument slot. */
+	/** Builds one direct-root requirement for each runtime use owned by the call. */
 	public static function requirements(call:OcamlCallDecision, plan:OcamlCallRuntimeUsePlan):Array<OcamlRuntimeRequirement> {
 		OcamlCallRuntimeUseContract.requireForCall(call, plan);
 		return [
 			for (occurrence in plan.runtimeUseOccurrences)
-				{
+				if (occurrence.role == "standard-array-operation" && call.standardArrayTarget != null) {
+					id: occurrence.requirementId,
+					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+					sourceId: call.id,
+					source: occurrence.source,
+					semanticCapability: OcamlCallRuntimeUseContract.HAXE_ARRAY_CALL_CAPABILITY,
+					cause: OcamlRuntimeRequirementCause.LoweringDecision,
+					decisionId: call.id,
+					subject: {
+						kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+						id: call.standardArrayTarget.receiverSemanticTypeId
+					},
+					implementationFeature: "haxe-array-v1",
+					rootModules: [call.standardArrayTarget.runtimeModule],
+					profileEligibility: occurrence.profileEligibility.copy(),
+					explanation: "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call."
+				} else {
 					id: occurrence.requirementId,
 					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
 					sourceId: call.id,

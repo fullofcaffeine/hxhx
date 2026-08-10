@@ -97,13 +97,25 @@ try {
 	assert.strictEqual(report.lowering.controlAdmissions.length, report.summary.controlAdmissionCount)
 	assert.match(report.lowering.controlTargetRevision, sha256Revision)
 	assert.match(report.lowering.callRevision, sha256Revision)
-	assert(report.lowering.calls.every(call =>
+	assert(report.lowering.calls
+		.filter(call => call.standardArrayTarget == null
+			&& call.standardIMapTarget == null
+			&& call.structuralIteratorTarget == null)
+		.every(call =>
 		report.lowering.callableBoundaries.some(boundary =>
 			boundary.calleeId === call.calleeId
 			&& boundary.arguments.length === call.arguments.length
 			&& call.arguments.every((argument, index) =>
 				boundary.arguments[index].outputRepresentationId === argument.outputRepresentationId)
 			&& boundary.result.inputRepresentationId === call.result.inputRepresentationId)))
+	const standardArrayCalls = report.lowering.calls.filter(call => call.standardArrayTarget != null)
+	assert(standardArrayCalls.length > 0)
+	assert(standardArrayCalls.every(call => {
+		const target = call.standardArrayTarget
+		return call.kind === 'standard-array-method'
+			&& target.runtimeModule === 'HxArray'
+			&& (target.runtimeFunction === 'concat' || target.runtimeFunction === 'copy')
+	}))
 	assert(report.lowering.calls.some(call =>
 		call.arguments.length === 0
 		&& call.evaluationSchedule.length === 1

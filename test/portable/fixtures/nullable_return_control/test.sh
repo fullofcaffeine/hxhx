@@ -28,7 +28,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 71
+if (report.schemaVersion !== 72
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
@@ -69,7 +69,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v86'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v87'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason

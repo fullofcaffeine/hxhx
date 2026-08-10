@@ -11,7 +11,7 @@ const admission = report.controlAdmissions.find(entry =>
 const result = report.functionResultBoundaries.find(entry => entry.functionId === admission?.functionId)
 const callable = report.callableBoundaries.find(entry => entry.functionId === admission?.functionId)
 const returns = admission?.families?.find(entry => entry.family === 'return')
-if (report.schemaVersion !== 71
+if (report.schemaVersion !== 72
 	|| returns?.status !== 'admitted'
 	|| returns.occurrenceCount !== 1
 	|| returns.decisionCount !== 1

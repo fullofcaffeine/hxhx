@@ -31,7 +31,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 71
+if (report.schemaVersion !== 72
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v5'
 	|| report.controlCatchCount !== report.controlCatches.length
@@ -98,7 +98,7 @@ for (const chain of catches) {
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
 		|| chain.proofId !== 'represented-value-catch-control-v5'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v86'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v87'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)

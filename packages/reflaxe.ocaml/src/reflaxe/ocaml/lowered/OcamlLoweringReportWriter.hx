@@ -17,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
@@ -52,6 +53,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIte
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldContract;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlCallRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
@@ -67,7 +69,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 71;
+	public static inline final SCHEMA_VERSION = 72;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -363,6 +365,7 @@ class OcamlLoweringReportWriter {
 			if (call.result != null)
 				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
 			if (call.kind == OcamlCallKind.TypedFunctionValue
+				|| call.kind == OcamlCallKind.StandardArrayMethod
 				|| call.kind == OcamlCallKind.StandardIMapMethod
 				|| call.kind == OcamlCallKind.StructuralIteratorMethod)
 				continue;
@@ -698,6 +701,21 @@ class OcamlLoweringReportWriter {
 			}
 		}
 		for (call in sortedCalls) {
+			// A sealed call can own a private runtime function even when it has no
+			// ordinary callable boundary. Rebuild the immutable companion facts from
+			// the call and require the request ledger to contain the same rows. This
+			// makes the report explain every helper that generated OCaml may invoke.
+			final runtimeUsePlan = OcamlCallRuntimeUseContract.forCall(call);
+			if (runtimeUsePlan != null) {
+				for (expected in OcamlCallRuntimeRequirementRecorder.requirements(call, runtimeUsePlan)) {
+					final recorded = requirementById.get(expected.id);
+					if (recorded == null)
+						throw 'Typed call "${call.id}" refers to missing runtime requirement "${expected.id}".';
+					if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+						throw 'Typed call "${call.id}" disagrees with runtime requirement "${expected.id}".';
+					includedRequirementIds.set(expected.id, true);
+				}
+			}
 			if (call.standardIMapTarget != null) {
 				final expectedIds = OcamlStandardIMapCallContract.runtimeRequirementIds(call.id, call.standardIMapTarget);
 				final expectedRequirements = OcamlRuntimeRequirementLedger.requirementsForStandardIMapCall(call.id, call.source, call.profileEligibility,
@@ -853,7 +871,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v20",
+			callModel: "typed-ocaml-directional-call-boundary-v21",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,

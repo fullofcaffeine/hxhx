@@ -36,6 +36,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentedArrayDescript
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntime;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardArrayCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
@@ -89,7 +90,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v86";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v87";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -440,8 +441,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 71) {
-						throw 'Unsupported lowering report schema $version; expected 71.';
+					if (version != 72) {
+						throw 'Unsupported lowering report schema $version; expected 72.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1594,7 +1595,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v20")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v21")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1636,6 +1637,11 @@ class ReflaxeOcamlInspection {
 				throw 'Call report contains duplicate identity "${call.id}".';
 			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
 				throw 'Call "${call.id}" has an invalid source span.';
+			if (call.kind == "standard-array-method") {
+				validateStandardArrayCall(call);
+				callIds.set(call.id, true);
+				continue;
+			}
 			if (call.kind == "standard-imap-method") {
 				ReflaxeOcamlStandardIMapInspection.validate(call);
 				callIds.set(call.id, true);
@@ -1646,6 +1652,8 @@ class ReflaxeOcamlInspection {
 				callIds.set(call.id, true);
 				continue;
 			}
+			if (call.standardArrayTarget != null)
+				throw 'Call "${call.id}" carries a standard Array target for ordinary call kind "${call.kind}".';
 			if (call.standardIMapTarget != null)
 				throw 'Call "${call.id}" carries a standard IMap target for ordinary call kind "${call.kind}".';
 			if (call.structuralIteratorTarget != null)
@@ -1686,6 +1694,42 @@ class ReflaxeOcamlInspection {
 		calls.sort((left, right) -> compareStrings(left.id, right.id));
 		boundaries.sort((left, right) -> compareStrings(left.calleeId, right.calleeId));
 		return {calls: calls, boundaries: boundaries};
+	}
+
+	/** Rejects a standard Array report entry that disagrees with its sealed target. */
+	static function validateStandardArrayCall(call:InspectionCall):Void {
+		final target = call.standardArrayTarget;
+		if (target == null)
+			throw 'Standard Array call "${call.id}" has no typed target.';
+		final expectedField = switch (target.operation) {
+			case "concat": "concat";
+			case "copy": "copy";
+			case _: throw 'Standard Array call "${call.id}" has unsupported operation "${target.operation}".';
+		}
+		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
+		final expectedArguments = target.operation == "concat" ? [expectedArrayType] : [];
+		if (call.calleeId != 'Array|Array::$expectedField'
+			|| call.sourceModuleId != "Array"
+			|| call.sourceTypeName != "Array"
+			|| call.sourceFieldName != expectedField
+			|| call.receiver != null
+			|| call.arguments.length != 0
+			|| call.resultKind != "value"
+			|| call.result != null
+			|| call.standardIMapTarget != null
+			|| call.structuralIteratorTarget != null
+			|| target.receiverSemanticTypeId != expectedArrayType
+			|| target.argumentSemanticTypeIds.join("\n") != expectedArguments.join("\n")
+			|| target.resultSemanticTypeId != expectedArrayType
+			|| target.runtimeModule != "HxArray"
+			|| target.runtimeFunction != expectedField
+			|| target.runtimeCapabilities.join(",") != "haxe-array"
+			|| target.proofId != "standard-array-typed-target-call-v1"
+			|| call.proofId != target.proofId
+			|| call.proofClaim != target.proofClaim
+			|| call.profileEligibility.join(",") != "metal,portable") {
+			throw 'Standard Array call "${call.id}" disagrees with its source declaration, typed target, runtime, or proof.';
+		}
 	}
 
 	/**
@@ -1999,7 +2043,7 @@ class ReflaxeOcamlInspection {
 		if (!Reflect.hasField(value, "result"))
 			throw 'Expected typed-call field "result".';
 		final rawResult = Reflect.field(value, "result");
-		if (kind == "standard-imap-method" || kind == "structural-iterator-method") {
+		if (kind == "standard-array-method" || kind == "standard-imap-method" || kind == "structural-iterator-method") {
 			if (rawResult != null)
 				throw 'Specialized call kind "$kind" describes its result in the sealed target instead of an ordinary call crossing.';
 			return null;
@@ -2038,6 +2082,7 @@ class ReflaxeOcamlInspection {
 			&& kind != "direct-instance-haxe-method"
 			&& kind != "direct-haxe-constructor"
 			&& kind != "typed-function-value"
+			&& kind != "standard-array-method"
 			&& kind != "standard-imap-method"
 			&& kind != "structural-iterator-method")
 			throw 'Unsupported typed-call kind "$kind".';
@@ -2050,9 +2095,10 @@ class ReflaxeOcamlInspection {
 		final kind = requireCallKind(value);
 		final receiver = callReceiver(value, kind);
 		final arguments = callValues(value, "arguments");
+		final standardArrayTarget = standardArrayCallTarget(value, kind);
 		final standardIMapTarget = standardIMapCallTarget(value, kind);
 		final structuralIteratorTarget = structuralIteratorCallTarget(value, kind);
-		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardIMapTarget, structuralIteratorTarget);
+		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardArrayTarget, standardIMapTarget, structuralIteratorTarget);
 		final resultKind = callResultKind(value);
 		return {
 			id: id,
@@ -2077,8 +2123,33 @@ class ReflaxeOcamlInspection {
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision"),
+			standardArrayTarget: standardArrayTarget,
 			standardIMapTarget: standardIMapTarget,
 			structuralIteratorTarget: structuralIteratorTarget
+		};
+	}
+
+	static function standardArrayCallTarget(value:Dynamic, kind:String):Null<InspectionStandardArrayCallTarget> {
+		if (!Reflect.hasField(value, "standardArrayTarget"))
+			throw 'Expected typed-call field "standardArrayTarget".';
+		final rawTarget = Reflect.field(value, "standardArrayTarget");
+		if (kind != "standard-array-method") {
+			if (rawTarget != null)
+				throw 'Typed-call kind "$kind" cannot carry a standard Array target.';
+			return null;
+		}
+		final target = requiredObject(value, "standardArrayTarget");
+		return {
+			operation: requiredString(target, "operation"),
+			elementSemanticTypeId: requiredString(target, "elementSemanticTypeId"),
+			receiverSemanticTypeId: requiredString(target, "receiverSemanticTypeId"),
+			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
+			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			runtimeModule: requiredString(target, "runtimeModule"),
+			runtimeFunction: requiredString(target, "runtimeFunction"),
+			runtimeCapabilities: requiredStringArray(target, "runtimeCapabilities"),
+			proofId: requiredString(target, "proofId"),
+			proofClaim: requiredString(target, "proofClaim")
 		};
 	}
 
@@ -2138,7 +2209,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String, arguments:Array<InspectionCallValue>,
-			standardIMapTarget:Null<InspectionStandardIMapCallTarget>,
+			standardArrayTarget:Null<InspectionStandardArrayCallTarget>, standardIMapTarget:Null<InspectionStandardIMapCallTarget>,
 			structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
@@ -2151,9 +2222,10 @@ class ReflaxeOcamlInspection {
 		];
 		final materializesCallee = kind == "typed-function-value";
 		final materializesReceiver = kind == "direct-instance-haxe-method"
+			|| kind == "standard-array-method"
 			|| kind == "standard-imap-method"
 			|| kind == "structural-iterator-method";
-		final argumentCount = standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length;
+		final argumentCount = standardArrayTarget != null ? standardArrayTarget.argumentSemanticTypeIds.length : (standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length);
 		if (structuralIteratorTarget != null && argumentCount != 0)
 			throw 'Structural Iterator call "$callId" unexpectedly owns source arguments.';
 		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
@@ -2178,7 +2250,7 @@ class ReflaxeOcamlInspection {
 		var sourceArgumentIndex = 0;
 		for (index in 0...argumentCount) {
 			final step = schedule[index + scheduleOffset];
-			final omitted = standardIMapTarget == null && isOmittedConversion(arguments[index].conversion);
+			final omitted = standardArrayTarget == null && standardIMapTarget == null && isOmittedConversion(arguments[index].conversion);
 			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
@@ -3781,6 +3853,36 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		for (call in calls) {
+			final arrayTarget = call.standardArrayTarget;
+			if (arrayTarget != null) {
+				final capability = "haxe-array";
+				final requirementId = call.id + ":runtime:" + capability + ":" + arrayTarget.runtimeFunction;
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'Standard Array call "${call.id}" refers to missing runtime requirement "$requirementId".';
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				if (arrayTarget.runtimeCapabilities.length != 1
+					|| arrayTarget.runtimeCapabilities[0] != capability
+					|| requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != call.id
+					|| requiredString(source, "file") != call.sourceFile
+					|| requiredInt(source, "min") != call.sourceMin
+					|| requiredInt(source, "max") != call.sourceMax
+					|| requiredString(requirement, "semanticCapability") != capability
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != call.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != arrayTarget.receiverSemanticTypeId
+					|| requiredString(requirement, "implementationFeature") != "haxe-array-v1"
+					|| roots.length != 1
+					|| roots[0] != "HxArray"
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+					throw 'Standard Array call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+				}
+				referenced.set(requirementId, true);
+			}
 			final target = call.standardIMapTarget;
 			if (target != null)
 				for (capability in target.runtimeCapabilities) {
