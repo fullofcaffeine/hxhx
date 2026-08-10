@@ -9,6 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$ROOT/test/reflaxe_ocaml_complete_program_server"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
 MATRIX_HELPER="$ROOT/scripts/ci/reflaxe-ocaml-server-matrix-helper.js"
+MEMORY_HELPER="$ROOT/scripts/ci/reflaxe-ocaml-memory-plateau.js"
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_VERSION="$("$HAXE_BIN" --version)"
 if [[ "$HAXE_VERSION" != "4.3.7" ]]; then
@@ -21,6 +22,7 @@ PROJECT_DIR="$WORK_DIR/project"
 SNAPSHOT_DIR="$WORK_DIR/snapshots"
 SERVER_STATE_DIR="$WORK_DIR/server-state"
 MEMORY_SENTINEL_DIR="$WORK_DIR/memory-sentinels"
+MEMORY_RSS_SAMPLES="$WORK_DIR/memory-rss.tsv"
 SERVER_PORT="${REFLAXE_OCAML_TEST_SERVER_PORT:-$((24000 + ($$ % 10000)))}"
 BUILD_DIR="$PROJECT_DIR/.out.reflaxe-ocaml-dune-build"
 MAIN_SOURCE="$PROJECT_DIR/src/Main.hx"
@@ -207,8 +209,10 @@ compile_and_verify_state() {
 	echo "REFLAXE_OCAML_SERVER_STATE:PASS state=$name clean_ms=$clean_elapsed warm_ms=$server_elapsed"
 }
 
-server_rss_kb() {
+sample_server_rss_kb() {
+	local event="$1"
 	local total=0
+	local process_count=0
 	local rss
 	local pid
 	while IFS= read -r pid; do
@@ -216,6 +220,8 @@ server_rss_kb() {
 		rss="$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
 		if [[ "$rss" =~ ^[0-9]+$ ]]; then
 			total="$((total + rss))"
+			process_count="$((process_count + 1))"
+			printf '%s\t%s\t%s\n' "$event" "$pid" "$rss" >>"$MEMORY_RSS_SAMPLES"
 		fi
 	done < <(
 		HXHX_STATE_DIR="$SERVER_STATE_DIR" \
@@ -223,6 +229,9 @@ server_rss_kb() {
 			HAXE_BIN="$HAXE_BIN" \
 			bash "$SERVER_HELPER" owned-pids
 	)
+	if (( process_count == 0 )); then
+		fail "memory sample '$event' found no repository-owned compiler-server process"
+	fi
 	printf '%s\n' "$total"
 }
 
@@ -378,7 +387,8 @@ run_published restored-a "$expected_a"
 # Production compilation keeps the runtime's normal garbage-collection policy.
 compile_server_with_compacted_gc
 stable_digest="$(source_bundle_revision "$PROJECT_DIR/out")"
-rss_baseline_kb="$(server_rss_kb)"
+: >"$MEMORY_RSS_SAMPLES"
+rss_baseline_kb="$(sample_server_rss_kb baseline)"
 rss_peak_kb="$rss_baseline_kb"
 repeated_total_ms=0
 rss_after_10_kb=0
@@ -390,7 +400,7 @@ for request in {1..30}; do
 	repeated_total_ms="$((repeated_total_ms + elapsed))"
 	[[ "$(source_bundle_revision "$PROJECT_DIR/out")" = "$stable_digest" ]] \
 		|| fail "unchanged repeated request $request changed the generated source bundle"
-	current_rss_kb="$(server_rss_kb)"
+	current_rss_kb="$(sample_server_rss_kb "request-$request")"
 	if (( current_rss_kb > rss_peak_kb )); then
 		rss_peak_kb="$current_rss_kb"
 	fi
@@ -400,17 +410,22 @@ for request in {1..30}; do
 		rss_after_20_kb="$current_rss_kb"
 	fi
 done
-rss_final_kb="$(server_rss_kb)"
-gc_sample_count="$(wc -l <"$MEMORY_SENTINEL_DIR/gc-events.tsv" | tr -d ' ')"
-if (( gc_sample_count < 31 )); then
-	fail "the memory plateau check did not record one compacted evaluator sample for its baseline and thirty repeated requests"
+rss_final_kb="$current_rss_kb"
+# A compacted live heap counts objects that the compiler can still reach.
+# Process RSS also counts reusable allocator pages, which can rise even after
+# those objects are gone. The helper uses live objects for the final-ten leak
+# decision and retains a 128 MiB total RSS ceiling for memory outside that heap.
+memory_proof_error="$WORK_DIR/memory-proof.error.log"
+if ! memory_proof="$(node "$MEMORY_HELPER" \
+	"$MEMORY_SENTINEL_DIR/gc-events.tsv" \
+	"$MEMORY_RSS_SAMPLES" \
+	"$(( $(getconf LONG_BIT) / 8 ))" 2>"$memory_proof_error")"; then
+	sed -n '1,160p' "$memory_proof_error" >&2
+	sed -n '1,80p' "$MEMORY_SENTINEL_DIR/gc-events.tsv" >&2
+	sed -n '1,120p' "$MEMORY_RSS_SAMPLES" >&2
+	fail "compacted live-heap memory proof failed"
 fi
-if (( rss_final_kb > rss_baseline_kb + 131072 )); then
-	fail "thirty unchanged requests grew owned server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB final=${rss_final_kb}KB)"
-fi
-if (( rss_final_kb > rss_after_20_kb + 32768 )); then
-	fail "owned server RSS did not approach a plateau in the final ten requests (after20=${rss_after_20_kb}KB final=${rss_final_kb}KB)"
-fi
+echo "$memory_proof"
 
 compile_and_verify_state sourcemap-base "$expected_a" -D ocaml_sourcemap=directives
 replace_source_text "$MAIN_SOURCE" "class Main {" $'\n\nclass Main {'
