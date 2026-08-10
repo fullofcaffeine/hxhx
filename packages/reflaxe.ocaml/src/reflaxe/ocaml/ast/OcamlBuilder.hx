@@ -2379,22 +2379,6 @@ class OcamlBuilder {
 		return out;
 	}
 
-	static function isHaxeRestType(t:Type):Bool {
-		return switch (followNoAbstracts(unwrapNullType(t))) {
-			case TAbstract(aRef, [_]): final a = aRef.get(); final pack = a.pack ?? []; pack.length == 1 && pack[0] == "haxe" && a.name == "Rest";
-			case _:
-				false;
-		}
-	}
-
-	static inline function isOmittableTrailingRestArg(expectedArgs:Array<{name:String, opt:Bool, t:Type}>, index:Int):Bool {
-		return index == expectedArgs.length - 1 && isHaxeRestType(expectedArgs[index].t);
-	}
-
-	static inline function missingTrailingRestArgValue():OcamlExpr {
-		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBootArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-	}
-
 	inline function isDynamicLike(t:Type):Bool {
 		final ft = followNoAbstracts(unwrapNullType(t));
 		return switch (ft) {
@@ -4015,9 +3999,7 @@ class OcamlBuilder {
 												if (args.length < expectedArgs.length) {
 													for (i in args.length...expectedArgs.length) {
 														final ea = expectedArgs[i];
-														if (isOmittableTrailingRestArg(expectedArgs, i)) {
-															builtArgs.push(missingTrailingRestArgValue());
-														} else if (!ea.opt) {
+														if (!ea.opt) {
 															#if macro
 															guardrailError("reflaxe.ocaml: call is missing required argument '" + ea.name + "'.", e.pos);
 															#end
@@ -4317,9 +4299,7 @@ class OcamlBuilder {
 														if (args.length < expectedArgs.length) {
 															for (i in args.length...expectedArgs.length) {
 																final ea = expectedArgs[i];
-																if (isOmittableTrailingRestArg(expectedArgs, i)) {
-																	coercedArgs.push(missingTrailingRestArgValue());
-																} else if (!ea.opt) {
+																if (!ea.opt) {
 																	#if macro
 																	guardrailError("reflaxe.ocaml: call is missing required argument '" + ea.name + "'.",
 																		e.pos);
@@ -4420,9 +4400,7 @@ class OcamlBuilder {
 													if (args.length < expectedArgs.length) {
 														for (i in args.length...expectedArgs.length) {
 															final ea = expectedArgs[i];
-															if (isOmittableTrailingRestArg(expectedArgs, i)) {
-																builtArgs.push(missingTrailingRestArgValue());
-															} else if (!ea.opt) {
+															if (!ea.opt) {
 																#if macro
 																guardrailError("reflaxe.ocaml: call is missing required argument '" + ea.name + "'.", e.pos);
 																#end
@@ -4472,9 +4450,7 @@ class OcamlBuilder {
 												if (args.length < expectedArgs.length) {
 													for (i in args.length...expectedArgs.length) {
 														final ea = expectedArgs[i];
-														if (isOmittableTrailingRestArg(expectedArgs, i)) {
-															builtArgs.push(missingTrailingRestArgValue());
-														} else if (!ea.opt) {
+														if (!ea.opt) {
 															#if macro
 															guardrailError("reflaxe.ocaml: enum constructor call is missing required argument '"
 																+ ea.name
@@ -4606,9 +4582,7 @@ class OcamlBuilder {
 												if (args.length < expectedArgs.length) {
 													for (i in args.length...expectedArgs.length) {
 														final ea = expectedArgs[i];
-														if (isOmittableTrailingRestArg(expectedArgs, i)) {
-															builtArgs.push(missingTrailingRestArgValue());
-														} else if (!ea.opt) {
+														if (!ea.opt) {
 															#if macro
 															guardrailError("reflaxe.ocaml: call is missing required argument '" + ea.name + "'.", e.pos);
 															#end
