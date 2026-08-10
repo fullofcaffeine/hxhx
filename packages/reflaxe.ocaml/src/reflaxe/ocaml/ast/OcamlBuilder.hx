@@ -49,6 +49,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -658,7 +659,7 @@ class OcamlBuilder {
 	}
 
 	/** Mechanically applies one conversion already selected by the call plan. */
-	function buildPlannedCallArgument(callId:String, value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
+	function buildPlannedCallArgument(call:OcamlCallDecision, value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
@@ -668,7 +669,28 @@ class OcamlBuilder {
 			case BoxConcreteToDynamic:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
 			case BoxExactBoolToDynamic:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(expression)]);
+				final callPlan = currentCallPlan;
+				if (callPlan == null)
+					return callPlanInvariant('call "${call.id}" reached Bool-to-Dynamic boxing without its sealed call inventory', expression.pos);
+				final runtimeUsePlan = callPlan.runtimeUsePlanFor(call.id);
+				if (runtimeUsePlan == null)
+					return callPlanInvariant('call "${call.id}" argument ${value.index} has no exact Boolean runtime-use plan', expression.pos);
+				try {
+					OcamlCallRuntimeUseContract.requireForCall(call, runtimeUsePlan);
+					final occurrence = OcamlCallRuntimeUseContract.occurrenceForArgument(runtimeUsePlan, value.index);
+					final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+					final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+						ctx.runtimeRequirementsByIds([occurrence.requirementId]), [occurrence], ctx.finalRuntimeUses);
+					final runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision,
+						occurrence.exactSymbol));
+					// The argument expression can contain private runtime calls owned by
+					// other plans. Check only this call slot's helper identifier before
+					// placing the independently built argument beneath it.
+					authority.reconcileExpression(runtimeFunction);
+					OcamlExpr.EApp(runtimeFunction, [buildExpr(expression)]);
+				} catch (error:Dynamic) {
+					callPlanInvariant(Std.string(error), expression.pos);
+				}
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(expression)]);
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString:
@@ -677,7 +699,7 @@ class OcamlBuilder {
 				if (!OcamlCallPlan.isExplicitNullExpression(expression))
 					callPlanInvariant('call argument ${value.index} claims an explicit null String conversion for a non-null source expression',
 						expression.pos);
-				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:$callId:explicit-null:${value.index}', expression.pos);
+				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:${call.id}:explicit-null:${value.index}', expression.pos);
 		}
 	}
 
@@ -1131,7 +1153,7 @@ class OcamlBuilder {
 					final name = freshTmp("call_arg_" + argumentIndex);
 					materialized.push({
 						name: name,
-						value: buildPlannedCallArgument(call.id, call.arguments[argumentIndex], arguments[sourceArgumentIndex])
+						value: buildPlannedCallArgument(call, call.arguments[argumentIndex], arguments[sourceArgumentIndex])
 					});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.MaterializeOmittedArgument:

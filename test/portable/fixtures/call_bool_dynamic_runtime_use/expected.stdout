@@ -1,0 +1,7 @@
+evaluate-static=1
+static=true
+evaluate-function=2
+function=false
+evaluate-optional=3
+optional:true
+evaluations=3

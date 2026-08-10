@@ -217,6 +217,9 @@ class OcamlFunctionPlanSealer {
 			context.recordEnumDynamicContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
+			final runtimeUsePlan = calls.runtimeUsePlanFor(call.id);
+			if (runtimeUsePlan != null)
+				context.recordCallRuntimeRequirements(call, runtimeUsePlan);
 			if (call.standardIMapTarget != null)
 				context.recordStandardIMapRuntimeRequirements(call);
 			if (call.structuralIteratorTarget != null)

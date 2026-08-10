@@ -10,6 +10,8 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -208,6 +210,7 @@ class OcamlCallPlan {
 
 	final ordered:Array<OcamlCallDecision>;
 	final bySourceKey:Map<String, Array<OcamlCallDecision>> = [];
+	final runtimeUsesByCallId:Map<String, OcamlCallRuntimeUsePlan> = [];
 
 	public final revision:String;
 
@@ -233,6 +236,9 @@ class OcamlCallPlan {
 			candidates.push(copyDecision(decision));
 			bySourceKey.set(key, candidates);
 			normalized.push(copyDecision(decision));
+			final runtimeUsePlan = OcamlCallRuntimeUseContract.forCall(decision);
+			if (runtimeUsePlan != null)
+				runtimeUsesByCallId.set(decision.id, OcamlCallRuntimeUseContract.copy(runtimeUsePlan));
 		}
 		ordered = normalized;
 		revision = "sha256:" + Sha256.encode(ordered.map(decisionFingerprint).join("\n"));
@@ -350,6 +356,17 @@ class OcamlCallPlan {
 	/** Returns every admitted call in deterministic identity order. */
 	public function decisions():Array<OcamlCallDecision> {
 		return ordered.map(copyDecision);
+	}
+
+	/**
+		Returns the private runtime uses owned by one exact call occurrence.
+
+		`null` means that the call uses direct OCaml carriers only. It is not
+		permission for syntax to infer a helper from a value type.
+	**/
+	public function runtimeUsePlanFor(callId:String):Null<OcamlCallRuntimeUsePlan> {
+		final plan = runtimeUsesByCallId.get(callId);
+		return plan == null ? null : OcamlCallRuntimeUseContract.copy(plan);
 	}
 
 	public static function sourceKey(source:OcamlLoweredSourceSpan):String {
@@ -1947,10 +1964,14 @@ class OcamlCallPlanner {
 		for (index in 0...arguments.length) {
 			final expected = signature.arguments[index];
 			final actualSemanticType = semanticTypeId(arguments[index].t);
+			// The later call-value planner already owns Bool-to-Dynamic boxing.
+			// Admit it here too, so computed functions cannot bypass the sealed
+			// call merely because a Dynamic parameter receives a concrete Bool.
 			if (actualSemanticType == expected.semanticTypeId
 				|| (actualSemanticType == "Int" && expected.semanticTypeId == "Null<Int>")
 				|| (actualSemanticType == "Null<Int>" && expected.semanticTypeId == "Int")
 				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Null<Bool>")
+				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Dynamic")
 				|| (expected.optional
 					&& expected.semanticTypeId == "String"
 					&& OcamlCallPlan.isExplicitNullExpression(arguments[index]))) {

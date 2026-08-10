@@ -10,6 +10,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 #if macro
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUsePlan;
 #end
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
@@ -27,6 +28,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlCallRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
@@ -511,6 +513,11 @@ class CompilationContext {
 		if (call.structuralIteratorTarget == null)
 			throw 'Structural Iterator call "${call.id}" has no sealed runtime target.';
 		runtimeRequirements.recordStructuralIteratorCall(call.id, call.source, call.profileEligibility, call.structuralIteratorTarget);
+	}
+
+	/** Records the runtime helper owned by one sealed Boolean call argument. */
+	public function recordCallRuntimeRequirements(call:OcamlCallDecision, plan:OcamlCallRuntimeUsePlan):Void {
+		OcamlCallRuntimeRequirementRecorder.record(runtimeRequirements, call, plan);
 	}
 	#end
 

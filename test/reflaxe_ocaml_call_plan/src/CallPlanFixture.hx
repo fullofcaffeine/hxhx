@@ -7,6 +7,7 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.OcamlCompiler;
+import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
@@ -18,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
@@ -36,6 +38,8 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+import reflaxe.ocaml.runtimegen.OcamlCallRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
 using reflaxe.helpers.ClassFieldHelper;
 
@@ -1489,6 +1493,53 @@ class CallPlanFixture {
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final boolRuntimeCall = copyCall(call(caller), null, null, [boxedDynamicBool]);
+		final boolRuntimeCallPlan = new OcamlCallPlan([boolRuntimeCall]);
+		final boolRuntimeUsePlan = boolRuntimeCallPlan.runtimeUsePlanFor(boolRuntimeCall.id);
+		if (boolRuntimeUsePlan == null)
+			Context.error("The sealed Bool-to-Dynamic call argument has no runtime-use plan.", Context.currentPos());
+		OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, boolRuntimeUsePlan);
+		if (boolRuntimeUsePlan.runtimeRequirementIds.length != 1
+			|| boolRuntimeUsePlan.runtimeUseOccurrences.length != 1
+			|| boolRuntimeUsePlan.runtimeUseOccurrences[0].ownerId != boolRuntimeCall.id
+			|| boolRuntimeUsePlan.runtimeUseOccurrences[0].exactSymbol != "HxRuntime.box_bool"
+			|| boolRuntimeUsePlan.runtimeUseOccurrences[0].role != "box-dynamic-bool-argument:0") {
+			Context.error("The Bool-to-Dynamic call argument does not own one exact HxRuntime.box_bool occurrence.", Context.currentPos());
+		}
+		final missingBoolRuntimeUse = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(missingBoolRuntimeUse, "runtimeUseOccurrences", []);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, missingBoolRuntimeUse));
+		final wrongBoolRuntimeSymbol = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(wrongBoolRuntimeSymbol.runtimeUseOccurrences[0], "exactSymbol", "HxRuntime.unbox_bool_or_obj");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeSymbol));
+		final wrongBoolRuntimeSlot = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(wrongBoolRuntimeSlot.runtimeUseOccurrences[0], "role", "box-dynamic-bool-argument:1");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeSlot));
+		final duplicateBoolRuntimeUse = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(duplicateBoolRuntimeUse, "runtimeUseOccurrences", [
+			duplicateBoolRuntimeUse.runtimeUseOccurrences[0],
+			duplicateBoolRuntimeUse.runtimeUseOccurrences[0]
+		]);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, duplicateBoolRuntimeUse));
+		final staleBoolRuntimeUse = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(staleBoolRuntimeUse.runtimeUseOccurrences[0], "planRevision", "sha256:stale");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, staleBoolRuntimeUse));
+		final wrongBoolRuntimeOwner = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(wrongBoolRuntimeOwner.runtimeUseOccurrences[0], "ownerId", "call:other");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeOwner));
+		final wrongBoolRuntimeProfile = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(wrongBoolRuntimeProfile.runtimeUseOccurrences[0], "profileEligibility", ["portable"]);
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeProfile));
+		final wrongBoolRuntimeCall = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
+		Reflect.setField(wrongBoolRuntimeCall, "callId", "call:other");
+		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeCall));
+		final plainReferenceAuthority = new OcamlRuntimeUseAuthority(boolRuntimeUsePlan.planRevision, "portable",
+			OcamlCallRuntimeRequirementRecorder.requirements(boolRuntimeCall, boolRuntimeUsePlan), boolRuntimeUsePlan.runtimeUseOccurrences);
+		expectThrows("plain private runtime reference",
+			() -> plainReferenceAuthority.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool")));
+		final plainIntCallPlan = new OcamlCallPlan([call(caller)]);
+		if (plainIntCallPlan.runtimeUsePlanFor(CALL_ID) != null)
+			Context.error("An identity-only Int call unexpectedly owns a private runtime-use plan.", Context.currentPos());
 		final genericClassKey = Context.typeExpr(macro([] : Array<Int>)).t;
 		if (OcamlStandardIMapCallContract.keyKindForType(genericClassKey) != null)
 			Context.error("The standard IMap target admitted a generic class key as object identity.", Context.currentPos());
