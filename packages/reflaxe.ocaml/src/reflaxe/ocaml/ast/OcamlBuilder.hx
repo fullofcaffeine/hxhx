@@ -693,13 +693,18 @@ class OcamlBuilder {
 				}
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(expression)]);
-			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString:
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeOmittedDynamic:
 				callPlanInvariant('call argument ${value.index} claims an omitted conversion but received a source expression', expression.pos);
 			case MaterializeExplicitNullString:
 				if (!OcamlCallPlan.isExplicitNullExpression(expression))
 					callPlanInvariant('call argument ${value.index} claims an explicit null String conversion for a non-null source expression',
 						expression.pos);
 				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:${call.id}:explicit-null:${value.index}', expression.pos);
+			case MaterializeExplicitNullDynamic:
+				if (!OcamlCallPlan.isExplicitNullExpression(expression))
+					callPlanInvariant('call argument ${value.index} claims an explicit null Dynamic conversion for a non-null source expression',
+						expression.pos);
+				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 		}
 	}
 
@@ -707,7 +712,7 @@ class OcamlBuilder {
 	function buildPlannedOmittedArgument(callId:String, value:OcamlCallValuePlan, position:Position):OcamlExpr {
 		requireCallValue(value, value.index, 'omitted call argument ${value.index}', position);
 		return switch (value.conversion) {
-			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedDynamic:
 				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 			case MaterializeOmittedString:
 				exactStringNullValue(OcamlRepresentationDomain.InternalValue, 'call:$callId:omitted:${value.index}', position);
@@ -727,7 +732,7 @@ class OcamlBuilder {
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);
 			case BoxConcreteToDynamic, BoxExactBoolToDynamic, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString,
-				MaterializeExplicitNullString:
+				MaterializeOmittedDynamic, MaterializeExplicitNullString, MaterializeExplicitNullDynamic:
 				callPlanInvariant("a callable result cannot use a call-argument-only conversion", position);
 		}
 	}
@@ -5362,15 +5367,20 @@ class OcamlBuilder {
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
 	function buildStdString(inner:TypedExpr):OcamlExpr {
 		final e = unwrap(inner);
+		inline function dynamicToStdString():OcamlExpr {
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
+		}
+		if (OcamlRepresentationRegistry.isExactNullDynamic(e.t))
+			return dynamicToStdString();
 		// Best-effort `Std.string` for `Dynamic` / structural values carried as `Obj.t`.
 		// Avoid applying this to typedef-backed anonymous structures that we represent as real OCaml records.
 		switch (followNoAbstracts(e.t)) {
 			case TDynamic(_):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
+				return dynamicToStdString();
 			case TAbstract(_, _) if (isStdAnyAbstract(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
+				return dynamicToStdString();
 			case TAnonymous(_) if (shouldAnonUseHxAnon(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
+				return dynamicToStdString();
 			case _:
 		}
 

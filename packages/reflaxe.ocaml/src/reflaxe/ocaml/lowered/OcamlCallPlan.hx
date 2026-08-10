@@ -55,7 +55,9 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
 	final MaterializeOmittedNullableBool = "materialize-omitted-nullable-bool";
 	final MaterializeOmittedString = "materialize-omitted-string";
+	final MaterializeOmittedDynamic = "materialize-omitted-dynamic";
 	final MaterializeExplicitNullString = "materialize-explicit-null-string";
+	final MaterializeExplicitNullDynamic = "materialize-explicit-null-dynamic";
 }
 
 /** The only runtime actions admitted in a sealed typed-call schedule. */
@@ -305,7 +307,8 @@ class OcamlCallPlan {
 	public static function isOmittedConversion(conversion:OcamlCallCarrierConversion):Bool {
 		return conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
 			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool
-			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedString;
+			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedString
+			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedDynamic;
 	}
 
 	/** Returns whether one exact argument preserves the sealed `Null<Bool>` carrier. */
@@ -678,12 +681,26 @@ class OcamlCallPlan {
 					|| value.proofId != "omitted-string-call-materialization-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional String carrier';
 				}
+			case MaterializeOmittedDynamic:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "omitted-dynamic-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional Dynamic carrier';
+				}
 			case MaterializeExplicitNullString:
 				if (!value.parameterOptional
 					|| !sameRepresentationSides(value)
 					|| !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 					|| value.proofId != "explicit-null-string-call-materialization-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one explicitly supplied null String carrier';
+				}
+			case MaterializeExplicitNullDynamic:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "explicit-null-dynamic-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one explicitly supplied null Dynamic carrier';
 				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported conversion "${value.conversion}"';
@@ -1129,7 +1146,7 @@ class OcamlCallPlan {
 	}
 
 	static function isOptionalSemanticType(semanticTypeId:String):Bool {
-		return isNullableSemanticType(semanticTypeId) || semanticTypeId == "String";
+		return isNullableSemanticType(semanticTypeId) || semanticTypeId == "String" || semanticTypeId == "Dynamic";
 	}
 
 	/** Recognizes the identity shape used by a sealed program-owned class record. */
@@ -1964,16 +1981,17 @@ class OcamlCallPlanner {
 		for (index in 0...arguments.length) {
 			final expected = signature.arguments[index];
 			final actualSemanticType = semanticTypeId(arguments[index].t);
-			// The later call-value planner already owns Bool-to-Dynamic boxing.
-			// Admit it here too, so computed functions cannot bypass the sealed
-			// call merely because a Dynamic parameter receives a concrete Bool.
+			// The later call-value planner already owns concrete-to-Dynamic boxing.
+			// Admit the same primitive matrix here, so computed functions cannot
+			// bypass the sealed call before those conversions are selected.
 			if (actualSemanticType == expected.semanticTypeId
 				|| (actualSemanticType == "Int" && expected.semanticTypeId == "Null<Int>")
 				|| (actualSemanticType == "Null<Int>" && expected.semanticTypeId == "Int")
 				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Null<Bool>")
-				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Dynamic")
+				|| ((actualSemanticType == "Bool" || actualSemanticType == "Int" || actualSemanticType == "String")
+					&& expected.semanticTypeId == "Dynamic")
 				|| (expected.optional
-					&& expected.semanticTypeId == "String"
+					&& (expected.semanticTypeId == "String" || expected.semanticTypeId == "Dynamic")
 					&& OcamlCallPlan.isExplicitNullExpression(arguments[index]))) {
 				continue;
 			}
@@ -2060,6 +2078,12 @@ class OcamlCallPlanner {
 				planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullString, true));
 				continue;
 			}
+			if (boundary.parameterOptional
+				&& output.semanticTypeId == "Dynamic"
+				&& OcamlCallPlan.isExplicitNullExpression(arguments[index])) {
+				planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullDynamic, true));
+				continue;
+			}
 			final input = representationFor(arguments[index].t, representations);
 			if (input == null)
 				return null;
@@ -2100,6 +2124,7 @@ class OcamlCallPlanner {
 				case "Null<Int>": OcamlCallCarrierConversion.MaterializeOmittedNullableInt;
 				case "Null<Bool>": OcamlCallCarrierConversion.MaterializeOmittedNullableBool;
 				case "String": OcamlCallCarrierConversion.MaterializeOmittedString;
+				case "Dynamic": OcamlCallCarrierConversion.MaterializeOmittedDynamic;
 				case _: return null;
 			}
 			planned.push(crossingValue(boundary.index, representation, representation, conversion, true));
@@ -2240,7 +2265,7 @@ class OcamlCallPlanner {
 			resultKind: signature.resultKind,
 			result: resultRepresentation == null ? null : identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: isStatic ? 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.' : 'An ordinary instance method on exact ${receiverRepresentation.semanticTypeId} uses the sealed ${receiverRepresentation.carrierTypeId} nominal receiver plus arguments [$semanticSignature] and result $resultDescription.',
+			reason: isStatic ? 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, exact String, or Dynamic parameter may be optional.' : 'An ordinary instance method on exact ${receiverRepresentation.semanticTypeId} uses the sealed ${receiverRepresentation.carrierTypeId} nominal receiver plus arguments [$semanticSignature] and result $resultDescription.',
 			proofId: isStatic ? OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID : OcamlCallPlan.DIRECT_INSTANCE_SIGNATURE_PROOF_ID,
 			proofClaim: isStatic ? "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation." : "The complete typed program selects one exact monomorphic receiver carrier and a closed method signature. Every admitted occurrence must preserve that carrier, materialize the receiver once before all source-order arguments, and invoke only the matching sealed instance definition.",
 			programRevision: programRevision,
@@ -2295,7 +2320,8 @@ class OcamlCallPlanner {
 		Selects one canonical callable signature over already-sealed representations.
 
 		Haxe 4.3.7 preserves the optional flag on call-produced function typedefs
-		but exposes optional primitive/String parameters as their exact types.
+		but exposes optional primitive, String, and Dynamic parameters through
+		different exact or core `Null` shapes.
 		Local method values retain the nullable parameter type. This selector
 		normalizes both forms to one semantic signature while refusing exact
 		optional locals that do not have that observed typed-API shape.
@@ -2310,7 +2336,9 @@ class OcamlCallPlanner {
 				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
 				for (index in 0...arguments.length) {
 					final argument = arguments[index];
-					final semanticType = if (argument.opt && OcamlRepresentationRegistry.isExactNullString(argument.t)) {
+					final semanticType = if (argument.opt && OcamlRepresentationRegistry.isExactNullDynamic(argument.t)) {
+						"Dynamic";
+					} else if (argument.opt && OcamlRepresentationRegistry.isExactNullString(argument.t)) {
 						"String";
 					} else if (argument.opt && calleeForm == "call-result" && OcamlRepresentationRegistry.isExactInt(argument.t)) {
 						"Null<Int>";
@@ -2331,7 +2359,7 @@ class OcamlCallPlanner {
 						optionalCount += 1;
 						if (optionalCount > 1
 							|| index != arguments.length - 1
-							|| (semanticType != "Null<Int>" && semanticType != "Null<Bool>" && semanticType != "String")) {
+							|| (semanticType != "Null<Int>" && semanticType != "Null<Bool>" && semanticType != "String" && semanticType != "Dynamic")) {
 							valid = false;
 							break;
 						}
@@ -2529,9 +2557,17 @@ class OcamlCallPlanner {
 					id: "omitted-string-call-materialization-v1",
 					claim: "The Haxe call omits one trailing optional String parameter, so the sealed schedule materializes the selected Haxe String null sentinel without evaluating a source expression."
 				};
+			case MaterializeOmittedDynamic: {
+					id: "omitted-dynamic-call-materialization-v1",
+					claim: "The Haxe call omits one trailing optional Dynamic parameter, so the sealed schedule materializes Dynamic's existing null Obj.t carrier without evaluating a source expression."
+				};
 			case MaterializeExplicitNullString: {
 					id: "explicit-null-string-call-materialization-v1",
 					claim: "The Haxe call explicitly supplies the null literal to one trailing optional String parameter, so the sealed supplied-argument step materializes the selected Haxe String null sentinel."
+				};
+			case MaterializeExplicitNullDynamic: {
+					id: "explicit-null-dynamic-call-materialization-v1",
+					claim: "The Haxe call explicitly supplies the null literal to one trailing optional Dynamic parameter, so the sealed supplied-argument step materializes Dynamic's existing null Obj.t carrier."
 				};
 			case Identity:
 				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a directional call crossing cannot use the identity helper";

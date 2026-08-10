@@ -286,6 +286,42 @@ class CallPlanFixture {
 		};
 	}
 
+	/** Creates the supplied or omitted carrier for one optional Dynamic slot. */
+	static function optionalDynamicValue(index:Int, omitted:Bool = false):OcamlCallValuePlan {
+		final selected = dynamicValue(index, OcamlCallCarrierConversion.Identity);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: omitted ? OcamlCallCarrierConversion.MaterializeOmittedDynamic : selected.conversion,
+			proofId: omitted ? "omitted-dynamic-call-materialization-v1" : selected.proofId,
+			proofClaim: omitted ? "fixture omitted optional Dynamic" : selected.proofClaim
+		};
+	}
+
+	/** Creates the carrier selected for an explicitly supplied null Dynamic. */
+	static function explicitNullDynamicValue(index:Int):OcamlCallValuePlan {
+		final selected = optionalDynamicValue(index);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: OcamlCallCarrierConversion.MaterializeExplicitNullDynamic,
+			proofId: "explicit-null-dynamic-call-materialization-v1",
+			proofClaim: "fixture explicitly supplied null Dynamic"
+		};
+	}
+
 	static function nullableArgument(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
 		return switch (conversion) {
 			case PreserveNullableIntCarrier:
@@ -319,8 +355,8 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
 			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
-				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic,
-				BoxExactBoolToDynamic:
+				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeOmittedDynamic, MaterializeExplicitNullString,
+				MaterializeExplicitNullDynamic, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -374,7 +410,8 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+				MaterializeOmittedString, MaterializeOmittedDynamic, MaterializeExplicitNullString, MaterializeExplicitNullDynamic, PreserveDynamicCarrier,
+				BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}
@@ -1955,6 +1992,26 @@ class CallPlanFixture {
 		final nonTrailingOptionalStringDeclaration = OcamlCallPlan.copyDeclaration(optionalStringDeclaration);
 		Reflect.setField(nonTrailingOptionalStringDeclaration, "arguments", [optionalStringValue(0), value(1)]);
 		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallableDeclarationPlan(nonTrailingOptionalStringDeclaration));
+
+		final optionalDynamicDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
+		Reflect.setField(optionalDynamicDeclaration, "arguments", [optionalDynamicValue(0)]);
+		OcamlCallPlan.requireCallableDeclarationPlan(optionalDynamicDeclaration);
+		final omittedOptionalDynamic = copyCall(omittedOptionalCall, null, null, [optionalDynamicValue(0, true)]);
+		OcamlCallPlan.requireCall(omittedOptionalDynamic);
+		final explicitNullOptionalDynamic = copyCall(suppliedOptionalCall, null, null, [explicitNullDynamicValue(0)]);
+		OcamlCallPlan.requireCall(explicitNullOptionalDynamic);
+		final optionalDynamicBoundary = optionalBoundary(optionalCallee);
+		Reflect.setField(optionalDynamicBoundary, "arguments", [optionalDynamicValue(0)]);
+		OcamlCallPlan.requireCallableBoundary(optionalDynamicBoundary);
+		final omittedDynamicWithWrongProof = OcamlCallPlan.copyValue(optionalDynamicValue(0, true));
+		Reflect.setField(omittedDynamicWithWrongProof, "proofId", "dynamic-call-carrier-preserve-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(omittedDynamicWithWrongProof, 0, "fixture omitted optional Dynamic"));
+		final omittedDynamicWithoutOptional = OcamlCallPlan.copyValue(optionalDynamicValue(0, true));
+		Reflect.setField(omittedDynamicWithoutOptional, "parameterOptional", false);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(omittedDynamicWithoutOptional, 0, "fixture required Dynamic"));
+		final explicitNullDynamicWithWrongProof = OcamlCallPlan.copyValue(explicitNullDynamicValue(0));
+		Reflect.setField(explicitNullDynamicWithWrongProof, "proofId", "omitted-dynamic-call-materialization-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(explicitNullDynamicWithWrongProof, 0, "fixture explicit null optional Dynamic"));
 
 		final voidCaller = binding("Main|Main::voidCalls", "body:void-caller");
 		final voidCallee = binding(VOID_CALLEE_ID, "body:void-callee");

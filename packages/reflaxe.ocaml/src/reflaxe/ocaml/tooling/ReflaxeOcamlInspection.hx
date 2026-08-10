@@ -2419,7 +2419,8 @@ class ReflaxeOcamlInspection {
 	static function isOmittedConversion(conversion:String):Bool {
 		return conversion == "materialize-omitted-nullable-int"
 			|| conversion == "materialize-omitted-nullable-bool"
-			|| conversion == "materialize-omitted-string";
+			|| conversion == "materialize-omitted-string"
+			|| conversion == "materialize-omitted-dynamic";
 	}
 
 	static function isAdmittedCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {

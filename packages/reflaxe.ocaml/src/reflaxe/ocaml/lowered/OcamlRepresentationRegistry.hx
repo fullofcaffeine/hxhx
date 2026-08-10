@@ -424,6 +424,22 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
+		Returns whether Haxe wrapped the exact `Dynamic` type in core `Null`.
+
+		Haxe 4.3.7 exposes a parameter declared as `?value:Dynamic` through this
+		type shape inside the function body. `Dynamic` already carries null in its
+		`Obj.t` representation, so the wrapper changes optionality but must not
+		select a second native carrier.
+	**/
+	public static function isExactNullDynamic(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, [TDynamic(_)]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null";
+			case _:
+				false;
+		}
+	}
+
+	/**
 		Returns whether Haxe wrapped the direct built-in `String` class in its
 		core `Null` abstract.
 
