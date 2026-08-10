@@ -49,6 +49,10 @@ class Main {
 		final prefixDecrementResult = --receiver().value;
 		Sys.println("prefix_decrement=" + prefixDecrementResult + " final=" + holder.value + " events=" + events.join(","));
 
+		holder.value = 2147483647;
+		final overflowResult = holder.value++;
+		Sys.println("overflow=" + overflowResult + " final=" + holder.value);
+
 		final concatCounter = new ConcatCounter();
 		Sys.println(concatCounter.nextLabel());
 	}

@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.38",
+  "reviewBead": "haxe_ocaml-0uwin.39",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.38",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.39",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 408,
+    "total": 402,
     "byDomain": {
-      "expression": 378,
+      "expression": 372,
       "pattern": 15,
       "raw-boundary": 2,
       "type": 13
@@ -43,12 +43,11 @@
       "compiler-core": 13,
       "field-representation-materializer": 1,
       "imap-interface-syntax": 12,
-      "place-assignment": 6,
       "standard-map-carrier-model": 3,
       "string-representation-materializer": 1
     }
   },
-  "inventoryRevision": "f45094909bc962c0b10660ed9b81be96d6f38a0612454bd22791195d26bf8cdd",
+  "inventoryRevision": "a96e88cb3d6bacb2591432cc9e085b003573732757ba82bb2582596c754053b5",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
@@ -3899,66 +3898,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 1,
       "migrationFamily": "field-representation-materializer"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 1,
-      "migrationFamily": "place-assignment"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::2",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 2,
-      "migrationFamily": "place-assignment"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::3",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 3,
-      "migrationFamily": "place-assignment"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::4",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 4,
-      "migrationFamily": "place-assignment"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::5",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 5,
-      "migrationFamily": "place-assignment"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx::expression::EField(EIdent)::HxInt.add::6",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlPlaceAssignmentEmitter.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxInt.add",
-      "rootModule": "HxInt",
-      "ordinal": 6,
-      "migrationFamily": "place-assignment"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardMapCarrierModel.hx::type::TApp::HxMap.string_map::1",

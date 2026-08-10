@@ -32,11 +32,13 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
@@ -60,6 +62,28 @@ class OcamlPlaceAssignmentPlanner {
 		this.localIdentities = localIdentities;
 		this.staticStorage = staticStorage;
 		this.binding = binding;
+	}
+
+	/**
+		Authorizes the one Haxe Int32 addition call chosen by a sealed mutation plan.
+
+		The `order` is the operator step in that plan's evaluation schedule. Syntax
+		generation may use `HxInt.add` only by consuming this exact record.
+	**/
+	function intAdditionRuntimeUse(originId:String, ownerId:String, requirementId:String, order:Int, source:OcamlLoweredSourceSpan):OcamlRuntimeUseOccurrence {
+		return {
+			id: originId + ":runtime-use:int-add",
+			planRevision: OcamlRuntimeUseModel.planRevision(binding),
+			ownerId: ownerId,
+			requirementId: requirementId,
+			domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+			exactSymbol: "HxInt.add",
+			role: "int-add",
+			order: order,
+			source: source,
+			profileEligibility: ["metal", "portable"],
+			cardinality: 1
+		};
 	}
 
 	/** Selects one complete place plan from a final origin-bearing operation. */
@@ -344,10 +368,13 @@ class OcamlPlaceAssignmentPlanner {
 		if (place == null)
 			return null;
 		final newValueId = originId + ":new-value";
+		final planId = originId + ":static-compound-assignment";
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":static-compound-assignment",
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: "Int",
 			carrierTypeId: "int",
 			place: place,
@@ -369,7 +396,8 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+			runtimeRequirementIds: [requirementId],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 2, source)]
 		};
 	}
 
@@ -393,10 +421,13 @@ class OcamlPlaceAssignmentPlanner {
 		final isIncrement = operation == OpIncrement;
 		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
 		final delta = isIncrement ? 1 : -1;
+		final planId = originId + ":static-int-" + sourceOperator;
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":static-int-" + sourceOperator,
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: "Int",
 			carrierTypeId: "int",
 			place: place,
@@ -418,7 +449,8 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+			runtimeRequirementIds: [requirementId],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 1, source)]
 		};
 	}
 
@@ -496,10 +528,13 @@ class OcamlPlaceAssignmentPlanner {
 			return null;
 		final placeId = target.place.id;
 		final newValueId = originId + ":new-value";
+		final planId = originId + ":array-compound-assignment";
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":array-compound-assignment",
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: "Int",
 			carrierTypeId: "int",
 			place: target.place,
@@ -529,9 +564,10 @@ class OcamlPlaceAssignmentPlanner {
 			],
 			runtimeRequirementIds: [
 				originId + ":runtime:haxe-array-element-get",
-				originId + ":runtime:haxe-int32-add",
+				requirementId,
 				originId + ":runtime:haxe-array-element-set"
-			]
+			],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 4, source)]
 		};
 	}
 
@@ -556,10 +592,13 @@ class OcamlPlaceAssignmentPlanner {
 		final isIncrement = operation == OpIncrement;
 		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
 		final delta = isIncrement ? 1 : -1;
+		final planId = originId + ":array-int-" + sourceOperator;
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":array-int-" + sourceOperator,
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: "Int",
 			carrierTypeId: "int",
 			place: target.place,
@@ -589,9 +628,10 @@ class OcamlPlaceAssignmentPlanner {
 			],
 			runtimeRequirementIds: [
 				originId + ":runtime:haxe-array-element-get",
-				originId + ":runtime:haxe-int32-add",
+				requirementId,
 				originId + ":runtime:haxe-array-element-set"
-			]
+			],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 3, source)]
 		};
 	}
 
@@ -607,10 +647,13 @@ class OcamlPlaceAssignmentPlanner {
 			return null;
 		final placeId = target.place.id;
 		final newValueId = originId + ":new-value";
+		final planId = originId + ":compound-assignment";
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":compound-assignment",
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: TypeTools.toString(expression.t),
 			carrierTypeId: "int",
 			place: target.place,
@@ -635,7 +678,8 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+			runtimeRequirementIds: [requirementId],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 3, source)]
 		};
 	}
 
@@ -659,10 +703,13 @@ class OcamlPlaceAssignmentPlanner {
 		final isIncrement = operation == OpIncrement;
 		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
 		final delta = isIncrement ? 1 : -1;
+		final planId = originId + ":int-" + sourceOperator;
+		final requirementId = originId + ":runtime:haxe-int32-add";
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		return {
-			id: originId + ":int-" + sourceOperator,
+			id: planId,
 			originId: originId,
-			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			source: source,
 			semanticTypeId: TypeTools.toString(expression.t),
 			carrierTypeId: "int",
 			place: target.place,
@@ -687,7 +734,8 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+			runtimeRequirementIds: [requirementId],
+			runtimeUseOccurrences: [intAdditionRuntimeUse(originId, planId, requirementId, 2, source)]
 		};
 	}
 

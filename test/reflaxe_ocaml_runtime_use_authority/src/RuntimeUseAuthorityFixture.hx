@@ -133,6 +133,7 @@ class RuntimeUseAuthorityFixture {
 	**/
 	static function migratedPrivatePlainReferencesFail():Void {
 		for (symbol in [
+			"HxInt.add",
 			"HxAnon.get",
 			"HxAnon.set",
 			"HxRuntime.box_bool",

@@ -166,6 +166,7 @@ typedef InspectionLoweredPlan = {
 	final effects:Array<String>;
 	final schedule:Array<String>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** One exact field carried by an admitted mutable anonymous object. */

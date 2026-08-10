@@ -91,6 +91,9 @@ const stringAssignment = report.plans.find(item =>
 	&& item.carrierTypeId === 'string'
 	&& item.place?.fieldName === 'omittedString'
 	&& item.place?.representationId === stringDecision?.id)
+const intMutations = report.plans.filter(item =>
+	item.nodeKind === 'static-compound-assignment'
+	|| item.nodeKind === 'static-int-update')
 if (!decision
 	|| decision.carrierTypeId !== 'int'
 	|| decision.implicitDefaultPolicy !== 'exact-int-zero'
@@ -135,6 +138,12 @@ if (!stringDecision
 	|| !stringAssignment
 	|| stringAssignment.conversion !== 'identity') {
 	throw new Error('the lowering report did not preserve the exact String static carrier/default/simple-assignment decision')
+}
+if (intMutations.length === 0
+	|| intMutations.some(item => item.runtimeUseOccurrences?.length !== 1
+		|| item.runtimeUseOccurrences[0].exactSymbol !== 'HxInt.add'
+		|| item.runtimeUseOccurrences[0].requirementId !== item.runtimeRequirementIds.find(id => id.endsWith(':runtime:haxe-int32-add')))) {
+	throw new Error('each sealed static Int mutation must own its exact HxInt.add runtime occurrence')
 }
 NODE
 

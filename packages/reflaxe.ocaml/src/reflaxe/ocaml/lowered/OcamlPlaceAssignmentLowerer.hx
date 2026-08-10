@@ -14,8 +14,11 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlPlaceAssignmentEmitter.OcamlIntAdditionEmission;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -42,6 +45,25 @@ class OcamlPlaceAssignmentLowerer {
 
 	static function invalid(errors:Array<String>, originId:String):OcamlPlaceAssignmentLoweringResult {
 		return Invalid(errors.join("; ") + " (origin " + originId + ")");
+	}
+
+	/**
+		Consumes the exact `HxInt.add` permission owned by one sealed mutation.
+
+		Only the returned addition subtree is reconciled here. Child expressions may
+		contain independently sealed operations, so their runtime permissions remain
+		owned and checked by their own lowerers.
+	**/
+	function emitAuthorizedIntAddition(binding:OcamlFunctionPlanBinding, requirementIds:Array<String>, occurrences:Array<OcamlRuntimeUseOccurrence>,
+			emit:OcamlRuntimeReference->OcamlIntAdditionEmission):OcamlExpr {
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(planRevision, activeProfile, context.runtimeRequirementsByIds(requirementIds), occurrences);
+		final occurrence = occurrences[0];
+		final reference = authority.expressionIdentifier(occurrence.id, planRevision, occurrence.exactSymbol);
+		final emission = emit(reference);
+		authority.reconcileExpression(emission.runtimeAddition);
+		return emission.expression;
 	}
 
 	static function instancePlaceReport(place:OcamlLoweredInstanceFieldPlace):OcamlLoweredPlaceReport {
@@ -148,7 +170,8 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: []
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitSimple(plan, buildExpr, freshTemporary));
@@ -169,7 +192,8 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: []
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitStaticSimple(plan, buildExpr, freshTemporary));
@@ -191,10 +215,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitStaticCompoundIntAdd(plan, buildExpr, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitStaticCompoundIntAdd(plan, reference, buildExpr, freshTemporary)));
 				}
 			case StaticUpdate(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateStaticIntUpdate(plan);
@@ -216,10 +242,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitStaticIntUpdate(plan, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitStaticIntUpdate(plan, reference, freshTemporary)));
 				}
 			case ArraySimple(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArraySimple(plan);
@@ -237,7 +265,8 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
 					final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
@@ -269,10 +298,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitArrayCompoundIntAdd(plan, buildExpr, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitArrayCompoundIntAdd(plan, reference, buildExpr, freshTemporary)));
 				}
 			case ArrayUpdate(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArrayIntUpdate(plan);
@@ -294,10 +325,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitArrayIntUpdate(plan, buildExpr, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitArrayIntUpdate(plan, reference, buildExpr, freshTemporary)));
 				}
 			case Compound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateCompoundIntAdd(plan);
@@ -316,10 +349,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitCompoundIntAdd(plan, buildExpr, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitCompoundIntAdd(plan, reference, buildExpr, freshTemporary)));
 				}
 			case Update(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateIntUpdate(plan);
@@ -341,10 +376,12 @@ class OcamlPlaceAssignmentLowerer {
 							result: plan.result,
 							schedule: plan.schedule,
 							effects: plan.effects,
-							runtimeRequirementIds: plan.runtimeRequirementIds
+							runtimeRequirementIds: plan.runtimeRequirementIds,
+							runtimeUseOccurrences: plan.runtimeUseOccurrences
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitIntUpdate(plan, buildExpr, freshTemporary));
+					Lowered(emitAuthorizedIntAddition(binding, plan.runtimeRequirementIds, plan.runtimeUseOccurrences,
+						reference -> OcamlPlaceAssignmentEmitter.emitIntUpdate(plan, reference, buildExpr, freshTemporary)));
 				}
 		}
 	}

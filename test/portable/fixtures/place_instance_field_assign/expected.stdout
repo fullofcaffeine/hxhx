@@ -8,4 +8,5 @@ postfix=14 final=15 events=receiver
 prefix=16 final=16 events=receiver
 postfix_decrement=16 final=15 events=receiver
 prefix_decrement=14 final=14 events=receiver
+overflow=2147483647 final=-2147483648
 concat=0

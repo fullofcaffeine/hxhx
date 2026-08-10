@@ -3227,7 +3227,7 @@ class ReflaxeOcamlInspection {
 		final place = requiredObject(value, "place");
 		final scheduleValues = requiredArray(value, "schedule");
 		final schedule = [for (entry in scheduleValues) requiredString(entry, "role")];
-		return {
+		final plan:InspectionLoweredPlan = {
 			id: requiredString(value, "id"),
 			nodeKind: requiredString(value, "nodeKind"),
 			sourceFile: requiredString(source, "file"),
@@ -3251,8 +3251,73 @@ class ReflaxeOcamlInspection {
 			result: optionalString(value, "result"),
 			effects: requiredStringArray(value, "effects"),
 			schedule: schedule,
-			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds")
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: loweredPlanRuntimeUseOccurrences(value)
 		};
+		validateLoweredPlanRuntimeUses(plan);
+		return plan;
+	}
+
+	/** Reads exact private-runtime permissions retained by a sealed place plan. */
+	static function loweredPlanRuntimeUseOccurrences(value:Dynamic):Array<OcamlRuntimeUseOccurrence> {
+		return [
+			for (entry in requiredArray(value, "runtimeUseOccurrences")) {
+				final source = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					planRevision: requiredSha256Revision(entry, "planRevision"),
+					ownerId: requiredString(entry, "ownerId"),
+					requirementId: requiredString(entry, "requirementId"),
+					domain: cast requiredString(entry, "domain"),
+					exactSymbol: requiredString(entry, "exactSymbol"),
+					role: requiredString(entry, "role"),
+					order: requiredInt(entry, "order"),
+					source: {
+						file: requiredString(source, "file"),
+						min: requiredInt(source, "min"),
+						max: requiredInt(source, "max")
+					},
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					cardinality: requiredInt(entry, "cardinality")
+				};
+			}
+		];
+	}
+
+	/** Rejects place reports whose Int32 operation permission no longer matches the sealed operation step. */
+	static function validateLoweredPlanRuntimeUses(plan:InspectionLoweredPlan):Void {
+		final expectedOrder = switch (plan.nodeKind) {
+			case "static-compound-assignment": 2;
+			case "static-int-update": 1;
+			case "array-compound-assignment": 4;
+			case "array-int-update": 3;
+			case "compound-assignment": 3;
+			case "int-update": 2;
+			case _: return;
+		}
+		var requirementId:Null<String> = null;
+		for (id in plan.runtimeRequirementIds) {
+			if (StringTools.endsWith(id, ":runtime:haxe-int32-add")) {
+				requirementId = id;
+				break;
+			}
+		}
+		if (requirementId == null || plan.runtimeUseOccurrences.length != 1)
+			throw 'Lowered plan "${plan.id}" has a missing or repeated HxInt.add runtime use.';
+		final occurrence = plan.runtimeUseOccurrences[0];
+		if (occurrence.ownerId != plan.id
+			|| occurrence.requirementId != requirementId
+			|| occurrence.domain != reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain.ExpressionIdentifier
+			|| occurrence.exactSymbol != "HxInt.add"
+			|| occurrence.role != "int-add"
+			|| occurrence.order != expectedOrder
+			|| occurrence.source.file != plan.sourceFile
+			|| occurrence.source.min != plan.sourceMin
+			|| occurrence.source.max != plan.sourceMax
+			|| occurrence.profileEligibility.join(",") != "metal,portable"
+			|| occurrence.cardinality != 1) {
+			throw 'Lowered plan "${plan.id}" has an HxInt.add runtime use that disagrees with its sealed operator step.';
+		}
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,

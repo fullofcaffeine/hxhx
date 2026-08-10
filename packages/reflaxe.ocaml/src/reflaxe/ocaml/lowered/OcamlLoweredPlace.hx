@@ -188,6 +188,7 @@ typedef OcamlLoweredStaticCompoundAssignment = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A typed ordinary Int static update with explicit fixity and result. */
@@ -207,6 +208,7 @@ typedef OcamlLoweredStaticIntUpdate = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A value-producing assignment to one exact `Array<Int>` element. */
@@ -245,6 +247,7 @@ typedef OcamlLoweredArrayCompoundAssignment = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A typed ordinary Int array update with explicit fixity and result. */
@@ -266,6 +269,7 @@ typedef OcamlLoweredArrayIntUpdate = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A typed ordinary Int compound assignment with an explicit old-value load. */
@@ -284,6 +288,7 @@ typedef OcamlLoweredCompoundAssignment = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** A typed ordinary Int update with explicit fixity, mutation, and result. */
@@ -304,6 +309,7 @@ typedef OcamlLoweredIntUpdate = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 
 /** Closed typed place-operation families currently admitted by the target. */
@@ -368,5 +374,6 @@ typedef OcamlLoweredPlaceReportEntry = {
 	final schedule:Array<OcamlPlaceOccurrence>;
 	final effects:Array<OcamlLoweredEffect>;
 	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
 }
 #end

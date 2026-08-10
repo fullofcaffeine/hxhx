@@ -24,6 +24,9 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignmen
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 private typedef OcamlPlaceValidationFacts = {
 	final id:String;
@@ -54,6 +57,29 @@ private typedef OcamlStaticPlaceValidationFacts = {
 
 /** Checks semantic completeness before an admitted plan reaches target syntax. */
 class OcamlPlaceAssignmentValidator {
+	/** Checks that one sealed operator step owns exactly one `HxInt.add` use. */
+	static function validateIntAdditionRuntimeUse(errors:Array<String>, planId:String, requirementId:String, operatorOrder:Int, source:OcamlLoweredSourceSpan,
+			occurrences:Array<OcamlRuntimeUseOccurrence>):Void {
+		if (occurrences.length != 1) {
+			errors.push("primitive-Int mutation requires exactly one authorized HxInt.add occurrence");
+			return;
+		}
+		final occurrence = occurrences[0];
+		if (occurrence.ownerId != planId
+			|| occurrence.requirementId != requirementId
+			|| occurrence.domain != OcamlRuntimeUseDomain.ExpressionIdentifier
+			|| occurrence.exactSymbol != "HxInt.add"
+			|| occurrence.role != "int-add"
+			|| occurrence.order != operatorOrder
+			|| occurrence.source.file != source.file
+			|| occurrence.source.min != source.min
+			|| occurrence.source.max != source.max
+			|| occurrence.profileEligibility.join(",") != "metal,portable"
+			|| occurrence.cardinality != 1) {
+			errors.push("primitive-Int mutation runtime occurrence disagrees with its sealed operator step");
+		}
+	}
+
 	/** Validates any admitted place-plan variant through one sealed boundary. */
 	public static function validate(operation:OcamlLoweredPlaceOperation):Array<String> {
 		return switch (operation) {
@@ -299,6 +325,7 @@ class OcamlPlaceAssignmentValidator {
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("primitive-Int static += must record its Haxe Int addition runtime requirement");
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeId, 2, plan.source, plan.runtimeUseOccurrences);
 		if (containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed static-compound RHS");
 		return errors;
@@ -352,6 +379,7 @@ class OcamlPlaceAssignmentValidator {
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("primitive-Int static update must record its Haxe Int addition runtime requirement");
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeId, 1, plan.source, plan.runtimeUseOccurrences);
 		return errors;
 	}
 
@@ -457,6 +485,7 @@ class OcamlPlaceAssignmentValidator {
 					errors.push("array compound runtime requirement " + index + " is not the sealed semantic capability");
 			}
 		}
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeIds[1], 4, plan.source, plan.runtimeUseOccurrences);
 		if (containsUnsealedAdmittedPlace(plan.receiver)
 			|| containsUnsealedAdmittedPlace(plan.index)
 			|| containsUnsealedAdmittedPlace(plan.rightHandSide))
@@ -524,6 +553,7 @@ class OcamlPlaceAssignmentValidator {
 					errors.push("array update runtime requirement " + index + " is not the sealed semantic capability");
 			}
 		}
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeIds[1], 3, plan.source, plan.runtimeUseOccurrences);
 		if (containsUnsealedAdmittedPlace(plan.receiver) || containsUnsealedAdmittedPlace(plan.index))
 			errors.push("an admitted nested assignment or update is hidden inside an unsealed array-update child");
 		return errors;
@@ -566,6 +596,7 @@ class OcamlPlaceAssignmentValidator {
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("primitive-Int += must record its Haxe Int addition runtime requirement");
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeId, 3, plan.source, plan.runtimeUseOccurrences);
 		if (containsUnsealedAdmittedPlace(plan.receiver) || containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed source-shaped child");
 		return errors;
@@ -620,6 +651,7 @@ class OcamlPlaceAssignmentValidator {
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("primitive-Int update must record its Haxe Int addition runtime requirement");
+		validateIntAdditionRuntimeUse(errors, plan.id, expectedRuntimeId, 2, plan.source, plan.runtimeUseOccurrences);
 		if (containsUnsealedAdmittedPlace(plan.receiver))
 			errors.push("an admitted nested assignment or update is hidden inside an unsealed source-shaped child");
 		return errors;
