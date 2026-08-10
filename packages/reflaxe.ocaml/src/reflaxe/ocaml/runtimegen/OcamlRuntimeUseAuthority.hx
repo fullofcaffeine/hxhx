@@ -259,49 +259,26 @@ class OcamlRuntimeUseAuthority {
 		return false;
 	}
 
+	/**
+		Reports whether an unchecked name belongs to the migrated private-runtime set.
+
+		The string switch is also a compile-time performance boundary. Expressing this
+		closed set as one long Boolean `or` chain makes Haxe 4.3.7 null-safety explore
+		a rapidly growing number of condition paths before it can check this class.
+	**/
 	public static function isPlainPrivateReference(name:String):Bool {
-		return name == "HxInt.add"
-			|| name == "HxArray.set"
-			|| name == "HxArray.create"
-			|| name == "HxArray.push"
-			|| name == "HxAnon.get"
-			|| name == "HxAnon.set"
-			|| name == "HxRuntime.box_bool"
-			|| name == "HxRuntime.unbox_bool_or_obj"
-			|| name == "HxIterator.hasNext"
-			|| name == "HxIterator.next"
-			|| name == "HxBytes.fill"
-			|| name == "HxBytes.blit"
-			|| name == "HxBytes.get"
-			|| name == "HxBytes.set"
-			|| name == "HxBytes.getUInt16"
-			|| name == "HxBytes.setUInt16"
-			|| name == "HxBytes.getInt32"
-			|| name == "HxBytes.setInt32"
-			|| name == "HxBytes.getInt64"
-			|| name == "HxBytes.setInt64"
-			|| name == "HxBytes.getFloat"
-			|| name == "HxBytes.setFloat"
-			|| name == "HxBytes.getDouble"
-			|| name == "HxBytes.setDouble"
-			|| name == "HxBytes.getData"
-			|| name == "HxBytes.fastGet"
-			|| name == "HxBytes.requireMultiByteInt"
-			|| name == "HxBytes.length"
-			|| name == "HxBytes.sub"
-			|| name == "HxBytes.compare"
-			|| name == "HxBytes.getString"
-			|| name == "HxBytes.toString"
-			|| name == "HxBytes.toHex"
-			|| name == "HxBytes.create"
-			|| name == "HxBytes.alloc"
-			|| name == "HxBytes.ofString"
-			|| name == "HxBytes.ofData"
-			|| name == "HxBytes.ofHex"
-			|| name == "HxString.hx_null_string"
-			|| name == "HxRuntime.nullable_int_unwrap"
-			|| name == "HxRuntime.is_null"
-			|| name == "HxRuntime.hx_throw_typed";
+		return switch (name) {
+			case "HxInt.add", "HxArray.set", "HxArray.create", "HxArray.push", "HxAnon.get", "HxAnon.set", "HxRuntime.box_bool",
+				"HxRuntime.unbox_bool_or_obj", "HxIterator.hasNext", "HxIterator.next", "HxBytes.fill", "HxBytes.blit", "HxBytes.get", "HxBytes.set",
+				"HxBytes.getUInt16", "HxBytes.setUInt16", "HxBytes.getInt32", "HxBytes.setInt32", "HxBytes.getInt64", "HxBytes.setInt64", "HxBytes.getFloat",
+				"HxBytes.setFloat", "HxBytes.getDouble", "HxBytes.setDouble", "HxBytes.getData", "HxBytes.fastGet", "HxBytes.requireMultiByteInt",
+				"HxBytes.length", "HxBytes.sub", "HxBytes.compare", "HxBytes.getString", "HxBytes.toString", "HxBytes.toHex", "HxBytes.create",
+				"HxBytes.alloc", "HxBytes.ofString", "HxBytes.ofData", "HxBytes.ofHex", "HxString.hx_null_string", "HxRuntime.nullable_int_unwrap",
+				"HxRuntime.is_null", "HxRuntime.hx_throw_typed":
+				true;
+			case _:
+				false;
+		}
 	}
 }
 #end

@@ -290,6 +290,9 @@ class RuntimeUseAuthorityFixture {
 	static function migratedPrivatePlainReferencesFail():Void {
 		for (symbol in [
 			"HxInt.add",
+			"HxArray.set",
+			"HxArray.create",
+			"HxArray.push",
 			"HxAnon.get",
 			"HxAnon.set",
 			"HxRuntime.box_bool",
@@ -324,6 +327,7 @@ class RuntimeUseAuthorityFixture {
 			"HxBytes.ofString",
 			"HxBytes.ofData",
 			"HxBytes.ofHex",
+			"HxString.hx_null_string",
 			"HxRuntime.nullable_int_unwrap",
 			"HxRuntime.is_null",
 			"HxRuntime.hx_throw_typed"
@@ -334,6 +338,14 @@ class RuntimeUseAuthorityFixture {
 			final checker = authority([occurrence("U1", 0)]);
 			expectFailure(symbol, 'plain private runtime reference $symbol',
 				() -> checker.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent(moduleName), fieldName)));
+		}
+	}
+
+	/** Proves that similar, unmigrated names do not become reserved by accident. */
+	static function nonMigratedPlainReferencesRemainAllowed():Void {
+		for (symbol in ["HxArray.get", "HxString.hx_null_string_extra", "HxRuntime.hx_throw"]) {
+			final checker = authority([]);
+			checker.reconcileExpression(OcamlExpr.EIdent(symbol));
 		}
 	}
 
@@ -352,6 +364,7 @@ class RuntimeUseAuthorityFixture {
 		constructionFailures();
 		reconciliationFailures();
 		migratedPrivatePlainReferencesFail();
+		nonMigratedPlainReferencesRemainAllowed();
 		exactRequirementRoot();
 		assertTrue(true, "runtime use authority fixture completed");
 		Sys.println("RUNTIME_USE_AUTHORITY:PASS");
