@@ -2050,11 +2050,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 						reference.exactSymbol == target;
 					case EConst(_):
 						false;
-					case ERaw(_):
-						false;
-					case ERawInterpolated(parts):
+					case ERawInjection(injection):
 						var found = false;
-						for (part in parts) {
+						for (part in injection.segments()) {
 							switch (part) {
 								case RawText(_):
 								case RawExpression(child):
@@ -4937,9 +4935,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case EPos(_, inner):
 					visit(inner);
 				case EConst(_):
-				case ERaw(_):
-				case ERawInterpolated(parts):
-					for (part in parts)
+				case ERawInjection(injection):
+					for (part in injection.segments())
 						switch (part) {
 							case RawText(_):
 							case RawExpression(child):

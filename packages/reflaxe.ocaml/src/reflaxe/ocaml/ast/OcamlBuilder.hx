@@ -21,7 +21,6 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
@@ -35,8 +34,8 @@ import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax;
 import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax.OcamlIMapInterfaceSyntaxServices;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
-import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanPart;
-import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanResult;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionMaterializationResult;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionPlanResult;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlStructuralFieldSyntax;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
@@ -2168,37 +2167,12 @@ class OcamlBuilder {
 		}
 	}
 
-	/** Converts a checked placeholder plan without rendering any typed expression early. */
-	static function buildRawInjection(plan:Array<OcamlRawInterpolationPlanPart>, args:Array<OcamlExpr>):OcamlExpr {
-		final parts:Array<OcamlRawPart> = [];
-		for (part in plan) {
-			switch (part) {
-				case AuthoredText(value):
-					parts.push(RawText(value));
-				case TypedArgument(index):
-					parts.push(RawExpression(args[index]));
-			}
-		}
-		return OcamlExpr.ERawInterpolated(parts);
-	}
-
 	static function rawInjectionFailure(message:String, pos:Position):Void {
 		#if macro
 		Context.error("reflaxe.ocaml: " + message + ".", pos);
 		#else
 		throw "reflaxe.ocaml: " + message + ".";
 		#end
-	}
-
-	/** Rejects user-authored code that tries to impersonate a compiler-owned runtime module. */
-	static function validateRawOcamlText(text:String, pos:Position):Void {
-		final privateNames = OcamlCodeIdentifierScanner.scan(text).filter(OcamlCodeIdentifierScanner.isPrivateRuntimeIdentifier);
-		if (privateNames.length == 0)
-			return;
-		final message = "raw __ocaml__ text cannot name compiler-private runtime identifier "
-			+ privateNames[0]
-			+ "; use a typed Haxe expression or supported extern instead";
-		rawInjectionFailure(message, pos);
 	}
 
 	#if macro
@@ -3244,20 +3218,21 @@ class OcamlBuilder {
 								final a = unwrap(args[0]);
 								switch (a.expr) {
 									case TConst(TString(s)):
-										validateRawOcamlText(s, a.pos);
-										if (args.length == 1) {
-											OcamlExpr.ERaw(s);
-										} else {
-											switch (OcamlRawInterpolationPlan.create(s, args.length - 1)) {
-												case Invalid(message):
-													rawInjectionFailure(message, a.pos);
-													OcamlExpr.EConst(OcamlConst.CUnit);
-												case Planned(plan):
-													final compiledArgs = new Array<OcamlExpr>();
-													for (i in 1...args.length)
-														compiledArgs.push(buildExpr(args[i]));
-													buildRawInjection(plan, compiledArgs);
-											}
+										switch (OcamlRawInjection.plan(s, args.length - 1)) {
+											case PlanInvalid(message):
+												rawInjectionFailure(message, a.pos);
+												OcamlExpr.EConst(OcamlConst.CUnit);
+											case PlanReady(plan):
+												final compiledArgs = new Array<OcamlExpr>();
+												for (i in 1...args.length)
+													compiledArgs.push(buildExpr(args[i]));
+												switch (OcamlRawInjection.materialize(plan, compiledArgs)) {
+													case InjectionReady(injection):
+														OcamlExpr.ERawInjection(injection);
+													case InjectionInvalid(message):
+														rawInjectionFailure(message, a.pos);
+														OcamlExpr.EConst(OcamlConst.CUnit);
+												}
 										}
 									case _:
 										#if macro
@@ -7924,11 +7899,11 @@ class OcamlBuilder {
 		return switch (expr) {
 			case EPos(_, inner):
 				exprMentionsIdent(inner, target);
-			case EConst(_), ERaw(_):
+			case EConst(_):
 				false;
-			case ERawInterpolated(parts):
+			case ERawInjection(injection):
 				var found = false;
-				for (part in parts) {
+				for (part in injection.segments()) {
 					switch (part) {
 						case RawText(_):
 						case RawExpression(child):

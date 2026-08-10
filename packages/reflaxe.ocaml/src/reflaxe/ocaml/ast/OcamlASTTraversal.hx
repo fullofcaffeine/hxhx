@@ -2,7 +2,6 @@ package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
@@ -20,9 +19,9 @@ private enum OcamlASTWalkItem {
 	from that same mapping contract, so adding an AST constructor cannot silently
 	turn it into a leaf in one of those consumers.
 
-	`ERaw` text and the text parts of `ERawInterpolated` are deliberately opaque:
-	they are not parsed or traversed. Interpolated expression parts remain normal
-	AST children so compiler-owned runtime uses cannot disappear inside rendered
+	Authored text inside `ERawInjection` is deliberately opaque after the raw
+	boundary validates it. Its typed expression segments remain normal AST
+	children so compiler-owned runtime uses cannot disappear inside rendered
 	text. `EPos` is structurally transparent and always exposes its wrapped expression. Lexical
 	scope is outside this module; analyses that care about binding or shadowing
 	must add an explicit scope-aware layer instead of treating this walk as one.
@@ -32,17 +31,11 @@ class OcamlASTTraversal {
 	public static function mapExprImmediate(expression:OcamlExpr, mapExpression:OcamlExpr->OcamlExpr, mapPattern:OcamlPat->OcamlPat,
 			mapType:OcamlTypeExpr->OcamlTypeExpr):OcamlExpr {
 		return switch (expression) {
-			case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_):
+			case EConst(_), EIdent(_), ERuntimeIdent(_):
 				expression;
-			case ERawInterpolated(parts):
-				final mappedParts = mapArrayPreservingIdentity(parts, part -> switch (part) {
-					case RawText(_):
-						part;
-					case RawExpression(child):
-						final mappedChild = mapExpression(child);
-						mappedChild == child ? part : RawExpression(mappedChild);
-				});
-				mappedParts == parts ? expression : ERawInterpolated(mappedParts);
+			case ERawInjection(injection):
+				final mappedInjection = injection.mapExpressions(mapExpression);
+				mappedInjection == injection ? expression : ERawInjection(mappedInjection);
 			case EPos(pos, inner):
 				final mappedInner = mapExpression(inner);
 				mappedInner == inner ? expression : EPos(pos, mappedInner);

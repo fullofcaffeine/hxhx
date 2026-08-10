@@ -8,6 +8,7 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRecordField;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.ast.OcamlDebugPos;
+import reflaxe.ocaml.ast.OcamlRawInjection;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 
 enum OcamlBinop {
@@ -61,11 +62,8 @@ enum OcamlExpr {
 	/** A checked private-runtime name whose sealed use identity survives printing. */
 	ERuntimeIdent(reference:OcamlRuntimeReference);
 
-	/** Raw OCaml snippet injected verbatim (escape hatch). */
-	ERaw(code:String);
-
-	/** Raw authored text with typed expression children that remain structurally visible. */
-	ERawInterpolated(parts:Array<OcamlRawPart>);
+	/** Checked raw OCaml whose typed expression children remain structurally visible. */
+	ERawInjection(injection:OcamlRawInjection);
 
 	/**
 		Source position wrapper (best-effort).

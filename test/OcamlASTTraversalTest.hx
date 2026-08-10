@@ -4,10 +4,12 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlDebugPos;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlRawInjection;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionMaterializationResult;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionPlanResult;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
@@ -18,6 +20,19 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /** Verifies exhaustive, deterministic traversal of the OCaml target AST. */
 class OcamlASTTraversalTest {
+	/** Builds raw target syntax only through the production validation boundary. */
+	public static function rawInjectionExpression(template:String, arguments:Array<OcamlExpr>):OcamlExpr {
+		return switch (OcamlRawInjection.plan(template, arguments.length)) {
+			case PlanInvalid(message):
+				throw "raw injection plan failed in traversal fixture: " + message;
+			case PlanReady(plan):
+				switch (OcamlRawInjection.materialize(plan, arguments)) {
+					case InjectionReady(injection): OcamlExpr.ERawInjection(injection);
+					case InjectionInvalid(message): throw "raw injection materialization failed in traversal fixture: " + message;
+				}
+		};
+	}
+
 	/** Builds a real checked token so tests cannot bypass its restricted constructor. */
 	public static function runtimeIdentifierExpression():OcamlExpr {
 		final source:OcamlLoweredSourceSpan = {file: "Traversal.hx", min: 7, max: 8};
@@ -131,12 +146,8 @@ class OcamlASTTraversalTest {
 			OcamlExpr.EConst(OcamlConst.CUnit),
 			OcamlExpr.EIdent("ident_leaf"),
 			runtimeIdentifierExpression(),
-			OcamlExpr.ERaw("raw_leaf"),
-			OcamlExpr.ERawInterpolated([
-				OcamlRawPart.RawText("raw_interpolation("),
-				OcamlRawPart.RawExpression(OcamlExpr.EIdent("interpolated_child")),
-				OcamlRawPart.RawText(")")
-			]),
+			rawInjectionExpression("raw_leaf", []),
+			rawInjectionExpression("raw_interpolation({0})", [OcamlExpr.EIdent("interpolated_child")]),
 			OcamlExpr.EPos(debugPosition, OcamlExpr.EIdent("position_child")),
 			OcamlExpr.ERaise(OcamlExpr.EIdent("raise_child")),
 			OcamlExpr.ELet("binding", OcamlExpr.EIdent("let_value"), OcamlExpr.EIdent("let_body"), false),
@@ -286,11 +297,8 @@ class OcamlASTTraversalTest {
 						OcamlTypeExpr.TApp("HxType.t", [OcamlTypeExpr.TIdent("HxNested.t")]))
 				}
 			]),
-			OcamlExpr.ERaw("HxRaw.hidden"),
-			OcamlExpr.ERawInterpolated([
-				OcamlRawPart.RawText("HxRawText.hidden "),
-				OcamlRawPart.RawExpression(runtimeIdentifierExpression())
-			])
+			rawInjectionExpression("NativeRaw.hidden", []),
+			rawInjectionExpression("NativeRawText.hidden {0}", [runtimeIdentifierExpression()])
 		]);
 		final items:Array<OcamlModuleItem> = [
 			OcamlModuleItem.ILet([{name: "value", expr: expression}], false),

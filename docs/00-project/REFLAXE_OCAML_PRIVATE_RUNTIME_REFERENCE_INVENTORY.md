@@ -26,17 +26,17 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 385 legacy entries:
+The current reviewed baseline contains 353 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 355 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 331 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured types | 13 | Direct `TIdent` or `TApp` construction containing a private runtime type. |
-| Structured patterns | 15 | Direct private runtime constructors in OCaml patterns. |
+| Structured patterns | 9 | Direct private runtime constructors in OCaml patterns. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
-| Raw boundary | 2 | `__ocaml__` has one opaque literal path and one interpolated path whose typed expression children remain visible to compiler checks. |
+| Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-Most entries—369—are in `OcamlBuilder.hx`. That is an ownership warning, not a
+Most entries—337—are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place the migration there. Each semantic family should move through a
 focused lowering or syntax module, and new runtime-reference infrastructure
 must remain small and independent of that large builder.

@@ -96,7 +96,7 @@ class OcamlASTPrinter {
 			switch (current) {
 				case EPos(_, inner):
 					current = inner;
-				case EConst(_), EIdent(_), ERuntimeIdent(_), ERaw(_), ERawInterpolated(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
+				case EConst(_), EIdent(_), ERuntimeIdent(_), ERawInjection(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
 					return PREC_ATOM;
 				case EField(_, _):
 					return PREC_FIELD;
@@ -148,9 +148,10 @@ class OcamlASTPrinter {
 		switch (expression) {
 			case EConst(constant):
 				work.push(EmitText(printConst(constant)));
-			case EIdent(name), ERaw(name):
+			case EIdent(name):
 				work.push(EmitText(name));
-			case ERawInterpolated(parts):
+			case ERawInjection(injection):
+				final parts = injection.segments();
 				var index = parts.length;
 				while (index > 0) {
 					index--;

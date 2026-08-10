@@ -1,12 +1,12 @@
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
-import reflaxe.ocaml.ast.OcamlRawInterpolationPlan;
+import reflaxe.ocaml.ast.OcamlRawInjection;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionMaterializationResult;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionPlanResult;
 import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanPart;
-import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanResult;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
@@ -19,16 +19,21 @@ class OcamlASTPrinterTest {
 
 	/** Proves that a raw template cannot discard or duplicate one typed expression. */
 	static function verifyRawInterpolationPlan():Void {
-		switch (OcamlRawInterpolationPlan.create("before {0} middle {1} after", 2)) {
-			case Planned([
-				AuthoredText("before "),
-				TypedArgument(0),
-				AuthoredText(" middle "),
-				TypedArgument(1),
-				AuthoredText(" after")
-			]):
-			case other:
-				throw "valid raw interpolation plan changed: " + Std.string(other);
+		switch (OcamlRawInjection.plan("before {0} middle {1} after", 2)) {
+			case PlanReady(plan):
+				switch (plan.parts()) {
+					case [
+						AuthoredText("before "),
+						TypedArgument(0),
+						AuthoredText(" middle "),
+						TypedArgument(1),
+						AuthoredText(" after")
+					]:
+					case other:
+						throw "valid raw interpolation plan changed: " + Std.string(other);
+				}
+			case PlanInvalid(message):
+				throw "valid raw interpolation plan failed: " + message;
 		}
 
 		for (testCase in [
@@ -61,15 +66,34 @@ class OcamlASTPrinterTest {
 				template: "{0}xRuntime",
 				arguments: 1,
 				expected: "separated from authored identifier text"
+			},
+			{
+				label: "private runtime",
+				template: "HxRuntime.hx_null",
+				arguments: 0,
+				expected: "cannot name compiler-private runtime identifier HxRuntime"
 			}
 		]) {
-			switch (OcamlRawInterpolationPlan.create(testCase.template, testCase.arguments)) {
-				case Invalid(message) if (message.indexOf(testCase.expected) >= 0):
-				case Invalid(message):
+			switch (OcamlRawInjection.plan(testCase.template, testCase.arguments)) {
+				case PlanInvalid(message) if (message.indexOf(testCase.expected) >= 0):
+				case PlanInvalid(message):
 					throw testCase.label + " raw interpolation error changed: " + message;
-				case Planned(_):
+				case PlanReady(_):
 					throw testCase.label + " raw interpolation unexpectedly succeeded";
 			}
+		}
+
+		switch (OcamlRawInjection.plan("{0}", 1)) {
+			case PlanInvalid(message):
+				throw "valid raw materialization plan failed: " + message;
+			case PlanReady(plan):
+				switch (OcamlRawInjection.materialize(plan, [])) {
+					case InjectionInvalid(message) if (message.indexOf("expected 1 typed arguments but received 0") >= 0):
+					case InjectionInvalid(message):
+						throw "raw materialization cardinality error changed: " + message;
+					case InjectionReady(_):
+						throw "raw materialization accepted a missing typed argument";
+				}
 		}
 	}
 
@@ -105,11 +129,16 @@ class OcamlASTPrinterTest {
 			"checked runtime identifier prints the exact planned symbol without printer decisions");
 		assertEq("HxArray.ObjStore runtime_pattern_arg", p.printPat(OcamlASTTraversalTest.runtimeConstructorPattern()),
 			"checked runtime pattern prints the exact planned constructor without printer decisions");
-		assertEq("(ignore visible_child)", p.printExpr(OcamlExpr.ERawInterpolated([
-			OcamlRawPart.RawText("(ignore "),
-			OcamlRawPart.RawExpression(OcamlExpr.EIdent("visible_child")),
-			OcamlRawPart.RawText(")")
-		])), "raw interpolation prints authored text around a structured expression child");
+		final rawExpression = OcamlASTTraversalTest.rawInjectionExpression("(ignore {0})", [OcamlExpr.EIdent("visible_child")]);
+		assertEq("(ignore visible_child)", p.printExpr(rawExpression), "raw interpolation prints authored text around a structured expression child");
+		switch (rawExpression) {
+			case ERawInjection(injection):
+				final callerCopy = injection.segments();
+				callerCopy.resize(0);
+				assertEq("(ignore visible_child)", p.printExpr(rawExpression), "mutating a returned segment list cannot change validated raw syntax");
+			case _:
+				throw "raw fixture did not produce the checked raw AST node";
+		}
 
 		// application + arg parens for low-precedence expressions
 		assertEq("f (let x = 1 in x)", p.printExpr(OcamlExpr.EApp(OcamlExpr.EIdent("f"), [

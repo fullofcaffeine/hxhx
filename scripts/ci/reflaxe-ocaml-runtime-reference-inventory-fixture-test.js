@@ -34,6 +34,7 @@ class FixtureSyntax {
     final unqualifiedRaw = ERaw(otherCode);
     final unqualifiedInterpolated = ERawInterpolated(parts);
     final qualifiedInterpolated = OcamlExpr.ERawInterpolated(parts);
+    final checkedInjection = OcamlExpr.ERawInjection(injection);
     return OcamlExpr.ERaw(userCode);
   }
 }
@@ -60,6 +61,14 @@ const traversalRebuild = discoverFromSourceMap(new Map([[
 	'class OcamlASTTraversal { static function rebuild(parts) return ERawInterpolated(parts); }',
 ]]))
 assert.deepStrictEqual(traversalRebuild, [], 'structural traversal rebuild must not be counted as a new raw boundary')
+
+const rawVariantDeclaration = discoverFromSourceMap(new Map([[
+	'packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlExpr.hx',
+	'enum OcamlExpr { ERawText(code:String); ERawInjection(injection:OcamlRawInjection); }',
+]]))
+assert.deepStrictEqual(rawVariantDeclaration.map(record => [record.domain, record.construction]), [
+	['raw-boundary', 'ERawText'],
+], 'a new unchecked raw AST variant must re-enter the legacy inventory even before a builder constructs it')
 
 const first = buildInventory(records, 'haxe_ocaml-fixture')
 const second = buildInventory(discoverFromSourceMap(sourceMap(baselineSource)), 'haxe_ocaml-fixture')

@@ -266,12 +266,14 @@ function discoverLegacyGeneratedText(records, relativePath, source, masked) {
 }
 
 function discoverRawBoundaries(records, relativePath, source, masked) {
-	const rawConstructor = /\b(?:OcamlExpr\.)?(ERaw(?:Interpolated)?)\s*\(/g
+	const rawConstructor = /\b(?:OcamlExpr\.)?(ERaw[A-Za-z0-9_]*)\s*\(/g
 	for (const match of masked.matchAll(rawConstructor)) {
+		// The checked node cannot carry authored text without an
+		// OcamlRawInjection, whose private constructor proves validation first.
+		if (match[1] === 'ERawInjection') continue
 		const lineStart = masked.lastIndexOf('\n', match.index) + 1
 		const linePrefix = masked.slice(lineStart, match.index)
 		if (/\bcase\b/.test(linePrefix)) continue
-		if (relativePath.endsWith('/OcamlExpr.hx') && linePrefix.trim() === '') continue
 		// The exhaustive traversal reconstructs an already-authorized node after
 		// mapping its typed children. It is not a source-to-raw boundary owner.
 		if (relativePath.endsWith('/OcamlASTTraversal.hx')) continue
