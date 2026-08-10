@@ -17,7 +17,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 72 || report.callModel !== 'typed-ocaml-directional-call-boundary-v21') {
+if (report.schemaVersion !== 73 || report.callModel !== 'typed-ocaml-directional-call-boundary-v22') {
 	fail('expected the optional-function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call =>

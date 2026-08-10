@@ -90,7 +90,7 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v87";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v88";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v16";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v4";
 
@@ -441,8 +441,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 72) {
-						throw 'Unsupported lowering report schema $version; expected 72.';
+					if (version != 73) {
+						throw 'Unsupported lowering report schema $version; expected 73.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1595,7 +1595,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v21")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v22")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1704,27 +1704,54 @@ class ReflaxeOcamlInspection {
 		final expectedField = switch (target.operation) {
 			case "concat": "concat";
 			case "copy": "copy";
+			case "push": "push";
+			case "pop": "pop";
+			case "shift": "shift";
+			case "unshift": "unshift";
+			case "reverse": "reverse";
 			case _: throw 'Standard Array call "${call.id}" has unsupported operation "${target.operation}".';
 		}
 		final expectedArrayType = 'Array<${target.elementSemanticTypeId}>';
-		final expectedArguments = target.operation == "concat" ? [expectedArrayType] : [];
+		final expectedParameters = switch (target.operation) {
+			case "concat": [expectedArrayType];
+			case "push" | "unshift": [target.elementSemanticTypeId];
+			case "copy" | "pop" | "shift" | "reverse": [];
+			case _: [];
+		};
+		final expectedResultType = switch (target.operation) {
+			case "concat" | "copy": expectedArrayType;
+			case "push": "Int";
+			case "pop" | "shift": 'Null<${target.elementSemanticTypeId}>';
+			case "unshift" | "reverse": "Void";
+			case _: "";
+		};
+		final expectedResultKind = target.operation == "unshift" || target.operation == "reverse" ? "effect-only-void" : "value";
+		final expectedRuntimeTakesUnit = target.operation == "pop" || target.operation == "shift" || target.operation == "reverse";
+		final sourceArgumentsMatch = target.argumentSemanticTypeIds.length == expectedParameters.length
+			&& !Lambda.exists(target.argumentSemanticTypeIds, argument -> argument.length == 0)
+			&& (target.operation != "concat" || target.argumentSemanticTypeIds[0] == expectedParameters[0]);
 		if (call.calleeId != 'Array|Array::$expectedField'
 			|| call.sourceModuleId != "Array"
 			|| call.sourceTypeName != "Array"
 			|| call.sourceFieldName != expectedField
 			|| call.receiver != null
 			|| call.arguments.length != 0
-			|| call.resultKind != "value"
+			|| call.resultKind != expectedResultKind
 			|| call.result != null
 			|| call.standardIMapTarget != null
 			|| call.structuralIteratorTarget != null
 			|| target.receiverSemanticTypeId != expectedArrayType
-			|| target.argumentSemanticTypeIds.join("\n") != expectedArguments.join("\n")
-			|| target.resultSemanticTypeId != expectedArrayType
+			|| target.parameterSemanticTypeIds.join("\n") != expectedParameters.join("\n")
+			|| !sourceArgumentsMatch
+			|| target.argumentCompatibilityProofIds.length != expectedParameters.length
+			|| Lambda.exists(target.argumentCompatibilityProofIds, proofId -> proofId != "haxe-typed-array-argument-compatible-v1")
+			|| target.resultSemanticTypeId != expectedResultType
+			|| target.resultKind != expectedResultKind
 			|| target.runtimeModule != "HxArray"
 			|| target.runtimeFunction != expectedField
+			|| target.runtimeTakesUnitArgument != expectedRuntimeTakesUnit
 			|| target.runtimeCapabilities.join(",") != "haxe-array"
-			|| target.proofId != "standard-array-typed-target-call-v1"
+			|| target.proofId != "standard-array-typed-target-call-v2"
 			|| call.proofId != target.proofId
 			|| call.proofClaim != target.proofClaim
 			|| call.profileEligibility.join(",") != "metal,portable") {
@@ -2143,10 +2170,14 @@ class ReflaxeOcamlInspection {
 			operation: requiredString(target, "operation"),
 			elementSemanticTypeId: requiredString(target, "elementSemanticTypeId"),
 			receiverSemanticTypeId: requiredString(target, "receiverSemanticTypeId"),
+			parameterSemanticTypeIds: requiredStringArray(target, "parameterSemanticTypeIds"),
 			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
+			argumentCompatibilityProofIds: requiredStringArray(target, "argumentCompatibilityProofIds"),
 			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			resultKind: requiredString(target, "resultKind"),
 			runtimeModule: requiredString(target, "runtimeModule"),
 			runtimeFunction: requiredString(target, "runtimeFunction"),
+			runtimeTakesUnitArgument: requiredBool(target, "runtimeTakesUnitArgument"),
 			runtimeCapabilities: requiredStringArray(target, "runtimeCapabilities"),
 			proofId: requiredString(target, "proofId"),
 			proofClaim: requiredString(target, "proofClaim")

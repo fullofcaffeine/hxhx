@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayResultKind;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallTarget;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
@@ -837,7 +838,7 @@ class OcamlCallPlan {
 			|| call.sourceFieldName != expectedField
 			|| call.receiver != null
 			|| call.arguments.length != 0
-			|| call.resultKind != OcamlCallResultKind.Value
+			|| call.resultKind != standardArrayCallResultKind(target.resultKind)
 			|| call.result != null
 			|| call.standardIMapTarget != null
 			|| call.structuralIteratorTarget != null
@@ -881,6 +882,15 @@ class OcamlCallPlan {
 			|| invocation.sourceArgumentIndex != null
 			|| invocation.slotId != null) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard Array call "${call.id}" has an invalid invocation step';
+		}
+	}
+
+	/** Converts the Array-specific result fact into the shared call result kind. */
+	public static function standardArrayCallResultKind(resultKind:OcamlStandardArrayResultKind):OcamlCallResultKind {
+		return switch (resultKind) {
+			case Value: OcamlCallResultKind.Value;
+			case EffectOnlyVoid: OcamlCallResultKind.EffectOnlyVoid;
+			case _: throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported standard Array result kind "$resultKind"';
 		}
 	}
 
@@ -1941,7 +1951,7 @@ class OcamlCallPlanner {
 			kind: OcamlCallKind.StandardArrayMethod,
 			receiver: null,
 			arguments: [],
-			resultKind: OcamlCallResultKind.Value,
+			resultKind: OcamlCallPlan.standardArrayCallResultKind(target.resultKind),
 			result: null,
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, target.argumentSemanticTypeIds.length, [], false, true),
 			profileEligibility: ["metal", "portable"],

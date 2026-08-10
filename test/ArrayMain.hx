@@ -1,3 +1,9 @@
+/**
+	Exercises Array behavior through both upstream Haxe and generated OCaml.
+
+	`M6ArrayIntegrationTest` runs this same source through both compilers, so
+	each assertion is a behavior oracle rather than a generated-text snapshot.
+**/
 class ArrayMain {
 	static var callOrder:Array<String> = [];
 
@@ -11,11 +17,23 @@ class ArrayMain {
 		return [8];
 	}
 
+	static function makeMutationArgument():Int {
+		callOrder.push("argument");
+		return 8;
+	}
+
+	static function makePairReceiver():Array<Int> {
+		callOrder.push("receiver");
+		return [7, 6];
+	}
+
 	static function main() {
 		final a = [];
 
-		a.push(1);
-		a.push(2);
+		if (a.push(1) != 1)
+			throw "push_result_1";
+		if (a.push(2) != 2)
+			throw "push_result_2";
 		if (a.length != 2)
 			throw "len2";
 		if (a[0] != 1)
@@ -40,6 +58,12 @@ class ArrayMain {
 		final s = a.shift();
 		if (s != 0)
 			throw "shift";
+
+		final empty:Array<Int> = [];
+		if (empty.pop() != null)
+			throw "empty_pop";
+		if (empty.shift() != null)
+			throw "empty_shift";
 
 		a.insert(0, 9);
 		if (a[0] != 9)
@@ -81,6 +105,29 @@ class ArrayMain {
 			throw "concat_order";
 		if (orderedConcat.length != 2 || orderedConcat[0] != 7 || orderedConcat[1] != 8)
 			throw "concat_once";
+
+		callOrder = [];
+		final orderedPushLength = makeReceiver().push(makeMutationArgument());
+		if (callOrder.join(",") != "receiver,argument" || orderedPushLength != 2)
+			throw "push_order_or_result";
+
+		callOrder = [];
+		makeReceiver().unshift(makeMutationArgument());
+		if (callOrder.join(",") != "receiver,argument")
+			throw "unshift_order";
+
+		callOrder = [];
+		if (makeReceiver().pop() != 7 || callOrder.join(",") != "receiver")
+			throw "pop_receiver_once";
+
+		callOrder = [];
+		if (makeReceiver().shift() != 7 || callOrder.join(",") != "receiver")
+			throw "shift_receiver_once";
+
+		callOrder = [];
+		makePairReceiver().reverse();
+		if (callOrder.join(",") != "receiver")
+			throw "reverse_receiver_once";
 
 		if (!b.contains(3))
 			throw "contains_true";

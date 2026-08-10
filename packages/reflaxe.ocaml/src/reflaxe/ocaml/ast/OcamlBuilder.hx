@@ -1370,6 +1370,8 @@ class OcamlBuilder {
 				materialized.push({name: argumentName, value: buildExpr(arguments[index])});
 				applicationArguments.push(OcamlExpr.EIdent(argumentName));
 			}
+			if (target.runtimeTakesUnitArgument)
+				applicationArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
 			var out = OcamlExpr.EApp(runtimeFunction, applicationArguments);
 			for (offset in 0...materialized.length) {
 				final binding = materialized[materialized.length - 1 - offset];
@@ -4270,21 +4272,6 @@ class OcamlBuilder {
 														case "toString" if (args.length == 0):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "toString"),
 																[buildExpr(objExpr), buildArrayJoinStringifier(objExpr, e.pos)]);
-														case "push":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
-														case "pop":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "pop"),
-																[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "shift":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "shift"),
-																[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "reverse":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "reverse"),
-																[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "unshift":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "unshift"),
-																[buildExpr(objExpr), buildExpr(args[0])]);
 														case "insert":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "insert"),
 																[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]);

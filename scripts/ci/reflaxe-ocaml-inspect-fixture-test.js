@@ -114,7 +114,7 @@ try {
 		const target = call.standardArrayTarget
 		return call.kind === 'standard-array-method'
 			&& target.runtimeModule === 'HxArray'
-			&& (target.runtimeFunction === 'concat' || target.runtimeFunction === 'copy')
+			&& ['concat', 'copy', 'push', 'pop', 'shift', 'unshift', 'reverse'].includes(target.runtimeFunction)
 	}))
 	assert(report.lowering.calls.some(call =>
 		call.arguments.length === 0
@@ -487,6 +487,17 @@ try {
 	const corruptNullableDefaultReport = JSON.parse(corruptNullableDefaultResult.stdout)
 	assert.strictEqual(corruptNullableDefaultReport.lowering.status, 'invalid')
 	assert(corruptNullableDefaultReport.lowering.message.includes('does not match its sealed nullable primitive field default'))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const corruptStandardArrayValue = JSON.parse(loweringBytes)
+	const corruptStandardArray = corruptStandardArrayValue.calls.find(call => call.standardArrayTarget != null)
+	assert(corruptStandardArray)
+	corruptStandardArray.standardArrayTarget.runtimeTakesUnitArgument = !corruptStandardArray.standardArrayTarget.runtimeTakesUnitArgument
+	fs.writeFileSync(loweringPath, JSON.stringify(corruptStandardArrayValue, null, 2) + '\n')
+	const corruptStandardArrayResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(corruptStandardArrayResult.status, 1)
+	const corruptStandardArrayReport = JSON.parse(corruptStandardArrayResult.stdout)
+	assert.strictEqual(corruptStandardArrayReport.lowering.status, 'invalid')
+	assert(corruptStandardArrayReport.lowering.message.includes('disagrees with its source declaration, typed target, runtime, or proof'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const missingUnsafeValue = JSON.parse(loweringBytes)
 	const removedUnsafe = missingUnsafeValue.unsafeOperations.pop()

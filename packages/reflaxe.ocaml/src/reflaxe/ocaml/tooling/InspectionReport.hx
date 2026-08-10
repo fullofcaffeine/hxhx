@@ -425,10 +425,14 @@ typedef InspectionStandardArrayCallTarget = {
 	final operation:String;
 	final elementSemanticTypeId:String;
 	final receiverSemanticTypeId:String;
+	final parameterSemanticTypeIds:Array<String>;
 	final argumentSemanticTypeIds:Array<String>;
+	final argumentCompatibilityProofIds:Array<String>;
 	final resultSemanticTypeId:String;
+	final resultKind:String;
 	final runtimeModule:String;
 	final runtimeFunction:String;
+	final runtimeTakesUnitArgument:Bool;
 	final runtimeCapabilities:Array<String>;
 	final proofId:String;
 	final proofClaim:String;
