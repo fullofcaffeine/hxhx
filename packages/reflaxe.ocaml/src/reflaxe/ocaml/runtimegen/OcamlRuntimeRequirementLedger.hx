@@ -11,6 +11,9 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralPro
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
+import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
 #end
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
@@ -374,6 +377,48 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one complete Haxe catch chain. */
 	public function recordCatchChain(chain:OcamlCatchChainDecision):Void {
 		for (requirement in requirementsForCatchChain(chain))
+			record(requirement);
+	}
+
+	/** Returns the exact HxRuntime requirement selected by one sealed early return. */
+	public static function requirementsForReturnDecision(decision:OcamlControlDecision):Array<OcamlRuntimeRequirement> {
+		final plan = OcamlReturnRuntimeUseContract.forDecision(decision);
+		final subjectType = decision.payload == null ? "Void" : decision.payload.outputSemanticTypeId;
+		final implementation = switch (decision.mechanism) {
+			case RuntimeReturnSignal: {
+					feature: "haxe-function-return-signal-v1",
+					explanation: "The sealed value-bearing return raises one private signal so only its owning Haxe function boundary can recover the already-selected result carrier."
+				};
+			case RuntimeVoidReturnSignal: {
+					feature: "haxe-function-void-return-signal-v1",
+					explanation: "The sealed payloadless return raises one private signal so only its owning effect-only Haxe Void function boundary exits early."
+				};
+			case _: throw 'Return decision "${decision.id}" has no supported runtime signal.';
+		};
+		return [
+			normalize({
+				id: plan.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: decision.runtimeCapabilityId,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: subjectType
+				},
+				implementationFeature: implementation.feature,
+				rootModules: ["HxRuntime"],
+				profileEligibility: decision.profileEligibility,
+				explanation: implementation.explanation
+			})
+		];
+	}
+
+	/** Records the private signal requirement owned by one sealed early return. */
+	public function recordReturnDecision(decision:OcamlControlDecision):Void {
+		for (requirement in requirementsForReturnDecision(decision))
 			record(requirement);
 	}
 	#end

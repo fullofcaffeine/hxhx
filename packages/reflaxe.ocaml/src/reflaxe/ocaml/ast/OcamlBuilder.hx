@@ -52,6 +52,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeTagUseRole;
+import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -762,7 +763,7 @@ class OcamlBuilder {
 			case RuntimeVoidReturnSignal:
 				if (value != null || decision.payload != null)
 					controlPlanInvariant('control decision "${decision.id}" selected an effect-only Void return for a value-bearing typed return',
-					position); else OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"));
+					position); else buildAuthorizedReturnSignal(decision, null, position);
 			case RuntimeReturnSignal:
 				if (value == null)
 					controlPlanInvariant('control decision "${decision.id}" expects an exact represented return value, but the typed return is empty',
@@ -785,11 +786,54 @@ class OcamlBuilder {
 									controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}',
 										position);
 						}
-						OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+						buildAuthorizedReturnSignal(decision, payload, position);
 					}
 				}
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
+		}
+	}
+
+	/**
+		Raises one planned private return signal after checking its exact owner.
+
+		The control plan has already decided whether this return carries a value. This
+		helper only converts that decision's one runtime-use occurrence into a hidden
+		AST reference and proves the resulting signal expression used it exactly once.
+	**/
+	function buildAuthorizedReturnSignal(decision:OcamlControlDecision, payload:Null<OcamlExpr>, position:Position):OcamlExpr {
+		return try {
+			final runtimeUsePlan = OcamlReturnRuntimeUseContract.forDecision(decision);
+			OcamlReturnRuntimeUseContract.requireForDecision(decision, runtimeUsePlan);
+			final occurrence = OcamlReturnRuntimeUseContract.signalOccurrence(runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final signal = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
+			final expression = switch (decision.mechanism) {
+				case RuntimeReturnSignal:
+					if (payload == null)
+						return controlPlanInvariant('return decision "${decision.id}" lost its sealed payload before signal construction', position);
+					OcamlExpr.ERaise(OcamlExpr.EApp(signal, [payload]));
+				case RuntimeVoidReturnSignal:
+					if (payload != null)
+						return controlPlanInvariant('payloadless return decision "${decision.id}" received a target value', position);
+					OcamlExpr.ERaise(signal);
+				case _:
+					return controlPlanInvariant('return decision "${decision.id}" selected unsupported signal mechanism ${decision.mechanism}', position);
+			};
+			// The returned value can contain private helpers owned by other sealed
+			// plans. Check only the signal node introduced here; the request-wide final
+			// authority still walks the complete expression before publication.
+			final signalProof = switch (decision.mechanism) {
+				case RuntimeReturnSignal: OcamlExpr.EApp(signal, [OcamlExpr.EIdent("return_payload_owned_elsewhere")]);
+				case RuntimeVoidReturnSignal: signal;
+				case _: throw "unreachable return-signal proof mechanism";
+			};
+			runtimeAuthority.reconcileExpression(signalProof);
+			expression;
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
 		}
 	}
 

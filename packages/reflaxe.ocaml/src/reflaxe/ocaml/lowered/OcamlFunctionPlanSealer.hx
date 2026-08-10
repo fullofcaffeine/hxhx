@@ -172,6 +172,9 @@ class OcamlFunctionPlanSealer {
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		for (chain in controls.catchChains())
 			context.recordCatchChainRuntimeRequirements(chain);
+		for (decision in controls.decisions())
+			if (decision.kind == OcamlControlTransferKind.Return)
+				context.recordReturnRuntimeRequirement(decision);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
@@ -371,6 +374,9 @@ class OcamlFunctionPlanSealer {
 								context.recordArrayLiteralRuntimeRequirements(decision);
 							for (chain in controls.catchChains())
 								context.recordCatchChainRuntimeRequirements(chain);
+							for (decision in controls.decisions())
+								if (decision.kind == OcamlControlTransferKind.Return)
+									context.recordReturnRuntimeRequirement(decision);
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}
 					}

@@ -582,6 +582,17 @@ class CompilationContext {
 	}
 
 	/**
+		Records why one sealed early return needs its private HxRuntime signal.
+
+		The control plan already fixed the owning function and optional result
+		carrier. This handoff records that exact source decision before syntax creates
+		the signal identifier; it does not infer a dependency from generated OCaml.
+	**/
+	public function recordReturnRuntimeRequirement(decision:OcamlControlDecision):Void {
+		runtimeRequirements.recordReturnDecision(decision);
+	}
+
+	/**
 		Records why one sealed anonymous-object operation needs `HxAnon`.
 
 		The operation was already selected from the final typed function. This
