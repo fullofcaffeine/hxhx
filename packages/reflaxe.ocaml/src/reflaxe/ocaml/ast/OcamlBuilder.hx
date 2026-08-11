@@ -54,6 +54,7 @@ import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeTagUseRo
 import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopTargetRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -1017,9 +1018,36 @@ class OcamlBuilder {
 		final tags = OcamlExpr.EList(decision.runtimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
 		return switch (decision.mechanism) {
 			case RuntimeTypedHaxeExceptionSignal:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tags]);
+				buildAuthorizedThrowSignal(decision, payload, tags, position);
 			case _:
 				controlPlanInvariant('throw decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
+		}
+	}
+
+	/**
+		Builds one planned throw call after checking its exact private-runtime owner.
+
+		The payload can contain calls owned by other plans. This helper checks only
+		the `HxType` name introduced for this throw. The request-wide final check then
+		verifies that the completed target tree contains the same occurrence once.
+	**/
+	function buildAuthorizedThrowSignal(decision:OcamlControlDecision, payload:OcamlExpr, tags:OcamlExpr, position:Position):OcamlExpr {
+		return try {
+			final runtimeUsePlan = OcamlThrowRuntimeUseContract.forDecision(decision);
+			OcamlThrowRuntimeUseContract.requireForDecision(decision, runtimeUsePlan);
+			final occurrence = OcamlThrowRuntimeUseContract.signalOccurrence(runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final signal = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			final expression = OcamlExpr.EApp(signal, [payload, tags]);
+			authority.reconcileExpression(OcamlExpr.EApp(signal, [
+				OcamlExpr.EIdent("throw_payload_owned_elsewhere"),
+				OcamlExpr.EIdent("throw_tags_owned_by_control_plan")
+			]));
+			expression;
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
 		}
 	}
 

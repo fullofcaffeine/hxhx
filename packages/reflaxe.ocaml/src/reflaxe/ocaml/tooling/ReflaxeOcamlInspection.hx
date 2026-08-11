@@ -3700,6 +3700,29 @@ class ReflaxeOcamlInspection {
 			if (control.kind != "throw" || payload == null)
 				continue;
 			final enumPayload:InspectionControlPayload = payload;
+			final throwRequirementId = control.id + ":runtime:" + control.runtimeCapabilityId;
+			final throwRequirement = requirements.get(throwRequirementId);
+			if (throwRequirement == null)
+				throw 'Throw decision "${control.id}" refers to missing runtime requirement "$throwRequirementId".';
+			final throwSource = requiredObject(throwRequirement, "source");
+			final throwSubject = requiredObject(throwRequirement, "subject");
+			final throwRoots = requiredStringArray(throwRequirement, "rootModules");
+			if (requiredString(throwRequirement, "sourceKind") != "haxe-expression"
+				|| requiredString(throwRequirement, "sourceId") != control.id
+				|| requiredString(throwSource, "file") != control.sourceFile
+				|| requiredInt(throwSource, "min") != control.sourceMin
+				|| requiredInt(throwSource, "max") != control.sourceMax
+				|| requiredString(throwRequirement, "semanticCapability") != control.runtimeCapabilityId
+				|| requiredString(throwRequirement, "cause") != "lowering-decision"
+				|| requiredString(throwRequirement, "decisionId") != control.id
+				|| requiredString(throwSubject, "kind") != "haxe-type"
+				|| requiredString(throwSubject, "id") != enumPayload.inputSemanticTypeId
+				|| requiredString(throwRequirement, "implementationFeature") != "haxe-typed-throw-v1"
+				|| throwRoots.join(",") != "HxType"
+				|| requiredStringArray(throwRequirement, "profileEligibility").join(",") != control.profileEligibility.join(",")) {
+				throw 'Throw decision "${control.id}" runtime requirement "$throwRequirementId" disagrees with its sealed HxType signal.';
+			}
+			referenced.set(throwRequirementId, true);
 			if (enumPayload.conversion != "box-enum-throw-carrier")
 				continue;
 			final requirementId = control.id + ":runtime:haxe-enum-dynamic-box";

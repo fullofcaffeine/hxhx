@@ -670,6 +670,18 @@ class OcamlLoweringReportWriter {
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (control in sortedControls) {
+			if (control.kind != OcamlControlTransferKind.Throw)
+				continue;
+			for (expected in OcamlRuntimeRequirementLedger.requirementsForThrowDecision(control)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Throw decision "${control.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Throw decision "${control.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
+		for (control in sortedControls) {
 			final payload = control.payload;
 			if (payload == null || !OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
 				continue;

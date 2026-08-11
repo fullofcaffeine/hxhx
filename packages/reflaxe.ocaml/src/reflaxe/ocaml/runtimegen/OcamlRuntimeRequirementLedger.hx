@@ -29,6 +29,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUseContract;
 #end
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
@@ -683,6 +684,39 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private signal requirement owned by one sealed early return. */
 	public function recordReturnDecision(decision:OcamlControlDecision):Void {
 		for (requirement in requirementsForReturnDecision(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact HxType requirement selected by one sealed Haxe throw. */
+	public static function requirementsForThrowDecision(decision:OcamlControlDecision):Array<OcamlRuntimeRequirement> {
+		final plan = OcamlThrowRuntimeUseContract.forDecision(decision);
+		final payload = decision.payload;
+		if (payload == null)
+			throw 'Throw decision "${decision.id}" has no sealed payload.';
+		return [
+			normalize({
+				id: plan.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: decision.runtimeCapabilityId,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: payload.inputSemanticTypeId
+				},
+				implementationFeature: "haxe-typed-throw-v1",
+				rootModules: ["HxType"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel."
+			})
+		];
+	}
+
+	/** Records the private HxType call required by one sealed Haxe throw. */
+	public function recordThrowDecision(decision:OcamlControlDecision):Void {
+		for (requirement in requirementsForThrowDecision(decision))
 			record(requirement);
 	}
 

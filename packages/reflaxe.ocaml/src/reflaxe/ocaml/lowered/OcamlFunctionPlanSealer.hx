@@ -202,8 +202,13 @@ class OcamlFunctionPlanSealer {
 				context.recordLoopRuntimeRequirements(target, transfers);
 		}
 		for (decision in controls.decisions())
-			if (decision.kind == OcamlControlTransferKind.Return)
-				context.recordReturnRuntimeRequirement(decision);
+			switch (decision.kind) {
+				case OcamlControlTransferKind.Return:
+					context.recordReturnRuntimeRequirement(decision);
+				case OcamlControlTransferKind.Throw:
+					context.recordThrowRuntimeRequirement(decision);
+				case Break, Continue:
+			}
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
@@ -437,8 +442,13 @@ class OcamlFunctionPlanSealer {
 									context.recordLoopRuntimeRequirements(target, transfers);
 							}
 							for (decision in controls.decisions())
-								if (decision.kind == OcamlControlTransferKind.Return)
-									context.recordReturnRuntimeRequirement(decision);
+								switch (decision.kind) {
+									case OcamlControlTransferKind.Return:
+										context.recordReturnRuntimeRequirement(decision);
+									case OcamlControlTransferKind.Throw:
+										context.recordThrowRuntimeRequirement(decision);
+									case Break, Continue:
+								}
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}
 					}

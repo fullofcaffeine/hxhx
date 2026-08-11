@@ -775,6 +775,16 @@ class CompilationContext {
 		runtimeRequirements.recordReturnDecision(decision);
 	}
 
+	/**
+		Records why one sealed Haxe throw needs the private HxType signal call.
+
+		The control plan has already fixed the payload conversion and runtime tags.
+		This handoff gives packaging that typed reason before syntax prints a name.
+	**/
+	public function recordThrowRuntimeRequirement(decision:OcamlControlDecision):Void {
+		runtimeRequirements.recordThrowDecision(decision);
+	}
+
 	/** Records the exact private patterns and raises owned by one lexical loop. */
 	public function recordLoopRuntimeRequirements(target:OcamlControlLoopTarget, decisions:Array<OcamlControlDecision>):Void {
 		runtimeRequirements.recordLoopTarget(target, decisions);
