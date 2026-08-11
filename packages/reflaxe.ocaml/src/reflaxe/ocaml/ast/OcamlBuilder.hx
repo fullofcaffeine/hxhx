@@ -1238,6 +1238,14 @@ class OcamlBuilder {
 					OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
 				final continueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
 					OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
+				final returnPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_RETURN_PATTERN_ROLE);
+				final returnReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_RETURN_RERAISE_ROLE);
+				final voidReturnPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_PATTERN_ROLE);
+				final voidReturnReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_RERAISE_ROLE);
 				[
 					{
 						pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(breakPattern.id, runtimeUsePlan.planRevision,
@@ -1254,14 +1262,20 @@ class OcamlBuilder {
 							continueReraise.exactSymbol)))
 					},
 					{
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVariable)]),
+						pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(returnPattern.id, runtimeUsePlan.planRevision,
+							returnPattern.exactSymbol),
+							[OcamlPat.PVar(returnVariable)]),
 						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVariable)]))
+						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(returnReraise.id,
+							runtimeUsePlan.planRevision, returnReraise.exactSymbol)),
+							[OcamlExpr.EIdent(returnVariable)]))
 					},
 					{
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
+						pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(voidReturnPattern.id, runtimeUsePlan.planRevision,
+							voidReturnPattern.exactSymbol), []),
 						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"))
+						expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(voidReturnReraise.id,
+							runtimeUsePlan.planRevision, voidReturnReraise.exactSymbol)))
 					}
 				];
 		};

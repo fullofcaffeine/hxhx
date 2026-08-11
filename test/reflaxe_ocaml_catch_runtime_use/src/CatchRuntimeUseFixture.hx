@@ -29,9 +29,10 @@ using StringTools;
 /**
 	Checks the private runtime names used by one sealed Haxe catch chain.
 
-	The printed OCaml pattern and rethrow call are ordinary target syntax. Their
-	hidden IDs prove that both names came from the same final typed catch decision,
-	not from a builder-wide permission or a scan of rendered text.
+	The generated OCaml first propagates compiler-owned return and loop signals.
+	It then handles source exceptions. Hidden IDs prove that every private pattern
+	and call came from the same final typed catch decision, not from a
+	builder-wide permission or a scan of rendered text.
 **/
 class CatchRuntimeUseFixture {
 	static inline final PROFILE = "portable";
@@ -222,6 +223,33 @@ class CatchRuntimeUseFixture {
 		assertTrue(tagTests.length == 1, "One exact Int catch must own one runtime-tag test before syntax is built.");
 	}
 
+	static function catchReturnSignalsArePlanned():Void {
+		final selected = chain();
+		final plan = OcamlCatchRuntimeUseContract.forChain(selected);
+		final valuePattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_PATTERN_ROLE);
+		final valueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_RERAISE_ROLE);
+		final voidPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_PATTERN_ROLE);
+		final voidReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_RERAISE_ROLE);
+		assertTrue([valuePattern.order, valueReraise.order, voidPattern.order, voidReraise.order].join(",") == "4,5,6,7",
+			"Value and Void return propagation must follow the existing break and continue pairs in final target-tree order.");
+		assertTrue(valuePattern.domain == OcamlRuntimeUseDomain.PatternConstructor
+			&& valueReraise.domain == OcamlRuntimeUseDomain.ExpressionIdentifier
+			&& valuePattern.exactSymbol == "HxRuntime.Hx_return"
+			&& valueReraise.exactSymbol == valuePattern.exactSymbol,
+			"The value-return pattern and re-raise must own distinct uses of the same private signal.");
+		assertTrue(voidPattern.domain == OcamlRuntimeUseDomain.PatternConstructor
+			&& voidReraise.domain == OcamlRuntimeUseDomain.ExpressionIdentifier
+			&& voidPattern.exactSymbol == "HxRuntime.Hx_return_void"
+			&& voidReraise.exactSymbol == voidPattern.exactSymbol,
+			"The Void-return pattern and re-raise must own distinct uses of the same private signal.");
+		for (use in [valuePattern, valueReraise, voidPattern, voidReraise])
+			assertTrue(use.ownerId == selected.id
+				&& use.requirementId == OcamlCatchRuntimeUseContract.requirementId(selected)
+				&& use.source.min == selected.source.min
+				&& use.source.max == selected.source.max,
+				"Every propagated return use must retain the exact catch owner, requirement, and source span.");
+	}
+
 	static function tagTestsFollowClauseAndRoleOrder():Void {
 		final selected = orderedTagChain();
 		final plan = OcamlCatchRuntimeUseContract.forChain(selected);
@@ -232,11 +260,11 @@ class CatchRuntimeUseFixture {
 		final matchAny = OcamlCatchRuntimeUseContract.runtimeTagOccurrence(plan, "catch-clause:value-exception", OcamlCatchRuntimeTagUseRole.MatchAnyException);
 		final convertValue = OcamlCatchRuntimeUseContract.runtimeTagOccurrence(plan, "catch-clause:value-exception",
 			OcamlCatchRuntimeTagUseRole.ConvertValueException);
-		assertTrue([exact.order, matchValue.order, matchAny.order, convertValue.order].join(",") == "5,6,7,8",
+		assertTrue([exact.order, matchValue.order, matchAny.order, convertValue.order].join(",") == "9,10,11,12",
 			"Catch tag tests must follow source clause order and then their expression order.");
 		assertTrue(exact.source.min == 20 && convertValue.source.min == 33, "Each catch tag test must retain the source span of its exact clause.");
-		assertTrue(plan.runtimeUseOccurrences.length == 10,
-			"The private control cases, Haxe pattern, four tag tests, and unmatched rethrow must form one complete catch-owned runtime plan.");
+		assertTrue(plan.runtimeUseOccurrences.length == 14,
+			"The four private control pairs, Haxe pattern, four tag tests, and unmatched rethrow must form one complete catch-owned runtime plan.");
 	}
 
 	static function checkedTry(?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlExpr {
@@ -247,33 +275,15 @@ class CatchRuntimeUseFixture {
 		final authority = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences, finalOutput);
 		final patternUse = OcamlCatchRuntimeUseContract.patternOccurrence(plan);
 		final rethrowUse = OcamlCatchRuntimeUseContract.rethrowOccurrence(plan);
-		final breakPatternUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_PATTERN_ROLE);
-		final breakReraiseUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_RERAISE_ROLE);
-		final continuePatternUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
-		final continueReraiseUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
-		final breakPatternReference = authority.patternIdentifier(breakPatternUse.id, plan.planRevision, breakPatternUse.exactSymbol);
-		final breakReraiseReference = authority.expressionIdentifier(breakReraiseUse.id, plan.planRevision, breakReraiseUse.exactSymbol);
-		final continuePatternReference = authority.patternIdentifier(continuePatternUse.id, plan.planRevision, continuePatternUse.exactSymbol);
-		final continueReraiseReference = authority.expressionIdentifier(continueReraiseUse.id, plan.planRevision, continueReraiseUse.exactSymbol);
 		final patternReference = authority.patternIdentifier(patternUse.id, plan.planRevision, patternUse.exactSymbol);
 		final rethrowReference = authority.expressionIdentifier(rethrowUse.id, plan.planRevision, rethrowUse.exactSymbol);
-		final expression = OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [
-			{
-				pat: OcamlPat.PRuntimeConstructor(breakPatternReference, []),
-				guard: null,
-				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(breakReraiseReference))
-			},
-			{
-				pat: OcamlPat.PRuntimeConstructor(continuePatternReference, []),
-				guard: null,
-				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(continueReraiseReference))
-			},
-			{
-				pat: OcamlPat.PRuntimeConstructor(patternReference, [OcamlPat.PVar("value"), OcamlPat.PVar("tags")]),
-				guard: null,
-				expr: OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(rethrowReference), [OcamlExpr.EIdent("value"), OcamlExpr.EIdent("tags")])
-			}
-		]);
+		final cases = privateControlCases(plan, authority);
+		cases.push({
+			pat: OcamlPat.PRuntimeConstructor(patternReference, [OcamlPat.PVar("value"), OcamlPat.PVar("tags")]),
+			guard: null,
+			expr: OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(rethrowReference), [OcamlExpr.EIdent("value"), OcamlExpr.EIdent("tags")])
+		});
+		final expression = OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), cases);
 		authority.reconcileExpression(expression);
 		return expression;
 	}
@@ -286,6 +296,10 @@ class CatchRuntimeUseFixture {
 		finalOutput.finishProgram();
 
 		final rendered = new OcamlASTPrinter().printExpr(expression);
+		assertTrue(rendered.contains("HxRuntime.Hx_return returned -> raise (HxRuntime.Hx_return returned)"),
+			"The checked catch chain must preserve a value-bearing return signal.");
+		assertTrue(rendered.contains("HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)"),
+			"The checked catch chain must preserve a Void return signal.");
 		assertTrue(rendered.contains("HxRuntime.Hx_exception (value, tags)"), "The checked pattern must print the exact runtime constructor.");
 		assertTrue(rendered.contains("HxRuntime.hx_throw_typed value tags"), "The checked rethrow must print the exact runtime helper.");
 	}
@@ -394,6 +408,67 @@ class CatchRuntimeUseFixture {
 		});
 	}
 
+	static function returnControlPlanAndConstructionFailures():Void {
+		final selected = chain();
+		final plan = OcamlCatchRuntimeUseContract.forChain(selected);
+		final valuePattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_PATTERN_ROLE);
+		final valueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_RERAISE_ROLE);
+		final voidPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_PATTERN_ROLE);
+		final occurrences = plan.runtimeUseOccurrences;
+
+		expectFailure("missing return pattern", "invalid-runtime-use",
+			() -> OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, occurrences.filter(use -> use.id != valuePattern.id))));
+		expectFailure("reordered return pair", "invalid-runtime-use", () -> {
+			final changed = occurrences.copy();
+			changed[valuePattern.order] = valueReraise;
+			changed[valueReraise.order] = valuePattern;
+			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
+		});
+		for (corruption in [
+			{label: "wrong return owner", use: copyOccurrence(valuePattern, "catch-chain:other")},
+			{label: "wrong return symbol", use: copyOccurrence(valuePattern, null, null, "HxRuntime.Hx_return_void")},
+			{label: "wrong return domain", use: copyOccurrence(valuePattern, null, OcamlRuntimeUseDomain.ExpressionIdentifier)},
+			{label: "wrong return profile", use: copyOccurrence(valuePattern, null, null, null, null, ["metal"])},
+			{label: "wrong return cardinality", use: copyOccurrence(valuePattern, null, null, null, null, null, null, null, null, 2)}
+		]) {
+			expectFailure(corruption.label, "invalid-runtime-use", () -> {
+				final changed = occurrences.copy();
+				changed[valuePattern.order] = corruption.use;
+				OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
+			});
+		}
+
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForCatchChain(selected);
+		final missingRequirement = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, [], plan.runtimeUseOccurrences);
+		expectFailure("missing return requirement", "has no exact requirement",
+			() -> missingRequirement.patternIdentifier(valuePattern.id, plan.planRevision, valuePattern.exactSymbol));
+		final stale = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences);
+		expectFailure("stale return pattern", "stale runtime use", () -> stale.patternIdentifier(valuePattern.id, "plan:stale", valuePattern.exactSymbol));
+		final wrongSymbol = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences);
+		expectFailure("substituted return pattern", "wrong target symbol",
+			() -> wrongSymbol.patternIdentifier(valuePattern.id, plan.planRevision, voidPattern.exactSymbol));
+		final wrongDomain = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences);
+		expectFailure("return pattern used as expression", "wrong target domain",
+			() -> wrongDomain.expressionIdentifier(valuePattern.id, plan.planRevision, valuePattern.exactSymbol));
+		final wrongProfile = new OcamlRuntimeUseAuthority(plan.planRevision, "unsupported-profile", requirements, plan.runtimeUseOccurrences);
+		expectFailure("return pattern in wrong profile", "not eligible for profile",
+			() -> wrongProfile.patternIdentifier(valuePattern.id, plan.planRevision, valuePattern.exactSymbol));
+		final duplicate = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences);
+		duplicate.patternIdentifier(valuePattern.id, plan.planRevision, valuePattern.exactSymbol);
+		expectFailure("duplicate return pattern", "constructed more than once",
+			() -> duplicate.patternIdentifier(valuePattern.id, plan.planRevision, valuePattern.exactSymbol));
+
+		final plain = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences);
+		expectFailure("plain return propagation", "plain private runtime reference HxRuntime.Hx_return",
+			() -> plain.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [
+				{
+					pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar("returned")]),
+					guard: null,
+					expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent("returned")]))
+				}
+			])));
+	}
+
 	static function checkedTagConstructionAndFailures():Void {
 		final selected = exactIntChain();
 		final plan = OcamlCatchRuntimeUseContract.forChain(selected);
@@ -430,6 +505,10 @@ class CatchRuntimeUseFixture {
 		final breakReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_RERAISE_ROLE);
 		final continuePattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
 		final continueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
+		final returnPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_PATTERN_ROLE);
+		final returnReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_RETURN_RERAISE_ROLE);
+		final voidReturnPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_PATTERN_ROLE);
+		final voidReturnReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_VOID_RETURN_RERAISE_ROLE);
 		return [
 			{
 				pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(breakPattern.id, plan.planRevision, breakPattern.exactSymbol), []),
@@ -441,6 +520,20 @@ class CatchRuntimeUseFixture {
 				guard: null,
 				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(continueReraise.id, plan.planRevision,
 					continueReraise.exactSymbol)))
+			},
+			{
+				pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(returnPattern.id, plan.planRevision, returnPattern.exactSymbol),
+					[OcamlPat.PVar("returned")]),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(returnReraise.id, plan.planRevision,
+					returnReraise.exactSymbol)),
+					[OcamlExpr.EIdent("returned")]))
+			},
+			{
+				pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(voidReturnPattern.id, plan.planRevision, voidReturnPattern.exactSymbol), []),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(voidReturnReraise.id, plan.planRevision,
+					voidReturnReraise.exactSymbol)))
 			}
 		];
 	}
@@ -509,6 +602,29 @@ class CatchRuntimeUseFixture {
 				throw "The catch corruption fixture lost its checked pattern.";
 		}
 		expectFailure("wrong final pattern owner", "wrong owner", () -> corruptedOutput.observeExpression(corrupted));
+
+		final corruptedReturnOutput = new OcamlFinalRuntimeUseAuthority();
+		corruptedReturnOutput.beginProgram("program:catch-return-runtime-use-corruption", PROFILE);
+		final corruptedReturn = checkedTry(corruptedReturnOutput);
+		switch (corruptedReturn) {
+			case ETry(_, cases):
+				final returnPatterns = cases.filter(item -> switch (item.pat) {
+					case PRuntimeConstructor(reference, _): reference.exactSymbol == "HxRuntime.Hx_return";
+					case _: false;
+				});
+				if (returnPatterns.length != 1)
+					throw "The catch corruption fixture lost its checked return pattern.";
+				switch (returnPatterns[0].pat) {
+					case PRuntimeConstructor(reference, _):
+						// The production field is immutable. This negative test changes the
+						// copied boundary record to prove final output checks its owner.
+						Reflect.setField(reference, "ownerId", "catch-chain:wrong-return-owner");
+					case _:
+				}
+			case _:
+				throw "The catch corruption fixture lost its checked try expression.";
+		}
+		expectFailure("wrong final return owner", "wrong owner", () -> corruptedReturnOutput.observeExpression(corruptedReturn));
 	}
 
 	static function plainPatternFails():Void {
@@ -552,10 +668,12 @@ class CatchRuntimeUseFixture {
 
 	public static macro function run():Expr {
 		exactTagTestIsPlanned();
+		catchReturnSignalsArePlanned();
 		tagTestsFollowClauseAndRoleOrder();
 		validLocalAndFinalUse();
 		planAndConstructionFailures();
 		tagPlanCorruptionFails();
+		returnControlPlanAndConstructionFailures();
 		checkedTagConstructionAndFailures();
 		missingAndDuplicatePatternUsesFail();
 		finalPatternCopyAndCorruption();

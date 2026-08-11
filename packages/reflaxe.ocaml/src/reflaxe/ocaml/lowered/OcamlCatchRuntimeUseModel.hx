@@ -20,11 +20,13 @@ enum abstract OcamlCatchRuntimeTagUseRole(String) from String to String {
 /**
 	The private runtime names selected by one complete Haxe catch chain.
 
-	The OCaml pattern receives the Haxe exception signal. Each typed clause then
-	owns the exact tag tests needed by its match and payload-conversion policies.
-	The final expression rethrows the signal when no clause matches. This record
-	binds every use to the same final typed catch, function body, and target
-	pipeline before syntax is built.
+	A source `catch` must not intercept compiler-owned return, break, or continue
+	signals. The target therefore matches and immediately re-raises those signals
+	before it checks source exception clauses. Each typed clause owns the exact
+	tag tests needed by its match and payload-conversion policies. The final
+	expression rethrows the Haxe exception signal when no clause matches. This
+	record binds every use to the same final typed catch, function body, and
+	target pipeline before syntax is built.
 **/
 typedef OcamlCatchRuntimeUsePlan = {
 	final chainId:String;
@@ -44,13 +46,17 @@ class OcamlCatchRuntimeUseContract {
 	public static inline final PRIVATE_BREAK_RERAISE_ROLE = "private-break-reraise";
 	public static inline final PRIVATE_CONTINUE_PATTERN_ROLE = "private-continue-pattern";
 	public static inline final PRIVATE_CONTINUE_RERAISE_ROLE = "private-continue-reraise";
+	public static inline final PRIVATE_RETURN_PATTERN_ROLE = "private-return-pattern";
+	public static inline final PRIVATE_RETURN_RERAISE_ROLE = "private-return-reraise";
+	public static inline final PRIVATE_VOID_RETURN_PATTERN_ROLE = "private-void-return-pattern";
+	public static inline final PRIVATE_VOID_RETURN_RERAISE_ROLE = "private-void-return-reraise";
 
-	/** Returns the one runtime requirement shared by the catch pattern, tag tests, and rethrow. */
+	/** Returns the one runtime requirement shared by private-control propagation and Haxe exception handling. */
 	public static function requirementId(chain:OcamlCatchChainDecision):String {
 		return chain.id + ":runtime:" + chain.runtimeCapabilityId;
 	}
 
-	/** Returns the stable identity of one of the two planned target-language uses. */
+	/** Returns the stable identity of one planned target-language runtime use. */
 	public static function runtimeUseId(chainId:String, role:String):String {
 		return chainId + ":runtime-use:" + role;
 	}
@@ -76,6 +82,14 @@ class OcamlCatchRuntimeUseContract {
 			OcamlRuntimeUseDomain.PatternConstructor, "HxRuntime.Hx_continue", order++));
 		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_CONTINUE_RERAISE_ROLE,
 			OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.Hx_continue", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_RETURN_PATTERN_ROLE,
+			OcamlRuntimeUseDomain.PatternConstructor, "HxRuntime.Hx_return", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_RETURN_RERAISE_ROLE,
+			OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.Hx_return", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_VOID_RETURN_PATTERN_ROLE,
+			OcamlRuntimeUseDomain.PatternConstructor, "HxRuntime.Hx_return_void", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_VOID_RETURN_RERAISE_ROLE,
+			OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.Hx_return_void", order++));
 		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor,
 			PATTERN_SYMBOL, order++));
 		for (clause in chain.clauses) {
