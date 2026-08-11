@@ -26,12 +26,12 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 317 legacy entries:
+The current reviewed baseline contains 309 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
 | Structured expressions | 298 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
-| Structured types | 12 | Direct `TIdent` or `TApp` construction containing a private runtime type. |
+| Structured types | 4 | Direct `TIdent` or `TApp` construction containing a private runtime type. |
 | Structured patterns | 7 | Direct private runtime constructors in OCaml patterns. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |

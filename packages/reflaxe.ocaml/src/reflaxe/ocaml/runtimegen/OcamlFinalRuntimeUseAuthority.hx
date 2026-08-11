@@ -87,27 +87,28 @@ class OcamlFinalRuntimeUseAuthority {
 		For example, a class constructor body appears in both `create` and the
 		dispatch constructor used by `super()`. Reusing the same hidden runtime ID
 		would spend one permission twice. This operation clones only already-accepted
-		references and gives the second output site its own exact identities.
+		references and gives the second output site its own exact identities. The
+		optional callback prepares a staged reference before this class copies it.
 	**/
-	public function copyExpressionForOutput(expression:OcamlExpr, outputRole:String):OcamlExpr {
+	public function copyExpressionForOutput(expression:OcamlExpr, outputRole:String, ?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {
 		requireOpen();
 		final stableRole = requiredOutputRole(outputRole);
 		final copiedSourceKeys:Map<String, Bool> = [];
 		final copiedExpression = OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
-				ERuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys));
+				ERuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference));
 			case _:
 				current;
 		}, pattern -> switch (pattern) {
 			case PRuntimeConstructor(reference, args):
-				PRuntimeConstructor(copyReferenceForOutput(reference, stableRole, copiedSourceKeys), args);
+				PRuntimeConstructor(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference), args);
 			case _:
 				pattern;
 		}, type -> switch (type) {
 			case TRuntimeIdent(reference):
-				TRuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys));
+				TRuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference));
 			case TRuntimeApp(reference, params):
-				TRuntimeApp(copyReferenceForOutput(reference, stableRole, copiedSourceKeys), params);
+				TRuntimeApp(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference), params);
 			case _:
 				type;
 		});
@@ -131,7 +132,10 @@ class OcamlFinalRuntimeUseAuthority {
 	}
 
 	/** Copies one already-accepted private name into a separately counted output site. */
-	function copyReferenceForOutput(reference:OcamlRuntimeReference, stableRole:String, copiedSourceKeys:Map<String, Bool>):OcamlRuntimeReference {
+	function copyReferenceForOutput(reference:OcamlRuntimeReference, stableRole:String, copiedSourceKeys:Map<String, Bool>,
+			beforeReference:Null<OcamlRuntimeReference->Void>):OcamlRuntimeReference {
+		if (beforeReference != null)
+			beforeReference(reference);
 		final sourceExpected = expectedByKey.get(occurrenceKey(reference.planRevision, reference.id));
 		if (sourceExpected == null)
 			throw 'Cannot copy unplanned final runtime use ${reference.id} for output role $stableRole.';
@@ -160,56 +164,73 @@ class OcamlFinalRuntimeUseAuthority {
 		return new OcamlRuntimeReference(copied.id, copied.planRevision, copied.ownerId, copied.domain, copied.exactSymbol);
 	}
 
-	/** Observes every runtime reference in one complete structured module. */
-	public function observeModuleItems(items:Array<OcamlModuleItem>, ?outputUnitId:String):Void {
+	/**
+		Observes every runtime reference in one complete structured module.
+
+		The optional callback runs before each observation. A caller can use it to
+		activate a checked, request-local plan that was not known to reach output.
+	**/
+	public function observeModuleItems(items:Array<OcamlModuleItem>, ?outputUnitId:String, ?beforeReference:OcamlRuntimeReference->Void):Void {
 		requireOpen();
 		final unitId = outputUnitId == null ? "anonymous-structured-output" : requiredOutputRole(outputUnitId);
 		for (item in items)
 			switch (item) {
 				case ILet(bindings, _):
 					for (binding in bindings)
-						observeExpression(binding.expr, unitId + "::let:" + binding.name);
+						observeExpression(binding.expr, unitId + "::let:" + binding.name, beforeReference);
 				case IType(declarations, _):
 					for (declaration in declarations) {
 						final location = unitId + "::type:" + declaration.name;
 						switch (declaration.kind) {
 							case Alias(type):
-								observeType(type, location);
+								observeType(type, location, beforeReference);
 							case Record(fields):
 								for (field in fields)
-									observeType(field.typ, location + "::field:" + field.name);
+									observeType(field.typ, location + "::field:" + field.name, beforeReference);
 							case Variant(constructors):
 								for (constructor in constructors)
 									for (argument in constructor.args)
-										observeType(argument, location + "::constructor:" + constructor.name);
+										observeType(argument, location + "::constructor:" + constructor.name, beforeReference);
 						}
 					}
 			}
 	}
 
 	/** Observes checked private names stored in one final OCaml type tree. */
-	function observeType(type:OcamlTypeExpr, outputLocation:String):Void {
+	function observeType(type:OcamlTypeExpr, outputLocation:String, beforeReference:Null<OcamlRuntimeReference->Void>):Void {
 		OcamlASTTraversal.walkTypePre(type, current -> switch (current) {
 			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				if (beforeReference != null)
+					beforeReference(reference);
 				observeReference(reference, outputLocation);
 			case _:
 		});
 	}
 
-	/** Observes one final structured expression before its hidden identities are printed. */
-	public function observeExpression(expression:OcamlExpr, ?outputLocation:String):Void {
+	/**
+		Observes one final structured expression before its hidden identities are printed.
+
+		The optional callback has the same staged-plan contract as module observation.
+	**/
+	public function observeExpression(expression:OcamlExpr, ?outputLocation:String, ?beforeReference:OcamlRuntimeReference->Void):Void {
 		requireOpen();
 		final location = outputLocation == null ? "anonymous-structured-expression" : requiredOutputRole(outputLocation);
 		OcamlASTTraversal.walkExprPre(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
+				if (beforeReference != null)
+					beforeReference(reference);
 				observeReference(reference, location);
 			case _:
 		}, current -> switch (current) {
 			case PRuntimeConstructor(reference, _):
+				if (beforeReference != null)
+					beforeReference(reference);
 				observeReference(reference, location);
 			case _:
 		}, current -> switch (current) {
 			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				if (beforeReference != null)
+					beforeReference(reference);
 				observeReference(reference, location);
 			case _:
 		});

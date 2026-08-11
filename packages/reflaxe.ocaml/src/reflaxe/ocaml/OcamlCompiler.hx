@@ -62,6 +62,7 @@ import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifest;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryClassFields;
 import reflaxe.ocaml.runtimegen.OcamlTypeRegistryBaseEmitter.OcamlTypeRegistryClassSuper;
@@ -103,6 +104,7 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierKind;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -166,6 +168,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
 	final compilerExpressionOrdinals:ObjectMap<TypedExpr, Int> = new ObjectMap();
 	var nextCompilerExpressionOrdinal:Int = 0;
+	var nextStandardMapCarrierOrdinal:Int = 0;
 
 	#if macro
 	/**
@@ -425,6 +428,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.beginProgramRevision(revision);
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
+		nextStandardMapCarrierOrdinal = 0;
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
 		staticStoragePlan.beginProgram(revision.id);
@@ -1065,7 +1069,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		helper comes from its lowering plan and is counted here before rendering.
 	**/
 	function printFinalModule(items:Array<OcamlModuleItem>, outputUnitId:String):String {
-		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId);
+		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId, ctx.activateStandardMapCarrierRuntimeUse);
 		return printer.printModule(items);
 	}
 
@@ -2456,7 +2460,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// the constructor body used in `create`, but takes `self` explicitly.
 			if (isDispatch) {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body");
+				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body",
+					ctx.activateStandardMapCarrierRuntimeUse);
 				final ctorBodyForCtor = ensureParamUsage(copiedCtorBody, [selfPat].concat(createParams));
 				lets.push({
 					name: ctorName,
@@ -4290,7 +4295,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
 		final e = buildStandaloneExpression(builder, compilerExpressionOwner(expr), expr);
-		ctx.finalRuntimeUses.observeExpression(e, "expression:" + compilerExpressionOwner(expr));
+		ctx.finalRuntimeUses.observeExpression(e, "expression:" + compilerExpressionOwner(expr), ctx.activateStandardMapCarrierRuntimeUse);
 		return printer.printExpr(e);
 	}
 
@@ -4373,6 +4378,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	function ocamlTypeExprFromHaxeType(t:Type):OcamlTypeExpr {
+		final standardMapCarrier = standardMapCarrierType(t);
+		if (standardMapCarrier != null)
+			return standardMapCarrier;
 		return switch (t) {
 			case TAbstract(aRef, params):
 				final a = aRef.get();
@@ -4464,36 +4472,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// concrete map implementation is not boxed.
 				//
 				// Represent it as its concrete OCaml runtime map type based on the key kind.
-				if (aPack.length == 2 && aPack[0] == "haxe" && aPack[1] == "ds" && a.name == "Map") {
-					final k = (params != null && params.length > 0) ? params[0] : null;
-					final v = (params != null && params.length > 1) ? params[1] : null;
-					final vT = v != null ? ocamlTypeExprFromHaxeType(v) : OcamlTypeExpr.TIdent("Obj.t");
-
-					// Follow key abstracts so `Map<Int, V>` (where Int is an abstract) is detected.
-					final kFollowed = k != null ? TypeTools.follow(k) : null;
-					switch (kFollowed) {
-						case TInst(cRef, _):
-							final c = cRef.get();
-							if (c.pack != null && c.pack.length == 0 && c.name == "String") {
-								return OcamlTypeExpr.TApp("HxMap.string_map", [vT]);
-							}
-							// Non-String class keys use ObjectMap.
-							final kT = ocamlTypeExprFromHaxeType(kFollowed);
-							return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
-						case TAbstract(kRef, _):
-							final ka = kRef.get();
-							if (ka.name == "Int") {
-								return OcamlTypeExpr.TApp("HxMap.int_map", [vT]);
-							}
-							// Unknown abstract keys: treat as ObjectMap.
-							final kT = ocamlTypeExprFromHaxeType(kFollowed);
-							return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
-						case _:
-							// Default to ObjectMap for any other key type.
-							final kT = kFollowed != null ? ocamlTypeExprFromHaxeType(kFollowed) : OcamlTypeExpr.TIdent("Obj.t");
-							return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
-					}
-				}
 				switch (a.name) {
 					case "Int": OcamlTypeExpr.TIdent("int");
 					case "Float": OcamlTypeExpr.TIdent("float");
@@ -4519,7 +4497,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 										.type) : OcamlTypeExpr.TIdent("Obj.t"));
 								case TInst(cRef, innerParams):
 									final c = cRef.get();
-									final mapCarrier = OcamlStandardMapCarrierContract.carrierForClass(c, innerParams, ocamlTypeExprFromHaxeType);
 									switch (c.kind) {
 										case KTypeParameter(_):
 											// Portable mode doesn't model polymorphic class parameters in OCaml.
@@ -4532,8 +4509,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 									} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
 										final elem = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
 										OcamlTypeExpr.TApp("HxArray.t", [elem]);
-									} else if (mapCarrier != null) {
-										mapCarrier;
 									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 										OcamlTypeExpr.TIdent("HxBytes.t");
 									} else if (c.isExtern) {
@@ -4566,7 +4541,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			case TInst(cRef, params):
 				final c = cRef.get();
-				final mapCarrier = OcamlStandardMapCarrierContract.carrierForClass(c, params, ocamlTypeExprFromHaxeType);
 				switch (c.kind) {
 					case KTypeParameter(_):
 						// Portable mode doesn't model polymorphic class parameters in OCaml.
@@ -4580,8 +4554,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// Haxe Array<T> -> 't HxArray.t (runtime is permissive; type is best-effort).
 					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
 					OcamlTypeExpr.TApp("HxArray.t", [elem]);
-				} else if (mapCarrier != null) {
-					mapCarrier;
 				} else if (OcamlStandardIMapCallContract.isIMapClass(c) && params.length == 2) {
 					// An `IMap` value carries a checked dispatch record, not key-selected
 					// standard Map storage. The record itself is boxed so standard maps and
@@ -4651,6 +4623,44 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 				acc;
 		}
+	}
+
+	/**
+		Builds one checked private HxMap carrier type from the sealed Haxe Map type.
+
+		The local check consumes only the carrier name. Nested type parameters can
+		contain their own checked names. Each carrier is staged separately. The final
+		output observer activates and counts only the hidden IDs that reach output.
+	**/
+	function standardMapCarrierType(type:Type):Null<OcamlTypeExpr> {
+		final revision = programRevision;
+		if (revision == null)
+			return null;
+		final moduleOwner = ctx.currentModuleId == null ? "compiler-root" : ctx.currentModuleId;
+		final typeOwner = ctx.currentTypeFullName == null ? "anonymous-type" : ctx.currentTypeFullName;
+		final ownerId = 'standard-map-carrier:$moduleOwner:$typeOwner:${nextStandardMapCarrierOrdinal++}';
+		final materialization = OcamlStandardMapCarrierContract.seal(type, ownerId, revision.id, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+		if (materialization == null) {
+			nextStandardMapCarrierOrdinal--;
+			return null;
+		}
+		OcamlStandardMapCarrierContract.requireMaterialization(materialization);
+		final decision = materialization.decision;
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			OcamlRuntimeRequirementLedger.requirementsForStandardMapCarrier(decision), decision.runtimeUseOccurrences);
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final reference = authority.typeIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
+		authority.reconcileType(OcamlTypeExpr.TRuntimeIdent(reference));
+		ctx.stageStandardMapCarrierRuntimeUse(decision);
+		final valueType = materialization.valueType == null ? OcamlTypeExpr.TIdent("Obj.t") : ocamlTypeExprFromHaxeType(materialization.valueType);
+		final parameters = switch (decision.kind) {
+			case StringKeys, IntKeys:
+				[valueType];
+			case ObjectIdentityKeys:
+				final keyType = materialization.keyType == null ? OcamlTypeExpr.TIdent("Obj.t") : ocamlTypeExprFromHaxeType(materialization.keyType);
+					[keyType, valueType];
+		};
+		return OcamlTypeExpr.TRuntimeApp(reference, parameters);
 	}
 
 	static inline function fullNameOfClassType(cls:ClassType):String {

@@ -38,6 +38,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplici
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -121,6 +123,36 @@ class OcamlRuntimeRequirementLedger {
 			requirementIds:Array<String>):Void {
 		for (requirementId in requirementIds)
 			record(requirementForPlaceCapability(decisionId, originId, originId, source, semanticTypeId, requirementId));
+	}
+
+	/** Returns the direct HxMap dependency selected by one standard Map carrier. */
+	public static function requirementsForStandardMapCarrier(decision:OcamlStandardMapCarrierDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStandardMapCarrierContract.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+				sourceId: decision.sourceDeclarationId,
+				source: decision.source,
+				semanticCapability: HAXE_MAP,
+				cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: 'Map<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
+				},
+				implementationFeature: "haxe-map-v1",
+				rootModules: ["HxMap"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed standard Haxe Map type uses the selected HxMap carrier to preserve string, integer, or object-identity key behavior."
+			})
+		];
+	}
+
+	/** Records the direct HxMap dependency selected by one standard Map carrier. */
+	public function recordStandardMapCarrier(decision:OcamlStandardMapCarrierDecision):Void {
+		for (requirement in requirementsForStandardMapCarrier(decision))
+			record(requirement);
 	}
 
 	/**

@@ -31,6 +31,8 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 #if macro
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
@@ -46,6 +48,9 @@ import reflaxe.ocaml.runtimegen.OcamlReflectCompareRuntimeRequirementRecorder;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 #end
 
 /**
@@ -457,6 +462,24 @@ class CompilationContext {
 		then proves that assembly printed each allowed occurrence exactly once.
 	**/
 	public final finalRuntimeUses = new OcamlFinalRuntimeUseAuthority();
+
+	/**
+		Map carrier choices that can become final target types in this request.
+
+		The general type mapper also creates temporary comparison types. Staging keeps
+		their checked Haxe origin without claiming runtime support until a hidden use
+		ID reaches the final structured output.
+	**/
+	final pendingStandardMapCarrierByUseId:Map<String, OcamlStandardMapCarrierDecision> = [];
+
+	/** Hidden Map use identities that already activated their final-output plan. */
+	final activeStandardMapCarrierUseIds:Map<String, Bool> = [];
+
+	/** Target profile bound to the current runtime-requirement request. */
+	var activeRuntimeRequirementProfile:Null<String>;
+
+	/** Program revision bound to the current runtime-requirement request. */
+	var activeRuntimeRequirementProgramRevision:Null<String>;
 	#end
 
 	/** Sealed semantic place decisions retained for deterministic inspection. */
@@ -501,12 +524,68 @@ class CompilationContext {
 	public function beginRuntimeRequirementProgram(programRevision:String, activeProfile:String):Void {
 		runtimeRequirements.beginProgram(programRevision);
 		finalRuntimeUses.beginProgram(programRevision, activeProfile);
+		pendingStandardMapCarrierByUseId.clear();
+		activeStandardMapCarrierUseIds.clear();
+		activeRuntimeRequirementProfile = activeProfile;
+		activeRuntimeRequirementProgramRevision = programRevision;
 	}
 
 	/** Records the runtime capabilities already sealed into one place-lowering plan. **/
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
 		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
+	}
+
+	/**
+		Stages one checked Map carrier until final output uses its hidden identity.
+
+		An unused stage records no runtime requirement. This prevents a temporary type
+		candidate from making `HxMap` appear necessary in the published source bundle.
+	**/
+	public function stageStandardMapCarrierRuntimeUse(decision:OcamlStandardMapCarrierDecision):Void {
+		final staged = OcamlStandardMapCarrierContract.copyDecision(decision);
+		if (staged.programRevision != activeRuntimeRequirementProgramRevision)
+			throw 'Standard Map carrier ${staged.id} uses program revision ${staged.programRevision}; expected $activeRuntimeRequirementProgramRevision.';
+		final occurrence = staged.runtimeUseOccurrences[0];
+		final existing = pendingStandardMapCarrierByUseId.get(occurrence.id);
+		if (existing != null) {
+			if (existing.revision != staged.revision || haxe.Json.stringify(existing) != haxe.Json.stringify(staged))
+				throw 'Standard Map carrier runtime use ${occurrence.id} was staged with conflicting facts.';
+			return;
+		}
+		pendingStandardMapCarrierByUseId.set(occurrence.id, staged);
+	}
+
+	/**
+		Activates a staged Map carrier when final structured output contains its ID.
+
+		Activation records the direct `HxMap` requirement and registers one expected
+		final use. A plain generated name has no hidden ID, so it cannot call this path.
+	**/
+	public function activateStandardMapCarrierRuntimeUse(reference:OcamlRuntimeReference):Void {
+		final decision = pendingStandardMapCarrierByUseId.get(reference.id);
+		if (decision == null)
+			return;
+		OcamlStandardMapCarrierContract.requireDecision(decision);
+		if (decision.programRevision != activeRuntimeRequirementProgramRevision)
+			throw 'Standard Map carrier ${decision.id} no longer matches active program revision $activeRuntimeRequirementProgramRevision.';
+		final occurrence = decision.runtimeUseOccurrences[0];
+		if (reference.planRevision != occurrence.planRevision
+			|| reference.ownerId != occurrence.ownerId
+			|| reference.domain != occurrence.domain
+			|| reference.exactSymbol != occurrence.exactSymbol)
+			throw 'Standard Map carrier runtime use ${reference.id} no longer matches its staged facts.';
+		if (activeStandardMapCarrierUseIds.exists(reference.id))
+			return;
+		final activeProfile = activeRuntimeRequirementProfile;
+		if (activeProfile == null)
+			throw "Standard Map carrier runtime activation requires an active compiler request.";
+		runtimeRequirements.recordStandardMapCarrier(decision);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile,
+			runtimeRequirements.requirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, finalRuntimeUses);
+		final checkedReference = authority.typeIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
+		authority.reconcileType(OcamlTypeExpr.TRuntimeIdent(checkedReference));
+		activeStandardMapCarrierUseIds.set(reference.id, true);
 	}
 
 	#if macro
