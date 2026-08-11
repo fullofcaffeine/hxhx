@@ -25,6 +25,7 @@ typedef OcamlReturnRuntimeUsePlan = {
 **/
 class OcamlReturnRuntimeUseContract {
 	public static inline final SIGNAL_ROLE = "raise-function-return-signal";
+	public static inline final BOUNDARY_PATTERN_ROLE = "catch-function-return-signal";
 
 	/** Returns the requirement identity owned by one exact return decision. */
 	public static function requirementId(decision:OcamlControlDecision):String {
@@ -38,59 +39,42 @@ class OcamlReturnRuntimeUseContract {
 
 	/** Derives the one private signal use selected by a valid return decision. */
 	public static function forDecision(decision:OcamlControlDecision):OcamlReturnRuntimeUsePlan {
-		OcamlControlPlan.requireDecision(decision);
-		if (decision.kind != OcamlControlTransferKind.Return)
-			throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: control decision "${decision.id}" is not a return';
-		final exactSymbol = switch (decision.mechanism) {
-			case RuntimeReturnSignal: "HxRuntime.Hx_return";
-			case RuntimeVoidReturnSignal: "HxRuntime.Hx_return_void";
-			case _: throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: return decision "${decision.id}" has unsupported mechanism ${decision.mechanism}';
-		};
-		final binding:OcamlFunctionPlanBinding = {
-			functionId: decision.functionId,
-			programRevision: decision.programRevision,
-			bodyRevision: decision.bodyRevision,
-			pipelineRevision: decision.pipelineRevision
-		};
-		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
-		final selectedRequirementId = requirementId(decision);
-		return {
-			decisionId: decision.id,
-			planRevision: planRevision,
-			runtimeRequirementIds: [selectedRequirementId],
-			runtimeUseOccurrences: [
-				{
-					id: runtimeUseId(decision.id),
-					planRevision: planRevision,
-					ownerId: decision.id,
-					requirementId: selectedRequirementId,
-					domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
-					exactSymbol: exactSymbol,
-					role: SIGNAL_ROLE,
-					order: 0,
-					source: {
-						file: decision.source.file,
-						min: decision.source.min,
-						max: decision.source.max
-					},
-					profileEligibility: decision.profileEligibility.copy(),
-					cardinality: 1
-				}
-			]
-		};
+		return planFor(decision, SIGNAL_ROLE, OcamlRuntimeUseDomain.ExpressionIdentifier);
+	}
+
+	/** Derives the checked constructor matched by the owning function boundary. */
+	public static function forBoundaryDecision(decision:OcamlControlDecision):OcamlReturnRuntimeUsePlan {
+		return planFor(decision, BOUNDARY_PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor);
 	}
 
 	/** Rejects a missing, stale, or conflicting return runtime-use plan. */
 	public static function requireForDecision(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan):Void {
 		final expected = forDecision(decision);
+		requireExact(decision, plan, expected);
+	}
+
+	/** Rejects a missing, stale, or conflicting function-boundary pattern plan. */
+	public static function requireForBoundaryDecision(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan):Void {
+		final expected = forBoundaryDecision(decision);
+		requireExact(decision, plan, expected);
+	}
+
+	static function requireExact(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan, expected:OcamlReturnRuntimeUsePlan):Void {
 		if (plan == null
 			|| plan.decisionId != expected.decisionId
 			|| plan.planRevision != expected.planRevision
 			|| plan.runtimeRequirementIds.join(",") != expected.runtimeRequirementIds.join(",")
 			|| plan.runtimeUseOccurrences.length != 1
 			|| !sameOccurrence(plan.runtimeUseOccurrences[0], expected.runtimeUseOccurrences[0])) {
-			throw 'reflaxe.ocaml [ocaml-return:invalid-runtime-use]: return decision "${decision.id}" does not own its exact runtime requirement and signal occurrence';
+			throw 'reflaxe.ocaml [ocaml-return:invalid-runtime-use]: return decision "${decision.id}" does not own its exact runtime requirement and occurrence';
 		}
+	}
+
+	/** Returns the checked constructor occurrence for one function boundary. */
+	public static function boundaryPatternOccurrence(plan:OcamlReturnRuntimeUsePlan):OcamlRuntimeUseOccurrence {
+		if (plan.runtimeUseOccurrences.length != 1 || plan.runtimeUseOccurrences[0].role != BOUNDARY_PATTERN_ROLE)
+			throw 'reflaxe.ocaml [ocaml-return:invalid-runtime-use]: return decision "${plan.decisionId}" has no unique boundary pattern occurrence';
+		return copyOccurrence(plan.runtimeUseOccurrences[0]);
 	}
 
 	/** Returns the checked occurrence that prints the private return signal. */
@@ -107,6 +91,55 @@ class OcamlReturnRuntimeUseContract {
 			planRevision: plan.planRevision,
 			runtimeRequirementIds: plan.runtimeRequirementIds.copy(),
 			runtimeUseOccurrences: plan.runtimeUseOccurrences.map(copyOccurrence)
+		};
+	}
+
+	static function planFor(decision:OcamlControlDecision, role:String, domain:OcamlRuntimeUseDomain):OcamlReturnRuntimeUsePlan {
+		OcamlControlPlan.requireDecision(decision);
+		if (decision.kind != OcamlControlTransferKind.Return)
+			throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: control decision "${decision.id}" is not a return';
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		};
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final selectedRequirementId = requirementId(decision);
+		// The final OCaml tree visits the raised signal in the function body before
+		// it visits the matching catch pattern at the function boundary.
+		final order = role == SIGNAL_ROLE ? 0 : 1;
+		return {
+			decisionId: decision.id,
+			planRevision: planRevision,
+			runtimeRequirementIds: [selectedRequirementId],
+			runtimeUseOccurrences: [
+				{
+					id: decision.id + ":runtime-use:" + role,
+					planRevision: planRevision,
+					ownerId: decision.id,
+					requirementId: selectedRequirementId,
+					domain: domain,
+					exactSymbol: signalSymbol(decision),
+					role: role,
+					order: order,
+					source: {
+						file: decision.source.file,
+						min: decision.source.min,
+						max: decision.source.max
+					},
+					profileEligibility: decision.profileEligibility.copy(),
+					cardinality: 1
+				}
+			]
+		};
+	}
+
+	static function signalSymbol(decision:OcamlControlDecision):String {
+		return switch (decision.mechanism) {
+			case RuntimeReturnSignal: "HxRuntime.Hx_return";
+			case RuntimeVoidReturnSignal: "HxRuntime.Hx_return_void";
+			case _: throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: return decision "${decision.id}" has unsupported mechanism ${decision.mechanism}';
 		};
 	}
 

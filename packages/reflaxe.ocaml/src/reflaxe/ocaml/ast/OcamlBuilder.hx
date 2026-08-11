@@ -943,6 +943,33 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+		Builds the checked pattern that catches one planned function return.
+
+		The sealed return decision already selects the value-bearing or payloadless
+		signal. This helper authorizes only the matching pattern constructor. The
+		branch result remains owned by the function-result plan.
+	**/
+	function buildAuthorizedReturnBoundaryPattern(decision:OcamlControlDecision, arguments:Array<OcamlPat>, position:Position):OcamlPat {
+		return try {
+			final runtimeUsePlan = OcamlReturnRuntimeUseContract.forBoundaryDecision(decision);
+			OcamlReturnRuntimeUseContract.requireForBoundaryDecision(decision, runtimeUsePlan);
+			final occurrence = OcamlReturnRuntimeUseContract.boundaryPatternOccurrence(runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final pattern = OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(occurrence.id, runtimeUsePlan.planRevision,
+				occurrence.exactSymbol), arguments);
+			// The real branch can contain target names owned by other plans. Reconcile a
+			// small tree that contains only the constructor introduced by this helper.
+			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit),
+				[{pat: pattern, guard: null, expr: OcamlExpr.EConst(OcamlConst.CUnit)}]));
+			pattern;
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
+		}
+	}
+
 	/** Recovers the sealed early-return payload at its exact function boundary. */
 	function buildPlannedReturnBoundary(decision:OcamlControlDecision, returnVarName:String, position:Position):OcamlExpr {
 		try {
@@ -8579,20 +8606,28 @@ class OcamlBuilder {
 			final plannedReturn = functionPlan.controls.returnFamilyAdmitted ? functionPlan.controls.returnBoundaryDecision() : null;
 			if (functionPlan.controls.returnFamilyAdmitted && plannedReturn == null)
 				return controlPlanInvariant("an admitted return family requires a return catch but has no sealed return-boundary decision", bodyExpr.pos);
-			final returnCase:OcamlMatchCase = if (plannedReturn != null
-				&& plannedReturn.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal) {
-				{
-					pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
-					guard: null,
-					expr: OcamlExpr.EConst(OcamlConst.CUnit)
-				};
-			} else {
+			final returnCase:OcamlMatchCase = if (plannedReturn == null) {
 				{
 					pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 					guard: null,
-					expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
-						resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
+					expr: returnPayloadToFunctionType(returnVar, resolvedReturnType)
 				};
+			} else switch (plannedReturn.mechanism) {
+				case RuntimeVoidReturnSignal:
+					{
+						pat: buildAuthorizedReturnBoundaryPattern(plannedReturn, [], bodyExpr.pos),
+						guard: null,
+						expr: OcamlExpr.EConst(OcamlConst.CUnit)
+					};
+				case RuntimeReturnSignal:
+					{
+						pat: buildAuthorizedReturnBoundaryPattern(plannedReturn, [OcamlPat.PVar(returnVar)], bodyExpr.pos),
+						guard: null,
+						expr: buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
+					};
+				case _:
+					return controlPlanInvariant('return decision "${plannedReturn.id}" selected unsupported boundary mechanism ${plannedReturn.mechanism}',
+						bodyExpr.pos);
 			}
 			final fallbackBody = if (isVoidType(resolvedReturnType)) {
 				exprAsStatement(body);
@@ -8782,12 +8817,30 @@ class OcamlBuilder {
 			final plannedReturn = nestedPlan == null ? null : nestedPlan.controls.returnBoundaryDecision();
 			if (nestedPlan != null && plannedReturn == null)
 				return controlPlanInvariant("an admitted nested return plan has no sealed return-boundary decision", tfunc.expr.pos);
-			final returnCase:OcamlMatchCase = {
-				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
-				guard: null,
-				expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
-					functionReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, tfunc.expr.pos)
-			};
+			final returnCase:OcamlMatchCase = if (plannedReturn == null) {
+				{
+					pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
+					guard: null,
+					expr: returnPayloadToFunctionType(returnVar, functionReturnType)
+				};
+			} else switch (plannedReturn.mechanism) {
+				case RuntimeVoidReturnSignal:
+					{
+						pat: buildAuthorizedReturnBoundaryPattern(plannedReturn, [], tfunc.expr.pos),
+						guard: null,
+						expr: OcamlExpr.EConst(OcamlConst.CUnit)
+					};
+				case RuntimeReturnSignal:
+					{
+						pat: buildAuthorizedReturnBoundaryPattern(plannedReturn, [OcamlPat.PVar(returnVar)], tfunc.expr.pos),
+						guard: null,
+						expr: buildPlannedReturnBoundary(plannedReturn, returnVar, tfunc.expr.pos)
+					};
+				case _:
+					return
+						controlPlanInvariant('nested return decision "${plannedReturn.id}" selected unsupported boundary mechanism ${plannedReturn.mechanism}',
+							tfunc.expr.pos);
+			}
 			final fallbackBody = if (isVoidType(functionReturnType)) {
 				exprAsStatement(body);
 			} else if (nestedPlan != null) {

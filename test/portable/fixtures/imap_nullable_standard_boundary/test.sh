@@ -28,7 +28,7 @@ for (const [kind, facts] of expected) {
 		|| alias.nullPolicy !== 'check-null-and-unbox'
 		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
 		|| alias.runtimeRequirementIds?.join(',') !== `${alias.id}:runtime:haxe-runtime-core`
-		|| alias.pipelineRevision !== 'ocaml-function-plans-v99'
+		|| alias.pipelineRevision !== 'ocaml-function-plans-v100'
 		|| alias.runtimeUseOccurrences?.length !== 2
 		|| alias.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.is_null'
 		|| alias.runtimeUseOccurrences[0].role !== 'check-null'

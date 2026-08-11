@@ -688,11 +688,11 @@ class OcamlRuntimeRequirementLedger {
 		final implementation = switch (decision.mechanism) {
 			case RuntimeReturnSignal: {
 					feature: "haxe-function-return-signal-v1",
-					explanation: "The sealed value-bearing return raises one private signal so only its owning Haxe function boundary can recover the already-selected result carrier."
+					explanation: "The sealed value-bearing return raises one private signal, and its owning Haxe function boundary matches that same signal to recover the already-selected result carrier."
 				};
 			case RuntimeVoidReturnSignal: {
 					feature: "haxe-function-void-return-signal-v1",
-					explanation: "The sealed payloadless return raises one private signal so only its owning effect-only Haxe Void function boundary exits early."
+					explanation: "The sealed payloadless return raises one private signal, and its owning effect-only Haxe Void function boundary matches that same signal to exit early."
 				};
 			case _: throw 'Return decision "${decision.id}" has no supported runtime signal.';
 		};
