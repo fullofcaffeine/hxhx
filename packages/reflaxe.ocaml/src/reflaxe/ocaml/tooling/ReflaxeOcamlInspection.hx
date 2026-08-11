@@ -52,6 +52,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlFamilyAdmission;
+import reflaxe.ocaml.lowered.OcamlTypedFunctionResultModel;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
@@ -91,8 +92,8 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v102";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v23";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v103";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v24";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v9";
 
 	/** Returns the control-plan schema selected by one report owner. */
@@ -449,8 +450,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 81) {
-						throw 'Unsupported lowering report schema $version; expected 81.';
+					if (version != 82) {
+						throw 'Unsupported lowering report schema $version; expected 82.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -860,7 +861,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v24")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v25")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -949,10 +950,14 @@ class ReflaxeOcamlInspection {
 						case "runtime-return-signal":
 							if (control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1" || payload == null)
 								throw 'Control decision "${control.id}" has an invalid exact-value return capability or payload.';
-							validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-								'Control decision "${control.id}" input', control.programRevision);
-							validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
-								representationById, 'Control decision "${control.id}" output', control.programRevision);
+							final typedFunctionPayload = payload.conversion == "box-and-recover-typed-function-result"
+								|| payload.conversion == "box-bool-and-recover-dynamic-typed-function-result";
+							if (!typedFunctionPayload) {
+								validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
+									representationById, 'Control decision "${control.id}" input', control.programRevision);
+								validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
+									representationById, 'Control decision "${control.id}" output', control.programRevision);
+							}
 							final admittedExactInput = (payload.inputSemanticTypeId == "Int"
 								&& payload.inputCarrierTypeId == "int"
 								&& payload.inputRepresentationId == "representation:Int:internal-value")
@@ -1041,11 +1046,33 @@ class ReflaxeOcamlInspection {
 								&& payload.conversion == "box-and-recover-nominal-value"
 								&& payload.proofId == "exact-monomorphic-class-early-return-control-v1"
 								&& control.proofId == "exact-monomorphic-class-early-return-control-v1";
+							final typedFunctionConversionValid = payload.conversion == "box-and-recover-typed-function-result"
+								|| (payload.conversion == "box-bool-and-recover-dynamic-typed-function-result"
+									&& payload.inputSemanticTypeId == "Bool"
+									&& payload.outputSemanticTypeId == "Dynamic");
+							final typedFunctionPayloadValid = payload.inputSemanticTypeId.length > 0
+								&& payload.outputSemanticTypeId.length > 0
+								&& payload.inputCarrierTypeId == OcamlTypedFunctionResultModel.INFERRED_CARRIER_TYPE_ID
+								&& payload.outputCarrierTypeId == OcamlTypedFunctionResultModel.INFERRED_CARRIER_TYPE_ID
+								&& payload.inputRepresentationId == OcamlTypedFunctionResultModel.representationId(control.functionId, "input",
+									payload.inputSemanticTypeId)
+								&& payload.outputRepresentationId == OcamlTypedFunctionResultModel.representationId(control.functionId, "output",
+									payload.outputSemanticTypeId)
+								&& payload.representationRevision == null
+								&& payload.arrayDescriptorId == null
+								&& payload.arrayDescriptorRevision == null
+								&& payload.arrayLiteralProducerId == null
+								&& payload.arrayLiteralProducerPlanRevision == null
+								&& payload.nominalRepresentation == null
+								&& typedFunctionPayload
+								&& typedFunctionConversionValid
+								&& payload.proofId == OcamlTypedFunctionResultModel.PROOF_ID
+								&& control.proofId == OcamlTypedFunctionResultModel.PROOF_ID;
 							if (!commonPayloadValid
 								|| payload.proofClaim.length == 0
 								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !anonymousPayloadValid && !dynamicPayloadValid
-									&& !nullableIntConversionValid && !nullableBoolConversionValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, or primitive-to-nullable payload crossing.';
+									&& !nullableIntConversionValid && !nullableBoolConversionValid && !typedFunctionPayloadValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
@@ -2128,15 +2155,26 @@ class ReflaxeOcamlInspection {
 	static function requireFunctionResultCoverage(boundaries:Array<InspectionFunctionResultBoundary>, admissions:Array<OcamlControlAdmissionSnapshot>,
 			controls:Array<InspectionControl>):Void {
 		final byFunction:Map<String, InspectionFunctionResultBoundary> = [];
+		final typedReturnCountByFunction:Map<String, Int> = [];
 		for (boundary in boundaries)
 			byFunction.set(boundary.functionId, boundary);
+		for (control in controls) {
+			final payload = control.payload;
+			if (control.kind != "return" || payload == null)
+				continue;
+			if (payload.conversion != "box-and-recover-typed-function-result"
+				&& payload.conversion != "box-bool-and-recover-dynamic-typed-function-result")
+				continue;
+			typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+		}
 		for (admission in admissions) {
 			if (admission.functionId.indexOf("|nested-function|") >= 0)
 				continue;
 			final returns = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
 			if (returns.status == OcamlControlAdmissionStatus.Admitted
 				&& returns.occurrenceCount > 0
-				&& !byFunction.exists(admission.functionId)) {
+				&& !byFunction.exists(admission.functionId)
+				&& typedReturnCountByFunction.get(admission.functionId) != returns.occurrenceCount) {
 				throw 'Control admission "${admission.id}" admits return transfers without a function-result boundary.';
 			}
 		}

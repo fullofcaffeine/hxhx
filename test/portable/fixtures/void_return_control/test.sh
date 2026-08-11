@@ -27,8 +27,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 81
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
+if (report.schemaVersion !== 82
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
 }
@@ -37,23 +37,27 @@ const controls = report.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-const expectedByFunction = new Map([
+const expectedRootByFunction = new Map([
 	['branch', 1],
 	['loop', 1],
 	['throughTry', 1],
 	['fromCatch', 1],
 	['pushAfterGuard', 1]
 ])
-if (controls.length !== 5)
-	fail(`expected 5 effect-only Void return decisions, got ${controls.length}`)
-for (const [name, expectedCount] of expectedByFunction) {
+if (controls.length !== 6)
+	fail(`expected 6 effect-only Void return decisions, got ${controls.length}`)
+for (const [name, expectedCount] of expectedRootByFunction) {
 	const decisions = controls.filter(control =>
 		control.functionId.includes(`|function|${name}|`))
 	if (decisions.length !== expectedCount)
 		fail(`expected ${expectedCount} sealed ${name} Void return, got ${decisions.length}`)
 }
-if (controls.some(control => control.functionId.includes('|function|local|')))
-	fail('the outer function plan incorrectly claimed the nested function literal')
+const nestedControls = controls.filter(control => control.functionId.includes('|nested-function|'))
+if (nestedControls.length !== 1
+	|| !nestedControls[0].functionId.includes('|function|nestedClosure|')
+	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v24') {
+	fail('the nested Void function did not receive its own effect-only return boundary')
+}
 
 const ids = new Set()
 for (const control of controls) {
@@ -67,7 +71,9 @@ for (const control of controls) {
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-void-return-signal-v1'
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v102'
+		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
+			? 'ocaml-nested-function-plans-v24'
+			: 'ocaml-function-plans-v103')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -115,6 +121,8 @@ for (const name of ['throughTry', 'fromCatch']) {
 
 const closureBody = functionBody('nestedClosure')
 if (!closureBody.includes('let local = fun')
+	|| !closureBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !closureBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| !closureBody.includes('"outer"')) {
 	fail('the nested anonymous function did not keep an independent return boundary')
 }
@@ -144,10 +152,10 @@ const controls = report.lowering.controls.filter(control =>
 if (report.schemaVersion !== 45
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| controls.length !== 5
+	|| controls.length !== 6
 	|| controls.some(control => control.payload !== null)
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 5 validated effect-only Void returns')
+	throw new Error('public inspection did not expose the 6 validated effect-only Void returns')
 }
 NODE
 
@@ -179,4 +187,4 @@ fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
-echo "REFLAXE_OCAML_VOID_RETURN_CONTROL_FIXTURE:PASS controls=5"
+echo "REFLAXE_OCAML_VOID_RETURN_CONTROL_FIXTURE:PASS controls=6"

@@ -109,11 +109,11 @@ class Main {
 	}
 
 	/**
-		Keeps null-to-nominal return behavior visible but outside the first proof.
+		Checks a null early return whose class carrier has no precise conversion.
 
-		The nominal record decision does not yet own the conversion from Haxe's
-		null sentinel into a class carrier, so this function must remain on the
-		legacy path until that conversion has a separate typed contract.
+		Haxe has already checked both returns against `Counter`. The OCaml target can
+		therefore use the private, function-owned fallback without claiming that null
+		has the normal `Counter` record representation at a public call boundary.
 	**/
 	static function chooseNull(stop:Bool, fallbackValue:Int):Counter {
 		if (stop)

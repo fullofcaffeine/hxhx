@@ -2,13 +2,14 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
-/** The one private runtime identifier raised by an exact sealed Haxe return. */
+/** The runtime identifier and requirement owned by one sealed return operation. */
 typedef OcamlReturnRuntimeUsePlan = {
 	final decisionId:String;
 	final planRevision:String;
@@ -20,12 +21,14 @@ typedef OcamlReturnRuntimeUsePlan = {
 	Builds and validates private-runtime ownership for one early return.
 
 	The control decision already says which function exits and whether a value
-	crosses the boundary. This contract adds only the narrower permission to print
-	the matching private OCaml signal once for that exact typed return.
+	crosses the boundary. This contract adds only the narrower permissions to use
+	the matching private OCaml signal and, when required, the Boolean box that
+	keeps `Dynamic` Boolean and integer values distinct.
 **/
 class OcamlReturnRuntimeUseContract {
 	public static inline final SIGNAL_ROLE = "raise-function-return-signal";
 	public static inline final BOUNDARY_PATTERN_ROLE = "catch-function-return-signal";
+	public static inline final BOOL_PAYLOAD_ROLE = "box-dynamic-bool-return-payload";
 
 	/** Returns the requirement identity owned by one exact return decision. */
 	public static function requirementId(decision:OcamlControlDecision):String {
@@ -47,6 +50,16 @@ class OcamlReturnRuntimeUseContract {
 		return planFor(decision, BOUNDARY_PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor);
 	}
 
+	/** Derives the Boolean box used by one typed Bool-to-Dynamic return. */
+	public static function forBoolPayloadDecision(decision:OcamlControlDecision):OcamlReturnRuntimeUsePlan {
+		OcamlControlPlan.requireDecision(decision);
+		if (decision.payload == null
+			|| decision.payload.conversion != OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
+			throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: return decision "${decision.id}" does not own a Dynamic Boolean payload';
+		}
+		return planForSymbol(decision, BOOL_PAYLOAD_ROLE, OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.box_bool", 1);
+	}
+
 	/** Rejects a missing, stale, or conflicting return runtime-use plan. */
 	public static function requireForDecision(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan):Void {
 		final expected = forDecision(decision);
@@ -56,6 +69,12 @@ class OcamlReturnRuntimeUseContract {
 	/** Rejects a missing, stale, or conflicting function-boundary pattern plan. */
 	public static function requireForBoundaryDecision(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan):Void {
 		final expected = forBoundaryDecision(decision);
+		requireExact(decision, plan, expected);
+	}
+
+	/** Rejects a missing or stale Boolean-payload runtime-use plan. */
+	public static function requireForBoolPayloadDecision(decision:OcamlControlDecision, plan:OcamlReturnRuntimeUsePlan):Void {
+		final expected = forBoolPayloadDecision(decision);
 		requireExact(decision, plan, expected);
 	}
 
@@ -84,6 +103,13 @@ class OcamlReturnRuntimeUseContract {
 		return copyOccurrence(plan.runtimeUseOccurrences[0]);
 	}
 
+	/** Returns the checked occurrence that boxes one Dynamic Boolean payload. */
+	public static function boolPayloadOccurrence(plan:OcamlReturnRuntimeUsePlan):OcamlRuntimeUseOccurrence {
+		if (plan.runtimeUseOccurrences.length != 1 || plan.runtimeUseOccurrences[0].role != BOOL_PAYLOAD_ROLE)
+			throw 'reflaxe.ocaml [ocaml-return:invalid-runtime-use]: return decision "${plan.decisionId}" has no unique Dynamic Boolean payload occurrence';
+		return copyOccurrence(plan.runtimeUseOccurrences[0]);
+	}
+
 	/** Returns a detached copy suitable for request handoff and corruption tests. */
 	public static function copy(plan:OcamlReturnRuntimeUsePlan):OcamlReturnRuntimeUsePlan {
 		return {
@@ -98,6 +124,20 @@ class OcamlReturnRuntimeUseContract {
 		OcamlControlPlan.requireDecision(decision);
 		if (decision.kind != OcamlControlTransferKind.Return)
 			throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: control decision "${decision.id}" is not a return';
+		// The final AST inventory visits the signal constructor before its payload.
+		// A Dynamic Boolean helper is therefore second. The matching boundary
+		// pattern is last for the same decision.
+		final hasBoolPayload = decision.payload != null
+			&& decision.payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult;
+		final order = role == SIGNAL_ROLE ? 0 : (hasBoolPayload ? 2 : 1);
+		return planForSymbol(decision, role, domain, signalSymbol(decision), order);
+	}
+
+	static function planForSymbol(decision:OcamlControlDecision, role:String, domain:OcamlRuntimeUseDomain, exactSymbol:String,
+			order:Int):OcamlReturnRuntimeUsePlan {
+		OcamlControlPlan.requireDecision(decision);
+		if (decision.kind != OcamlControlTransferKind.Return)
+			throw 'reflaxe.ocaml [ocaml-return:unexpected-runtime-use]: control decision "${decision.id}" is not a return';
 		final binding:OcamlFunctionPlanBinding = {
 			functionId: decision.functionId,
 			programRevision: decision.programRevision,
@@ -106,9 +146,6 @@ class OcamlReturnRuntimeUseContract {
 		};
 		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final selectedRequirementId = requirementId(decision);
-		// The final OCaml tree visits the raised signal in the function body before
-		// it visits the matching catch pattern at the function boundary.
-		final order = role == SIGNAL_ROLE ? 0 : 1;
 		return {
 			decisionId: decision.id,
 			planRevision: planRevision,
@@ -120,7 +157,7 @@ class OcamlReturnRuntimeUseContract {
 					ownerId: decision.id,
 					requirementId: selectedRequirementId,
 					domain: domain,
-					exactSymbol: signalSymbol(decision),
+					exactSymbol: exactSymbol,
 					role: role,
 					order: order,
 					source: {

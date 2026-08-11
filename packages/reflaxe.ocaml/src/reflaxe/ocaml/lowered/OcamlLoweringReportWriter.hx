@@ -26,6 +26,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
@@ -69,7 +70,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 81;
+	public static inline final SCHEMA_VERSION = 82;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -389,6 +390,14 @@ class OcamlLoweringReportWriter {
 		}
 		final sortedControlAdmissions = controlAdmissions.map(OcamlControlAdmissionContract.copySnapshot);
 		sortedControlAdmissions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final typedReturnCountByFunction:Map<String, Int> = [];
+		for (control in controls) {
+			if (control.kind == OcamlControlTransferKind.Return
+				&& control.payload != null
+				&& OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(control.payload, control.functionId)) {
+				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+			}
+		}
 		final controlAdmissionByFunction:Map<String, OcamlControlAdmissionSnapshot> = [];
 		final controlAdmissionIds:Map<String, Bool> = [];
 		for (admission in sortedControlAdmissions) {
@@ -401,7 +410,8 @@ class OcamlLoweringReportWriter {
 			if (returnFamily.status == OcamlControlAdmissionStatus.Admitted
 				&& returnFamily.occurrenceCount > 0
 				&& admission.functionId.indexOf("|nested-function|") < 0
-				&& !functionResultByFunction.exists(admission.functionId)) {
+				&& !functionResultByFunction.exists(admission.functionId)
+				&& typedReturnCountByFunction.get(admission.functionId) != returnFamily.occurrenceCount) {
 				throw 'Control admission "${admission.id}" admits return transfers without a function result boundary.';
 			}
 		}
@@ -467,7 +477,11 @@ class OcamlLoweringReportWriter {
 						throw 'Control decision "${control.id}" does not consume its exact revision-bound array-literal producer.';
 					}
 				}
-				if (payload.inputSemanticTypeId == "Dynamic") {
+				if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
+					|| payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
+					if (!OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(payload, control.functionId))
+						throw 'Control decision "${control.id}" has an invalid typed-function result carrier.';
+				} else if (payload.inputSemanticTypeId == "Dynamic") {
 					switch (control.kind) {
 						case Return:
 							if (!OcamlControlPlan.isAdmittedDynamicReturnPayload(payload))
@@ -901,7 +915,7 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
 			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v24",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v25",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

@@ -48,6 +48,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunction
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlTypedFunctionResultModel;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
@@ -130,24 +131,33 @@ class ControlPlanFixture {
 			case PreserveDynamicReturnCarrier: OcamlControlPlan.DYNAMIC_RETURN_PROOF_ID;
 			case BoxExactIntToNullableCarrier: OcamlControlPlan.NULLABLE_INT_CONVERSION_RETURN_PROOF_ID;
 			case BoxExactBoolToNullableCarrier: OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID;
+			case BoxAndRecoverTypedFunctionResult, BoxBoolAndRecoverDynamicTypedFunctionResult: OcamlTypedFunctionResultModel.PROOF_ID;
 			case _: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID;
 		}
-		final carrierType = switch (semanticType) {
+		final typedFunctionResult = selectedConversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
+			|| selectedConversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult;
+		final carrierType = if (typedFunctionResult) {
+			OcamlTypedFunctionResultModel.INFERRED_CARRIER_TYPE_ID;
+		} else switch (semanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
-		final outputCarrierType = switch (outputSemanticType) {
+		final outputCarrierType = if (typedFunctionResult) {
+			OcamlTypedFunctionResultModel.INFERRED_CARRIER_TYPE_ID;
+		} else switch (outputSemanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
-		final representationId = 'representation:$semanticType:internal-value';
-		final outputRepresentationId = 'representation:$outputSemanticType:internal-value';
+		final representationId = typedFunctionResult ? OcamlTypedFunctionResultModel.representationId(selectedBinding.functionId, "input",
+			semanticType) : 'representation:$semanticType:internal-value';
+		final outputRepresentationId = typedFunctionResult ? OcamlTypedFunctionResultModel.representationId(selectedBinding.functionId, "output",
+			outputSemanticType) : 'representation:$outputSemanticType:internal-value';
 		final proof = 'fixture exact-$semanticType early-return crossing';
 		return {
 			id: id,
@@ -846,6 +856,35 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(dynamicReturn);
 		if (dynamicReturn.payload == null || !OcamlControlPlan.isAdmittedDynamicReturnPayload(dynamicReturn.payload))
 			throw "Exact Dynamic return lost its carrier-preserving function boundary";
+		final typedFunctionReturn = returnDecision("control:return:typed-function-result", 47, null,
+			OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult, null, "fixture.Node", "fixture.Node");
+		OcamlControlPlan.requireDecision(typedFunctionReturn);
+		if (typedFunctionReturn.payload == null
+			|| !OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(typedFunctionReturn.payload, typedFunctionReturn.functionId)) {
+			throw "Typed function result return lost its exact owner-bound private crossing";
+		}
+		final typedDynamicBoolReturn = returnDecision("control:return:typed-dynamic-bool", 47, null,
+			OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult, null, "Bool", "Dynamic");
+		OcamlControlPlan.requireDecision(typedDynamicBoolReturn);
+		if (typedDynamicBoolReturn.payload == null
+			|| !OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(typedDynamicBoolReturn.payload, typedDynamicBoolReturn.functionId)) {
+			throw "Typed Dynamic function result lost its distinct Boolean carrier";
+		}
+		final untaggedDynamicBoolReturn = returnDecision("control:return:typed-dynamic-bool-untagged", 47, null,
+			OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult, null, "Bool", "Dynamic");
+		expectThrows("incomplete typed-function", () -> OcamlControlPlan.requireDecision(untaggedDynamicBoolReturn));
+		final wrongTypedInput = returnDecision("control:return:typed-wrong-input", 47, null, OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult,
+			null, "fixture.Node", "fixture.Node");
+		Reflect.setField(cast wrongTypedInput.payload, "inputRepresentationId", "control-representation:typed-function-result-v1:borrowed");
+		expectThrows("incomplete typed-function", () -> OcamlControlPlan.requireDecision(wrongTypedInput));
+		final wrongTypedOutputCarrier = returnDecision("control:return:typed-wrong-output", 47, null,
+			OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult, null, "fixture.Node", "fixture.Node");
+		Reflect.setField(cast wrongTypedOutputCarrier.payload, "outputCarrierTypeId", "Obj.t");
+		expectThrows("incomplete typed-function", () -> OcamlControlPlan.requireDecision(wrongTypedOutputCarrier));
+		final wrongTypedProof = returnDecision("control:return:typed-wrong-proof", 47, null, OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult,
+			null, "fixture.Node", "fixture.Node");
+		Reflect.setField(cast wrongTypedProof.payload, "proofId", OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID);
+		expectThrows("incomplete typed-function", () -> OcamlControlPlan.requireDecision(wrongTypedProof));
 		final nullableReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [nullableIntReturn]);
 		if (nullableReturnOnly.returnBoundaryDecision()?.payload?.conversion != OcamlControlPayloadConversion.PreserveNullableCarrier)
 			throw "Exact nullable return lost its carrier-preserving function boundary";

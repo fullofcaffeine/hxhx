@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (lowering.schemaVersion !== 81
+if (lowering.schemaVersion !== 82
 	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v4') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
@@ -32,7 +32,7 @@ for (const field of storedFields) {
 		|| field.receiverCarrierTypeId !== 'Obj.t'
 		|| field.runtimeModule !== 'HxAnon'
 		|| field.runtimeOperation !== (field.operation === 'write-stored-field' ? 'set' : 'get')
-		|| field.pipelineRevision !== 'ocaml-function-plans-v102') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v103') {
 		throw new Error(`stored structural field ${field.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === field.id)
@@ -98,7 +98,7 @@ for (const field of tupleFields) {
 		|| !target.iteratorLocalId.startsWith('lexical-local-v1:')
 		|| !target.pairLocalId.startsWith('lexical-local-v1:')
 		|| target.proofId !== 'standard-map-key-value-tuple-projection-v3'
-		|| field.pipelineRevision !== 'ocaml-function-plans-v102') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v103') {
 		throw new Error(`Map-pair projection ${field.id} has no complete typed producer proof`)
 	}
 	if (lowering.runtimeRequirements.some(requirement => requirement.decisionId === field.id))
@@ -109,11 +109,26 @@ const listSortFields = fields.filter(field => field.source.file === 'haxe-stdlib
 if (listSortFields.length < 6)
 	throw new Error('the real ListSort implementation did not contribute its expected next reads and writes')
 
+const listSortReturns = (lowering.controls ?? []).filter(control =>
+	control.kind === 'return'
+	&& control.functionId.includes('haxe.ds.ListSort|ListSort|static|function|sortSingleLinked|'))
+if (listSortReturns.length !== 1
+	|| listSortReturns[0].payload?.conversion !== 'box-and-recover-typed-function-result'
+	|| listSortReturns[0].payload?.inputCarrierTypeId !== 'ocaml-inferred-function-result'
+	|| listSortReturns[0].payload?.outputCarrierTypeId !== 'ocaml-inferred-function-result'
+	|| listSortReturns[0].proofId !== 'typed-function-result-early-return-control-v1') {
+	throw new Error('the generic ListSort return did not use its exact function-owned typed fallback')
+}
+
 const generated = fs.readFileSync('out/haxe_ds_ListSort.ml', 'utf8')
 if (!generated.includes('HxAnon.get') || !generated.includes('HxAnon.set'))
 	throw new Error('generated ListSort did not exercise both stored next operations')
 if (/HxIterator\.(hasNext|next)/.test(generated))
 	throw new Error('generated ListSort still mistakes an ordinary next field for an Iterator method')
+if (!/HxRuntime\.Hx_return __ret_\d+ -> Obj\.obj __ret_\d+/.test(generated)
+	|| /HxRuntime\.Hx_return __ret_\d+ -> Obj\.magic __ret_\d+/.test(generated)) {
+	throw new Error('generated ListSort did not recover its generic result through the private typed boundary')
+}
 
 const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
 if (!generatedMain.includes('HxAnon.get')

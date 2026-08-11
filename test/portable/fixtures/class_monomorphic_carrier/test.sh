@@ -18,8 +18,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 81
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
+if (report.schemaVersion !== 82
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
 	fail('unexpected lowering-report schema, control model, or representation scope')
 }
@@ -77,7 +77,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v102'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v103'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'
@@ -94,10 +94,15 @@ for (const functionName of expectedReturnFunctions) {
 		fail(`${functionName} did not bind its private return crossing to the exact Counter layout`)
 	}
 }
-if ((report.controls ?? []).some(control =>
+const inferredReturns = (report.controls ?? []).filter(control =>
 	control.kind === 'return'
-	&& control.functionId.includes('|chooseNull|'))) {
-	fail('the unproved null-to-nominal return was admitted without its own conversion contract')
+	&& control.functionId.includes('|chooseNull|'))
+if (inferredReturns.length !== 1
+	|| inferredReturns[0].payload?.conversion !== 'box-and-recover-typed-function-result'
+	|| inferredReturns[0].payload?.inputCarrierTypeId !== 'ocaml-inferred-function-result'
+	|| inferredReturns[0].payload?.outputCarrierTypeId !== 'ocaml-inferred-function-result'
+	|| inferredReturns[0].proofId !== 'typed-function-result-early-return-control-v1') {
+	fail('the null-to-nominal return did not use its exact function-owned typed fallback')
 }
 
 const admittedReceivers = (report.plans ?? []).filter(plan =>
@@ -220,8 +225,10 @@ for (const functionName of expectedReturnFunctions) {
 const nullReturnStart = source.indexOf('let chooseNull =')
 const nullReturnEnd = source.indexOf('\nlet ', nullReturnStart + 1)
 const nullReturnSource = nullReturnStart < 0 ? '' : source.slice(nullReturnStart, nullReturnEnd < 0 ? source.length : nullReturnEnd)
-if (!nullReturnSource.includes('Obj.magic')) {
-	fail('the unsupported null-to-nominal return was accidentally admitted')
+if (!/HxRuntime\.Hx_return \(Obj\.repr \(Obj\.magic \(HxRuntime\.hx_null\)\)\)/.test(nullReturnSource)
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> Obj\.obj __ret_\d+ : counter_t/.test(nullReturnSource)
+	|| /HxRuntime\.Hx_return __ret_\d+ -> Obj\.magic __ret_\d+/.test(nullReturnSource)) {
+	fail('the null-to-nominal return did not recover its Haxe-typed result through the private function boundary')
 }
 if (!/let ordinary = Obj\.magic \(let __call_arg_0_\d+ = 13 in counter_create __call_arg_0_\d+\)/.test(source)
 	|| !/let called = ref \(Obj\.magic \(let __call_arg_0_\d+ = 14 in counter_create __call_arg_0_\d+\)\) in let read = fun \(\) -> \(Obj\.magic \(!called\) : counter_t\)\.value/.test(source)
@@ -380,7 +387,7 @@ if (
 	echo "The external inspector accepted an early return bound to a stale class layout" >&2
 	exit 1
 fi
-if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, or primitive-to-nullable payload crossing" "$invalid_control_nominal_log"; then
+if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$invalid_control_nominal_log"; then
 	echo "The external inspector rejected the stale early-return class layout for an unexpected reason" >&2
 	cat "$invalid_control_nominal_log" >&2
 	exit 1

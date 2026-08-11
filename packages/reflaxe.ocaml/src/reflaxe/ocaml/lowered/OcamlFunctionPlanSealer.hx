@@ -37,12 +37,14 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructure
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
+import reflaxe.ocaml.lowered.OcamlTypedFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
@@ -224,7 +226,7 @@ class OcamlFunctionPlanSealer {
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
-			arrayLiteralProducers).plan(data.expr, functionResultBoundary);
+			arrayLiteralProducers).plan(data.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromDeclaration(data, binding));
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
@@ -416,7 +418,8 @@ class OcamlFunctionPlanSealer {
 					arrayLiteralProducers.requirePlanBinding(nestedBinding);
 					arrayLiteralProducers.requireRepresentations(representations);
 					final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
-						arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
+						arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary,
+							OcamlTypedFunctionResultBoundary.fromNestedFunction(tfunc, nestedBinding));
 					requireCompleteCatchCoverage(controls, expression.pos);
 					validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
 					recordControlRuntimeRequirements(controls);
@@ -540,6 +543,12 @@ class OcamlFunctionPlanSealer {
 			final payload = control.payload;
 			if (payload == null)
 				continue;
+			if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
+				|| payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
+				if (!OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(payload, control.functionId))
+					fail('control "${control.id}" has an invalid typed-function result carrier', position);
+				continue;
+			}
 			if (payload.inputSemanticTypeId == "Dynamic") {
 				final validDynamic = switch (control.kind) {
 					case Return: OcamlControlPlan.isAdmittedDynamicReturnPayload(payload);

@@ -206,7 +206,7 @@ if haxe build.hxml -D ocaml_no_build -D map_invalid_source_identity >"$INVALID_I
 	echo "Malformed typed declaration identity unexpectedly compiled" >&2
 	exit 1
 fi
-if ! grep -Fq 'reflaxe.ocaml [typed-declaration-identity]: :realPath on a class requires exactly one constant source name.' "$INVALID_IDENTITY_LOG"; then
+if ! grep -Fq 'reflaxe.ocaml [typed-declaration-identity]: :realPath on a class marker declaration requires exactly one constant source name.' "$INVALID_IDENTITY_LOG"; then
 	echo "Malformed typed declaration identity did not fail at the typed identity boundary" >&2
 	cat "$INVALID_IDENTITY_LOG" >&2
 	exit 1

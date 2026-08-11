@@ -20,6 +20,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier.OcamlEnumDynamicCarrierIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary.OcamlFunctionResultBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlTypedFunctionResultBoundary.OcamlTypedFunctionResultBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
@@ -74,6 +75,8 @@ enum abstract OcamlControlRuntimeTagPolicy(String) from String to String {
 enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final BoxAndRecoverNominalValue = "box-and-recover-nominal-value";
+	final BoxAndRecoverTypedFunctionResult = "box-and-recover-typed-function-result";
+	final BoxBoolAndRecoverDynamicTypedFunctionResult = "box-bool-and-recover-dynamic-typed-function-result";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
 	final PreserveAnonymousCarrier = "preserve-anonymous-carrier";
 	final PreserveDynamicReturnCarrier = "preserve-dynamic-return-carrier";
@@ -159,6 +162,20 @@ enum abstract OcamlCatchEffect(String) from String to String {
 **/
 enum abstract OcamlCatchBranchResultPolicy(String) from String to String {
 	final PreserveTypedResult = "preserve-typed-result";
+	final DiscardCompletedValueToUnit = "discard-completed-value-to-unit";
+}
+
+/**
+	How a Haxe expression behaves when OCaml syntax needs a statement result.
+
+	Most statement expressions can finish normally, so their value must be
+	discarded to OCaml `unit`. An expression whose every visible branch returns or
+	throws cannot finish normally. Keeping that expression polymorphic prevents an
+	outer `ignore` from changing the result type recovered by the function's
+	private return handler.
+**/
+enum abstract OcamlStatementResultPolicy(String) from String to String {
+	final PreserveNonLocalResult = "preserve-non-local-result";
 	final DiscardCompletedValueToUnit = "discard-completed-value-to-unit";
 }
 
@@ -298,6 +315,19 @@ typedef OcamlControlDecisionOccurrence = {
 	final decisionId:String;
 }
 
+/**
+	One exact typed branch whose statement-result behavior was fixed by planning.
+
+	The expression reference is request-local lookup only. The stable identity,
+	source span, and policy participate in the detached plan revision.
+**/
+typedef OcamlStatementResultOccurrence = {
+	final expression:TypedExpr;
+	final occurrenceId:String;
+	final source:OcamlLoweredSourceSpan;
+	final policy:OcamlStatementResultPolicy;
+}
+
 /** One ordered, typed clause within an admitted source catch chain. */
 typedef OcamlCatchClauseDecision = {
 	final id:String;
@@ -392,6 +422,7 @@ typedef OcamlCatchBranchResultDisposition = {
 **/
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
+	public static inline final TYPED_FUNCTION_RESULT_RETURN_PROOF_ID = OcamlTypedFunctionResultBoundary.PROOF_ID;
 	public static inline final DYNAMIC_RETURN_PROOF_ID = "dynamic-carrier-return-control-v1";
 	public static inline final EXACT_NOMINAL_RETURN_PROOF_ID = "exact-monomorphic-class-early-return-control-v1";
 	public static inline final NULLABLE_CARRIER_RETURN_PROOF_ID = "exact-nullable-carrier-early-return-control-v1";
@@ -447,14 +478,18 @@ class OcamlControlPlan {
 	final catchChainIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
 	final catchDispositionByExpression:ObjectMap<TypedExpr, Bool> = new ObjectMap();
 	final catchBranchResultsByExpression:ObjectMap<TypedExpr, OcamlCatchBranchResultDisposition> = new ObjectMap();
+	final statementResultPolicyByExpression:ObjectMap<TypedExpr, OcamlStatementResultPolicy> = new ObjectMap();
 	final hasOccurrenceIndex:Bool;
 	final hasCatchOccurrenceIndex:Bool;
+	final hasStatementResultIndex:Bool;
 	final catchOccurrenceFingerprints:Array<String>;
+	final statementResultFingerprints:Array<String>;
 
 	public function new(returnFamilyAdmitted:Bool, loopFamilyAdmitted:Bool, throwFamilyAdmitted:Bool, binding:OcamlFunctionPlanBinding,
 			targets:Array<OcamlControlLoopTarget>, decisions:Array<OcamlControlDecision>, ?targetOccurrences:Array<OcamlControlLoopTargetOccurrence>,
 			?decisionOccurrences:Array<OcamlControlDecisionOccurrence>, ?catchChains:Array<OcamlCatchChainDecision>,
-			?catchOccurrences:Array<OcamlCatchChainOccurrence>, ?admission:OcamlControlAdmissionSnapshot) {
+			?catchOccurrences:Array<OcamlCatchChainOccurrence>, ?admission:OcamlControlAdmissionSnapshot,
+			?statementResultOccurrences:Array<OcamlStatementResultOccurrence>) {
 		this.returnFamilyAdmitted = returnFamilyAdmitted;
 		this.loopFamilyAdmitted = loopFamilyAdmitted;
 		this.throwFamilyAdmitted = throwFamilyAdmitted;
@@ -463,6 +498,7 @@ class OcamlControlPlan {
 			throw 'reflaxe.ocaml [ocaml-control:incomplete-occurrence-index]: loop-target and transfer occurrence indexes must be supplied together';
 		hasOccurrenceIndex = targetOccurrences != null;
 		hasCatchOccurrenceIndex = catchOccurrences != null;
+		hasStatementResultIndex = statementResultOccurrences != null;
 
 		final sortedTargets = targets.map(copyLoopTarget);
 		sortedTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -637,6 +673,29 @@ class OcamlControlPlan {
 					throw 'reflaxe.ocaml [ocaml-control:missing-catch-occurrence]: catch chain "${chain.id}" has no exact typed occurrence';
 			}
 		}
+		final indexedStatementResultIds:Map<String, Bool> = [];
+		final normalizedStatementResultFingerprints:Array<String> = [];
+		for (occurrence in statementResultOccurrences ?? []) {
+			final occurrenceSource = OcamlLoweredOrigin.sourceSpan(occurrence.expression.pos);
+			if (occurrence.occurrenceId.length == 0
+				|| sourceKey(occurrence.source) != sourceKey(occurrenceSource)
+				|| !isStatementResultPolicy(occurrence.policy)) {
+				throw 'reflaxe.ocaml [ocaml-control:invalid-statement-result]: typed statement-result occurrence has incomplete identity, source, or policy';
+			}
+			if (indexedStatementResultIds.exists(occurrence.occurrenceId))
+				throw 'reflaxe.ocaml [ocaml-control:duplicate-statement-result]: statement-result occurrence "${occurrence.occurrenceId}" appears more than once';
+			if (statementResultPolicyByExpression.exists(occurrence.expression))
+				throw 'reflaxe.ocaml [ocaml-control:ambiguous-statement-result]: one typed expression has more than one statement-result policy';
+			statementResultPolicyByExpression.set(occurrence.expression, occurrence.policy);
+			indexedStatementResultIds.set(occurrence.occurrenceId, true);
+			normalizedStatementResultFingerprints.push([
+				occurrence.occurrenceId,
+				sourceKey(occurrence.source),
+				(occurrence.policy : String)
+			].join("|"));
+		}
+		normalizedStatementResultFingerprints.sort(Reflect.compare);
+		statementResultFingerprints = normalizedStatementResultFingerprints;
 		this.admission = admission == null ? null : OcamlControlAdmissionContract.copySnapshot(admission);
 		if (this.admission != null) {
 			OcamlControlAdmissionContract.requireSnapshot(this.admission);
@@ -671,6 +730,7 @@ class OcamlControlPlan {
 			.concat(ordered.map(decisionFingerprint))
 			.concat(orderedCatchChains.map(catchChainFingerprint))
 			.concat(catchOccurrenceFingerprints)
+			.concat(statementResultFingerprints)
 			.join("\n"));
 	}
 
@@ -844,6 +904,16 @@ class OcamlControlPlan {
 		return hasCatchOccurrenceIndex ? catchDispositionByExpression.exists(expression) : true;
 	}
 
+	/** Returns the pre-syntax statement policy for one exact typed expression. */
+	public function statementResultPolicyFor(expression:TypedExpr):OcamlStatementResultPolicy {
+		if (!hasStatementResultIndex)
+			return OcamlStatementResultPolicy.DiscardCompletedValueToUnit;
+		final policy = statementResultPolicyByExpression.get(expression);
+		if (policy == null)
+			throw 'reflaxe.ocaml [ocaml-control:missing-statement-result]: typed statement expression has no sealed result policy';
+		return policy;
+	}
+
 	/**
 		Returns one decision whose output side represents the shared function boundary.
 
@@ -966,6 +1036,12 @@ class OcamlControlPlan {
 							|| payload.proofId != EXACT_NOMINAL_RETURN_PROOF_ID
 							|| decision.proofId != EXACT_NOMINAL_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete monomorphic-class payload crossing';
+						}
+					case BoxAndRecoverTypedFunctionResult, BoxBoolAndRecoverDynamicTypedFunctionResult:
+						if (!isAdmittedTypedFunctionReturnPayload(payload, decision.functionId)
+							|| payload.proofId != TYPED_FUNCTION_RESULT_RETURN_PROOF_ID
+							|| decision.proofId != TYPED_FUNCTION_RESULT_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete typed-function result crossing';
 						}
 					case PreserveNullableCarrier:
 						if (!isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
@@ -1227,6 +1303,11 @@ class OcamlControlPlan {
 	static function isCatchBranchResultPolicy(policy:OcamlCatchBranchResultPolicy):Bool {
 		return policy == OcamlCatchBranchResultPolicy.PreserveTypedResult
 			|| policy == OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit;
+	}
+
+	static function isStatementResultPolicy(policy:OcamlStatementResultPolicy):Bool {
+		return policy == OcamlStatementResultPolicy.PreserveNonLocalResult
+			|| policy == OcamlStatementResultPolicy.DiscardCompletedValueToUnit;
 	}
 
 	static function requireExactCatchSide(clause:OcamlCatchClauseDecision, carrierTypeId:String, representationId:String, runtimeTag:String,
@@ -1753,6 +1834,33 @@ class OcamlControlPlan {
 	}
 
 	/**
+		Reports whether one private return uses its exact Haxe-typed function owner.
+
+		The carrier name is a policy marker, not an OCaml type. `Obj.t` exists only
+		while the private exception is in flight. The matching function handler uses
+		OCaml type inference to recover the value into the same function body, so the
+		plan does not invent a callable carrier or use `Obj.magic` as evidence.
+	**/
+	public static function isAdmittedTypedFunctionReturnPayload(payload:OcamlControlPayloadPlan, functionId:String):Bool {
+		final needsTaggedBoolBox = payload.inputSemanticTypeId == "Bool" && payload.outputSemanticTypeId == "Dynamic";
+		final conversionAdmitted = needsTaggedBoolBox ? payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult : payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult;
+		return conversionAdmitted
+			&& payload.inputSemanticTypeId.length > 0
+			&& payload.outputSemanticTypeId.length > 0
+			&& payload.inputCarrierTypeId == OcamlTypedFunctionResultBoundary.INFERRED_CARRIER_TYPE_ID
+			&& payload.outputCarrierTypeId == OcamlTypedFunctionResultBoundary.INFERRED_CARRIER_TYPE_ID
+			&& payload.inputRepresentationId == OcamlTypedFunctionResultBoundary.representationId(functionId, "input", payload.inputSemanticTypeId)
+			&& payload.outputRepresentationId == OcamlTypedFunctionResultBoundary.representationId(functionId, "output", payload.outputSemanticTypeId)
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& payload.representationRevision == null
+			&& payload.arrayDescriptorId == null
+			&& payload.arrayDescriptorRevision == null
+			&& payload.arrayLiteralProducerId == null
+			&& payload.arrayLiteralProducerPlanRevision == null
+			&& payload.nominalRepresentation == null;
+	}
+
+	/**
 		Reports whether an exact generated Haxe exception wrapper crosses the
 		private exception channel without changing object identity.
 
@@ -1785,6 +1893,10 @@ class OcamlControlPlan {
 	}
 
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
+		if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
+			|| payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
+			return haxe.macro.TypeTools.toString(expression.t) == payload.inputSemanticTypeId;
+		}
 		if (payload.conversion == OcamlControlPayloadConversion.PreserveAnonymousCarrier) {
 			final unwrapped = unwrapControlTransparent(expression);
 			return switch (unwrapped.expr) {
@@ -2036,16 +2148,17 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects exact-value or effect-only `Void` returns, represented primitive or
-	monomorphic-class throws, lexical loop transfers, and represented
-	primitive/monomorphic-class/Dynamic catch chains.
+	Plans non-local control before the OCaml syntax builder runs.
 
-	Return-family admission depends on the function result carrier. A function
-	result carrier records what the completed body returns without also claiming
-	that the compiler admitted the receiver, parameters, or call occurrences.
-	Loop-family
-	admission is independent and records `while`/`do ... while` targets in every
-	sealed function body. Throw-family admission is independent and accepts exact
+	For a return, the planner first uses a precise represented result when one is
+	available. If one return in a value-producing function cannot use that result,
+	the planner gives every return in that function one owner-bound fallback. This
+	fallback uses the result type that Haxe already checked. It does not define a
+	public call representation. An effect-only `Void` function uses a payloadless
+	private signal.
+
+	Loop admission is independent and records `while` and `do ... while` targets
+	in every sealed function body. Throw admission is also independent. It accepts exact
 	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
 	immutable-local `Array<Int>` or directly constructed `Array<Int>`/`Array<String>`, one whole-program-monomorphic class payload, or
 	a directly visible ordinary enum constructor. The array case reuses the
@@ -2056,7 +2169,7 @@ class OcamlControlPlan {
 	itself is the constructor value or call; values reached through locals, casts,
 	fields, or other expressions remain outside this slice. Nested function literals own
 	independent boundaries and are deliberately skipped. Each source `try` is
-	admitted independently, so one unsupported catch chain does not discard
+	admitted independently. Thus, one unsupported catch chain does not discard
 	another represented chain in the same function.
 
 	Stable record IDs use the node's structural path through the final typed body,
@@ -2065,6 +2178,14 @@ class OcamlControlPlan {
 	request-local object index reconnects each stable record to the exact immutable
 	node consumed by syntax generation.
 **/
+private typedef OcamlObservedReturn = {
+	final expression:TypedExpr;
+	final value:Null<TypedExpr>;
+	final path:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:Null<String>;
+}
+
 class OcamlControlPlanner {
 	final representations:OcamlRepresentationRegistry;
 	final localRepresentations:OcamlLocalRepresentationPlan;
@@ -2082,14 +2203,22 @@ class OcamlControlPlanner {
 		this.arrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 	}
 
-	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlFunctionResultBoundaryPlan>):OcamlControlPlan {
+	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlFunctionResultBoundaryPlan>,
+			?typedBoundary:OcamlTypedFunctionResultBoundaryPlan):OcamlControlPlan {
 		if (body == null)
 			return OcamlControlPlan.notAdmitted(binding);
+		if (typedBoundary != null)
+			OcamlTypedFunctionResultBoundary.require(typedBoundary, binding);
 
 		final boundaryPayload = admittedBoundaryPayload(boundary);
-		final effectOnlyVoidBoundary = admittedEffectOnlyVoidBoundary(boundary);
-		final returnBoundaryAdmitted = boundaryPayload != null || effectOnlyVoidBoundary;
+		final effectOnlyVoidBoundary = admittedEffectOnlyVoidBoundary(boundary)
+			|| typedBoundary != null
+			&& typedBoundary.resultKind == OcamlCallResultKind.EffectOnlyVoid;
+		final typedValueBoundary = typedBoundary != null && typedBoundary.resultKind == OcamlCallResultKind.Value;
+		final preciseReturnBoundaryAdmitted = boundaryPayload != null || effectOnlyVoidBoundary;
+		final returnBoundaryAdmitted = preciseReturnBoundaryAdmitted || typedValueBoundary;
 		var returnFamilyAdmitted = returnBoundaryAdmitted;
+		var typedValueFallbackRequired = false;
 		var loopFamilyAdmitted = true;
 		var throwFamilyAdmitted = true;
 		var returnOccurrenceCount = 0;
@@ -2104,8 +2233,35 @@ class OcamlControlPlanner {
 		final targetOccurrences:Array<OcamlControlLoopTargetOccurrence> = [];
 		var decisionOccurrences:Array<OcamlControlDecisionOccurrence> = [];
 		final catchOccurrences:Array<OcamlCatchChainOccurrence> = [];
+		final statementResultOccurrences:Array<OcamlStatementResultOccurrence> = [];
 		final catchAdmissions:Array<OcamlControlCatchAdmission> = [];
 		final loopStack:Array<OcamlControlLoopTarget> = [];
+		final observedReturns:Array<OcamlObservedReturn> = [];
+
+		function addStatementResult(expression:TypedExpr, path:String):Void {
+			statementResultOccurrences.push({
+				expression: expression,
+				occurrenceId: statementResultOccurrenceId(path),
+				source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+				policy: OcamlControlFlowFacts.definitelyReturnsOrThrows(expression) ? OcamlStatementResultPolicy.PreserveNonLocalResult : OcamlStatementResultPolicy.DiscardCompletedValueToUnit
+			});
+		}
+
+		function observeStatementResults(expression:TypedExpr, path:String):Void {
+			switch (expression.expr) {
+				case TIf(_, thenExpression, elseExpression):
+					if (elseExpression == null || isVoid(expression.t))
+						addStatementResult(thenExpression, path + "/if:then");
+					if (elseExpression != null && isVoid(expression.t))
+						addStatementResult(elseExpression, path + "/if:else");
+				case TSwitch(_, cases, defaultExpression) if (isVoid(expression.t)):
+					for (index => entry in cases)
+						addStatementResult(entry.expr, path + "/switch:case:" + index);
+					if (defaultExpression != null)
+						addStatementResult(defaultExpression, path + "/switch:default");
+				case _:
+			}
+		}
 
 		function addLoopTransfer(expression:TypedExpr, path:String, kind:OcamlControlTransferKind):Void {
 			loopOccurrenceCount++;
@@ -2148,6 +2304,7 @@ class OcamlControlPlanner {
 		}
 
 		function visit(expression:TypedExpr, directRootStatement:Bool, path:String):Void {
+			observeStatementResults(expression, path);
 			switch (expression.expr) {
 				case TReturn(value):
 					if (value != null)
@@ -2158,7 +2315,19 @@ class OcamlControlPlanner {
 					final returnSource = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final returnSemanticTypeId = value == null ? null : haxe.macro.TypeTools.toString(value.t);
 					final returnOccurrenceId = controlBlockerOccurrenceId(OcamlControlTransferKind.Return, path);
-					if (!returnFamilyAdmitted) {
+					observedReturns.push({
+						expression: expression,
+						value: value,
+						path: path,
+						source: returnSource,
+						semanticTypeId: returnSemanticTypeId
+					});
+					if (!preciseReturnBoundaryAdmitted) {
+						if (typedValueBoundary && value != null) {
+							typedValueFallbackRequired = true;
+							return;
+						}
+						returnFamilyAdmitted = false;
 						if (!returnBoundaryAdmitted && returnBlockers.length == 0) {
 							returnBlockers.push(OcamlControlAdmissionContract.blocker("return-boundary-unrepresented", returnOccurrenceId, returnSource,
 								returnSemanticTypeId));
@@ -2203,15 +2372,23 @@ class OcamlControlPlanner {
 					final representation = value == null ? null : returnRepresentation(value, boundary);
 					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
 					if (representation == null) {
-						returnFamilyAdmitted = false;
-						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-value-unrepresented", returnOccurrenceId, returnSource,
-							returnSemanticTypeId));
+						if (typedValueBoundary) {
+							typedValueFallbackRequired = true;
+						} else {
+							returnFamilyAdmitted = false;
+							returnBlockers.push(OcamlControlAdmissionContract.blocker("return-value-unrepresented", returnOccurrenceId, returnSource,
+								returnSemanticTypeId));
+						}
 						return;
 					}
 					if (payload == null) {
-						returnFamilyAdmitted = false;
-						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-conversion-unrepresented", returnOccurrenceId, returnSource,
-							returnSemanticTypeId));
+						if (typedValueBoundary) {
+							typedValueFallbackRequired = true;
+						} else {
+							returnFamilyAdmitted = false;
+							returnBlockers.push(OcamlControlAdmissionContract.blocker("return-conversion-unrepresented", returnOccurrenceId, returnSource,
+								returnSemanticTypeId));
+						}
 						return;
 					}
 					final proofId = payload.proofId;
@@ -2498,6 +2675,55 @@ class OcamlControlPlanner {
 				visit(body, true, "root");
 		}
 
+		if (typedValueFallbackRequired) {
+			if (typedBoundary == null || typedBoundary.resultKind != OcamlCallResultKind.Value)
+				throw 'reflaxe.ocaml [ocaml-control:missing-typed-result]: function "${binding.functionId}" requested a typed return fallback without a value boundary';
+			decisions = decisions.filter(decision -> decision.kind != OcamlControlTransferKind.Return);
+			decisionOccurrences = decisionOccurrences.filter(occurrence -> {
+				final decision = Lambda.find(decisions, candidate -> candidate.id == occurrence.decisionId);
+				return decision != null;
+			});
+			returnBlockers.resize(0);
+			returnFamilyAdmitted = true;
+			for (observed in observedReturns) {
+				final value = observed.value;
+				final inputSemanticTypeId = observed.semanticTypeId;
+				if (value == null || inputSemanticTypeId == null) {
+					returnFamilyAdmitted = false;
+					returnBlockers.push(OcamlControlAdmissionContract.blocker("return-payload-missing",
+						controlBlockerOccurrenceId(OcamlControlTransferKind.Return, observed.path), observed.source));
+					continue;
+				}
+				final payload = typedFunctionReturnPayload(inputSemanticTypeId, typedBoundary);
+				final decision:OcamlControlDecision = {
+					id: controlId(OcamlControlTransferKind.Return, observed.path, binding.functionId),
+					source: observed.source,
+					kind: OcamlControlTransferKind.Return,
+					effect: OcamlControlEffect.ExitFunction,
+					targetKind: OcamlControlTargetKind.Function,
+					targetId: binding.functionId,
+					payload: payload,
+					runtimeTags: [],
+					runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
+					mechanism: OcamlControlTargetMechanism.RuntimeReturnSignal,
+					runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
+					profileEligibility: ["metal", "portable"],
+					reason: "This nested return uses the result type already checked for its exact Haxe function. The private signal erases the value only until the matching function handler recovers it.",
+					proofId: OcamlControlPlan.TYPED_FUNCTION_RESULT_RETURN_PROOF_ID,
+					proofClaim: typedBoundary.proofClaim,
+					functionId: binding.functionId,
+					programRevision: binding.programRevision,
+					bodyRevision: binding.bodyRevision,
+					pipelineRevision: binding.pipelineRevision
+				};
+				decisions.push(decision);
+				decisionOccurrences.push({
+					expression: observed.expression,
+					decisionId: decision.id
+				});
+			}
+		}
+
 		if (!returnFamilyAdmitted) {
 			decisions = decisions.filter(decision -> decision.kind != OcamlControlTransferKind.Return);
 			final admittedIds = [for (decision in decisions) decision.id => true];
@@ -2526,7 +2752,7 @@ class OcamlControlPlanner {
 				Lambda.count(decisions, decision -> decision.kind == OcamlControlTransferKind.Throw), throwFamilyAdmitted, throwBlockers)
 		], catchAdmissions);
 		return new OcamlControlPlan(returnFamilyAdmitted, loopFamilyAdmitted, throwFamilyAdmitted, binding, targets, decisions, targetOccurrences,
-			decisionOccurrences, catchChains, catchOccurrences, admission);
+			decisionOccurrences, catchChains, catchOccurrences, admission, statementResultOccurrences);
 	}
 
 	static function catchBranchResultPolicy(tryResultType:Type, branch:TypedExpr):OcamlCatchBranchResultPolicy {
@@ -3019,6 +3245,24 @@ class OcamlControlPlanner {
 		return null;
 	}
 
+	/** Builds one function-local fallback from Haxe's checked return assignment. */
+	static function typedFunctionReturnPayload(inputSemanticTypeId:String, boundary:OcamlTypedFunctionResultBoundaryPlan):OcamlControlPayloadPlan {
+		return {
+			inputSemanticTypeId: inputSemanticTypeId,
+			inputCarrierTypeId: OcamlTypedFunctionResultBoundary.INFERRED_CARRIER_TYPE_ID,
+			inputRepresentationId: OcamlTypedFunctionResultBoundary.representationId(boundary.functionId, "input", inputSemanticTypeId),
+			signalCarrierTypeId: "Obj.t",
+			outputSemanticTypeId: boundary.semanticTypeId,
+			outputCarrierTypeId: OcamlTypedFunctionResultBoundary.INFERRED_CARRIER_TYPE_ID,
+			outputRepresentationId: OcamlTypedFunctionResultBoundary.representationId(boundary.functionId, "output", boundary.semanticTypeId),
+			conversion: inputSemanticTypeId == "Bool"
+			&& boundary.semanticTypeId == "Dynamic" ? OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult : OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult,
+			nominalRepresentation: null,
+			proofId: OcamlControlPlan.TYPED_FUNCTION_RESULT_RETURN_PROOF_ID,
+			proofClaim: boundary.proofClaim
+		};
+	}
+
 	static function nominalProofFor(representation:OcamlRepresentationDecision):Null<OcamlControlNominalRepresentationProof> {
 		final targetModuleName = representation.nominalTargetModuleName;
 		final targetTypeName = representation.nominalTargetTypeName;
@@ -3091,6 +3335,10 @@ class OcamlControlPlanner {
 
 	function catchChainId(path:String):String {
 		return "control-catch-chain:" + Sha256.encode(binding.functionId + "|" + path).substr(0, 24);
+	}
+
+	function statementResultOccurrenceId(path:String):String {
+		return "control-statement-result:" + Sha256.encode(binding.functionId + "|" + path).substr(0, 24);
 	}
 
 	function catchOccurrenceId(path:String):String {

@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 81
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
+if (report.schemaVersion !== 82
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
 }
@@ -69,7 +69,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v102'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v103'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -264,7 +264,7 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	echo "Public inspection accepted a primitive-to-nullable return with a conflicting output family" >&2
 	exit 1
 fi
-if ! grep -q "exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, or primitive-to-nullable payload crossing" "$TAMPER_INSPECTION"; then
+if ! grep -q "exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$TAMPER_INSPECTION"; then
 	echo "Public inspection rejected the corrupt primitive-to-nullable return without an actionable reason" >&2
 	cat "$TAMPER_INSPECTION" >&2
 	exit 1
