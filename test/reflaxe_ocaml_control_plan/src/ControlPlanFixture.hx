@@ -1424,15 +1424,20 @@ class ControlPlanFixture {
 		deferredRegistry.registerRootIdentityPlan(nestedParent, deferredIdentities);
 		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
 		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
+		final deferredControls = new OcamlControlPlan(false, true, true, deferredBinding, [], []);
 		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
 			emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]),
-			"fixture explicitly defers one observed literal");
+			deferredControls, "fixture explicitly defers one observed literal");
 		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
+		final deferredDisposition = deferredRegistry.nestedFunctionSyntaxDispositionFor(nestedExpression, nestedParent);
+		deferredDisposition.controls.requirePlanBinding(deferredBinding);
+		if (!deferredDisposition.controls.loopFamilyAdmitted)
+			throw "An explicitly deferred nested function discarded its admitted loop-control family";
 		expectThrows("duplicate-occurrence",
 			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
 				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]),
-				new OcamlDynamicEqualityPlan([]), "fixture duplicate"));
+				new OcamlDynamicEqualityPlan([]), deferredControls, "fixture duplicate"));
 		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
 		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
 		final staleParent:OcamlFunctionPlanBinding = {
@@ -1765,7 +1770,7 @@ class ControlPlanFixture {
 		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
 		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
 			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), new OcamlArrayReadPlan([]),
-			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), "fixture child uses the older result path");
+			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), siblingChild.plan.controls, "fixture child uses the older result path");
 		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
@@ -1801,9 +1806,10 @@ class ControlPlanFixture {
 		final deferredParentBinding = nestedFunctionBinding(deferredParentRoot, deferredParentExpression, deferredParentExternalLocals,
 			deferredParentIdentities);
 		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
+		final deferredParentControls = new OcamlControlPlan(false, true, true, deferredParentBinding, [], []);
 		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
 			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding), new OcamlArrayReadPlan([]),
-			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), "fixture outer function uses the older result path");
+			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), deferredParentControls, "fixture outer function uses the older result path");
 		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
 			"control:return:deferred-parent-child");
 		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.externalLocals, representedChild.binding.bodyRevision,

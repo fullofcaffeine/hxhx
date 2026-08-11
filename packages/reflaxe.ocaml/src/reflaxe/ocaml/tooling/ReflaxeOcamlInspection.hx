@@ -91,9 +91,16 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v101";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v22";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v8";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v102";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v23";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v9";
+
+	/** Returns the control-plan schema selected by one report owner. */
+	static function controlPipelineRevision(functionId:String):String {
+		if (StringTools.startsWith(functionId, "standalone:"))
+			return STANDALONE_EXPRESSION_PIPELINE_REVISION;
+		return functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+	}
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -733,7 +740,7 @@ class ReflaxeOcamlInspection {
 		final ids:Map<String, Bool> = [];
 		for (admission in admissions) {
 			OcamlControlAdmissionContract.requireSnapshot(admission);
-			final expectedPipelineRevision = admission.functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+			final expectedPipelineRevision = controlPipelineRevision(admission.functionId);
 			if (admission.pipelineRevision != expectedPipelineRevision)
 				throw 'Control admission "${admission.id}" uses unsupported function-plan pipeline "${admission.pipelineRevision}".';
 			if (ids.exists(admission.id) || byFunction.exists(admission.functionId))
@@ -899,7 +906,7 @@ class ReflaxeOcamlInspection {
 				throw 'Control report contains duplicate identity "${control.id}".';
 			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
 				throw 'Control decision "${control.id}" has an invalid source span.';
-			final expectedPipelineRevision = control.functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+			final expectedPipelineRevision = controlPipelineRevision(control.functionId);
 			if (control.pipelineRevision != expectedPipelineRevision) {
 				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$expectedPipelineRevision" for function "${control.functionId}".';
 			}

@@ -86,6 +86,34 @@ class OcamlFunctionPlanSealer {
 		this.staticStorage = staticStorage;
 	}
 
+	/**
+		Records the runtime modules and constructors required by one control plan.
+
+		A deferred nested result can still have fully planned loops, throws, or catch
+		chains. Recording each admitted family here keeps those uses available to the
+		final runtime check without claiming that an unrepresented return is complete.
+	**/
+	function recordControlRuntimeRequirements(controls:OcamlControlPlan):Void {
+		for (chain in controls.catchChains())
+			context.recordCatchChainRuntimeRequirements(chain);
+		for (target in controls.loopTargets()) {
+			final transfers = controls.decisionsForTarget(target.id);
+			if (transfers.length > 0)
+				context.recordLoopRuntimeRequirements(target, transfers);
+		}
+		for (decision in controls.decisions())
+			switch (decision.kind) {
+				case OcamlControlTransferKind.Return:
+					context.recordReturnRuntimeRequirement(decision);
+				case OcamlControlTransferKind.Throw:
+					context.recordThrowRuntimeRequirement(decision);
+					final payload = decision.payload;
+					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+						context.recordEnumThrowRuntimeRequirement(decision);
+				case Break, Continue:
+			}
+	}
+
 	static function fail(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-lowering:plan-seal]: " + message;
 		#if macro
@@ -198,21 +226,6 @@ class OcamlFunctionPlanSealer {
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
 			arrayLiteralProducers).plan(data.expr, functionResultBoundary);
 		requireCompleteCatchCoverage(controls, data.expr.pos);
-		for (chain in controls.catchChains())
-			context.recordCatchChainRuntimeRequirements(chain);
-		for (target in controls.loopTargets()) {
-			final transfers = controls.decisionsForTarget(target.id);
-			if (transfers.length > 0)
-				context.recordLoopRuntimeRequirements(target, transfers);
-		}
-		for (decision in controls.decisions())
-			switch (decision.kind) {
-				case OcamlControlTransferKind.Return:
-					context.recordReturnRuntimeRequirement(decision);
-				case OcamlControlTransferKind.Throw:
-					context.recordThrowRuntimeRequirement(decision);
-				case Break, Continue:
-			}
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
@@ -275,11 +288,7 @@ class OcamlFunctionPlanSealer {
 				context.recordStructuralIteratorRuntimeRequirements(call);
 		}
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
-		for (control in controls.decisions()) {
-			final payload = control.payload;
-			if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
-				context.recordEnumThrowRuntimeRequirement(control);
-		}
+		recordControlRuntimeRequirements(controls);
 		anonymousStructures.requirePlanBinding(binding);
 		anonymousStructures.requireRepresentations(representations);
 		validateFunctionResultRepresentationReferences(functionResultBoundary, anonymousStructures, binding.programRevision, data.expr.pos);
@@ -395,24 +404,33 @@ class OcamlFunctionPlanSealer {
 					// optional behavior plan does not own the lexical parent relationship.
 					final childParentBinding = nestedBinding;
 					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
+					final functionResultBoundary = boundary == null ? null : OcamlFunctionResultBoundary.fromCallable(boundary);
+					// Loop and exception control does not depend on whether the closure's
+					// result carrier is represented. Only return planning consumes this
+					// literal-producer plan and the optional result boundary.
+					final arrayLiteralProducers = if (boundary == null) {
+						new OcamlArrayLiteralProducerPlan([]);
+					} else {
+						new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
+					}
+					arrayLiteralProducers.requirePlanBinding(nestedBinding);
+					arrayLiteralProducers.requireRepresentations(representations);
+					final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
+						arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
+					requireCompleteCatchCoverage(controls, expression.pos);
+					validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
+					recordControlRuntimeRequirements(controls);
 					if (boundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
-							arrayReads, arrayIterators, dynamicEquality,
+							arrayReads, arrayIterators, dynamicEquality, controls,
 							"The typed function literal is outside the existing represented-result callable boundary.", dynamicString, reflectRuntimeUses);
 					} else {
-						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
 						// A nested function can read a local declared by its enclosing function.
 						// Reuse the enclosing function's sealed representation choices so an exact
 						// captured value, such as a monomorphic class record, crosses an early
 						// return with the same carrier. The nested planner still sees only locals
 						// present in its typed body and validates every selected representation
 						// against the current complete-program revision.
-						final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
-						arrayLiteralProducers.requirePlanBinding(nestedBinding);
-						arrayLiteralProducers.requireRepresentations(representations);
-						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
-							arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary);
-						requireCompleteCatchCoverage(controls, expression.pos);
 						// An unsupported transfer or catch is omitted from the admitted lists.
 						// Compare both the family flags and the observed catch count so one valid
 						// return cannot make a partly represented closure look complete.
@@ -420,12 +438,11 @@ class OcamlFunctionPlanSealer {
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
-								imapInterfaces, arrayReads, arrayIterators, dynamicEquality,
+								imapInterfaces, arrayReads, arrayIterators, dynamicEquality, controls,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
 								dynamicString, reflectRuntimeUses);
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
-							validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
 							final plan:OcamlSealedNestedFunctionPlan = {
 								occurrenceId: occurrenceId,
 								parentBinding: lexicalParentBinding,
@@ -443,21 +460,6 @@ class OcamlFunctionPlanSealer {
 							};
 							for (decision in arrayLiteralProducers.decisions())
 								context.recordArrayLiteralRuntimeRequirements(decision);
-							for (chain in controls.catchChains())
-								context.recordCatchChainRuntimeRequirements(chain);
-							for (target in controls.loopTargets()) {
-								final transfers = controls.decisionsForTarget(target.id);
-								if (transfers.length > 0)
-									context.recordLoopRuntimeRequirements(target, transfers);
-							}
-							for (decision in controls.decisions())
-								switch (decision.kind) {
-									case OcamlControlTransferKind.Return:
-										context.recordReturnRuntimeRequirement(decision);
-									case OcamlControlTransferKind.Throw:
-										context.recordThrowRuntimeRequirement(decision);
-									case Break, Continue:
-								}
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 						}
 					}

@@ -227,6 +227,7 @@ class BytesProducerPlanFixture {
 				bodyRevision: firstStandalone.binding.bodyRevision + ":changed",
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
+			controls: firstStandalone.controls,
 			containerElements: firstStandalone.containerElements,
 			anonymousStructures: firstStandalone.anonymousStructures,
 			structuralFields: firstStandalone.structuralFields,
@@ -237,7 +238,9 @@ class BytesProducerPlanFixture {
 			arrayReads: firstStandalone.arrayReads,
 			arrayIterators: firstStandalone.arrayIterators,
 			dynamicEquality: firstStandalone.dynamicEquality,
-			reflectCompare: firstStandalone.reflectCompare
+			dynamicString: firstStandalone.dynamicString,
+			reflectCompare: firstStandalone.reflectCompare,
+			reflectRuntimeUses: firstStandalone.reflectRuntimeUses
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 

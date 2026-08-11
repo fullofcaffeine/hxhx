@@ -225,9 +225,8 @@ class OcamlBuilder {
 
 	var tmpId:Int = 0;
 
-	// Legacy nesting check for nested function literals that do not yet own a
-	// sealed function plan. Admitted ordinary functions use exact target IDs.
-	var loopDepth:Int = 0;
+	// Tracks the exact lexical loop targets active while syntax builds one sealed
+	// expression owner. A break or continue must name the final target in this list.
 	var currentLoopTargetIds:Array<String> = [];
 
 	// Set while compiling a function body so declarations consume the selected
@@ -1352,22 +1351,6 @@ class OcamlBuilder {
 			case _:
 				controlPlanInvariant('catch result policy for "$ownerId" is unsupported: $policy', position);
 		}
-	}
-
-	/** Builds the remaining pre-authority loop boundary for an unsealed fallback. */
-	function buildLegacyLoopControlCases():OcamlLoopControlCases {
-		return {
-			breakCase: {
-				pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
-				guard: null,
-				expr: OcamlExpr.EConst(OcamlConst.CUnit)
-			},
-			continueCase: {
-				pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
-				guard: null,
-				expr: OcamlExpr.EConst(OcamlConst.CUnit)
-			}
-		};
 	}
 
 	/** Builds checked catch patterns for the exact signals used by one sealed loop. */
@@ -3312,27 +3295,6 @@ class OcamlBuilder {
 					return current;
 			}
 		}
-	}
-
-	static function containsLoopControl(e:TypedExpr):Bool {
-		var found = false;
-
-		function visit(e:TypedExpr):Void {
-			if (found)
-				return;
-			switch (e.expr) {
-				case TBreak, TContinue:
-					found = true;
-				case TWhile(_, _, _), TFunction(_):
-					// Skip nested loops/functions. Loop control only applies to the
-					// innermost loop at the lexical site in Haxe.
-				case _:
-					TypedExprTools.iter(e, visit);
-			}
-		}
-
-		visit(e);
-		return found;
 	}
 
 	function buildCondition(cond:TypedExpr):OcamlExpr {
@@ -5388,7 +5350,9 @@ class OcamlBuilder {
 						OcamlExpr.EConst(OcamlConst.CInt(-1));
 				}
 			case TBreak:
-				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
+				if (currentControlPlan == null)
+					return controlPlanInvariant("a break reached syntax without a sealed control plan", e.pos);
+				if (currentControlPlan.loopFamilyAdmitted) {
 					final decision = try {
 						currentControlPlan.decisionFor(e);
 					} catch (error:Dynamic) {
@@ -5397,16 +5361,13 @@ class OcamlBuilder {
 					if (decision == null)
 						return controlPlanInvariant("an admitted break reached syntax without its sealed loop-transfer decision", e.pos);
 					buildPlannedLoopTransfer(decision, OcamlControlTransferKind.Break, e.pos);
-				} else if (loopDepth <= 0) {
-					#if macro
-					guardrailError("reflaxe.ocaml: `break` is only supported inside loops.", e.pos);
-					#end
-					OcamlExpr.EConst(OcamlConst.CUnit);
 				} else {
-					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
+					controlPlanInvariant("a break reached syntax after its loop-control family was rejected", e.pos);
 				}
 			case TContinue:
-				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
+				if (currentControlPlan == null)
+					return controlPlanInvariant("a continue reached syntax without a sealed control plan", e.pos);
+				if (currentControlPlan.loopFamilyAdmitted) {
 					final decision = try {
 						currentControlPlan.decisionFor(e);
 					} catch (error:Dynamic) {
@@ -5415,43 +5376,28 @@ class OcamlBuilder {
 					if (decision == null)
 						return controlPlanInvariant("an admitted continue reached syntax without its sealed loop-transfer decision", e.pos);
 					buildPlannedLoopTransfer(decision, OcamlControlTransferKind.Continue, e.pos);
-				} else if (loopDepth <= 0) {
-					#if macro
-					guardrailError("reflaxe.ocaml: `continue` is only supported inside loops.", e.pos);
-					#end
-					OcamlExpr.EConst(OcamlConst.CUnit);
 				} else {
-					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
+					controlPlanInvariant("a continue reached syntax after its loop-control family was rejected", e.pos);
 				}
 			case TWhile(cond, body, normalWhile):
+				if (currentControlPlan == null)
+					return controlPlanInvariant("a loop reached syntax without a sealed control plan", e.pos);
+				if (!currentControlPlan.loopFamilyAdmitted)
+					return controlPlanInvariant("a loop reached syntax after its control family was rejected", e.pos);
 				final condExpr = buildCondition(cond);
-				final plannedTarget:Null<OcamlControlLoopTarget> = if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
-					try {
-						currentControlPlan.loopTargetFor(e);
-					} catch (error:Dynamic) {
-						return controlPlanInvariant(Std.string(error), e.pos);
-					}
-				} else {
-					null;
+				final plannedTarget:Null<OcamlControlLoopTarget> = try {
+					currentControlPlan.loopTargetFor(e);
+				} catch (error:Dynamic) {
+					return controlPlanInvariant(Std.string(error), e.pos);
 				};
-				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted && plannedTarget == null)
+				if (plannedTarget == null)
 					return controlPlanInvariant("an admitted loop reached syntax without its sealed lexical target", e.pos);
-				final needsControl = plannedTarget == null ? containsLoopControl(body) : currentControlPlan.hasTransfersForTarget(plannedTarget.id);
-				if (plannedTarget == null) {
-					loopDepth += 1;
-				} else {
-					currentLoopTargetIds.push(plannedTarget.id);
-				}
+				final needsControl = currentControlPlan.hasTransfersForTarget(plannedTarget.id);
+				currentLoopTargetIds.push(plannedTarget.id);
 				final builtBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]);
-				if (plannedTarget == null) {
-					loopDepth -= 1;
-				} else {
-					currentLoopTargetIds.pop();
-				}
+				currentLoopTargetIds.pop();
 				final loopCases = if (!needsControl) {
 					null;
-				} else if (plannedTarget == null) {
-					buildLegacyLoopControlCases();
 				} else {
 					buildPlannedLoopControlCases(plannedTarget, currentControlPlan.decisionsForTarget(plannedTarget.id), e.pos);
 				}
@@ -8190,7 +8136,9 @@ class OcamlBuilder {
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousLoopTargetIds = currentLoopTargetIds;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
@@ -8208,6 +8156,8 @@ class OcamlBuilder {
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
+		currentControlPlan = validatedPlan.controls;
+		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -8224,7 +8174,9 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentLoopTargetIds = previousLoopTargetIds;
 		return result;
 	}
 
@@ -8251,7 +8203,9 @@ class OcamlBuilder {
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousLoopTargetIds = currentLoopTargetIds;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
@@ -8269,6 +8223,8 @@ class OcamlBuilder {
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
+		currentControlPlan = validatedPlan.controls;
+		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -8285,7 +8241,9 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentLoopTargetIds = previousLoopTargetIds;
 		return result;
 	}
 
@@ -8502,7 +8460,6 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
-		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
 		currentLocalPlanBinding = functionPlan.binding;
@@ -8530,7 +8487,6 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = functionPlan.arrayIterators;
 		currentDynamicEqualityPlan = functionPlan.dynamicEquality;
 		currentDynamicStringPlan = functionPlan.dynamicString;
-		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
@@ -8716,7 +8672,6 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
-		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
@@ -8784,9 +8739,8 @@ class OcamlBuilder {
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
-		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
-		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
+		currentControlPlan = nestedDisposition == null ? null : nestedDisposition.controls;
 		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
 		// Array-read ownership is independent from the optional represented-return
 		// plan. Every observed nested body has its own exact decisions, including
@@ -8805,7 +8759,6 @@ class OcamlBuilder {
 			// enclosing function's occurrence-indexed IMap decisions.
 			currentIMapInterfacePlan = null;
 		}
-		loopDepth = 0;
 		currentLoopTargetIds = [];
 		final needsReturnCatch = nestedPlan == null ? containsNestedReturnInFunctionBody(tfunc.expr) : nestedPlan.controls.hasReturnTransfers();
 		final functionReturnType:Type = switch (tfunc.t) {
@@ -8898,7 +8851,6 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
-		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);
 	}

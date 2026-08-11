@@ -86,6 +86,8 @@ import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
@@ -1679,6 +1681,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordReflectCompareRuntimeRequirements(decision);
 		for (decision in plan.reflectRuntimeUses.decisions())
 			ctx.recordReflectRuntimeUseRequirement(decision);
+		for (chain in plan.controls.catchChains())
+			ctx.recordCatchChainRuntimeRequirements(chain);
+		for (target in plan.controls.loopTargets()) {
+			final transfers = plan.controls.decisionsForTarget(target.id);
+			if (transfers.length > 0)
+				ctx.recordLoopRuntimeRequirements(target, transfers);
+		}
+		for (decision in plan.controls.decisions())
+			switch (decision.kind) {
+				case OcamlControlTransferKind.Return:
+					ctx.recordReturnRuntimeRequirement(decision);
+				case OcamlControlTransferKind.Throw:
+					ctx.recordThrowRuntimeRequirement(decision);
+					final payload = decision.payload;
+					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+						ctx.recordEnumThrowRuntimeRequirement(decision);
+				case Break, Continue:
+			}
 		return plan;
 	}
 

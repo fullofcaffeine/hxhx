@@ -49,6 +49,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanne
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
@@ -165,14 +166,17 @@ typedef OcamlNestedFunctionIdentity = {
 }
 
 /**
-	Gives syntax the nested function's identity and optional represented behavior.
+	Gives syntax the nested function's identity, controls, and optional result plan.
 
-	`plan == null` means that planning explicitly kept the older result or control
-	path for this function. The binding still becomes the parent while syntax builds
-	the function body, so any deeper function keeps the correct lexical owner.
+	Every observed literal keeps its own control plan. This lets a deferred closure
+	use checked `break`, `continue`, throw, and catch decisions without pretending
+	that its return carrier is supported. `plan == null` now defers only the complete
+	callable-result path. The binding still becomes the parent while syntax builds
+	the body, so a deeper function keeps the correct lexical owner.
 **/
 typedef OcamlNestedFunctionSyntaxDisposition = {
 	final binding:OcamlFunctionPlanBinding;
+	final controls:OcamlControlPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final arrayReads:OcamlArrayReadPlan;
 	final arrayIterators:OcamlArrayIteratorPlan;
@@ -191,6 +195,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final controls:OcamlControlPlan;
 	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final structuralFields:OcamlStructuralFieldPlan;
@@ -221,13 +226,15 @@ private typedef OcamlSealedFunctionRecord = {
 /**
 	One nested literal observed while sealing its parent function.
 
-	`plan == null` is an explicit deferral, not a missing plan. Keeping that
-	distinction lets syntax use the legacy path only for a literal the planner
-	actually saw and deliberately left outside the represented nested-result slice.
+	`controls` always owns the exact request-local control occurrences. `plan ==
+	null` is an explicit result-boundary deferral, not a missing observation. This
+	distinction lets syntax preserve current return behavior while it consumes the
+	loop, throw, and catch decisions that planning can already prove.
 **/
 private typedef OcamlNestedFunctionRecord = {
 	final binding:OcamlFunctionPlanBinding;
 	final parentBinding:OcamlFunctionPlanBinding;
+	final controls:OcamlControlPlan;
 	final bodyExternalLocals:Array<TVar>;
 	final observedBodyRevision:String;
 	final occurrenceId:String;
@@ -263,9 +270,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v101";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v22";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v8";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v102";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v23";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v9";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -303,6 +310,7 @@ class OcamlFunctionPlanRegistry {
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 	final standaloneStructuralFieldsById:StringMap<OcamlStructuralFieldDecision> = new StringMap();
 	final standaloneReflectCompareById:StringMap<OcamlReflectCompareDecision> = new StringMap();
+	final standaloneControlsByFunctionId:StringMap<OcamlControlPlan> = new StringMap();
 
 	public function new() {}
 
@@ -329,6 +337,7 @@ class OcamlFunctionPlanRegistry {
 		standaloneAnonymousOperationsById.clear();
 		standaloneStructuralFieldsById.clear();
 		standaloneReflectCompareById.clear();
+		standaloneControlsByFunctionId.clear();
 	}
 
 	/**
@@ -367,8 +376,8 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
 			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
-			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
-			?reflectRuntimeUses:OcamlReflectRuntimeUsePlan):Void {
+			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String,
+			?dynamicString:OcamlDynamicStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
@@ -376,6 +385,7 @@ class OcamlFunctionPlanRegistry {
 		arrayReads.requirePlanBinding(identity.binding);
 		arrayIterators.requirePlanBinding(identity.binding);
 		dynamicEquality.requirePlanBinding(identity.binding);
+		controls.requirePlanBinding(identity.binding);
 		final sealedDynamicString = dynamicString ?? new OcamlDynamicStringPlan([]);
 		sealedDynamicString.requirePlanBinding(identity.binding);
 		final sealedReflectRuntimeUses = reflectRuntimeUses ?? new OcamlReflectRuntimeUsePlan([]);
@@ -383,6 +393,7 @@ class OcamlFunctionPlanRegistry {
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
+			controls: controls,
 			bodyExternalLocals: bodyExternalLocals.copy(),
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: identity.occurrenceId,
@@ -474,6 +485,7 @@ class OcamlFunctionPlanRegistry {
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(plan.binding),
 			parentBinding: copyBinding(plan.parentBinding),
+			controls: plan.controls,
 			bodyExternalLocals: bodyExternalLocals.copy(),
 			observedBodyRevision: observedBodyRevision,
 			occurrenceId: plan.occurrenceId,
@@ -584,6 +596,7 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: a function literal in parent "${parentBinding.functionId}" changed from ${record.observedBodyRevision} to $observedBodyRevision after planning';
 		return {
 			binding: copyBinding(record.binding),
+			controls: record.controls,
 			imapInterfaces: record.imapInterfaces,
 			arrayReads: record.arrayReads,
 			arrayIterators: record.arrayIterators,
@@ -680,6 +693,7 @@ class OcamlFunctionPlanRegistry {
 		final dynamicString = new OcamlDynamicStringPlanner(binding).plan(expression);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(expression);
 		final reflectRuntimeUses = new OcamlReflectRuntimeUsePlanner(binding).plan(expression);
+		final controls = new OcamlControlPlanner(representations, new OcamlLocalRepresentationPlan([]), binding, localIdentities).plan(expression, null);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
@@ -699,12 +713,15 @@ class OcamlFunctionPlanRegistry {
 		bytesReads.requireRepresentations(representations);
 		reflectCompare.requirePlanBinding(binding);
 		reflectRuntimeUses.requirePlanBinding(binding);
+		controls.requirePlanBinding(binding);
 		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
 		recordStandaloneStructuralFields(structuralFields);
 		recordStandaloneReflectCompare(reflectCompare);
+		standaloneControlsByFunctionId.set(binding.functionId, controls);
 		return {
 			binding: binding,
+			controls: controls,
 			containerElements: containerElements,
 			anonymousStructures: anonymousStructures,
 			structuralFields: structuralFields,
@@ -818,6 +835,7 @@ class OcamlFunctionPlanRegistry {
 		plan.dynamicString.requirePlanBinding(expected);
 		plan.reflectCompare.requirePlanBinding(expected);
 		plan.reflectRuntimeUses.requirePlanBinding(expected);
+		plan.controls.requirePlanBinding(expected);
 		return plan;
 	}
 
@@ -1274,7 +1292,10 @@ class OcamlFunctionPlanRegistry {
 					controls.push(decision);
 			}
 		}
-		for (nested in nestedFunctionsByOccurrence) {
+		for (standalone in standaloneControlsByFunctionId)
+			for (decision in standalone.decisions())
+				controls.push(decision);
+		for (nested in nestedFunctionsByFunctionId) {
 			for (decision in nested.controls.decisions())
 				controls.push(decision);
 		}
@@ -1294,7 +1315,10 @@ class OcamlFunctionPlanRegistry {
 					targets.push(target);
 			}
 		}
-		for (nested in nestedFunctionsByOccurrence) {
+		for (standalone in standaloneControlsByFunctionId)
+			for (target in standalone.loopTargets())
+				targets.push(target);
+		for (nested in nestedFunctionsByFunctionId) {
 			for (target in nested.controls.loopTargets())
 				targets.push(target);
 		}
@@ -1314,7 +1338,10 @@ class OcamlFunctionPlanRegistry {
 					chains.push(chain);
 			}
 		}
-		for (nested in nestedFunctionsByOccurrence) {
+		for (standalone in standaloneControlsByFunctionId)
+			for (chain in standalone.catchChains())
+				chains.push(chain);
+		for (nested in nestedFunctionsByFunctionId) {
 			for (chain in nested.controls.catchChains())
 				chains.push(chain);
 		}
@@ -1323,11 +1350,13 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/**
-		Returns the complete typed-control disposition for every sealed function.
+		Returns the complete typed-control disposition for every expression owner.
 
-		Unlike the admitted decision lists, this inventory also includes functions
-		whose return, loop-transfer, throw, or catch family remained on the older
-		builder path, together with the planner-owned reason.
+		The owners include ordinary functions, nested function literals, and
+		standalone expressions such as field initializers. Unlike the admitted
+		decision lists, this inventory also includes a control family that the
+		planner rejected, together with the planner-owned reason. Syntax must fail
+		closed if it reaches an occurrence from a rejected family.
 	**/
 	public function controlAdmissionSnapshots():Array<OcamlControlAdmissionSnapshot> {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
@@ -1338,7 +1367,9 @@ class OcamlFunctionPlanRegistry {
 			if (sealed != null)
 				snapshots.push(sealed.plan.controls.admissionSnapshot());
 		}
-		for (nested in nestedFunctionsByOccurrence)
+		for (standalone in standaloneControlsByFunctionId)
+			snapshots.push(standalone.admissionSnapshot());
+		for (nested in nestedFunctionsByFunctionId)
 			snapshots.push(nested.controls.admissionSnapshot());
 		snapshots.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return snapshots;

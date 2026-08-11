@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.31.33",
+  "reviewBead": "haxe_ocaml-0uwin.31.34",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.33",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.34",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,16 +15,16 @@
     }
   ],
   "counts": {
-    "total": 283,
+    "total": 279,
     "byDomain": {
-      "expression": 279,
-      "pattern": 4
+      "expression": 277,
+      "pattern": 2
     },
     "byMigrationFamily": {
       "builder-anon": 19,
       "builder-array": 25,
       "builder-boolean-carriers": 28,
-      "builder-control-transfer": 8,
+      "builder-control-transfer": 4,
       "builder-enum": 27,
       "builder-int": 60,
       "builder-nullable-carriers": 64,
@@ -32,7 +32,7 @@
       "builder-type": 27
     }
   },
-  "inventoryRevision": "ab96ff5850a63166a78707e976e65bcbbe9da2dbd8557ef0fa27c4dd49253833",
+  "inventoryRevision": "596276e01abe031154d49e252a266dfefc7a73304849e6387019ae0298ce5a04",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -173,26 +173,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 5,
       "migrationFamily": "builder-nullable-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_break::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "pattern",
-      "construction": "PConstructor",
-      "symbol": "HxRuntime.Hx_break",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-control-transfer"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::pattern::PConstructor::HxRuntime.Hx_continue::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "pattern",
-      "construction": "PConstructor",
-      "symbol": "HxRuntime.Hx_continue",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-control-transfer"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.isNull::1",
@@ -1303,26 +1283,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 26,
       "migrationFamily": "builder-nullable-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_break::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.Hx_break",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-control-transfer"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.Hx_continue::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.Hx_continue",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "builder-control-transfer"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.get::3",

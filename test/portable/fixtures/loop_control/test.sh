@@ -37,19 +37,28 @@ if (report.schemaVersion !== 81
 }
 
 const mainTargets = report.controlTargets.filter(target =>
-	target.functionId.includes('Main|') && !target.functionId.includes('|function|local|'))
+	target.functionId.includes('Main|') && !target.functionId.includes('|nested-function|'))
 const mainTransfers = report.controls.filter(control =>
 	control.targetKind === 'loop'
 	&& control.functionId.includes('Main|')
-	&& !control.functionId.includes('|function|local|'))
+	&& !control.functionId.includes('|nested-function|'))
 if (mainTargets.length !== 7 || mainTransfers.length !== 12) {
 	fail(`expected 7 Main loop targets and 12 Main transfers, got ${mainTargets.length} and ${mainTransfers.length}`)
 }
-if (report.controls.some(control => control.functionId.includes('|function|local|'))) {
-	fail('the outer function plan incorrectly claimed a nested function literal transfer')
+const nestedTargets = report.controlTargets.filter(target =>
+	target.functionId.includes('Main|') && target.functionId.includes('|nested-function|'))
+const nestedTransfers = report.controls.filter(control =>
+	control.targetKind === 'loop'
+	&& control.functionId.includes('Main|')
+	&& control.functionId.includes('|nested-function|'))
+if (nestedTargets.length !== 1
+	|| nestedTransfers.length !== 2
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v23'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v23')) {
+	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 
-const targetById = new Map(mainTargets.map(target => [target.id, target]))
+const targetById = new Map([...mainTargets, ...nestedTargets].map(target => [target.id, target]))
 const expectedTransfers = new Map([
 	['nestedLoops', 3],
 	['doWhileContinue', 1],
@@ -70,11 +79,11 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v101') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v102') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
-for (const control of mainTransfers) {
+for (const control of [...mainTransfers, ...nestedTransfers]) {
 	const target = targetById.get(control.targetId)
 	const isBreak = control.kind === 'break'
 	if (!target
