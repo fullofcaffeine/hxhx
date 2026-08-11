@@ -16,6 +16,15 @@ class Main {
 
 		final dStr:Dynamic = "x";
 		Sys.println("dyn_string=" + (dStr == "x"));
+		final nestedEquals = (left:Dynamic, right:Dynamic) -> left == right;
+		Sys.println("dyn_nested=" + nestedEquals(2, 2.0));
+
+		final classToken:Dynamic = Array;
+		final classKind = switch (classToken) {
+			case Array, String: "known";
+			default: "other";
+		};
+		Sys.println("dyn_switch_class=" + classKind);
 
 		final ns:Null<String> = null;
 		final dNullStr:Dynamic = ns;

@@ -233,6 +233,8 @@ class BytesReadPlanFixture {
 			bytesProducers: firstStandalone.bytesProducers,
 			bytesReads: firstStandalone.bytesReads,
 			arrayReads: firstStandalone.arrayReads,
+			arrayIterators: firstStandalone.arrayIterators,
+			dynamicEquality: firstStandalone.dynamicEquality,
 			reflectCompare: firstStandalone.reflectCompare
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(lengthBody, staleStandalone, representations));

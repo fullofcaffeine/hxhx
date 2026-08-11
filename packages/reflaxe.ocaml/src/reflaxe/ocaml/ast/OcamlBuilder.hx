@@ -63,6 +63,9 @@ import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorUseKind;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityKind;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
@@ -179,6 +182,7 @@ class OcamlBuilder {
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
 	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
+	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -2537,6 +2541,39 @@ class OcamlBuilder {
 			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 	}
 
+	function dynamicEqualityInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-dynamic-equality:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/** Returns the one runtime function authorized for this typed equality occurrence. */
+	function dynamicEqualityFunction(source:TypedExpr, expectedKind:OcamlDynamicEqualityKind):OcamlExpr {
+		final plan = currentDynamicEqualityPlan;
+		if (plan == null)
+			return dynamicEqualityInvariant("Dynamic equality syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return dynamicEqualityInvariant(Std.string(error), source.pos);
+		}
+		if (decision.kind != expectedKind)
+			return dynamicEqualityInvariant('decision "${decision.id}" has kind ${decision.kind}, not $expectedKind', source.pos);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final use = decision.runtimeUseOccurrences[0];
+		final expression = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
+		try {
+			authority.reconcileExpression(expression);
+		} catch (error:Dynamic) {
+			return dynamicEqualityInvariant(Std.string(error), source.pos);
+		}
+		return expression;
+	}
+
 	static function isStringType(t:Type):Bool {
 		return switch (followNoAbstracts(t)) {
 			case TAbstract(aRef, [inner]): final a = aRef.get(); a.pack != null && a.pack.length == 0 && a.name == "Null" && isStringType(inner);
@@ -2724,13 +2761,7 @@ class OcamlBuilder {
 		access such as `it.hasNext ()`).
 	**/
 	static function shouldAnonUseHxAnon(t:Type):Bool {
-		if (isSysFileStatTypedef(t) || isSysFileStatAnon(t))
-			return false;
-		if (isIteratorAnon(t))
-			return false;
-		if (isKeyValueAnon(t))
-			return false;
-		return true;
+		return OcamlDynamicCarrierModel.anonymousUsesHxAnon(t);
 	}
 
 	static function isIntType(t:Type):Bool {
@@ -2844,17 +2875,7 @@ class OcamlBuilder {
 	}
 
 	inline function isDynamicLike(t:Type):Bool {
-		final ft = followNoAbstracts(unwrapNullType(t));
-		return switch (ft) {
-			case TDynamic(_):
-				true;
-			case TAbstract(_, _) if (isStdAnyAbstract(t)):
-				true;
-			case TAnonymous(_) if (shouldAnonUseHxAnon(t)):
-				true;
-			case _:
-				false;
-		}
+		return OcamlDynamicCarrierModel.usesDynamicCarrier(t);
 	}
 
 	static function fullNameOfTypeEnum(t:Type):Null<String> {
@@ -3372,7 +3393,7 @@ class OcamlBuilder {
 			case TParenthesis(inner):
 				buildExpr(inner);
 			case TBinop(op, e1, e2):
-				buildBinop(op, e1, e2, e.t);
+				buildBinop(e, op, e1, e2, e.t);
 			case TUnop(op, postFix, inner):
 				buildUnop(op, postFix, inner, e.t);
 			case TFunction(tfunc):
@@ -5896,7 +5917,7 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr, resultType:Type):OcamlExpr {
+	function buildBinop(source:TypedExpr, op:Binop, e1:TypedExpr, e2:TypedExpr, resultType:Type):OcamlExpr {
 		inline function isNullExpr(e:TypedExpr):Bool {
 			final u = unwrap(e);
 			return switch (u.expr) {
@@ -6583,7 +6604,7 @@ class OcamlBuilder {
 					}
 
 					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
-						return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_equals"), [toDynamicObj(e1), toDynamicObj(e2)]);
+						return OcamlExpr.EApp(dynamicEqualityFunction(source, OcamlDynamicEqualityKind.Equal), [toDynamicObj(e1), toDynamicObj(e2)]);
 					}
 
 					inline function shouldUsePhysicalEq(t:Type):Bool {
@@ -6642,7 +6663,7 @@ class OcamlBuilder {
 
 					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
 						return OcamlExpr.EUnop(OcamlUnop.Not,
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_equals"), [toDynamicObj(e1), toDynamicObj(e2)]));
+							OcamlExpr.EApp(dynamicEqualityFunction(source, OcamlDynamicEqualityKind.NotEqual), [toDynamicObj(e1), toDynamicObj(e2)]));
 					}
 
 					inline function shouldUsePhysicalEq(t:Type):Bool {
@@ -8020,6 +8041,7 @@ class OcamlBuilder {
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
+		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -8035,6 +8057,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
+		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -8048,6 +8071,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
+		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8072,6 +8096,7 @@ class OcamlBuilder {
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
+		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -8087,6 +8112,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
+		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -8100,6 +8126,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
+		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8315,6 +8342,7 @@ class OcamlBuilder {
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
+		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
@@ -8340,6 +8368,7 @@ class OcamlBuilder {
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
 		currentArrayIteratorPlan = functionPlan.arrayIterators;
+		currentDynamicEqualityPlan = functionPlan.dynamicEquality;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
@@ -8515,6 +8544,7 @@ class OcamlBuilder {
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
+		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
@@ -8578,6 +8608,7 @@ class OcamlBuilder {
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
+		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
@@ -8589,6 +8620,7 @@ class OcamlBuilder {
 		// iterator closures that do not contain an early return.
 		currentArrayReadPlan = nestedDisposition == null ? null : nestedDisposition.arrayReads;
 		currentArrayIteratorPlan = nestedDisposition == null ? null : nestedDisposition.arrayIterators;
+		currentDynamicEqualityPlan = nestedDisposition == null ? null : nestedDisposition.dynamicEquality;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8669,6 +8701,7 @@ class OcamlBuilder {
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
+		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8894,7 +8927,7 @@ class OcamlBuilder {
 						case TConst(TNull):
 							OcamlExpr.EBinop(OcamlBinop.PhysEq, scrutObj, OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
 						case _:
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_equals"), [scrutObj, toDynamicObjExpr(v.t, buildExpr(v))]);
+							OcamlExpr.EApp(dynamicEqualityFunction(v, OcamlDynamicEqualityKind.SwitchCase), [scrutObj, toDynamicObjExpr(v.t, buildExpr(v))]);
 					}
 					cond = cond == null ? thisCond : OcamlExpr.EBinop(OcamlBinop.Or, cond, thisCond);
 				}

@@ -14,6 +14,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
@@ -705,6 +707,8 @@ class ControlPlanFixture {
 				controls: controls,
 				arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([]),
 				arrayReads: new OcamlArrayReadPlan([]),
+				arrayIterators: new OcamlArrayIteratorPlan([]),
+				dynamicEquality: new OcamlDynamicEqualityPlan([]),
 				imapInterfaces: emptyIMapInterfacePlan(planBinding)
 			}
 		};
@@ -1421,12 +1425,14 @@ class ControlPlanFixture {
 		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
 		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
 		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
-			emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), "fixture explicitly defers one observed literal");
+			emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]),
+			"fixture explicitly defers one observed literal");
 		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
 		expectThrows("duplicate-occurrence",
 			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
-				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), "fixture duplicate"));
+				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]),
+				new OcamlDynamicEqualityPlan([]), "fixture duplicate"));
 		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
 		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
 		final staleParent:OcamlFunctionPlanBinding = {
@@ -1470,6 +1476,8 @@ class ControlPlanFixture {
 			controls: admittedControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(admittedBinding)
 		};
 		final noncanonicalIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedExpression);
@@ -1489,6 +1497,8 @@ class ControlPlanFixture {
 			controls: noncanonicalControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(noncanonicalBinding)
 		};
 		expectThrows("foreign-root-identities",
@@ -1508,6 +1518,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(wrongNestedBinding)
 		};
 		expectThrows("binding-mismatch",
@@ -1527,6 +1539,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("stale-root-binding",
@@ -1541,6 +1555,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: admittedPlan.arrayLiteralProducers,
 			arrayReads: admittedPlan.arrayReads,
+			arrayIterators: admittedPlan.arrayIterators,
+			dynamicEquality: admittedPlan.dynamicEquality,
 			imapInterfaces: emptyIMapInterfacePlan(nestedParent)
 		};
 		expectThrows("ocaml-imap-interface:stale-plan",
@@ -1566,6 +1582,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("missing-identity",
@@ -1579,6 +1597,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("foreign-occurrence",
@@ -1606,6 +1626,8 @@ class ControlPlanFixture {
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(ordinaryImpostorBinding)
 		};
 		expectThrows("foreign-root-identities",
@@ -1643,6 +1665,8 @@ class ControlPlanFixture {
 			controls: impostorRootControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(impostorRootBinding)
 		};
 		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
@@ -1682,6 +1706,8 @@ class ControlPlanFixture {
 			controls: crossRootChildControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(crossRootChildBinding)
 		};
 		expectThrows("foreign-parent-occurrence",
@@ -1739,7 +1765,7 @@ class ControlPlanFixture {
 		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
 		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
 			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), new OcamlArrayReadPlan([]),
-			"fixture child uses the older result path");
+			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), "fixture child uses the older result path");
 		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
@@ -1777,7 +1803,7 @@ class ControlPlanFixture {
 		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
 		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
 			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding), new OcamlArrayReadPlan([]),
-			"fixture outer function uses the older result path");
+			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), "fixture outer function uses the older result path");
 		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
 			"control:return:deferred-parent-child");
 		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.externalLocals, representedChild.binding.bodyRevision,
@@ -1836,6 +1862,8 @@ class ControlPlanFixture {
 			controls: mismatchedControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("return-boundary-mismatch",
@@ -1855,6 +1883,8 @@ class ControlPlanFixture {
 			controls: unadmittedThrowControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
@@ -1871,6 +1901,8 @@ class ControlPlanFixture {
 			controls: unadmittedLoopControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
@@ -1940,6 +1972,8 @@ class ControlPlanFixture {
 			controls: caughtControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
 			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(caughtBinding)
 		};
 		expectThrows("unsupported-control",

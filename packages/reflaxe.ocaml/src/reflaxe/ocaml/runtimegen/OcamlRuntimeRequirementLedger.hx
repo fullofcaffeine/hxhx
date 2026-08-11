@@ -11,6 +11,8 @@ import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorContract;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -76,6 +78,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_SYSTEM = "haxe-system";
 	public static inline final HAXE_MAP = "haxe-map";
 	public static inline final HAXE_ITERATOR = "haxe-iterator";
+	public static inline final HAXE_DYNAMIC_EQUALITY = "haxe-dynamic-equality";
 	public static inline final HAXE_ARRAY = "haxe-array";
 	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
 	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
@@ -336,6 +339,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one Array iterator reference. */
 	public function recordArrayIterator(decision:OcamlArrayIteratorDecision):Void {
 		for (requirement in requirementsForArrayIterator(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact HxRuntime reason for one sealed Dynamic equality call. */
+	public static function requirementsForDynamicEquality(decision:OcamlDynamicEqualityDecision):Array<OcamlRuntimeRequirement> {
+		OcamlDynamicEqualityPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_DYNAMIC_EQUALITY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.leftSemanticTypeId + " == " + decision.rightSemanticTypeId
+				},
+				implementationFeature: "haxe-dynamic-equality-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed equality or switch case uses the Dynamic value representation. This checked HxRuntime.dynamic_equals call preserves Haxe rules for numbers, Booleans, enums, strings, null values, and object identity."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one Dynamic equality decision. */
+	public function recordDynamicEquality(decision:OcamlDynamicEqualityDecision):Void {
+		for (requirement in requirementsForDynamicEquality(decision))
 			record(requirement);
 	}
 

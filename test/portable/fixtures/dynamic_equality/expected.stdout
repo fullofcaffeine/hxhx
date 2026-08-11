@@ -1,6 +1,8 @@
 dyn_int_float=true
 dyn_int_bool=false
 dyn_string=true
+dyn_nested=true
+dyn_switch_class=known
 dyn_null_string_is_null=true
 dyn_enum_const=true
 dyn_enum_args=false
