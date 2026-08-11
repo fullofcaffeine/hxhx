@@ -22,6 +22,8 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorPlanner;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
@@ -83,6 +85,7 @@ typedef OcamlSealedFunctionPlan = {
 	final containerElements:OcamlContainerElementPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 	final arrayReads:OcamlArrayReadPlan;
+	final arrayIterators:OcamlArrayIteratorPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final structuralFields:OcamlStructuralFieldPlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
@@ -131,6 +134,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final controls:OcamlControlPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 	final arrayReads:OcamlArrayReadPlan;
+	final arrayIterators:OcamlArrayIteratorPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 }
 
@@ -159,6 +163,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final binding:OcamlFunctionPlanBinding;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final arrayReads:OcamlArrayReadPlan;
+	final arrayIterators:OcamlArrayIteratorPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 }
 
@@ -179,6 +184,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final bytesProducers:OcamlBytesProducerPlan;
 	final bytesReads:OcamlBytesReadPlan;
 	final arrayReads:OcamlArrayReadPlan;
+	final arrayIterators:OcamlArrayIteratorPlan;
 	final reflectCompare:OcamlReflectComparePlan;
 }
 
@@ -209,6 +215,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final occurrenceId:String;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final arrayReads:OcamlArrayReadPlan;
+	final arrayIterators:OcamlArrayIteratorPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 	final deferredReason:Null<String>;
 }
@@ -235,9 +242,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v96";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v17";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v5";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v97";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v18";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v6";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -339,12 +346,13 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
 			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
-			reason:String):Void {
+			arrayIterators:OcamlArrayIteratorPlan, reason:String):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
 		imapInterfaces.requirePlanBinding(identity.binding);
 		arrayReads.requirePlanBinding(identity.binding);
+		arrayIterators.requirePlanBinding(identity.binding);
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
@@ -353,6 +361,7 @@ class OcamlFunctionPlanRegistry {
 			occurrenceId: identity.occurrenceId,
 			imapInterfaces: imapInterfaces,
 			arrayReads: arrayReads,
+			arrayIterators: arrayIterators,
 			plan: null,
 			deferredReason: reason
 		}, localIdentities.ownerId);
@@ -390,6 +399,7 @@ class OcamlFunctionPlanRegistry {
 		plan.controls.requirePlanBinding(plan.binding);
 		plan.arrayLiteralProducers.requirePlanBinding(plan.binding);
 		plan.arrayReads.requirePlanBinding(plan.binding);
+		plan.arrayIterators.requirePlanBinding(plan.binding);
 		plan.imapInterfaces.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
@@ -420,6 +430,7 @@ class OcamlFunctionPlanRegistry {
 			controls: plan.controls,
 			arrayLiteralProducers: plan.arrayLiteralProducers,
 			arrayReads: plan.arrayReads,
+			arrayIterators: plan.arrayIterators,
 			imapInterfaces: plan.imapInterfaces
 		};
 		storeNestedFunctionRecord(expression, {
@@ -430,6 +441,7 @@ class OcamlFunctionPlanRegistry {
 			occurrenceId: plan.occurrenceId,
 			imapInterfaces: plan.imapInterfaces,
 			arrayReads: plan.arrayReads,
+			arrayIterators: plan.arrayIterators,
 			plan: stored,
 			deferredReason: null
 		}, localIdentities.ownerId);
@@ -533,6 +545,7 @@ class OcamlFunctionPlanRegistry {
 			binding: copyBinding(record.binding),
 			imapInterfaces: record.imapInterfaces,
 			arrayReads: record.arrayReads,
+			arrayIterators: record.arrayIterators,
 			plan: record.plan
 		};
 	}
@@ -618,6 +631,7 @@ class OcamlFunctionPlanRegistry {
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(expression);
 		final arrayReads = new OcamlArrayReadPlanner(binding).plan(expression);
+		final arrayIterators = new OcamlArrayIteratorPlanner(binding).plan(expression);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(expression);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
@@ -632,6 +646,7 @@ class OcamlFunctionPlanRegistry {
 		bytesProducers.requireRepresentations(representations);
 		bytesReads.requirePlanBinding(binding);
 		arrayReads.requirePlanBinding(binding);
+		arrayIterators.requirePlanBinding(binding);
 		bytesReads.requireRepresentations(representations);
 		reflectCompare.requirePlanBinding(binding);
 		recordStandaloneContainerElements(containerElements);
@@ -648,6 +663,7 @@ class OcamlFunctionPlanRegistry {
 			bytesProducers: bytesProducers,
 			bytesReads: bytesReads,
 			arrayReads: arrayReads,
+			arrayIterators: arrayIterators,
 			reflectCompare: reflectCompare
 		};
 	}
@@ -744,6 +760,7 @@ class OcamlFunctionPlanRegistry {
 		plan.bytesReads.requirePlanBinding(expected);
 		plan.bytesReads.requireRepresentations(representations);
 		plan.arrayReads.requirePlanBinding(expected);
+		plan.arrayIterators.requirePlanBinding(expected);
 		plan.reflectCompare.requirePlanBinding(expected);
 		return plan;
 	}
@@ -896,7 +913,8 @@ class OcamlFunctionPlanRegistry {
 			imapInterfaces:OcamlIMapInterfacePlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
 			functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
 			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan,
-			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan, ?arrayReads:OcamlArrayReadPlan):Void {
+			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan, ?arrayReads:OcamlArrayReadPlan,
+			?arrayIterators:OcamlArrayIteratorPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -913,6 +931,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedArrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 		final sealedReflectCompare = reflectCompare ?? new OcamlReflectComparePlan([]);
 		final sealedArrayReads = arrayReads ?? new OcamlArrayReadPlan([]);
+		final sealedArrayIterators = arrayIterators ?? new OcamlArrayIteratorPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
@@ -924,6 +943,7 @@ class OcamlFunctionPlanRegistry {
 		containerElements.requirePlanBinding(binding);
 		sealedArrayLiteralProducers.requirePlanBinding(binding);
 		sealedArrayReads.requirePlanBinding(binding);
+		sealedArrayIterators.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -954,6 +974,7 @@ class OcamlFunctionPlanRegistry {
 				containerElements: containerElements,
 				arrayLiteralProducers: sealedArrayLiteralProducers,
 				arrayReads: sealedArrayReads,
+				arrayIterators: sealedArrayIterators,
 				anonymousStructures: sealedAnonymousStructures,
 				structuralFields: sealedStructuralFields,
 				bytesAccesses: bytesAccesses,

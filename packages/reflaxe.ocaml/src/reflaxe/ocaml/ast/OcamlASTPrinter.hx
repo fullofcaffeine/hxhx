@@ -592,8 +592,8 @@ class OcamlASTPrinter {
 		return switch (t) {
 			case TArrow(_, _): TPREC_ARROW;
 			case TTuple(_): TPREC_TUPLE;
-			case TApp(_, _): TPREC_APP;
-			case TIdent(_), TVar(_), TRecord(_): TPREC_ATOM_T;
+			case TApp(_, _), TRuntimeApp(_, _): TPREC_APP;
+			case TIdent(_), TRuntimeIdent(_), TVar(_), TRecord(_): TPREC_ATOM_T;
 		}
 	}
 
@@ -602,6 +602,8 @@ class OcamlASTPrinter {
 		final s = switch (t) {
 			case TIdent(name):
 				name;
+			case TRuntimeIdent(reference):
+				reference.exactSymbol;
 			case TVar(name):
 				"'" + name;
 			case TTuple(items):
@@ -617,6 +619,14 @@ class OcamlASTPrinter {
 					printTypeCtx(params[0], TPREC_APP) + " " + name;
 				} else {
 					"(" + params.map(p -> printTypeCtx(p, TPREC_TOP)).join(", ") + ") " + name;
+				}
+			case TRuntimeApp(reference, params):
+				if (params.length == 0) {
+					reference.exactSymbol;
+				} else if (params.length == 1) {
+					printTypeCtx(params[0], TPREC_APP) + " " + reference.exactSymbol;
+				} else {
+					"(" + params.map(p -> printTypeCtx(p, TPREC_TOP)).join(", ") + ") " + reference.exactSymbol;
 				}
 			case TRecord(fields):
 				"{ " + fields.map(function(f) {

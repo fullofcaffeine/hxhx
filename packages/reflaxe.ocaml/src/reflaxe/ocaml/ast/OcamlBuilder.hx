@@ -59,6 +59,9 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructur
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorUseKind;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
@@ -175,6 +178,7 @@ class OcamlBuilder {
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
+	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -2455,8 +2459,82 @@ class OcamlBuilder {
 		}
 	}
 
-	function ocamlIteratorOfArray(items:OcamlExpr):OcamlExpr {
-		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "of_array"), [items]);
+	function arrayIteratorInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-array-iterator:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/** Builds one checked Array-to-iterator call from its sealed typed occurrence. */
+	function ocamlIteratorOfArray(source:TypedExpr, items:OcamlExpr):OcamlExpr {
+		final plan = currentArrayIteratorPlan;
+		if (plan == null)
+			return arrayIteratorInvariant("Array iterator syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return arrayIteratorInvariant(Std.string(error), source.pos);
+		}
+		if (decision.kind != OcamlArrayIteratorUseKind.StructuralAdapter)
+			return arrayIteratorInvariant('decision "${decision.id}" is not an Array-to-Iterable adapter', source.pos);
+		final authority = arrayIteratorRuntimeAuthority(decision);
+		final use = decision.runtimeUseOccurrences[0];
+		final expression = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol)), [items]);
+		try {
+			authority.reconcileExpression(expression);
+		} catch (error:Dynamic) {
+			return arrayIteratorInvariant(Std.string(error), source.pos);
+		}
+		return expression;
+	}
+
+	/** Builds the standard generated `ArrayIterator` value for a direct or stored method. */
+	function ocamlStandardArrayIterator(source:TypedExpr, items:OcamlExpr):OcamlExpr {
+		final plan = currentArrayIteratorPlan;
+		if (plan == null)
+			return arrayIteratorInvariant("standard Array iterator syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return arrayIteratorInvariant(Std.string(error), source.pos);
+		}
+		if (decision.kind != OcamlArrayIteratorUseKind.DirectCall && decision.kind != OcamlArrayIteratorUseKind.BoundMethod)
+			return arrayIteratorInvariant('decision "${decision.id}" is not a direct or stored standard Array iterator', source.pos);
+		final moduleId = "haxe.iterators.ArrayIterator";
+		final moduleName = moduleIdToOcamlModuleName(moduleId);
+		final createName = ctx.scopedValueName(moduleId, "ArrayIterator", "create");
+		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(moduleName), createName), [items]);
+	}
+
+	/** Builds one checked `HxIterator.t` application for a structural literal. */
+	function ocamlIteratorCarrier(source:TypedExpr, itemType:OcamlTypeExpr):OcamlTypeExpr {
+		final plan = currentArrayIteratorPlan;
+		if (plan == null)
+			return arrayIteratorInvariant("structural Iterator syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return arrayIteratorInvariant(Std.string(error), source.pos);
+		}
+		if (decision.kind != OcamlArrayIteratorUseKind.StructuralCarrier)
+			return arrayIteratorInvariant('decision "${decision.id}" is not a structural Iterator carrier', source.pos);
+		final authority = arrayIteratorRuntimeAuthority(decision);
+		final use = decision.runtimeUseOccurrences[0];
+		final type = OcamlTypeExpr.TRuntimeApp(authority.typeIdentifier(use.id, use.planRevision, use.exactSymbol), [itemType]);
+		try {
+			authority.reconcileType(type);
+		} catch (error:Dynamic) {
+			return arrayIteratorInvariant(Std.string(error), source.pos);
+		}
+		return type;
+	}
+
+	function arrayIteratorRuntimeAuthority(decision:OcamlArrayIteratorDecision):OcamlRuntimeUseAuthority {
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		return new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
 	}
 
 	static function isStringType(t:Type):Bool {
@@ -4433,7 +4511,7 @@ class OcamlBuilder {
 												if (isStdArrayClass(cls)) {
 													switch (cf.name) {
 														case "iterator" if (args.length == 0):
-															ocamlIteratorOfArray(buildExpr(objExpr));
+															ocamlStandardArrayIterator(e, buildExpr(objExpr));
 														case "join":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"), [
 																buildExpr(objExpr),
@@ -4915,7 +4993,7 @@ class OcamlBuilder {
 						}
 				}
 			case TField(obj, fa):
-				buildField(obj, fa, e.pos);
+				buildField(e, obj, fa, e.pos);
 			case TMeta(metadata, e1):
 				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceOperation(metadata, e1) : buildExpr(e1);
 			case TCast(e1, _):
@@ -5255,9 +5333,7 @@ class OcamlBuilder {
 				// consumed by `HxIterator.hasNext/next`.
 				if (isIteratorAnon(e.t)) {
 					final itemType = iteratorAnonItemType(e.t);
-					final iteratorType = OcamlTypeExpr.TApp("HxIterator.t", [
-						itemType != null ? typeExprFromHaxeType(itemType) : OcamlTypeExpr.TIdent("Obj.t")
-					]);
+					final iteratorType = ocamlIteratorCarrier(e, itemType != null ? typeExprFromHaxeType(itemType) : OcamlTypeExpr.TIdent("Obj.t"));
 					OcamlExpr.EAnnot(OcamlExpr.ERecord(fields.map(f -> ({
 						name: f.name,
 						value: buildExpr(f.expr)
@@ -6808,11 +6884,11 @@ class OcamlBuilder {
 						return OcamlExpr.ELet(recvTmp, buildExpr(rhs), OcamlExpr.ERecord([
 							{
 								name: "hasNext",
-								value: buildBoundMethodClosureFromReceiverVar(recvVar, rhs.t, hasNextField.owner, hasNextField.field, rhs.pos)
+								value: buildBoundMethodClosureFromReceiverVar(rhs, recvVar, rhs.t, hasNextField.owner, hasNextField.field, rhs.pos)
 							},
 							{
 								name: "next",
-								value: buildBoundMethodClosureFromReceiverVar(recvVar, rhs.t, nextField.owner, nextField.field, rhs.pos)
+								value: buildBoundMethodClosureFromReceiverVar(rhs, recvVar, rhs.t, nextField.owner, nextField.field, rhs.pos)
 							}
 						]), false);
 					}
@@ -7041,7 +7117,7 @@ class OcamlBuilder {
 									final valueObj:OcamlExpr = switch (found.field.kind) {
 										case FMethod(_):
 											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [
-												buildBoundMethodClosureFromReceiverVar(objVar, rhs.t, found.owner, found.field, rhs.pos)
+												buildBoundMethodClosureFromReceiverVar(rhs, objVar, rhs.t, found.owner, found.field, rhs.pos)
 											]);
 										case FVar(_, _):
 											boxExprForObj(found.field.type, OcamlExpr.EField(objVar, found.field.name));
@@ -7943,6 +8019,7 @@ class OcamlBuilder {
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
+		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -7957,6 +8034,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		currentArrayReadPlan = validatedPlan.arrayReads;
+		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -7969,6 +8047,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
+		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -7992,6 +8071,7 @@ class OcamlBuilder {
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
+		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -8006,6 +8086,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		currentArrayReadPlan = validatedPlan.arrayReads;
+		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -8018,6 +8099,7 @@ class OcamlBuilder {
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
+		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8232,6 +8314,7 @@ class OcamlBuilder {
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
+		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
@@ -8256,6 +8339,7 @@ class OcamlBuilder {
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
+		currentArrayIteratorPlan = functionPlan.arrayIterators;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
@@ -8430,6 +8514,7 @@ class OcamlBuilder {
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
+		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
@@ -8492,6 +8577,7 @@ class OcamlBuilder {
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
+		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
@@ -8502,6 +8588,7 @@ class OcamlBuilder {
 		// plan. Every observed nested body has its own exact decisions, including
 		// iterator closures that do not contain an early return.
 		currentArrayReadPlan = nestedDisposition == null ? null : nestedDisposition.arrayReads;
+		currentArrayIteratorPlan = nestedDisposition == null ? null : nestedDisposition.arrayIterators;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8581,6 +8668,7 @@ class OcamlBuilder {
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
+		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -9081,7 +9169,7 @@ class OcamlBuilder {
 		return OcamlMonomorphicClassMaterializer.typeExpr(decision, moduleIdToOcamlModuleName(ctx.currentModuleId));
 	}
 
-	function buildField(obj:TypedExpr, fa:FieldAccess, pos:Position):OcamlExpr {
+	function buildField(source:TypedExpr, obj:TypedExpr, fa:FieldAccess, pos:Position):OcamlExpr {
 		return switch (fa) {
 			case FEnum(eRef, ef):
 				final e = eRef.get();
@@ -9204,7 +9292,7 @@ class OcamlBuilder {
 						if (isStdArrayClass(cls) && cf.name == "iterator") {
 							final recvTmp = freshTmp("arr");
 							OcamlExpr.ELet(recvTmp, buildExpr(obj),
-								OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], ocamlIteratorOfArray(OcamlExpr.EIdent(recvTmp))), false);
+								OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], ocamlStandardArrayIterator(source, OcamlExpr.EIdent(recvTmp))), false);
 						} else {
 							buildBoundMethodClosure(obj, cls, cf, pos);
 						}
@@ -9240,6 +9328,10 @@ class OcamlBuilder {
 						#end
 						OcamlExpr.EConst(OcamlConst.CUnit);
 					}
+				} else if (isStdArrayClass(owner) && cf.name == "iterator") {
+					final recvTmp = freshTmp("arr");
+					OcamlExpr.ELet(recvTmp, buildExpr(obj),
+						OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], ocamlStandardArrayIterator(source, OcamlExpr.EIdent(recvTmp))), false);
 				} else {
 					buildBoundMethodClosure(obj, owner, cf, pos);
 				}
@@ -9390,7 +9482,7 @@ class OcamlBuilder {
 		 * - The regular `buildBoundMethodClosure` takes a `TypedExpr` receiver and will re-emit `buildExpr`
 		 *   (which would duplicate side effects for expressions like `new C()`).
 		 */
-	function buildBoundMethodClosureFromReceiverVar(recvVar:OcamlExpr, recvType:Type, cls:ClassType, cf:ClassField, pos:Position):OcamlExpr {
+	function buildBoundMethodClosureFromReceiverVar(source:TypedExpr, recvVar:OcamlExpr, recvType:Type, cls:ClassType, cf:ClassField, pos:Position):OcamlExpr {
 		final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (cf.type) {
 			case TFun(fargs, _): fargs;
 			case _: null;
@@ -9402,7 +9494,7 @@ class OcamlBuilder {
 		// the generated `Array.iterator recv ()`, but `Array` is not a real OCaml module.
 		// Use the runtime iterator representation instead.
 		if (isStdArrayClass(cls) && cf.name == "iterator" && argCount == 0) {
-			return OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], ocamlIteratorOfArray(recvVar));
+			return OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], ocamlIteratorOfArray(source, recvVar));
 		}
 
 		final paramNames:Array<String> = [];

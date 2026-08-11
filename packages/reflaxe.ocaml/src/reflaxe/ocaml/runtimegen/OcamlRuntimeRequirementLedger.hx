@@ -9,6 +9,8 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralPro
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorContract;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -302,6 +304,38 @@ class OcamlRuntimeRequirementLedger {
 	public function recordStructuralIteratorCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
 			target:OcamlStructuralIteratorCallTarget):Void {
 		for (requirement in requirementsForStructuralIteratorCall(callId, source, profileEligibility, target))
+			record(requirement);
+	}
+
+	/** Returns a runtime reason only when this Array iterator decision uses `HxIterator`. */
+	public static function requirementsForArrayIterator(decision:OcamlArrayIteratorDecision):Array<OcamlRuntimeRequirement> {
+		OcamlArrayIteratorContract.requireDecision(decision);
+		if (decision.runtimeRequirementIds.length == 0)
+			return [];
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_ITERATOR,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.resultSemanticTypeId
+				},
+				implementationFeature: "haxe-iterator-v1",
+				rootModules: ["HxIterator"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed occurrence uses HxIterator only for an exact Array-to-Iterable adapter or a structural Iterator carrier. Direct and stored Array.iterator calls return the standard generated ArrayIterator class instead."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one Array iterator reference. */
+	public function recordArrayIterator(decision:OcamlArrayIteratorDecision):Void {
+		for (requirement in requirementsForArrayIterator(decision))
 			record(requirement);
 	}
 

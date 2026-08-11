@@ -460,6 +460,8 @@ class OcamlStaticStoragePlan {
 	static function cloneCarrierType(type:OcamlTypeExpr):OcamlTypeExpr {
 		return switch (type) {
 			case TIdent(name): TIdent(name);
+			case TRuntimeIdent(reference): TRuntimeIdent(reference);
+			case TRuntimeApp(reference, parameters): TRuntimeApp(reference, parameters.map(cloneCarrierType));
 			case TApp(name, parameters): TApp(name, parameters.map(cloneCarrierType));
 			case TArrow(from, to): TArrow(cloneCarrierType(from), cloneCarrierType(to));
 			case TTuple(items): TTuple(items.map(cloneCarrierType));

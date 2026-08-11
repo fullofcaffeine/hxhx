@@ -57,6 +57,7 @@ class RuntimeUsageCollector {
 	static function collectTypeExpr(typ:OcamlTypeExpr, markModule:String->Void):Void {
 		OcamlASTTraversal.walkTypePre(typ, current -> switch (current) {
 			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
+			case TRuntimeIdent(reference), TRuntimeApp(reference, _): markQualifiedName(reference.exactSymbol, markModule);
 			case TArrow(_, _), TTuple(_), TVar(_), TRecord(_):
 		});
 	}
@@ -73,6 +74,7 @@ class RuntimeUsageCollector {
 			case PAny, PVar(_), PConst(_), PTuple(_), POr(_), PRecord(_), PAnnot(_, _):
 		}, current -> switch (current) {
 			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
+			case TRuntimeIdent(reference), TRuntimeApp(reference, _): markQualifiedName(reference.exactSymbol, markModule);
 			case TArrow(_, _), TTuple(_), TVar(_), TRecord(_):
 		});
 	}

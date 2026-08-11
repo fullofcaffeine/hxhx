@@ -4,6 +4,7 @@ package reflaxe.ocaml.runtimegen;
 import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -77,6 +78,11 @@ class OcamlRuntimeUseAuthority {
 	/** Creates one pattern constructor after checking all sealed catch-use facts. */
 	public function patternIdentifier(id:String, requestedPlanRevision:String, exactSymbol:String):OcamlRuntimeReference {
 		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.PatternConstructor, exactSymbol);
+	}
+
+	/** Creates one private-runtime type name after checking its sealed owner. */
+	public function typeIdentifier(id:String, requestedPlanRevision:String, exactSymbol:String):OcamlRuntimeReference {
+		return reference(id, requestedPlanRevision, OcamlRuntimeUseDomain.TypeIdentifier, exactSymbol);
 	}
 
 	/** Creates one generated-text placeholder after checking all sealed facts. */
@@ -167,7 +173,29 @@ class OcamlRuntimeUseAuthority {
 			case PConstructor(name, _) if (isPlainPrivateReference(name) || isPlannedExactReference(name)):
 				errors.push('plain private runtime reference $name');
 			case _:
-		}, _ -> {});
+		}, current -> switch (current) {
+			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				observeReference(reference, observedIds, counts, errors);
+			case TIdent(name) | TApp(name, _) if (isPlainPrivateReference(name) || isPlannedExactReference(name)):
+				errors.push('plain private runtime reference $name');
+			case _:
+		});
+		finishReconciliation(observedIds, counts, errors);
+	}
+
+	/** Seals and reconciles one complete private-runtime type subtree. */
+	public function reconcileType(type:OcamlTypeExpr):Void {
+		beginReconciliation();
+		final errors:Array<String> = [];
+		final observedIds:Array<String> = [];
+		final counts:Map<String, Int> = [];
+		OcamlASTTraversal.walkTypePre(type, current -> switch (current) {
+			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				observeReference(reference, observedIds, counts, errors);
+			case TIdent(name) | TApp(name, _) if (isPlainPrivateReference(name) || isPlannedExactReference(name)):
+				errors.push('plain private runtime reference $name');
+			case _:
+		});
 		finishReconciliation(observedIds, counts, errors);
 	}
 

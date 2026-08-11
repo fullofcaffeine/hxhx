@@ -18,6 +18,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
@@ -576,6 +577,11 @@ class CompilationContext {
 	/** Records the exact HxArray dependency owned by one sealed bracket read. */
 	public function recordArrayReadRuntimeRequirements(decision:OcamlArrayReadDecision):Void {
 		runtimeRequirements.recordArrayRead(decision);
+	}
+
+	/** Records a private `HxIterator` dependency when the sealed Array occurrence needs one. */
+	public function recordArrayIteratorRuntimeRequirements(decision:OcamlArrayIteratorDecision):Void {
+		runtimeRequirements.recordArrayIterator(decision);
 	}
 
 	/** Records the exact HxArray dependency owned by one non-Array bracket read. */

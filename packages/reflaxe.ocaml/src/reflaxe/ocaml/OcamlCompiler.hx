@@ -940,6 +940,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TIdent(name):
 						final selected = targetTypeOrderByName.get(name);
 						selected == null ? -1 : selected;
+					case TRuntimeIdent(_):
+						-1;
+					case TRuntimeApp(_, parameters):
+						var latest = -1;
+						for (parameter in parameters)
+							latest = Std.int(Math.max(latest, latestCarrierTypeOrder(parameter)));
+						latest;
 					case TApp(name, parameters):
 						var latest = targetTypeOrderByName.exists(name) ? targetTypeOrderByName.get(name) : -1;
 						for (parameter in parameters)
@@ -1612,6 +1619,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordArrayReadRuntimeRequirements(decision);
 		for (decision in plan.arrayReads.dynamicDecisions())
 			ctx.recordDynamicBracketReadRuntimeRequirements(decision);
+		for (decision in plan.arrayIterators.decisions())
+			ctx.recordArrayIteratorRuntimeRequirements(decision);
 		for (decision in plan.reflectCompare.decisions())
 			ctx.recordReflectCompareRuntimeRequirements(decision);
 		return plan;

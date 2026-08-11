@@ -1,5 +1,7 @@
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlTypeDeclKind;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
@@ -41,12 +43,12 @@ class RuntimeUseAuthorityFixture {
 	}
 
 	static function occurrence(id:String, order:Int, ?symbol:String = "HxArray.set", ?domain:OcamlRuntimeUseDomain, ?planRevision:String = PLAN_REVISION,
-			?ownerId:String = "place:array-simple-assignment"):OcamlRuntimeUseOccurrence {
+			?ownerId:String = "place:array-simple-assignment", ?requirementId:String = "place:array:runtime:haxe-array-element-set"):OcamlRuntimeUseOccurrence {
 		return {
 			id: id,
 			planRevision: planRevision,
 			ownerId: ownerId,
-			requirementId: "place:array:runtime:haxe-array-element-set",
+			requirementId: requirementId,
 			domain: domain == null ? OcamlRuntimeUseDomain.ExpressionIdentifier : domain,
 			exactSymbol: symbol,
 			role: "store",
@@ -79,6 +81,70 @@ class RuntimeUseAuthorityFixture {
 		assertTrue(receipts.length == 2 && receipts[0].id == "U1" && receipts[1].id == "U2",
 			"Construction receipts should preserve the plan's owner-local order.");
 		checker.reconcileExpression(OcamlExpr.ESeq([OcamlExpr.ERuntimeIdent(u1), OcamlExpr.ERuntimeIdent(u2)]));
+	}
+
+	/** Proves that private runtime carrier types retain the same checked identity. */
+	static function checkedRuntimeTypeUse():Void {
+		final iteratorRequirement = iteratorTypeRequirement();
+		final typeUse = occurrence("T1", 0, "HxIterator.t", OcamlRuntimeUseDomain.TypeIdentifier, PLAN_REVISION, "array-iterator:type", iteratorRequirement.id);
+		final checker = authority([typeUse], null, [iteratorRequirement]);
+		final reference = checker.typeIdentifier("T1", PLAN_REVISION, "HxIterator.t");
+		checker.reconcileType(OcamlTypeExpr.TRuntimeIdent(reference));
+
+		final plain = authority([typeUse], null, [iteratorRequirement]);
+		expectFailure("plain private runtime type", "plain private runtime reference HxIterator.t",
+			() -> plain.reconcileType(OcamlTypeExpr.TIdent("HxIterator.t")));
+		final wrongDomainUse = occurrence("T1", 0, "HxIterator.t", null, PLAN_REVISION, "array-iterator:type", iteratorRequirement.id);
+		final wrongDomain = authority([wrongDomainUse], null, [iteratorRequirement]);
+		expectFailure("wrong runtime type domain", "wrong target domain", () -> wrongDomain.typeIdentifier("T1", PLAN_REVISION, "HxIterator.t"));
+
+		final finalOutput = new OcamlFinalRuntimeUseAuthority();
+		finalOutput.beginProgram("program:runtime-type-copy", PROFILE);
+		final copyAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [iteratorRequirement], [typeUse], finalOutput);
+		final copiedReference = copyAuthority.typeIdentifier("T1", PLAN_REVISION, "HxIterator.t");
+		final original = OcamlExpr.EAnnot(OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CUnit),
+			OcamlTypeExpr.TRuntimeApp(copiedReference, [OcamlTypeExpr.TIdent("int")]));
+		copyAuthority.reconcileExpression(original);
+		final copied = finalOutput.copyExpressionForOutput(original, "second-typed-binding");
+		finalOutput.observeModuleItems([
+			OcamlModuleItem.ILet([{name: "originalType", expr: original}, {name: "copiedType", expr: copied}], false)
+		]);
+		finalOutput.finishProgram();
+
+		final typeDeclarationOutput = new OcamlFinalRuntimeUseAuthority();
+		typeDeclarationOutput.beginProgram("program:runtime-type-declaration", PROFILE);
+		final declarationAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [iteratorRequirement], [typeUse], typeDeclarationOutput);
+		final declarationReference = declarationAuthority.typeIdentifier("T1", PLAN_REVISION, "HxIterator.t");
+		final declarationType = OcamlTypeExpr.TRuntimeApp(declarationReference, [OcamlTypeExpr.TIdent("int")]);
+		declarationAuthority.reconcileType(declarationType);
+		typeDeclarationOutput.observeModuleItems([
+			OcamlModuleItem.IType([
+				{
+					name: "checked_iterator",
+					params: [],
+					kind: OcamlTypeDeclKind.Alias(declarationType)
+				}
+			], false)
+		]);
+		typeDeclarationOutput.finishProgram();
+	}
+
+	static function iteratorTypeRequirement():OcamlRuntimeRequirement {
+		final base = requirement();
+		return {
+			id: "array-iterator:runtime:haxe-iterator",
+			sourceKind: base.sourceKind,
+			sourceId: base.sourceId,
+			source: base.source,
+			semanticCapability: base.semanticCapability,
+			cause: base.cause,
+			decisionId: base.decisionId,
+			subject: base.subject,
+			implementationFeature: base.implementationFeature,
+			rootModules: ["HxIterator"],
+			profileEligibility: base.profileEligibility,
+			explanation: base.explanation
+		};
 	}
 
 	static function duplicateSameSymbolUseFails():Void {
@@ -358,6 +424,7 @@ class RuntimeUseAuthorityFixture {
 
 	static function main():Void {
 		validSameSymbolUses();
+		checkedRuntimeTypeUse();
 		duplicateSameSymbolUseFails();
 		duplicatedReconciledSubtreeFailsFinalOutput();
 		finalOutputContract();

@@ -15,6 +15,8 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
+import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
@@ -158,6 +160,10 @@ class OcamlFunctionPlanSealer {
 			context.recordArrayReadRuntimeRequirements(decision);
 		for (decision in arrayReads.dynamicDecisions())
 			context.recordDynamicBracketReadRuntimeRequirements(decision);
+		final arrayIterators = new OcamlArrayIteratorPlanner(binding).plan(data.expr);
+		arrayIterators.requirePlanBinding(binding);
+		for (decision in arrayIterators.decisions())
+			context.recordArrayIteratorRuntimeRequirements(decision);
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -276,7 +282,7 @@ class OcamlFunctionPlanSealer {
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
-			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads);
+			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads, arrayIterators);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -349,6 +355,10 @@ class OcamlFunctionPlanSealer {
 						context.recordArrayReadRuntimeRequirements(decision);
 					for (decision in arrayReads.dynamicDecisions())
 						context.recordDynamicBracketReadRuntimeRequirements(decision);
+					final arrayIterators = new OcamlArrayIteratorPlanner(nestedBinding).plan(tfunc.expr);
+					arrayIterators.requirePlanBinding(nestedBinding);
+					for (decision in arrayIterators.decisions())
+						context.recordArrayIteratorRuntimeRequirements(decision);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
@@ -356,7 +366,7 @@ class OcamlFunctionPlanSealer {
 					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
-							arrayReads, "The typed function literal is outside the existing represented-result callable boundary.");
+							arrayReads, arrayIterators, "The typed function literal is outside the existing represented-result callable boundary.");
 					} else {
 						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
 						// A nested function can read a local declared by its enclosing function.
@@ -378,7 +388,7 @@ class OcamlFunctionPlanSealer {
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
-								imapInterfaces, arrayReads,
+								imapInterfaces, arrayReads, arrayIterators,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.");
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
@@ -392,6 +402,7 @@ class OcamlFunctionPlanSealer {
 								controls: controls,
 								arrayLiteralProducers: arrayLiteralProducers,
 								arrayReads: arrayReads,
+								arrayIterators: arrayIterators,
 								imapInterfaces: imapInterfaces
 							};
 							for (decision in arrayLiteralProducers.decisions())

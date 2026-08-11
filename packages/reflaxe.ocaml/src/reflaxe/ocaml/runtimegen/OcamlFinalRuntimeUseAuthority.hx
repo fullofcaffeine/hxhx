@@ -5,6 +5,8 @@ import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
@@ -101,7 +103,14 @@ class OcamlFinalRuntimeUseAuthority {
 				PRuntimeConstructor(copyReferenceForOutput(reference, stableRole, copiedSourceKeys), args);
 			case _:
 				pattern;
-		}, type -> type);
+		}, type -> switch (type) {
+			case TRuntimeIdent(reference):
+				TRuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys));
+			case TRuntimeApp(reference, params):
+				TRuntimeApp(copyReferenceForOutput(reference, stableRole, copiedSourceKeys), params);
+			case _:
+				type;
+		});
 		OcamlASTTraversal.walkExprPre(copiedExpression, current -> switch (current) {
 			case ERuntimeIdent(reference):
 				if (copiedSourceKeys.exists(occurrenceKey(reference.planRevision,
@@ -112,7 +121,12 @@ class OcamlFinalRuntimeUseAuthority {
 				if (copiedSourceKeys.exists(occurrenceKey(reference.planRevision,
 					reference.id))) throw 'Final runtime-use output copy $stableRole retained original occurrence ${reference.id}.';
 			case _:
-		}, _ -> {});
+		}, current -> switch (current) {
+			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				if (copiedSourceKeys.exists(occurrenceKey(reference.planRevision,
+					reference.id))) throw 'Final runtime-use output copy $stableRole retained original occurrence ${reference.id}.';
+			case _:
+		});
 		return copiedExpression;
 	}
 
@@ -155,8 +169,31 @@ class OcamlFinalRuntimeUseAuthority {
 				case ILet(bindings, _):
 					for (binding in bindings)
 						observeExpression(binding.expr, unitId + "::let:" + binding.name);
-				case IType(_, _):
+				case IType(declarations, _):
+					for (declaration in declarations) {
+						final location = unitId + "::type:" + declaration.name;
+						switch (declaration.kind) {
+							case Alias(type):
+								observeType(type, location);
+							case Record(fields):
+								for (field in fields)
+									observeType(field.typ, location + "::field:" + field.name);
+							case Variant(constructors):
+								for (constructor in constructors)
+									for (argument in constructor.args)
+										observeType(argument, location + "::constructor:" + constructor.name);
+						}
+					}
 			}
+	}
+
+	/** Observes checked private names stored in one final OCaml type tree. */
+	function observeType(type:OcamlTypeExpr, outputLocation:String):Void {
+		OcamlASTTraversal.walkTypePre(type, current -> switch (current) {
+			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				observeReference(reference, outputLocation);
+			case _:
+		});
 	}
 
 	/** Observes one final structured expression before its hidden identities are printed. */
@@ -171,7 +208,11 @@ class OcamlFinalRuntimeUseAuthority {
 			case PRuntimeConstructor(reference, _):
 				observeReference(reference, location);
 			case _:
-		}, _ -> {});
+		}, current -> switch (current) {
+			case TRuntimeIdent(reference) | TRuntimeApp(reference, _):
+				observeReference(reference, location);
+			case _:
+		});
 	}
 
 	/** Observes the hidden references retained by one checked generated-text record. */

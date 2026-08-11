@@ -7,6 +7,8 @@
 	adaptation remains a separate unsupported boundary and is not claimed here.
 **/
 class Main {
+	static var arrayBuilds = 0;
+
 	static function emit(line:String):Void {
 		#if js
 		js.Syntax.code("console.log({0})", line);
@@ -39,6 +41,18 @@ class Main {
 		return values.join(",");
 	}
 
+	static function makeArray():Array<Int> {
+		arrayBuilds++;
+		return [7, 8];
+	}
+
+	static function consumeArrayIterator(iterator:Iterator<Int>):String {
+		final values:Array<String> = [];
+		while (iterator.hasNext())
+			values.push(Std.string(iterator.next()));
+		return values.join(",");
+	}
+
 	/**
 		Exercises the generic Iterator returned by `ObjectMap.keys()`.
 
@@ -63,5 +77,11 @@ class Main {
 		emit("objectmap.keys=" + countObjectMapKeys());
 
 		emit("array.count=" + Lambda.count([7, 8, 9]));
+
+		arrayBuilds = 0;
+		emit("array.direct=" + consumeArrayIterator(makeArray().iterator()) + ":builds=" + arrayBuilds);
+		arrayBuilds = 0;
+		final iteratorFactory = makeArray().iterator;
+		emit("array.stored=" + consumeArrayIterator(iteratorFactory()) + ":builds=" + arrayBuilds);
 	}
 }

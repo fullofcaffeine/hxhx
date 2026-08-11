@@ -2,3 +2,5 @@ literal.sum=6
 method.values=4,5
 objectmap.keys=1
 array.count=3
+array.direct=7,8:builds=1
+array.stored=7,8:builds=1

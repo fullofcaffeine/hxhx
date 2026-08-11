@@ -119,8 +119,11 @@ class OcamlASTTraversal {
 	/** Rebuilds exactly the immediate children of one OCaml type-expression node. */
 	public static function mapTypeImmediate(type:OcamlTypeExpr, mapType:OcamlTypeExpr->OcamlTypeExpr):OcamlTypeExpr {
 		return switch (type) {
-			case TIdent(_), TVar(_):
+			case TIdent(_), TRuntimeIdent(_), TVar(_):
 				type;
+			case TRuntimeApp(reference, params):
+				final mappedParams = mapArrayPreservingIdentity(params, mapType);
+				mappedParams == params ? type : TRuntimeApp(reference, mappedParams);
 			case TApp(name, params):
 				final mappedParams = mapArrayPreservingIdentity(params, mapType);
 				mappedParams == params ? type : TApp(name, mappedParams);

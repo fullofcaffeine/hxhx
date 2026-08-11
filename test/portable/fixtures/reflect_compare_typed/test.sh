@@ -38,7 +38,7 @@ if (JSON.stringify(domains) !== JSON.stringify([
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
-		|| !['ocaml-function-plans-v96', 'ocaml-standalone-expression-plans-v5'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v97', 'ocaml-standalone-expression-plans-v6'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 	const exceptional = decision.domain === 'float' || decision.domain === 'string'
