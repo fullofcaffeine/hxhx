@@ -96,6 +96,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlUnrepresentedFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
@@ -1463,6 +1464,33 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 	}
 
+	/** Returns the active whole-program identity required by compiler-owned field defaults. */
+	function activeProgramRevisionId(ownerId:String):String {
+		final revision = programRevision;
+		if (revision == null)
+			throw 'reflaxe.ocaml [ocaml-unrepresented-field-default:missing-program]: owner "$ownerId" requires an active program revision';
+		return revision.id;
+	}
+
+	/**
+		Constructs one owner-bound default for a field outside the representation registry.
+
+		The decision records the exact owner, type, and selected value before target syntax exists.
+		It preserves the existing zero, false, or null behavior.
+		Only a null decision receives permission to print `HxRuntime.hx_null`, and
+		that permission belongs to this one field output occurrence.
+	**/
+	function materializeUnrepresentedFieldDefault(type:Type, ownerId:String, ownerRevision:String, source:OcamlLoweredSourceSpan):OcamlExpr {
+		final decision = OcamlUnrepresentedFieldDefaultPlan.seal(type, ownerId, ownerRevision, source);
+		if (decision.runtimeUseOccurrences.length == 0)
+			return OcamlUnrepresentedFieldDefaultPlan.materialize(decision, type, null);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			decision.runtimeRequirements, decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final materialized = OcamlUnrepresentedFieldDefaultPlan.materialize(decision, type, authority);
+		authority.reconcileExpression(materialized);
+		return materialized;
+	}
+
 	/** Names a static-storage occurrence when no typed expression owns its declaration site. */
 	static function staticStorageDefaultSource(entry:OcamlStaticStorageEntry):OcamlLoweredSourceSpan {
 		return {
@@ -1487,6 +1515,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final ownerRevision = storage == null ? decision.programRevision : storage.revision;
 		return materializeRepresentedFieldDefault(decision, OcamlRepresentationDomain.StaticField, ownerId, ownerRevision,
 			OcamlLoweredOrigin.sourceSpan(field.pos));
+	}
+
+	/** Returns one unrepresented static field's existing owner-bound default. */
+	function unrepresentedStaticFieldDefault(classType:ClassType, field:ClassField, storage:Null<OcamlStaticStorageEntry>):OcamlExpr {
+		final ownerId = storage == null ? fieldInitializerOwner(classType, field, "static") + ":implicit-default" : storage.initializationId
+			+ ":source-initialization";
+		final ownerRevision = storage == null ? activeProgramRevisionId(ownerId) : storage.revision;
+		return materializeUnrepresentedFieldDefault(field.type, ownerId, ownerRevision, OcamlLoweredOrigin.sourceSpan(field.pos));
+	}
+
+	/** Returns one unrepresented type-prelude static cell's existing owner-bound default. */
+	function unrepresentedStaticStorageDefault(entry:OcamlStaticStorageEntry, emissionRole:String):OcamlExpr {
+		final ownerId = entry.initializationId + ":" + emissionRole;
+		return materializeUnrepresentedFieldDefault(entry.fieldType, ownerId, entry.revision, staticStorageDefaultSource(entry));
 	}
 
 	/** Selects one explicitly admitted field representation, when applicable. */
@@ -1556,14 +1598,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 	}
 
-	/** Returns one instance field's owner-bound implicit default or the unmigrated mapper. */
+	/** Returns one instance field's owner-bound implicit default. */
 	function instanceFieldDefault(classType:ClassType, field:ClassField, emissionRole:String):OcamlExpr {
 		final represented = representedInstanceField(field.type);
-		if (represented == null)
-			return defaultValueForType(field.type);
-		return materializeRepresentedFieldDefault(represented, OcamlRepresentationDomain.InstanceField,
-			fieldInitializerOwner(classType, field, "instance") + ":implicit-default:" + emissionRole, represented.programRevision,
-			OcamlLoweredOrigin.sourceSpan(field.pos)).implicitDefault;
+		final ownerId = fieldInitializerOwner(classType, field, "instance") + ":implicit-default:" + emissionRole;
+		return represented == null ? materializeUnrepresentedFieldDefault(field.type, ownerId, activeProgramRevisionId(ownerId),
+			OcamlLoweredOrigin.sourceSpan(field.pos)) : materializeRepresentedFieldDefault(represented, OcamlRepresentationDomain.InstanceField, ownerId,
+				represented.programRevision, OcamlLoweredOrigin.sourceSpan(field.pos)).implicitDefault;
 	}
 
 	/** Reports whether a typed initializer is the canonical Haxe null literal. */
@@ -1839,8 +1880,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final instanceVarsLocal = varFields.filter(v -> !v.isStatic);
 		final hasInstanceVarsLocal = instanceVarsLocal.length > 0;
 
-		// Default expressions are only available via `ClassVarData` for the class currently being compiled.
-		// For inherited vars (declared in super classes), we fall back to `defaultValueForType`.
+		// Default expressions are only available through `ClassVarData` for the class being compiled.
+		// Inherited fields therefore use their owner-bound implicit default decision.
 		final localVarInitByName:Map<String, TypedExpr> = [];
 		for (v in instanceVarsLocal) {
 			final init = v.findDefaultExpr();
@@ -2678,8 +2719,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			} else if (init != null) {
 				buildStandaloneAssignment(builder, fieldInitializerOwner(classType, v.field, "static"), v.field.type, init);
 			} else {
-				representedStatic == null ? defaultValueForType(v.field.type) : staticFieldDefault(classType, v.field, storage,
-					representedStatic).implicitDefault;
+				representedStatic == null ? unrepresentedStaticFieldDefault(classType, v.field,
+					storage) : staticFieldDefault(classType, v.field, storage, representedStatic).implicitDefault;
 			};
 			final compiledInit = if (consumesRepresentedNullDefault) {
 				compiledInitFromFieldType;
@@ -2716,7 +2757,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				continue;
 			final representedField = requireStaticFieldRepresentation(entry);
 			final materialized = representedField == null ? null : staticStorageDefault(entry, representedField, "type-prelude-default");
-			final initialValue = OcamlExpr.EAnnot(materialized == null ? defaultValueForType(entry.fieldType) : materialized.implicitDefault,
+			final initialValue = OcamlExpr.EAnnot(materialized == null ? unrepresentedStaticStorageDefault(entry,
+				"type-prelude-default") : materialized.implicitDefault,
 				materialized == null ? entry.carrierType : materialized.carrierType);
 			items.push(OcamlModuleItem.ILet([
 				{
@@ -4787,47 +4829,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		addClassTags(cls);
 		return tags;
-	}
-
-	function defaultValueForType(t:Type):OcamlExpr {
-		if (OcamlRepresentationRegistry.isExactString(t)) {
-			throw "reflaxe.ocaml [ocaml-string-default:missing-owner]: exact String defaults must use a field, storage, local, call-slot, or expression owner";
-		}
-		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
-
-		return switch (t) {
-			case TAbstract(aRef, params):
-				final a = aRef.get();
-				switch (a.name) {
-					case "Int": OcamlExpr.EConst(OcamlConst.CInt(0));
-					case "Float": OcamlExpr.EConst(OcamlConst.CFloat("0."));
-					case "Bool": OcamlExpr.EConst(OcamlConst.CBool(false));
-					case "Null":
-						if (params != null && params.length == 1) {
-							switch (params[0]) {
-								case TAbstract(pRef, _):
-									final p = pRef.get();
-									switch (p.name) {
-										case "Int", "Float", "Bool":
-											OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-										case _:
-											anyNull;
-									}
-								case _:
-									anyNull;
-							}
-						} else {
-							anyNull;
-						}
-					default: anyNull;
-				}
-			case TInst(_, _):
-				anyNull;
-			case TEnum(_, _):
-				anyNull;
-			case _:
-				anyNull;
-		}
 	}
 
 	static function orderLetBindingsForOcaml(lets:Array<OcamlLetBinding>):Array<{bindings:Array<OcamlLetBinding>, isRec:Bool}> {

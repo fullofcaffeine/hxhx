@@ -6825,7 +6825,7 @@
       "representationId": "representation:Int:static-field"
     }
   ],
-  "runtimeRequirementCount": 86,
+  "runtimeRequirementCount": 105,
   "schemaVersion": 80,
   "controlAdmissionCount": 151,
   "structuralFieldModel": "typed-structural-field-overlap-v4",
@@ -12695,7 +12695,7 @@
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 49,
-  "runtimeRequirementRevision": "sha256:ef4c8567fa7f47ba0764706e5fb669986e22b76578492a07b73d1093ca8f1bea",
+  "runtimeRequirementRevision": "sha256:3960a7d72ccafe89246b951f0bf0ec8ce2ef59543f833cfc5486ad478f42cb30",
   "callRevision": "sha256:1d4bc3f66bba51ef4642e693c05b5699cd0dee127536c94966294d9c88594fe2",
   "representedArrayCount": 1,
   "controls": [
@@ -16449,6 +16449,110 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:176c0f43597c139896b605a9:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 1703,
+        "max": 1708,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:176c0f43597c139896b605a9",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:176c0f43597c139896b605a9",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Eof",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:2100085bb51a40200c3beba6:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 2443,
+        "max": 2448,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+      },
+      "sourceId": "control:throw:2100085bb51a40200c3beba6",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:2100085bb51a40200c3beba6",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Eof",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:3d33477b4f57d894cb0d00ae:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 1944,
+        "max": 1949,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+      },
+      "sourceId": "control:throw:3d33477b4f57d894cb0d00ae",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:3d33477b4f57d894cb0d00ae",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Eof",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:3d5f1ccf0306804f86a1da48:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 2206,
+        "max": 2211,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx"
+      },
+      "sourceId": "control:throw:3d5f1ccf0306804f86a1da48",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:3d5f1ccf0306804f86a1da48",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16461,6 +16565,32 @@
         "HxEnum"
       ],
       "id": "control:throw:49196381ef9f7069d3fd77d1:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 2413,
+        "max": 2418,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "control:throw:49196381ef9f7069d3fd77d1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:49196381ef9f7069d3fd77d1",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:49196381ef9f7069d3fd77d1:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 2413,
         "max": 2418,
@@ -16501,6 +16631,32 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:4ed55409d8c96b4aed960ee8:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 3850,
+        "max": 3855,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:4ed55409d8c96b4aed960ee8",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:4ed55409d8c96b4aed960ee8",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16527,6 +16683,58 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:54e4082ec1e9a08878ccdb38:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 4085,
+        "max": 4090,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:54e4082ec1e9a08878ccdb38",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:54e4082ec1e9a08878ccdb38",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Eof",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:640161e0ae41feda890a274e:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 3074,
+        "max": 3079,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "control:throw:640161e0ae41feda890a274e",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:640161e0ae41feda890a274e",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16539,6 +16747,32 @@
         "HxEnum"
       ],
       "id": "control:throw:65e794654b153fb2a3489990:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 3601,
+        "max": 3606,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:65e794654b153fb2a3489990",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:65e794654b153fb2a3489990",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:65e794654b153fb2a3489990:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 3601,
         "max": 3606,
@@ -16579,6 +16813,32 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:73610ed016b178785132b4fb:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 1437,
+        "max": 1442,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "control:throw:73610ed016b178785132b4fb",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:73610ed016b178785132b4fb",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16591,6 +16851,32 @@
         "HxEnum"
       ],
       "id": "control:throw:a0b112cec17fd8fc7a107314:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 3480,
+        "max": 3485,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:a0b112cec17fd8fc7a107314",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:a0b112cec17fd8fc7a107314",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:a0b112cec17fd8fc7a107314:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 3480,
         "max": 3485,
@@ -16631,6 +16917,32 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:a4cd5906745944d1c0a8f7fb:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 3722,
+        "max": 3727,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:a4cd5906745944d1c0a8f7fb",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:a4cd5906745944d1c0a8f7fb",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16643,6 +16955,32 @@
         "HxEnum"
       ],
       "id": "control:throw:b9bade58515a566b3179ae9e:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 2153,
+        "max": 2158,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:b9bade58515a566b3179ae9e",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:b9bade58515a566b3179ae9e",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:b9bade58515a566b3179ae9e:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 2153,
         "max": 2158,
@@ -16683,6 +17021,84 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:c8692e493bf7d7e77923e09a:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 2659,
+        "max": 2664,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
+      },
+      "sourceId": "control:throw:c8692e493bf7d7e77923e09a",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:c8692e493bf7d7e77923e09a",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.exceptions.NotImplementedException",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:d72ee49dcf0f63283299771d:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 1331,
+        "max": 1336,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:d72ee49dcf0f63283299771d",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:d72ee49dcf0f63283299771d",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.exceptions.NotImplementedException",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:e866f4d36b6821ec6b5f17cb:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 1105,
+        "max": 1110,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "control:throw:e866f4d36b6821ec6b5f17cb",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:e866f4d36b6821ec6b5f17cb",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16695,6 +17111,32 @@
         "HxEnum"
       ],
       "id": "control:throw:ef065046d8a04a146a74b803:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 2646,
+        "max": 2651,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:ef065046d8a04a146a74b803",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:ef065046d8a04a146a74b803",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:ef065046d8a04a146a74b803:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 2646,
         "max": 2651,
@@ -16735,6 +17177,32 @@
       "sourceKind": "haxe-expression"
     },
     {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:f43ba7d20da22c67015e5aae:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+      "source": {
+        "min": 4217,
+        "max": 4222,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx"
+      },
+      "sourceId": "control:throw:f43ba7d20da22c67015e5aae",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:f43ba7d20da22c67015e5aae",
+      "sourceKind": "haxe-expression"
+    },
+    {
       "implementationFeature": "haxe-enum-dynamic-box-v1",
       "subject": {
         "id": "haxe.io.Error",
@@ -16747,6 +17215,32 @@
         "HxEnum"
       ],
       "id": "control:throw:f55c2a2fc646332cab61bdbc:runtime:haxe-enum-dynamic-box",
+      "source": {
+        "min": 2190,
+        "max": 2195,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx"
+      },
+      "sourceId": "control:throw:f55c2a2fc646332cab61bdbc",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "control:throw:f55c2a2fc646332cab61bdbc",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-typed-throw-v1",
+      "subject": {
+        "id": "haxe.io.Error",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
+      "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
       "source": {
         "min": 2190,
         "max": 2195,

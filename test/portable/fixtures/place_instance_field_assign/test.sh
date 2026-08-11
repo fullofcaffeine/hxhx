@@ -51,7 +51,11 @@ if ! grep -q 'optionalCount = HxRuntime.hx_null.*optionalFlag = HxRuntime.hx_nul
 	echo "Exact nullable primitive fields must use direct HxRuntime.hx_null defaults" >&2
 	exit 1
 fi
-if ! grep -q 'value = Obj.magic (HxRuntime.hx_null).*: abstractholder_t' "$source_file"; then
+
+# A checked runtime identifier is an atomic OCaml expression, so the printer can
+# omit the older optional parentheses around it. Both forms preserve the same
+# WrappedInt fallback and must remain outside the exact core Int representation.
+if ! grep -Eq 'value = Obj\.magic (HxRuntime\.hx_null|\(HxRuntime\.hx_null\)).*: abstractholder_t' "$source_file"; then
 	echo "WrappedInt fields must remain outside the exact core Int field decision" >&2
 	exit 1
 fi
