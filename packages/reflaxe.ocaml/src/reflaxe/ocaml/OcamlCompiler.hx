@@ -85,6 +85,7 @@ import reflaxe.ocaml.reuse.OcamlSourceBundleReplay.OcamlSourceBundleReplayCorrup
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
@@ -2324,11 +2325,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			function buildSelfInit(emissionRole:String):OcamlExpr {
+				final classMarker = classIdentityMarker(classType, fullName, emissionRole);
 				return if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];
 					fields.push({
 						name: "__hx_type",
-						value: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"), [OcamlExpr.EConst(OcamlConst.CString(fullName))])
+						value: classMarker
 					});
 					if (isDispatch && dispatchLayoutFields != null) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
@@ -2437,7 +2439,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final recordExpr = OcamlExpr.ERecord([
 						{
 							name: "__hx_type",
-							value: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"), [OcamlExpr.EConst(OcamlConst.CString(fullName))])
+							value: classMarker
 						}
 					]);
 					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
@@ -4623,6 +4625,30 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 				acc;
 		}
+	}
+
+	/**
+		Builds the checked runtime class marker for one generated record.
+
+		The constructor and empty-instance functions emit separate records. Their
+		role names therefore select separate hidden occurrences, even though both
+		markers print the same class name and use the same HxType module.
+	**/
+	function classIdentityMarker(classType:ClassType, runtimeClassName:String, emissionRole:String):OcamlExpr {
+		final revision = programRevision;
+		if (revision == null)
+			throw "reflaxe.ocaml [ocaml-class-marker:missing-program]: class identity marker requires an active program revision";
+		final decision = OcamlClassIdentityMarkerPlan.seal(classType, runtimeClassName, emissionRole, revision.id, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+		OcamlClassIdentityMarkerPlan.requireDecision(decision);
+		ctx.runtimeRequirements.recordClassIdentityMarker(decision);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final reference = authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
+		final marker = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(reference), [OcamlExpr.EConst(OcamlConst.CString(decision.runtimeClassName))]);
+		authority.reconcileExpression(marker);
+		return marker;
 	}
 
 	/**

@@ -11,6 +11,8 @@ import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorContract;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
+import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
+import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan.OcamlClassIdentityMarkerDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
@@ -185,6 +187,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the direct runtime dependency selected by one Array or Bytes type. */
 	public function recordStandardContainerCarrier(decision:OcamlStandardContainerCarrierDecision):Void {
 		for (requirement in requirementsForStandardContainerCarrier(decision))
+			record(requirement);
+	}
+
+	/** Returns the direct HxType dependency for one generated class record. */
+	public static function requirementsForClassIdentityMarker(decision:OcamlClassIdentityMarkerDecision):Array<OcamlRuntimeRequirement> {
+		OcamlClassIdentityMarkerPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+				sourceId: decision.sourceDeclarationId,
+				source: decision.source,
+				semanticCapability: OcamlClassIdentityMarkerPlan.RUNTIME_CAPABILITY,
+				cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.sourceDeclarationId
+				},
+				implementationFeature: OcamlClassIdentityMarkerPlan.IMPLEMENTATION_FEATURE,
+				rootModules: ["HxType"],
+				profileEligibility: decision.profileEligibility,
+				explanation: 'The generated ${decision.emissionRole} for ${decision.sourceDeclarationId} stores the exact Haxe runtime class marker used by Type.getClass.'
+			})
+		];
+	}
+
+	/** Records the direct HxType dependency for one generated class record. */
+	public function recordClassIdentityMarker(decision:OcamlClassIdentityMarkerDecision):Void {
+		for (requirement in requirementsForClassIdentityMarker(decision))
 			record(requirement);
 	}
 

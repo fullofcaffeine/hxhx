@@ -2,3 +2,4 @@ base=Child
 iface=Child
 dyn=Child
 anon=true
+empty=Child

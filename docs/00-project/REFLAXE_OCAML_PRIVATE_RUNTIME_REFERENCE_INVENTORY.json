@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.31.26",
+  "reviewBead": "haxe_ocaml-0uwin.31.27",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.26",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.27",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 305,
+    "total": 303,
     "byDomain": {
-      "expression": 298,
+      "expression": 296,
       "pattern": 7
     },
     "byMigrationFamily": {
@@ -31,10 +31,10 @@
       "builder-reflect": 9,
       "builder-string": 25,
       "builder-type": 28,
-      "compiler-core": 4
+      "compiler-core": 2
     }
   },
-  "inventoryRevision": "e71b9e059b63668ae0151843e26f49cc39d882587fe3478a692fa79cf1c1a4a0",
+  "inventoryRevision": "93a4bbb4e64127f1da075ae23dbed49a2e7ed402eac3d2b1d426520b5aff61f1",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -3045,26 +3045,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 9,
       "migrationFamily": "builder-boolean-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxType.class_::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxType.class_",
-      "rootModule": "HxType",
-      "ordinal": 1,
-      "migrationFamily": "compiler-core"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxType.class_::2",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxType.class_",
-      "rootModule": "HxType",
-      "ordinal": 2,
-      "migrationFamily": "compiler-core"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx::expression::EField(EIdent)::HxRuntime.hx_null::1",
