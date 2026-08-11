@@ -55,6 +55,7 @@ import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopRuntimeUseContrac
 import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopTargetRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUseRole;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -1037,16 +1038,15 @@ class OcamlBuilder {
 			case ReprAndRecoverExactValue:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case BoxBoolAndRecoverExactValue:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [built]);
+				buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.BoxExactBoolPayload, [built], position);
 			case PreserveNullableIntThrowCarrier:
 				built;
 			case NormalizeNullableBoolThrowCarrier:
 				final carrierName = freshTmp("throw_nullable_bool");
 				final carrier = OcamlExpr.EIdent(carrierName);
-				final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [carrier]);
-				final normalized = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [carrier])
-				]);
+				final isNull = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.TestNullableBoolPayload, [carrier], position);
+				final recovered = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.RecoverNullableBoolPayload, [carrier], position);
+				final normalized = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.BoxNullableBoolPayload, [recovered], position);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
 			case BoxRepresentedArrayThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
@@ -1058,10 +1058,10 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case BoxEnumThrowCarrier:
 				final represented = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"), [
+				buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.BoxEnumPayload, [
 					OcamlExpr.EConst(OcamlConst.CString(selectedPayload.inputSemanticTypeId)),
 					represented
-				]);
+				], position);
 			case BoxRuntimeClassThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
@@ -1090,13 +1090,42 @@ class OcamlBuilder {
 			final occurrence = OcamlThrowRuntimeUseContract.signalOccurrence(runtimeUsePlan);
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
-				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), [occurrence], ctx.finalRuntimeUses);
 			final signal = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 			final expression = OcamlExpr.EApp(signal, [payload, tags]);
 			authority.reconcileExpression(OcamlExpr.EApp(signal, [
 				OcamlExpr.EIdent("throw_payload_owned_elsewhere"),
 				OcamlExpr.EIdent("throw_tags_owned_by_control_plan")
 			]));
+			expression;
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	/**
+		Builds one payload conversion call selected by the sealed throw decision.
+
+		The source expression passed as an argument has a different owner. The proof
+		expression therefore uses placeholders for arguments and checks only the
+		private runtime name introduced at this boundary.
+	**/
+	function buildAuthorizedThrowPayloadHelper(decision:OcamlControlDecision, role:OcamlThrowRuntimeUseRole, arguments:Array<OcamlExpr>,
+			position:Position):OcamlExpr {
+		return try {
+			final runtimeUsePlan = OcamlThrowRuntimeUseContract.forDecision(decision);
+			OcamlThrowRuntimeUseContract.requireForDecision(decision, runtimeUsePlan);
+			final occurrence = OcamlThrowRuntimeUseContract.payloadOccurrence(runtimeUsePlan, role);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), [occurrence], ctx.finalRuntimeUses);
+			final helper = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			final expression = OcamlExpr.EApp(helper, arguments);
+			final proofArguments = [
+				for (index in 0...arguments.length)
+					OcamlExpr.EIdent('throw_payload_argument_${index}_owned_elsewhere')
+			];
+			authority.reconcileExpression(OcamlExpr.EApp(helper, proofArguments));
 			expression;
 		} catch (error:Dynamic) {
 			controlPlanInvariant(Std.string(error), position);

@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlRuntimeTagPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
+import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlThrowRuntimeUseModel.OcamlThrowRuntimeUsePlan;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
@@ -23,11 +24,12 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 using StringTools;
 
 /**
-	Checks the private OCaml call that carries one sealed Haxe `throw`.
+	Checks the private OCaml calls that carry one sealed Haxe `throw`.
 
-	The control plan already chooses the payload conversion and runtime tags. This
-	fixture proves that only that exact decision can print the matching `HxType`
-	call, and that runtime packaging receives the same typed reason.
+	For example, a Boolean throw first boxes the value, then raises the private
+	exception signal. The control plan already chooses that conversion and its
+	runtime tags. This fixture proves that only the exact decision can print each
+	helper in that order, and that packaging receives every required module.
 **/
 class ThrowRuntimeUseFixture {
 	static inline final PROFILE = "portable";
@@ -46,39 +48,114 @@ class ThrowRuntimeUseFixture {
 		proveDecisionFailures(decision, plan, occurrence);
 		proveAuthorityFailures(decision, plan, occurrence);
 		proveFinalOutput(decision, plan, occurrence);
+		provePayloadHelperSchedules();
 		Sys.println("REFLAXE_OCAML_THROW_RUNTIME_USE:PASS");
 		return macro null;
 	}
 
+	static function provePayloadHelperSchedules():Void {
+		final boolDecision = throwDecision("control:throw:bool", "Bool", "bool", "representation:Bool:internal-value",
+			OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue, OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID, false);
+		proveSymbols(boolDecision, ["HxType.hx_throw_typed_rtti", "HxRuntime.box_bool"], ["HxRuntime", "HxType"]);
+		final nullableBoolDecision = throwDecision("control:throw:nullable-bool", "Null<Bool>", "Obj.t", "representation:Null<Bool>:internal-value",
+			OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier, OcamlControlPlan.NULLABLE_BOOL_THROW_PROOF_ID, false);
+		proveSymbols(nullableBoolDecision, [
+			"HxType.hx_throw_typed_rtti",
+			"HxRuntime.is_null",
+			"HxRuntime.box_bool",
+			"HxRuntime.unbox_bool_or_obj"
+		], ["HxRuntime", "HxType"]);
+		final enumDecision = throwDecision("control:throw:enum", "fixture.Signal", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":fixture.Signal",
+			OcamlControlPlan.enumThrowRepresentationId("fixture.Signal"), OcamlControlPayloadConversion.BoxEnumThrowCarrier,
+			OcamlControlPlan.EXACT_ENUM_THROW_PROOF_ID, true);
+		proveSymbols(enumDecision, ["HxType.hx_throw_typed_rtti", "HxEnum.box_if_needed"], ["HxEnum", "HxType"]);
+
+		final nullablePlan = OcamlThrowRuntimeUseContract.forDecision(nullableBoolDecision);
+		final reordered = nullablePlan.runtimeUseOccurrences.copy();
+		final previous = reordered[2];
+		reordered[2] = reordered[3];
+		reordered[3] = previous;
+		expectFailure("reordered payload helpers", "reordered",
+			() -> OcamlThrowRuntimeUseContract.requireForDecision(nullableBoolDecision, withUses(nullablePlan, reordered)));
+		expectFailure("wrong payload helper", "conflicting",
+			() -> OcamlThrowRuntimeUseContract.requireForDecision(nullableBoolDecision, withUses(nullablePlan, [
+				nullablePlan.runtimeUseOccurrences[0],
+				copyUse(nullablePlan.runtimeUseOccurrences[1], null, "HxRuntime.is_not_null"),
+				nullablePlan.runtimeUseOccurrences[2],
+				nullablePlan.runtimeUseOccurrences[3]
+			])));
+		provePayloadFinalOutput(boolDecision);
+	}
+
+	static function proveSymbols(decision:OcamlControlDecision, expected:Array<String>, expectedRoots:Array<String>):Void {
+		final plan = OcamlThrowRuntimeUseContract.forDecision(decision);
+		OcamlThrowRuntimeUseContract.requireForDecision(decision, plan);
+		final actual = plan.runtimeUseOccurrences.map(occurrence -> occurrence.exactSymbol);
+		if (actual.join(",") != expected.join(","))
+			throw 'Throw ${decision.id} expected ${expected.join(",")}, received ${actual.join(",")}.';
+		for (index in 0...plan.runtimeUseOccurrences.length)
+			if (plan.runtimeUseOccurrences[index].order != index)
+				throw 'Throw ${decision.id} runtime use ${plan.runtimeUseOccurrences[index].id} has order ${plan.runtimeUseOccurrences[index].order}; expected $index.';
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForThrowDecision(decision);
+		if (requirements.length != 1 || requirements[0].rootModules.join(",") != expectedRoots.join(","))
+			throw 'Throw ${decision.id} expected runtime roots ${expectedRoots.join(",")}, received ${requirements[0].rootModules.join(",")}.';
+	}
+
+	static function provePayloadFinalOutput(decision:OcamlControlDecision):Void {
+		final plan = OcamlThrowRuntimeUseContract.forDecision(decision);
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForThrowDecision(decision);
+		final finalOutput = new OcamlFinalRuntimeUseAuthority();
+		finalOutput.beginProgram(decision.programRevision, PROFILE);
+		final authority = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences, finalOutput);
+		final signalOccurrence = plan.runtimeUseOccurrences[0];
+		final boxOccurrence = plan.runtimeUseOccurrences[1];
+		final signal = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(signalOccurrence.id, signalOccurrence.planRevision,
+			signalOccurrence.exactSymbol));
+		final box = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(boxOccurrence.id, boxOccurrence.planRevision, boxOccurrence.exactSymbol));
+		final expression = OcamlExpr.EApp(signal, [
+			OcamlExpr.EApp(box, [OcamlExpr.EIdent("payload")]),
+			OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("Dynamic"))])
+		]);
+		authority.reconcileExpression(expression);
+		finalOutput.observeExpression(expression, "Main::main::bool-throw");
+		finalOutput.finishProgram();
+	}
+
 	static function intThrowDecision():OcamlControlDecision {
+		return throwDecision("control:throw:int", "Int", "int", "representation:Int:internal-value", OcamlControlPayloadConversion.ReprAndRecoverExactValue,
+			OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID, false);
+	}
+
+	static function throwDecision(id:String, semanticTypeId:String, carrierTypeId:String, representationId:String, conversion:OcamlControlPayloadConversion,
+			proofId:String, directEnum:Bool):OcamlControlDecision {
 		return {
-			id: "control:throw:int",
+			id: id,
 			source: {file: "src/Main.hx", min: 12, max: 20},
 			kind: OcamlControlTransferKind.Throw,
 			effect: OcamlControlEffect.RaiseHaxeValue,
 			targetKind: OcamlControlTargetKind.HaxeExceptionChannel,
 			targetId: OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID,
 			payload: {
-				inputSemanticTypeId: "Int",
-				inputCarrierTypeId: "int",
-				inputRepresentationId: "representation:Int:internal-value",
+				inputSemanticTypeId: semanticTypeId,
+				inputCarrierTypeId: carrierTypeId,
+				inputRepresentationId: representationId,
 				signalCarrierTypeId: "Obj.t",
-				outputSemanticTypeId: "Int",
-				outputCarrierTypeId: "int",
-				outputRepresentationId: "representation:Int:internal-value",
-				conversion: OcamlControlPayloadConversion.ReprAndRecoverExactValue,
-				proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
-				proofClaim: "The fixture carries one exact Int through the Haxe exception channel.",
+				outputSemanticTypeId: semanticTypeId,
+				outputCarrierTypeId: carrierTypeId,
+				outputRepresentationId: representationId,
+				conversion: conversion,
+				proofId: proofId,
+				proofClaim: "The fixture carries one checked value through the Haxe exception channel.",
 				nominalRepresentation: null
 			},
-			runtimeTags: ["Dynamic"],
+			runtimeTags: OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, false),
 			runtimeTagPolicy: OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 			mechanism: OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
 			profileEligibility: ["metal", "portable"],
-			reason: "The typed fixture throws one exact Int.",
-			proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
-			proofClaim: "The final typed fixture fixes one exact Int throw.",
+			reason: "The typed fixture throws one checked value.",
+			proofId: proofId,
+			proofClaim: "The final typed fixture fixes one checked throw.",
 			functionId: "Main|Main|static|main",
 			programRevision: "program:throw-runtime-use",
 			bodyRevision: "body:throw-runtime-use",

@@ -723,7 +723,7 @@ class OcamlRuntimeRequirementLedger {
 			record(requirement);
 	}
 
-	/** Returns the exact HxType requirement selected by one sealed Haxe throw. */
+	/** Returns the exact runtime-module requirement selected by one sealed Haxe throw. */
 	public static function requirementsForThrowDecision(decision:OcamlControlDecision):Array<OcamlRuntimeRequirement> {
 		final plan = OcamlThrowRuntimeUseContract.forDecision(decision);
 		final payload = decision.payload;
@@ -743,14 +743,14 @@ class OcamlRuntimeRequirementLedger {
 					id: payload.inputSemanticTypeId
 				},
 				implementationFeature: "haxe-typed-throw-v1",
-				rootModules: ["HxType"],
+				rootModules: OcamlThrowRuntimeUseContract.rootModules(plan),
 				profileEligibility: decision.profileEligibility,
 				explanation: "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel."
 			})
 		];
 	}
 
-	/** Records the private HxType call required by one sealed Haxe throw. */
+	/** Records the private runtime calls required by one sealed Haxe throw. */
 	public function recordThrowDecision(decision:OcamlControlDecision):Void {
 		for (requirement in requirementsForThrowDecision(decision))
 			record(requirement);

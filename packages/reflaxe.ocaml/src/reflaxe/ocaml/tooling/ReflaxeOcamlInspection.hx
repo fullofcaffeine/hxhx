@@ -3822,6 +3822,13 @@ class ReflaxeOcamlInspection {
 			final throwSource = requiredObject(throwRequirement, "source");
 			final throwSubject = requiredObject(throwRequirement, "subject");
 			final throwRoots = requiredStringArray(throwRequirement, "rootModules");
+			// The report records the sealed payload conversion, not generated OCaml.
+			// This closed mapping checks the runtime modules selected by that conversion.
+			final expectedThrowRoots = switch (enumPayload.conversion) {
+				case "box-bool-and-recover-exact-value", "normalize-nullable-bool-throw-carrier": "HxRuntime,HxType";
+				case "box-enum-throw-carrier": "HxEnum,HxType";
+				case _: "HxType";
+			};
 			if (requiredString(throwRequirement, "sourceKind") != "haxe-expression"
 				|| requiredString(throwRequirement, "sourceId") != control.id
 				|| requiredString(throwSource, "file") != control.sourceFile
@@ -3833,9 +3840,9 @@ class ReflaxeOcamlInspection {
 				|| requiredString(throwSubject, "kind") != "haxe-type"
 				|| requiredString(throwSubject, "id") != enumPayload.inputSemanticTypeId
 				|| requiredString(throwRequirement, "implementationFeature") != "haxe-typed-throw-v1"
-				|| throwRoots.join(",") != "HxType"
+				|| throwRoots.join(",") != expectedThrowRoots
 				|| requiredStringArray(throwRequirement, "profileEligibility").join(",") != control.profileEligibility.join(",")) {
-				throw 'Throw decision "${control.id}" runtime requirement "$throwRequirementId" disagrees with its sealed HxType signal.';
+				throw 'Throw decision "${control.id}" runtime requirement "$throwRequirementId" disagrees with its sealed signal and payload helpers.';
 			}
 			referenced.set(throwRequirementId, true);
 			if (enumPayload.conversion != "box-enum-throw-carrier")

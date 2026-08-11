@@ -127,7 +127,7 @@ class OcamlRuntimeUseAuthority {
 			throw 'Runtime requirement ${requirement.id} is not eligible for profile $activeProfile.';
 		final separator = occurrence.exactSymbol.indexOf(".");
 		final directRoot = separator < 0 ? occurrence.exactSymbol : occurrence.exactSymbol.substr(0, separator);
-		if (requirement.rootModules.length != 1 || requirement.rootModules[0] != directRoot)
+		if (!requirement.rootModules.contains(directRoot))
 			throw 'Runtime use ${occurrence.id} requires direct runtime root $directRoot, but ${requirement.id} declares ${requirement.rootModules.join(",")}.';
 	}
 

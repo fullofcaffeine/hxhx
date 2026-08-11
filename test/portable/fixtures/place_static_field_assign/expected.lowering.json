@@ -12744,7 +12744,7 @@
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 49,
-  "runtimeRequirementRevision": "sha256:aa44ceff9bfffd6008f1187185557f1e45b33cb1309c8ce3f10ec1e3c2c16336",
+  "runtimeRequirementRevision": "sha256:fe583b6aaefd6f0723cce867155a6da6382ca308cfc24c8ebca9ceb1a0489472",
   "callRevision": "sha256:d94dd0c836555b31381215b87b30b86954f4182460e7ff35471b25c9999560b4",
   "representedArrayCount": 1,
   "controls": [
@@ -16507,6 +16507,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:176c0f43597c139896b605a9:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16637,6 +16638,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:49196381ef9f7069d3fd77d1:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16689,6 +16691,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:4ed55409d8c96b4aed960ee8:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16741,6 +16744,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:54e4082ec1e9a08878ccdb38:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16819,6 +16823,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:65e794654b153fb2a3489990:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16871,6 +16876,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:73610ed016b178785132b4fb:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16923,6 +16929,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:a0b112cec17fd8fc7a107314:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -16975,6 +16982,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:a4cd5906745944d1c0a8f7fb:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -17027,6 +17035,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:b9bade58515a566b3179ae9e:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -17079,6 +17088,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:c8692e493bf7d7e77923e09a:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -17183,6 +17193,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:ef065046d8a04a146a74b803:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -17235,6 +17246,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:f43ba7d20da22c67015e5aae:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
@@ -17287,6 +17299,7 @@
       "semanticCapability": "hxhx-runtime:typed-haxe-exception-signal-v1",
       "explanation": "The sealed Haxe throw sends one represented source value and its preselected runtime tags through the compiler-owned exception channel.",
       "rootModules": [
+        "HxEnum",
         "HxType"
       ],
       "id": "control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
