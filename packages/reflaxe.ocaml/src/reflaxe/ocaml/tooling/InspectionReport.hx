@@ -420,6 +420,22 @@ typedef InspectionCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
+/**
+	The detached type facts for a call whose callable value has Haxe type `Dynamic`.
+
+	The report keeps compiler objects out of the public evidence. These plain values
+	let inspection verify the runtime call without inventing a declared method.
+**/
+typedef InspectionDynamicFunctionCallTarget = {
+	final calleeSemanticTypeId:String;
+	final calleeCarrierTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final resultKind:String;
+	final proofId:String;
+	final proofClaim:String;
+}
+
 /** The exact standard Array operation selected before OCaml syntax. */
 typedef InspectionStandardArrayCallTarget = {
 	final operation:String;
@@ -639,6 +655,7 @@ typedef InspectionCall = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final dynamicFunctionTarget:Null<InspectionDynamicFunctionCallTarget>;
 	final standardArrayTarget:Null<InspectionStandardArrayCallTarget>;
 	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 	final structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>;

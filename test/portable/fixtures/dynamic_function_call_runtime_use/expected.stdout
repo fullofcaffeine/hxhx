@@ -1,0 +1,16 @@
+computed-callee
+arg=1
+arg=2
+sum=3
+zero-callee
+zero=7
+void-callee
+arg=3
+void=3
+varargs-callee
+text=a
+text=b
+varargs=a|b
+nested-callee
+arg=4
+nested=8

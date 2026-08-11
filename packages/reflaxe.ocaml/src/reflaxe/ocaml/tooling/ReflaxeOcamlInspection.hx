@@ -16,6 +16,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionReflectCompare;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionDynamicFunctionCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
@@ -90,9 +91,9 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v98";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v19";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v7";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v99";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v20";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v8";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -441,8 +442,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 80) {
-						throw 'Unsupported lowering report schema $version; expected 80.';
+					if (version != 81) {
+						throw 'Unsupported lowering report schema $version; expected 81.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1628,7 +1629,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v28")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v29")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -1670,6 +1671,11 @@ class ReflaxeOcamlInspection {
 				throw 'Call report contains duplicate identity "${call.id}".';
 			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
 				throw 'Call "${call.id}" has an invalid source span.';
+			if (call.kind == "dynamic-function-value") {
+				validateDynamicFunctionCall(call);
+				callIds.set(call.id, true);
+				continue;
+			}
 			if (call.kind == "standard-array-method") {
 				validateStandardArrayCall(call);
 				callIds.set(call.id, true);
@@ -1691,6 +1697,8 @@ class ReflaxeOcamlInspection {
 				throw 'Call "${call.id}" carries a standard IMap target for ordinary call kind "${call.kind}".';
 			if (call.structuralIteratorTarget != null)
 				throw 'Call "${call.id}" carries a structural Iterator target for ordinary call kind "${call.kind}".';
+			if (call.dynamicFunctionTarget != null)
+				throw 'Call "${call.id}" carries a Dynamic function target for ordinary call kind "${call.kind}".';
 			if (call.receiver != null)
 				validateCallValue(call.receiver, representationById, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
@@ -1727,6 +1735,39 @@ class ReflaxeOcamlInspection {
 		calls.sort((left, right) -> compareStrings(left.id, right.id));
 		boundaries.sort((left, right) -> compareStrings(left.calleeId, right.calleeId));
 		return {calls: calls, boundaries: boundaries};
+	}
+
+	/** Rejects a Dynamic-call report whose detached target facts conflict with its call occurrence. */
+	static function validateDynamicFunctionCall(call:InspectionCall):Void {
+		final target = call.dynamicFunctionTarget;
+		if (target == null)
+			throw 'Dynamic function call "${call.id}" has no typed target.';
+		if (call.calleeId.length == 0
+			|| call.sourceModuleId.length != 0
+			|| call.sourceTypeName.length != 0
+			|| call.sourceFieldName.length != 0
+			|| call.receiver != null
+			|| call.arguments.length != 0
+			|| call.result != null
+			|| call.resultKind != target.resultKind
+			|| call.standardArrayTarget != null
+			|| call.standardIMapTarget != null
+			|| call.structuralIteratorTarget != null
+			|| target.calleeSemanticTypeId != "Dynamic"
+			|| target.calleeCarrierTypeId != "Obj.t"
+			|| Lambda.exists(target.argumentSemanticTypeIds, semanticTypeId -> semanticTypeId.length == 0)
+			|| target.resultSemanticTypeId.length == 0
+			|| target.proofId != "dynamic-function-call-v1"
+			|| target.proofClaim.length == 0
+			|| call.proofId != target.proofId
+			|| call.proofClaim != target.proofClaim
+			|| call.profileEligibility.length != 2
+			|| call.profileEligibility[0] != "metal"
+			|| call.profileEligibility[1] != "portable") {
+			throw 'Dynamic function call "${call.id}" has incomplete or conflicting target facts.';
+		}
+		if ((target.resultKind == "value") != (target.resultSemanticTypeId != "Void"))
+			throw 'Dynamic function call "${call.id}" has inconsistent result facts.';
 	}
 
 	/** Rejects a standard Array report entry that disagrees with its sealed target. */
@@ -2160,7 +2201,7 @@ class ReflaxeOcamlInspection {
 		if (!Reflect.hasField(value, "result"))
 			throw 'Expected typed-call field "result".';
 		final rawResult = Reflect.field(value, "result");
-		if (kind == "standard-array-method" || kind == "standard-imap-method" || kind == "structural-iterator-method") {
+		if (kind == "dynamic-function-value" || kind == "standard-array-method" || kind == "standard-imap-method" || kind == "structural-iterator-method") {
 			if (rawResult != null)
 				throw 'Specialized call kind "$kind" describes its result in the sealed target instead of an ordinary call crossing.';
 			return null;
@@ -2199,6 +2240,7 @@ class ReflaxeOcamlInspection {
 			&& kind != "direct-instance-haxe-method"
 			&& kind != "direct-haxe-constructor"
 			&& kind != "typed-function-value"
+			&& kind != "dynamic-function-value"
 			&& kind != "standard-array-method"
 			&& kind != "standard-imap-method"
 			&& kind != "structural-iterator-method")
@@ -2212,10 +2254,12 @@ class ReflaxeOcamlInspection {
 		final kind = requireCallKind(value);
 		final receiver = callReceiver(value, kind);
 		final arguments = callValues(value, "arguments");
+		final dynamicFunctionTarget = dynamicFunctionCallTarget(value, kind);
 		final standardArrayTarget = standardArrayCallTarget(value, kind);
 		final standardIMapTarget = standardIMapCallTarget(value, kind);
 		final structuralIteratorTarget = structuralIteratorCallTarget(value, kind);
-		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardArrayTarget, standardIMapTarget, structuralIteratorTarget);
+		final schedule = callEvaluationSchedule(value, id, kind, arguments, dynamicFunctionTarget, standardArrayTarget, standardIMapTarget,
+			structuralIteratorTarget);
 		final resultKind = callResultKind(value);
 		return {
 			id: id,
@@ -2240,9 +2284,31 @@ class ReflaxeOcamlInspection {
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision"),
+			dynamicFunctionTarget: dynamicFunctionTarget,
 			standardArrayTarget: standardArrayTarget,
 			standardIMapTarget: standardIMapTarget,
 			structuralIteratorTarget: structuralIteratorTarget
+		};
+	}
+
+	static function dynamicFunctionCallTarget(value:Dynamic, kind:String):Null<InspectionDynamicFunctionCallTarget> {
+		if (!Reflect.hasField(value, "dynamicFunctionTarget"))
+			throw 'Expected typed-call field "dynamicFunctionTarget".';
+		final rawTarget = Reflect.field(value, "dynamicFunctionTarget");
+		if (kind != "dynamic-function-value") {
+			if (rawTarget != null)
+				throw 'Typed-call kind "$kind" cannot carry a Dynamic function target.';
+			return null;
+		}
+		final target = requiredObject(value, "dynamicFunctionTarget");
+		return {
+			calleeSemanticTypeId: requiredString(target, "calleeSemanticTypeId"),
+			calleeCarrierTypeId: requiredString(target, "calleeCarrierTypeId"),
+			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
+			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			resultKind: callResultKind(target),
+			proofId: requiredString(target, "proofId"),
+			proofClaim: requiredString(target, "proofClaim")
 		};
 	}
 
@@ -2331,7 +2397,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String, arguments:Array<InspectionCallValue>,
-			standardArrayTarget:Null<InspectionStandardArrayCallTarget>, standardIMapTarget:Null<InspectionStandardIMapCallTarget>,
+			dynamicFunctionTarget:Null<InspectionDynamicFunctionCallTarget>, standardArrayTarget:Null<InspectionStandardArrayCallTarget>,
+			standardIMapTarget:Null<InspectionStandardIMapCallTarget>,
 			structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
@@ -2342,12 +2409,12 @@ class ReflaxeOcamlInspection {
 					slotId: optionalString(entry, "slotId")
 				}
 		];
-		final materializesCallee = kind == "typed-function-value";
+		final materializesCallee = kind == "typed-function-value" || kind == "dynamic-function-value";
 		final materializesReceiver = kind == "direct-instance-haxe-method"
 			|| kind == "standard-array-method"
 			|| kind == "standard-imap-method"
 			|| kind == "structural-iterator-method";
-		final argumentCount = standardArrayTarget != null ? standardArrayTarget.argumentSemanticTypeIds.length : (standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length);
+		final argumentCount = dynamicFunctionTarget != null ? dynamicFunctionTarget.argumentSemanticTypeIds.length : (standardArrayTarget != null ? standardArrayTarget.argumentSemanticTypeIds.length : (standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length));
 		if (structuralIteratorTarget != null && argumentCount != 0)
 			throw 'Structural Iterator call "$callId" unexpectedly owns source arguments.';
 		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
@@ -2372,7 +2439,10 @@ class ReflaxeOcamlInspection {
 		var sourceArgumentIndex = 0;
 		for (index in 0...argumentCount) {
 			final step = schedule[index + scheduleOffset];
-			final omitted = standardArrayTarget == null && standardIMapTarget == null && isOmittedConversion(arguments[index].conversion);
+			final omitted = dynamicFunctionTarget == null
+				&& standardArrayTarget == null
+				&& standardIMapTarget == null
+				&& isOmittedConversion(arguments[index].conversion);
 			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
@@ -3998,6 +4068,8 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		for (call in calls) {
+			if (call.dynamicFunctionTarget != null)
+				validateDynamicCallRuntimeRequirements(call, requirements, referenced);
 			for (argument in call.arguments) {
 				if (argument.conversion != "box-exact-bool-to-dynamic")
 					continue;
@@ -4149,6 +4221,49 @@ class ReflaxeOcamlInspection {
 			if (!referenced.exists(requirementId))
 				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
 		return expectedCount;
+	}
+
+	/**
+		Checks every helper used by one Dynamic call against its sealed source span and argument count.
+
+		A Dynamic call has no declared method boundary. Its detached target and these
+		runtime rows are therefore the complete explanation for the generated call.
+	**/
+	static function validateDynamicCallRuntimeRequirements(call:InspectionCall, requirements:Map<String, Dynamic>, referenced:Map<String, Bool>):Void {
+		final target = call.dynamicFunctionTarget;
+		if (target == null)
+			throw 'Dynamic function call "${call.id}" has no typed target.';
+		final expected = [{suffix: "dynamic-call-argument-array-create", root: "HxArray"}];
+		for (index in 0...target.argumentSemanticTypeIds.length)
+			expected.push({suffix: 'dynamic-call-argument-push:$index', root: "HxArray"});
+		expected.push({suffix: "dynamic-call-invoke", root: "HxReflect"});
+		expected.push({suffix: "dynamic-call-null-receiver", root: "HxRuntime"});
+		for (entry in expected) {
+			final requirementId = '${call.id}:runtime:haxe-dynamic-function-call:${entry.suffix}';
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Dynamic function call "${call.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != call.id
+				|| requiredString(source, "file") != call.sourceFile
+				|| requiredInt(source, "min") != call.sourceMin
+				|| requiredInt(source, "max") != call.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-dynamic-function-call"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != call.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != "Dynamic"
+				|| requiredString(requirement, "implementationFeature") != "haxe-dynamic-function-call-v1"
+				|| roots.length != 1
+				|| roots[0] != entry.root
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+				throw 'Dynamic function call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+			}
+			referenced.set(requirementId, true);
+		}
 	}
 
 	/**

@@ -10,12 +10,11 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
 
 /**
-	Transfers a sealed Boolean call conversion into the runtime inventory.
+	Transfers sealed call-helper decisions into the runtime inventory.
 
-	The call planner has already proved that a particular argument must enter a
-	`Dynamic` parameter through the distinguishable Boolean box. This recorder
-	does not inspect generated OCaml or make another type decision; it only tells
-	packaging why that exact call needs `HxRuntime`.
+	The call planner has already selected each private helper. This recorder does
+	not inspect generated OCaml or repeat the type decision. It tells packaging
+	which runtime module implements each exact use and why the call needs it.
 **/
 class OcamlCallRuntimeRequirementRecorder {
 	/** Builds one direct-root requirement for each runtime use owned by the call. */
@@ -23,7 +22,23 @@ class OcamlCallRuntimeRequirementRecorder {
 		OcamlCallRuntimeUseContract.requireForCall(call, plan);
 		return [
 			for (occurrence in plan.runtimeUseOccurrences)
-				if (occurrence.role == "standard-array-operation" && call.standardArrayTarget != null) {
+				if (call.dynamicFunctionTarget != null && occurrence.role.indexOf("dynamic-call-") == 0) {
+					id: occurrence.requirementId,
+					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+					sourceId: call.id,
+					source: occurrence.source,
+					semanticCapability: OcamlCallRuntimeUseContract.HAXE_DYNAMIC_FUNCTION_CALL_CAPABILITY,
+					cause: OcamlRuntimeRequirementCause.LoweringDecision,
+					decisionId: call.id,
+					subject: {
+						kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+						id: "Dynamic"
+					},
+					implementationFeature: "haxe-dynamic-function-call-v1",
+					rootModules: [occurrence.exactSymbol.substr(0, occurrence.exactSymbol.indexOf("."))],
+					profileEligibility: occurrence.profileEligibility.copy(),
+					explanation: "The sealed Dynamic call evaluates its callee once, evaluates each argument once from left to right, and then invokes the value through the shared reflection runtime."
+				} else if (occurrence.role == "standard-array-operation" && call.standardArrayTarget != null) {
 					id: occurrence.requirementId,
 					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
 					sourceId: call.id,

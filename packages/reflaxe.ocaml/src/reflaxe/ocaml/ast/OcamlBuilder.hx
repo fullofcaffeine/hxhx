@@ -1401,6 +1401,8 @@ class OcamlBuilder {
 	function buildPlannedCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
+			if (call.kind == OcamlCallKind.DynamicFunctionValue)
+				return buildPlannedDynamicFunctionCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.StandardArrayMethod)
 				return buildPlannedStandardArrayCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.StandardIMapMethod)
@@ -1430,6 +1432,8 @@ class OcamlBuilder {
 					targetName);
 			case OcamlCallKind.TypedFunctionValue:
 				null;
+			case OcamlCallKind.DynamicFunctionValue:
+				return callPlanInvariant('Dynamic function call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StandardArrayMethod:
 				return callPlanInvariant('standard Array call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StandardIMapMethod:
@@ -1514,6 +1518,83 @@ class OcamlBuilder {
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
 		return out;
+	}
+
+	/**
+		Invokes one sealed `Dynamic` callee in Haxe evaluation order.
+
+		The outer binding evaluates the callee once. The inner sequence then
+		evaluates each argument once from left to right before the runtime call.
+	**/
+	function buildPlannedDynamicFunctionCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		final target = call.dynamicFunctionTarget;
+		if (target == null)
+			return callPlanInvariant('Dynamic function call "${call.id}" has no sealed target', position);
+		if (callee == null)
+			return callPlanInvariant('Dynamic function call "${call.id}" has no typed callee occurrence', position);
+		// The call-plan lookup already checked the call's result type. This local
+		// check protects the callee and arguments used by this specialized builder.
+		if (!OcamlCallPlanner.matchesDynamicFunctionInputs(target, callee, arguments))
+			return callPlanInvariant('Dynamic function call "${call.id}" disagrees with its final typed occurrence', position);
+		final callPlan = currentCallPlan;
+		if (callPlan == null)
+			return callPlanInvariant('Dynamic function call "${call.id}" reached syntax without its sealed call inventory', position);
+		final runtimeUsePlan = callPlan.runtimeUsePlanFor(call.id);
+		if (runtimeUsePlan == null)
+			return callPlanInvariant('Dynamic function call "${call.id}" has no exact runtime-use plan', position);
+
+		return try {
+			OcamlCallRuntimeUseContract.requireForCall(call, runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final runtimeIdentifiers:Array<OcamlExpr> = [];
+			function runtimeIdentifier(role:String):OcamlExpr {
+				final occurrence = OcamlCallRuntimeUseContract.occurrenceForDynamicCallRole(runtimeUsePlan, role);
+				final expression = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+				runtimeIdentifiers.push(expression);
+				return expression;
+			}
+
+			final createFunction = runtimeIdentifier("dynamic-call-argument-array-create");
+			final pushFunctions = [
+				for (index in 0...arguments.length)
+					runtimeIdentifier('dynamic-call-argument-push:$index')
+			];
+			final invokeFunction = runtimeIdentifier("dynamic-call-invoke");
+			final nullReceiver = runtimeIdentifier("dynamic-call-null-receiver");
+			// Nested argument expressions can own other private runtime calls. Check
+			// this call's identifiers in isolation before placing those expressions.
+			authority.reconcileExpression(OcamlExpr.ESeq(runtimeIdentifiers));
+
+			final calleeName = freshTmp("dynamic_callee");
+			final argumentsName = freshTmp("dynamic_args");
+			final sequence:Array<OcamlExpr> = [];
+			for (index in 0...arguments.length) {
+				sequence.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
+					OcamlExpr.EApp(pushFunctions[index], [
+						OcamlExpr.EIdent(argumentsName),
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(arguments[index])])
+					])
+				]));
+			}
+			final callObject = OcamlExpr.EApp(invokeFunction, [
+				nullReceiver,
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(calleeName)]),
+				OcamlExpr.EIdent(argumentsName)
+			]);
+			final callValue = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [callObject]);
+			if (target.resultKind == OcamlCallResultKind.EffectOnlyVoid) {
+				sequence.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [callValue]));
+				sequence.push(OcamlExpr.EConst(OcamlConst.CUnit));
+			} else {
+				sequence.push(callValue);
+			}
+			OcamlExpr.ELet(calleeName, buildExpr(callee),
+				OcamlExpr.ELet(argumentsName, OcamlExpr.EApp(createFunction, [OcamlExpr.EConst(OcamlConst.CUnit)]), OcamlExpr.ESeq(sequence), false), false);
+		} catch (error:Dynamic) {
+			callPlanInvariant(Std.string(error), position);
+		}
 	}
 
 	/**
@@ -5048,34 +5129,7 @@ class OcamlBuilder {
 											case _: false;
 										};
 										if (isDynamicCall) {
-											final tmp = freshTmp("dyn_args");
-											final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"),
-												[OcamlExpr.EConst(OcamlConst.CUnit)]);
-											final seq:Array<OcamlExpr> = [];
-											for (a in args) {
-												seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [
-														OcamlExpr.EIdent(tmp),
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(a)])
-													])
-												]));
-											}
-
-											final callObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"), [
-												OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"),
-												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(fn)]),
-												OcamlExpr.EIdent(tmp)
-											]);
-											final callDyn = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [callObj]);
-
-											if (isVoidType(e.t)) {
-												seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [callDyn]));
-												seq.push(OcamlExpr.EConst(OcamlConst.CUnit));
-											} else {
-												seq.push(callDyn);
-											}
-
-											OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
+											callPlanInvariant("a Dynamic function call reached syntax without its sealed call and runtime-use plan", e.pos);
 										} else {
 											final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (followNoAbstracts(unwrapNullType(fn.t))) {
 												case TFun(fargs, _): fargs;

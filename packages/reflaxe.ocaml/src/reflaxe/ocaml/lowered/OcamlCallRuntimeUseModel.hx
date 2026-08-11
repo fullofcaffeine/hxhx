@@ -28,6 +28,7 @@ typedef OcamlCallRuntimeUsePlan = {
 class OcamlCallRuntimeUseContract {
 	public static inline final HAXE_BOOL_CARRIER_CAPABILITY = "haxe-call-bool-carrier";
 	public static inline final HAXE_ARRAY_CALL_CAPABILITY = "haxe-array";
+	public static inline final HAXE_DYNAMIC_FUNCTION_CALL_CAPABILITY = "haxe-dynamic-function-call";
 
 	/** Returns the exact requirement identity for one Boolean argument slot. */
 	public static function requirementId(callId:String, argumentIndex:Int):String {
@@ -44,6 +45,16 @@ class OcamlCallRuntimeUseContract {
 		return '$callId:runtime-use:standard-array-operation';
 	}
 
+	/** Returns one exact requirement identity for the Dynamic-call runtime path. */
+	public static function dynamicCallRequirementId(callId:String, role:String):String {
+		return '$callId:runtime:$HAXE_DYNAMIC_FUNCTION_CALL_CAPABILITY:$role';
+	}
+
+	/** Returns one exact runtime-use identity for the Dynamic-call runtime path. */
+	public static function dynamicCallRuntimeUseId(callId:String, role:String):String {
+		return '$callId:runtime-use:$role';
+	}
+
 	/**
 		Derives the companion plan after the ordinary typed-call contract is valid.
 
@@ -53,7 +64,8 @@ class OcamlCallRuntimeUseContract {
 	public static function forCall(call:OcamlCallDecision):Null<OcamlCallRuntimeUsePlan> {
 		final boxedBoolArguments = call.arguments.filter(argument -> argument.conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic);
 		final standardArrayTarget = call.standardArrayTarget;
-		if (boxedBoolArguments.length == 0 && standardArrayTarget == null)
+		final dynamicFunctionTarget = call.dynamicFunctionTarget;
+		if (boxedBoolArguments.length == 0 && standardArrayTarget == null && dynamicFunctionTarget == null)
 			return null;
 		OcamlCallPlan.requireCall(call);
 		final binding:OcamlFunctionPlanBinding = {
@@ -65,6 +77,43 @@ class OcamlCallRuntimeUseContract {
 		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final requirementIds:Array<String> = [];
 		final occurrences:Array<OcamlRuntimeUseOccurrence> = [];
+		if (dynamicFunctionTarget != null) {
+			final roles = ["dynamic-call-argument-array-create"];
+			for (index in 0...dynamicFunctionTarget.argumentSemanticTypeIds.length)
+				roles.push('dynamic-call-argument-push:$index');
+			roles.push("dynamic-call-invoke");
+			roles.push("dynamic-call-null-receiver");
+			for (role in roles) {
+				final exactSymbol = if (role == "dynamic-call-argument-array-create") {
+					"HxArray.create";
+				} else if (role.indexOf("dynamic-call-argument-push:") == 0) {
+					"HxArray.push";
+				} else if (role == "dynamic-call-invoke") {
+					"HxReflect.callMethod";
+				} else {
+					"HxRuntime.hx_null";
+				}
+				final selectedRequirementId = dynamicCallRequirementId(call.id, role);
+				requirementIds.push(selectedRequirementId);
+				occurrences.push({
+					id: dynamicCallRuntimeUseId(call.id, role),
+					planRevision: planRevision,
+					ownerId: call.id,
+					requirementId: selectedRequirementId,
+					domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+					exactSymbol: exactSymbol,
+					role: role,
+					order: occurrences.length,
+					source: {
+						file: call.source.file,
+						min: call.source.min,
+						max: call.source.max
+					},
+					profileEligibility: call.profileEligibility.copy(),
+					cardinality: 1
+				});
+			}
+		}
 		for (argument in call.arguments) {
 			if (argument.conversion != OcamlCallCarrierConversion.BoxExactBoolToDynamic)
 				continue;
@@ -162,6 +211,14 @@ class OcamlCallRuntimeUseContract {
 		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == "standard-array-operation");
 		if (matches.length != 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} standard Array runtime uses';
+		return copyOccurrence(matches[0]);
+	}
+
+	/** Returns the one private runtime identifier selected for a Dynamic-call role. */
+	public static function occurrenceForDynamicCallRole(plan:OcamlCallRuntimeUsePlan, role:String):OcamlRuntimeUseOccurrence {
+		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == role);
+		if (matches.length != 1)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} runtime uses for Dynamic-call role "$role"';
 		return copyOccurrence(matches[0]);
 	}
 

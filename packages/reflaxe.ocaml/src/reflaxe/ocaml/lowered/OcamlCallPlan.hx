@@ -29,6 +29,7 @@ enum abstract OcamlCallKind(String) from String to String {
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
+	final DynamicFunctionValue = "dynamic-function-value";
 	final StandardArrayMethod = "standard-array-method";
 	final StandardIMapMethod = "standard-imap-method";
 	final StructuralIteratorMethod = "structural-iterator-method";
@@ -107,6 +108,22 @@ typedef OcamlCallValuePlan = {
 	final outputCarrierTypeId:String;
 	final outputRepresentationId:String;
 	final conversion:OcamlCallCarrierConversion;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/**
+	The host-neutral facts for one call whose callee has Haxe type `Dynamic`.
+
+	The target stores type names, not compiler objects. Syntax uses these facts to
+	validate the final occurrence before it invokes the shared reflection runtime.
+**/
+typedef OcamlDynamicFunctionCallTarget = {
+	final calleeSemanticTypeId:String;
+	final calleeCarrierTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final resultKind:OcamlCallResultKind;
 	final proofId:String;
 	final proofClaim:String;
 }
@@ -193,6 +210,7 @@ typedef OcamlCallDecision = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final ?dynamicFunctionTarget:OcamlDynamicFunctionCallTarget;
 	final ?standardArrayTarget:OcamlStandardArrayCallTarget;
 	final ?standardIMapTarget:OcamlStandardIMapCallTarget;
 	final ?structuralIteratorTarget:OcamlStructuralIteratorCallTarget;
@@ -214,6 +232,7 @@ class OcamlCallPlan {
 	public static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	public static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
+	public static inline final DYNAMIC_FUNCTION_CALL_PROOF_ID = "dynamic-function-call-v1";
 
 	final ordered:Array<OcamlCallDecision>;
 	final bySourceKey:Map<String, Array<OcamlCallDecision>> = [];
@@ -262,6 +281,14 @@ class OcamlCallPlan {
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
 		return switch (expression.expr) {
+			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.DynamicFunctionValue
+				&& decision.dynamicFunctionTarget != null): OcamlCallPlanner.matchesDynamicFunctionTarget(decision.dynamicFunctionTarget, callee, arguments,
+					expression.t) && OcamlCallPlanner.dynamicFunctionCalleeId(callee, {
+					functionId: decision.functionId,
+					programRevision: decision.programRevision,
+					bodyRevision: decision.bodyRevision,
+					pipelineRevision: decision.pipelineRevision
+				}, decision.dynamicFunctionTarget) == decision.calleeId;
 			case TNew(classRef, parameters, arguments) if (decision.kind == OcamlCallKind.DirectHaxeConstructor):
 				parameters.length == 0
 				&& arguments.length == suppliedArgumentCount(decision.arguments)
@@ -307,6 +334,8 @@ class OcamlCallPlan {
 	}
 
 	static function suppliedArgumentCountForDecision(decision:OcamlCallDecision):Int {
+		if (decision.dynamicFunctionTarget != null)
+			return decision.dynamicFunctionTarget.argumentSemanticTypeIds.length;
 		if (decision.standardArrayTarget != null)
 			return decision.standardArrayTarget.argumentSemanticTypeIds.length;
 		if (decision.standardIMapTarget != null)
@@ -396,6 +425,7 @@ class OcamlCallPlan {
 			decision.arguments.map(valueFingerprint).join(","),
 			resultFingerprint(decision.resultKind, decision.result),
 			decision.evaluationSchedule.map(evaluationStepFingerprint).join(","),
+			decision.dynamicFunctionTarget == null ? "" : dynamicFunctionTargetFingerprint(decision.dynamicFunctionTarget),
 			decision.standardArrayTarget == null ? "" : OcamlStandardArrayCallContract.fingerprint(decision.standardArrayTarget),
 			decision.standardIMapTarget == null ? "" : OcamlStandardIMapCallContract.fingerprint(decision.standardIMapTarget),
 			decision.structuralIteratorTarget == null ? "" : OcamlStructuralIteratorCallContract.fingerprint(decision.structuralIteratorTarget),
@@ -404,6 +434,19 @@ class OcamlCallPlan {
 			decision.bodyRevision,
 			decision.pipelineRevision
 		].join("|");
+	}
+
+	/** Returns the deterministic identity of one detached Dynamic-call target. */
+	public static function dynamicFunctionTargetFingerprint(target:OcamlDynamicFunctionCallTarget):String {
+		return [
+			target.calleeSemanticTypeId,
+			target.calleeCarrierTypeId,
+			target.argumentSemanticTypeIds.join(","),
+			target.resultSemanticTypeId,
+			(target.resultKind : String),
+			target.proofId,
+			target.proofClaim
+		].join(":");
 	}
 
 	static function resultFingerprint(kind:OcamlCallResultKind, value:Null<OcamlCallValuePlan>):String {
@@ -457,9 +500,23 @@ class OcamlCallPlan {
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision,
+			dynamicFunctionTarget: decision.dynamicFunctionTarget == null ? null : copyDynamicFunctionTarget(decision.dynamicFunctionTarget),
 			standardArrayTarget: decision.standardArrayTarget == null ? null : OcamlStandardArrayCallContract.copy(decision.standardArrayTarget),
 			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget),
 			structuralIteratorTarget: decision.structuralIteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.structuralIteratorTarget)
+		};
+	}
+
+	/** Returns a detached copy of one Dynamic-call target. */
+	public static function copyDynamicFunctionTarget(target:OcamlDynamicFunctionCallTarget):OcamlDynamicFunctionCallTarget {
+		return {
+			calleeSemanticTypeId: target.calleeSemanticTypeId,
+			calleeCarrierTypeId: target.calleeCarrierTypeId,
+			argumentSemanticTypeIds: target.argumentSemanticTypeIds.copy(),
+			resultSemanticTypeId: target.resultSemanticTypeId,
+			resultKind: target.resultKind,
+			proofId: target.proofId,
+			proofClaim: target.proofClaim
 		};
 	}
 
@@ -741,6 +798,10 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireCall(call:OcamlCallDecision):Void {
+		if (call.kind == OcamlCallKind.DynamicFunctionValue) {
+			requireDynamicFunctionCall(call);
+			return;
+		}
 		if (call.kind == OcamlCallKind.StandardArrayMethod) {
 			requireStandardArrayCall(call);
 			return;
@@ -759,6 +820,8 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: non-IMap call "${call.id}" owns a standard IMap target';
 		if (call.structuralIteratorTarget != null)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: ordinary call "${call.id}" owns a structural Iterator target';
+		if (call.dynamicFunctionTarget != null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: ordinary call "${call.id}" owns a Dynamic function target';
 		requireCallCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
 			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision,
 			'call "${call.id}"', call.receiver);
@@ -823,6 +886,87 @@ class OcamlCallPlan {
 			|| invocation.sourceArgumentIndex != null
 			|| invocation.slotId != null)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid invocation step';
+	}
+
+	/** Rejects a corrupted Dynamic function call before syntax can consume it. */
+	static function requireDynamicFunctionCall(call:OcamlCallDecision):Void {
+		final target = call.dynamicFunctionTarget;
+		if (target == null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has no typed target';
+		requireDynamicFunctionTarget(target);
+		if (call.calleeId.length == 0
+			|| call.sourceModuleId.length != 0
+			|| call.sourceTypeName.length != 0
+			|| call.sourceFieldName.length != 0
+			|| call.receiver != null
+			|| call.arguments.length != 0
+			|| call.resultKind != target.resultKind
+			|| call.result != null
+			|| call.standardArrayTarget != null
+			|| call.standardIMapTarget != null
+			|| call.structuralIteratorTarget != null
+			|| call.proofId != target.proofId
+			|| call.proofClaim != target.proofClaim
+			|| call.reason.length == 0
+			|| call.functionId.length == 0
+			|| call.programRevision.length == 0
+			|| call.bodyRevision.length == 0
+			|| call.pipelineRevision.length == 0
+			|| call.source.file.length == 0
+			|| call.source.min < 0
+			|| call.source.max < call.source.min
+			|| call.profileEligibility.length != 2
+			|| call.profileEligibility[0] != "metal"
+			|| call.profileEligibility[1] != "portable") {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has incomplete or conflicting source, proof, profile, or revision facts';
+		}
+		final argumentCount = target.argumentSemanticTypeIds.length;
+		if (call.evaluationSchedule.length != argumentCount + 2)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has an invalid evaluation schedule';
+		final callee = call.evaluationSchedule[0];
+		if (callee.kind != OcamlCallEvaluationStepKind.MaterializeCallee
+			|| callee.argumentIndex != null
+			|| callee.sourceArgumentIndex != null
+			|| callee.slotId != calleeSlotId(call.id)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has an invalid callee materialization';
+		}
+		for (index in 0...argumentCount) {
+			final step = call.evaluationSchedule[index + 1];
+			if (step.kind != OcamlCallEvaluationStepKind.MaterializeArgument
+				|| step.argumentIndex != index
+				|| step.sourceArgumentIndex != index
+				|| step.slotId != argumentSlotId(call.id, index)) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has an invalid argument materialization at index $index';
+			}
+		}
+		final invocation = call.evaluationSchedule[call.evaluationSchedule.length - 1];
+		if (invocation.kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| invocation.argumentIndex != null
+			|| invocation.sourceArgumentIndex != null
+			|| invocation.slotId != null) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function call "${call.id}" has an invalid invocation step';
+		}
+	}
+
+	/** Rejects invalid or incomplete plain-data facts for a Dynamic call. */
+	public static function requireDynamicFunctionTarget(target:OcamlDynamicFunctionCallTarget):Void {
+		if (target.calleeSemanticTypeId != "Dynamic"
+			|| target.calleeCarrierTypeId != "Obj.t"
+			|| Lambda.exists(target.argumentSemanticTypeIds, semanticTypeId -> semanticTypeId.length == 0)
+			|| target.resultSemanticTypeId.length == 0
+			|| target.proofId != DYNAMIC_FUNCTION_CALL_PROOF_ID
+			|| target.proofClaim.length == 0) {
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function target has incomplete or conflicting carrier and proof facts";
+		}
+		switch (target.resultKind) {
+			case Value if (target.resultSemanticTypeId == "Void"):
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function target records Void as a value result";
+			case EffectOnlyVoid if (target.resultSemanticTypeId != "Void"):
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function target records a non-Void effect-only result";
+			case Value, EffectOnlyVoid:
+			case _:
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: Dynamic function target has unsupported result kind ${target.resultKind}';
+		}
 	}
 
 	/** Rejects a corrupted standard Array call before syntax can consume it. */
@@ -1735,6 +1879,8 @@ class OcamlCallPlanner {
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		return switch (expression.expr) {
+			case TCall(callee, arguments) if (OcamlRepresentationRegistry.isExactDynamic(callee.t)):
+				dynamicFunctionCallDecision(expression, callee, arguments);
 			case TNew(classRef, parameters, arguments):
 				final classType = classRef.get();
 				final constructor = classType.constructor == null ? null : classType.constructor.get();
@@ -1925,6 +2071,95 @@ class OcamlCallPlanner {
 				}
 			case _:
 				null;
+		}
+	}
+
+	/** Builds the sealed occurrence for a call through a Haxe `Dynamic` value. */
+	function dynamicFunctionCallDecision(expression:TypedExpr, callee:TypedExpr, arguments:Array<TypedExpr>):OcamlCallDecision {
+		final target:OcamlDynamicFunctionCallTarget = {
+			calleeSemanticTypeId: "Dynamic",
+			calleeCarrierTypeId: "Obj.t",
+			argumentSemanticTypeIds: arguments.map(argument -> stableTypeId(argument.t)),
+			resultSemanticTypeId: isVoidType(expression.t) ? "Void" : stableTypeId(expression.t),
+			resultKind: isVoidType(expression.t) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value,
+			proofId: OcamlCallPlan.DYNAMIC_FUNCTION_CALL_PROOF_ID,
+			proofClaim: "The final typed callee is Haxe Dynamic. The target evaluates it once before every source argument, then invokes it through the shared reflection runtime."
+		};
+		OcamlCallPlan.requireDynamicFunctionTarget(target);
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final selectedCalleeId = dynamicFunctionCalleeId(callee, binding, target);
+		final id = "call:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(source),
+			selectedCalleeId,
+			OcamlCallPlan.dynamicFunctionTargetFingerprint(target)
+		].join("|")).substr(0, 24);
+		return {
+			id: id,
+			source: source,
+			calleeId: selectedCalleeId,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.DynamicFunctionValue,
+			receiver: null,
+			arguments: [],
+			resultKind: target.resultKind,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, arguments.length, [], true),
+			profileEligibility: ["metal", "portable"],
+			reason: target.proofClaim,
+			proofId: target.proofId,
+			proofClaim: target.proofClaim,
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision,
+			dynamicFunctionTarget: OcamlCallPlan.copyDynamicFunctionTarget(target)
+		};
+	}
+
+	/** Returns whether fresh typed call data still matches one sealed Dynamic target. */
+	public static function matchesDynamicFunctionTarget(target:OcamlDynamicFunctionCallTarget, callee:TypedExpr, arguments:Array<TypedExpr>,
+			resultType:Type):Bool {
+		return matchesDynamicFunctionInputs(target, callee, arguments)
+			&& target.resultSemanticTypeId == (isVoidType(resultType) ? "Void" : stableTypeId(resultType))
+			&& target.resultKind == (isVoidType(resultType) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value);
+	}
+
+	/** Returns whether the callee and source arguments still match a sealed target. */
+	public static function matchesDynamicFunctionInputs(target:OcamlDynamicFunctionCallTarget, callee:TypedExpr, arguments:Array<TypedExpr>):Bool {
+		return OcamlRepresentationRegistry.isExactDynamic(callee.t)
+			&& target.calleeSemanticTypeId == "Dynamic"
+			&& target.calleeCarrierTypeId == "Obj.t"
+			&& target.argumentSemanticTypeIds.join(",") == arguments.map(argument -> stableTypeId(argument.t)).join(",");
+	}
+
+	/** Returns the stable callee identity for one request-local Dynamic occurrence. */
+	public static function dynamicFunctionCalleeId(callee:TypedExpr, binding:OcamlFunctionPlanBinding, target:OcamlDynamicFunctionCallTarget):String {
+		return "dynamic-function:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(OcamlLoweredOrigin.sourceSpan(callee.pos)),
+			OcamlCallPlan.dynamicFunctionTargetFingerprint(target)
+		].join("|")).substr(0, 24);
+	}
+
+	/** Returns a deterministic plain-text identity for one final Haxe type. */
+	static function stableTypeId(type:Type):String {
+		return TypeTools.toString(type);
+	}
+
+	static function isVoidType(type:Type):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TAbstract(abstractRef, _): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Void";
+			case _:
+				false;
 		}
 	}
 
