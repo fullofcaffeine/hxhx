@@ -27,9 +27,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 79
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v5'
+if (report.schemaVersion !== 80
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v6'
 	|| report.controlCatchCount !== report.controlCatches.length) {
 	fail('unexpected nominal throw/catch report schema, model, or inventory')
 }
@@ -67,7 +67,7 @@ for (const functionName of throwFunctions) {
 	const payload = control?.payload
 	const nominal = payload?.nominalRepresentation
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v95'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v96'
 		|| control.proofId !== 'exact-monomorphic-class-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -88,8 +88,8 @@ for (const functionName of throwFunctions) {
 
 let nominalClauseCount = 0
 for (const chain of mainCatchChains) {
-	if (chain.proofId !== 'represented-value-catch-control-v5'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v95') {
+	if (chain.proofId !== 'represented-value-catch-control-v6'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v96') {
 		fail(`catch chain ${chain.id} does not use the represented-value proof`)
 	}
 	for (const clause of chain.clauses) {

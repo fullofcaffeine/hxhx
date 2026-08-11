@@ -955,6 +955,8 @@ class OcamlBuilder {
 					OcamlExpr.EConst(OcamlConst.CString(selectedPayload.inputSemanticTypeId)),
 					represented
 				]);
+			case BoxRuntimeClassThrowCarrier:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
 				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
 		}
@@ -1078,6 +1080,8 @@ class OcamlBuilder {
 						final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
 							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), valueExpression]);
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
+					case RecoverRuntimeClassValue:
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 					case PreserveDynamicCarrier:
 						valueExpression;
 					case PreserveOrWrapHaxeException:

@@ -23,3 +23,31 @@ The four fixtures failed for separate reasons:
 
 These are the intended red states. The first two need narrower current
 expectations. The latter two need product fixes with focused regression checks.
+
+## Subclass catch representation red state
+
+The first runtime-tagged catch fixture proved only which branch ran. A stronger
+version added `Base.label` and `Child.detail`, then read those fields after
+exact, superclass, base-static-type, and `Dynamic` catches.
+
+Command:
+
+```text
+PATH="$PWD/node_modules/.bin:$PATH" \
+PORTABLE_FIXTURE_ALLOWLIST=typed_catches PORTABLE_JOBS=1 \
+bash scripts/test-portable.sh
+```
+
+The generated source built, but the executable exited with signal 11. The
+generated layouts explained the failure:
+
+```text
+type base_t = { __hx_type : Obj.t; mutable label : string }
+type child_t = { __hx_type : Obj.t; mutable detail : int }
+```
+
+The runtime class tag correctly identified `Child` and `Base`. However, a tag
+cannot make those two OCaml record layouts compatible. The compiler already
+computed a base-prefix layout for inheritance chains with method slots; the
+fix applies that same layout to field-only chains. After the fix, `child_t`
+contains `__hx_type`, `label`, then `detail`, and the same command passes.

@@ -138,7 +138,7 @@ class OcamlCatchRuntimeUseContract {
 				roles.push(OcamlCatchRuntimeTagUseRole.ConvertAnyException);
 			case PreserveOrWrapHaxeValueException:
 				roles.push(OcamlCatchRuntimeTagUseRole.ConvertValueException);
-			case RecoverExactValue, RecoverCheckedBool, RecoverNominalValue, RecoverEnumValue, PreserveDynamicCarrier:
+			case RecoverExactValue, RecoverCheckedBool, RecoverNominalValue, RecoverEnumValue, RecoverRuntimeClassValue, PreserveDynamicCarrier:
 		}
 		return roles;
 	}

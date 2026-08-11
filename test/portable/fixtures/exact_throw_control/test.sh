@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 79
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
+if (report.schemaVersion !== 80
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')
@@ -37,8 +37,8 @@ if (report.schemaVersion !== 79
 
 const throws = report.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (throws.length !== 12) {
-	fail(`expected 12 represented throw decisions, got ${throws.length}`)
+if (throws.length !== 13) {
+	fail(`expected 13 represented throw decisions, got ${throws.length}`)
 }
 const expectedByFunction = new Map([
 	['throwInt', 1],
@@ -51,6 +51,7 @@ const expectedByFunction = new Map([
 	['rethrowNullableInt', 1],
 	['catchExplicitValueException', 1],
 	['catchExplicitException', 1],
+	['catchCustomException', 1],
 	['catchExceptionBeforeInt', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
@@ -70,6 +71,7 @@ const expectedCarrier = new Map([
 	['String', 'string'],
 	['Null<Int>', 'Obj.t'],
 	['Null<Bool>', 'Obj.t'],
+	['OracleCustomException', 'haxe-class-runtime-tagged-carrier-v1:OracleCustomException'],
 	['haxe.Exception', 'Haxe_Exception.t'],
 	['haxe.ValueException', 'Haxe_ValueException.t']
 ])
@@ -79,6 +81,7 @@ const expectedConversion = new Map([
 	['String', 'repr-and-recover-exact-value'],
 	['Null<Int>', 'preserve-nullable-int-throw-carrier'],
 	['Null<Bool>', 'normalize-nullable-bool-throw-carrier'],
+	['OracleCustomException', 'box-runtime-class-throw-carrier'],
 	['haxe.Exception', 'box-haxe-exception-wrapper-throw-carrier'],
 	['haxe.ValueException', 'box-haxe-exception-wrapper-throw-carrier']
 ])
@@ -88,10 +91,12 @@ const expectedProof = new Map([
 	['String', 'exact-value-throw-control-v1'],
 	['Null<Int>', 'nullable-int-throw-control-v1'],
 	['Null<Bool>', 'nullable-bool-throw-control-v1'],
+	['OracleCustomException', 'runtime-tagged-class-throw-control-v1'],
 	['haxe.Exception', 'exact-haxe-exception-wrapper-throw-control-v1'],
 	['haxe.ValueException', 'exact-haxe-exception-wrapper-throw-control-v1']
 ])
 const expectedRepresentation = new Map([
+	['OracleCustomException', 'control-representation:runtime-class-throw-v1:OracleCustomException'],
 	['haxe.Exception', 'control-representation:haxe.Exception:runtime-wrapper-v1'],
 	['haxe.ValueException', 'control-representation:haxe.ValueException:runtime-wrapper-v1']
 ])
@@ -116,7 +121,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v95'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v96'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== (expectedRepresentation.get(payload.inputSemanticTypeId)
@@ -160,10 +165,10 @@ for (const { chain, clause } of wrapperClauses) {
 		|| clause.runtimeTag !== null
 		|| clause.conversion !== expected.conversion
 		|| clause.nominalRepresentation !== null
-		|| clause.proofId !== 'represented-value-catch-control-v5'
-		|| chain.proofId !== 'represented-value-catch-control-v5'
-		|| clause.pipelineRevision !== 'ocaml-function-plans-v95'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v95') {
+		|| clause.proofId !== 'represented-value-catch-control-v6'
+		|| chain.proofId !== 'represented-value-catch-control-v6'
+		|| clause.pipelineRevision !== 'ocaml-function-plans-v96'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v96') {
 		fail(`wrapper catch clause ${clause.id} has an incomplete sealed policy`)
 	}
 }
@@ -264,7 +269,8 @@ const customBody = functionBody('catchCustomException', 'catchExceptionBeforeInt
 if (!customBody.includes('"haxe.ValueException" || not (HxRuntime.tags_has')
 	|| !customBody.includes('else if true then let error =')
 	|| !customBody.includes('"haxe.Exception" then Obj.obj')
-	|| !customBody.includes('["Dynamic"; "OracleCustomException"; "haxe.Exception"]')) {
+	|| !customBody.includes('hx_throw_typed_rtti (Obj.repr original) ["Dynamic"]')
+	|| customBody.includes('["Dynamic"; "OracleCustomException"; "haxe.Exception"]')) {
 	fail('custom Exception subtype catch syntax did not preserve the sealed source order')
 }
 NODE
@@ -294,7 +300,7 @@ const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
 if (report.schemaVersion !== 45
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| throws.length !== 12
+	|| throws.length !== 13
 	|| wrapperClauses.length !== 7
 	|| wrapperClauses.some(clause =>
 		clause.runtimeTag !== null
@@ -303,7 +309,7 @@ if (report.schemaVersion !== 45
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 12 validated represented throw decisions')
+	throw new Error('public inspection did not expose the 13 validated represented throw decisions')
 }
 NODE
 
@@ -392,4 +398,4 @@ fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
-echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=12 wrapper_catches=7"
+echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=13 wrapper_catches=7"

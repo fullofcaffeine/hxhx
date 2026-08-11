@@ -487,6 +487,8 @@ class OcamlFunctionPlanSealer {
 				continue;
 			if (OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
 				continue;
+			if (OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload))
+				continue;
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);
 			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, programRevision,
@@ -510,7 +512,8 @@ class OcamlFunctionPlanSealer {
 			for (clause in chain.clauses) {
 				if (clause.semanticTypeId == "Dynamic"
 					|| OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)
-					|| OcamlControlPlan.isAdmittedEnumCatchClause(clause))
+					|| OcamlControlPlan.isAdmittedEnumCatchClause(clause)
+					|| OcamlControlPlan.isAdmittedRuntimeClassCatchClause(clause))
 					continue;
 				validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, programRevision,
 					'control catch clause "${clause.id}" output', position);

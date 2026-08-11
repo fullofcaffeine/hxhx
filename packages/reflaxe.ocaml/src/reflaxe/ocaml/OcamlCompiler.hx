@@ -2161,7 +2161,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				isMutable: false,
 				typ: OcamlTypeExpr.TIdent("Obj.t")
 			});
-			if (isDispatchInstance && dispatchLayoutFields != null) {
+			// Every inheritance or interface-dispatch record needs the shared layout,
+			// even when it contains no method slots. Otherwise a field-only subclass
+			// contains only its local fields, so a base constructor or field access
+			// interprets unrelated record slots after an upcast.
+			if (isDispatch && dispatchLayoutFields != null) {
 				function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
 					// Dispatch methods take `Obj.t` as the receiver so that interface + base-class
 					// callsites can share a single representation without OCaml structural subtyping.
@@ -2297,13 +2301,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			function buildSelfInit(emissionRole:String):OcamlExpr {
-				return if (hasInstanceVarsLocal || isDispatchInstance) {
+				return if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];
 					fields.push({
 						name: "__hx_type",
 						value: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"), [OcamlExpr.EConst(OcamlConst.CString(fullName))])
 					});
-					if (isDispatchInstance && dispatchLayoutFields != null) {
+					if (isDispatch && dispatchLayoutFields != null) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
 							final ownerExpr = owner.module == classType.module ? OcamlExpr.EIdent(ownerBindingName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)),
 								ownerBindingName);

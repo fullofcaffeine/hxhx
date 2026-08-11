@@ -69,7 +69,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 79;
+	public static inline final SCHEMA_VERSION = 80;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -482,7 +482,8 @@ class OcamlLoweringReportWriter {
 							throw 'Control decision "${control.id}" has a Dynamic payload on unsupported transfer ${control.kind}.';
 					}
 				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)
-					&& !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)) {
+					&& !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)
+					&& !OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload)) {
 					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
 					requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
@@ -524,7 +525,8 @@ class OcamlLoweringReportWriter {
 			for (clause in chain.clauses) {
 				if (clause.semanticTypeId != "Dynamic"
 					&& !OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)
-					&& !OcamlControlPlan.isAdmittedEnumCatchClause(clause)) {
+					&& !OcamlControlPlan.isAdmittedEnumCatchClause(clause)
+					&& !OcamlControlPlan.isAdmittedRuntimeClassCatchClause(clause)) {
 					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control catch clause "${clause.id}" output');
 				}
@@ -886,11 +888,11 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
 			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v23",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v24",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
-			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v5",
+			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v6",
 			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
 			controlCatchCount: sortedCatchChains.length,
 			controlCatches: sortedCatchChains,

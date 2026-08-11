@@ -31,9 +31,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 79
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v23'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v5'
+if (report.schemaVersion !== 80
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v24'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v6'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| !sha256.test(report.controlCatchRevision)) {
 	fail('unexpected exact-catch report schema, model, inventory, or revision')
@@ -97,8 +97,8 @@ for (const chain of catches) {
 		|| chain.targetNativeRuntimeTags.join(',') !== 'OcamlExn'
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
-		|| chain.proofId !== 'represented-value-catch-control-v5'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v95'
+		|| chain.proofId !== 'represented-value-catch-control-v6'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v96'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)

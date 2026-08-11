@@ -13,6 +13,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
+import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
@@ -409,6 +410,34 @@ class ControlPlanFixture {
 		return clause;
 	}
 
+	/** Builds the private exception carrier for one generated class hierarchy. */
+	static function runtimeClassThrowDecision(id:String, min:Int, semanticTypeId:String):OcamlControlDecision {
+		final decision = throwDecision(id, min, semanticTypeId);
+		final payload = decision.payload;
+		if (payload == null)
+			throw "The runtime-class throw fixture lost its payload";
+		final carrierTypeId = OcamlControlPlan.RUNTIME_CLASS_CARRIER_PREFIX + semanticTypeId;
+		final representationId = OcamlControlPlan.RUNTIME_CLASS_THROW_CONTROL_REPRESENTATION_PREFIX + semanticTypeId;
+		Reflect.setField(payload, "inputCarrierTypeId", carrierTypeId);
+		Reflect.setField(payload, "outputCarrierTypeId", carrierTypeId);
+		Reflect.setField(payload, "inputRepresentationId", representationId);
+		Reflect.setField(payload, "outputRepresentationId", representationId);
+		Reflect.setField(payload, "conversion", OcamlControlPayloadConversion.BoxRuntimeClassThrowCarrier);
+		Reflect.setField(payload, "proofId", OcamlControlPlan.RUNTIME_CLASS_THROW_PROOF_ID);
+		Reflect.setField(decision, "runtimeTags", ["Dynamic"]);
+		Reflect.setField(decision, "proofId", OcamlControlPlan.RUNTIME_CLASS_THROW_PROOF_ID);
+		return decision;
+	}
+
+	/** Builds the checked catch-side carrier for one generated class hierarchy. */
+	static function runtimeClassCatchClause(id:String, min:Int, order:Int, variableName:String, semanticTypeId:String):OcamlCatchClauseDecision {
+		final clause = catchClause(id, min, order, variableName, semanticTypeId);
+		Reflect.setField(clause, "outputCarrierTypeId", OcamlControlPlan.RUNTIME_CLASS_CARRIER_PREFIX + semanticTypeId);
+		Reflect.setField(clause, "outputRepresentationId", OcamlControlPlan.RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX + semanticTypeId);
+		Reflect.setField(clause, "conversion", OcamlCatchPayloadConversion.RecoverRuntimeClassValue);
+		return clause;
+	}
+
 	/**
 		Builds a class catch whose target record layout was fixed by whole-program planning.
 
@@ -675,6 +704,7 @@ class ControlPlanFixture {
 				callableBoundary: nestedBoundary(planBinding),
 				controls: controls,
 				arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([]),
+				arrayReads: new OcamlArrayReadPlan([]),
 				imapInterfaces: emptyIMapInterfacePlan(planBinding)
 			}
 		};
@@ -1054,6 +1084,14 @@ class ControlPlanFixture {
 			true);
 		Reflect.setField(enumThrowFromOtherRevision, "pipelineRevision", "typed-ocaml-function-plan-v32");
 		expectThrows("stale-binding", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowFromOtherRevision]));
+		final runtimeClassThrow = runtimeClassThrowDecision("control:throw:runtime-class", 256, "fixture.Child");
+		OcamlControlPlan.requireDecision(runtimeClassThrow);
+		final runtimeClassThrowWithWrongCarrier = runtimeClassThrowDecision("control:throw:runtime-class-wrong-carrier", 256, "fixture.Child");
+		Reflect.setField(runtimeClassThrowWithWrongCarrier.payload, "inputCarrierTypeId", "Obj.t");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [runtimeClassThrowWithWrongCarrier]));
+		final runtimeClassThrowWithWrongTags = runtimeClassThrowDecision("control:throw:runtime-class-wrong-tags", 256, "fixture.Child");
+		Reflect.setField(runtimeClassThrowWithWrongTags, "runtimeTags", ["Dynamic", "fixture.Child"]);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [runtimeClassThrowWithWrongTags]));
 		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 257, "Int");
 		final primitivePayload = primitiveWithNominalProof.payload;
 		if (primitivePayload == null)
@@ -1090,6 +1128,14 @@ class ControlPlanFixture {
 		expectThrows("invalid-catch-clause",
 			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
 				[catchChain("control-catch-chain:bad-nominal-layout", [badNominalLayout])]));
+		final runtimeClassCatch = runtimeClassCatchClause("control-catch-clause:runtime-class", 353, 0, "asChild", "fixture.Child");
+		OcamlControlPlan.requireCatchClause(runtimeClassCatch);
+		final runtimeClassCatchWithWrongConversion = runtimeClassCatchClause("control-catch-clause:runtime-class-wrong-conversion", 354, 0, "asChild",
+			"fixture.Child");
+		Reflect.setField(runtimeClassCatchWithWrongConversion, "conversion", OcamlCatchPayloadConversion.RecoverNominalValue);
+		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [
+			catchChain("control-catch-chain:runtime-class-wrong-conversion", [runtimeClassCatchWithWrongConversion])
+		]));
 		final badCatchConversion = catchChain("control-catch-chain:bad-conversion", [
 			catchClause("control-catch-clause:bad-conversion", 350, 0, "asBool", "Bool", null, OcamlCatchPayloadConversion.RecoverExactValue)
 		]);
@@ -1375,12 +1421,12 @@ class ControlPlanFixture {
 		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
 		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
 		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
-			emptyIMapInterfacePlan(deferredBinding), "fixture explicitly defers one observed literal");
+			emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), "fixture explicitly defers one observed literal");
 		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
 		expectThrows("duplicate-occurrence",
 			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
-				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), "fixture duplicate"));
+				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), "fixture duplicate"));
 		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
 		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
 		final staleParent:OcamlFunctionPlanBinding = {
@@ -1423,6 +1469,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(admittedBinding),
 			controls: admittedControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(admittedBinding)
 		};
 		final noncanonicalIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedExpression);
@@ -1441,6 +1488,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(noncanonicalBinding),
 			controls: noncanonicalControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(noncanonicalBinding)
 		};
 		expectThrows("foreign-root-identities",
@@ -1459,6 +1507,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(wrongNestedBinding)
 		};
 		expectThrows("binding-mismatch",
@@ -1477,6 +1526,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("stale-root-binding",
@@ -1490,6 +1540,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: admittedPlan.arrayLiteralProducers,
+			arrayReads: admittedPlan.arrayReads,
 			imapInterfaces: emptyIMapInterfacePlan(nestedParent)
 		};
 		expectThrows("ocaml-imap-interface:stale-plan",
@@ -1514,6 +1565,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("missing-identity",
@@ -1526,6 +1578,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("foreign-occurrence",
@@ -1552,6 +1605,7 @@ class ControlPlanFixture {
 			callableBoundary: admittedPlan.callableBoundary,
 			controls: admittedPlan.controls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(ordinaryImpostorBinding)
 		};
 		expectThrows("foreign-root-identities",
@@ -1588,6 +1642,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(impostorRootBinding),
 			controls: impostorRootControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(impostorRootBinding)
 		};
 		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
@@ -1626,6 +1681,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(crossRootChildBinding),
 			controls: crossRootChildControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(crossRootChildBinding)
 		};
 		expectThrows("foreign-parent-occurrence",
@@ -1682,7 +1738,8 @@ class ControlPlanFixture {
 		deferredChildRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
 		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
 		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
-			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), "fixture child uses the older result path");
+			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), new OcamlArrayReadPlan([]),
+			"fixture child uses the older result path");
 		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
@@ -1719,7 +1776,7 @@ class ControlPlanFixture {
 			deferredParentIdentities);
 		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
 		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
-			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding),
+			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding), new OcamlArrayReadPlan([]),
 			"fixture outer function uses the older result path");
 		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
 			"control:return:deferred-parent-child");
@@ -1778,6 +1835,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(mismatchedBinding, "Bool"),
 			controls: mismatchedControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("return-boundary-mismatch",
@@ -1796,6 +1854,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedThrowControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
@@ -1811,6 +1870,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedLoopControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
 		expectThrows("unsupported-control",
@@ -1879,6 +1939,7 @@ class ControlPlanFixture {
 			callableBoundary: nestedBoundary(caughtBinding),
 			controls: caughtControls,
 			arrayLiteralProducers: noArrayLiteralProducers,
+			arrayReads: new OcamlArrayReadPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(caughtBinding)
 		};
 		expectThrows("unsupported-control",

@@ -88,6 +88,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final PreserveDynamicThrowCarrier = "preserve-dynamic-throw-carrier";
 	final BoxHaxeExceptionWrapperThrowCarrier = "box-haxe-exception-wrapper-throw-carrier";
 	final BoxEnumThrowCarrier = "box-enum-throw-carrier";
+	final BoxRuntimeClassThrowCarrier = "box-runtime-class-throw-carrier";
 }
 
 /**
@@ -118,6 +119,7 @@ enum abstract OcamlCatchPayloadConversion(String) from String to String {
 	final RecoverCheckedBool = "recover-checked-bool";
 	final RecoverNominalValue = "recover-nominal-value";
 	final RecoverEnumValue = "recover-enum-value";
+	final RecoverRuntimeClassValue = "recover-runtime-class-value";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
 	final PreserveOrWrapHaxeException = "preserve-or-wrap-haxe-exception";
 	final PreserveOrWrapHaxeValueException = "preserve-or-wrap-haxe-value-exception";
@@ -217,6 +219,22 @@ private typedef OcamlControlThrowRepresentation = {
 	final arrayLiteralProducerPlanRevision:Null<String>;
 	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final enumIdentity:Null<OcamlEnumDynamicCarrierIdentity>;
+	final runtimeClassIdentity:Null<OcamlRuntimeClassCarrierIdentity>;
+}
+
+/**
+	The plain-data identity for a generated class that crosses an exception.
+
+	Generated class records contain a `__hx_type` marker. The runtime uses that
+	marker to find the concrete class and its parent classes. This identity does
+	not define a second class layout. It only lets the control plan box the value,
+	check a class tag, and recover the typed catch variable after that check.
+**/
+typedef OcamlRuntimeClassCarrierIdentity = {
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final throwRepresentationId:String;
+	final catchRepresentationId:String;
 }
 
 /** One represented array selection and its optional direct-literal owner. */
@@ -390,7 +408,8 @@ class OcamlControlPlan {
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
 	public static inline final HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID = "exact-haxe-exception-wrapper-throw-control-v1";
 	public static inline final EXACT_ENUM_THROW_PROOF_ID = "exact-enum-constructor-throw-control-v1";
-	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v5";
+	public static inline final RUNTIME_CLASS_THROW_PROOF_ID = "runtime-tagged-class-throw-control-v1";
+	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v6";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
@@ -403,6 +422,9 @@ class OcamlControlPlan {
 	public static inline final HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID = "control-representation:haxe.ValueException:runtime-wrapper-v1";
 	public static inline final ENUM_THROW_CONTROL_REPRESENTATION_PREFIX = "control-representation:enum-direct-v1:";
 	public static inline final ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX = "control-representation:enum-catch-v1:";
+	public static inline final RUNTIME_CLASS_CARRIER_PREFIX = "haxe-class-runtime-tagged-carrier-v1:";
+	public static inline final RUNTIME_CLASS_THROW_CONTROL_REPRESENTATION_PREFIX = "control-representation:runtime-class-throw-v1:";
+	public static inline final RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX = "control-representation:runtime-class-catch-v1:";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
@@ -1010,6 +1032,7 @@ class OcamlControlPlan {
 		final literalProducerFieldCount = payload == null ? 0 : (payload.arrayLiteralProducerId == null ? 0 : 1)
 			+ (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
 		final hasEnumRepresentation = payload != null && isEnumThrowPayloadIdentity(payload);
+		final hasRuntimeClassRepresentation = payload != null && isRuntimeClassThrowPayloadIdentity(payload);
 		if (decision.effect != OcamlControlEffect.RaiseHaxeValue
 			|| decision.targetKind != OcamlControlTargetKind.HaxeExceptionChannel
 			|| decision.targetId != HAXE_EXCEPTION_CHANNEL_ID
@@ -1020,17 +1043,18 @@ class OcamlControlPlan {
 			|| payload.signalCarrierTypeId != "Obj.t"
 			|| !samePayloadSides(payload)
 			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId, payload.nominalRepresentation != null, hasEnumRepresentation,
-				payload.arrayDescriptorId != null)
+				payload.arrayDescriptorId != null, hasRuntimeClassRepresentation)
 			|| payload.proofClaim.length == 0
 			|| !sameStrings(decision.runtimeTags,
-				expectedThrowTags(payload.inputSemanticTypeId, payload.nominalRepresentation != null, hasEnumRepresentation, payload.arrayDescriptorId != null))
+				expectedThrowTags(payload.inputSemanticTypeId, payload.nominalRepresentation != null, hasEnumRepresentation,
+					payload.arrayDescriptorId != null, hasRuntimeClassRepresentation))
 			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an unsupported exception target or incomplete value payload crossing';
 		}
 
 		final hasNominalRepresentation = payload.nominalRepresentation != null;
 		final expectedProofId = expectedThrowProofId(payload.inputSemanticTypeId, hasNominalRepresentation, hasEnumRepresentation,
-			payload.arrayDescriptorId != null);
+			payload.arrayDescriptorId != null, hasRuntimeClassRepresentation);
 		if (expectedProofId == null
 			|| hasNominalRepresentation != (expectedProofId == EXACT_NOMINAL_THROW_PROOF_ID)
 			|| payload.proofId != expectedProofId
@@ -1072,6 +1096,10 @@ class OcamlControlPlan {
 			case BoxEnumThrowCarrier:
 				if (!isAdmittedEnumThrowPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid direct enum-constructor carrier crossing';
+				}
+			case BoxRuntimeClassThrowCarrier:
+				if (!isAdmittedRuntimeClassThrowPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid runtime-tagged class carrier crossing';
 				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
@@ -1166,6 +1194,10 @@ class OcamlControlPlan {
 			case _ if (StringTools.startsWith(clause.outputRepresentationId, ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX)):
 				if (!isAdmittedEnumCatchClause(clause)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: enum catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion';
+				}
+			case _ if (StringTools.startsWith(clause.outputRepresentationId, RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX)):
+				if (!isAdmittedRuntimeClassCatchClause(clause)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: runtime-tagged class catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion';
 				}
 			case "Dynamic":
 				if (clause.outputCarrierTypeId != "Obj.t"
@@ -1468,6 +1500,23 @@ class OcamlControlPlan {
 	}
 
 	/**
+		Reports whether a generated class catch uses the private runtime-tag carrier.
+
+		The runtime tag check happens before syntax converts `Obj.t` to the catch
+		variable type. This order makes superclass matching safe without claiming
+		that unrelated generated class records share one public representation.
+	**/
+	public static function isAdmittedRuntimeClassCatchClause(clause:OcamlCatchClauseDecision):Bool {
+		return clause.semanticTypeId.length > 0
+			&& clause.outputCarrierTypeId == RUNTIME_CLASS_CARRIER_PREFIX + clause.semanticTypeId
+			&& clause.outputRepresentationId == RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX + clause.semanticTypeId
+			&& clause.matchPolicy == OcamlCatchMatchPolicy.ExactRuntimeTag
+			&& clause.runtimeTag == clause.semanticTypeId
+			&& clause.conversion == OcamlCatchPayloadConversion.RecoverRuntimeClassValue
+			&& clause.nominalRepresentation == null;
+	}
+
+	/**
 		Reports whether one catch-only Haxe exception wrapper contract is exact.
 
 		These two generated Haxe runtime classes are not general program
@@ -1498,9 +1547,11 @@ class OcamlControlPlan {
 	}
 
 	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
-			hasRepresentedArray:Bool = false):Array<String> {
+			hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false):Array<String> {
 		if (hasRepresentedArray)
 			return ["Dynamic", "Array"];
+		if (hasRuntimeClassRepresentation)
+			return ["Dynamic"];
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
 			case _: hasEnumRepresentation ? ["Dynamic", semanticTypeId] : (hasNominalRepresentation ? ["Dynamic"] : []);
@@ -1508,9 +1559,11 @@ class OcamlControlPlan {
 	}
 
 	public static function expectedThrowConversion(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
-			hasRepresentedArray:Bool = false):Null<OcamlControlPayloadConversion> {
+			hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false):Null<OcamlControlPayloadConversion> {
 		if (hasRepresentedArray)
 			return OcamlControlPayloadConversion.BoxRepresentedArrayThrowCarrier;
+		if (hasRuntimeClassRepresentation)
+			return OcamlControlPayloadConversion.BoxRuntimeClassThrowCarrier;
 		return switch (semanticTypeId) {
 			case "Int", "String": OcamlControlPayloadConversion.ReprAndRecoverExactValue;
 			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
@@ -1524,9 +1577,11 @@ class OcamlControlPlan {
 
 	/** Selects the proof family required by one admitted throw payload. */
 	public static function expectedThrowProofId(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
-			hasRepresentedArray:Bool = false):Null<String> {
+			hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false):Null<String> {
 		if (hasRepresentedArray)
 			return REPRESENTED_ARRAY_THROW_PROOF_ID;
+		if (hasRuntimeClassRepresentation)
+			return RUNTIME_CLASS_THROW_PROOF_ID;
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String": EXACT_VALUE_THROW_PROOF_ID;
 			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
@@ -1547,6 +1602,27 @@ class OcamlControlPlan {
 		return ENUM_CATCH_CONTROL_REPRESENTATION_PREFIX + semanticTypeId;
 	}
 
+	/** Returns the control-only identity for a non-generic generated class. */
+	public static function runtimeClassCarrierIdentityForType(type:Type):Null<OcamlRuntimeClassCarrierIdentity> {
+		return switch (haxe.macro.TypeTools.follow(type)) {
+			case TInst(classRef, parameters):
+				final classType = classRef.get();
+				if (classType.isExtern || classType.isInterface || parameters.length != 0 || haxeExceptionWrapperTypeId(type) != null) {
+					null;
+				} else {
+					final semanticTypeId = (classType.pack ?? []).concat([classType.name]).join(".");
+					semanticTypeId.length == 0 ? null : {
+						semanticTypeId: semanticTypeId,
+						carrierTypeId: RUNTIME_CLASS_CARRIER_PREFIX + semanticTypeId,
+						throwRepresentationId: RUNTIME_CLASS_THROW_CONTROL_REPRESENTATION_PREFIX + semanticTypeId,
+						catchRepresentationId: RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX + semanticTypeId
+					};
+				}
+			case _:
+				null;
+		};
+	}
+
 	/**
 		Checks the complete control-only carrier for one visible enum constructor.
 
@@ -1559,6 +1635,26 @@ class OcamlControlPlan {
 			&& payload.conversion == OcamlControlPayloadConversion.BoxEnumThrowCarrier
 			&& payload.signalCarrierTypeId == "Obj.t"
 			&& payload.nominalRepresentation == null;
+	}
+
+	/** Reports whether one generated class crosses only the exception channel. */
+	public static function isAdmittedRuntimeClassThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		return isRuntimeClassThrowPayloadIdentity(payload)
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& payload.conversion == OcamlControlPayloadConversion.BoxRuntimeClassThrowCarrier
+			&& payload.nominalRepresentation == null
+			&& payload.representationRevision == null
+			&& payload.arrayDescriptorId == null
+			&& payload.arrayDescriptorRevision == null
+			&& payload.arrayLiteralProducerId == null
+			&& payload.arrayLiteralProducerPlanRevision == null;
+	}
+
+	static function isRuntimeClassThrowPayloadIdentity(payload:OcamlControlPayloadPlan):Bool {
+		return payload.inputSemanticTypeId.length > 0
+			&& payload.inputCarrierTypeId == RUNTIME_CLASS_CARRIER_PREFIX + payload.inputSemanticTypeId
+			&& payload.inputRepresentationId == RUNTIME_CLASS_THROW_CONTROL_REPRESENTATION_PREFIX + payload.inputSemanticTypeId
+			&& samePayloadSides(payload);
 	}
 
 	static function isEnumThrowPayloadIdentity(payload:OcamlControlPayloadPlan):Bool {
@@ -1696,6 +1792,13 @@ class OcamlControlPlan {
 				&& identity.semanticTypeId == payload.inputSemanticTypeId
 				&& identity.carrierTypeId == payload.inputCarrierTypeId;
 		}
+		if (isAdmittedRuntimeClassThrowPayload(payload)) {
+			final identity = runtimeClassCarrierIdentityForType(expression.t);
+			return identity != null
+				&& identity.semanticTypeId == payload.inputSemanticTypeId
+				&& identity.carrierTypeId == payload.inputCarrierTypeId
+				&& identity.throwRepresentationId == payload.inputRepresentationId;
+		}
 		if (payload.arrayDescriptorId != null) {
 			final hasLiteralProducer = payload.arrayLiteralProducerId != null && payload.arrayLiteralProducerPlanRevision != null;
 			final normalized = if (hasLiteralProducer) {
@@ -1783,6 +1886,13 @@ class OcamlControlPlan {
 					enumIdentity.semanticTypeId == clause.semanticTypeId
 					&& enumIdentity.carrierTypeId == clause.outputCarrierTypeId
 					&& isAdmittedEnumCatchClause(clause);
+				} else if (StringTools.startsWith(clause.outputRepresentationId, RUNTIME_CLASS_CATCH_CONTROL_REPRESENTATION_PREFIX)) {
+					final identity = runtimeClassCarrierIdentityForType(type);
+					identity != null
+					&& identity.semanticTypeId == clause.semanticTypeId
+					&& identity.carrierTypeId == clause.outputCarrierTypeId
+					&& identity.catchRepresentationId == clause.outputRepresentationId
+					&& isAdmittedRuntimeClassCatchClause(clause);
 				} else {
 					final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type);
 					semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause)
@@ -2135,8 +2245,9 @@ class OcamlControlPlanner {
 					final nominalRepresentation = representation == null ? null : representation.nominalRepresentation;
 					final enumRepresentation = representation != null && representation.enumIdentity != null;
 					final representedArray = representation != null && representation.arrayDescriptorId != null;
+					final runtimeClassRepresentation = representation != null && representation.runtimeClassIdentity != null;
 					final conversion = representation == null ? null : OcamlControlPlan.expectedThrowConversion(representation.semanticTypeId,
-						nominalRepresentation != null, enumRepresentation, representedArray);
+						nominalRepresentation != null, enumRepresentation, representedArray, runtimeClassRepresentation);
 					if (representation == null || conversion == null) {
 						throwFamilyAdmitted = false;
 						throwBlockers.push(OcamlControlAdmissionContract.blocker(representation == null ? "throw-value-unrepresented" : "throw-conversion-unrepresented",
@@ -2145,7 +2256,7 @@ class OcamlControlPlanner {
 						return;
 					}
 					final proofId = OcamlControlPlan.expectedThrowProofId(representation.semanticTypeId, nominalRepresentation != null, enumRepresentation,
-						representedArray);
+						representedArray, runtimeClassRepresentation);
 					if (proofId == null) {
 						throwFamilyAdmitted = false;
 						throwBlockers.push(OcamlControlAdmissionContract.blocker("throw-proof-unrepresented", throwOccurrenceId, throwSource,
@@ -2169,6 +2280,8 @@ class OcamlControlPlanner {
 							'The final typed Haxe body throws one directly visible ${representation.semanticTypeId} constructor carried as its native OCaml variant. The compiler records the enum name before syntax, evaluates the constructor once, and applies HxEnum.box_if_needed so exact enum and Dynamic catches receive the original constructor and payload.';
 						case _ if (nominalRepresentation != null):
 							'The final typed Haxe body sends one already-sealed ${representation.semanticTypeId}/${representation.carrierTypeId} nominal record through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the existing runtime class marker derives the concrete tag for a non-null record, while null remains Dynamic-only.';
+						case _ if (runtimeClassRepresentation):
+							'The final typed Haxe body sends one generated ${representation.semanticTypeId} class value through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier. The runtime reads the value\'s existing __hx_type marker and adds its concrete class and parent-class tags before any source catch recovers a typed variable.';
 						case _:
 							'The final typed Haxe body sends this exact ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. The selected payload conversion preserves that represented value in the private Obj.t carrier. The sealed tag policy always admits Dynamic and derives the exact primitive tag from the carried runtime value, so a null String remains Dynamic rather than matching String.';
 					};
@@ -2198,7 +2311,7 @@ class OcamlControlPlanner {
 							proofClaim: proofClaim
 						},
 						runtimeTags: OcamlControlPlan.expectedThrowTags(representation.semanticTypeId, nominalRepresentation != null, enumRepresentation,
-							representedArray),
+							representedArray, runtimeClassRepresentation),
 						runtimeTagPolicy: OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 						mechanism: OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 						runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -2517,6 +2630,18 @@ class OcamlControlPlanner {
 				nominalRepresentation: nominalRepresentation
 			};
 		}
+		final runtimeClassIdentity = OcamlControlPlan.runtimeClassCarrierIdentityForType(type);
+		if (runtimeClassIdentity != null) {
+			return {
+				semanticTypeId: runtimeClassIdentity.semanticTypeId,
+				outputCarrierTypeId: runtimeClassIdentity.carrierTypeId,
+				outputRepresentationId: runtimeClassIdentity.catchRepresentationId,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: runtimeClassIdentity.semanticTypeId,
+				conversion: OcamlCatchPayloadConversion.RecoverRuntimeClassValue,
+				nominalRepresentation: null
+			};
+		}
 		final enumIdentity = OcamlEnumDynamicCarrier.fromType(type);
 		if (enumIdentity != null) {
 			return {
@@ -2709,7 +2834,8 @@ class OcamlControlPlanner {
 				arrayLiteralProducerId: null,
 				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
-				enumIdentity: null
+				enumIdentity: null,
+				runtimeClassIdentity: null
 			} : {
 				semanticTypeId: haxeExceptionTypeId,
 				carrierTypeId: "Haxe_ValueException.t",
@@ -2720,7 +2846,8 @@ class OcamlControlPlanner {
 				arrayLiteralProducerId: null,
 				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
-				enumIdentity: null
+				enumIdentity: null,
+				runtimeClassIdentity: null
 				};
 		}
 		final exact = exactValueRepresentation(expression);
@@ -2735,7 +2862,8 @@ class OcamlControlPlanner {
 				arrayLiteralProducerId: null,
 				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: nominalProofFor(exact),
-				enumIdentity: null
+				enumIdentity: null,
+				runtimeClassIdentity: null
 			};
 		}
 		final representedArray = representedArrayThrowRepresentation(expression);
@@ -2750,7 +2878,8 @@ class OcamlControlPlanner {
 				arrayLiteralProducerId: representedArray.arrayLiteralProducerId,
 				arrayLiteralProducerPlanRevision: representedArray.arrayLiteralProducerPlanRevision,
 				nominalRepresentation: null,
-				enumIdentity: null
+				enumIdentity: null,
+				runtimeClassIdentity: null
 			};
 		}
 		switch (haxe.macro.TypeTools.follow(expression.t)) {
@@ -2765,7 +2894,8 @@ class OcamlControlPlanner {
 					arrayLiteralProducerId: null,
 					arrayLiteralProducerPlanRevision: null,
 					nominalRepresentation: null,
-					enumIdentity: null
+					enumIdentity: null,
+					runtimeClassIdentity: null
 				};
 			case _:
 		}
@@ -2781,24 +2911,42 @@ class OcamlControlPlanner {
 				arrayLiteralProducerId: null,
 				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
-				enumIdentity: enumIdentity
+				enumIdentity: enumIdentity,
+				runtimeClassIdentity: null
 			};
 		}
 		final nominalClass = representations.monomorphicClassForType(expression.t);
-		if (nominalClass == null)
-			return null;
-		final representation = representations.monomorphicClassValue(nominalClass.semanticTypeId);
-		return representation == null ? null : {
-			semanticTypeId: representation.semanticTypeId,
-			carrierTypeId: representation.carrierTypeId,
-			representationId: representation.id,
-			representationRevision: representation.revision,
-			arrayDescriptorId: representation.arrayDescriptorId,
-			arrayDescriptorRevision: representation.arrayDescriptorRevision,
+		if (nominalClass != null) {
+			final representation = representations.monomorphicClassValue(nominalClass.semanticTypeId);
+			if (representation != null) {
+				return {
+					semanticTypeId: representation.semanticTypeId,
+					carrierTypeId: representation.carrierTypeId,
+					representationId: representation.id,
+					representationRevision: representation.revision,
+					arrayDescriptorId: representation.arrayDescriptorId,
+					arrayDescriptorRevision: representation.arrayDescriptorRevision,
+					arrayLiteralProducerId: null,
+					arrayLiteralProducerPlanRevision: null,
+					nominalRepresentation: nominalProofFor(representation),
+					enumIdentity: null,
+					runtimeClassIdentity: null
+				};
+			}
+		}
+		final runtimeClassIdentity = OcamlControlPlan.runtimeClassCarrierIdentityForType(expression.t);
+		return runtimeClassIdentity == null ? null : {
+			semanticTypeId: runtimeClassIdentity.semanticTypeId,
+			carrierTypeId: runtimeClassIdentity.carrierTypeId,
+			representationId: runtimeClassIdentity.throwRepresentationId,
+			representationRevision: null,
+			arrayDescriptorId: null,
+			arrayDescriptorRevision: null,
 			arrayLiteralProducerId: null,
 			arrayLiteralProducerPlanRevision: null,
-			nominalRepresentation: nominalProofFor(representation),
-			enumIdentity: null
+			nominalRepresentation: null,
+			enumIdentity: null,
+			runtimeClassIdentity: runtimeClassIdentity
 		};
 	}
 
