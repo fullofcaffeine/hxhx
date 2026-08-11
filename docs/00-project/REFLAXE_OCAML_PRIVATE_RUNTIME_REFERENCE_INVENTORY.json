@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.31.29",
+  "reviewBead": "haxe_ocaml-0uwin.31.30",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.29",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.31.30",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 300,
+    "total": 292,
     "byDomain": {
-      "expression": 293,
+      "expression": 285,
       "pattern": 7
     },
     "byMigrationFamily": {
@@ -28,12 +28,12 @@
       "builder-enum": 27,
       "builder-int": 60,
       "builder-nullable-carriers": 65,
-      "builder-reflect": 9,
+      "builder-reflect": 1,
       "builder-string": 25,
       "builder-type": 27
     }
   },
-  "inventoryRevision": "f7f4968007cf0229eb30b7f2a1a20f686bea946f2f6352451e092fb1c2c6014a",
+  "inventoryRevision": "e8018135e8c36e8f5e549e0a1be4f9b6bb56278b4611093796330548a591bce5",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -976,36 +976,6 @@
       "migrationFamily": "builder-anon"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.callMethod::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.callMethod",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isFunction::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.isFunction",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EIdent::HxReflect::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EIdent",
-      "symbol": "HxReflect",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxAnon.set::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
@@ -1054,56 +1024,6 @@
       "rootModule": "HxAnon",
       "ordinal": 1,
       "migrationFamily": "builder-anon"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.compare::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.compare",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isObject::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.isObject",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.isEnumValue::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.isEnumValue",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.same_closure::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.same_closure",
-      "rootModule": "HxReflect",
-      "ordinal": 1,
-      "migrationFamily": "builder-reflect"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.same_closure::2",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxReflect.same_closure",
-      "rootModule": "HxReflect",
-      "ordinal": 2,
-      "migrationFamily": "builder-reflect"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxString.fromCharCode::1",
@@ -1436,13 +1356,13 @@
       "migrationFamily": "builder-array"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.callMethod::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxReflect.callMethod::1",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxReflect.callMethod",
       "rootModule": "HxReflect",
-      "ordinal": 2,
+      "ordinal": 1,
       "migrationFamily": "builder-reflect"
     },
     {

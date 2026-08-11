@@ -187,7 +187,6 @@ function main() {
 		'| Module | Status | Evidence |',
 		'|---|---|---|',
 		...statusRows,
-		'',
 	]
 
 	fs.writeFileSync(outputPath, `${markdown.join('\n')}\n`, 'utf8')

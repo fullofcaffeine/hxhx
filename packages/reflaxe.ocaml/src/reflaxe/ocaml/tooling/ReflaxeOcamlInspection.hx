@@ -90,9 +90,9 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v97";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v18";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v6";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v98";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v19";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v7";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {

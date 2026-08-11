@@ -65,6 +65,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectComparePlanner;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUsePlanner;
 
 /** One validated target plan that is immutable after its function is sealed. */
 typedef OcamlSealedPlacePlan = {
@@ -101,6 +103,7 @@ typedef OcamlSealedFunctionPlan = {
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final calls:OcamlCallPlan;
 	final reflectCompare:OcamlReflectComparePlan;
+	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>;
@@ -143,6 +146,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final arrayIterators:OcamlArrayIteratorPlan;
 	final dynamicEquality:OcamlDynamicEqualityPlan;
 	final ?dynamicString:OcamlDynamicStringPlan;
+	final ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 }
 
@@ -174,6 +178,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final arrayIterators:OcamlArrayIteratorPlan;
 	final dynamicEquality:OcamlDynamicEqualityPlan;
 	final ?dynamicString:OcamlDynamicStringPlan;
+	final ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 }
 
@@ -198,6 +203,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final dynamicEquality:OcamlDynamicEqualityPlan;
 	final dynamicString:OcamlDynamicStringPlan;
 	final reflectCompare:OcamlReflectComparePlan;
+	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -230,6 +236,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final arrayIterators:OcamlArrayIteratorPlan;
 	final dynamicEquality:OcamlDynamicEqualityPlan;
 	final dynamicString:OcamlDynamicStringPlan;
+	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 	final deferredReason:Null<String>;
 }
@@ -256,9 +263,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v97";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v18";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v6";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v98";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v19";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v7";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -360,7 +367,8 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
 			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
-			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan):Void {
+			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
+			?reflectRuntimeUses:OcamlReflectRuntimeUsePlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
@@ -370,6 +378,8 @@ class OcamlFunctionPlanRegistry {
 		dynamicEquality.requirePlanBinding(identity.binding);
 		final sealedDynamicString = dynamicString ?? new OcamlDynamicStringPlan([]);
 		sealedDynamicString.requirePlanBinding(identity.binding);
+		final sealedReflectRuntimeUses = reflectRuntimeUses ?? new OcamlReflectRuntimeUsePlan([]);
+		sealedReflectRuntimeUses.requirePlanBinding(identity.binding);
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
@@ -381,6 +391,7 @@ class OcamlFunctionPlanRegistry {
 			arrayIterators: arrayIterators,
 			dynamicEquality: dynamicEquality,
 			dynamicString: sealedDynamicString,
+			reflectRuntimeUses: sealedReflectRuntimeUses,
 			plan: null,
 			deferredReason: reason
 		}, localIdentities.ownerId);
@@ -422,6 +433,8 @@ class OcamlFunctionPlanRegistry {
 		plan.dynamicEquality.requirePlanBinding(plan.binding);
 		final sealedDynamicString = plan.dynamicString ?? new OcamlDynamicStringPlan([]);
 		sealedDynamicString.requirePlanBinding(plan.binding);
+		final sealedReflectRuntimeUses = plan.reflectRuntimeUses ?? new OcamlReflectRuntimeUsePlan([]);
+		sealedReflectRuntimeUses.requirePlanBinding(plan.binding);
 		plan.imapInterfaces.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
@@ -455,6 +468,7 @@ class OcamlFunctionPlanRegistry {
 			arrayIterators: plan.arrayIterators,
 			dynamicEquality: plan.dynamicEquality,
 			dynamicString: sealedDynamicString,
+			reflectRuntimeUses: sealedReflectRuntimeUses,
 			imapInterfaces: plan.imapInterfaces
 		};
 		storeNestedFunctionRecord(expression, {
@@ -468,6 +482,7 @@ class OcamlFunctionPlanRegistry {
 			arrayIterators: plan.arrayIterators,
 			dynamicEquality: plan.dynamicEquality,
 			dynamicString: sealedDynamicString,
+			reflectRuntimeUses: sealedReflectRuntimeUses,
 			plan: stored,
 			deferredReason: null
 		}, localIdentities.ownerId);
@@ -574,6 +589,7 @@ class OcamlFunctionPlanRegistry {
 			arrayIterators: record.arrayIterators,
 			dynamicEquality: record.dynamicEquality,
 			dynamicString: record.dynamicString,
+			reflectRuntimeUses: record.reflectRuntimeUses,
 			plan: record.plan
 		};
 	}
@@ -663,6 +679,7 @@ class OcamlFunctionPlanRegistry {
 		final dynamicEquality = new OcamlDynamicEqualityPlanner(binding).plan(expression);
 		final dynamicString = new OcamlDynamicStringPlanner(binding).plan(expression);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(expression);
+		final reflectRuntimeUses = new OcamlReflectRuntimeUsePlanner(binding).plan(expression);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
@@ -681,6 +698,7 @@ class OcamlFunctionPlanRegistry {
 		dynamicString.requirePlanBinding(binding);
 		bytesReads.requireRepresentations(representations);
 		reflectCompare.requirePlanBinding(binding);
+		reflectRuntimeUses.requirePlanBinding(binding);
 		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
 		recordStandaloneStructuralFields(structuralFields);
@@ -698,7 +716,8 @@ class OcamlFunctionPlanRegistry {
 			arrayIterators: arrayIterators,
 			dynamicEquality: dynamicEquality,
 			dynamicString: dynamicString,
-			reflectCompare: reflectCompare
+			reflectCompare: reflectCompare,
+			reflectRuntimeUses: reflectRuntimeUses
 		};
 	}
 
@@ -798,6 +817,7 @@ class OcamlFunctionPlanRegistry {
 		plan.dynamicEquality.requirePlanBinding(expected);
 		plan.dynamicString.requirePlanBinding(expected);
 		plan.reflectCompare.requirePlanBinding(expected);
+		plan.reflectRuntimeUses.requirePlanBinding(expected);
 		return plan;
 	}
 
@@ -950,7 +970,8 @@ class OcamlFunctionPlanRegistry {
 			functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
 			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan,
 			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan, ?arrayReads:OcamlArrayReadPlan,
-			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan):Void {
+			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan,
+			?reflectRuntimeUses:OcamlReflectRuntimeUsePlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -970,6 +991,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedArrayIterators = arrayIterators ?? new OcamlArrayIteratorPlan([]);
 		final sealedDynamicEquality = dynamicEquality ?? new OcamlDynamicEqualityPlan([]);
 		final sealedDynamicString = dynamicString ?? new OcamlDynamicStringPlan([]);
+		final sealedReflectRuntimeUses = reflectRuntimeUses ?? new OcamlReflectRuntimeUsePlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
@@ -984,6 +1006,7 @@ class OcamlFunctionPlanRegistry {
 		sealedArrayIterators.requirePlanBinding(binding);
 		sealedDynamicEquality.requirePlanBinding(binding);
 		sealedDynamicString.requirePlanBinding(binding);
+		sealedReflectRuntimeUses.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -1026,6 +1049,7 @@ class OcamlFunctionPlanRegistry {
 				imapInterfaces: imapInterfaces,
 				calls: calls,
 				reflectCompare: sealedReflectCompare,
+				reflectRuntimeUses: sealedReflectRuntimeUses,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
 				functionResultBoundary: functionResultBoundary == null ? null : OcamlFunctionResultBoundary.copy(functionResultBoundary),

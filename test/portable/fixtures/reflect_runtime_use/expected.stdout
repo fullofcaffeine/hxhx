@@ -1,0 +1,9 @@
+call=5
+function=true,false
+object=true,false
+enum=true,false
+methods=true
+initializer=true
+nested=true
+varargs=3
+void=x|y

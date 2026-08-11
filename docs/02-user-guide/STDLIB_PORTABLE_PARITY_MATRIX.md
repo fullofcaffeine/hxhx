@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/ocaml/_std/`
 
-Summary: `204` modules total, `46` overrides, `2` runtime-backed, `5` lowering-intrinsic, `151` passthrough-verified, `0` passthrough-unverified.
+Summary: `204` modules total, `49` overrides, `2` runtime-backed, `2` lowering-intrinsic, `151` passthrough-verified, `0` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -22,7 +22,7 @@ Summary: `204` modules total, `46` overrides, `2` runtime-backed, `5` lowering-i
 | `List` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
 | `Math` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Math.hx |
-| `Reflect` | `passthrough_verified` | test/portable/fixtures/reflect_call_method_basic/src/Main.hx; test/portable/fixtures/reflect_dynamic_fields/src/Main.hx |
+| `Reflect` | `passthrough_verified` | test/portable/fixtures/reflect_call_method_basic/src/Main.hx; test/portable/fixtures/reflect_dynamic_fields/src/Main.hx; test/portable/fixtures/reflect_runtime_use/src/Main.hx |
 | `Std` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `StdTypes` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `String` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/String.hx |
@@ -84,14 +84,14 @@ Summary: `204` modules total, `46` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.ds.EnumValueMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.GenericStack` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.HashMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
-| `haxe.ds.IntMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.IntMap` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/IntMap.hx |
 | `haxe.ds.List` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.ListSort` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
-| `haxe.ds.ObjectMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.ObjectMap` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/ObjectMap.hx |
 | `haxe.ds.Option` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.ReadOnlyArray` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
-| `haxe.ds.StringMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.StringMap` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/StringMap.hx |
 | `haxe.ds.Vector` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.WeakMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.exceptions.ArgumentException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |

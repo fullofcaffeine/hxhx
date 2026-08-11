@@ -67,7 +67,7 @@ for (const functionName of throwFunctions) {
 	const payload = control?.payload
 	const nominal = payload?.nominalRepresentation
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v97'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v98'
 		|| control.proofId !== 'exact-monomorphic-class-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -89,7 +89,7 @@ for (const functionName of throwFunctions) {
 let nominalClauseCount = 0
 for (const chain of mainCatchChains) {
 	if (chain.proofId !== 'represented-value-catch-control-v6'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v97') {
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v98') {
 		fail(`catch chain ${chain.id} does not use the represented-value proof`)
 	}
 	for (const clause of chain.clauses) {

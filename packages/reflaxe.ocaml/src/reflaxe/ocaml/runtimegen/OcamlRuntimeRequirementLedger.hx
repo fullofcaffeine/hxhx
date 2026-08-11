@@ -17,6 +17,8 @@ import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringDecision;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -93,6 +95,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
 	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
 	public static inline final HAXE_REFLECT_COMPARE_FAILURE = "haxe-reflect-compare-failure";
+	public static inline final HAXE_REFLECT_RUNTIME_CALL = "haxe-reflect-runtime-call";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -500,6 +503,39 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one Dynamic string decision. */
 	public function recordDynamicString(decision:OcamlDynamicStringDecision):Void {
 		for (requirement in requirementsForDynamicString(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact HxReflect reason for one sealed standard Reflect call. */
+	public static function requirementsForReflectRuntimeUse(decision:OcamlReflectRuntimeUseDecision):Array<OcamlRuntimeRequirement> {
+		OcamlReflectRuntimeUsePlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_REFLECT_RUNTIME_CALL,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Reflect."
+					+ decision.sourceMethod
+					+ ":"
+					+ decision.argumentSemanticTypeIds.join(",")
+					+ "->"
+					+ decision.resultSemanticTypeId},
+				implementationFeature: "haxe-direct-reflect-call-v1",
+				rootModules: ["HxReflect"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The resolved standard Reflect call selected one private HxReflect operation. The compiler records this one generated identifier before it writes OCaml, so another HxReflect use cannot borrow the same permission."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one direct standard Reflect call. */
+	public function recordReflectRuntimeUse(decision:OcamlReflectRuntimeUseDecision):Void {
+		for (requirement in requirementsForReflectRuntimeUse(decision))
 			record(requirement);
 	}
 

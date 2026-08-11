@@ -26,19 +26,23 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 300 legacy entries:
+The current reviewed baseline contains 292 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 293 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 285 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 7 | Direct private runtime constructors in OCaml patterns. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 300 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 292 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
+
+Direct calls to the standard Haxe `Reflect` class now use sealed runtime-use
+decisions. The remaining `builder-reflect` entry invokes a value whose type is
+`Dynamic`. A separate call-boundary task must authorize that case.
 
 ## What the guard does not prove
 

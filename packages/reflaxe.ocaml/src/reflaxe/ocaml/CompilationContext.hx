@@ -38,6 +38,7 @@ import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrie
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 #if macro
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -682,6 +683,11 @@ class CompilationContext {
 	/** Records runtime support selected by one exceptional typed `Reflect.compare`. */
 	public function recordReflectCompareRuntimeRequirements(decision:OcamlReflectCompareDecision):Void {
 		OcamlReflectCompareRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/** Records the private helper selected by one direct standard Reflect call. */
+	public function recordReflectRuntimeUseRequirement(decision:OcamlReflectRuntimeUseDecision):Void {
+		runtimeRequirements.recordReflectRuntimeUse(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

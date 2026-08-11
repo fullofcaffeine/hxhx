@@ -54,6 +54,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectComparePlanner;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUsePlanner;
 
 private typedef OcamlPlaceRuntimeFacts = {
 	final decisionId:String;
@@ -183,6 +184,9 @@ class OcamlFunctionPlanSealer {
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		for (decision in reflectCompare.decisions())
 			context.recordReflectCompareRuntimeRequirements(decision);
+		final reflectRuntimeUses = new OcamlReflectRuntimeUsePlanner(binding).plan(data.expr);
+		for (decision in reflectRuntimeUses.decisions())
+			context.recordReflectRuntimeUseRequirement(decision);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
@@ -297,7 +301,7 @@ class OcamlFunctionPlanSealer {
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
-			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads, arrayIterators, dynamicEquality, dynamicString);
+			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads, arrayIterators, dynamicEquality, dynamicString, reflectRuntimeUses);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -382,6 +386,10 @@ class OcamlFunctionPlanSealer {
 					dynamicString.requirePlanBinding(nestedBinding);
 					for (decision in dynamicString.decisions())
 						context.recordDynamicStringRuntimeRequirement(decision);
+					final reflectRuntimeUses = new OcamlReflectRuntimeUsePlanner(nestedBinding).plan(tfunc.expr);
+					reflectRuntimeUses.requirePlanBinding(nestedBinding);
+					for (decision in reflectRuntimeUses.decisions())
+						context.recordReflectRuntimeUseRequirement(decision);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
@@ -390,7 +398,7 @@ class OcamlFunctionPlanSealer {
 					if (boundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
 							arrayReads, arrayIterators, dynamicEquality,
-							"The typed function literal is outside the existing represented-result callable boundary.", dynamicString);
+							"The typed function literal is outside the existing represented-result callable boundary.", dynamicString, reflectRuntimeUses);
 					} else {
 						final functionResultBoundary = OcamlFunctionResultBoundary.fromCallable(boundary);
 						// A nested function can read a local declared by its enclosing function.
@@ -414,7 +422,7 @@ class OcamlFunctionPlanSealer {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
 								imapInterfaces, arrayReads, arrayIterators, dynamicEquality,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
-								dynamicString);
+								dynamicString, reflectRuntimeUses);
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
 							validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
@@ -430,6 +438,7 @@ class OcamlFunctionPlanSealer {
 								arrayIterators: arrayIterators,
 								dynamicEquality: dynamicEquality,
 								dynamicString: dynamicString,
+								reflectRuntimeUses: reflectRuntimeUses,
 								imapInterfaces: imapInterfaces
 							};
 							for (decision in arrayLiteralProducers.decisions())

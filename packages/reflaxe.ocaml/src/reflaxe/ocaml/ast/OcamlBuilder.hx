@@ -126,6 +126,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDomain;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
+import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseKind;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -182,6 +184,7 @@ class OcamlBuilder {
 	var currentIMapInterfacePlan:Null<OcamlIMapInterfacePlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
 	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
+	var currentReflectRuntimeUsePlan:Null<OcamlReflectRuntimeUsePlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -1671,6 +1674,37 @@ class OcamlBuilder {
 		final rightName = freshTmp("reflect_arg_1");
 		final invoke = OcamlExpr.EApp(buildPlannedReflectCompareFunction(decision, position), [OcamlExpr.EIdent(leftName), OcamlExpr.EIdent(rightName)]);
 		return OcamlExpr.ELet(leftName, buildExpr(arguments[0]), OcamlExpr.ELet(rightName, buildExpr(arguments[1]), invoke, false), false);
+	}
+
+	/**
+		Returns the private helper authorized by one resolved standard Reflect call.
+
+		This method checks the exact request-local typed call and the helper selected
+		before syntax generation. It reconciles only the identifier introduced here;
+		argument expressions keep the runtime-use authority of their own plans.
+	**/
+	function directReflectRuntimeFunction(call:TypedExpr, expectedKind:OcamlReflectRuntimeUseKind):OcamlExpr {
+		final plan = currentReflectRuntimeUsePlan;
+		if (plan == null)
+			return callPlanInvariant("a direct standard Reflect call has no active sealed runtime-use plan", call.pos);
+		final decision = try {
+			plan.requireFor(call);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+		if (decision.kind != expectedKind)
+			return callPlanInvariant('Reflect decision "${decision.id}" selected ${decision.kind}, not $expectedKind', call.pos);
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final identifier = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+		try {
+			authority.reconcileExpression(identifier);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+		return identifier;
 	}
 
 	/**
@@ -4331,7 +4365,7 @@ class OcamlBuilder {
 													]);
 												case "callMethod" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
+														OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.CallMethod),
 															[toObjArg(args[0]), toObjArg(args[1]), buildExpr(args[2])])
 													]);
 												case "isFunction" if (args.length == 1):
@@ -4345,7 +4379,7 @@ class OcamlBuilder {
 															case _:
 																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
 														};
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isFunction"), [asObj]);
+														OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsFunction), [asObj]);
 													}
 												case "makeVarArgs" if (args.length == 1):
 													final f = args[0];
@@ -4353,11 +4387,12 @@ class OcamlBuilder {
 														case TFun(_, ret): isVoidType(ret);
 														case _: false;
 													};
-													final fnName = isVoid ? "makeVarArgsVoid" : "makeVarArgs";
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), fnName), [
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(f)])
-														])
+														OcamlExpr.EApp(directReflectRuntimeFunction(e,
+															isVoid ? OcamlReflectRuntimeUseKind.MakeVarArgsVoid : OcamlReflectRuntimeUseKind.MakeVarArgs),
+															[
+																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(f)])
+															])
 													]);
 												case "setField" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
@@ -4374,18 +4409,13 @@ class OcamlBuilder {
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "copy"), [toObjArg(args[0])])
 													]);
-												case "compare" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "compare"),
-														[toObjValue(args[0]), toObjValue(args[1])]);
 												case "isObject" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isObject"), [toObjValue(args[0])]);
+													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsObject), [toObjValue(args[0])]);
 												case "isEnumValue" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isEnumValue"), [toObjValue(args[0])]);
-												case "same_closure" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "same_closure"),
-														[toObjValue(args[0]), toObjValue(args[1])]);
+													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsEnumValue),
+														[toObjValue(args[0])]);
 												case "compareMethods" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "same_closure"),
+													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.CompareMethods),
 														[toObjValue(args[0]), toObjValue(args[1])]);
 												case _:
 													#if macro
@@ -8064,6 +8094,7 @@ class OcamlBuilder {
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
+		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
@@ -8081,6 +8112,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
+		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -8096,6 +8128,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
+		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
 	}
@@ -8122,6 +8155,7 @@ class OcamlBuilder {
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
+		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
@@ -8139,6 +8173,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
+		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -8154,6 +8189,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
+		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
 	}
@@ -8364,6 +8400,7 @@ class OcamlBuilder {
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousCallPlan = currentCallPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
+		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8391,6 +8428,7 @@ class OcamlBuilder {
 		currentIMapInterfacePlan = functionPlan.imapInterfaces;
 		currentCallPlan = functionPlan.calls;
 		currentReflectComparePlan = functionPlan.reflectCompare;
+		currentReflectRuntimeUsePlan = functionPlan.reflectRuntimeUses;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8568,6 +8606,7 @@ class OcamlBuilder {
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentCallPlan = previousCallPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
+		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8639,6 +8678,7 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
+		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
@@ -8652,6 +8692,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = nestedDisposition == null ? null : nestedDisposition.arrayIterators;
 		currentDynamicEqualityPlan = nestedDisposition == null ? null : nestedDisposition.dynamicEquality;
 		currentDynamicStringPlan = nestedDisposition == null ? null : nestedDisposition.dynamicString;
+		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8734,6 +8775,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
+		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
