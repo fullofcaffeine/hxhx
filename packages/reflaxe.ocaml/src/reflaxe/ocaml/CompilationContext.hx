@@ -18,11 +18,13 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
@@ -576,6 +578,11 @@ class CompilationContext {
 		runtimeRequirements.recordArrayRead(decision);
 	}
 
+	/** Records the exact HxArray dependency owned by one non-Array bracket read. */
+	public function recordDynamicBracketReadRuntimeRequirements(decision:OcamlDynamicBracketReadDecision):Void {
+		runtimeRequirements.recordDynamicBracketRead(decision);
+	}
+
 	/**
 		Records why one sealed catch chain needs the private Haxe exception signal.
 
@@ -596,6 +603,11 @@ class CompilationContext {
 	**/
 	public function recordReturnRuntimeRequirement(decision:OcamlControlDecision):Void {
 		runtimeRequirements.recordReturnDecision(decision);
+	}
+
+	/** Records the exact private patterns and raises owned by one lexical loop. */
+	public function recordLoopRuntimeRequirements(target:OcamlControlLoopTarget, decisions:Array<OcamlControlDecision>):Void {
+		runtimeRequirements.recordLoopTarget(target, decisions);
 	}
 
 	/**

@@ -3,6 +3,7 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUsePlan;
@@ -231,11 +232,11 @@ class CatchRuntimeUseFixture {
 		final matchAny = OcamlCatchRuntimeUseContract.runtimeTagOccurrence(plan, "catch-clause:value-exception", OcamlCatchRuntimeTagUseRole.MatchAnyException);
 		final convertValue = OcamlCatchRuntimeUseContract.runtimeTagOccurrence(plan, "catch-clause:value-exception",
 			OcamlCatchRuntimeTagUseRole.ConvertValueException);
-		assertTrue([exact.order, matchValue.order, matchAny.order, convertValue.order].join(",") == "1,2,3,4",
+		assertTrue([exact.order, matchValue.order, matchAny.order, convertValue.order].join(",") == "5,6,7,8",
 			"Catch tag tests must follow source clause order and then their expression order.");
 		assertTrue(exact.source.min == 20 && convertValue.source.min == 33, "Each catch tag test must retain the source span of its exact clause.");
-		assertTrue(plan.runtimeUseOccurrences.length == 6,
-			"The pattern, four tag tests, and unmatched rethrow must form one complete catch-owned runtime plan.");
+		assertTrue(plan.runtimeUseOccurrences.length == 10,
+			"The private control cases, Haxe pattern, four tag tests, and unmatched rethrow must form one complete catch-owned runtime plan.");
 	}
 
 	static function checkedTry(?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlExpr {
@@ -246,9 +247,27 @@ class CatchRuntimeUseFixture {
 		final authority = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences, finalOutput);
 		final patternUse = OcamlCatchRuntimeUseContract.patternOccurrence(plan);
 		final rethrowUse = OcamlCatchRuntimeUseContract.rethrowOccurrence(plan);
+		final breakPatternUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_PATTERN_ROLE);
+		final breakReraiseUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_RERAISE_ROLE);
+		final continuePatternUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
+		final continueReraiseUse = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
+		final breakPatternReference = authority.patternIdentifier(breakPatternUse.id, plan.planRevision, breakPatternUse.exactSymbol);
+		final breakReraiseReference = authority.expressionIdentifier(breakReraiseUse.id, plan.planRevision, breakReraiseUse.exactSymbol);
+		final continuePatternReference = authority.patternIdentifier(continuePatternUse.id, plan.planRevision, continuePatternUse.exactSymbol);
+		final continueReraiseReference = authority.expressionIdentifier(continueReraiseUse.id, plan.planRevision, continueReraiseUse.exactSymbol);
 		final patternReference = authority.patternIdentifier(patternUse.id, plan.planRevision, patternUse.exactSymbol);
 		final rethrowReference = authority.expressionIdentifier(rethrowUse.id, plan.planRevision, rethrowUse.exactSymbol);
 		final expression = OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [
+			{
+				pat: OcamlPat.PRuntimeConstructor(breakPatternReference, []),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(breakReraiseReference))
+			},
+			{
+				pat: OcamlPat.PRuntimeConstructor(continuePatternReference, []),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(continueReraiseReference))
+			},
 			{
 				pat: OcamlPat.PRuntimeConstructor(patternReference, [OcamlPat.PVar("value"), OcamlPat.PVar("tags")]),
 				guard: null,
@@ -334,43 +353,43 @@ class CatchRuntimeUseFixture {
 			() -> OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, occurrences.filter(use -> use.id != exact.id))));
 		expectFailure("reordered tag occurrence", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = matchValue;
-			changed[2] = exact;
+			changed[exact.order] = matchValue;
+			changed[matchValue.order] = exact;
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag owner", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, "catch-chain:other");
+			changed[exact.order] = copyOccurrence(exact, "catch-chain:other");
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag clause", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, null, null, null, null, exact.id + ":other-clause");
+			changed[exact.order] = copyOccurrence(exact, null, null, null, null, null, exact.id + ":other-clause");
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag role", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, null, null, null, null, null, exact.role + ":other");
+			changed[exact.order] = copyOccurrence(exact, null, null, null, null, null, null, exact.role + ":other");
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag symbol", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, null, "HxRuntime.is_null");
+			changed[exact.order] = copyOccurrence(exact, null, null, "HxRuntime.is_null");
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag domain", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, OcamlRuntimeUseDomain.PatternConstructor);
+			changed[exact.order] = copyOccurrence(exact, null, OcamlRuntimeUseDomain.PatternConstructor);
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag profile", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, null, null, null, ["metal"]);
+			changed[exact.order] = copyOccurrence(exact, null, null, null, null, ["metal"]);
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 		expectFailure("wrong tag cardinality", "invalid-runtime-use", () -> {
 			final changed = occurrences.copy();
-			changed[1] = copyOccurrence(exact, null, null, null, null, null, null, null, null, 2);
+			changed[exact.order] = copyOccurrence(exact, null, null, null, null, null, null, null, null, 2);
 			OcamlCatchRuntimeUseContract.requireForChain(selected, planWithOccurrences(plan, changed));
 		});
 	}
@@ -387,16 +406,15 @@ class CatchRuntimeUseFixture {
 		final patternReference = authority.patternIdentifier(pattern.id, plan.planRevision, pattern.exactSymbol);
 		final tagReference = authority.expressionIdentifier(tag.id, plan.planRevision, tag.exactSymbol);
 		final rethrowReference = authority.expressionIdentifier(rethrow.id, plan.planRevision, rethrow.exactSymbol);
-		final expression = OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), [
-			{
-				pat: OcamlPat.PRuntimeConstructor(patternReference, [OcamlPat.PVar("value"), OcamlPat.PVar("tags")]),
-				guard: null,
-				expr: OcamlExpr.EIf(OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(tagReference),
-					[OcamlExpr.EIdent("tags"), OcamlExpr.EConst(OcamlConst.CString("Int"))]),
-					OcamlExpr.EConst(OcamlConst.CUnit),
-					OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(rethrowReference), [OcamlExpr.EIdent("value"), OcamlExpr.EIdent("tags")]))
-			}
-		]);
+		final cases = privateControlCases(plan, authority);
+		cases.push({
+			pat: OcamlPat.PRuntimeConstructor(patternReference, [OcamlPat.PVar("value"), OcamlPat.PVar("tags")]),
+			guard: null,
+			expr: OcamlExpr.EIf(OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(tagReference), [OcamlExpr.EIdent("tags"), OcamlExpr.EConst(OcamlConst.CString("Int"))]),
+				OcamlExpr.EConst(OcamlConst.CUnit),
+				OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(rethrowReference), [OcamlExpr.EIdent("value"), OcamlExpr.EIdent("tags")]))
+		});
+		final expression = OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), cases);
 		authority.reconcileExpression(expression);
 		final rendered = new OcamlASTPrinter().printExpr(expression);
 		assertTrue(rendered.contains("HxRuntime.tags_has tags \"Int\""), "The checked exact catch tag test must print unchanged OCaml syntax.");
@@ -405,6 +423,26 @@ class CatchRuntimeUseFixture {
 		duplicate.expressionIdentifier(tag.id, plan.planRevision, tag.exactSymbol);
 		expectFailure("duplicate tag construction", "constructed more than once",
 			() -> duplicate.expressionIdentifier(tag.id, plan.planRevision, tag.exactSymbol));
+	}
+
+	static function privateControlCases(plan:OcamlCatchRuntimeUsePlan, authority:OcamlRuntimeUseAuthority):Array<OcamlMatchCase> {
+		final breakPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_PATTERN_ROLE);
+		final breakReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_BREAK_RERAISE_ROLE);
+		final continuePattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
+		final continueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(plan, OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
+		return [
+			{
+				pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(breakPattern.id, plan.planRevision, breakPattern.exactSymbol), []),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(breakReraise.id, plan.planRevision, breakReraise.exactSymbol)))
+			},
+			{
+				pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(continuePattern.id, plan.planRevision, continuePattern.exactSymbol), []),
+				guard: null,
+				expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(continueReraise.id, plan.planRevision,
+					continueReraise.exactSymbol)))
+			}
+		];
 	}
 
 	static function missingAndDuplicatePatternUsesFail():Void {
@@ -453,11 +491,20 @@ class CatchRuntimeUseFixture {
 		corruptedOutput.beginProgram("program:catch-runtime-use-corruption", PROFILE);
 		final corrupted = checkedTry(corruptedOutput);
 		switch (corrupted) {
-			case ETry(_, [{pat: PRuntimeConstructor(reference, _)}]):
-				// The production field is immutable. Reflect is confined to this negative
-				// test so it can simulate damaged boundary data that ordinary Haxe code
-				// cannot construct.
-				Reflect.setField(reference, "ownerId", "catch-chain:wrong-owner");
+			case ETry(_, cases):
+				final haxePattern = cases.filter(item -> switch (item.pat) {
+					case PRuntimeConstructor(reference, _): reference.exactSymbol == "HxRuntime.Hx_exception";
+					case _: false;
+				});
+				if (haxePattern.length != 1)
+					throw "The catch corruption fixture lost its checked Haxe exception pattern.";
+				switch (haxePattern[0].pat) {
+					case PRuntimeConstructor(reference, _):
+						// The production field is immutable. Reflect is confined to this
+						// negative test so it can simulate damaged boundary data.
+						Reflect.setField(reference, "ownerId", "catch-chain:wrong-owner");
+					case _:
+				}
 			case _:
 				throw "The catch corruption fixture lost its checked pattern.";
 		}

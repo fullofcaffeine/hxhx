@@ -51,6 +51,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeTagUseRole;
+import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopRuntimeUseContract;
+import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopTargetRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
@@ -58,6 +60,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
@@ -128,6 +131,11 @@ import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+
+private typedef OcamlLoopControlCases = {
+	final breakCase:Null<OcamlMatchCase>;
+	final continueCase:Null<OcamlMatchCase>;
+}
 
 /**
 	Converts Haxe's final typed expressions into OCaml syntax.
@@ -639,6 +647,40 @@ class OcamlBuilder {
 	}
 
 	/**
+		Builds one numeric-style bracket read whose receiver is not a standard Array.
+
+		This is a compatibility rule for values typed as `Dynamic` or another
+		non-Array type. Its separate decision keeps the strict `Array<T>` proof
+		unchanged while still checking the one private `HxArray.get` name used here.
+	**/
+	function buildDynamicBracketRead(decision:OcamlDynamicBracketReadDecision, receiver:TypedExpr, index:TypedExpr, position:Position):OcamlExpr {
+		return try {
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			};
+			final runtimePlanRevision = OcamlRuntimeUseModel.planRevision(binding);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final occurrence = decision.runtimeUseOccurrences[0];
+			final runtimeFunction = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, occurrence.planRevision,
+				occurrence.exactSymbol));
+			runtimeAuthority.reconcileExpression(runtimeFunction);
+			final receiverName = freshTmp("dynamic_bracket_receiver");
+			final indexName = freshTmp("dynamic_bracket_index");
+			OcamlExpr.ELet(receiverName, buildExpr(receiver), OcamlExpr.ELet(indexName, buildExpr(index), OcamlExpr.EApp(runtimeFunction, [
+				coerceArrayReceiver(OcamlExpr.EIdent(receiverName), receiver),
+				OcamlExpr.EIdent(indexName)
+			]), false), false);
+		} catch (error:Dynamic) {
+			arrayReadInvariant(Std.string(error), position);
+		}
+	}
+
+	/**
 		Builds one read-only Bytes call from its completed compiler decision.
 
 		The decision names the nullable-receiver checks, when needed, and the final
@@ -1118,16 +1160,28 @@ class OcamlBuilder {
 		final privateControlCases:Array<OcamlMatchCase> = switch (chain.privateControlPolicy) {
 			case PropagatePrivateControlSignals:
 				final returnVariable = freshTmp("ret");
+				final breakPattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_BREAK_PATTERN_ROLE);
+				final breakReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_BREAK_RERAISE_ROLE);
+				final continuePattern = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_PATTERN_ROLE);
+				final continueReraise = OcamlCatchRuntimeUseContract.privateControlOccurrence(runtimeUsePlan,
+					OcamlCatchRuntimeUseContract.PRIVATE_CONTINUE_RERAISE_ROLE);
 				[
 					{
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+						pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(breakPattern.id, runtimeUsePlan.planRevision,
+							breakPattern.exactSymbol), []),
 						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"))
+						expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(breakReraise.id, runtimeUsePlan.planRevision,
+							breakReraise.exactSymbol)))
 					},
 					{
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+						pat: OcamlPat.PRuntimeConstructor(runtimeAuthority.patternIdentifier(continuePattern.id, runtimeUsePlan.planRevision,
+							continuePattern.exactSymbol), []),
 						guard: null,
-						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"))
+						expr: OcamlExpr.ERaise(OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(continueReraise.id, runtimeUsePlan.planRevision,
+							continueReraise.exactSymbol)))
 					},
 					{
 						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVariable)]),
@@ -1173,8 +1227,8 @@ class OcamlBuilder {
 				for (proof in clauseProofs)
 					tagProofs.push(proof);
 			tagProofs.push(haxeFallback);
-			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit),
-				[{pat: haxeCase.pat, guard: null, expr: OcamlExpr.ESeq(tagProofs)}]));
+			final proofCases = privateControlCases.concat([{pat: haxeCase.pat, guard: null, expr: OcamlExpr.ESeq(tagProofs)}]);
+			runtimeAuthority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), proofCases));
 		} catch (error:Dynamic) {
 			return controlPlanInvariant(Std.string(error), position);
 		}
@@ -1212,6 +1266,54 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Builds the remaining pre-authority loop boundary for an unsealed fallback. */
+	function buildLegacyLoopControlCases():OcamlLoopControlCases {
+		return {
+			breakCase: {
+				pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+				guard: null,
+				expr: OcamlExpr.EConst(OcamlConst.CUnit)
+			},
+			continueCase: {
+				pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+				guard: null,
+				expr: OcamlExpr.EConst(OcamlConst.CUnit)
+			}
+		};
+	}
+
+	/** Builds checked catch patterns for the exact signals used by one sealed loop. */
+	function buildPlannedLoopControlCases(target:OcamlControlLoopTarget, decisions:Array<OcamlControlDecision>, position:Position):OcamlLoopControlCases {
+		return try {
+			final runtimeUsePlan = OcamlLoopRuntimeUseContract.forTarget(target, decisions);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final breakCase = loopPatternCase(runtimeUsePlan, authority, OcamlControlTransferKind.Break);
+			final continueCase = loopPatternCase(runtimeUsePlan, authority, OcamlControlTransferKind.Continue);
+			final references:Array<OcamlMatchCase> = [];
+			if (continueCase != null)
+				references.push(continueCase);
+			if (breakCase != null)
+				references.push(breakCase);
+			authority.reconcileExpression(OcamlExpr.ETry(OcamlExpr.EConst(OcamlConst.CUnit), references));
+			{breakCase: breakCase, continueCase: continueCase};
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	function loopPatternCase(plan:OcamlLoopTargetRuntimeUsePlan, authority:OcamlRuntimeUseAuthority, kind:OcamlControlTransferKind):Null<OcamlMatchCase> {
+		if (!Lambda.exists(plan.runtimeUseOccurrences, occurrence -> occurrence.exactSymbol == OcamlLoopRuntimeUseContract.signalSymbol(kind)))
+			return null;
+		final occurrence = OcamlLoopRuntimeUseContract.patternOccurrence(plan, kind);
+		return {
+			pat: OcamlPat.PRuntimeConstructor(authority.patternIdentifier(occurrence.id, plan.planRevision, occurrence.exactSymbol), []),
+			guard: null,
+			expr: OcamlExpr.EConst(OcamlConst.CUnit)
+		};
+	}
+
 	/** Raises one sealed break or continue after checking its lexical target. */
 	function buildPlannedLoopTransfer(decision:OcamlControlDecision, expectedKind:OcamlControlTransferKind, position:Position):OcamlExpr {
 		try {
@@ -1228,13 +1330,17 @@ class OcamlBuilder {
 			return
 				controlPlanInvariant('control decision "${decision.id}" targets loop "${decision.targetId}" while syntax is building innermost loop "$currentTargetId"',
 					position);
-		return switch (decision.mechanism) {
-			case RuntimeBreakSignal if (expectedKind == OcamlControlTransferKind.Break):
-				OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
-			case RuntimeContinueSignal if (expectedKind == OcamlControlTransferKind.Continue):
-				OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
-			case _:
-				controlPlanInvariant('control decision "${decision.id}" selected mechanism ${decision.mechanism} for $expectedKind', position);
+		return try {
+			final runtimeUsePlan = OcamlLoopRuntimeUseContract.forDecision(decision);
+			final occurrence = OcamlLoopRuntimeUseContract.signalOccurrence(runtimeUsePlan);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+			final signal = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
+			authority.reconcileExpression(signal);
+			OcamlExpr.ERaise(signal);
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
 		}
 	}
 
@@ -2953,6 +3059,9 @@ class OcamlBuilder {
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
 		final arrayReadOccurrence = OcamlArrayReadPlan.admittedOccurrence(e);
 		final plannedArrayRead = currentArrayReadPlan == null || arrayReadOccurrence == null ? null : currentArrayReadPlan.requireFor(e);
+		final dynamicBracketReadOccurrence = OcamlArrayReadPlan.admittedDynamicOccurrence(e);
+		final plannedDynamicBracketRead = currentArrayReadPlan == null
+			|| dynamicBracketReadOccurrence == null ? null : currentArrayReadPlan.requireDynamicFor(e);
 		final plannedIMapStorageAliasUse = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.storageAliasUseFor(e);
 		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
 		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
@@ -3005,6 +3114,10 @@ class OcamlBuilder {
 				buildArrayRead(plannedArrayRead, arrayReadOccurrence.receiver, arrayReadOccurrence.index, e.pos);
 			case TArray(_, _) if (arrayReadOccurrence != null):
 				arrayReadInvariant("an admitted standard Array bracket read reached syntax without its sealed decision", e.pos);
+			case TArray(_, _) if (plannedDynamicBracketRead != null && dynamicBracketReadOccurrence != null):
+				buildDynamicBracketRead(plannedDynamicBracketRead, dynamicBracketReadOccurrence.receiver, dynamicBracketReadOccurrence.index, e.pos);
+			case TArray(_, _) if (dynamicBracketReadOccurrence != null):
+				arrayReadInvariant("an admitted non-Array bracket read reached syntax without its sealed compatibility decision", e.pos);
 			case TNew(_, _, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
@@ -5039,21 +5152,19 @@ class OcamlBuilder {
 				} else {
 					currentLoopTargetIds.pop();
 				}
+				final loopCases = if (!needsControl) {
+					null;
+				} else if (plannedTarget == null) {
+					buildLegacyLoopControlCases();
+				} else {
+					buildPlannedLoopControlCases(plannedTarget, currentControlPlan.decisionsForTarget(plannedTarget.id), e.pos);
+				}
 
 				if (!normalWhile) {
 					var iterationBody = builtBody;
-					var breakCase:Null<OcamlMatchCase> = null;
-					if (needsControl) {
-						final continueCase:OcamlMatchCase = {
-							pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
-							guard: null,
-							expr: OcamlExpr.EConst(OcamlConst.CUnit)
-						};
-						breakCase = {
-							pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
-							guard: null,
-							expr: OcamlExpr.EConst(OcamlConst.CUnit)
-						};
+					final breakCase = loopCases == null ? null : loopCases.breakCase;
+					final continueCase = loopCases == null ? null : loopCases.continueCase;
+					if (continueCase != null) {
 						// Keep the try expression inside one function argument. This prevents
 						// the following condition from becoming part of the exception handler.
 						iterationBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
@@ -5073,21 +5184,10 @@ class OcamlBuilder {
 					return breakCase == null ? loop : OcamlExpr.ETry(loop, [breakCase]);
 				}
 
-				if (needsControl) {
-					final continueCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
-						guard: null,
-						expr: OcamlExpr.EConst(OcamlConst.CUnit)
-					};
-					final breakCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
-						guard: null,
-						expr: OcamlExpr.EConst(OcamlConst.CUnit)
-					};
-
-					final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
+				if (loopCases != null) {
+					final bodyWithContinue = loopCases.continueCase == null ? builtBody : OcamlExpr.ETry(builtBody, [loopCases.continueCase]);
 					final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
-					final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
+					final loopExpr = loopCases.breakCase == null ? whileExpr : OcamlExpr.ETry(whileExpr, [loopCases.breakCase]);
 					return loopExpr;
 				}
 
@@ -5140,10 +5240,7 @@ class OcamlBuilder {
 						case _ if (idxString != null):
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [arrObjExpr, OcamlExpr.EConst(OcamlConst.CString(idxString))]);
 						case _ if (!OcamlArrayReadPlan.hasStandardArrayReceiver(e)):
-							// Dynamic bracket access is outside the standard Array-read
-							// contract. Preserve its existing compatibility path until a
-							// separate typed Dynamic-access plan owns that behavior.
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [arrExpr, buildExpr(idx)]);
+							arrayReadInvariant("a non-Array bracket read reached legacy syntax without its sealed compatibility decision", e.pos);
 						case _:
 							arrayReadInvariant("a numeric bracket read reached legacy syntax without a standard Array decision", e.pos);
 					}

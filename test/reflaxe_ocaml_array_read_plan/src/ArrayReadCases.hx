@@ -29,4 +29,9 @@ class ArrayReadCases {
 		values[0]++;
 		return values[0];
 	}
+
+	public static function dynamicRead():Dynamic {
+		final values:Dynamic = [10, 20];
+		return values[1];
+	}
 }

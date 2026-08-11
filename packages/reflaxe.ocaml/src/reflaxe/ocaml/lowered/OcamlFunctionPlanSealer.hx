@@ -156,6 +156,8 @@ class OcamlFunctionPlanSealer {
 		arrayReads.requirePlanBinding(binding);
 		for (decision in arrayReads.decisions())
 			context.recordArrayReadRuntimeRequirements(decision);
+		for (decision in arrayReads.dynamicDecisions())
+			context.recordDynamicBracketReadRuntimeRequirements(decision);
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -178,6 +180,11 @@ class OcamlFunctionPlanSealer {
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		for (chain in controls.catchChains())
 			context.recordCatchChainRuntimeRequirements(chain);
+		for (target in controls.loopTargets()) {
+			final transfers = controls.decisionsForTarget(target.id);
+			if (transfers.length > 0)
+				context.recordLoopRuntimeRequirements(target, transfers);
+		}
 		for (decision in controls.decisions())
 			if (decision.kind == OcamlControlTransferKind.Return)
 				context.recordReturnRuntimeRequirement(decision);
@@ -340,6 +347,8 @@ class OcamlFunctionPlanSealer {
 					arrayReads.requirePlanBinding(nestedBinding);
 					for (decision in arrayReads.decisions())
 						context.recordArrayReadRuntimeRequirements(decision);
+					for (decision in arrayReads.dynamicDecisions())
+						context.recordDynamicBracketReadRuntimeRequirements(decision);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
@@ -389,6 +398,11 @@ class OcamlFunctionPlanSealer {
 								context.recordArrayLiteralRuntimeRequirements(decision);
 							for (chain in controls.catchChains())
 								context.recordCatchChainRuntimeRequirements(chain);
+							for (target in controls.loopTargets()) {
+								final transfers = controls.decisionsForTarget(target.id);
+								if (transfers.length > 0)
+									context.recordLoopRuntimeRequirements(target, transfers);
+							}
 							for (decision in controls.decisions())
 								if (decision.kind == OcamlControlTransferKind.Return)
 									context.recordReturnRuntimeRequirement(decision);

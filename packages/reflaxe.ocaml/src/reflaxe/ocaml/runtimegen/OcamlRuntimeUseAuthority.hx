@@ -268,13 +268,13 @@ class OcamlRuntimeUseAuthority {
 	**/
 	public static function isPlainPrivateReference(name:String):Bool {
 		return switch (name) {
-			case "HxInt.add", "HxArray.set", "HxArray.create", "HxArray.push", "HxAnon.get", "HxAnon.set", "HxRuntime.box_bool",
-				"HxRuntime.unbox_bool_or_obj", "HxIterator.hasNext", "HxIterator.next", "HxBytes.fill", "HxBytes.blit", "HxBytes.get", "HxBytes.set",
-				"HxBytes.getUInt16", "HxBytes.setUInt16", "HxBytes.getInt32", "HxBytes.setInt32", "HxBytes.getInt64", "HxBytes.setInt64", "HxBytes.getFloat",
-				"HxBytes.setFloat", "HxBytes.getDouble", "HxBytes.setDouble", "HxBytes.getData", "HxBytes.fastGet", "HxBytes.requireMultiByteInt",
-				"HxBytes.length", "HxBytes.sub", "HxBytes.compare", "HxBytes.getString", "HxBytes.toString", "HxBytes.toHex", "HxBytes.create",
-				"HxBytes.alloc", "HxBytes.ofString", "HxBytes.ofData", "HxBytes.ofHex", "HxString.hx_null_string", "HxRuntime.nullable_int_unwrap",
-				"HxRuntime.is_null", "HxRuntime.hx_throw_typed", "HxRuntime.tags_has":
+			case "HxInt.add", "HxArray.set", "HxArray.create", "HxArray.push", "HxAnon.get", "HxAnon.set", "HxRuntime.box_bool", "HxRuntime.Hx_break",
+				"HxRuntime.Hx_continue", "HxRuntime.unbox_bool_or_obj", "HxIterator.hasNext", "HxIterator.next", "HxBytes.fill", "HxBytes.blit",
+				"HxBytes.get", "HxBytes.set", "HxBytes.getUInt16", "HxBytes.setUInt16", "HxBytes.getInt32", "HxBytes.setInt32", "HxBytes.getInt64",
+				"HxBytes.setInt64", "HxBytes.getFloat", "HxBytes.setFloat", "HxBytes.getDouble", "HxBytes.setDouble", "HxBytes.getData", "HxBytes.fastGet",
+				"HxBytes.requireMultiByteInt", "HxBytes.length", "HxBytes.sub", "HxBytes.compare", "HxBytes.getString", "HxBytes.toString", "HxBytes.toHex",
+				"HxBytes.create", "HxBytes.alloc", "HxBytes.ofString", "HxBytes.ofData", "HxBytes.ofHex", "HxString.hx_null_string",
+				"HxRuntime.nullable_int_unwrap", "HxRuntime.is_null", "HxRuntime.hx_throw_typed", "HxRuntime.tags_has":
 				true;
 			case _:
 				false;

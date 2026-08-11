@@ -107,7 +107,15 @@ for (const name of ['nestedLoops', 'doWhileContinue', 'throughTry', 'voidLoop', 
 	const start = source.indexOf(`let ${name} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	const body = source.slice(start, next)
-	if (start < 0 || next < 0 || !body.includes('HxRuntime.Hx_break') || !body.includes('HxRuntime.Hx_continue')) {
+	const kinds = new Set(mainTransfers
+		.filter(control => control.functionId.includes(`|function|${name}|`))
+		.map(control => control.kind))
+	if (start < 0
+		|| next < 0
+		|| (kinds.has('break') && !body.includes('HxRuntime.Hx_break'))
+		|| (kinds.has('continue') && !body.includes('HxRuntime.Hx_continue'))
+		|| (!kinds.has('break') && body.includes('HxRuntime.Hx_break'))
+		|| (!kinds.has('continue') && body.includes('HxRuntime.Hx_continue'))) {
 		fail(`${name} did not emit mechanically matched private loop-control boundaries`)
 	}
 }

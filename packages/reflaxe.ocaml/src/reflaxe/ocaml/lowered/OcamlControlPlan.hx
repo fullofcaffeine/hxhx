@@ -734,6 +734,13 @@ class OcamlControlPlan {
 		return Lambda.exists(ordered, decision -> decision.targetKind == OcamlControlTargetKind.Loop && decision.targetId == targetId);
 	}
 
+	/** Returns detached transfer decisions owned by one sealed loop target. */
+	public function decisionsForTarget(targetId:String):Array<OcamlControlDecision> {
+		final selected = ordered.filter(decision -> decision.targetKind == OcamlControlTargetKind.Loop && decision.targetId == targetId);
+		selected.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return selected.map(copyDecision);
+	}
+
 	/** Resolves one typed loop occurrence without consulting builder nesting. */
 	public function loopTargetFor(expression:TypedExpr):Null<OcamlControlLoopTarget> {
 		final candidates = if (hasOccurrenceIndex) {

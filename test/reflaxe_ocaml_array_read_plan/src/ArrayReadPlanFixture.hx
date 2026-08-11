@@ -10,6 +10,7 @@ import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
+import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
@@ -73,6 +74,7 @@ class ArrayReadPlanFixture {
 
 		assertReadCount(fields, "assignmentTarget", 1);
 		assertReadCount(fields, "updateTarget", 1);
+		proveDynamicRead(fields);
 
 		expectThrows("duplicate-decision", () -> new OcamlArrayReadPlan([decision, decision]));
 		expectThrows("stale-plan", () -> new OcamlArrayReadPlan([decision]).requirePlanBinding({
@@ -112,6 +114,37 @@ class ArrayReadPlanFixture {
 		proveRuntimeAuthority(decision, owner);
 		Sys.println("REFLAXE_OCAML_ARRAY_READ_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	static function proveDynamicRead(fields:Map<String, ClassField>):Void {
+		final body = fieldBody(requiredField(fields, "dynamicRead"));
+		final owner = binding("dynamicRead");
+		final plan = new OcamlArrayReadPlanner(owner).plan(body);
+		final decisions = plan.dynamicDecisions();
+		final read = firstDynamicRead(body);
+		if (decisions.length != 1 || read == null || plan.requireDynamicFor(read).id != decisions[0].id)
+			Context.error("The Dynamic bracket case did not resolve one exact compatibility decision.", body.pos);
+		final decision = decisions[0];
+		final use = decision.runtimeUseOccurrences[0];
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForDynamicBracketRead(decision);
+		final authority = new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(owner), "portable", requirements, decision.runtimeUseOccurrences);
+		authority.reconcileExpression(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol)));
+		if (authority.receiptsSorted().length != 1)
+			Context.error("The Dynamic bracket decision did not consume its exact runtime occurrence.", body.pos);
+
+		expectThrows("missing-decision", () -> new OcamlArrayReadPlan([]).requireDynamicFor(read));
+		expectThrows("stale-plan", () -> new OcamlArrayReadPlan([], null, [decision]).requirePlanBinding({
+			functionId: owner.functionId,
+			programRevision: owner.programRevision,
+			bodyRevision: owner.bodyRevision + ":changed",
+			pipelineRevision: owner.pipelineRevision
+		}));
+		expectThrows("invalid-runtime-use", () -> new OcamlArrayReadPlan([], null, [
+			copyDynamicWithUse(decision, copyUse(use, "HxArray.set", use.planRevision, use.ownerId, use.order, use.profileEligibility))
+		]));
+		final plainAuthority = new OcamlRuntimeUseAuthority(OcamlRuntimeUseModel.planRevision(owner), "portable", requirements, decision.runtimeUseOccurrences);
+		expectThrows("plain private runtime reference HxArray.get",
+			() -> plainAuthority.reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get")));
 	}
 
 	static function assertReadCount(fields:Map<String, ClassField>, name:String, expected:Int):Void {
@@ -185,6 +218,28 @@ class ArrayReadPlanFixture {
 		};
 	}
 
+	static function copyDynamicWithUse(decision:OcamlDynamicBracketReadDecision, use:OcamlRuntimeUseOccurrence):OcamlDynamicBracketReadDecision {
+		final copy = OcamlArrayReadPlan.copyDynamicDecision(decision);
+		return {
+			id: copy.id,
+			source: copy.source,
+			readOrdinal: copy.readOrdinal,
+			receiverSemanticTypeId: copy.receiverSemanticTypeId,
+			indexSemanticTypeId: copy.indexSemanticTypeId,
+			resultSemanticTypeId: copy.resultSemanticTypeId,
+			evaluationOrder: copy.evaluationOrder,
+			profileEligibility: copy.profileEligibility,
+			runtimeRequirementIds: copy.runtimeRequirementIds,
+			runtimeUseOccurrences: [use],
+			proofId: copy.proofId,
+			proofClaim: copy.proofClaim,
+			functionId: copy.functionId,
+			programRevision: copy.programRevision,
+			bodyRevision: copy.bodyRevision,
+			pipelineRevision: copy.pipelineRevision
+		};
+	}
+
 	static function binding(name:String):OcamlFunctionPlanBinding {
 		return {
 			functionId: "ArrayReadCases." + name,
@@ -200,6 +255,25 @@ class ArrayReadPlanFixture {
 			if (found != null)
 				return;
 			if (OcamlArrayReadPlan.admittedOccurrence(expression) != null) {
+				found = expression;
+				return;
+			}
+			switch (expression.expr) {
+				case TFunction(_):
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+		visit(body);
+		return found;
+	}
+
+	static function firstDynamicRead(body:TypedExpr):Null<TypedExpr> {
+		var found:Null<TypedExpr> = null;
+		function visit(expression:TypedExpr):Void {
+			if (found != null)
+				return;
+			if (OcamlArrayReadPlan.admittedDynamicOccurrence(expression) != null) {
 				found = expression;
 				return;
 			}

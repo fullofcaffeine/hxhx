@@ -9,12 +9,17 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralPro
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
+import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
 import reflaxe.ocaml.lowered.OcamlCatchRuntimeUseModel.OcamlCatchRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
+import reflaxe.ocaml.lowered.OcamlLoopRuntimeUseModel.OcamlLoopRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlReturnRuntimeUseModel.OcamlReturnRuntimeUseContract;
 #end
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
@@ -369,6 +374,36 @@ class OcamlRuntimeRequirementLedger {
 			record(requirement);
 	}
 
+	/** Returns the runtime reason selected by one non-Array compatibility read. */
+	public static function requirementsForDynamicBracketRead(decision:OcamlDynamicBracketReadDecision):Array<OcamlRuntimeRequirement> {
+		OcamlDynamicBracketReadContract.requireDecision(decision);
+		return [
+			normalize({
+				id: OcamlDynamicBracketReadContract.runtimeRequirementId(decision.id),
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: OcamlDynamicBracketReadContract.RUNTIME_CAPABILITY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.receiverSemanticTypeId
+				},
+				implementationFeature: "haxe-array-v1",
+				rootModules: ["HxArray"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed compatibility read preserves a numeric-style bracket access on a non-Array value through HxArray without weakening standard Array proof."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one non-Array compatibility read. */
+	public function recordDynamicBracketRead(decision:OcamlDynamicBracketReadDecision):Void {
+		for (requirement in requirementsForDynamicBracketRead(decision))
+			record(requirement);
+	}
+
 	#if macro
 	/**
 		Returns the runtime reasons selected by one complete Haxe catch chain.
@@ -452,6 +487,65 @@ class OcamlRuntimeRequirementLedger {
 	public function recordReturnDecision(decision:OcamlControlDecision):Void {
 		for (requirement in requirementsForReturnDecision(decision))
 			record(requirement);
+	}
+
+	/** Returns the pattern requirements owned by one sealed lexical loop. */
+	public static function requirementsForLoopTarget(target:OcamlControlLoopTarget, decisions:Array<OcamlControlDecision>):Array<OcamlRuntimeRequirement> {
+		final plan = OcamlLoopRuntimeUseContract.forTarget(target, decisions);
+		return plan.runtimeRequirementIds.map(requirementId -> {
+			final isBreak = requirementId == OcamlLoopRuntimeUseContract.targetRequirementId(target, OcamlControlTransferKind.Break);
+			final kind = isBreak ? OcamlControlTransferKind.Break : OcamlControlTransferKind.Continue;
+			normalize({
+				id: requirementId,
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: target.id,
+				source: target.source,
+				semanticCapability: OcamlLoopRuntimeUseContract.capabilityId(kind),
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: target.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Void"
+				},
+				implementationFeature: isBreak ? "haxe-loop-break-boundary-v1" : "haxe-loop-continue-boundary-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: ["metal", "portable"],
+				explanation: isBreak ? "The sealed lexical loop catches its private break signal once at the exact target boundary." : "The sealed lexical loop catches its private continue signal once before evaluating the next condition."
+			});
+		});
+	}
+
+	/** Returns the signal requirement owned by one sealed break or continue. */
+	public static function requirementsForLoopDecision(decision:OcamlControlDecision):Array<OcamlRuntimeRequirement> {
+		final plan = OcamlLoopRuntimeUseContract.forDecision(decision);
+		return [
+			normalize({
+				id: plan.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: decision.runtimeCapabilityId,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Void"
+				},
+				implementationFeature: decision.kind == OcamlControlTransferKind.Break ? "haxe-loop-break-signal-v1" : "haxe-loop-continue-signal-v1",
+				rootModules: ["HxRuntime"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed source loop transfer raises its exact private signal for the already-selected lexical target."
+			})
+		];
+	}
+
+	/** Records one loop boundary and each transfer that can reach it. */
+	public function recordLoopTarget(target:OcamlControlLoopTarget, decisions:Array<OcamlControlDecision>):Void {
+		for (requirement in requirementsForLoopTarget(target, decisions))
+			record(requirement);
+		for (decision in decisions)
+			for (requirement in requirementsForLoopDecision(decision))
+				record(requirement);
 	}
 	#end
 

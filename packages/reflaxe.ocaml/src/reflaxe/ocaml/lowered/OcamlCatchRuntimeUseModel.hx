@@ -40,6 +40,10 @@ class OcamlCatchRuntimeUseContract {
 	public static inline final PATTERN_SYMBOL = "HxRuntime.Hx_exception";
 	public static inline final RETHROW_SYMBOL = "HxRuntime.hx_throw_typed";
 	public static inline final RUNTIME_TAG_SYMBOL = "HxRuntime.tags_has";
+	public static inline final PRIVATE_BREAK_PATTERN_ROLE = "private-break-pattern";
+	public static inline final PRIVATE_BREAK_RERAISE_ROLE = "private-break-reraise";
+	public static inline final PRIVATE_CONTINUE_PATTERN_ROLE = "private-continue-pattern";
+	public static inline final PRIVATE_CONTINUE_RERAISE_ROLE = "private-continue-reraise";
 
 	/** Returns the one runtime requirement shared by the catch pattern, tag tests, and rethrow. */
 	public static function requirementId(chain:OcamlCatchChainDecision):String {
@@ -64,6 +68,14 @@ class OcamlCatchRuntimeUseContract {
 		final selectedRequirementId = requirementId(chain);
 		final occurrences:Array<OcamlRuntimeUseOccurrence> = [];
 		var order = 0;
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_BREAK_PATTERN_ROLE,
+			OcamlRuntimeUseDomain.PatternConstructor, "HxRuntime.Hx_break", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_BREAK_RERAISE_ROLE,
+			OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.Hx_break", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_CONTINUE_PATTERN_ROLE,
+			OcamlRuntimeUseDomain.PatternConstructor, "HxRuntime.Hx_continue", order++));
+		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PRIVATE_CONTINUE_RERAISE_ROLE,
+			OcamlRuntimeUseDomain.ExpressionIdentifier, "HxRuntime.Hx_continue", order++));
 		occurrences.push(occurrence(chain, chain.source, planRevision, selectedRequirementId, PATTERN_ROLE, OcamlRuntimeUseDomain.PatternConstructor,
 			PATTERN_SYMBOL, order++));
 		for (clause in chain.clauses) {
@@ -107,6 +119,11 @@ class OcamlCatchRuntimeUseContract {
 	/** Returns the checked occurrence that prints the unmatched-signal rethrow. */
 	public static function rethrowOccurrence(plan:OcamlCatchRuntimeUsePlan):OcamlRuntimeUseOccurrence {
 		return occurrenceForRole(plan, RETHROW_ROLE);
+	}
+
+	/** Returns one checked private-control pattern or rethrow selected by the catch chain. */
+	public static function privateControlOccurrence(plan:OcamlCatchRuntimeUsePlan, role:String):OcamlRuntimeUseOccurrence {
+		return occurrenceForRole(plan, role);
 	}
 
 	/** Returns the one checked tag test selected for a clause role. */
