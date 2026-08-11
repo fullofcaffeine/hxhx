@@ -38,6 +38,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplici
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
@@ -152,6 +154,37 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the direct HxMap dependency selected by one standard Map carrier. */
 	public function recordStandardMapCarrier(decision:OcamlStandardMapCarrierDecision):Void {
 		for (requirement in requirementsForStandardMapCarrier(decision))
+			record(requirement);
+	}
+
+	/** Returns the direct runtime dependency for one standard Array or Bytes type. */
+	public static function requirementsForStandardContainerCarrier(decision:OcamlStandardContainerCarrierDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStandardContainerCarrierContract.requireDecision(decision);
+		final runtimeModule = OcamlStandardContainerCarrierContract.runtimeModuleForKind(decision.kind);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+				sourceId: decision.sourceDeclarationId,
+				source: decision.source,
+				semanticCapability: OcamlStandardContainerCarrierContract.runtimeCapabilityForKind(decision.kind),
+				cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.semanticTypeId
+				},
+				implementationFeature: OcamlStandardContainerCarrierContract.implementationFeatureForKind(decision.kind),
+				rootModules: [runtimeModule],
+				profileEligibility: decision.profileEligibility,
+				explanation: 'The sealed standard Haxe ${decision.sourceDeclarationId} type uses $runtimeModule as its concrete mutable OCaml carrier.'
+			})
+		];
+	}
+
+	/** Records the direct runtime dependency selected by one Array or Bytes type. */
+	public function recordStandardContainerCarrier(decision:OcamlStandardContainerCarrierDecision):Void {
+		for (requirement in requirementsForStandardContainerCarrier(decision))
 			record(requirement);
 	}
 

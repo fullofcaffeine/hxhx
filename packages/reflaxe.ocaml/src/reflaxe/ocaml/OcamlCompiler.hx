@@ -103,6 +103,8 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierKind;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierKind;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
@@ -169,6 +171,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final compilerExpressionOrdinals:ObjectMap<TypedExpr, Int> = new ObjectMap();
 	var nextCompilerExpressionOrdinal:Int = 0;
 	var nextStandardMapCarrierOrdinal:Int = 0;
+	var nextStandardContainerCarrierOrdinal:Int = 0;
 
 	#if macro
 	/**
@@ -429,6 +432,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
 		nextStandardMapCarrierOrdinal = 0;
+		nextStandardContainerCarrierOrdinal = 0;
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
 		staticStoragePlan.beginProgram(revision.id);
@@ -1069,7 +1073,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		helper comes from its lowering plan and is counted here before rendering.
 	**/
 	function printFinalModule(items:Array<OcamlModuleItem>, outputUnitId:String):String {
-		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId, ctx.activateStandardMapCarrierRuntimeUse);
+		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId, ctx.activateStagedTypeRuntimeUse);
 		return printer.printModule(items);
 	}
 
@@ -2460,8 +2464,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// the constructor body used in `create`, but takes `self` explicitly.
 			if (isDispatch) {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body",
-					ctx.activateStandardMapCarrierRuntimeUse);
+				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body", ctx.activateStagedTypeRuntimeUse);
 				final ctorBodyForCtor = ensureParamUsage(copiedCtorBody, [selfPat].concat(createParams));
 				lets.push({
 					name: ctorName,
@@ -4295,7 +4298,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
 		final e = buildStandaloneExpression(builder, compilerExpressionOwner(expr), expr);
-		ctx.finalRuntimeUses.observeExpression(e, "expression:" + compilerExpressionOwner(expr), ctx.activateStandardMapCarrierRuntimeUse);
+		ctx.finalRuntimeUses.observeExpression(e, "expression:" + compilerExpressionOwner(expr), ctx.activateStagedTypeRuntimeUse);
 		return printer.printExpr(e);
 	}
 
@@ -4507,10 +4510,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 									if (c.pack != null && c.pack.length == 0 && c.name == "String") {
 										OcamlTypeExpr.TIdent("string");
 									} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
-										final elem = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
-										OcamlTypeExpr.TApp("HxArray.t", [elem]);
+										requireStandardContainerCarrierType(TypeTools.follow(params[0]), "Null<Array<T>>");
 									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
-										OcamlTypeExpr.TIdent("HxBytes.t");
+										requireStandardContainerCarrierType(TypeTools.follow(params[0]), "Null<haxe.io.Bytes>");
 									} else if (c.isExtern) {
 										OcamlTypeExpr.TIdent("Obj.t");
 									} else {
@@ -4551,9 +4553,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				if (c.pack != null && c.pack.length == 0 && c.name == "String") {
 					OcamlTypeExpr.TIdent("string");
 				} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
-					// Haxe Array<T> -> 't HxArray.t (runtime is permissive; type is best-effort).
-					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
-					OcamlTypeExpr.TApp("HxArray.t", [elem]);
+					requireStandardContainerCarrierType(t, "Array<T>");
 				} else if (OcamlStandardIMapCallContract.isIMapClass(c) && params.length == 2) {
 					// An `IMap` value carries a checked dispatch record, not key-selected
 					// standard Map storage. The record itself is boxed so standard maps and
@@ -4561,7 +4561,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// same runtime object layout.
 					OcamlTypeExpr.TIdent("Obj.t");
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
-					OcamlTypeExpr.TIdent("HxBytes.t");
+					requireStandardContainerCarrierType(t, "haxe.io.Bytes");
 				} else if (c.pack != null && c.pack.length == 1 && c.pack[0] == "ocaml" && c.name == "Ref") {
 					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
 					OcamlTypeExpr.TApp("ref", [elem]);
@@ -4661,6 +4661,50 @@ class OcamlCompiler extends DirectToStringCompiler {
 					[keyType, valueType];
 		};
 		return OcamlTypeExpr.TRuntimeApp(reference, parameters);
+	}
+
+	/**
+		Builds one checked private Array or Bytes carrier from a typed Haxe type.
+
+		The type mapper can create candidates that never reach generated output.
+		This method stages the checked decision. The final output observer records the
+		runtime dependency only if the hidden reference is actually printed.
+	**/
+	function standardContainerCarrierType(type:Type):Null<OcamlTypeExpr> {
+		final revision = programRevision;
+		if (revision == null)
+			return null;
+		final moduleOwner = ctx.currentModuleId == null ? "compiler-root" : ctx.currentModuleId;
+		final typeOwner = ctx.currentTypeFullName == null ? "anonymous-type" : ctx.currentTypeFullName;
+		final ownerId = 'standard-container-carrier:$moduleOwner:$typeOwner:${nextStandardContainerCarrierOrdinal++}';
+		final materialization = OcamlStandardContainerCarrierContract.seal(type, ownerId, revision.id, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+		if (materialization == null) {
+			nextStandardContainerCarrierOrdinal--;
+			return null;
+		}
+		OcamlStandardContainerCarrierContract.requireMaterialization(materialization);
+		final decision = materialization.decision;
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			OcamlRuntimeRequirementLedger.requirementsForStandardContainerCarrier(decision), decision.runtimeUseOccurrences);
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final reference = authority.typeIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
+		authority.reconcileType(OcamlTypeExpr.TRuntimeIdent(reference));
+		ctx.stageStandardContainerCarrierRuntimeUse(decision);
+		return switch (decision.kind) {
+			case ArrayCarrier:
+				final elementType = materialization.elementType == null ? OcamlTypeExpr.TIdent("Obj.t") : ocamlTypeExprFromHaxeType(materialization.elementType);
+				OcamlTypeExpr.TRuntimeApp(reference, [elementType]);
+			case BytesCarrier:
+				OcamlTypeExpr.TRuntimeIdent(reference);
+		};
+	}
+
+	/** Fails if a known standard container cannot obtain request-bound authority. */
+	function requireStandardContainerCarrierType(type:Type, sourceType:String):OcamlTypeExpr {
+		final carrier = standardContainerCarrierType(type);
+		if (carrier == null)
+			throw 'reflaxe.ocaml [ocaml-standard-container-carrier:missing-authority]: typed $sourceType requires an active checked private runtime carrier';
+		return carrier;
 	}
 
 	static inline function fullNameOfClassType(cls:ClassType):String {

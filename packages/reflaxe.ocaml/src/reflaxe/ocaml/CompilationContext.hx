@@ -31,6 +31,8 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapStorageAliasDecision;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierContract;
+import reflaxe.ocaml.lowered.OcamlStandardContainerCarrierModel.OcamlStandardContainerCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -475,6 +477,12 @@ class CompilationContext {
 	/** Hidden Map use identities that already activated their final-output plan. */
 	final activeStandardMapCarrierUseIds:Map<String, Bool> = [];
 
+	/** Checked Array and Bytes type choices waiting for final structured output. */
+	final pendingStandardContainerCarrierByUseId:Map<String, OcamlStandardContainerCarrierDecision> = [];
+
+	/** Hidden Array and Bytes use identities already counted in final output. */
+	final activeStandardContainerCarrierUseIds:Map<String, Bool> = [];
+
 	/** Target profile bound to the current runtime-requirement request. */
 	var activeRuntimeRequirementProfile:Null<String>;
 
@@ -526,6 +534,8 @@ class CompilationContext {
 		finalRuntimeUses.beginProgram(programRevision, activeProfile);
 		pendingStandardMapCarrierByUseId.clear();
 		activeStandardMapCarrierUseIds.clear();
+		pendingStandardContainerCarrierByUseId.clear();
+		activeStandardContainerCarrierUseIds.clear();
 		activeRuntimeRequirementProfile = activeProfile;
 		activeRuntimeRequirementProgramRevision = programRevision;
 	}
@@ -586,6 +596,69 @@ class CompilationContext {
 		final checkedReference = authority.typeIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
 		authority.reconcileType(OcamlTypeExpr.TRuntimeIdent(checkedReference));
 		activeStandardMapCarrierUseIds.set(reference.id, true);
+	}
+
+	/**
+		Stages one checked Array or Bytes carrier until final output uses its ID.
+
+		The type mapper also builds temporary comparison types. An unused temporary
+		type must not make its runtime module part of the published source bundle.
+	**/
+	public function stageStandardContainerCarrierRuntimeUse(decision:OcamlStandardContainerCarrierDecision):Void {
+		final staged = OcamlStandardContainerCarrierContract.copyDecision(decision);
+		if (staged.programRevision != activeRuntimeRequirementProgramRevision)
+			throw 'Standard container carrier ${staged.id} uses program revision ${staged.programRevision}; expected $activeRuntimeRequirementProgramRevision.';
+		final occurrence = staged.runtimeUseOccurrences[0];
+		final existing = pendingStandardContainerCarrierByUseId.get(occurrence.id);
+		if (existing != null) {
+			if (existing.revision != staged.revision || haxe.Json.stringify(existing) != haxe.Json.stringify(staged))
+				throw 'Standard container carrier runtime use ${occurrence.id} was staged with conflicting facts.';
+			return;
+		}
+		pendingStandardContainerCarrierByUseId.set(occurrence.id, staged);
+	}
+
+	/**
+		Activates a staged Array or Bytes carrier found in final structured output.
+
+		Activation records the direct runtime dependency and one expected final use.
+		A plain generated type name has no hidden ID and cannot enter this path.
+	**/
+	public function activateStandardContainerCarrierRuntimeUse(reference:OcamlRuntimeReference):Void {
+		final decision = pendingStandardContainerCarrierByUseId.get(reference.id);
+		if (decision == null)
+			return;
+		OcamlStandardContainerCarrierContract.requireDecision(decision);
+		if (decision.programRevision != activeRuntimeRequirementProgramRevision)
+			throw 'Standard container carrier ${decision.id} no longer matches active program revision $activeRuntimeRequirementProgramRevision.';
+		final occurrence = decision.runtimeUseOccurrences[0];
+		if (reference.planRevision != occurrence.planRevision
+			|| reference.ownerId != occurrence.ownerId
+			|| reference.domain != occurrence.domain
+			|| reference.exactSymbol != occurrence.exactSymbol)
+			throw 'Standard container carrier runtime use ${reference.id} no longer matches its staged facts.';
+		if (activeStandardContainerCarrierUseIds.exists(reference.id))
+			return;
+		final activeProfile = activeRuntimeRequirementProfile;
+		if (activeProfile == null)
+			throw "Standard container carrier runtime activation requires an active compiler request.";
+		runtimeRequirements.recordStandardContainerCarrier(decision);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile,
+			runtimeRequirements.requirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, finalRuntimeUses);
+		final checkedReference = authority.typeIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
+		authority.reconcileType(OcamlTypeExpr.TRuntimeIdent(checkedReference));
+		activeStandardContainerCarrierUseIds.set(reference.id, true);
+	}
+
+	/**
+		Checks every staged private container type against one final output reference.
+
+		Map, Array, and Bytes keep separate typed decision models. This small dispatcher
+		lets the final-output observer use one callback without merging their semantics.
+	**/
+	public function activateStagedTypeRuntimeUse(reference:OcamlRuntimeReference):Void {
+		activateStandardMapCarrierRuntimeUse(reference);
+		activateStandardContainerCarrierRuntimeUse(reference);
 	}
 
 	#if macro

@@ -1260,7 +1260,7 @@ class OcamlBuilder {
 		final nativeHandler = ctx.finalRuntimeUses.copyExpressionForOutput(buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
 			[OcamlExpr.EIdent(nativeExceptionVariable)]), nativeTags, nativeFallback, true),
 			"target-native-catch-channel:"
-			+ chain.id, ctx.activateStandardMapCarrierRuntimeUse);
+			+ chain.id, ctx.activateStagedTypeRuntimeUse);
 		final nativeCase:OcamlMatchCase = {
 			pat: OcamlPat.PVar(nativeExceptionVariable),
 			guard: null,
