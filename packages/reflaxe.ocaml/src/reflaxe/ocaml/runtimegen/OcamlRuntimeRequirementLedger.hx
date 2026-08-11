@@ -13,6 +13,8 @@ import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorContract;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -79,6 +81,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_MAP = "haxe-map";
 	public static inline final HAXE_ITERATOR = "haxe-iterator";
 	public static inline final HAXE_DYNAMIC_EQUALITY = "haxe-dynamic-equality";
+	public static inline final HAXE_DYNAMIC_STRING = "haxe-dynamic-string";
 	public static inline final HAXE_ARRAY = "haxe-array";
 	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
 	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
@@ -369,6 +372,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one Dynamic equality decision. */
 	public function recordDynamicEquality(decision:OcamlDynamicEqualityDecision):Void {
 		for (requirement in requirementsForDynamicEquality(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact HxDynamic reason for one sealed standard string conversion. */
+	public static function requirementsForDynamicString(decision:OcamlDynamicStringDecision):Array<OcamlRuntimeRequirement> {
+		OcamlDynamicStringPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_DYNAMIC_STRING,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.semanticTypeId
+				},
+				implementationFeature: "haxe-dynamic-string-v1",
+				rootModules: ["HxDynamic"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed expression needs Haxe standard string behavior and has no selected static conversion. The checked HxDynamic.toStdString call preserves null, primitive, registered class, enum, and fallback object formatting."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one Dynamic string decision. */
+	public function recordDynamicString(decision:OcamlDynamicStringDecision):Void {
+		for (requirement in requirementsForDynamicString(decision))
 			record(requirement);
 	}
 

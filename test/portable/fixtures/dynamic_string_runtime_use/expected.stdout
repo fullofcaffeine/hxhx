@@ -1,0 +1,10 @@
+standalone=true
+std=true
+concat=true
+field=42
+plain=PlainValue
+named=named:2
+generic=3
+assigned=starttrue
+nested=true
+catch=true

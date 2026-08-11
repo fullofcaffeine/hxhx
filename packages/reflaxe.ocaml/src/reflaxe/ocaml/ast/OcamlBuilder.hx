@@ -66,6 +66,9 @@ import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityKind;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringModel;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringStrategy;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
@@ -183,6 +186,7 @@ class OcamlBuilder {
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
 	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
+	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -1250,9 +1254,13 @@ class OcamlBuilder {
 					position);
 		};
 		final nativeTags = OcamlExpr.EList(chain.targetNativeRuntimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
+		// One catch body is emitted for Haxe-wrapped exceptions and again for native
+		// OCaml exceptions. The chain ID keeps nested copies distinct, so each emitted
+		// private runtime name has one permission and one final output location.
 		final nativeHandler = ctx.finalRuntimeUses.copyExpressionForOutput(buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
 			[OcamlExpr.EIdent(nativeExceptionVariable)]), nativeTags, nativeFallback, true),
-			"target-native-catch-channel");
+			"target-native-catch-channel:"
+			+ chain.id);
 		final nativeCase:OcamlMatchCase = {
 			pat: OcamlPat.PVar(nativeExceptionVariable),
 			guard: null,
@@ -2570,6 +2578,42 @@ class OcamlBuilder {
 			authority.reconcileExpression(expression);
 		} catch (error:Dynamic) {
 			return dynamicEqualityInvariant(Std.string(error), source.pos);
+		}
+		return expression;
+	}
+
+	function dynamicStringInvariant(message:String, position:Position):OcamlExpr {
+		final diagnostic = "reflaxe.ocaml [ocaml-dynamic-string:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/** Returns the one runtime function authorized for this typed string conversion. */
+	function dynamicStringFunction(source:TypedExpr, expectedStrategy:OcamlDynamicStringStrategy):OcamlExpr {
+		final plan = currentDynamicStringPlan;
+		if (plan == null)
+			return dynamicStringInvariant("Dynamic string syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return dynamicStringInvariant(Std.string(error), source.pos);
+		}
+		if (decision.strategy != expectedStrategy)
+			return dynamicStringInvariant('decision "${decision.id}" has strategy ${decision.strategy}, not $expectedStrategy', source.pos);
+		final semanticTypeId = TypeTools.toString(source.t);
+		if (decision.semanticTypeId != semanticTypeId)
+			return dynamicStringInvariant('decision "${decision.id}" expects ${decision.semanticTypeId}, not $semanticTypeId', source.pos);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final use = decision.runtimeUseOccurrences[0];
+		final expression = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
+		try {
+			authority.reconcileExpression(expression);
+		} catch (error:Dynamic) {
+			return dynamicStringInvariant(Std.string(error), source.pos);
 		}
 		return expression;
 	}
@@ -5559,21 +5603,14 @@ class OcamlBuilder {
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
 	function buildStdString(inner:TypedExpr):OcamlExpr {
 		final e = unwrap(inner);
-		inline function dynamicToStdString():OcamlExpr {
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
-		}
-		if (OcamlRepresentationRegistry.isExactNullDynamic(e.t))
-			return dynamicToStdString();
-		// Best-effort `Std.string` for `Dynamic` / structural values carried as `Obj.t`.
-		// Avoid applying this to typedef-backed anonymous structures that we represent as real OCaml records.
-		switch (followNoAbstracts(e.t)) {
-			case TDynamic(_):
-				return dynamicToStdString();
-			case TAbstract(_, _) if (isStdAnyAbstract(e.t)):
-				return dynamicToStdString();
-			case TAnonymous(_) if (shouldAnonUseHxAnon(e.t)):
-				return dynamicToStdString();
-			case _:
+		final dynamicStrategy = OcamlDynamicStringModel.select(inner);
+		if (dynamicStrategy != null) {
+			final built = buildExpr(inner);
+			final carrier = switch (dynamicStrategy) {
+				case DirectCarrier: built;
+				case BoxWithObjRepr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+			};
+			return OcamlExpr.EApp(dynamicStringFunction(inner, dynamicStrategy), [carrier]);
 		}
 
 		switch (e.expr) {
@@ -5646,56 +5683,11 @@ class OcamlBuilder {
 							"toString");
 						OcamlExpr.EApp(callFn, [buildExpr(inner), OcamlExpr.EConst(OcamlConst.CUnit)]);
 					} else {
-						// Still evaluate the value (important under `-warn-error` where unused
-						// parameters become hard errors in the OCaml build).
-						final built = buildExpr(inner);
-						final mappedType = typeExprFromHaxeType(e.t);
-						final asObj:OcamlExpr = switch (mappedType) {
-							case TIdent(name):
-								name == "Obj.t" ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-							case TApp(name, params):
-								(name == "Obj" && params.length == 1 && switch (params[0]) {
-									case TIdent(paramName):
-										paramName == "t";
-									case _:
-										false;
-								}) ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-							case _:
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-						};
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [asObj]);
+						dynamicStringInvariant("a nominal value without toString reached syntax without its selected Dynamic strategy", inner.pos);
 					}
 				}
 			case _:
-				// Fallback: treat the value as `Dynamic` and stringify best-effort.
-				//
-				// This is important for generic code in the upstream stdlib (e.g. `StringBuf.add<T>(x:T)`),
-				// which relies on string concatenation behavior even when `T` is not statically known.
-				//
-				// Note: this is not perfect for OCaml immediates (bool vs int), but it preserves
-				// the key invariants: the value is used (avoids unused-var under -warn-error),
-				// and the output is stable enough for debugging and early bootstrap workloads.
-				final built = buildExpr(inner);
-				final mappedType = typeExprFromHaxeType(e.t);
-				final isObjMappedType = switch (mappedType) {
-					case TIdent(name):
-						name == "Obj.t";
-					case TApp(name, params): name == "Obj" && params.length == 1 && switch (params[0]) {
-							case TIdent(paramName):
-								paramName == "t";
-							case _:
-								false;
-						};
-					case _:
-						false;
-				};
-				final asObj:OcamlExpr = (nullablePrimitiveKind(e.t) != null) ? built : switch (unwrapNullType(e.t)) {
-					case TDynamic(_), TAnonymous(_):
-						built;
-					case _:
-						isObjMappedType ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-				};
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [asObj]);
+				dynamicStringInvariant("a value without a static string conversion reached syntax without its selected Dynamic strategy", inner.pos);
 		}
 	}
 
@@ -8042,6 +8034,7 @@ class OcamlBuilder {
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
+		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -8058,6 +8051,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
+		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -8072,6 +8066,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
+		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8097,6 +8092,7 @@ class OcamlBuilder {
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
+		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentLocalStoragePlan = storagePlan;
@@ -8113,6 +8109,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = validatedPlan.arrayReads;
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
+		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
@@ -8127,6 +8124,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
+		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		return result;
@@ -8343,6 +8341,7 @@ class OcamlBuilder {
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
+		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
@@ -8369,6 +8368,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = functionPlan.arrayReads;
 		currentArrayIteratorPlan = functionPlan.arrayIterators;
 		currentDynamicEqualityPlan = functionPlan.dynamicEquality;
+		currentDynamicStringPlan = functionPlan.dynamicString;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
@@ -8545,6 +8545,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
+		currentDynamicStringPlan = previousDynamicStringPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
@@ -8609,6 +8610,7 @@ class OcamlBuilder {
 		final previousArrayReadPlan = currentArrayReadPlan;
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
+		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
@@ -8621,6 +8623,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = nestedDisposition == null ? null : nestedDisposition.arrayReads;
 		currentArrayIteratorPlan = nestedDisposition == null ? null : nestedDisposition.arrayIterators;
 		currentDynamicEqualityPlan = nestedDisposition == null ? null : nestedDisposition.dynamicEquality;
+		currentDynamicStringPlan = nestedDisposition == null ? null : nestedDisposition.dynamicString;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8702,6 +8705,7 @@ class OcamlBuilder {
 		currentArrayReadPlan = previousArrayReadPlan;
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
+		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;

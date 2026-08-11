@@ -20,6 +20,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralPro
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityDecision;
+import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
@@ -588,6 +589,11 @@ class CompilationContext {
 	/** Records the private Haxe equality helper selected for one typed occurrence. */
 	public function recordDynamicEqualityRuntimeRequirement(decision:OcamlDynamicEqualityDecision):Void {
 		runtimeRequirements.recordDynamicEquality(decision);
+	}
+
+	/** Records the private Haxe string helper selected for one typed occurrence. */
+	public function recordDynamicStringRuntimeRequirement(decision:OcamlDynamicStringDecision):Void {
+		runtimeRequirements.recordDynamicString(decision);
 	}
 
 	/** Records the exact HxArray dependency owned by one non-Array bracket read. */
