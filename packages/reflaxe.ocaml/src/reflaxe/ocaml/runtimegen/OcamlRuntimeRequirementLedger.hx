@@ -28,6 +28,8 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityDecision;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -80,6 +82,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final STRING_FROM_CHAR_CODE = "haxe-string-from-char-code";
 	public static inline final STRING_EQUALITY = "haxe-string-equality";
+	public static inline final STRING_METHOD = "haxe-string-method";
 	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -673,6 +676,40 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helper selected by one String equality expression. */
 	public function recordStringEquality(decision:OcamlStringEqualityDecision):Void {
 		for (requirement in requirementsForStringEquality(decision))
+			record(requirement);
+	}
+
+	/** Returns the direct runtime reasons selected by one standard String method. */
+	public static function requirementsForStringMethod(decision:OcamlStringMethodDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStringMethodPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: STRING_METHOD,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.receiverSemanticTypeId
+					+ "."
+					+ (decision.operation : String)
+					+ "("
+					+ decision.argumentSemanticTypeIds.join(",")
+					+ ") -> "
+					+ decision.resultSemanticTypeId},
+				implementationFeature: "haxe-string-method-v1",
+				rootModules: OcamlStringMethodPlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax."
+			})
+		];
+	}
+
+	/** Records the private helpers selected by one direct standard String call. */
+	public function recordStringMethod(decision:OcamlStringMethodDecision):Void {
+		for (requirement in requirementsForStringMethod(decision))
 			record(requirement);
 	}
 

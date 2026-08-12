@@ -144,6 +144,12 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityKind;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOperation;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOptionalCarrier;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOptionalDefault;
+import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -205,6 +211,7 @@ class OcamlBuilder {
 	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
+	var currentStringMethodPlan:Null<OcamlStringMethodPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -3524,6 +3531,9 @@ class OcamlBuilder {
 		};
 		final plannedStringFromCharCode = currentStringFromCharCodePlan == null
 			|| !stringFromCharCodeCandidate ? null : currentStringFromCharCodePlan.requireFor(e);
+		final stringMethodCandidate = OcamlStringMethodPlanner.isDirectStringMethodCall(e);
+		final plannedStringMethod = currentStringMethodPlan == null
+			|| !stringMethodCandidate ? null : currentStringMethodPlan.requireFor(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TCall(_, _) if (plannedStringFromCharCode != null):
 				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
@@ -3531,6 +3541,10 @@ class OcamlBuilder {
 				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
 			case _ if (stringFromCharCodeCandidate):
 				callPlanInvariant("String.fromCharCode reached target syntax without its sealed call or function-value plan", e.pos);
+			case TCall(callee, arguments) if (plannedStringMethod != null):
+				buildPlannedStringMethod(e, callee, arguments, plannedStringMethod);
+			case TCall(_, _) if (stringMethodCandidate):
+				callPlanInvariant("a direct standard String method reached target syntax without its sealed method plan", e.pos);
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
 				buildAnonymousLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), e.pos);
 			case _ if (anonymousLiteralCandidate):
@@ -4798,97 +4812,14 @@ class OcamlBuilder {
 															OcamlExpr.EConst(OcamlConst.CUnit);
 													}
 												} else if (isStdStringClass(cls)) {
-													final self = buildExpr(objExpr);
-													switch (cf.name) {
-														case "toUpperCase":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toUpperCase"),
-																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "toLowerCase":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toLowerCase"),
-																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "charAt":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "charAt"),
-																[self, buildExpr(args[0])]);
-														case "charCodeAt":
-															final raw = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "charCodeAt"),
-																[self, buildExpr(args[0])]);
-															// Haxe's `String.charCodeAt` is `Null<Int>` but it is frequently used in
-															// non-nullable `Int` contexts (via implicit conversions). Our runtime
-															// always returns `Obj.t` (either `hx_null` or `Obj.repr int`), so unwrap
-															// when the typed AST expects an `Int`.
-															isIntType(e.t) ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-																"nullable_int_unwrap"), [raw]) : raw;
-														case "indexOf":
-															final startExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		OcamlExpr.EConst(OcamlConst.CInt(0));
-																	case _:
-																		coerceNullableIntToInt(args[1]);
-																}
-															} else {
-																OcamlExpr.EConst(OcamlConst.CInt(0));
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "indexOf"),
-																[self, buildExpr(args[0]), startExpr]);
-														case "lastIndexOf":
-															final defaultStart = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"),
-																[self]);
-															final startExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		defaultStart;
-																	case _:
-																		coerceNullableIntToInt(args[1]);
-																}
-															} else {
-																defaultStart;
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "lastIndexOf"),
-																[self, buildExpr(args[0]), startExpr]);
-														case "split":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "split"), [self, buildExpr(args[0])]);
-														case "substr":
-															final lenExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		OcamlExpr.EConst(OcamlConst.CInt(-1));
-																	case _:
-																		coerceNullableIntToInt(args[1]);
-																}
-															} else {
-																OcamlExpr.EConst(OcamlConst.CInt(-1));
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "substr"),
-																[self, buildExpr(args[0]), lenExpr]);
-														case "substring":
-															final defaultEnd = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [self]);
-															final endExpr = if (args.length > 1) {
-																final unwrapped = unwrap(args[1]);
-																switch (unwrapped.expr) {
-																	case TConst(TNull):
-																		defaultEnd;
-																	case _:
-																		coerceNullableIntToInt(args[1]);
-																}
-															} else {
-																defaultEnd;
-															}
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "substring"),
-																[self, buildExpr(args[0]), endExpr]);
-														case "toString":
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toString"),
-																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case _:
-															#if macro
-															guardrailError("reflaxe.ocaml (M6): unsupported String method '" + cf.name
-																+ "'. (bd: haxe.ocaml-28t.7.4)",
-																e.pos);
-															#end
-															OcamlExpr.EConst(OcamlConst.CUnit);
+													if (OcamlStringMethodPlanner.operationFor(cf.name) != null) {
+														callPlanInvariant("a direct standard String method bypassed its sealed method plan", e.pos);
+													} else {
+														#if macro
+														guardrailError("reflaxe.ocaml (M6): unsupported String method '" + cf.name
+															+ "'. (bd: haxe.ocaml-28t.7.4)", e.pos);
+														#end
+														OcamlExpr.EConst(OcamlConst.CUnit);
 													}
 												} else if (isStdBytesClass(cls)) {
 													switch (cf.name) {
@@ -7597,6 +7528,141 @@ class OcamlBuilder {
 		return OcamlExpr.EApp(runtimeIdentifiers[0], [carriedValue]);
 	}
 
+	/**
+			Builds one direct String call from its checked method plan.
+			The method plan is the record created from the final typed Haxe call before
+				OCaml syntax generation starts. It fixes the method, optional-index default,
+				private runtime names, and receiver-first evaluation order. This method binds
+				the receiver and computed arguments once, then converts that record to OCaml.
+		**/
+	function buildPlannedStringMethod(expression:TypedExpr, callee:TypedExpr, arguments:Array<TypedExpr>, decision:OcamlStringMethodDecision):OcamlExpr {
+		try {
+			OcamlStringMethodPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+
+		final receiver:Null<TypedExpr> = switch (callee.expr) {
+			case TField(value, FInstance(classRef, _, fieldRef)) if (isStdStringClass(classRef.get()) && fieldRef.get().kind.match(FMethod(_))):
+				final operation = OcamlStringMethodPlanner.operationFor(fieldRef.get().name);
+				if (operation != decision.operation)
+					return callPlanInvariant('String method decision "${decision.id}" belongs to another method', expression.pos);
+				value;
+			case _:
+				return callPlanInvariant('String method decision "${decision.id}" no longer owns a direct standard String call', expression.pos);
+		};
+		if (receiver == null
+			|| decision.receiverSemanticTypeId != TypeTools.toString(receiver.t)
+			|| decision.argumentSemanticTypeIds.join("\u001e") != arguments.map(argument -> TypeTools.toString(argument.t)).join("\u001e")
+			|| decision.resultSemanticTypeId != TypeTools.toString(expression.t))
+			return callPlanInvariant('String method decision "${decision.id}" belongs to different receiver, argument, or result types', expression.pos);
+
+		final optionalCarrierMatches = switch (decision.optionalCarrier) {
+			case NotApplicable:
+				decision.optionalDefault == OcamlStringMethodOptionalDefault.NotApplicable;
+			case Omitted:
+				arguments.length == stringMethodMaximumArguments(decision.operation) - 1;
+			case ExplicitNull: arguments.length == stringMethodMaximumArguments(decision.operation) && switch (unwrap(arguments[arguments.length - 1]).expr) {
+					case TConst(TNull): true;
+					case _: false;
+				};
+			case ExactInt: arguments.length == stringMethodMaximumArguments(decision.operation) && OcamlRepresentationRegistry.isExactInt(arguments[arguments.length
+					- 1].t);
+			case NullableInt: arguments.length == stringMethodMaximumArguments(decision.operation) && OcamlRepresentationRegistry.isExactNullInt(arguments[arguments.length
+					- 1].t);
+		};
+		if (!optionalCarrierMatches)
+			return callPlanInvariant('String method decision "${decision.id}" belongs to another optional-index carrier', expression.pos);
+
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifiers:Map<String, OcamlExpr> = [];
+		for (occurrence in decision.runtimeUseOccurrences)
+			runtimeIdentifiers.set(occurrence.exactSymbol,
+				OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol)));
+		function requiredRuntimeIdentifier(symbol:String):OcamlExpr {
+			final value = runtimeIdentifiers.get(symbol);
+			return value == null ? callPlanInvariant('String method decision "${decision.id}" did not authorize $symbol', expression.pos) : value;
+		}
+
+		final receiverName = freshTmp("string_receiver");
+		final receiverValue = OcamlExpr.EIdent(receiverName);
+		final argumentNames:Array<String> = [];
+		final evaluatedArguments:Array<{name:String, value:OcamlExpr}> = [];
+		for (index in 0...arguments.length) {
+			if (decision.optionalCarrier == OcamlStringMethodOptionalCarrier.ExplicitNull && index == arguments.length - 1)
+				continue;
+			final name = freshTmp('string_argument_$index');
+			argumentNames.push(name);
+			evaluatedArguments.push({name: name, value: buildExpr(arguments[index])});
+		}
+
+		final methodSymbol = "HxString." + (decision.operation : String);
+		final methodArguments:Array<OcamlExpr> = [receiverValue];
+		switch (decision.operation) {
+			case ToUpperCase, ToLowerCase, ToString:
+				methodArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
+			case CharAt, CharCodeAt, Split:
+				methodArguments.push(OcamlExpr.EIdent(argumentNames[0]));
+			case IndexOf, LastIndexOf, Substr, Substring:
+				methodArguments.push(OcamlExpr.EIdent(argumentNames[0]));
+				methodArguments.push(buildStringMethodOptionalIndex(decision, receiverValue, argumentNames, requiredRuntimeIdentifier, expression.pos));
+		}
+		final methodCall = OcamlExpr.EApp(requiredRuntimeIdentifier(methodSymbol), methodArguments);
+		final completedCall = decision.operation == OcamlStringMethodOperation.CharCodeAt
+			&& decision.resultSemanticTypeId == "Int" ? OcamlExpr.EApp(requiredRuntimeIdentifier("HxRuntime.nullable_int_unwrap"), [methodCall]) : methodCall;
+		try {
+			// Operand subtrees have their own runtime-use owners. Replace them with
+			// neutral names while this authority checks only the String-call helpers.
+			authority.reconcileExpression(completedCall);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+
+		var materialized = completedCall;
+		for (index in 0...evaluatedArguments.length) {
+			final argument = evaluatedArguments[evaluatedArguments.length - 1 - index];
+			materialized = OcamlExpr.ELet(argument.name, argument.value, materialized, false);
+		}
+		return OcamlExpr.ELet(receiverName, buildExpr(receiver), materialized, false);
+	}
+
+	/** Returns the declared argument count before one optional index is omitted. */
+	static function stringMethodMaximumArguments(operation:OcamlStringMethodOperation):Int {
+		return switch (operation) {
+			case ToUpperCase, ToLowerCase, ToString: 0;
+			case CharAt, CharCodeAt, Split: 1;
+			case IndexOf, LastIndexOf, Substr, Substring: 2;
+		};
+	}
+
+	/** Materializes the exact default or nullable integer selected by the plan. */
+	function buildStringMethodOptionalIndex(decision:OcamlStringMethodDecision, receiver:OcamlExpr, argumentNames:Array<String>,
+			requiredRuntimeIdentifier:String->OcamlExpr, position:Position):OcamlExpr {
+		function defaultValue():OcamlExpr {
+			return switch (decision.optionalDefault) {
+				case Zero: OcamlExpr.EConst(OcamlConst.CInt(0));
+				case MinusOne: OcamlExpr.EConst(OcamlConst.CInt(-1));
+				case ReceiverLength: OcamlExpr.EApp(requiredRuntimeIdentifier("HxString.length"), [receiver]);
+				case NotApplicable: callPlanInvariant('String method decision "${decision.id}" has no optional-index default', position);
+			};
+		}
+
+		return switch (decision.optionalCarrier) {
+			case Omitted, ExplicitNull:
+				defaultValue();
+			case ExactInt:
+				OcamlExpr.EIdent(argumentNames[argumentNames.length - 1]);
+			case NullableInt:
+				final value = OcamlExpr.EIdent(argumentNames[argumentNames.length - 1]);
+				OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, value, requiredRuntimeIdentifier("HxRuntime.hx_null")), defaultValue(),
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]));
+			case NotApplicable:
+				callPlanInvariant('String method decision "${decision.id}" does not own an optional index', position);
+		};
+	}
+
 	/** Builds a String comparison from the checked helper choice made before target code generation. */
 	function buildPlannedStringEquality(expression:TypedExpr, left:TypedExpr, right:TypedExpr, expectedKind:OcamlStringEqualityKind):OcamlExpr {
 		final plan = currentStringEqualityPlan;
@@ -8336,6 +8402,7 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8360,6 +8427,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
+		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8382,6 +8450,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentStringMethodPlan = previousStringMethodPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8415,6 +8484,7 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8439,6 +8509,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
+		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8461,6 +8532,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentStringMethodPlan = previousStringMethodPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8628,6 +8700,7 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8659,6 +8732,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = functionPlan.intUnary;
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentStringEqualityPlan = functionPlan.stringEquality;
+		currentStringMethodPlan = functionPlan.stringMethods;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8838,6 +8912,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentStringMethodPlan = previousStringMethodPlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8913,6 +8988,7 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8930,6 +9006,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
+		currentStringMethodPlan = nestedDisposition == null ? null : nestedDisposition.stringMethods;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -9024,6 +9101,7 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentStringMethodPlan = previousStringMethodPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);

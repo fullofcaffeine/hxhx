@@ -26,16 +26,16 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 252 legacy entries:
+The current reviewed baseline contains 239 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 252 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 239 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 0 | Private runtime pattern constructors now use checked occurrence authority. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 252 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 239 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
@@ -48,7 +48,18 @@ Typed String `==` and `!=` expressions also use sealed runtime-use decisions.
 The plan records one `HxString.equals` use and left-to-right evaluation for
 each expression. Null-literal and `Dynamic` comparisons keep their separate
 behavior. The executable fixture proves equal, unequal, nullable, nested, and
-standalone cases without changing the readiness bar while 252 sites remain.
+standalone cases.
+
+Direct standard String method calls now use a separate sealed plan. It covers
+`toUpperCase`, `toLowerCase`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`,
+`split`, `substr`, `substring`, and `toString`. The plan distinguishes an
+omitted optional index from an explicit `null` and from a computed nullable
+integer. It also binds the receiver once before it evaluates arguments. The
+portable executable fixture compares results with upstream Haxe and checks
+that receiver and argument side effects occur once in source order.
+
+These changes reduce the frozen inventory by 13 entries. They do not change
+the readiness bar while 239 unchecked sites remain.
 
 ## What the guard does not prove
 
