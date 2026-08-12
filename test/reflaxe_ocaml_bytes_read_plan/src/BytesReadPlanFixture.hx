@@ -242,7 +242,8 @@ class BytesReadPlanFixture {
 			stdIsOfType: firstStandalone.stdIsOfType,
 			intUnary: firstStandalone.intUnary,
 			stringFromCharCode: firstStandalone.stringFromCharCode,
-			stringEquality: firstStandalone.stringEquality
+			stringEquality: firstStandalone.stringEquality,
+			stringMethods: firstStandalone.stringMethods
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(lengthBody, staleStandalone, representations));
 
