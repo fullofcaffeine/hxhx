@@ -1814,17 +1814,24 @@ class OcamlBuilder {
 				OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.Or, leftNaN, rightNaN),
 					reflectCompareFailure("unordered-nan", runtimeAuthority, decision.runtimeUseOccurrences[0], planRevision), ordered);
 			case String:
-				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
-				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
+				final leftNullName = freshTmp("reflect_left_null");
+				final rightNullName = freshTmp("reflect_right_null");
+				final leftNull = OcamlExpr.EIdent(leftNullName);
+				final rightNull = OcamlExpr.EIdent(rightNullName);
 				final bothNull = OcamlExpr.EBinop(OcamlBinop.And, leftNull, rightNull);
 				final oneNull = OcamlExpr.EBinop(OcamlBinop.Or, leftNull, rightNull);
-				OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)),
-					OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch", runtimeAuthority, decision.runtimeUseOccurrences[0], planRevision), ordered));
+				final compared = OcamlExpr.EIf(bothNull, OcamlExpr.EConst(OcamlConst.CInt(0)),
+					OcamlExpr.EIf(oneNull, reflectCompareFailure("null-mismatch", runtimeAuthority, decision.runtimeUseOccurrences[2], planRevision), ordered));
+				buildReflectCompareStringNullChecks(decision, runtimeAuthority, planRevision, left, right, leftNullName, rightNullName, compared);
 			case NullableString:
-				final leftNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [left]);
-				final rightNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "isNull"), [right]);
-				OcamlExpr.EIf(leftNull, OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EConst(OcamlConst.CInt(-1))),
+				final leftNullName = freshTmp("reflect_left_null");
+				final rightNullName = freshTmp("reflect_right_null");
+				final leftNull = OcamlExpr.EIdent(leftNullName);
+				final rightNull = OcamlExpr.EIdent(rightNullName);
+				final compared = OcamlExpr.EIf(leftNull,
+					OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(0)), OcamlExpr.EConst(OcamlConst.CInt(-1))),
 					OcamlExpr.EIf(rightNull, OcamlExpr.EConst(OcamlConst.CInt(1)), ordered));
+				buildReflectCompareStringNullChecks(decision, runtimeAuthority, planRevision, left, right, leftNullName, rightNullName, compared);
 		}
 		final comparator = OcamlExpr.EFun([
 			OcamlPat.PAnnot(OcamlPat.PVar(leftName), parameterType),
@@ -1832,6 +1839,21 @@ class OcamlBuilder {
 		], body);
 		runtimeAuthority.reconcileExpression(comparator);
 		return comparator;
+	}
+
+	/**
+		Binds the two null checks owned by one String comparator exactly once.
+
+		The plan fixes left-then-right order. Keeping each result in a local Boolean
+		lets the comparator reuse it without creating extra private runtime calls.
+	**/
+	function buildReflectCompareStringNullChecks(decision:OcamlReflectCompareDecision, authority:OcamlRuntimeUseAuthority, planRevision:String,
+			left:OcamlExpr, right:OcamlExpr, leftNullName:String, rightNullName:String, compared:OcamlExpr):OcamlExpr {
+		final leftUse = decision.runtimeUseOccurrences[0];
+		final rightUse = decision.runtimeUseOccurrences[1];
+		final leftCheck = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(leftUse.id, planRevision, leftUse.exactSymbol)), [left]);
+		final rightCheck = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(rightUse.id, planRevision, rightUse.exactSymbol)), [right]);
+		return OcamlExpr.ELet(leftNullName, leftCheck, OcamlExpr.ELet(rightNullName, rightCheck, compared, false), false);
 	}
 
 	/**

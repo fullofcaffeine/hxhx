@@ -54,9 +54,10 @@ typedef OcamlReflectCompareDecision = {
 	requests.
 **/
 class OcamlReflectComparePlan {
-	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v3";
+	public static inline final MODEL_REVISION = "typed-ocaml-reflect-compare-intrinsic-v4";
 	public static inline final PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
 	public static inline final FAILURE_RUNTIME_CAPABILITY = "haxe-reflect-compare-failure";
+	public static inline final STRING_NULL_RUNTIME_CAPABILITY = "haxe-reflect-compare-string-null";
 
 	final byExpression:ObjectMap<TypedExpr, OcamlReflectCompareDecision>;
 	final bySource:StringMap<Array<OcamlReflectCompareDecision>>;
@@ -172,10 +173,10 @@ class OcamlReflectComparePlan {
 		}
 		final expectedRequirements = runtimeRequirementIdsFor(decision.id, decision.domain);
 		if (decision.runtimeRequirementIds.join(",") != expectedRequirements.join(","))
-			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-requirement]: comparator "${decision.id}" has a stale or conflicting exceptional runtime requirement';
+			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-requirement]: comparator "${decision.id}" has a stale or conflicting runtime requirement';
 		final expectedUses = runtimeUseOccurrencesFor(decision);
 		if (decision.runtimeUseOccurrences.length != expectedUses.length)
-			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-use]: comparator "${decision.id}" has an incomplete exceptional runtime-use inventory';
+			throw 'reflaxe.ocaml [ocaml-reflect-compare:invalid-runtime-use]: comparator "${decision.id}" has an incomplete runtime-use inventory';
 		for (index in 0...expectedUses.length) {
 			final actual = decision.runtimeUseOccurrences[index];
 			final expected = expectedUses[index];
@@ -196,34 +197,39 @@ class OcamlReflectComparePlan {
 		}
 	}
 
-	/** Returns the runtime requirement owned only by exceptional comparison domains. */
+	/** Returns the exact runtime requirements selected by one comparison domain. */
 	public static function runtimeRequirementIdsFor(id:String, domain:OcamlReflectCompareDomain):Array<String> {
 		return switch (domain) {
-			case Float, String: [id + ":runtime:" + FAILURE_RUNTIME_CAPABILITY];
-			case Int, NullableString: [];
+			case Int: [];
+			case Float: [id + ":runtime:" + FAILURE_RUNTIME_CAPABILITY];
+			case String: [
+					id + ":runtime:" + STRING_NULL_RUNTIME_CAPABILITY,
+					id + ":runtime:" + FAILURE_RUNTIME_CAPABILITY
+				];
+			case NullableString: [id + ":runtime:" + STRING_NULL_RUNTIME_CAPABILITY];
 		}
 	}
 
-	/** Returns the exact private throw name inserted by one exceptional comparator. */
+	/** Returns every private runtime name in the comparator's syntax order. */
 	public static function runtimeUseOccurrencesFor(decision:OcamlReflectCompareDecision):Array<OcamlRuntimeUseOccurrence> {
-		if (decision.domain != Float && decision.domain != String)
-			return [];
 		final binding:OcamlFunctionPlanBinding = {
 			functionId: decision.functionId,
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
-		return [
-			{
-				id: decision.id + ":runtime-use:throw-invalid-comparison",
-				planRevision: OcamlRuntimeUseModel.planRevision(binding),
+		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
+		final out:Array<OcamlRuntimeUseOccurrence> = [];
+		function add(requirementId:String, symbol:String, role:String):Void {
+			out.push({
+				id: decision.id + ":runtime-use:" + role,
+				planRevision: planRevision,
 				ownerId: decision.id,
-				requirementId: decision.runtimeRequirementIds[0],
+				requirementId: requirementId,
 				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
-				exactSymbol: "HxRuntime.hx_throw",
-				role: "throw-invalid-comparison",
-				order: 0,
+				exactSymbol: symbol,
+				role: role,
+				order: out.length,
 				source: {
 					file: decision.source.file,
 					min: decision.source.min,
@@ -231,8 +237,21 @@ class OcamlReflectComparePlan {
 				},
 				profileEligibility: ["metal", "portable"],
 				cardinality: 1
-			}
-		];
+			});
+		}
+		switch (decision.domain) {
+			case Int:
+			case Float:
+				add(decision.runtimeRequirementIds[0], "HxRuntime.hx_throw", "throw-invalid-comparison");
+			case String:
+				add(decision.runtimeRequirementIds[0], "HxString.isNull", "left-null-check");
+				add(decision.runtimeRequirementIds[0], "HxString.isNull", "right-null-check");
+				add(decision.runtimeRequirementIds[1], "HxRuntime.hx_throw", "throw-invalid-comparison");
+			case NullableString:
+				add(decision.runtimeRequirementIds[0], "HxString.isNull", "left-null-check");
+				add(decision.runtimeRequirementIds[0], "HxString.isNull", "right-null-check");
+		}
+		return out;
 	}
 
 	static function copyDecision(decision:OcamlReflectCompareDecision):OcamlReflectCompareDecision {

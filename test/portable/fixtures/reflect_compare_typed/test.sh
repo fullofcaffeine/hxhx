@@ -21,7 +21,7 @@ const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 if (report.schemaVersion !== 84) {
 	throw new Error(`Expected lowering schema 84, received ${report.schemaVersion}`)
 }
-if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v3') {
+if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v4') {
 	throw new Error(`Unexpected Reflect.compare plan model: ${report.reflectCompareModel}`)
 }
 if (report.reflectCompareCount !== 16 || report.reflectCompare.length !== 16) {
@@ -41,21 +41,31 @@ for (const decision of report.reflectCompare) {
 		|| !['ocaml-function-plans-v105', 'ocaml-standalone-expression-plans-v11'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
-	const exceptional = decision.domain === 'float' || decision.domain === 'string'
-	const expectedRequirementId = `${decision.id}:runtime:haxe-reflect-compare-failure`
-	if (JSON.stringify(decision.runtimeRequirementIds) !== JSON.stringify(exceptional ? [expectedRequirementId] : [])) {
-		throw new Error(`Reflect.compare has the wrong exceptional runtime requirement: ${JSON.stringify(decision)}`)
+	const stringRequirementId = `${decision.id}:runtime:haxe-reflect-compare-string-null`
+	const failureRequirementId = `${decision.id}:runtime:haxe-reflect-compare-failure`
+	const expected = {
+		int: {requirements: [], uses: []},
+		float: {requirements: [failureRequirementId], uses: [[failureRequirementId, 'HxRuntime.hx_throw', 'throw-invalid-comparison']]},
+		string: {requirements: [stringRequirementId, failureRequirementId], uses: [
+			[stringRequirementId, 'HxString.isNull', 'left-null-check'],
+			[stringRequirementId, 'HxString.isNull', 'right-null-check'],
+			[failureRequirementId, 'HxRuntime.hx_throw', 'throw-invalid-comparison']
+		]},
+		'nullable-string': {requirements: [stringRequirementId], uses: [
+			[stringRequirementId, 'HxString.isNull', 'left-null-check'],
+			[stringRequirementId, 'HxString.isNull', 'right-null-check']
+		]}
+	}[decision.domain]
+	if (JSON.stringify(decision.runtimeRequirementIds) !== JSON.stringify(expected.requirements)
+		|| JSON.stringify(decision.runtimeUseOccurrences.map(use => [use.requirementId, use.exactSymbol, use.role])) !== JSON.stringify(expected.uses)) {
+		throw new Error(`Reflect.compare has the wrong exact runtime inventory: ${JSON.stringify(decision)}`)
 	}
-	if (!Array.isArray(decision.runtimeUseOccurrences)
-		|| decision.runtimeUseOccurrences.length !== (exceptional ? 1 : 0)
-		|| (exceptional && (decision.runtimeUseOccurrences[0].requirementId !== expectedRequirementId
-			|| decision.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.hx_throw'
-			|| decision.runtimeUseOccurrences[0].role !== 'throw-invalid-comparison'))) {
-		throw new Error(`Reflect.compare lacks its exact exceptional runtime use: ${JSON.stringify(decision)}`)
-	}
-	if (exceptional && !report.runtimeRequirements.some(requirement => requirement.id === expectedRequirementId
-		&& requirement.rootModules?.join(',') === 'HxRuntime')) {
-		throw new Error(`Reflect.compare runtime requirement is missing from the request ledger: ${expectedRequirementId}`)
+	for (const requirementId of expected.requirements) {
+		const expectedRoot = requirementId === stringRequirementId ? 'HxString' : 'HxRuntime'
+		if (!report.runtimeRequirements.some(requirement => requirement.id === requirementId
+			&& requirement.rootModules?.join(',') === expectedRoot)) {
+			throw new Error(`Reflect.compare runtime requirement is missing from the request ledger: ${requirementId}`)
+		}
 	}
 }
 NODE
@@ -123,7 +133,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-const exceptional = report.reflectCompare.find(decision => decision.runtimeUseOccurrences?.length === 1)
+const exceptional = report.reflectCompare.find(decision => decision.domain === 'float')
 if (!exceptional)
 	throw new Error('Missing exceptional Reflect.compare decision for corruption check')
 exceptional.runtimeUseOccurrences[0].exactSymbol = 'HxRuntime.hx_throw_typed'
@@ -138,7 +148,7 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	echo "Public inspection accepted a conflicting Reflect.compare runtime helper" >&2
 	exit 1
 fi
-if ! grep -Fq "stale or conflicting exceptional runtime-use evidence" "$invalid_log"; then
+if ! grep -Fq "stale or conflicting runtime-use evidence" "$invalid_log"; then
 	echo "Public inspection did not explain the conflicting Reflect.compare runtime helper" >&2
 	cat "$invalid_log" >&2
 	exit 1

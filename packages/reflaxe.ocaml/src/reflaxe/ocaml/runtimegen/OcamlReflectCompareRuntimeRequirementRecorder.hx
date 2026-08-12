@@ -9,41 +9,39 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
 
 /**
-	Connects one typed exceptional comparison to its Haxe exception runtime.
+	Connects one typed comparison to its exact private runtime modules.
 
-	The comparator plan has already decided whether invalid input is possible.
-	This adapter only turns that immutable decision into the requirement consumed
-	by packaging and reports; it does not inspect generated OCaml or choose
-	comparison behavior.
+	The comparator plan has already decided the value domain, null policy, and
+	failure policy. This adapter only converts those immutable choices into the
+	requirements used by packaging and reports.
 **/
 class OcamlReflectCompareRuntimeRequirementRecorder {
-	/** Returns the runtime reason owned by one exceptional typed comparator. */
+	/** Returns the runtime reasons owned by one typed comparator. */
 	public static function requirementsFor(decision:OcamlReflectCompareDecision):Array<OcamlRuntimeRequirement> {
 		OcamlReflectComparePlan.requireDecision(decision);
-		if (decision.runtimeRequirementIds.length == 0)
-			return [];
-		return [
-			{
-				id: decision.runtimeRequirementIds[0],
+		return decision.runtimeRequirementIds.map(requirementId -> {
+			final stringNull = StringTools.endsWith(requirementId, ":" + OcamlReflectComparePlan.STRING_NULL_RUNTIME_CAPABILITY);
+			return {
+				id: requirementId,
 				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
 				sourceId: decision.id,
 				source: decision.source,
-				semanticCapability: OcamlRuntimeRequirementLedger.HAXE_REFLECT_COMPARE_FAILURE,
+				semanticCapability: stringNull ? OcamlReflectComparePlan.STRING_NULL_RUNTIME_CAPABILITY : OcamlRuntimeRequirementLedger.HAXE_REFLECT_COMPARE_FAILURE,
 				cause: OcamlRuntimeRequirementCause.LoweringDecision,
 				decisionId: decision.id,
 				subject: {
 					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
 					id: "Reflect.compare:" + (decision.domain : String)
 				},
-				implementationFeature: "haxe-typed-throw-v1",
-				rootModules: ["HxRuntime"],
+				implementationFeature: stringNull ? "haxe-string-null-check-v1" : "haxe-typed-throw-v1",
+				rootModules: [stringNull ? "HxString" : "HxRuntime"],
 				profileEligibility: ["metal", "portable"],
-				explanation: "The sealed typed comparator rejects an invalid Float or String ordering through the Haxe exception channel, so generated OCaml needs the catchable HxRuntime throw helper."
-			}
-		];
+				explanation: stringNull ? "The sealed String comparator checks each operand against Haxe's String null sentinel before it applies its selected ordering policy." : "The sealed typed comparator rejects an invalid Float or String ordering through the Haxe exception channel, so generated OCaml needs the catchable HxRuntime throw helper."
+			};
+		});
 	}
 
-	/** Records the runtime dependency selected by one exceptional comparator. */
+	/** Records the runtime dependencies selected by one typed comparator. */
 	public static function record(ledger:OcamlRuntimeRequirementLedger, decision:OcamlReflectCompareDecision):Void {
 		for (requirement in requirementsFor(decision))
 			ledger.record(requirement);

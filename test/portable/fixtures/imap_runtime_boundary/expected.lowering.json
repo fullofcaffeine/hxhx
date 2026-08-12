@@ -1,5 +1,5 @@
 {
-  "reflectCompareModel": "typed-ocaml-reflect-compare-intrinsic-v3",
+  "reflectCompareModel": "typed-ocaml-reflect-compare-intrinsic-v4",
   "staticStorageModel": "typed-ocaml-static-storage",
   "model": "typed-ocaml-lowered-place",
   "anonymousStructureOperations": [

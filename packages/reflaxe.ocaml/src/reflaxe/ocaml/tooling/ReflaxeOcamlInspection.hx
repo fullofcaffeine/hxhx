@@ -92,7 +92,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
+	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v4";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
 	static inline final STD_IS_OF_TYPE_MODEL = "typed-ocaml-std-is-of-type-v1";
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
@@ -1627,34 +1627,58 @@ class ReflaxeOcamlInspection {
 				|| (decision.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
 					&& decision.pipelineRevision != STANDALONE_EXPRESSION_PIPELINE_REVISION))
 				throw 'Reflect.compare decision "${decision.id}" has an invalid plan binding.';
-			final exceptional = decision.domain == "float" || decision.domain == "string";
-			final requirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
-			if (decision.runtimeRequirementIds.join(",") != (exceptional ? requirementId : ""))
-				throw 'Reflect.compare decision "${decision.id}" has an invalid exceptional runtime requirement.';
-			if (decision.runtimeUseOccurrences.length != (exceptional ? 1 : 0))
-				throw 'Reflect.compare decision "${decision.id}" has an invalid exceptional runtime-use inventory.';
-			if (exceptional) {
-				final occurrence = decision.runtimeUseOccurrences[0];
-				final expectedPlanRevision = OcamlRuntimeUseModel.planRevision({
-					functionId: decision.functionId,
-					programRevision: decision.programRevision,
-					bodyRevision: decision.bodyRevision,
-					pipelineRevision: decision.pipelineRevision
-				});
-				if (occurrence.id != decision.id + ":runtime-use:throw-invalid-comparison"
+			final stringRequirementId = decision.id + ":runtime:haxe-reflect-compare-string-null";
+			final failureRequirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
+			final expectedRequirementIds = switch (decision.domain) {
+				case "int": [];
+				case "float": [failureRequirementId];
+				case "string": [stringRequirementId, failureRequirementId];
+				case "nullable-string": [stringRequirementId];
+				case _: [];
+			};
+			if (decision.runtimeRequirementIds.join(",") != expectedRequirementIds.join(","))
+				throw 'Reflect.compare decision "${decision.id}" has an invalid runtime requirement inventory.';
+			final expectedUses:Array<{requirementId:String, symbol:String, role:String}> = switch (decision.domain) {
+				case "int": [];
+				case "float": [
+						{requirementId: failureRequirementId, symbol: "HxRuntime.hx_throw", role: "throw-invalid-comparison"}
+					];
+				case "string": [
+						{requirementId: stringRequirementId, symbol: "HxString.isNull", role: "left-null-check"},
+						{requirementId: stringRequirementId, symbol: "HxString.isNull", role: "right-null-check"},
+						{requirementId: failureRequirementId, symbol: "HxRuntime.hx_throw", role: "throw-invalid-comparison"}
+					];
+				case "nullable-string": [
+						{requirementId: stringRequirementId, symbol: "HxString.isNull", role: "left-null-check"},
+						{requirementId: stringRequirementId, symbol: "HxString.isNull", role: "right-null-check"}
+					];
+				case _: [];
+			};
+			if (decision.runtimeUseOccurrences.length != expectedUses.length)
+				throw 'Reflect.compare decision "${decision.id}" has an invalid runtime-use inventory.';
+			final expectedPlanRevision = OcamlRuntimeUseModel.planRevision({
+				functionId: decision.functionId,
+				programRevision: decision.programRevision,
+				bodyRevision: decision.bodyRevision,
+				pipelineRevision: decision.pipelineRevision
+			});
+			for (index in 0...expectedUses.length) {
+				final occurrence = decision.runtimeUseOccurrences[index];
+				final expectedUse = expectedUses[index];
+				if (occurrence.id != decision.id + ":runtime-use:" + expectedUse.role
 					|| occurrence.planRevision != expectedPlanRevision
 					|| occurrence.ownerId != decision.id
-					|| occurrence.requirementId != requirementId
+					|| occurrence.requirementId != expectedUse.requirementId
 					|| (occurrence.domain : String) != "expression-identifier"
-						|| occurrence.exactSymbol != "HxRuntime.hx_throw"
-						|| occurrence.role != "throw-invalid-comparison"
-						|| occurrence.order != 0
+						|| occurrence.exactSymbol != expectedUse.symbol
+						|| occurrence.role != expectedUse.role
+						|| occurrence.order != index
 						|| occurrence.source.file != decision.sourceFile
 						|| occurrence.source.min != decision.sourceMin
 						|| occurrence.source.max != decision.sourceMax
 						|| occurrence.profileEligibility.join(",") != "metal,portable"
 						|| occurrence.cardinality != 1)
-					throw 'Reflect.compare decision "${decision.id}" has stale or conflicting exceptional runtime-use evidence.';
+					throw 'Reflect.compare decision "${decision.id}" has stale or conflicting runtime-use evidence.';
 			}
 			ids.set(decision.id, true);
 		}
