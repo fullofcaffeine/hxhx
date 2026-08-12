@@ -203,7 +203,7 @@ if (!/let __anonymous_value_[0-9]+ = HxAnon\.create \(\)/.test(source)
 	|| !/HxAnon\.set __anonymous_receiver_[0-9]+ "a" \(Obj\.repr __anonymous_new_field_value_[0-9]+\)/.test(source)
 	|| !/let __anonymous_receiver_[0-9]+ = o in let __anonymous_field_value_[0-9]+ = true/.test(source)
 	|| !/HxRuntime\.box_bool __anonymous_field_value_[0-9]+/.test(source)
-	|| !/let __anonymous_field_value_[0-9]+ = HxString\.substr data 0 \(Obj\.obj \(HxAnon\.get span "pos"\)\) in ignore \(HxAnon\.set __anonymous_value_[0-9]+ "p" \(Obj\.repr __anonymous_field_value_[0-9]+\)\)/.test(source)) {
+	|| !/let __anonymous_field_value_[0-9]+ = let __string_receiver_[0-9]+ = data in let __string_argument_0_[0-9]+ = 0 in let __string_argument_1_[0-9]+ = Obj\.obj \(HxAnon\.get span "pos"\) in HxString\.substr __string_receiver_[0-9]+ __string_argument_0_[0-9]+ __string_argument_1_[0-9]+ in ignore \(HxAnon\.set __anonymous_value_[0-9]+ "p" \(Obj\.repr __anonymous_field_value_[0-9]+\)\)/.test(source)) {
 	fail('generated OCaml did not mechanically consume the planned allocation, isolated literal field value, Bool carrier, or single-evaluation Int += schedule')
 }
 NODE
