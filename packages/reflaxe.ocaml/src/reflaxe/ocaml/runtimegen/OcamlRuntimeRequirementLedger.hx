@@ -26,6 +26,8 @@ import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -77,6 +79,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_LITERAL_CONSTRUCTION = "haxe-array-literal-construction";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final STRING_FROM_CHAR_CODE = "haxe-string-from-char-code";
+	public static inline final STRING_EQUALITY = "haxe-string-equality";
 	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -638,6 +641,38 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helpers selected by one `String.fromCharCode` expression. */
 	public function recordStringFromCharCode(decision:OcamlStringFromCharCodeDecision):Void {
 		for (requirement in requirementsForStringFromCharCode(decision))
+			record(requirement);
+	}
+
+	/** Returns the HxString reason selected by one String equality expression. */
+	public static function requirementsForStringEquality(decision:OcamlStringEqualityDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStringEqualityPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: STRING_EQUALITY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.leftSemanticTypeId
+					+ " "
+					+ (decision.kind : String)
+					+ " "
+					+ decision.rightSemanticTypeId},
+				implementationFeature: "haxe-string-equality-v1",
+				rootModules: OcamlStringEqualityPlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed String comparison selected the null-safe equality helper before target syntax. Inequality applies target-native Boolean negation after the checked call."
+			})
+		];
+	}
+
+	/** Records the private helper selected by one String equality expression. */
+	public function recordStringEquality(decision:OcamlStringEqualityDecision):Void {
+		for (requirement in requirementsForStringEquality(decision))
 			record(requirement);
 	}
 
