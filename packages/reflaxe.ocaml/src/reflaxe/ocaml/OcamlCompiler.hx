@@ -1691,6 +1691,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordStringEqualityRuntimeRequirement(decision);
 		for (decision in plan.stringMethods.decisions())
 			ctx.recordStringMethodRuntimeRequirement(decision);
+		for (decision in plan.stringFields.decisions())
+			ctx.recordStringFieldRuntimeRequirement(decision);
 		for (chain in plan.controls.catchChains())
 			ctx.recordCatchChainRuntimeRequirements(chain);
 		for (target in plan.controls.loopTargets()) {

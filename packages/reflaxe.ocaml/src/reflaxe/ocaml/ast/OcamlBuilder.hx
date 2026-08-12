@@ -150,6 +150,9 @@ import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOperation;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOptionalCarrier;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOptionalDefault;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
+import reflaxe.ocaml.lowered.OcamlStringFieldPlan;
+import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldDecision;
+import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -212,6 +215,7 @@ class OcamlBuilder {
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
 	var currentStringMethodPlan:Null<OcamlStringMethodPlan> = null;
+	var currentStringFieldPlan:Null<OcamlStringFieldPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -3556,6 +3560,8 @@ class OcamlBuilder {
 		final stringMethodCandidate = OcamlStringMethodPlanner.isDirectStringMethodCall(e);
 		final plannedStringMethod = currentStringMethodPlan == null
 			|| !stringMethodCandidate ? null : currentStringMethodPlan.requireFor(e);
+		final stringFieldCandidate = OcamlStringFieldPlanner.isDirectStringLengthRead(e);
+		final plannedStringField = currentStringFieldPlan == null || !stringFieldCandidate ? null : currentStringFieldPlan.requireFor(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TCall(_, _) if (plannedStringFromCharCode != null):
 				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
@@ -3567,6 +3573,10 @@ class OcamlBuilder {
 				buildPlannedStringMethod(e, callee, arguments, plannedStringMethod);
 			case TCall(_, _) if (stringMethodCandidate):
 				callPlanInvariant("a direct standard String method reached target syntax without its sealed method plan", e.pos);
+			case TField(receiver, FInstance(_, _, _)) if (plannedStringField != null):
+				buildPlannedStringField(e, receiver, plannedStringField);
+			case TField(_, _) if (stringFieldCandidate):
+				callPlanInvariant("a direct standard String.length read reached target syntax without its sealed field plan", e.pos);
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
 				buildAnonymousLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), e.pos);
 			case _ if (anonymousLiteralCandidate):
@@ -7551,11 +7561,55 @@ class OcamlBuilder {
 	}
 
 	/**
+			Builds one `String.length` read from its checked field plan.
+			The field plan records the exact final Haxe field, receiver type, result
+					type, and private OCaml helper before syntax generation starts. This method
+					binds the receiver once. It then uses only the helper that the plan permits.
+		**/
+	function buildPlannedStringField(expression:TypedExpr, receiver:TypedExpr, decision:OcamlStringFieldDecision):OcamlExpr {
+		try {
+			OcamlStringFieldPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+
+		final fieldMatches = switch (expression.expr) {
+			case TField(actualReceiver, FInstance(classRef, _, fieldRef)):
+				actualReceiver == receiver
+				&& isStdStringClass(classRef.get())
+				&& fieldRef.get().name == decision.fieldName
+				&& fieldRef.get().kind.match(FVar(_, _));
+			case _:
+				false;
+		};
+		if (!fieldMatches
+			|| decision.receiverSemanticTypeId != TypeTools.toString(receiver.t)
+			|| decision.resultSemanticTypeId != TypeTools.toString(expression.t))
+			return callPlanInvariant('String field decision "${decision.id}" belongs to another field or type', expression.pos);
+
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifier = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+		final receiverName = freshTmp("string_receiver");
+		final read = OcamlExpr.EApp(runtimeIdentifier, [OcamlExpr.EIdent(receiverName)]);
+		try {
+			// The receiver can contain separately planned runtime uses. This check
+			// validates only the helper that belongs to this field read.
+			authority.reconcileExpression(read);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+		return OcamlExpr.ELet(receiverName, buildExpr(receiver), read, false);
+	}
+
+	/**
 			Builds one direct String call from its checked method plan.
 			The method plan is the record created from the final typed Haxe call before
-				OCaml syntax generation starts. It fixes the method, optional-index default,
-				private runtime names, and receiver-first evaluation order. This method binds
-				the receiver and computed arguments once, then converts that record to OCaml.
+					OCaml syntax generation starts. It fixes the method, optional-index default,
+					private runtime names, and receiver-first evaluation order. This method binds
+					the receiver and computed arguments once, then converts that record to OCaml.
 		**/
 	function buildPlannedStringMethod(expression:TypedExpr, callee:TypedExpr, arguments:Array<TypedExpr>, decision:OcamlStringMethodDecision):OcamlExpr {
 		try {
@@ -8425,6 +8479,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
+		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8450,6 +8505,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentStringMethodPlan = validatedPlan.stringMethods;
+		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8473,6 +8529,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
+		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8507,6 +8564,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
+		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8532,6 +8590,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentStringMethodPlan = validatedPlan.stringMethods;
+		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8555,6 +8614,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
+		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8723,6 +8783,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
+		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8755,6 +8816,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentStringEqualityPlan = functionPlan.stringEquality;
 		currentStringMethodPlan = functionPlan.stringMethods;
+		currentStringFieldPlan = functionPlan.stringFields;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8935,6 +8997,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
+		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -9011,6 +9074,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
+		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -9029,6 +9093,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
 		currentStringMethodPlan = nestedDisposition == null ? null : nestedDisposition.stringMethods;
+		currentStringFieldPlan = nestedDisposition == null ? null : nestedDisposition.stringFields;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -9124,6 +9189,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
+		currentStringFieldPlan = previousStringFieldPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);
@@ -9707,7 +9773,7 @@ class OcamlBuilder {
 						if (isStdArrayClass(cls) && cf.name == "length") {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
 						} else if (isStdStringClass(cls) && cf.name == "length") {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
+							callPlanInvariant("standard String length bypassed its sealed field plan", pos);
 						} else if (isStdBytesClass(cls) && cf.name == "length") {
 							bytesReadInvariant("standard Bytes length bypassed its sealed read plan", pos);
 						} else if (cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "_Int64" && cls.name == "___Int64"

@@ -1,0 +1,5 @@
+local=5
+standalone=4
+nested=6
+side=4
+receiverCalls=1

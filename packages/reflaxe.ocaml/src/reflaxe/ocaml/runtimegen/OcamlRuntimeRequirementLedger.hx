@@ -30,6 +30,8 @@ import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
+import reflaxe.ocaml.lowered.OcamlStringFieldPlan;
+import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -83,6 +85,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final STRING_FROM_CHAR_CODE = "haxe-string-from-char-code";
 	public static inline final STRING_EQUALITY = "haxe-string-equality";
 	public static inline final STRING_METHOD = "haxe-string-method";
+	public static inline final STRING_FIELD = "haxe-string-field-read";
 	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -710,6 +713,38 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helpers selected by one direct standard String call. */
 	public function recordStringMethod(decision:OcamlStringMethodDecision):Void {
 		for (requirement in requirementsForStringMethod(decision))
+			record(requirement);
+	}
+
+	/** Returns the direct runtime reason selected by one standard String field read. */
+	public static function requirementsForStringField(decision:OcamlStringFieldDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStringFieldPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: STRING_FIELD,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.receiverSemanticTypeId
+					+ "."
+					+ decision.fieldName
+					+ " -> "
+					+ decision.resultSemanticTypeId},
+				implementationFeature: "haxe-string-field-v1",
+				rootModules: ["HxString"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed String.length field read selected one private length helper and a receiver-first evaluation schedule before target syntax."
+			})
+		];
+	}
+
+	/** Records the private helper selected by one standard String field read. */
+	public function recordStringField(decision:OcamlStringFieldDecision):Void {
+		for (requirement in requirementsForStringField(decision))
 			record(requirement);
 	}
 

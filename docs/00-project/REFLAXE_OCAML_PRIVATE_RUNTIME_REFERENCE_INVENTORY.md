@@ -26,16 +26,16 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 235 legacy entries:
+The current reviewed baseline contains 234 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 235 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 234 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 0 | Private runtime pattern constructors now use checked occurrence authority. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 235 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 234 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
@@ -58,13 +58,19 @@ integer. It also binds the receiver once before it evaluates arguments. The
 portable executable fixture compares results with upstream Haxe and checks
 that receiver and argument side effects occur once in source order.
 
+Direct reads of the standard `String.length` field also use a sealed plan. The
+plan accepts only the root `String` field with a `String` receiver and `Int`
+result. It records one checked `HxString.length` use and evaluates the receiver
+once. The portable fixture proves local, standalone, nested, and side-effecting
+receivers against upstream Haxe.
+
 Typed `Reflect.compare` String comparators now own two null checks. The builder
 binds each result once, then applies the sealed exact-String or nullable-String
 ordering policy. Its existing real OCaml fixture checks the results against the
 independent Haxe 4.3.7 oracle.
 
-These String changes reduce the earlier 252-entry baseline by 17 entries. They
-do not change the readiness bar while 235 unchecked sites remain.
+These String changes reduce the earlier 252-entry baseline by 18 entries. They
+do not change the readiness bar while 234 unchecked sites remain.
 
 ## What the guard does not prove
 
