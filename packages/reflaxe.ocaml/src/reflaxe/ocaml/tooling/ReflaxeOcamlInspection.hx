@@ -4542,34 +4542,38 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		for (decision in reflectCompare) {
-			if (decision.runtimeRequirementIds.length == 0)
-				continue;
-			final requirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
-			final requirement = requirements.get(requirementId);
-			if (requirement == null)
-				throw 'Reflect.compare decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
-			final source = requiredObject(requirement, "source");
-			final subject = requiredObject(requirement, "subject");
-			final roots = requiredStringArray(requirement, "rootModules");
-			if ((decision.domain != "float" && decision.domain != "string")
-				|| decision.runtimeRequirementIds.length != 1
-				|| decision.runtimeRequirementIds[0] != requirementId
-				|| requiredString(requirement, "sourceKind") != "haxe-expression"
-				|| requiredString(requirement, "sourceId") != decision.id
-				|| requiredString(source, "file") != decision.sourceFile
-				|| requiredInt(source, "min") != decision.sourceMin
-				|| requiredInt(source, "max") != decision.sourceMax
-				|| requiredString(requirement, "semanticCapability") != "haxe-reflect-compare-failure"
-				|| requiredString(requirement, "cause") != "lowering-decision"
-				|| requiredString(requirement, "decisionId") != decision.id
-				|| requiredString(subject, "kind") != "haxe-type"
-				|| requiredString(subject, "id") != "Reflect.compare:" + decision.domain
-				|| requiredString(requirement, "implementationFeature") != "haxe-typed-throw-v1"
-				|| roots.join(",") != "HxRuntime"
-				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
-				throw 'Reflect.compare decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed exceptional path.';
+			for (requirementId in decision.runtimeRequirementIds) {
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'Reflect.compare decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+				final stringRequirementId = decision.id + ":runtime:haxe-reflect-compare-string-null";
+				final failureRequirementId = decision.id + ":runtime:haxe-reflect-compare-failure";
+				final isStringNullCheck = requirementId == stringRequirementId;
+				if (!isStringNullCheck && requirementId != failureRequirementId)
+					throw 'Reflect.compare decision "${decision.id}" refers to unknown runtime requirement "$requirementId".';
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				final expectedCapability = isStringNullCheck ? "haxe-reflect-compare-string-null" : "haxe-reflect-compare-failure";
+				final expectedFeature = isStringNullCheck ? "haxe-string-null-check-v1" : "haxe-typed-throw-v1";
+				final expectedRoot = isStringNullCheck ? "HxString" : "HxRuntime";
+				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != decision.id
+					|| requiredString(source, "file") != decision.sourceFile
+					|| requiredInt(source, "min") != decision.sourceMin
+					|| requiredInt(source, "max") != decision.sourceMax
+					|| requiredString(requirement, "semanticCapability") != expectedCapability
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != decision.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != "Reflect.compare:" + decision.domain
+					|| requiredString(requirement, "implementationFeature") != expectedFeature
+					|| roots.join(",") != expectedRoot
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+					throw 'Reflect.compare decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed domain.';
+				}
+				referenced.set(requirementId, true);
 			}
-			referenced.set(requirementId, true);
 		}
 		for (decision in stdIsOfType) {
 			if (decision.runtimeRequirementIds.length == 0)

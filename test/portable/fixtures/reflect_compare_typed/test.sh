@@ -99,6 +99,36 @@ if (report.schemaVersion !== 47
 }
 NODE
 
+# The report stores the selected comparison and its runtime dependencies in two
+# separate sections. Change one String null-check dependency and refresh its
+# digest. Inspection must compare both sections before it accepts the report.
+node - "$report" <<'NODE'
+const crypto = require('crypto')
+const fs = require('fs')
+const reportPath = process.argv[2]
+const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+const requirement = report.runtimeRequirements.find(entry => entry.semanticCapability === 'haxe-reflect-compare-string-null')
+if (!requirement)
+	throw new Error('Missing String null-check requirement for corruption check')
+requirement.semanticCapability = 'haxe-reflect-compare-failure'
+report.runtimeRequirementRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.runtimeRequirements)).digest('hex')}`
+fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output out --require-lowering --json >"$invalid_log" 2>&1; then
+	echo "Public inspection accepted a contradictory Reflect.compare runtime requirement" >&2
+	exit 1
+fi
+if ! grep -Fq "disagrees with its sealed domain" "$invalid_log"; then
+	echo "Public inspection did not explain the contradictory Reflect.compare runtime requirement" >&2
+	cat "$invalid_log" >&2
+	exit 1
+fi
+cp "$original_report" "$report"
+
 # Change one proof and its inventory digest. Public inspection must reject the
 # false claim before a user or another tool relies on it.
 node - "$report" <<'NODE'
