@@ -23,6 +23,9 @@ import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -73,6 +76,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final ARRAY_LITERAL_CONSTRUCTION = "haxe-array-literal-construction";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
+	public static inline final STRING_FROM_CHAR_CODE = "haxe-string-from-char-code";
 	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -604,6 +608,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helpers selected by one integer unary expression. */
 	public function recordIntUnary(decision:OcamlIntUnaryDecision):Void {
 		for (requirement in requirementsForIntUnary(decision))
+			record(requirement);
+	}
+
+	/** Returns the runtime roots selected by one `String.fromCharCode` expression. */
+	public static function requirementsForStringFromCharCode(decision:OcamlStringFromCharCodeDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStringFromCharCodePlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: STRING_FROM_CHAR_CODE,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.form == OcamlStringFromCharCodeForm.DirectCall ? '${decision.argumentSemanticTypeId} -> String' : "String.fromCharCode function value"
+				},
+				implementationFeature: "haxe-string-from-char-code-v1",
+				rootModules: OcamlStringFromCharCodePlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed String.fromCharCode expression selected its call or function-value form and complete private helper sequence before target syntax."
+			})
+		];
+	}
+
+	/** Records the private helpers selected by one `String.fromCharCode` expression. */
+	public function recordStringFromCharCode(decision:OcamlStringFromCharCodeDecision):Void {
+		for (requirement in requirementsForStringFromCharCode(decision))
 			record(requirement);
 	}
 
