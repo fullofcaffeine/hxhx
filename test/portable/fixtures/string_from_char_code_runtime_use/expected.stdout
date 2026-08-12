@@ -1,0 +1,10 @@
+zero=1:0
+byte=1:255
+negative=0
+overflow=0
+side=C
+calls=1
+value=B
+nullable=1:0
+nested=D
+standalone=E

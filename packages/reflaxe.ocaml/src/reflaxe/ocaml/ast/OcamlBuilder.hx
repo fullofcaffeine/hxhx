@@ -136,6 +136,11 @@ import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeValueCarrier;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperation;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperandCarrier;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeArgumentCarrier;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -195,6 +200,7 @@ class OcamlBuilder {
 	var currentReflectRuntimeUsePlan:Null<OcamlReflectRuntimeUsePlan> = null;
 	var currentStdIsOfTypePlan:Null<OcamlStdIsOfTypePlan> = null;
 	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
+	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -3508,7 +3514,19 @@ class OcamlBuilder {
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final plannedReflectCompareValue = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForValue(e);
 		final plannedReflectCompareCall = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForCall(e);
+		final stringFromCharCodeCandidate = OcamlStringFromCharCodePlanner.isResolvedIntrinsic(e) || switch (e.expr) {
+			case TCall(callee, [_]): OcamlStringFromCharCodePlanner.isResolvedIntrinsic(callee);
+			case _: false;
+		};
+		final plannedStringFromCharCode = currentStringFromCharCodePlan == null
+			|| !stringFromCharCodeCandidate ? null : currentStringFromCharCodePlan.requireFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case TCall(_, _) if (plannedStringFromCharCode != null):
+				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
+			case _ if (plannedStringFromCharCode != null):
+				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
+			case _ if (stringFromCharCodeCandidate):
+				callPlanInvariant("String.fromCharCode reached target syntax without its sealed call or function-value plan", e.pos);
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
 				buildAnonymousLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), e.pos);
 			case _ if (anonymousLiteralCandidate):
@@ -4660,9 +4678,7 @@ class OcamlBuilder {
 													anyNull;
 											}
 										} else if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
-											final a0 = args[0];
-											final coerced = nullablePrimitiveKind(a0.t) == "int" ? safeUnboxNullableInt(buildExpr(a0)) : buildExpr(a0);
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [coerced]);
+											callPlanInvariant("String.fromCharCode bypassed its sealed runtime-use plan", e.pos);
 										} else if (isStdBytesClass(cls)) {
 											switch (cf.name) {
 												case "alloc", "ofString", "ofData", "ofHex":
@@ -7516,6 +7532,68 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+			Builds one `String.fromCharCode` use from its sealed source form.
+			A direct call and a stored method value have different typed shapes. The
+				planner selects that shape and every private runtime identifier first. This
+				method only verifies the current expression and turns the decision into OCaml.
+		**/
+	function buildPlannedStringFromCharCode(expression:TypedExpr, decision:OcamlStringFromCharCodeDecision):OcamlExpr {
+		try {
+			OcamlStringFromCharCodePlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+
+		final argument:Null<TypedExpr> = switch [decision.form, expression.expr] {
+			case [OcamlStringFromCharCodeForm.DirectCall, TCall(callee, [value])]
+				if (OcamlStringFromCharCodePlanner.isResolvedIntrinsic(callee)
+					&& !OcamlStringFromCharCodePlanner.isWrappedIntrinsic(callee)):
+				value;
+			case [OcamlStringFromCharCodeForm.FunctionValue, TCall(callee, [value])] if (OcamlStringFromCharCodePlanner.isWrappedIntrinsic(callee)):
+				if (!OcamlRepresentationRegistry.isExactInt(value.t) || TypeTools.toString(expression.t) != "Void")
+					return callPlanInvariant('String.fromCharCode decision "${decision.id}" no longer owns the exact generated method-value wrapper',
+						expression.pos);
+				value;
+			case [OcamlStringFromCharCodeForm.FunctionValue, _] if (OcamlStringFromCharCodePlanner.isResolvedIntrinsic(expression)):
+				null;
+			case _:
+				return callPlanInvariant('String.fromCharCode decision "${decision.id}" belongs to a different typed expression form', expression.pos);
+		};
+		if (decision.form == OcamlStringFromCharCodeForm.DirectCall) {
+			if (argument == null)
+				return callPlanInvariant('String.fromCharCode decision "${decision.id}" has no direct-call argument', expression.pos);
+			final actualCarrier = OcamlRepresentationRegistry.isExactNullInt(argument.t) ? OcamlStringFromCharCodeArgumentCarrier.NullableInt : OcamlStringFromCharCodeArgumentCarrier.ExactInt;
+			if ((!OcamlRepresentationRegistry.isExactInt(argument.t) && !OcamlRepresentationRegistry.isExactNullInt(argument.t))
+				|| decision.argumentCarrier != actualCarrier
+				|| decision.argumentSemanticTypeId != TypeTools.toString(argument.t)
+				|| decision.resultSemanticTypeId != TypeTools.toString(expression.t))
+				return callPlanInvariant('String.fromCharCode decision "${decision.id}" belongs to a different argument or result carrier', expression.pos);
+		}
+
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifiers:Array<OcamlExpr> = [];
+		for (occurrence in decision.runtimeUseOccurrences)
+			runtimeIdentifiers.push(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol)));
+		try {
+			authority.reconcileExpression(OcamlExpr.ESeq(runtimeIdentifiers));
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+		if (decision.form == OcamlStringFromCharCodeForm.FunctionValue) {
+			if (argument == null)
+				return runtimeIdentifiers[0];
+			return OcamlExpr.EApp(runtimeIdentifiers[0], [buildExpr(argument)]);
+		}
+
+		final sourceValue = buildExpr(argument);
+		final carriedValue = decision.argumentCarrier == OcamlStringFromCharCodeArgumentCarrier.NullableInt ? safeUnboxNullableIntWithSentinel(sourceValue,
+			runtimeIdentifiers[1]) : sourceValue;
+		return OcamlExpr.EApp(runtimeIdentifiers[0], [carriedValue]);
+	}
+
 	/** Builds one integer unary expression with the operation and helper names selected before target syntax generation. */
 	function buildPlannedIntUnary(expression:TypedExpr, operand:TypedExpr, expectedOperation:OcamlIntUnaryOperation):OcamlExpr {
 		final plan = currentIntUnaryPlan;
@@ -8215,6 +8293,7 @@ class OcamlBuilder {
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
+		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8237,6 +8316,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentIntUnaryPlan = validatedPlan.intUnary;
+		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8257,6 +8337,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
+		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8288,6 +8369,7 @@ class OcamlBuilder {
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
+		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8310,6 +8392,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentIntUnaryPlan = validatedPlan.intUnary;
+		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8330,6 +8413,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
+		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8495,6 +8579,7 @@ class OcamlBuilder {
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
+		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8524,6 +8609,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = functionPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = functionPlan.stdIsOfType;
 		currentIntUnaryPlan = functionPlan.intUnary;
+		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8701,6 +8787,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
+		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8774,6 +8861,7 @@ class OcamlBuilder {
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
+		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8789,6 +8877,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
 		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
+		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8881,6 +8970,7 @@ class OcamlBuilder {
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
+		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);
@@ -9405,7 +9495,7 @@ class OcamlBuilder {
 				final cls = clsRef.get();
 				final cf = cfRef.get();
 				if (isStdStringClass(cls) && cf.name == "fromCharCode") {
-					return OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode");
+					return callPlanInvariant("the String.fromCharCode function value bypassed its sealed runtime-use plan", pos);
 				}
 				#if macro
 				if (!ctx.currentIsHaxeStd && cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {

@@ -356,6 +356,12 @@ class OcamlStringFromCharCodePlanner {
 			switch (expression.expr) {
 				case TFunction(_):
 					return;
+				case TCall(callee, [argument]) if (isWrappedIntrinsic(callee)):
+					if (!OcamlRepresentationRegistry.isExactInt(argument.t) || TypeTools.toString(expression.t) != "Void")
+						unsupported('stored-method wrapper argument ${TypeTools.toString(argument.t)}', expression.pos);
+					add(expression, OcamlStringFromCharCodeForm.FunctionValue, null, null);
+					visit(argument);
+					return;
 				case TCall(callee, [argument]) if (isResolvedIntrinsic(callee)):
 					final carrier = if (OcamlRepresentationRegistry.isExactInt(argument.t)) {
 						OcamlStringFromCharCodeArgumentCarrier.ExactInt;
@@ -370,6 +376,8 @@ class OcamlStringFromCharCodePlanner {
 					visit(argument);
 					return;
 				case _ if (isResolvedIntrinsic(expression)):
+					if (!isExactFunctionValueType(expression.t))
+						unsupported('function value ${TypeTools.toString(expression.t)}', expression.pos);
 					add(expression, OcamlStringFromCharCodeForm.FunctionValue, null, null);
 					return;
 				case _:
@@ -398,6 +406,29 @@ class OcamlStringFromCharCodePlanner {
 				&& fieldOwner.module == owner.module
 				&& fieldOwner.name == owner.name
 				&& field.name == "fromCharCode";
+			case _:
+				false;
+		};
+	}
+
+	/** Reports whether Reflaxe created the marked adapter for a stored method value. */
+	public static function isWrappedIntrinsic(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TMeta(metadata, inner) if (metadata.name == ":wrappedInLambda"):
+				isResolvedIntrinsic(inner);
+			case _:
+				false;
+		};
+	}
+
+	/** Accepts only the public `(Int) -> String` type of the stored method. */
+	static function isExactFunctionValueType(type:Type):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TFun(arguments, result):
+				arguments.length == 1
+				&& !arguments[0].opt
+				&& OcamlRepresentationRegistry.isExactInt(arguments[0].t)
+				&& OcamlRepresentationRegistry.isExactString(result);
 			case _:
 				false;
 		};

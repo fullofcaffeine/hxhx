@@ -41,6 +41,7 @@ import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
+import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -700,6 +701,11 @@ class CompilationContext {
 	/** Records runtime support selected before one integer unary expression reaches syntax. */
 	public function recordIntUnaryRuntimeRequirement(decision:OcamlIntUnaryDecision):Void {
 		runtimeRequirements.recordIntUnary(decision);
+	}
+
+	/** Records the helpers selected for one direct call or stored `String.fromCharCode` value. */
+	public function recordStringFromCharCodeRuntimeRequirement(decision:OcamlStringFromCharCodeDecision):Void {
+		runtimeRequirements.recordStringFromCharCode(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */
