@@ -16,14 +16,32 @@ const dynamicRequirements = report.requirements.filter(entry =>
 		&& (entry.source.file === 'src/Main.hx' || entry.source.file === '(unknown)')
 )
 
-if (requirements.length !== 13) {
-	throw new Error(`Expected exactly thirteen fixture-owned static String decisions, received ${requirements.length}`)
+if (requirements.length !== 15) {
+	throw new Error(`Expected exactly fifteen fixture-owned static String decisions, received ${requirements.length}`)
 }
 if (requirements.some(entry => entry.rootModules.join(',') !== 'HxString')) {
 	throw new Error(`Static String decisions must name only HxString: ${JSON.stringify(requirements)}`)
 }
 if (dynamicRequirements.length !== 3 || dynamicRequirements.some(entry => entry.rootModules.join(',') !== 'HxDynamic')) {
 	throw new Error(`Dynamic conversion must keep its separate HxDynamic authority: ${JSON.stringify(dynamicRequirements)}`)
+}
+NODE
+
+# A concatenation of local String values has no work whose order can be
+# observed. Keep that common case as direct OCaml instead of adding temporary
+# variables that are only necessary for calls and other effectful expressions.
+node - out/Main.ml <<'NODE'
+const fs = require('fs')
+const source = fs.readFileSync(process.argv[2], 'utf8')
+const line = source.split('\n').find(line => line.startsWith('let pureConcat ='))
+if (line == null) {
+	throw new Error('Generated OCaml is missing pureConcat')
+}
+if (line.includes('__string_part_')) {
+	throw new Error(`Pure String concatenation has unnecessary sequencing: ${line}`)
+}
+if (!line.includes(' ^ ')) {
+	throw new Error(`Pure String concatenation is not direct OCaml: ${line}`)
 }
 NODE
 

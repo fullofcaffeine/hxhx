@@ -3529,6 +3529,30 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+		Reports whether a String-concatenation operand is safe to print without
+		an OCaml sequencing binding.
+
+		OCaml does not promise left-to-right evaluation for the `^` operator.
+		Constants and local reads of primitive or String values have no work that
+		is visible to callers. Calls, field access, and Dynamic conversion stay
+		sequenced because they can run user code or expose their order.
+	**/
+	static function isSimpleStringConcatPart(expression:TypedExpr):Bool {
+		final typeHasSimpleConversion = isStringType(expression.t)
+			|| isIntType(expression.t)
+			|| isFloatType(expression.t)
+			|| isBoolType(expression.t)
+			|| nullablePrimitiveKind(expression.t) != null;
+		if (!typeHasSimpleConversion)
+			return false;
+
+		return switch (unwrap(expression).expr) {
+			case TConst(_) | TLocal(_): true;
+			case _: false;
+		}
+	}
+
 	function buildCondition(cond:TypedExpr):OcamlExpr {
 		final plannedTruthiness = buildPlannedNullableBoolTruthiness(cond);
 		if (plannedTruthiness != null)
@@ -6684,23 +6708,32 @@ class OcamlBuilder {
 					collectConcatParts(e1, parts);
 					collectConcatParts(e2, parts);
 
-					// OCaml can evaluate `^` operands from right to left. Store each Haxe
-					// operand in a temporary value first. This keeps Haxe's required
-					// left-to-right order before the final concatenation reads those values.
-					final names:Array<String> = [];
+					// OCaml can evaluate `^` operands from right to left. Calls and other
+					// observable operands therefore use temporary values in Haxe's required
+					// left-to-right order. Primitive constants and local reads can stay as
+					// direct `^` operands because there is no observable work to reorder.
 					final values:Array<OcamlExpr> = [];
 					for (part in parts) {
-						names.push(freshTmp("string_part"));
 						values.push(buildStdString(part, OcamlStaticStringSourceKind.StringConcat));
 					}
-					var acc:OcamlExpr = OcamlExpr.EIdent(names[0]);
-					for (i in 1...parts.length) {
-						acc = OcamlExpr.EBinop(OcamlBinop.Concat, acc, OcamlExpr.EIdent(names[i]));
+					var direct = true;
+					for (part in parts) {
+						if (!isSimpleStringConcatPart(part)) {
+							direct = false;
+							break;
+						}
 					}
-					var i = parts.length;
-					while (i > 0) {
-						i--;
-						acc = OcamlExpr.ELet(names[i], values[i], acc, false);
+					final names:Array<String> = direct ? [] : [for (_ in parts) freshTmp("string_part")];
+					var acc:OcamlExpr = direct ? values[0] : OcamlExpr.EIdent(names[0]);
+					for (i in 1...parts.length) {
+						acc = OcamlExpr.EBinop(OcamlBinop.Concat, acc, direct ? values[i] : OcamlExpr.EIdent(names[i]));
+					}
+					if (!direct) {
+						var i = parts.length;
+						while (i > 0) {
+							i--;
+							acc = OcamlExpr.ELet(names[i], values[i], acc, false);
+						}
 					}
 					acc;
 				} else {

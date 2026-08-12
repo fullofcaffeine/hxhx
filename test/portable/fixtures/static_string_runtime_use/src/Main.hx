@@ -11,6 +11,10 @@ class Main {
 		return value;
 	}
 
+	static function pureConcat(left:String, right:String):String {
+		return left + right;
+	}
+
 	static function main():Void {
 		Sys.println("std=" + Std.string(nullable("std")));
 		Sys.println("concat=" + text("concat-left", "L") + nullable("concat-right"));
