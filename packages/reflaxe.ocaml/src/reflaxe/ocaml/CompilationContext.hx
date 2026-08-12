@@ -40,6 +40,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecisio
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -694,6 +695,11 @@ class CompilationContext {
 	/** Records the runtime helpers selected before one standard Haxe type check reaches syntax. */
 	public function recordStdIsOfTypeRuntimeRequirement(decision:OcamlStdIsOfTypeDecision):Void {
 		runtimeRequirements.recordStdIsOfType(decision);
+	}
+
+	/** Records runtime support selected before one integer unary expression reaches syntax. */
+	public function recordIntUnaryRuntimeRequirement(decision:OcamlIntUnaryDecision):Void {
+		runtimeRequirements.recordIntUnary(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

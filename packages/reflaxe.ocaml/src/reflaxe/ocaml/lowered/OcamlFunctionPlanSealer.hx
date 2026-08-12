@@ -58,6 +58,7 @@ import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectComparePlanner;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUsePlanner;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypePlanner;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryPlanner;
 
 private typedef OcamlPlaceRuntimeFacts = {
 	final decisionId:String;
@@ -221,6 +222,9 @@ class OcamlFunctionPlanSealer {
 		final stdIsOfType = new OcamlStdIsOfTypePlanner(binding).plan(data.expr);
 		for (decision in stdIsOfType.decisions())
 			context.recordStdIsOfTypeRuntimeRequirement(decision);
+		final intUnary = new OcamlIntUnaryPlanner(binding).plan(data.expr);
+		for (decision in intUnary.decisions())
+			context.recordIntUnaryRuntimeRequirement(decision);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
@@ -317,7 +321,7 @@ class OcamlFunctionPlanSealer {
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
 			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads, arrayIterators, dynamicEquality, dynamicString, reflectRuntimeUses,
-			stdIsOfType);
+			stdIsOfType, intUnary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -410,6 +414,10 @@ class OcamlFunctionPlanSealer {
 					stdIsOfType.requirePlanBinding(nestedBinding);
 					for (decision in stdIsOfType.decisions())
 						context.recordStdIsOfTypeRuntimeRequirement(decision);
+					final intUnary = new OcamlIntUnaryPlanner(nestedBinding).plan(tfunc.expr);
+					intUnary.requirePlanBinding(nestedBinding);
+					for (decision in intUnary.decisions())
+						context.recordIntUnaryRuntimeRequirement(decision);
 					// Every nested body becomes the parent of its own children, even when
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
@@ -436,7 +444,7 @@ class OcamlFunctionPlanSealer {
 						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
 							arrayReads, arrayIterators, dynamicEquality, controls,
 							"The typed function literal is outside the existing represented-result callable boundary.", dynamicString, reflectRuntimeUses,
-							stdIsOfType);
+							stdIsOfType, intUnary);
 					} else {
 						// A nested function can read a local declared by its enclosing function.
 						// Reuse the enclosing function's sealed representation choices so an exact
@@ -453,7 +461,7 @@ class OcamlFunctionPlanSealer {
 							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
 								imapInterfaces, arrayReads, arrayIterators, dynamicEquality, controls,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
-								dynamicString, reflectRuntimeUses, stdIsOfType);
+								dynamicString, reflectRuntimeUses, stdIsOfType, intUnary);
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
 							final plan:OcamlSealedNestedFunctionPlan = {
@@ -470,6 +478,7 @@ class OcamlFunctionPlanSealer {
 								dynamicString: dynamicString,
 								reflectRuntimeUses: reflectRuntimeUses,
 								stdIsOfType: stdIsOfType,
+								intUnary: intUnary,
 								imapInterfaces: imapInterfaces
 							};
 							for (decision in arrayLiteralProducers.decisions())

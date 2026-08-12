@@ -133,6 +133,9 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseKi
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeStrategy;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeValueCarrier;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperation;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperandCarrier;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -191,6 +194,7 @@ class OcamlBuilder {
 	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
 	var currentReflectRuntimeUsePlan:Null<OcamlReflectRuntimeUsePlan> = null;
 	var currentStdIsOfTypePlan:Null<OcamlStdIsOfTypePlan> = null;
+	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -3732,7 +3736,7 @@ class OcamlBuilder {
 			case TBinop(op, e1, e2):
 				buildBinop(e, op, e1, e2, e.t);
 			case TUnop(op, postFix, inner):
-				buildUnop(op, postFix, inner, e.t);
+				buildUnop(e, op, postFix, inner, e.t);
 			case TFunction(tfunc):
 				buildFunction(e, tfunc);
 			case TIf(cond, eif, eelse):
@@ -6860,8 +6864,13 @@ class OcamlBuilder {
 	}
 
 	function safeUnboxNullableInt(expr:OcamlExpr):OcamlExpr {
-		final tmp = freshTmp("nullable_int");
 		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		return safeUnboxNullableIntWithSentinel(expr, hxNull);
+	}
+
+	/** Converts one nullable integer after its owner supplies the exact null sentinel. */
+	function safeUnboxNullableIntWithSentinel(expr:OcamlExpr, hxNull:OcamlExpr):OcamlExpr {
+		final tmp = freshTmp("nullable_int");
 		return OcamlExpr.ELet(tmp, expr,
 			OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull), OcamlExpr.EConst(OcamlConst.CInt(0)),
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])),
@@ -7513,15 +7522,65 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildUnop(op:Unop, postFix:Bool, e:TypedExpr, resultType:Type):OcamlExpr {
+	/**
+			Builds one exact integer unary expression from its sealed runtime-use plan.
+	
+			The plan fixes both the Int32 operation and, for `Null<Int>`, the null
+			sentinel used by the existing null-to-zero conversion. This method evaluates
+			the source operand once and cannot introduce another private helper.
+		**/
+	function buildPlannedIntUnary(expression:TypedExpr, operand:TypedExpr, expectedOperation:OcamlIntUnaryOperation):OcamlExpr {
+		final plan = currentIntUnaryPlan;
+		if (plan == null)
+			return callPlanInvariant("an exact integer unary expression has no active sealed plan", expression.pos);
+		final decision = try {
+			plan.requireFor(expression);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+		final operandSemanticTypeId = TypeTools.toString(operand.t);
+		final resultSemanticTypeId = TypeTools.toString(expression.t);
+		final actualCarrier = nullablePrimitiveKind(operand.t) == "int" ? OcamlIntUnaryOperandCarrier.NullableInt : OcamlIntUnaryOperandCarrier.ExactInt;
+		if (decision.operation != expectedOperation
+			|| decision.operandCarrier != actualCarrier
+			|| decision.operandSemanticTypeId != operandSemanticTypeId
+			|| decision.resultSemanticTypeId != resultSemanticTypeId)
+			return callPlanInvariant('integer unary decision "${decision.id}" belongs to a different typed expression', expression.pos);
+
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifiers:Array<OcamlExpr> = [];
+		for (occurrence in decision.runtimeUseOccurrences)
+			runtimeIdentifiers.push(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol)));
+		try {
+			authority.reconcileExpression(OcamlExpr.ESeq(runtimeIdentifiers));
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+
+		final sourceValue = buildExpr(operand);
+		final carriedValue = switch (decision.operandCarrier) {
+			case ExactInt:
+				sourceValue;
+			case NullableInt:
+				safeUnboxNullableIntWithSentinel(sourceValue, runtimeIdentifiers[0]);
+		};
+		final operationIdentifier = runtimeIdentifiers[runtimeIdentifiers.length - 1];
+		return OcamlExpr.EApp(operationIdentifier, [carriedValue]);
+	}
+
+	function buildUnop(expression:TypedExpr, op:Unop, postFix:Bool, e:TypedExpr, resultType:Type):OcamlExpr {
 		return switch (op) {
 			case OpNot:
 				final plannedTruthiness = buildPlannedNullableBoolTruthiness(e);
 				OcamlExpr.EUnop(OcamlUnop.Not, plannedTruthiness == null ? buildExpr(e) : plannedTruthiness);
 			case OpNegBits:
-				final kind = nullablePrimitiveKind(e.t);
-				final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "lognot"), [v]);
+				if (isIntType(e.t) || nullablePrimitiveKind(e.t) == "int") {
+					buildPlannedIntUnary(expression, e, OcamlIntUnaryOperation.BitwiseNot);
+				} else {
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "lognot"), [buildExpr(e)]);
+				}
 			case OpNeg:
 				if (isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float") {
 					final kind = nullablePrimitiveKind(e.t);
@@ -7541,9 +7600,11 @@ class OcamlBuilder {
 					}
 					OcamlExpr.EUnop(OcamlUnop.NegF, v);
 				} else {
-					final kind = nullablePrimitiveKind(e.t);
-					final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [v]);
+					if (isIntType(e.t) || nullablePrimitiveKind(e.t) == "int") {
+						buildPlannedIntUnary(expression, e, OcamlIntUnaryOperation.Negate);
+					} else {
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [buildExpr(e)]);
+					}
 				}
 			case OpIncrement, OpDecrement:
 				// ++x / x++ / --x / x--:
@@ -8165,6 +8226,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8186,6 +8248,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
+		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8205,6 +8268,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8235,6 +8299,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8256,6 +8321,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
+		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8275,6 +8341,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8439,6 +8506,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8467,6 +8535,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = functionPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = functionPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = functionPlan.stdIsOfType;
+		currentIntUnaryPlan = functionPlan.intUnary;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8643,6 +8712,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8715,6 +8785,7 @@ class OcamlBuilder {
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8729,6 +8800,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = nestedDisposition == null ? null : nestedDisposition.dynamicString;
 		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
 		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
+		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8820,6 +8892,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);

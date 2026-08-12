@@ -21,6 +21,8 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
+import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -99,6 +101,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_REFLECT_COMPARE_FAILURE = "haxe-reflect-compare-failure";
 	public static inline final HAXE_REFLECT_RUNTIME_CALL = "haxe-reflect-runtime-call";
 	public static inline final HAXE_STD_IS_OF_TYPE = "haxe-std-is-of-type";
+	public static inline final HAXE_INT32_UNARY = "haxe-int32-unary";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -571,6 +574,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helpers selected by one sealed `Std.isOfType()` call. */
 	public function recordStdIsOfType(decision:OcamlStdIsOfTypeDecision):Void {
 		for (requirement in requirementsForStdIsOfType(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact runtime roots selected by one integer unary expression. */
+	public static function requirementsForIntUnary(decision:OcamlIntUnaryDecision):Array<OcamlRuntimeRequirement> {
+		OcamlIntUnaryPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_INT32_UNARY,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.operandSemanticTypeId + " -> " + decision.resultSemanticTypeId
+				},
+				implementationFeature: "haxe-int32-unary-v1",
+				rootModules: OcamlIntUnaryPlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed integer unary expression selected its Int32 operation and nullable conversion before target syntax. The listed private helper names are the complete allowed sequence for this source occurrence."
+			})
+		];
+	}
+
+	/** Records the private helpers selected by one integer unary expression. */
+	public function recordIntUnary(decision:OcamlIntUnaryDecision):Void {
+		for (requirement in requirementsForIntUnary(decision))
 			record(requirement);
 	}
 
