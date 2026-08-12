@@ -145,7 +145,7 @@ const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.cla
 	.filter(clause => clause.semanticTypeId === 'Box')
 const mainCatchChains = report.lowering.controlCatches.filter(chain =>
 	chain.functionId.startsWith('Main|Main|'))
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| mainCatchChains.length !== 4

@@ -120,7 +120,7 @@ const sourceFile = 'external-source/src/Main.hx'
 const controls = report.lowering.controls.filter(item =>
 	item.sourceFile === sourceFile
 	&& item.payload?.conversion === 'box-enum-throw-carrier')
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| report.summary.valid !== true
 	|| controls.length !== 3
 	|| controls.some(item =>

@@ -221,7 +221,7 @@ const preserved = controls.filter(control =>
 const directional = controls.filter(control =>
 	control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
 	|| control.payload?.conversion === 'box-exact-bool-to-nullable-carrier')
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 12

@@ -263,7 +263,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| report.lowering.controlCatches.length !== 19

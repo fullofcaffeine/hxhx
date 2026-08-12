@@ -115,7 +115,7 @@ const stringResults = report.lowering.functionResultBoundaries.filter(boundary =
 	boundary.source === 'non-generic-instance-exact-string-declaration')
 const voidResults = report.lowering.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-effect-only-void-declaration')
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| report.summary.valid !== true
 	|| stringResults.length !== 3
 	|| voidResults.length !== 3

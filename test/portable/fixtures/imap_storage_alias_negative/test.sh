@@ -53,7 +53,7 @@ trap 'rm -f "$inspection_report"' EXIT
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 45
+if (report.schemaVersion !== 46
 	|| !report.summary?.valid
 	|| report.summary.iMapStorageAliasCount !== 0
 	|| report.summary.iMapInterfaceConversionCount !== 6) {
