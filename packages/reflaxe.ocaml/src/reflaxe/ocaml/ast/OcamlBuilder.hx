@@ -7522,13 +7522,7 @@ class OcamlBuilder {
 		}
 	}
 
-	/**
-											Builds one exact integer unary expression from its sealed runtime-use plan.
-	
-											The plan fixes both the Int32 operation and, for `Null<Int>`, the null
-											sentinel used by the existing null-to-zero conversion. This method evaluates
-											the source operand once and cannot introduce another private helper.
-		**/
+	/** Builds one integer unary expression with the operation and helper names selected before target syntax generation. */
 	function buildPlannedIntUnary(expression:TypedExpr, operand:TypedExpr, expectedOperation:OcamlIntUnaryOperation):OcamlExpr {
 		final plan = currentIntUnaryPlan;
 		if (plan == null)
