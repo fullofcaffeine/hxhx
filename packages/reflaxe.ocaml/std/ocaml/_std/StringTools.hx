@@ -710,14 +710,20 @@ class StringTools {
 				index++;
 				continue;
 			}
-			if (code == '%'.code && index + 2 < bytes.length) {
-				final hi = _hexValue(bytes.get(index + 1));
-				final lo = _hexValue(bytes.get(index + 2));
-				if (hi >= 0 && lo >= 0) {
-					out.addByte((hi << 4) | lo);
-					index += 3;
-					continue;
+			if (code == '%'.code) {
+				if (index + 2 < bytes.length) {
+					final hi = _hexValue(bytes.get(index + 1));
+					final lo = _hexValue(bytes.get(index + 2));
+					if (hi >= 0 && lo >= 0) {
+						out.addByte((hi << 4) | lo);
+						index += 3;
+						continue;
+					}
 				}
+				// Haxe 4.3.7 eval discards an invalid percent marker. The following
+				// characters stay in the input stream and are decoded normally.
+				index++;
+				continue;
 			}
 			out.addByte(code);
 			index++;

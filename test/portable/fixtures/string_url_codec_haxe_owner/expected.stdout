@@ -1,0 +1,18 @@
+encode ordinary=a%20b
+encode reserved=a%2Fb%2Bc%3Fd%3De%26f
+encode unicode=caf%C3%A9%20%E2%9C%93
+decode ordinary=a b
+decode reserved=a/b+c?d=e&f
+decode unicode=café ✓
+decode plus=a b
+decode malformed short=a2
+decode malformed hex=aZZb
+decode malformed end=a
+decode malformed high=aG1b
+decode malformed low=a1Gb
+decode doubled percent=a b
+encode once=side%20effect%20value
+decode once=side effect value
+calls=2
+nested=nested value
+standalone=standalone%20value

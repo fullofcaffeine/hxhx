@@ -4696,12 +4696,6 @@ class OcamlBuilder {
 											buildPlannedStdIsOfType(e, args[0], args[1]);
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
 											buildStdString(args[0]);
-										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "StringTools" && cf.name == "urlEncode"
-											&& args.length == 1) {
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "urlEncode"), [buildExpr(args[0])]);
-										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "StringTools" && cf.name == "urlDecode"
-											&& args.length == 1) {
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "urlDecode"), [buildExpr(args[0])]);
 										} else {
 											final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (TypeTools.follow(cf.type)) {
 												case TFun(fargs, _):
