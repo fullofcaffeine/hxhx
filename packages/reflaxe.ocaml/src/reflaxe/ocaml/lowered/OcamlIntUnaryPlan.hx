@@ -52,8 +52,10 @@ typedef OcamlIntUnaryDecision = {
 
 	For `-value`, the plan selects `HxInt.neg`. For `~value`, it selects
 	`HxInt.lognot`. A nullable integer also records the Haxe null sentinel used by
-	the existing null-to-zero operand conversion. Target syntax receives only
-	these names and cannot choose another private helper after planning.
+	the existing null-to-zero operand conversion. The outer Int32 call appears
+	first in the structured target tree, followed by its nested sentinel use.
+	Target syntax receives only these names and cannot choose another private
+	helper after planning.
 
 	The expression lookup belongs to one compiler request and must not be cached.
 **/
@@ -158,13 +160,13 @@ class OcamlIntUnaryPlan {
 	/** Returns private helper names in their final target-expression order. */
 	public static function exactSymbolsFor(operation:OcamlIntUnaryOperation, carrier:OcamlIntUnaryOperandCarrier):Array<String> {
 		final finalOperation = operation == OcamlIntUnaryOperation.Negate ? "HxInt.neg" : "HxInt.lognot";
-		return carrier == OcamlIntUnaryOperandCarrier.NullableInt ? ["HxRuntime.hx_null", finalOperation] : [finalOperation];
+		return carrier == OcamlIntUnaryOperandCarrier.NullableInt ? [finalOperation, "HxRuntime.hx_null"] : [finalOperation];
 	}
 
 	/** Returns stable roles for the helpers selected by one decision. */
 	public static function rolesFor(operation:OcamlIntUnaryOperation, carrier:OcamlIntUnaryOperandCarrier):Array<String> {
 		final finalRole = operation == OcamlIntUnaryOperation.Negate ? "negate-int32" : "complement-int32";
-		return carrier == OcamlIntUnaryOperandCarrier.NullableInt ? ["nullable-null-sentinel", finalRole] : [finalRole];
+		return carrier == OcamlIntUnaryOperandCarrier.NullableInt ? [finalRole, "nullable-null-sentinel"] : [finalRole];
 	}
 
 	/** Returns the direct runtime roots selected by one validated decision. */

@@ -723,6 +723,29 @@ typedef InspectionStdIsOfType = {
 	final pipelineRevision:String;
 }
 
+/** One validated exact integer unary operation selected before target syntax. */
+typedef InspectionIntUnary = {
+	final id:String;
+	final revision:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final operation:String;
+	final operandCarrier:String;
+	final operandSemanticTypeId:String;
+	final resultSemanticTypeId:String;
+	final order:Int;
+	final profileEligibility:Array<String>;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /**
 	One emitted function's completed result, independent of receiver or arguments.
 
@@ -941,6 +964,8 @@ typedef InspectionLowering = {
 	final reflectCompare:Array<InspectionReflectCompare>;
 	final stdIsOfTypeRevision:Null<String>;
 	final stdIsOfType:Array<InspectionStdIsOfType>;
+	final intUnaryRevision:Null<String>;
+	final intUnary:Array<InspectionIntUnary>;
 	final functionResultBoundaryRevision:Null<String>;
 	final functionResultBoundaries:Array<InspectionFunctionResultBoundary>;
 	final controlRevision:Null<String>;
@@ -990,6 +1015,7 @@ typedef InspectionSummary = {
 	final callableBoundaryCount:Int;
 	final reflectCompareCount:Int;
 	final stdIsOfTypeCount:Int;
+	final intUnaryCount:Int;
 	final functionResultBoundaryCount:Int;
 	final controlCount:Int;
 	final controlCatchCount:Int;

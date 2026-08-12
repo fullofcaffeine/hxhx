@@ -7523,11 +7523,11 @@ class OcamlBuilder {
 	}
 
 	/**
-			Builds one exact integer unary expression from its sealed runtime-use plan.
+											Builds one exact integer unary expression from its sealed runtime-use plan.
 	
-			The plan fixes both the Int32 operation and, for `Null<Int>`, the null
-			sentinel used by the existing null-to-zero conversion. This method evaluates
-			the source operand once and cannot introduce another private helper.
+											The plan fixes both the Int32 operation and, for `Null<Int>`, the null
+											sentinel used by the existing null-to-zero conversion. This method evaluates
+											the source operand once and cannot introduce another private helper.
 		**/
 	function buildPlannedIntUnary(expression:TypedExpr, operand:TypedExpr, expectedOperation:OcamlIntUnaryOperation):OcamlExpr {
 		final plan = currentIntUnaryPlan;
@@ -7564,9 +7564,9 @@ class OcamlBuilder {
 			case ExactInt:
 				sourceValue;
 			case NullableInt:
-				safeUnboxNullableIntWithSentinel(sourceValue, runtimeIdentifiers[0]);
+				safeUnboxNullableIntWithSentinel(sourceValue, runtimeIdentifiers[1]);
 		};
-		final operationIdentifier = runtimeIdentifiers[runtimeIdentifiers.length - 1];
+		final operationIdentifier = runtimeIdentifiers[0];
 		return OcamlExpr.EApp(operationIdentifier, [carriedValue]);
 	}
 
@@ -7579,7 +7579,7 @@ class OcamlBuilder {
 				if (isIntType(e.t) || nullablePrimitiveKind(e.t) == "int") {
 					buildPlannedIntUnary(expression, e, OcamlIntUnaryOperation.BitwiseNot);
 				} else {
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "lognot"), [buildExpr(e)]);
+					callPlanInvariant("bitwise complement reached target syntax without an admitted integer operand carrier", expression.pos);
 				}
 			case OpNeg:
 				if (isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float") {
@@ -7603,7 +7603,7 @@ class OcamlBuilder {
 					if (isIntType(e.t) || nullablePrimitiveKind(e.t) == "int") {
 						buildPlannedIntUnary(expression, e, OcamlIntUnaryOperation.Negate);
 					} else {
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [buildExpr(e)]);
+						callPlanInvariant("integer negation reached target syntax without an admitted integer operand carrier", expression.pos);
 					}
 				}
 			case OpIncrement, OpDecrement:

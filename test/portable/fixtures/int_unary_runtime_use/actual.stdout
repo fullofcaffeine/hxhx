@@ -1,0 +1,11 @@
+neg=-7
+not=-8
+min=-2147483648
+side=-7
+calls=1
+null.neg=0
+null.not=-1
+value.neg=-5
+value.not=-6
+nested=-3
+standalone=-2

@@ -16,6 +16,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionReflectCompare;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStdIsOfType;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionIntUnary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionDynamicFunctionCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
@@ -95,9 +96,11 @@ class ReflaxeOcamlInspection {
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
 	static inline final STD_IS_OF_TYPE_MODEL = "typed-ocaml-std-is-of-type-v1";
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v104";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v25";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v10";
+	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
+	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v105";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v26";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v11";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -134,7 +137,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 46,
+			schemaVersion: 47,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -170,6 +173,7 @@ class ReflaxeOcamlInspection {
 				callableBoundaryCount: lowering.callableBoundaries.length,
 				reflectCompareCount: lowering.reflectCompare.length,
 				stdIsOfTypeCount: lowering.stdIsOfType.length,
+				intUnaryCount: lowering.intUnary.length,
 				functionResultBoundaryCount: lowering.functionResultBoundaries.length,
 				controlCount: lowering.controls.length,
 				controlCatchCount: lowering.controlCatches.length,
@@ -243,6 +247,7 @@ class ReflaxeOcamlInspection {
 			}
 			lines.push('[PASS] Reflect.compare: ${report.lowering.reflectCompare.length} typed Int, Float, String, or nullable-String comparison${report.lowering.reflectCompare.length == 1 ? "" : "s"} selected before OCaml syntax.');
 			lines.push('[PASS] Std.isOfType: ${report.lowering.stdIsOfType.length} static or runtime type check${report.lowering.stdIsOfType.length == 1 ? "" : "s"} selected before OCaml syntax.');
+			lines.push('[PASS] Integer unary: ${report.lowering.intUnary.length} negation or bitwise-complement expression${report.lowering.intUnary.length == 1 ? "" : "s"} selected before OCaml syntax.');
 			lines.push('[PASS] Function results: ${report.lowering.functionResultBoundaries.length} emitted function completion boundar${report.lowering.functionResultBoundaries.length == 1 ? "y" : "ies"} validated independently from call receivers and arguments.');
 			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
@@ -437,6 +442,8 @@ class ReflaxeOcamlInspection {
 					reflectCompare: [],
 					stdIsOfTypeRevision: null,
 					stdIsOfType: [],
+					intUnaryRevision: null,
+					intUnary: [],
 					functionResultBoundaryRevision: null,
 					functionResultBoundaries: [],
 					controlRevision: null,
@@ -457,8 +464,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 83) {
-						throw 'Unsupported lowering report schema $version; expected 83.';
+					if (version != 84) {
+						throw 'Unsupported lowering report schema $version; expected 84.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -483,6 +490,7 @@ class ReflaxeOcamlInspection {
 					final callInventory = inspectCalls(value, representation);
 					final reflectCompare = inspectReflectCompare(value);
 					final stdIsOfType = inspectStdIsOfType(value);
+					final intUnary = inspectIntUnary(value);
 					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries,
 						anonymousStructures.structures);
 					final controlTargets = inspectControlTargets(value);
@@ -493,7 +501,7 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, controls);
+						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, intUnary, controls);
 					{
 						status: "present",
 						required: required,
@@ -531,6 +539,8 @@ class ReflaxeOcamlInspection {
 						reflectCompare: reflectCompare,
 						stdIsOfTypeRevision: requiredSha256Revision(value, "stdIsOfTypeRevision"),
 						stdIsOfType: stdIsOfType,
+						intUnaryRevision: requiredSha256Revision(value, "intUnaryRevision"),
+						intUnary: intUnary,
 						functionResultBoundaryRevision: requiredSha256Revision(value, "functionResultBoundaryRevision"),
 						functionResultBoundaries: functionResultBoundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
@@ -1788,6 +1798,136 @@ class ReflaxeOcamlInspection {
 			decision.valueCarrier,
 			decision.valueSemanticTypeId,
 			decision.requestedTypeSemanticId,
+			Std.string(decision.order),
+			decision.functionId,
+			decision.programRevision,
+			decision.bodyRevision,
+			decision.pipelineRevision,
+			decision.runtimeRequirementIds.join("\u001e"),
+			symbols.join("\u001e"),
+			roles.join("\u001e")
+		].map(value -> value.length + ":" + value).join("|"));
+	}
+
+	/** Validates exact integer unary decisions without reading generated OCaml text. */
+	static function inspectIntUnary(value:Dynamic):Array<InspectionIntUnary> {
+		if (requiredString(value, "intUnaryModel") != INT_UNARY_MODEL)
+			throw "Unsupported integer unary report model.";
+		final raw = requiredArray(value, "intUnary");
+		if (raw.length != requiredInt(value, "intUnaryCount"))
+			throw "Integer unary count does not match its inventory.";
+		if (requiredSha256Revision(value, "intUnaryRevision") != "sha256:" + Sha256.encode(Json.stringify(raw)))
+			throw "Integer unary revision does not match its ordered decision inventory.";
+		final decisions = [for (entry in raw) intUnaryDecision(entry)];
+		final ids:Map<String, Bool> = [];
+		for (decision in decisions) {
+			if (ids.exists(decision.id))
+				throw 'Integer unary report contains duplicate identity "${decision.id}".';
+			if (decision.sourceFile.length == 0
+				|| decision.sourceMin < 0
+				|| decision.sourceMax < decision.sourceMin
+				|| decision.operandSemanticTypeId.length == 0
+				|| decision.resultSemanticTypeId.length == 0
+				|| decision.order < 0)
+				throw 'Integer unary decision "${decision.id}" has incomplete typed or source facts.';
+			if (decision.profileEligibility.join(",") != "metal,portable"
+				|| decision.proofId != INT_UNARY_PROOF_ID
+				|| decision.proofClaim.length == 0
+				|| decision.functionId.length == 0
+				|| decision.programRevision.length == 0
+				|| decision.bodyRevision.length == 0
+				|| (decision.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
+					&& decision.pipelineRevision != NESTED_FUNCTION_PIPELINE_REVISION
+					&& decision.pipelineRevision != STANDALONE_EXPRESSION_PIPELINE_REVISION))
+				throw 'Integer unary decision "${decision.id}" has invalid proof, profile, or plan binding facts.';
+			final symbols = intUnarySymbols(decision.operation, decision.operandCarrier);
+			final roles = intUnaryRoles(decision.operation, decision.operandCarrier);
+			final expectedRequirementIds = [decision.id + ":runtime:haxe-int32-unary"];
+			if (decision.runtimeRequirementIds.join(",") != expectedRequirementIds.join(",")
+				|| decision.runtimeUseOccurrences.length != symbols.length
+				|| decision.revision != intUnaryDecisionRevision(decision, symbols, roles))
+				throw 'Integer unary decision "${decision.id}" has stale operation, conversion, or runtime-use facts.';
+			for (index in 0...symbols.length) {
+				final occurrence = decision.runtimeUseOccurrences[index];
+				if (occurrence.id != decision.id + ":runtime-use:" + roles[index]
+					|| occurrence.planRevision != decision.revision
+					|| occurrence.ownerId != decision.id
+					|| occurrence.requirementId != expectedRequirementIds[0]
+					|| (occurrence.domain : String) != "expression-identifier"
+						|| occurrence.exactSymbol != symbols[index]
+						|| occurrence.role != roles[index]
+						|| occurrence.order != index
+						|| occurrence.source.file != decision.sourceFile
+						|| occurrence.source.min != decision.sourceMin
+						|| occurrence.source.max != decision.sourceMax
+						|| occurrence.profileEligibility.join(",") != "metal,portable"
+						|| occurrence.cardinality != 1)
+					throw 'Integer unary decision "${decision.id}" has a conflicting helper at order $index.';
+			}
+			ids.set(decision.id, true);
+		}
+		decisions.sort((left, right) -> compareStrings(left.id, right.id));
+		return decisions;
+	}
+
+	static function intUnaryDecision(value:Dynamic):InspectionIntUnary {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			revision: requiredSha256Revision(value, "revision"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			operation: requiredString(value, "operation"),
+			operandCarrier: requiredString(value, "operandCarrier"),
+			operandSemanticTypeId: requiredString(value, "operandSemanticTypeId"),
+			resultSemanticTypeId: requiredString(value, "resultSemanticTypeId"),
+			order: requiredInt(value, "order"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: loweredPlanRuntimeUseOccurrences(value),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function intUnarySymbols(operation:String, carrier:String):Array<String> {
+		final finalSymbol = switch (operation) {
+			case "negate": "HxInt.neg";
+			case "bitwise-not": "HxInt.lognot";
+			case _: throw 'Unsupported integer unary operation "$operation".';
+		};
+		return switch (carrier) {
+			case "exact-int": [finalSymbol];
+			case "nullable-int": [finalSymbol, "HxRuntime.hx_null"];
+			case _: throw 'Unsupported integer unary operand carrier "$carrier".';
+		};
+	}
+
+	static function intUnaryRoles(operation:String, carrier:String):Array<String> {
+		final finalRole = switch (operation) {
+			case "negate": "negate-int32";
+			case "bitwise-not": "complement-int32";
+			case _: throw 'Unsupported integer unary operation "$operation".';
+		};
+		return carrier == "nullable-int" ? [finalRole, "nullable-null-sentinel"] : [finalRole];
+	}
+
+	static function intUnaryDecisionRevision(decision:InspectionIntUnary, symbols:Array<String>, roles:Array<String>):String {
+		return "sha256:" + Sha256.encode([
+			"int-unary-runtime-use-v1",
+			decision.id,
+			decision.sourceFile,
+			Std.string(decision.sourceMin),
+			Std.string(decision.sourceMax),
+			decision.operation,
+			decision.operandCarrier,
+			decision.operandSemanticTypeId,
+			decision.resultSemanticTypeId,
 			Std.string(decision.order),
 			decision.functionId,
 			decision.programRevision,
@@ -3820,7 +3960,7 @@ class ReflaxeOcamlInspection {
 			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
 			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
 			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, reflectCompare:Array<InspectionReflectCompare>,
-			stdIsOfType:Array<InspectionStdIsOfType>, controls:Array<InspectionControl>):Int {
+			stdIsOfType:Array<InspectionStdIsOfType>, intUnary:Array<InspectionIntUnary>, controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -4441,6 +4581,36 @@ class ReflaxeOcamlInspection {
 				throw 'Std.isOfType decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed strategy.';
 			referenced.set(requirementId, true);
 		}
+		for (decision in intUnary) {
+			final requirementId = decision.id + ":runtime:haxe-int32-unary";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Integer unary decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final expectedRootsByName:Map<String, Bool> = [];
+			for (symbol in intUnarySymbols(decision.operation, decision.operandCarrier))
+				expectedRootsByName.set(symbol.split(".")[0], true);
+			final expectedRoots = [for (root in expectedRootsByName.keys()) root];
+			expectedRoots.sort(compareStrings);
+			if (decision.runtimeRequirementIds.length != 1
+				|| decision.runtimeRequirementIds[0] != requirementId
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != decision.id
+				|| requiredString(source, "file") != decision.sourceFile
+				|| requiredInt(source, "min") != decision.sourceMin
+				|| requiredInt(source, "max") != decision.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-int32-unary"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != decision.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != decision.operandSemanticTypeId + " -> " + decision.resultSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-int32-unary-v1"
+				|| requiredStringArray(requirement, "rootModules").join(",") != expectedRoots.join(",")
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable")
+				throw 'Integer unary decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed operation.';
+			referenced.set(requirementId, true);
+		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))
 				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
@@ -4868,6 +5038,8 @@ class ReflaxeOcamlInspection {
 			reflectCompare: [],
 			stdIsOfTypeRevision: null,
 			stdIsOfType: [],
+			intUnaryRevision: null,
+			intUnary: [],
 			functionResultBoundaryRevision: null,
 			functionResultBoundaries: [],
 			controlRevision: null,

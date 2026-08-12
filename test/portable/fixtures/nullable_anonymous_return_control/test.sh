@@ -122,10 +122,10 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$VALID_INSPECTION" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 46
+if (report.schemaVersion !== 47
 	|| report.summary?.valid !== true
 	|| report.lowering?.status !== 'present'
-	|| report.lowering?.schemaVersion !== 83) {
+	|| report.lowering?.schemaVersion !== 84) {
 	throw new Error('public inspection did not validate the nullable anonymous return report')
 }
 const boundaries = report.lowering.functionResultBoundaries.filter(item =>

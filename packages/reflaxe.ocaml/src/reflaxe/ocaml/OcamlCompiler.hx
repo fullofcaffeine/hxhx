@@ -1683,6 +1683,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordReflectRuntimeUseRequirement(decision);
 		for (decision in plan.stdIsOfType.decisions())
 			ctx.recordStdIsOfTypeRuntimeRequirement(decision);
+		for (decision in plan.intUnary.decisions())
+			ctx.recordIntUnaryRuntimeRequirement(decision);
 		for (chain in plan.controls.catchChains())
 			ctx.recordCatchChainRuntimeRequirements(chain);
 		for (target in plan.controls.loopTargets()) {
@@ -3006,9 +3008,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
 				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.iMapInterfaceConversions(), functionPlanRegistry.iMapInterfaceCalls(),
 				functionPlanRegistry.iMapStorageAliases(), functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(),
-				functionPlanRegistry.reflectCompareDecisions(), functionPlanRegistry.stdIsOfTypeDecisions(), functionPlanRegistry.functionResultBoundaries(),
-				functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(),
-				functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.reflectCompareDecisions(), functionPlanRegistry.stdIsOfTypeDecisions(), functionPlanRegistry.intUnaryDecisions(),
+				functionPlanRegistry.functionResultBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
+				functionPlanRegistry.controlCatchChains(), functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(),
+				staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
