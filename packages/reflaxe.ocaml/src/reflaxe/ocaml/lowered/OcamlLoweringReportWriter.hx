@@ -43,6 +43,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
@@ -70,7 +72,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 82;
+	public static inline final SCHEMA_VERSION = 83;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -148,8 +150,9 @@ class OcamlLoweringReportWriter {
 			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
 			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
 			iMapStorageAliases:Array<OcamlIMapStorageAliasDecision>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			reflectCompare:Array<OcamlReflectCompareDecision>, functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			reflectCompare:Array<OcamlReflectCompareDecision>, stdIsOfType:Array<OcamlStdIsOfTypeDecision>,
+			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
+			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
 			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
@@ -599,6 +602,15 @@ class OcamlLoweringReportWriter {
 			if (!containerElementConversionById.exists(id))
 				throw 'Required container-element occurrence "$id" has no sealed conversion.';
 		}
+		final sortedStdIsOfType = stdIsOfType.copy();
+		sortedStdIsOfType.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final stdIsOfTypeIds:Map<String, Bool> = [];
+		for (decision in sortedStdIsOfType) {
+			OcamlStdIsOfTypePlan.requireDecision(decision);
+			if (stdIsOfTypeIds.exists(decision.id))
+				throw 'Std.isOfType decision identity "${decision.id}" occurs more than once.';
+			stdIsOfTypeIds.set(decision.id, true);
+		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
 			if (requirementById.exists(requirement.id))
@@ -614,6 +626,16 @@ class OcamlLoweringReportWriter {
 					throw 'Reflect.compare decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
 				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
 					throw 'Reflect.compare decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
+		for (decision in sortedStdIsOfType) {
+			for (expected in OcamlRuntimeRequirementLedger.requirementsForStdIsOfType(decision)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Std.isOfType decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Std.isOfType decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
 				includedRequirementIds.set(expected.id, true);
 			}
 		}
@@ -840,6 +862,7 @@ class OcamlLoweringReportWriter {
 			reflectCompareIds.set(decision.id, true);
 		}
 		final canonicalReflectCompare = haxe.Json.stringify(sortedReflectCompare);
+		final canonicalStdIsOfType = haxe.Json.stringify(sortedStdIsOfType);
 		final canonicalFunctionResultBoundaries = haxe.Json.stringify(sortedFunctionResultBoundaries);
 		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
 		final canonicalControls = haxe.Json.stringify({
@@ -911,6 +934,10 @@ class OcamlLoweringReportWriter {
 			reflectCompareRevision: "sha256:" + Sha256.encode(canonicalReflectCompare),
 			reflectCompareCount: sortedReflectCompare.length,
 			reflectCompare: sortedReflectCompare,
+			stdIsOfTypeModel: OcamlStdIsOfTypePlan.MODEL_REVISION,
+			stdIsOfTypeRevision: "sha256:" + Sha256.encode(canonicalStdIsOfType),
+			stdIsOfTypeCount: sortedStdIsOfType.length,
+			stdIsOfType: sortedStdIsOfType,
 			functionResultBoundaryModel: OcamlFunctionResultBoundary.MODEL,
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,

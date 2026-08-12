@@ -15,10 +15,10 @@ const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 const targets = report.controlTargets.filter(target =>
 	target.functionId.startsWith('standalone:')
-	&& target.pipelineRevision === 'ocaml-standalone-expression-plans-v9')
+	&& target.pipelineRevision === 'ocaml-standalone-expression-plans-v10')
 const transfers = report.controls.filter(control =>
 	control.functionId.startsWith('standalone:')
-	&& control.pipelineRevision === 'ocaml-standalone-expression-plans-v9')
+	&& control.pipelineRevision === 'ocaml-standalone-expression-plans-v10')
 
 if (targets.length !== 1
 	|| transfers.length !== 2

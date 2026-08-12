@@ -130,6 +130,9 @@ import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDomain;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseKind;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeStrategy;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeValueCarrier;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -187,6 +190,7 @@ class OcamlBuilder {
 	var currentCallPlan:Null<OcamlCallPlan> = null;
 	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
 	var currentReflectRuntimeUsePlan:Null<OcamlReflectRuntimeUsePlan> = null;
+	var currentStdIsOfTypePlan:Null<OcamlStdIsOfTypePlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -1862,6 +1866,88 @@ class OcamlBuilder {
 			return callPlanInvariant(Std.string(error), call.pos);
 		}
 		return identifier;
+	}
+
+	/**
+		Builds one standard Haxe runtime type check from its sealed decision.
+
+		For example, `Std.isOfType(value, Int)` can need the private null and
+		boxed-Boolean helpers when `value` uses Haxe's Dynamic carrier. Planning
+		selects that complete check before this builder starts. This method can use
+		only the selected helper names, in their selected order. Argument expressions
+		keep their own runtime-use authority.
+	**/
+	function buildPlannedStdIsOfType(call:TypedExpr, value:TypedExpr, requestedType:TypedExpr):OcamlExpr {
+		final plan = currentStdIsOfTypePlan;
+		if (plan == null)
+			return callPlanInvariant("a resolved Std.isOfType call has no active sealed type-test plan", call.pos);
+		final decision = try {
+			plan.requireFor(call);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+		final valueSemanticTypeId = TypeTools.toString(value.t);
+		final requestedTypeSemanticId = TypeTools.toString(requestedType.t);
+		if (decision.valueSemanticTypeId != valueSemanticTypeId || decision.requestedTypeSemanticId != requestedTypeSemanticId)
+			return callPlanInvariant('Std.isOfType decision "${decision.id}" belongs to different typed operands', call.pos);
+
+		final valueExpr = buildExpr(value);
+		final carriedValue = switch (decision.valueCarrier) {
+			case DirectObject:
+				valueExpr;
+			case Repr:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+		}
+		if (decision.runtimeUseOccurrences.length == 0) {
+			final result = switch (decision.strategy) {
+				case StaticTrue: true;
+				case StaticFalse: false;
+				case _: return callPlanInvariant('Std.isOfType decision "${decision.id}" has no helpers for ${decision.strategy}', call.pos);
+			}
+			// Haxe evaluates call arguments even when the type result is known. Keep
+			// that side effect, then return the already selected Boolean result.
+			return OcamlExpr.ESeq([exprAsStatement(valueExpr), OcamlExpr.EConst(OcamlConst.CBool(result))]);
+		}
+
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifiers:Array<OcamlExpr> = [];
+		for (occurrence in decision.runtimeUseOccurrences)
+			runtimeIdentifiers.push(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol)));
+		try {
+			authority.reconcileExpression(OcamlExpr.ESeq(runtimeIdentifiers));
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+
+		final temporary = freshTmp("isOfTypeValue");
+		final storedValue = OcamlExpr.EIdent(temporary);
+		final result = switch (decision.strategy) {
+			case DynamicInt:
+				final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, storedValue, runtimeIdentifiers[0]);
+				final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [storedValue]);
+				final isBoxedBool = OcamlExpr.EApp(runtimeIdentifiers[1], [storedValue]);
+				OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)),
+					OcamlExpr.EBinop(OcamlBinop.And, isInt, OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool)));
+			case DynamicFloat:
+				final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, storedValue, runtimeIdentifiers[0]);
+				final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [storedValue]);
+				final isBoxedBool = OcamlExpr.EApp(runtimeIdentifiers[1], [storedValue]);
+				final intOk = OcamlExpr.EBinop(OcamlBinop.And, isInt, OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool));
+				final isDouble = OcamlExpr.EBinop(OcamlBinop.Eq, OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [storedValue]),
+					OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag"));
+				OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), OcamlExpr.EBinop(OcamlBinop.Or, intOk, isDouble));
+			case DynamicBool:
+				final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, storedValue, runtimeIdentifiers[0]);
+				final isBoxedBool = OcamlExpr.EApp(runtimeIdentifiers[1], [storedValue]);
+				OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), isBoxedBool);
+			case RuntimeFallback:
+				OcamlExpr.EApp(runtimeIdentifiers[0], [storedValue, buildExpr(requestedType)]);
+			case StaticTrue, StaticFalse:
+				return callPlanInvariant('static Std.isOfType decision "${decision.id}" unexpectedly owns runtime helpers', call.pos);
+		}
+		return OcamlExpr.ELet(temporary, carriedValue, result, false);
 	}
 
 	/**
@@ -4603,111 +4689,7 @@ class OcamlBuilder {
 													OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [buildExpr(arg)]);
 											}
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "isOfType" && args.length == 2) {
-											final a0 = args[0];
-											final a0Type = unwrapNullType(a0.t);
-											final a0Expr = buildExpr(a0);
-											final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null) ? a0Expr : switch (followNoAbstracts(a0Type)) {
-												case TDynamic(_):
-													a0Expr;
-												case TAbstract(_, _) if (isStdAnyAbstract(a0Type)):
-													a0Expr;
-												case TAnonymous(_) if (shouldAnonUseHxAnon(a0.t)):
-													a0Expr;
-												case _:
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
-											};
-											switch (unwrap(args[1]).expr) {
-												// Core abstracts are not classes/enums in our runtime; implement best-effort
-												// checks directly to support the `is` operator (which lowers to Std.isOfType).
-												// (bd: haxe.ocaml-s16)
-												case TTypeExpr(TAbstract(absRef)):
-													final abs = absRef.get();
-													final pack = abs.pack ?? [];
-													if (pack.length == 0) {
-														switch (abs.name) {
-															case "Int":
-																if (isIntType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(true));
-																} else if (isFloatType(a0.t) || isBoolType(a0.t) || isStringType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(false));
-																} else {
-																	final tmp = freshTmp("isInt");
-																	final v = OcamlExpr.EIdent(tmp);
-																	final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v,
-																		OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
-																	final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [v]);
-																	final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-																		"is_boxed_bool"), [v]);
-																	final notBool = OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool);
-																	OcamlExpr.ELet(tmp, asObj,
-																		OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)),
-																			OcamlExpr.EBinop(OcamlBinop.And, isInt, notBool)),
-																		false);
-																}
-															case "Float":
-																if (isFloatType(a0.t) || isIntType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(true));
-																} else if (isBoolType(a0.t) || isStringType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(false));
-																} else {
-																	final tmp = freshTmp("isFloat");
-																	final v = OcamlExpr.EIdent(tmp);
-																	final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v,
-																		OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
-																	final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [v]);
-																	final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-																		"is_boxed_bool"), [v]);
-																	final notBool = OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool);
-																	final intOk = OcamlExpr.EBinop(OcamlBinop.And, isInt, notBool);
-																	final isDouble = OcamlExpr.EBinop(OcamlBinop.Eq,
-																		OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [v]),
-																		OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag"));
-																	OcamlExpr.ELet(tmp, asObj,
-																		OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)),
-																			OcamlExpr.EBinop(OcamlBinop.Or, intOk, isDouble)),
-																		false);
-																}
-															case "Bool":
-																if (isBoolType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(true));
-																} else if (isIntType(a0.t) || isFloatType(a0.t) || isStringType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(false));
-																} else {
-																	final tmp = freshTmp("isBool");
-																	final v = OcamlExpr.EIdent(tmp);
-																	final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v,
-																		OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
-																	final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-																		"is_boxed_bool"), [v]);
-																	OcamlExpr.ELet(tmp, asObj,
-																		OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), isBoxedBool), false);
-																}
-															case "String":
-																if (isStringType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(true));
-																} else if (isIntType(a0.t) || isFloatType(a0.t) || isBoolType(a0.t)) {
-																	OcamlExpr.EConst(OcamlConst.CBool(false));
-																} else {
-																	final tmp = freshTmp("isString");
-																	final v = OcamlExpr.EIdent(tmp);
-																	final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v,
-																		OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
-																	final isString = OcamlExpr.EBinop(OcamlBinop.Eq,
-																		OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [v]),
-																		OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "string_tag"));
-																	OcamlExpr.ELet(tmp, asObj,
-																		OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), isString), false);
-																}
-															case _:
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"),
-																	[asObj, buildExpr(args[1])]);
-														}
-													} else {
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"), [asObj, buildExpr(args[1])]);
-													}
-												case _:
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"), [asObj, buildExpr(args[1])]);
-											}
+											buildPlannedStdIsOfType(e, args[0], args[1]);
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
 											buildStdString(args[0]);
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "StringTools" && cf.name == "urlEncode"
@@ -8182,6 +8164,7 @@ class OcamlBuilder {
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8202,6 +8185,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
+		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8220,6 +8204,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8249,6 +8234,7 @@ class OcamlBuilder {
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8269,6 +8255,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = validatedPlan.dynamicString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
+		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8287,6 +8274,7 @@ class OcamlBuilder {
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8450,6 +8438,7 @@ class OcamlBuilder {
 		final previousCallPlan = currentCallPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8477,6 +8466,7 @@ class OcamlBuilder {
 		currentCallPlan = functionPlan.calls;
 		currentReflectComparePlan = functionPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = functionPlan.reflectRuntimeUses;
+		currentStdIsOfTypePlan = functionPlan.stdIsOfType;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8652,6 +8642,7 @@ class OcamlBuilder {
 		currentCallPlan = previousCallPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8723,6 +8714,7 @@ class OcamlBuilder {
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
+		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8736,6 +8728,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = nestedDisposition == null ? null : nestedDisposition.dynamicEquality;
 		currentDynamicStringPlan = nestedDisposition == null ? null : nestedDisposition.dynamicString;
 		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
+		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8826,6 +8819,7 @@ class OcamlBuilder {
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
+		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);

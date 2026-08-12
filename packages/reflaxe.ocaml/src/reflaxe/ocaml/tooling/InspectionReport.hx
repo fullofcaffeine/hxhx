@@ -700,6 +700,29 @@ typedef InspectionReflectCompare = {
 	final pipelineRevision:String;
 }
 
+/** One validated standard Haxe runtime type check selected before target syntax. */
+typedef InspectionStdIsOfType = {
+	final id:String;
+	final revision:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final strategy:String;
+	final valueCarrier:String;
+	final valueSemanticTypeId:String;
+	final requestedTypeSemanticId:String;
+	final order:Int;
+	final profileEligibility:Array<String>;
+	final runtimeRequirementIds:Array<String>;
+	final runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /**
 	One emitted function's completed result, independent of receiver or arguments.
 
@@ -916,6 +939,8 @@ typedef InspectionLowering = {
 	final callableBoundaries:Array<InspectionCallableBoundary>;
 	final reflectCompareRevision:Null<String>;
 	final reflectCompare:Array<InspectionReflectCompare>;
+	final stdIsOfTypeRevision:Null<String>;
+	final stdIsOfType:Array<InspectionStdIsOfType>;
 	final functionResultBoundaryRevision:Null<String>;
 	final functionResultBoundaries:Array<InspectionFunctionResultBoundary>;
 	final controlRevision:Null<String>;
@@ -964,6 +989,7 @@ typedef InspectionSummary = {
 	final callCount:Int;
 	final callableBoundaryCount:Int;
 	final reflectCompareCount:Int;
+	final stdIsOfTypeCount:Int;
 	final functionResultBoundaryCount:Int;
 	final controlCount:Int;
 	final controlCatchCount:Int;

@@ -19,6 +19,8 @@ import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringDecision;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -96,6 +98,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
 	public static inline final HAXE_REFLECT_COMPARE_FAILURE = "haxe-reflect-compare-failure";
 	public static inline final HAXE_REFLECT_RUNTIME_CALL = "haxe-reflect-runtime-call";
+	public static inline final HAXE_STD_IS_OF_TYPE = "haxe-std-is-of-type";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -536,6 +539,38 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the runtime dependency selected by one direct standard Reflect call. */
 	public function recordReflectRuntimeUse(decision:OcamlReflectRuntimeUseDecision):Void {
 		for (requirement in requirementsForReflectRuntimeUse(decision))
+			record(requirement);
+	}
+
+	/** Returns the exact runtime roots selected by one sealed `Std.isOfType()` call. */
+	public static function requirementsForStdIsOfType(decision:OcamlStdIsOfTypeDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStdIsOfTypePlan.requireDecision(decision);
+		if (decision.runtimeRequirementIds.length == 0)
+			return [];
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_STD_IS_OF_TYPE,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.valueSemanticTypeId + " is " + decision.requestedTypeSemanticId
+				},
+				implementationFeature: "haxe-std-is-of-type-v1",
+				rootModules: OcamlStdIsOfTypePlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed standard Haxe type check selected one dynamic primitive check or the general runtime type test. Its private helper names are fixed before target syntax."
+			})
+		];
+	}
+
+	/** Records the private helpers selected by one sealed `Std.isOfType()` call. */
+	public function recordStdIsOfType(decision:OcamlStdIsOfTypeDecision):Void {
+		for (requirement in requirementsForStdIsOfType(decision))
 			record(requirement);
 	}
 

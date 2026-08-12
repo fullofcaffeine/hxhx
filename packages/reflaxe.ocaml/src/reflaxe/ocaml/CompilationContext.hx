@@ -39,6 +39,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecisio
 #if macro
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
+import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -688,6 +689,11 @@ class CompilationContext {
 	/** Records the private helper selected by one direct standard Reflect call. */
 	public function recordReflectRuntimeUseRequirement(decision:OcamlReflectRuntimeUseDecision):Void {
 		runtimeRequirements.recordReflectRuntimeUse(decision);
+	}
+
+	/** Records the runtime helpers selected before one standard Haxe type check reaches syntax. */
+	public function recordStdIsOfTypeRuntimeRequirement(decision:OcamlStdIsOfTypeDecision):Void {
+		runtimeRequirements.recordStdIsOfType(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

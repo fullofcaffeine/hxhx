@@ -15,6 +15,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionReflectCompare;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStdIsOfType;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionDynamicFunctionCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
@@ -92,9 +93,11 @@ class ReflaxeOcamlInspection {
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final REFLECT_COMPARE_MODEL = "typed-ocaml-reflect-compare-intrinsic-v3";
 	static inline final REFLECT_COMPARE_PROOF_ID_PREFIX = "ocaml-reflect-compare-intrinsic-v2:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v103";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v24";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v9";
+	static inline final STD_IS_OF_TYPE_MODEL = "typed-ocaml-std-is-of-type-v1";
+	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v104";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v25";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v10";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -131,7 +134,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 45,
+			schemaVersion: 46,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -166,6 +169,7 @@ class ReflaxeOcamlInspection {
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
 				reflectCompareCount: lowering.reflectCompare.length,
+				stdIsOfTypeCount: lowering.stdIsOfType.length,
 				functionResultBoundaryCount: lowering.functionResultBoundaries.length,
 				controlCount: lowering.controls.length,
 				controlCatchCount: lowering.controlCatches.length,
@@ -238,6 +242,7 @@ class ReflaxeOcamlInspection {
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
 			lines.push('[PASS] Reflect.compare: ${report.lowering.reflectCompare.length} typed Int, Float, String, or nullable-String comparison${report.lowering.reflectCompare.length == 1 ? "" : "s"} selected before OCaml syntax.');
+			lines.push('[PASS] Std.isOfType: ${report.lowering.stdIsOfType.length} static or runtime type check${report.lowering.stdIsOfType.length == 1 ? "" : "s"} selected before OCaml syntax.');
 			lines.push('[PASS] Function results: ${report.lowering.functionResultBoundaries.length} emitted function completion boundar${report.lowering.functionResultBoundaries.length == 1 ? "y" : "ies"} validated independently from call receivers and arguments.');
 			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
@@ -430,6 +435,8 @@ class ReflaxeOcamlInspection {
 					callableBoundaries: [],
 					reflectCompareRevision: null,
 					reflectCompare: [],
+					stdIsOfTypeRevision: null,
+					stdIsOfType: [],
 					functionResultBoundaryRevision: null,
 					functionResultBoundaries: [],
 					controlRevision: null,
@@ -450,8 +457,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 82) {
-						throw 'Unsupported lowering report schema $version; expected 82.';
+					if (version != 83) {
+						throw 'Unsupported lowering report schema $version; expected 83.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -475,6 +482,7 @@ class ReflaxeOcamlInspection {
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
 					final reflectCompare = inspectReflectCompare(value);
+					final stdIsOfType = inspectStdIsOfType(value);
 					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries,
 						anonymousStructures.structures);
 					final controlTargets = inspectControlTargets(value);
@@ -485,7 +493,7 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, controls);
+						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, controls);
 					{
 						status: "present",
 						required: required,
@@ -521,6 +529,8 @@ class ReflaxeOcamlInspection {
 						callableBoundaries: callInventory.boundaries,
 						reflectCompareRevision: requiredSha256Revision(value, "reflectCompareRevision"),
 						reflectCompare: reflectCompare,
+						stdIsOfTypeRevision: requiredSha256Revision(value, "stdIsOfTypeRevision"),
+						stdIsOfType: stdIsOfType,
 						functionResultBoundaryRevision: requiredSha256Revision(value, "functionResultBoundaryRevision"),
 						functionResultBoundaries: functionResultBoundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
@@ -534,7 +544,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${iMapInterfaces.storageAliases.length} closed standard Map storage alias${iMapInterfaces.storageAliases.length == 1 ? "" : "es"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${reflectCompare.length} typed Reflect.compare decision${reflectCompare.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${iMapInterfaces.storageAliases.length} closed standard Map storage alias${iMapInterfaces.storageAliases.length == 1 ? "" : "es"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${reflectCompare.length} typed Reflect.compare decision${reflectCompare.length == 1 ? "" : "s"}, ${stdIsOfType.length} standard type-check decision${stdIsOfType.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${controlAdmissions.length} function-level control admission explanation${controlAdmissions.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -1659,6 +1669,134 @@ class ReflaxeOcamlInspection {
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
 		};
+	}
+
+	/** Validates standard Haxe type checks without reading generated OCaml text. */
+	static function inspectStdIsOfType(value:Dynamic):Array<InspectionStdIsOfType> {
+		if (requiredString(value, "stdIsOfTypeModel") != STD_IS_OF_TYPE_MODEL)
+			throw "Unsupported Std.isOfType report model.";
+		final raw = requiredArray(value, "stdIsOfType");
+		if (raw.length != requiredInt(value, "stdIsOfTypeCount"))
+			throw "Std.isOfType count does not match its inventory.";
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		if (requiredSha256Revision(value, "stdIsOfTypeRevision") != expectedRevision)
+			throw "Std.isOfType revision does not match its ordered decision inventory.";
+
+		final decisions = [for (entry in raw) stdIsOfTypeDecision(entry)];
+		final ids:Map<String, Bool> = [];
+		for (decision in decisions) {
+			if (ids.exists(decision.id))
+				throw 'Std.isOfType report contains duplicate identity "${decision.id}".';
+			if (decision.sourceFile.length == 0 || decision.sourceMin < 0 || decision.sourceMax < decision.sourceMin)
+				throw 'Std.isOfType decision "${decision.id}" has an invalid source span.';
+			if (decision.valueSemanticTypeId.length == 0 || decision.requestedTypeSemanticId.length == 0 || decision.order < 0)
+				throw 'Std.isOfType decision "${decision.id}" has incomplete typed operands or source order.';
+			if (decision.profileEligibility.join(",") != "metal,portable"
+				|| decision.proofId != STD_IS_OF_TYPE_PROOF_ID
+				|| decision.proofClaim.length == 0
+				|| decision.functionId.length == 0
+				|| decision.programRevision.length == 0
+				|| decision.bodyRevision.length == 0
+				|| (decision.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
+					&& decision.pipelineRevision != NESTED_FUNCTION_PIPELINE_REVISION
+					&& decision.pipelineRevision != STANDALONE_EXPRESSION_PIPELINE_REVISION))
+				throw 'Std.isOfType decision "${decision.id}" has invalid proof, profile, or plan binding facts.';
+			if (decision.valueCarrier != "direct-object" && decision.valueCarrier != "repr")
+				throw 'Std.isOfType decision "${decision.id}" has unsupported value carrier "${decision.valueCarrier}".';
+
+			final symbols = stdIsOfTypeSymbols(decision.strategy);
+			final roles = stdIsOfTypeRoles(decision.strategy);
+			final expectedRequirementIds = symbols.length == 0 ? [] : [decision.id + ":runtime:haxe-std-is-of-type"];
+			if (decision.runtimeRequirementIds.join(",") != expectedRequirementIds.join(",")
+				|| decision.runtimeUseOccurrences.length != symbols.length
+				|| decision.revision != stdIsOfTypeDecisionRevision(decision, symbols, roles))
+				throw 'Std.isOfType decision "${decision.id}" has stale strategy or runtime-use facts.';
+			for (index in 0...symbols.length) {
+				final occurrence = decision.runtimeUseOccurrences[index];
+				if (occurrence.id != decision.id + ":runtime-use:" + roles[index]
+					|| occurrence.planRevision != decision.revision
+					|| occurrence.ownerId != decision.id
+					|| occurrence.requirementId != expectedRequirementIds[0]
+					|| (occurrence.domain : String) != "expression-identifier"
+						|| occurrence.exactSymbol != symbols[index]
+						|| occurrence.role != roles[index]
+						|| occurrence.order != index
+						|| occurrence.source.file != decision.sourceFile
+						|| occurrence.source.min != decision.sourceMin
+						|| occurrence.source.max != decision.sourceMax
+						|| occurrence.profileEligibility.join(",") != "metal,portable"
+						|| occurrence.cardinality != 1)
+					throw 'Std.isOfType decision "${decision.id}" has a conflicting helper at order $index.';
+			}
+			ids.set(decision.id, true);
+		}
+		decisions.sort((left, right) -> compareStrings(left.id, right.id));
+		return decisions;
+	}
+
+	static function stdIsOfTypeDecision(value:Dynamic):InspectionStdIsOfType {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			revision: requiredSha256Revision(value, "revision"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			strategy: requiredString(value, "strategy"),
+			valueCarrier: requiredString(value, "valueCarrier"),
+			valueSemanticTypeId: requiredString(value, "valueSemanticTypeId"),
+			requestedTypeSemanticId: requiredString(value, "requestedTypeSemanticId"),
+			order: requiredInt(value, "order"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
+			runtimeUseOccurrences: loweredPlanRuntimeUseOccurrences(value),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function stdIsOfTypeSymbols(strategy:String):Array<String> {
+		return switch (strategy) {
+			case "static-true", "static-false": [];
+			case "dynamic-int", "dynamic-float", "dynamic-bool": ["HxRuntime.hx_null", "HxRuntime.is_boxed_bool"];
+			case "runtime-fallback": ["HxType.isOfType"];
+			case _: throw 'Unsupported Std.isOfType strategy "$strategy".';
+		};
+	}
+
+	static function stdIsOfTypeRoles(strategy:String):Array<String> {
+		return switch (strategy) {
+			case "static-true", "static-false": [];
+			case "dynamic-int", "dynamic-float", "dynamic-bool": ["null-sentinel", "boxed-bool-test"];
+			case "runtime-fallback": ["runtime-type-test"];
+			case _: throw 'Unsupported Std.isOfType strategy "$strategy".';
+		};
+	}
+
+	static function stdIsOfTypeDecisionRevision(decision:InspectionStdIsOfType, symbols:Array<String>, roles:Array<String>):String {
+		return "sha256:" + Sha256.encode([
+			"std-is-of-type-runtime-use-v1",
+			decision.id,
+			decision.sourceFile,
+			Std.string(decision.sourceMin),
+			Std.string(decision.sourceMax),
+			decision.strategy,
+			decision.valueCarrier,
+			decision.valueSemanticTypeId,
+			decision.requestedTypeSemanticId,
+			Std.string(decision.order),
+			decision.functionId,
+			decision.programRevision,
+			decision.bodyRevision,
+			decision.pipelineRevision,
+			decision.runtimeRequirementIds.join("\u001e"),
+			symbols.join("\u001e"),
+			roles.join("\u001e")
+		].map(value -> value.length + ":" + value).join("|"));
 	}
 
 	static function inspectCalls(value:Dynamic,
@@ -3682,7 +3820,7 @@ class ReflaxeOcamlInspection {
 			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
 			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
 			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, reflectCompare:Array<InspectionReflectCompare>,
-			controls:Array<InspectionControl>):Int {
+			stdIsOfType:Array<InspectionStdIsOfType>, controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -4269,6 +4407,40 @@ class ReflaxeOcamlInspection {
 			}
 			referenced.set(requirementId, true);
 		}
+		for (decision in stdIsOfType) {
+			if (decision.runtimeRequirementIds.length == 0)
+				continue;
+			final requirementId = decision.id + ":runtime:haxe-std-is-of-type";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Std.isOfType decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			final expectedRoots = [for (symbol in stdIsOfTypeSymbols(decision.strategy)) symbol.split(".")[0]];
+			final uniqueRoots:Map<String, Bool> = [];
+			for (root in expectedRoots)
+				uniqueRoots.set(root, true);
+			final sortedRoots = [for (root in uniqueRoots.keys()) root];
+			sortedRoots.sort(compareStrings);
+			if (decision.runtimeRequirementIds.length != 1
+				|| decision.runtimeRequirementIds[0] != requirementId
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != decision.id
+				|| requiredString(source, "file") != decision.sourceFile
+				|| requiredInt(source, "min") != decision.sourceMin
+				|| requiredInt(source, "max") != decision.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-std-is-of-type"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != decision.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != decision.valueSemanticTypeId + " is " + decision.requestedTypeSemanticId
+				|| requiredString(requirement, "implementationFeature") != "haxe-std-is-of-type-v1"
+				|| roots.join(",") != sortedRoots.join(",")
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable")
+				throw 'Std.isOfType decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed strategy.';
+			referenced.set(requirementId, true);
+		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))
 				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
@@ -4694,6 +4866,8 @@ class ReflaxeOcamlInspection {
 			callableBoundaries: [],
 			reflectCompareRevision: null,
 			reflectCompare: [],
+			stdIsOfTypeRevision: null,
+			stdIsOfType: [],
 			functionResultBoundaryRevision: null,
 			functionResultBoundaries: [],
 			controlRevision: null,

@@ -1,0 +1,12 @@
+static-true=true effects=1
+static-false=false effects=2
+dynamic-int=true
+dynamic-float=true
+dynamic-bool=true
+dynamic-int-bool=false
+dynamic-string=true
+dynamic-class=true
+dynamic-enum=true
+operator-int=true
+nested-int=true
+standalone-string=true
