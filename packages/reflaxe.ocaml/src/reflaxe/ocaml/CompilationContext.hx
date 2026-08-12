@@ -42,6 +42,7 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDe
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -706,6 +707,11 @@ class CompilationContext {
 	/** Records the helpers selected for one direct call or stored `String.fromCharCode` value. */
 	public function recordStringFromCharCodeRuntimeRequirement(decision:OcamlStringFromCharCodeDecision):Void {
 		runtimeRequirements.recordStringFromCharCode(decision);
+	}
+
+	/** Records the null-safe helper selected for one typed String comparison. */
+	public function recordStringEqualityRuntimeRequirement(decision:OcamlStringEqualityDecision):Void {
+		runtimeRequirements.recordStringEquality(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

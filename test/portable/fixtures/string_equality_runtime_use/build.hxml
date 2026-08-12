@@ -1,0 +1,9 @@
+-cp src
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_lowering_report
+-D ocaml_output=out
+-D ocaml_dune_exes=out:Main

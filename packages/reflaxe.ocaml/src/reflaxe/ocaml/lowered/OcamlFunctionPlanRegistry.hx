@@ -77,6 +77,8 @@ import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryPlanner;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
 
 /** One validated target plan that is immutable after its function is sealed. */
 typedef OcamlSealedPlacePlan = {
@@ -117,6 +119,7 @@ typedef OcamlSealedFunctionPlan = {
 	final stdIsOfType:OcamlStdIsOfTypePlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
+	final stringEquality:OcamlStringEqualityPlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>;
@@ -163,6 +166,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final ?stdIsOfType:OcamlStdIsOfTypePlan;
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
+	final ?stringEquality:OcamlStringEqualityPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 }
 
@@ -201,6 +205,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final ?stdIsOfType:OcamlStdIsOfTypePlan;
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
+	final ?stringEquality:OcamlStringEqualityPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 }
 
@@ -230,6 +235,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final stdIsOfType:OcamlStdIsOfTypePlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
+	final stringEquality:OcamlStringEqualityPlan;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -268,6 +274,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final stdIsOfType:OcamlStdIsOfTypePlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
+	final stringEquality:OcamlStringEqualityPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
 	final deferredReason:Null<String>;
 }
@@ -408,7 +415,7 @@ class OcamlFunctionPlanRegistry {
 			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
 			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String,
 			?dynamicString:OcamlDynamicStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan,
-			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan):Void {
+			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
@@ -427,6 +434,8 @@ class OcamlFunctionPlanRegistry {
 		sealedIntUnary.requirePlanBinding(identity.binding);
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		sealedStringFromCharCode.requirePlanBinding(identity.binding);
+		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
+		sealedStringEquality.requirePlanBinding(identity.binding);
 		storeNestedFunctionRecord(expression, {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
@@ -443,6 +452,7 @@ class OcamlFunctionPlanRegistry {
 			stdIsOfType: sealedStdIsOfType,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
+			stringEquality: sealedStringEquality,
 			plan: null,
 			deferredReason: reason
 		}, localIdentities.ownerId);
@@ -492,6 +502,8 @@ class OcamlFunctionPlanRegistry {
 		sealedIntUnary.requirePlanBinding(plan.binding);
 		final sealedStringFromCharCode = plan.stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		sealedStringFromCharCode.requirePlanBinding(plan.binding);
+		final sealedStringEquality = plan.stringEquality ?? new OcamlStringEqualityPlan([]);
+		sealedStringEquality.requirePlanBinding(plan.binding);
 		plan.imapInterfaces.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
@@ -529,6 +541,7 @@ class OcamlFunctionPlanRegistry {
 			stdIsOfType: sealedStdIsOfType,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
+			stringEquality: sealedStringEquality,
 			imapInterfaces: plan.imapInterfaces
 		};
 		storeNestedFunctionRecord(expression, {
@@ -547,6 +560,7 @@ class OcamlFunctionPlanRegistry {
 			stdIsOfType: sealedStdIsOfType,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
+			stringEquality: sealedStringEquality,
 			plan: stored,
 			deferredReason: null
 		}, localIdentities.ownerId);
@@ -658,6 +672,7 @@ class OcamlFunctionPlanRegistry {
 			stdIsOfType: record.stdIsOfType,
 			intUnary: record.intUnary,
 			stringFromCharCode: record.stringFromCharCode,
+			stringEquality: record.stringEquality,
 			plan: record.plan
 		};
 	}
@@ -751,6 +766,7 @@ class OcamlFunctionPlanRegistry {
 		final stdIsOfType = new OcamlStdIsOfTypePlanner(binding).plan(expression);
 		final intUnary = new OcamlIntUnaryPlanner(binding).plan(expression);
 		final stringFromCharCode = new OcamlStringFromCharCodePlanner(binding).plan(expression);
+		final stringEquality = new OcamlStringEqualityPlanner(binding).plan(expression);
 		final controls = new OcamlControlPlanner(representations, new OcamlLocalRepresentationPlan([]), binding, localIdentities).plan(expression, null);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
@@ -774,6 +790,7 @@ class OcamlFunctionPlanRegistry {
 		stdIsOfType.requirePlanBinding(binding);
 		intUnary.requirePlanBinding(binding);
 		stringFromCharCode.requirePlanBinding(binding);
+		stringEquality.requirePlanBinding(binding);
 		controls.requirePlanBinding(binding);
 		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
@@ -801,7 +818,8 @@ class OcamlFunctionPlanRegistry {
 			reflectRuntimeUses: reflectRuntimeUses,
 			stdIsOfType: stdIsOfType,
 			intUnary: intUnary,
-			stringFromCharCode: stringFromCharCode
+			stringFromCharCode: stringFromCharCode,
+			stringEquality: stringEquality
 		};
 	}
 
@@ -935,6 +953,7 @@ class OcamlFunctionPlanRegistry {
 		plan.stdIsOfType.requirePlanBinding(expected);
 		plan.intUnary.requirePlanBinding(expected);
 		plan.stringFromCharCode.requirePlanBinding(expected);
+		plan.stringEquality.requirePlanBinding(expected);
 		plan.controls.requirePlanBinding(expected);
 		return plan;
 	}
@@ -1090,7 +1109,7 @@ class OcamlFunctionPlanRegistry {
 			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan, ?arrayReads:OcamlArrayReadPlan,
 			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan,
 			?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?intUnary:OcamlIntUnaryPlan,
-			?stringFromCharCode:OcamlStringFromCharCodePlan):Void {
+			?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -1114,6 +1133,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedStdIsOfType = stdIsOfType ?? new OcamlStdIsOfTypePlan([]);
 		final sealedIntUnary = intUnary ?? new OcamlIntUnaryPlan([]);
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
+		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
@@ -1132,6 +1152,7 @@ class OcamlFunctionPlanRegistry {
 		sealedStdIsOfType.requirePlanBinding(binding);
 		sealedIntUnary.requirePlanBinding(binding);
 		sealedStringFromCharCode.requirePlanBinding(binding);
+		sealedStringEquality.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -1178,6 +1199,7 @@ class OcamlFunctionPlanRegistry {
 				stdIsOfType: sealedStdIsOfType,
 				intUnary: sealedIntUnary,
 				stringFromCharCode: sealedStringFromCharCode,
+				stringEquality: sealedStringEquality,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
 				functionResultBoundary: functionResultBoundary == null ? null : OcamlFunctionResultBoundary.copy(functionResultBoundary),

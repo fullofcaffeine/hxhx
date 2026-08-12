@@ -38,6 +38,12 @@ class StringEqualityRuntimeUseFixture {
 			dynamicValue == left;
 			final nullableInt:Null<Int> = 1;
 			nullableInt == 1;
+			final objectLeft = {value: 1};
+			final objectRight = {value: 2};
+			objectLeft == objectRight;
+			final functionLeft = () -> 1;
+			final functionRight = functionLeft;
+			functionLeft == functionRight;
 			final nested = () -> left == right;
 			nested;
 		});
@@ -86,6 +92,8 @@ class StringEqualityRuntimeUseFixture {
 		final wrongKind = decision.kind == OcamlStringEqualityKind.Equal ? OcamlStringEqualityKind.NotEqual : OcamlStringEqualityKind.Equal;
 		expectFailure("changed operator", "invalid-runtime-use",
 			() -> OcamlStringEqualityPlan.requireDecision(copyDecision(decision, wrongKind, decision.runtimeUseOccurrences)));
+		expectFailure("changed evaluation order", "invalid-plan",
+			() -> OcamlStringEqualityPlan.requireDecision(copyDecision(decision, decision.kind, decision.runtimeUseOccurrences, ["right", "left"])));
 		final wrongDomain = copyOccurrence(use, use.ownerId, OcamlRuntimeUseDomain.TypeIdentifier);
 		expectFailure("wrong domain", "invalid-runtime-use",
 			() -> OcamlStringEqualityPlan.requireDecision(copyDecision(decision, decision.kind, [wrongDomain])));
@@ -98,12 +106,14 @@ class StringEqualityRuntimeUseFixture {
 		final decision = selected[0];
 		if (decision.leftSemanticTypeId != leftType || decision.rightSemanticTypeId != rightType)
 			throw '${(kind : String)} expected $leftType/$rightType, received ${decision.leftSemanticTypeId}/${decision.rightSemanticTypeId}.';
+		if (decision.evaluationOrder.join(",") != "left,right")
+			throw '${(kind : String)} must evaluate its operands from left to right.';
 		if (decision.runtimeUseOccurrences.length != 1 || decision.runtimeUseOccurrences[0].exactSymbol != "HxString.equals")
 			throw '${(kind : String)} must own exactly one HxString.equals identifier.';
 	}
 
-	static function copyDecision(source:OcamlStringEqualityDecision, kind:OcamlStringEqualityKind,
-			runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>):OcamlStringEqualityDecision {
+	static function copyDecision(source:OcamlStringEqualityDecision, kind:OcamlStringEqualityKind, runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>,
+			?evaluationOrder:Array<String>):OcamlStringEqualityDecision {
 		return {
 			id: source.id,
 			revision: source.revision,
@@ -112,6 +122,7 @@ class StringEqualityRuntimeUseFixture {
 			leftSemanticTypeId: source.leftSemanticTypeId,
 			rightSemanticTypeId: source.rightSemanticTypeId,
 			resultSemanticTypeId: source.resultSemanticTypeId,
+			evaluationOrder: evaluationOrder == null ? source.evaluationOrder.copy() : evaluationOrder.copy(),
 			order: source.order,
 			profileEligibility: source.profileEligibility.copy(),
 			runtimeRequirementIds: source.runtimeRequirementIds.copy(),

@@ -240,7 +240,11 @@ class BytesProducerPlanFixture {
 			dynamicEquality: firstStandalone.dynamicEquality,
 			dynamicString: firstStandalone.dynamicString,
 			reflectCompare: firstStandalone.reflectCompare,
-			reflectRuntimeUses: firstStandalone.reflectRuntimeUses
+			reflectRuntimeUses: firstStandalone.reflectRuntimeUses,
+			stdIsOfType: firstStandalone.stdIsOfType,
+			intUnary: firstStandalone.intUnary,
+			stringFromCharCode: firstStandalone.stringFromCharCode,
+			stringEquality: firstStandalone.stringEquality
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 

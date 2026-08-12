@@ -8,8 +8,8 @@ import haxe.macro.Type.TypedExpr;
 #if macro
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
-#end
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
+#end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
@@ -29,6 +29,7 @@ typedef OcamlStringEqualityDecision = {
 	final leftSemanticTypeId:String;
 	final rightSemanticTypeId:String;
 	final resultSemanticTypeId:String;
+	final evaluationOrder:Array<String>;
 	final order:Int;
 	final profileEligibility:Array<String>;
 	final runtimeRequirementIds:Array<String>;
@@ -108,6 +109,7 @@ class OcamlStringEqualityPlan {
 			|| decision.leftSemanticTypeId.length == 0
 			|| decision.rightSemanticTypeId.length == 0
 			|| decision.resultSemanticTypeId != "Bool"
+			|| decision.evaluationOrder.join(",") != "left,right"
 			|| decision.order < 0
 			|| decision.profileEligibility.join(",") != "metal,portable"
 			|| decision.runtimeRequirementIds.length != 1
@@ -123,7 +125,7 @@ class OcamlStringEqualityPlan {
 		final requirementId = decision.id + ":runtime:" + RUNTIME_CAPABILITY;
 		final role = roleFor(decision.kind);
 		final expectedRevision = sealRevision(decision.id, decision.source, decision.kind, decision.leftSemanticTypeId, decision.rightSemanticTypeId,
-			decision.resultSemanticTypeId, decision.order, bindingFor(decision), requirementId, role);
+			decision.resultSemanticTypeId, decision.evaluationOrder, decision.order, bindingFor(decision), requirementId, role);
 		final occurrence = decision.runtimeUseOccurrences[0];
 		if (decision.revision != expectedRevision
 			|| decision.runtimeRequirementIds[0] != requirementId
@@ -158,7 +160,8 @@ class OcamlStringEqualityPlan {
 	}
 
 	public static function sealRevision(id:String, source:OcamlLoweredSourceSpan, kind:OcamlStringEqualityKind, leftSemanticTypeId:String,
-			rightSemanticTypeId:String, resultSemanticTypeId:String, order:Int, binding:OcamlFunctionPlanBinding, requirementId:String, role:String):String {
+			rightSemanticTypeId:String, resultSemanticTypeId:String, evaluationOrder:Array<String>, order:Int, binding:OcamlFunctionPlanBinding,
+			requirementId:String, role:String):String {
 		return "sha256:" + Sha256.encode([
 			MODEL_REVISION,
 			id,
@@ -169,6 +172,7 @@ class OcamlStringEqualityPlan {
 			leftSemanticTypeId,
 			rightSemanticTypeId,
 			resultSemanticTypeId,
+			evaluationOrder.join(","),
 			Std.string(order),
 			binding.functionId,
 			binding.programRevision,
@@ -212,6 +216,7 @@ class OcamlStringEqualityPlan {
 			leftSemanticTypeId: decision.leftSemanticTypeId,
 			rightSemanticTypeId: decision.rightSemanticTypeId,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
+			evaluationOrder: decision.evaluationOrder.copy(),
 			order: decision.order,
 			profileEligibility: decision.profileEligibility.copy(),
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
@@ -281,8 +286,9 @@ class OcamlStringEqualityPlanner {
 			].join("\u001f")).substr(0, 24);
 			final requirementId = id + ":runtime:" + OcamlStringEqualityPlan.RUNTIME_CAPABILITY;
 			final role = OcamlStringEqualityPlan.roleFor(kind);
-			final revision = OcamlStringEqualityPlan.sealRevision(id, source, kind, leftSemanticTypeId, rightSemanticTypeId, resultSemanticTypeId, order,
-				binding, requirementId, role);
+			final evaluationOrder = ["left", "right"];
+			final revision = OcamlStringEqualityPlan.sealRevision(id, source, kind, leftSemanticTypeId, rightSemanticTypeId, resultSemanticTypeId,
+				evaluationOrder, order, binding, requirementId, role);
 			final decision:OcamlStringEqualityDecision = {
 				id: id,
 				revision: revision,
@@ -291,6 +297,7 @@ class OcamlStringEqualityPlanner {
 				leftSemanticTypeId: leftSemanticTypeId,
 				rightSemanticTypeId: rightSemanticTypeId,
 				resultSemanticTypeId: resultSemanticTypeId,
+				evaluationOrder: evaluationOrder,
 				order: order,
 				profileEligibility: ["metal", "portable"],
 				runtimeRequirementIds: [requirementId],
@@ -342,23 +349,13 @@ class OcamlStringEqualityPlanner {
 	/**
 		Returns whether a type reaches the existing String syntax branch.
 
-		This function follows typedefs but preserves abstracts. It recognizes the
-		built-in String carrier and String-backed abstracts such as `haxe.Ucs2`.
+		This function follows typedefs but preserves abstracts. It exactly mirrors
+		the target's existing String classification, including `Null<String>` and
+		`haxe.Ucs2`, without admitting a new abstract family in this migration.
 	**/
 	public static function isStringType(type:Type):Bool {
 		return switch (followNoAbstracts(type)) {
-			case TAbstract(abstractRef, [inner]):
-				final definition = abstractRef.get();
-				if (definition.pack.length == 0 && definition.name == "Null") {
-					isStringType(inner);
-				} else if (definition.pack.length == 1 && definition.pack[0] == "haxe" && definition.name == "Ucs2") {
-					true;
-				} else {
-					switch (TypeTools.follow(definition.type)) {
-						case TInst(classRef, _): isStdStringClass(classRef.get());
-						case _: false;
-					};
-				}
+			case TAbstract(abstractRef, [inner]): final definition = abstractRef.get(); definition.pack.length == 0 && definition.name == "Null" && isStringType(inner);
 			case TAbstract(abstractRef, _):
 				final definition = abstractRef.get();
 				if (definition.pack.length == 1 && definition.pack[0] == "haxe" && definition.name == "Ucs2") {

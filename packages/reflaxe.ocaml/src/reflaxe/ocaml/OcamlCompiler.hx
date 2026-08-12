@@ -1687,6 +1687,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordIntUnaryRuntimeRequirement(decision);
 		for (decision in plan.stringFromCharCode.decisions())
 			ctx.recordStringFromCharCodeRuntimeRequirement(decision);
+		for (decision in plan.stringEquality.decisions())
+			ctx.recordStringEqualityRuntimeRequirement(decision);
 		for (chain in plan.controls.catchChains())
 			ctx.recordCatchChainRuntimeRequirements(chain);
 		for (target in plan.controls.loopTargets()) {

@@ -141,6 +141,9 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityKind;
+import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
@@ -201,6 +204,7 @@ class OcamlBuilder {
 	var currentStdIsOfTypePlan:Null<OcamlStdIsOfTypePlan> = null;
 	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
+	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
@@ -6761,8 +6765,8 @@ class OcamlBuilder {
 					final primEq = buildNullablePrimitiveEq(k1, e1, k2, e2);
 					if (primEq != null) {
 						primEq;
-					} else if (isStringType(e1.t) || isStringType(e2.t)) {
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "equals"), [buildExpr(e1), buildExpr(e2)]);
+					} else if (OcamlStringEqualityPlanner.selectsStringHelper(e1, e2)) {
+						buildPlannedStringEquality(source, e1, e2, OcamlStringEqualityKind.Equal);
 					} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
 						OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)]));
@@ -6817,9 +6821,8 @@ class OcamlBuilder {
 					final primEq = buildNullablePrimitiveEq(k1, e1, k2, e2);
 					if (primEq != null) {
 						OcamlExpr.EUnop(OcamlUnop.Not, primEq);
-					} else if (isStringType(e1.t) || isStringType(e2.t)) {
-						OcamlExpr.EUnop(OcamlUnop.Not,
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "equals"), [buildExpr(e1), buildExpr(e2)]));
+					} else if (OcamlStringEqualityPlanner.selectsStringHelper(e1, e2)) {
+						buildPlannedStringEquality(source, e1, e2, OcamlStringEqualityKind.NotEqual);
 					} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
 						OcamlExpr.EBinop(OcamlBinop.PhysNeq, OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)]));
@@ -7594,6 +7597,44 @@ class OcamlBuilder {
 		return OcamlExpr.EApp(runtimeIdentifiers[0], [carriedValue]);
 	}
 
+	/** Builds a String comparison from the checked helper choice made before target code generation. */
+	function buildPlannedStringEquality(expression:TypedExpr, left:TypedExpr, right:TypedExpr, expectedKind:OcamlStringEqualityKind):OcamlExpr {
+		final plan = currentStringEqualityPlan;
+		if (plan == null)
+			return callPlanInvariant("a typed String comparison has no active sealed plan", expression.pos);
+		final decision = try {
+			plan.requireFor(expression);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+		if (decision.kind != expectedKind
+			|| decision.leftSemanticTypeId != TypeTools.toString(left.t)
+			|| decision.rightSemanticTypeId != TypeTools.toString(right.t)
+			|| decision.resultSemanticTypeId != TypeTools.toString(expression.t)
+			|| decision.evaluationOrder.join(",") != "left,right")
+			return callPlanInvariant('String equality decision "${decision.id}" belongs to a different typed expression', expression.pos);
+
+		final occurrence = decision.runtimeUseOccurrences[0];
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final helper = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+		final leftName = freshTmp("string_eq_left");
+		final rightName = freshTmp("string_eq_right");
+		final call = OcamlExpr.EApp(helper, [OcamlExpr.EIdent(leftName), OcamlExpr.EIdent(rightName)]);
+		final comparison = decision.kind == OcamlStringEqualityKind.NotEqual ? OcamlExpr.EUnop(OcamlUnop.Not, call) : call;
+		final materialized = OcamlExpr.ELet(leftName, buildExpr(left), OcamlExpr.ELet(rightName, buildExpr(right), comparison, false), false);
+		try {
+			// Reconcile the complete String comparison with placeholders for operand
+			// subtrees. Nested runtime references have their own exact authorities.
+			authority.reconcileExpression(OcamlExpr.ELet(leftName, OcamlExpr.EIdent("left_operand_owned_elsewhere"),
+				OcamlExpr.ELet(rightName, OcamlExpr.EIdent("right_operand_owned_elsewhere"), comparison, false), false));
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), expression.pos);
+		}
+		return materialized;
+	}
+
 	/** Builds one integer unary expression with the operation and helper names selected before target syntax generation. */
 	function buildPlannedIntUnary(expression:TypedExpr, operand:TypedExpr, expectedOperation:OcamlIntUnaryOperation):OcamlExpr {
 		final plan = currentIntUnaryPlan;
@@ -8294,6 +8335,7 @@ class OcamlBuilder {
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
+		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8317,6 +8359,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
+		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
@@ -8338,6 +8381,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
+		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8370,6 +8414,7 @@ class OcamlBuilder {
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
+		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8393,6 +8438,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
+		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
@@ -8414,6 +8460,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
+		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentControlPlan = previousControlPlan;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentLoopTargetIds = previousLoopTargetIds;
@@ -8580,6 +8627,7 @@ class OcamlBuilder {
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
+		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousArrayReadPlan = currentArrayReadPlan;
@@ -8610,6 +8658,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = functionPlan.stdIsOfType;
 		currentIntUnaryPlan = functionPlan.intUnary;
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
+		currentStringEqualityPlan = functionPlan.stringEquality;
 		currentControlPlan = functionPlan.controls;
 		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		currentArrayReadPlan = functionPlan.arrayReads;
@@ -8788,6 +8837,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
+		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentControlPlan = previousControlPlan;
 		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		currentArrayReadPlan = previousArrayReadPlan;
@@ -8862,6 +8912,7 @@ class OcamlBuilder {
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
+		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopTargetIds = currentLoopTargetIds;
@@ -8878,6 +8929,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
+		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
 		if (nestedDisposition != null) {
 			nestedDisposition.imapInterfaces.requirePlanBinding(nestedDisposition.binding);
 			currentIMapInterfacePlan = nestedDisposition.imapInterfaces;
@@ -8971,6 +9023,7 @@ class OcamlBuilder {
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
+		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);
