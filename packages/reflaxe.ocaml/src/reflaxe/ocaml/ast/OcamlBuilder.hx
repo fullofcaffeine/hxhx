@@ -71,6 +71,8 @@ import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityKind;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringModel;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringStrategy;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringSourceKind;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
@@ -222,6 +224,7 @@ class OcamlBuilder {
 	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
+	var currentStaticStringPlan:Null<OcamlStaticStringPlan> = null;
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -2970,6 +2973,50 @@ class OcamlBuilder {
 		return expression;
 	}
 
+	function staticStringInvariant(message:String, position:Position):OcamlExpr {
+		final diagnostic = "reflaxe.ocaml [ocaml-static-string:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/**
+		Builds the one null-aware String conversion authorized for this typed value.
+
+		The caller supplies the already-built OCaml value. This keeps receiver and
+		index evaluation in their original order while the typed Haxe occurrence,
+		not target syntax, owns the decision to call the private runtime helper.
+	**/
+	function buildStaticStringConversion(source:TypedExpr, value:OcamlExpr, expectedKind:OcamlStaticStringSourceKind):OcamlExpr {
+		final plan = currentStaticStringPlan;
+		if (plan == null)
+			return staticStringInvariant("static String syntax has no active sealed plan", source.pos);
+		final decision = try {
+			plan.requireFor(source);
+		} catch (error:Dynamic) {
+			return staticStringInvariant(Std.string(error), source.pos);
+		}
+		if (decision.sourceKind != expectedKind)
+			return staticStringInvariant('decision "${decision.id}" has source kind ${decision.sourceKind}, not $expectedKind', source.pos);
+		final semanticTypeId = TypeTools.toString(source.t);
+		if (decision.semanticTypeId != semanticTypeId)
+			return staticStringInvariant('decision "${decision.id}" expects ${decision.semanticTypeId}, not $semanticTypeId', source.pos);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final use = decision.runtimeUseOccurrences[0];
+		final runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(use.id, use.planRevision, use.exactSymbol));
+		try {
+			// Reconcile only this plan's helper identifier. The value can contain
+			// private helpers that another sealed plan owns, such as a String method.
+			authority.reconcileExpression(runtimeFunction);
+		} catch (error:Dynamic) {
+			return staticStringInvariant(Std.string(error), source.pos);
+		}
+		return OcamlExpr.EApp(runtimeFunction, [value]);
+	}
+
 	static function isStringType(t:Type):Bool {
 		return switch (followNoAbstracts(t)) {
 			case TAbstract(aRef, [inner]): final a = aRef.get(); a.pack != null && a.pack.length == 0 && a.name == "Null" && isStringType(inner);
@@ -4658,13 +4705,17 @@ class OcamlBuilder {
 											switch (cf.name) {
 												case "field" if (args.length == 2):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
-															[toObjArg(args[0]), buildStdString(args[1])])
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
+															toObjArg(args[0]),
+															buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
+														])
 													]);
 												case "getProperty" if (args.length == 2):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
-															[toObjArg(args[0]), buildStdString(args[1])])
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
+															toObjArg(args[0]),
+															buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
+														])
 													]);
 												case "callMethod" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
@@ -4698,16 +4749,23 @@ class OcamlBuilder {
 															])
 													]);
 												case "setField" if (args.length == 3):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
-														[toObjArg(args[0]), buildStdString(args[1]), toObjValue(args[2])]);
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"), [
+														toObjArg(args[0]),
+														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName),
+														toObjValue(args[2])
+													]);
 												case "hasField" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"),
-														[toObjArg(args[0]), buildStdString(args[1])]);
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"), [
+														toObjArg(args[0]),
+														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
+													]);
 												case "fields" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "fields"), [toObjArg(args[0])]);
 												case "deleteField" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "delete"),
-														[toObjArg(args[0]), buildStdString(args[1])]);
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "delete"), [
+														toObjArg(args[0]),
+														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
+													]);
 												case "copy" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "copy"), [toObjArg(args[0])])
@@ -4761,7 +4819,7 @@ class OcamlBuilder {
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "isOfType" && args.length == 2) {
 											buildPlannedStdIsOfType(e, args[0], args[1]);
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
-											buildStdString(args[0]);
+											buildStdString(args[0], OcamlStaticStringSourceKind.StdString);
 										} else {
 											final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (TypeTools.follow(cf.type)) {
 												case TFun(fargs, _):
@@ -5711,7 +5769,7 @@ class OcamlBuilder {
 	}
 
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
-	function buildStdString(inner:TypedExpr):OcamlExpr {
+	function buildStdString(inner:TypedExpr, sourceKind:OcamlStaticStringSourceKind):OcamlExpr {
 		final e = unwrap(inner);
 		final dynamicStrategy = OcamlDynamicStringModel.select(inner);
 		if (dynamicStrategy != null) {
@@ -5737,10 +5795,6 @@ class OcamlBuilder {
 			case _:
 		}
 
-		inline function toStdString(expr:OcamlExpr):OcamlExpr {
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"), [expr]);
-		}
-
 		return switch (e.t) {
 			case TAbstract(aRef, params):
 				final a = aRef.get();
@@ -5755,7 +5809,7 @@ class OcamlBuilder {
 						if (params != null && params.length == 1) {
 							final innerType = params[0];
 							if (isStringType(innerType)) {
-								toStdString(buildExpr(inner));
+								buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
 							} else if (isIntType(innerType)) {
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_toStdString"), [buildExpr(inner)]);
 							} else if (isFloatType(innerType)) {
@@ -5774,7 +5828,7 @@ class OcamlBuilder {
 			case TInst(cRef, _):
 				final c = cRef.get();
 				if (isStdStringClass(c)) {
-					toStdString(buildExpr(inner));
+					buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
 				} else {
 					var hasToString = false;
 					try {
@@ -6028,12 +6082,17 @@ class OcamlBuilder {
 			}
 		}
 
-		inline function toStdString(expr:OcamlExpr):OcamlExpr {
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"), [expr]);
-		}
-
 		inline function objObj(expr:OcamlExpr):OcamlExpr {
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [expr]);
+		}
+
+		// OCaml can evaluate `^` operands from right to left. Store the left
+		// value before the right value so this concatenation keeps Haxe's order.
+		function orderedStringConcat(left:OcamlExpr, right:OcamlExpr):OcamlExpr {
+			final leftName = freshTmp("string_left");
+			final rightName = freshTmp("string_right");
+			return OcamlExpr.ELet(leftName, left,
+				OcamlExpr.ELet(rightName, right, OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EIdent(leftName), OcamlExpr.EIdent(rightName)), false), false);
 		}
 
 		inline function toIntExpr(expr:TypedExpr):OcamlExpr {
@@ -6364,7 +6423,8 @@ class OcamlBuilder {
 						var rhs = switch (inner) {
 							case OpAdd:
 								if (isStringType(v.t) || isStringType(e2.t)) {
-									OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+									orderedStringConcat(buildStaticStringConversion(e1, lhs, OcamlStaticStringSourceKind.StringCompoundLeft),
+										buildStdString(e2, OcamlStaticStringSourceKind.StringCompoundRight));
 								} else if (floatMode) {
 									OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 								} else {
@@ -6437,7 +6497,8 @@ class OcamlBuilder {
 							final rhs = switch (inner) {
 								case OpAdd:
 									if (isStringType(e1.t) || isStringType(e2.t)) {
-										OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+										orderedStringConcat(buildStaticStringConversion(e1, lhs, OcamlStaticStringSourceKind.StringCompoundLeft),
+											buildStdString(e2, OcamlStaticStringSourceKind.StringCompoundRight));
 									} else if (floatMode) {
 										OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 									} else {
@@ -6507,7 +6568,8 @@ class OcamlBuilder {
 								final rhs = switch (inner) {
 									case OpAdd:
 										if (isStringType(e1.t) || isStringType(e2.t)) {
-											OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhsField), buildStdString(e2));
+											orderedStringConcat(buildStaticStringConversion(e1, lhsField, OcamlStaticStringSourceKind.StringCompoundLeft),
+												buildStdString(e2, OcamlStaticStringSourceKind.StringCompoundRight));
 										} else if (floatMode) {
 											OcamlExpr.EBinop(OcamlBinop.AddF, lhsField, toFloatExpr(e2));
 										} else {
@@ -6563,7 +6625,8 @@ class OcamlBuilder {
 						final rhs = switch (inner) {
 							case OpAdd:
 								if (isStringType(e1.t) || isStringType(e2.t)) {
-									OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+									orderedStringConcat(buildStaticStringConversion(e1, lhs, OcamlStaticStringSourceKind.StringCompoundLeft),
+										buildStdString(e2, OcamlStaticStringSourceKind.StringCompoundRight));
 								} else if (floatMode) {
 									OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 								} else {
@@ -6621,9 +6684,23 @@ class OcamlBuilder {
 					collectConcatParts(e1, parts);
 					collectConcatParts(e2, parts);
 
-					var acc:OcamlExpr = buildStdString(parts[0]);
+					// OCaml can evaluate `^` operands from right to left. Store each Haxe
+					// operand in a temporary value first. This keeps Haxe's required
+					// left-to-right order before the final concatenation reads those values.
+					final names:Array<String> = [];
+					final values:Array<OcamlExpr> = [];
+					for (part in parts) {
+						names.push(freshTmp("string_part"));
+						values.push(buildStdString(part, OcamlStaticStringSourceKind.StringConcat));
+					}
+					var acc:OcamlExpr = OcamlExpr.EIdent(names[0]);
 					for (i in 1...parts.length) {
-						acc = OcamlExpr.EBinop(OcamlBinop.Concat, acc, buildStdString(parts[i]));
+						acc = OcamlExpr.EBinop(OcamlBinop.Concat, acc, OcamlExpr.EIdent(names[i]));
+					}
+					var i = parts.length;
+					while (i > 0) {
+						i--;
+						acc = OcamlExpr.ELet(names[i], values[i], acc, false);
 					}
 					acc;
 				} else {
@@ -8472,6 +8549,7 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
+		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
@@ -8498,6 +8576,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentDynamicStringPlan = validatedPlan.dynamicString;
+		currentStaticStringPlan = validatedPlan.staticString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
@@ -8522,6 +8601,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
+		currentStaticStringPlan = previousStaticStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
@@ -8557,6 +8637,7 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
+		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
@@ -8583,6 +8664,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = validatedPlan.arrayIterators;
 		currentDynamicEqualityPlan = validatedPlan.dynamicEquality;
 		currentDynamicStringPlan = validatedPlan.dynamicString;
+		currentStaticStringPlan = validatedPlan.staticString;
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
@@ -8607,6 +8689,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
+		currentStaticStringPlan = previousStaticStringPlan;
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
@@ -8790,6 +8873,7 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
+		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
 		currentLocalPlanBinding = functionPlan.binding;
@@ -8823,6 +8907,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = functionPlan.arrayIterators;
 		currentDynamicEqualityPlan = functionPlan.dynamicEquality;
 		currentDynamicStringPlan = functionPlan.dynamicString;
+		currentStaticStringPlan = functionPlan.staticString;
 		currentLoopTargetIds = [];
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
@@ -9004,6 +9089,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
+		currentStaticStringPlan = previousStaticStringPlan;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
@@ -9068,6 +9154,7 @@ class OcamlBuilder {
 		final previousArrayIteratorPlan = currentArrayIteratorPlan;
 		final previousDynamicEqualityPlan = currentDynamicEqualityPlan;
 		final previousDynamicStringPlan = currentDynamicStringPlan;
+		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
@@ -9087,6 +9174,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = nestedDisposition == null ? null : nestedDisposition.arrayIterators;
 		currentDynamicEqualityPlan = nestedDisposition == null ? null : nestedDisposition.dynamicEquality;
 		currentDynamicStringPlan = nestedDisposition == null ? null : nestedDisposition.dynamicString;
+		currentStaticStringPlan = nestedDisposition == null ? null : nestedDisposition.staticString;
 		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
 		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
@@ -9183,6 +9271,7 @@ class OcamlBuilder {
 		currentArrayIteratorPlan = previousArrayIteratorPlan;
 		currentDynamicEqualityPlan = previousDynamicEqualityPlan;
 		currentDynamicStringPlan = previousDynamicStringPlan;
+		currentStaticStringPlan = previousStaticStringPlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;

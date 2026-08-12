@@ -45,6 +45,7 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityDecision;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldDecision;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringDecision;
 #end
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -724,6 +725,11 @@ class CompilationContext {
 	/** Records the exact private helper selected by one standard String field read. */
 	public function recordStringFieldRuntimeRequirement(decision:OcamlStringFieldDecision):Void {
 		runtimeRequirements.recordStringField(decision);
+	}
+
+	/** Records the exact private helper selected by one static String conversion. */
+	public function recordStaticStringRuntimeRequirement(decision:OcamlStaticStringDecision):Void {
+		runtimeRequirements.recordStaticString(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

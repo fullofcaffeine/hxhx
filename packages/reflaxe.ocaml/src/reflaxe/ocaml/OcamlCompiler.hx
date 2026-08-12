@@ -1677,6 +1677,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordDynamicEqualityRuntimeRequirement(decision);
 		for (decision in plan.dynamicString.decisions())
 			ctx.recordDynamicStringRuntimeRequirement(decision);
+		for (decision in plan.staticString.decisions())
+			ctx.recordStaticStringRuntimeRequirement(decision);
 		for (decision in plan.reflectCompare.decisions())
 			ctx.recordReflectCompareRuntimeRequirements(decision);
 		for (decision in plan.reflectRuntimeUses.decisions())

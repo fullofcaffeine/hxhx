@@ -49,7 +49,7 @@ for (const functionName of expectedFunctions) {
 	const control = controls.find(item => item.functionId.includes(`|function|${functionName}|`))
 	const payload = control?.payload
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v105'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v106'
 		|| control.proofId !== 'exact-enum-constructor-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic,Signal'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'

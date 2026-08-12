@@ -1,0 +1,6 @@
+std=null
+concat=Lnull
+assigned=nullR
+dynamic-assigned=7D
+field=42
+events=std,concat-left,concat-right,assign-initial,assign-right,dynamic-assign-right,field-name

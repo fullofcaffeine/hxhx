@@ -38,7 +38,7 @@ if (JSON.stringify(domains) !== JSON.stringify([
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
-		|| !['ocaml-function-plans-v105', 'ocaml-standalone-expression-plans-v11'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v106', 'ocaml-standalone-expression-plans-v12'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 	const stringRequirementId = `${decision.id}:runtime:haxe-reflect-compare-string-null`

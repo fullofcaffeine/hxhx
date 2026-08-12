@@ -26,16 +26,16 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 234 legacy entries:
+The current reviewed baseline contains 232 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 234 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 232 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 0 | Private runtime pattern constructors now use checked occurrence authority. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 234 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 232 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
@@ -69,8 +69,16 @@ binds each result once, then applies the sealed exact-String or nullable-String
 ordering policy. Its existing real OCaml fixture checks the results against the
 independent Haxe 4.3.7 oracle.
 
-These String changes reduce the earlier 252-entry baseline by 18 entries. They
-do not change the readiness bar while 234 unchecked sites remain.
+Static `String` and `Null<String>` conversions now own every
+`HxString.toStdString` use. This includes `Std.string`, concatenation,
+String `+=`, and String field names passed to `Reflect`. The plan is separate
+from Dynamic conversion because its OCaml input carrier is a typed `string`,
+not `Obj.t`. The portable fixture also found and fixed right-to-left target
+evaluation. It now proves Haxe's left-to-right operand order against upstream
+Haxe 4.3.7.
+
+These String changes reduce the earlier 252-entry baseline by 20 entries. They
+do not change the readiness bar while 232 unchecked sites remain.
 
 ## What the guard does not prove
 

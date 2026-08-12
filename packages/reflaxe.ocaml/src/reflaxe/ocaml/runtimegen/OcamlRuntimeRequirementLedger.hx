@@ -32,6 +32,8 @@ import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldDecision;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringDecision;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 #if macro
@@ -86,6 +88,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final STRING_EQUALITY = "haxe-string-equality";
 	public static inline final STRING_METHOD = "haxe-string-method";
 	public static inline final STRING_FIELD = "haxe-string-field-read";
+	public static inline final STATIC_STRING = "haxe-static-string-conversion";
 	public static inline final NULLABLE_PRIMITIVE_FIELD_DEFAULT = "haxe-nullable-primitive-field-default";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
@@ -745,6 +748,36 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helper selected by one standard String field read. */
 	public function recordStringField(decision:OcamlStringFieldDecision):Void {
 		for (requirement in requirementsForStringField(decision))
+			record(requirement);
+	}
+
+	/** Returns the direct runtime reason for one static String conversion. */
+	public static function requirementsForStaticString(decision:OcamlStaticStringDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStaticStringPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: STATIC_STRING,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.semanticTypeId
+				},
+				implementationFeature: "haxe-static-string-conversion-v1",
+				rootModules: ["HxString"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed String operation converts one String carrier through Haxe null-aware string behavior before target syntax."
+			})
+		];
+	}
+
+	/** Records the private helper selected by one static String conversion. */
+	public function recordStaticString(decision:OcamlStaticStringDecision):Void {
+		for (requirement in requirementsForStaticString(decision))
 			record(requirement);
 	}
 

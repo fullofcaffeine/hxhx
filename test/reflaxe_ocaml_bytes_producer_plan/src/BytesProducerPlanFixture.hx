@@ -246,7 +246,8 @@ class BytesProducerPlanFixture {
 			stringFromCharCode: firstStandalone.stringFromCharCode,
 			stringEquality: firstStandalone.stringEquality,
 			stringMethods: firstStandalone.stringMethods,
-			stringFields: firstStandalone.stringFields
+			stringFields: firstStandalone.stringFields,
+			staticString: firstStandalone.staticString
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 
