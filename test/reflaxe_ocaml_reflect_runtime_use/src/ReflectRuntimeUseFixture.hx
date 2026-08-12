@@ -33,8 +33,16 @@ class ReflectRuntimeUseFixture {
 	public static macro function run():Expr {
 		final typed = Context.typeExpr(macro {
 			final receiver:Dynamic = {value: 3};
+			final fieldName = "value";
 			final method:Dynamic = function(value:Int):Int return value + 1;
 			final enumValue:Dynamic = ReflectRuntimeUseEnum.Some;
+			Reflect.field(receiver, fieldName);
+			Reflect.getProperty(receiver, fieldName);
+			Reflect.setField(receiver, fieldName, 4);
+			Reflect.hasField(receiver, fieldName);
+			Reflect.fields(receiver);
+			Reflect.deleteField(receiver, fieldName);
+			Reflect.copy(receiver);
 			Reflect.callMethod(receiver, method, [2]);
 			Reflect.isFunction(method);
 			Reflect.makeVarArgs(function(arguments:Array<Dynamic>):Dynamic return arguments.length);
@@ -48,6 +56,13 @@ class ReflectRuntimeUseFixture {
 
 		final plan = new OcamlReflectRuntimeUsePlanner(binding).plan(typed);
 		final decisions = plan.decisions();
+		assertKind(decisions, OcamlReflectRuntimeUseKind.Field, 1, "HxAnon.get");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.GetProperty, 1, "HxAnon.get");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.SetField, 1, "HxAnon.set");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.HasField, 1, "HxAnon.has");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.Fields, 1, "HxAnon.fields");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.DeleteField, 1, "HxAnon.delete");
+		assertKind(decisions, OcamlReflectRuntimeUseKind.Copy, 1, "HxAnon.copy");
 		assertKind(decisions, OcamlReflectRuntimeUseKind.CallMethod, 1, "HxReflect.callMethod");
 		assertKind(decisions, OcamlReflectRuntimeUseKind.IsFunction, 1, "HxReflect.isFunction");
 		assertKind(decisions, OcamlReflectRuntimeUseKind.MakeVarArgs, 1, "HxReflect.makeVarArgs");
@@ -55,8 +70,8 @@ class ReflectRuntimeUseFixture {
 		assertKind(decisions, OcamlReflectRuntimeUseKind.IsObject, 1, "HxReflect.isObject");
 		assertKind(decisions, OcamlReflectRuntimeUseKind.IsEnumValue, 1, "HxReflect.isEnumValue");
 		assertKind(decisions, OcamlReflectRuntimeUseKind.CompareMethods, 1, "HxReflect.same_closure");
-		if (decisions.length != 7)
-			throw 'Expected seven outer-function Reflect decisions, received ${decisions.length}.';
+		if (decisions.length != 14)
+			throw 'Expected fourteen outer-function Reflect decisions, received ${decisions.length}.';
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);
@@ -76,6 +91,10 @@ class ReflectRuntimeUseFixture {
 		final requirements = OcamlRuntimeRequirementLedger.requirementsForReflectRuntimeUse(decision);
 		if (requirements.length != 1 || decision.runtimeUseOccurrences.length != 1)
 			throw 'Reflect decision "${decision.id}" must own one requirement and one runtime use.';
+		if (decision.evaluationPolicy != OcamlReflectRuntimeUsePlan.EVALUATION_POLICY)
+			throw 'Reflect decision "${decision.id}" has the wrong argument evaluation policy.';
+		if (requirements[0].rootModules.join(",") != OcamlReflectRuntimeUsePlan.rootModuleFor(decision.kind))
+			throw 'Reflect decision "${decision.id}" has the wrong runtime module.';
 		final occurrence = decision.runtimeUseOccurrences[0];
 		final authority = new OcamlRuntimeUseAuthority(decision.revision, "portable", requirements, decision.runtimeUseOccurrences);
 		final reference = authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
@@ -100,6 +119,15 @@ class ReflectRuntimeUseFixture {
 		});
 		final wrongOwner = copyOccurrence(occurrence, occurrence.ownerId + ":wrong");
 		expectFailure("wrong owner", "invalid-runtime-use", () -> OcamlReflectRuntimeUsePlan.requireDecision(copyDecision(decision, [wrongOwner])));
+		final wrongOrder = copyOccurrence(occurrence, occurrence.ownerId, occurrence.order + 1);
+		expectFailure("wrong order", "invalid-runtime-use", () -> OcamlReflectRuntimeUsePlan.requireDecision(copyDecision(decision, [wrongOrder])));
+		expectFailure("wrong method", "invalid-runtime-use",
+			() -> OcamlReflectRuntimeUsePlan.requireDecision(copyDecision(decision, decision.runtimeUseOccurrences, decision.sourceMethod + "Wrong")));
+		expectFailure("wrong evaluation policy", "invalid-plan",
+			() -> OcamlReflectRuntimeUsePlan.requireDecision(copyDecision(decision, decision.runtimeUseOccurrences, decision.sourceMethod, "unordered")));
+		expectFailure("wrong profile", "not eligible for profile",
+			() -> new OcamlRuntimeUseAuthority(decision.revision, "unsupported-profile", requirements,
+				decision.runtimeUseOccurrences).expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 	}
 
 	static function privateReference(symbol:String):OcamlExpr {
@@ -107,7 +135,7 @@ class ReflectRuntimeUseFixture {
 		return OcamlExpr.EField(OcamlExpr.EIdent(parts[0]), parts[1]);
 	}
 
-	static function copyOccurrence(source:OcamlRuntimeUseOccurrence, ownerId:String):OcamlRuntimeUseOccurrence {
+	static function copyOccurrence(source:OcamlRuntimeUseOccurrence, ownerId:String, ?order:Int):OcamlRuntimeUseOccurrence {
 		return {
 			id: source.id,
 			planRevision: source.planRevision,
@@ -116,7 +144,7 @@ class ReflectRuntimeUseFixture {
 			domain: source.domain,
 			exactSymbol: source.exactSymbol,
 			role: source.role,
-			order: source.order,
+			order: order ?? source.order,
 			source: {
 				file: source.source.file,
 				min: source.source.min,
@@ -127,16 +155,18 @@ class ReflectRuntimeUseFixture {
 		};
 	}
 
-	static function copyDecision(source:OcamlReflectRuntimeUseDecision, runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>):OcamlReflectRuntimeUseDecision {
+	static function copyDecision(source:OcamlReflectRuntimeUseDecision, runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>, ?sourceMethod:String,
+			?evaluationPolicy:String):OcamlReflectRuntimeUseDecision {
 		return {
 			id: source.id,
 			revision: source.revision,
 			source: {file: source.source.file, min: source.source.min, max: source.source.max},
 			kind: source.kind,
-			sourceMethod: source.sourceMethod,
+			sourceMethod: sourceMethod ?? source.sourceMethod,
 			exactSymbol: source.exactSymbol,
 			argumentSemanticTypeIds: source.argumentSemanticTypeIds.copy(),
 			resultSemanticTypeId: source.resultSemanticTypeId,
+			evaluationPolicy: evaluationPolicy ?? source.evaluationPolicy,
 			order: source.order,
 			profileEligibility: source.profileEligibility.copy(),
 			runtimeRequirementIds: source.runtimeRequirementIds.copy(),

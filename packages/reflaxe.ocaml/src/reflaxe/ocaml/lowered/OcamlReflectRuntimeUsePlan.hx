@@ -15,6 +15,13 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
 /** One supported operation from the standard Haxe `Reflect` class. */
 enum abstract OcamlReflectRuntimeUseKind(String) from String to String {
+	final Field = "field";
+	final GetProperty = "get-property";
+	final SetField = "set-field";
+	final HasField = "has-field";
+	final Fields = "fields";
+	final DeleteField = "delete-field";
+	final Copy = "copy";
 	final CallMethod = "call-method";
 	final IsFunction = "is-function";
 	final MakeVarArgs = "make-var-args";
@@ -34,6 +41,7 @@ typedef OcamlReflectRuntimeUseDecision = {
 	final exactSymbol:String;
 	final argumentSemanticTypeIds:Array<String>;
 	final resultSemanticTypeId:String;
+	final evaluationPolicy:String;
 	final order:Int;
 	final profileEligibility:Array<String>;
 	final runtimeRequirementIds:Array<String>;
@@ -49,16 +57,17 @@ typedef OcamlReflectRuntimeUseDecision = {
 /**
 	Plans how standard Haxe `Reflect` calls use the OCaml target runtime.
 
-	`HxReflect` is an OCaml support module, not the public Haxe class. The planner
-	resolves each typed Haxe call before syntax generation and selects one exact
-	`HxReflect` function. The syntax builder can then use only that selected
+	`HxReflect` and `HxAnon` are OCaml support modules, not the public Haxe class.
+	The planner resolves each typed Haxe call before syntax generation and selects
+	one exact target function. The syntax builder can then use only that selected
 	function for that call. A copied decision stores no compiler object and must
 	not be reused in another compilation request.
 **/
 class OcamlReflectRuntimeUsePlan {
-	public static inline final PROOF_ID = "direct-standard-reflect-runtime-use-v1";
-	public static inline final PROOF_CLAIM = "The final typed call resolves to one admitted method on the root standard Reflect class. Its method, argument types, result type, and callback result select exactly one private HxReflect helper. Reflect.compare remains owned by the typed comparator plan, and dynamic function invocation remains a separate call-boundary decision.";
+	public static inline final PROOF_ID = "direct-standard-reflect-runtime-use-v2";
+	public static inline final PROOF_CLAIM = "The final typed call resolves to one admitted method on the root standard Reflect class. Its method, argument types, result type, and callback result select exactly one private HxReflect or HxAnon helper. Arguments are evaluated once in Haxe source order. Reflect.compare remains owned by the typed comparator plan, and dynamic function invocation remains a separate call-boundary decision.";
 	public static inline final RUNTIME_CAPABILITY = "haxe-reflect-runtime-call";
+	public static inline final EVALUATION_POLICY = "arguments-left-to-right-once";
 
 	final ordered:Array<OcamlReflectRuntimeUseDecision>;
 	final byId:Map<String, OcamlReflectRuntimeUseDecision> = [];
@@ -114,6 +123,7 @@ class OcamlReflectRuntimeUsePlan {
 			|| decision.sourceMethod.length == 0
 			|| decision.exactSymbol.length == 0
 			|| decision.resultSemanticTypeId.length == 0
+			|| decision.evaluationPolicy != EVALUATION_POLICY
 			|| decision.order < 0
 			|| decision.profileEligibility.join(",") != "metal,portable"
 			|| decision.runtimeRequirementIds.length != 1
@@ -131,7 +141,7 @@ class OcamlReflectRuntimeUsePlan {
 		final role = roleFor(decision.kind);
 		final expectedRequirementId = decision.id + ":runtime:" + RUNTIME_CAPABILITY;
 		final expectedRevision = sealRevision(decision.id, decision.source, decision.kind, expectedMethod, expectedSymbol, decision.argumentSemanticTypeIds,
-			decision.resultSemanticTypeId, decision.order, bindingFor(decision), expectedRequirementId);
+			decision.resultSemanticTypeId, decision.evaluationPolicy, decision.order, bindingFor(decision), expectedRequirementId);
 		final occurrence = decision.runtimeUseOccurrences[0];
 		if (decision.sourceMethod != expectedMethod
 			|| decision.exactSymbol != expectedSymbol
@@ -155,6 +165,13 @@ class OcamlReflectRuntimeUsePlan {
 
 	public static function sourceMethodFor(kind:OcamlReflectRuntimeUseKind):String {
 		return switch (kind) {
+			case Field: "field";
+			case GetProperty: "getProperty";
+			case SetField: "setField";
+			case HasField: "hasField";
+			case Fields: "fields";
+			case DeleteField: "deleteField";
+			case Copy: "copy";
 			case CallMethod: "callMethod";
 			case IsFunction: "isFunction";
 			case MakeVarArgs, MakeVarArgsVoid: "makeVarArgs";
@@ -166,6 +183,12 @@ class OcamlReflectRuntimeUsePlan {
 
 	public static function exactSymbolFor(kind:OcamlReflectRuntimeUseKind):String {
 		return switch (kind) {
+			case Field, GetProperty: "HxAnon.get";
+			case SetField: "HxAnon.set";
+			case HasField: "HxAnon.has";
+			case Fields: "HxAnon.fields";
+			case DeleteField: "HxAnon.delete";
+			case Copy: "HxAnon.copy";
 			case CallMethod: "HxReflect.callMethod";
 			case IsFunction: "HxReflect.isFunction";
 			case MakeVarArgs: "HxReflect.makeVarArgs";
@@ -179,10 +202,17 @@ class OcamlReflectRuntimeUsePlan {
 	public static function roleFor(kind:OcamlReflectRuntimeUseKind):String
 		return "direct-" + (kind : String);
 
+	/** Returns the runtime module that owns the selected exact helper. */
+	public static function rootModuleFor(kind:OcamlReflectRuntimeUseKind):String {
+		final symbol = exactSymbolFor(kind);
+		return symbol.substr(0, symbol.indexOf("."));
+	}
+
 	public static function sealRevision(id:String, source:OcamlLoweredSourceSpan, kind:OcamlReflectRuntimeUseKind, sourceMethod:String, exactSymbol:String,
-			argumentSemanticTypeIds:Array<String>, resultSemanticTypeId:String, order:Int, binding:OcamlFunctionPlanBinding, requirementId:String):String {
+			argumentSemanticTypeIds:Array<String>, resultSemanticTypeId:String, evaluationPolicy:String, order:Int, binding:OcamlFunctionPlanBinding,
+			requirementId:String):String {
 		return "sha256:" + Sha256.encode([
-			"direct-standard-reflect-runtime-use-v1",
+			"direct-standard-reflect-runtime-use-v2",
 			id,
 			source.file,
 			Std.string(source.min),
@@ -192,6 +222,7 @@ class OcamlReflectRuntimeUsePlan {
 			exactSymbol,
 			argumentSemanticTypeIds.join("\u001e"),
 			resultSemanticTypeId,
+			evaluationPolicy,
 			Std.string(order),
 			binding.functionId,
 			binding.programRevision,
@@ -234,6 +265,7 @@ class OcamlReflectRuntimeUsePlan {
 			exactSymbol: decision.exactSymbol,
 			argumentSemanticTypeIds: decision.argumentSemanticTypeIds.copy(),
 			resultSemanticTypeId: decision.resultSemanticTypeId,
+			evaluationPolicy: decision.evaluationPolicy,
 			order: decision.order,
 			profileEligibility: decision.profileEligibility.copy(),
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
@@ -308,7 +340,7 @@ class OcamlReflectRuntimeUsePlanner {
 						].join("\u001f")).substr(0, 24);
 						final requirementId = id + ":runtime:" + OcamlReflectRuntimeUsePlan.RUNTIME_CAPABILITY;
 						final revision = OcamlReflectRuntimeUsePlan.sealRevision(id, source, kind, sourceMethod, exactSymbol, argumentSemanticTypeIds,
-							resultSemanticTypeId, order, binding, requirementId);
+							resultSemanticTypeId, OcamlReflectRuntimeUsePlan.EVALUATION_POLICY, order, binding, requirementId);
 						final role = OcamlReflectRuntimeUsePlan.roleFor(kind);
 						final decision:OcamlReflectRuntimeUseDecision = {
 							id: id,
@@ -319,6 +351,7 @@ class OcamlReflectRuntimeUsePlanner {
 							exactSymbol: exactSymbol,
 							argumentSemanticTypeIds: argumentSemanticTypeIds,
 							resultSemanticTypeId: resultSemanticTypeId,
+							evaluationPolicy: OcamlReflectRuntimeUsePlan.EVALUATION_POLICY,
 							order: order,
 							profileEligibility: ["metal", "portable"],
 							runtimeRequirementIds: [requirementId],
@@ -366,6 +399,13 @@ class OcamlReflectRuntimeUsePlanner {
 				final field = fieldRef.get();
 				if (owner.pack.length != 0 || owner.name != "Reflect" || owner.module != "Reflect" || fieldOwner.module != owner.module
 					|| fieldOwner.name != owner.name) null; else switch (field.name) {
+					case "field" if (arguments.length == 2): OcamlReflectRuntimeUseKind.Field;
+					case "getProperty" if (arguments.length == 2): OcamlReflectRuntimeUseKind.GetProperty;
+					case "setField" if (arguments.length == 3): OcamlReflectRuntimeUseKind.SetField;
+					case "hasField" if (arguments.length == 2): OcamlReflectRuntimeUseKind.HasField;
+					case "fields" if (arguments.length == 1): OcamlReflectRuntimeUseKind.Fields;
+					case "deleteField" if (arguments.length == 2): OcamlReflectRuntimeUseKind.DeleteField;
+					case "copy" if (arguments.length == 1): OcamlReflectRuntimeUseKind.Copy;
 					case "callMethod" if (arguments.length == 3): OcamlReflectRuntimeUseKind.CallMethod;
 					case "isFunction" if (arguments.length == 1): OcamlReflectRuntimeUseKind.IsFunction;
 					case "makeVarArgs" if (arguments.length == 1): callbackReturnsVoid(arguments[0].t) ? OcamlReflectRuntimeUseKind.MakeVarArgsVoid : OcamlReflectRuntimeUseKind.MakeVarArgs;

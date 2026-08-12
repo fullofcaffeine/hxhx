@@ -528,7 +528,7 @@ class OcamlRuntimeRequirementLedger {
 			record(requirement);
 	}
 
-	/** Returns the exact HxReflect reason for one sealed standard Reflect call. */
+	/** Returns the exact target-runtime reason for one sealed standard Reflect call. */
 	public static function requirementsForReflectRuntimeUse(decision:OcamlReflectRuntimeUseDecision):Array<OcamlRuntimeRequirement> {
 		OcamlReflectRuntimeUsePlan.requireDecision(decision);
 		return [
@@ -547,10 +547,10 @@ class OcamlRuntimeRequirementLedger {
 					+ decision.argumentSemanticTypeIds.join(",")
 					+ "->"
 					+ decision.resultSemanticTypeId},
-				implementationFeature: "haxe-direct-reflect-call-v1",
-				rootModules: ["HxReflect"],
+				implementationFeature: "haxe-direct-reflect-call-v2",
+				rootModules: [OcamlReflectRuntimeUsePlan.rootModuleFor(decision.kind)],
 				profileEligibility: decision.profileEligibility,
-				explanation: "The resolved standard Reflect call selected one private HxReflect operation. The compiler records this one generated identifier before it writes OCaml, so another HxReflect use cannot borrow the same permission."
+				explanation: "The resolved standard Reflect call selected one private target-runtime operation. The compiler records this one generated identifier before it writes OCaml, so another Reflect call cannot borrow the same permission."
 			})
 		];
 	}

@@ -26,23 +26,27 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 232 legacy entries:
+The current reviewed baseline contains 225 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 232 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 225 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 0 | Private runtime pattern constructors now use checked occurrence authority. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 232 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 225 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
 
 Direct calls to the standard Haxe `Reflect` class now use sealed runtime-use
-decisions. Dynamic call behavior remains a separate call-boundary concern; it
-must not be counted as direct `Reflect` authority.
+decisions. This includes the anonymous-object operations `field`,
+`getProperty`, `setField`, `hasField`, `fields`, `deleteField`, and `copy`.
+Each operation owns its exact `HxAnon` helper. The generated OCaml also binds
+each argument once in Haxe's left-to-right order. Dynamic call behavior remains
+a separate call-boundary concern; it must not be counted as direct `Reflect`
+authority.
 
 Typed String `==` and `!=` expressions also use sealed runtime-use decisions.
 The plan records one `HxString.equals` use and left-to-right evaluation for
@@ -77,8 +81,9 @@ not `Obj.t`. The portable fixture also found and fixed right-to-left target
 evaluation. It now proves Haxe's left-to-right operand order against upstream
 Haxe 4.3.7.
 
-These String changes reduce the earlier 252-entry baseline by 20 entries. They
-do not change the readiness bar while 232 unchecked sites remain.
+The String changes and direct anonymous-object `Reflect` operations reduce the
+earlier 252-entry baseline by 27 entries. They do not change the readiness bar
+while 225 unchecked sites remain.
 
 ## What the guard does not prove
 

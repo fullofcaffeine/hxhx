@@ -55,7 +55,7 @@ for (const [name, expectedCount] of expectedRootByFunction) {
 const nestedControls = controls.filter(control => control.functionId.includes('|nested-function|'))
 if (nestedControls.length !== 1
 	|| !nestedControls[0].functionId.includes('|function|nestedClosure|')
-	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v27') {
+	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v28') {
 	fail('the nested Void function did not receive its own effect-only return boundary')
 }
 
@@ -72,8 +72,8 @@ for (const control of controls) {
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
-			? 'ocaml-nested-function-plans-v27'
-			: 'ocaml-function-plans-v106')
+			? 'ocaml-nested-function-plans-v28'
+			: 'ocaml-function-plans-v107')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason

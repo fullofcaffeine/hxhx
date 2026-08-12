@@ -1919,6 +1919,33 @@ class OcamlBuilder {
 	}
 
 	/**
+		Builds one planned standard Reflect call in Haxe argument order.
+
+		OCaml can evaluate function arguments from right to left. The generated
+		bindings evaluate each Haxe argument once, from left to right, before the
+		selected private runtime function receives those values. Each conversion
+		stays specific to the public Reflect method.
+	**/
+	function buildOrderedReflectRuntimeCall(call:TypedExpr, expectedKind:OcamlReflectRuntimeUseKind, arguments:Array<TypedExpr>,
+			buildArgument:(TypedExpr, Int) -> OcamlExpr, buildResult:(OcamlExpr, Array<OcamlExpr>) -> OcamlExpr):OcamlExpr {
+		final runtimeFunction = directReflectRuntimeFunction(call, expectedKind);
+		final names:Array<String> = [];
+		final values:Array<OcamlExpr> = [];
+		for (index in 0...arguments.length) {
+			names.push(freshTmp("reflect_arg_" + index));
+			values.push(buildArgument(arguments[index], index));
+		}
+		final materialized = names.map(name -> OcamlExpr.EIdent(name));
+		var result = buildResult(runtimeFunction, materialized);
+		var index = arguments.length;
+		while (index > 0) {
+			index--;
+			result = OcamlExpr.ELet(names[index], values[index], result, false);
+		}
+		return result;
+	}
+
+	/**
 		Builds one standard Haxe runtime type check from its sealed decision.
 
 		For example, `Std.isOfType(value, Int)` can need the private null and
@@ -4728,24 +4755,27 @@ class OcamlBuilder {
 											}
 											switch (cf.name) {
 												case "field" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
-															toObjArg(args[0]),
-															buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
-														])
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.Field, args,
+														(argument,
+																index) -> index == 0 ? toObjArg(argument) : buildStdString(argument,
+																OcamlStaticStringSourceKind.ReflectFieldName),
+														(runtimeFunction,
+																values) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																[OcamlExpr.EApp(runtimeFunction, values)]));
 												case "getProperty" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [
-															toObjArg(args[0]),
-															buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
-														])
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.GetProperty, args,
+														(argument,
+																index) -> index == 0 ? toObjArg(argument) : buildStdString(argument,
+																OcamlStaticStringSourceKind.ReflectFieldName),
+														(runtimeFunction,
+																values) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																[OcamlExpr.EApp(runtimeFunction, values)]));
 												case "callMethod" if (args.length == 3):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.CallMethod),
-															[toObjArg(args[0]), toObjArg(args[1]), buildExpr(args[2])])
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.CallMethod, args,
+														(argument, index) -> index < 2 ? toObjArg(argument) : buildExpr(argument),
+														(runtimeFunction,
+																values) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																[OcamlExpr.EApp(runtimeFunction, values)]));
 												case "isFunction" if (args.length == 1):
 													{
 														final a0 = args[0];
@@ -4757,7 +4787,8 @@ class OcamlBuilder {
 															case _:
 																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
 														};
-														OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsFunction), [asObj]);
+														buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.IsFunction, args, (_, _) -> asObj,
+															(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 													}
 												case "makeVarArgs" if (args.length == 1):
 													final f = args[0];
@@ -4765,43 +4796,53 @@ class OcamlBuilder {
 														case TFun(_, ret): isVoidType(ret);
 														case _: false;
 													};
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(directReflectRuntimeFunction(e,
-															isVoid ? OcamlReflectRuntimeUseKind.MakeVarArgsVoid : OcamlReflectRuntimeUseKind.MakeVarArgs),
-															[
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(f)])
-															])
-													]);
+													buildOrderedReflectRuntimeCall(e,
+														isVoid ? OcamlReflectRuntimeUseKind.MakeVarArgsVoid : OcamlReflectRuntimeUseKind.MakeVarArgs, args,
+														(argument,
+																_) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(argument)]),
+														(runtimeFunction,
+																values) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																[OcamlExpr.EApp(runtimeFunction, values)]));
 												case "setField" if (args.length == 3):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"), [
-														toObjArg(args[0]),
-														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName),
-														toObjValue(args[2])
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.SetField, args,
+														(argument,
+																index) -> index == 0 ? toObjArg(argument) : (index == 1 ? buildStdString(argument,
+																OcamlStaticStringSourceKind.ReflectFieldName) : toObjValue(argument)),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "hasField" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"), [
-														toObjArg(args[0]),
-														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.HasField, args,
+														(argument,
+																index) -> index == 0 ? toObjArg(argument) : buildStdString(argument,
+																OcamlStaticStringSourceKind.ReflectFieldName),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "fields" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "fields"), [toObjArg(args[0])]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.Fields, args,
+														(argument, _) -> toObjArg(argument),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "deleteField" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "delete"), [
-														toObjArg(args[0]),
-														buildStdString(args[1], OcamlStaticStringSourceKind.ReflectFieldName)
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.DeleteField, args,
+														(argument,
+																index) -> index == 0 ? toObjArg(argument) : buildStdString(argument,
+																OcamlStaticStringSourceKind.ReflectFieldName),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "copy" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "copy"), [toObjArg(args[0])])
-													]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.Copy, args,
+														(argument, _) -> toObjArg(argument),
+														(runtimeFunction,
+																values) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																[OcamlExpr.EApp(runtimeFunction, values)]));
 												case "isObject" if (args.length == 1):
-													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsObject), [toObjValue(args[0])]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.IsObject, args,
+														(argument, _) -> toObjValue(argument),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "isEnumValue" if (args.length == 1):
-													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.IsEnumValue),
-														[toObjValue(args[0])]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.IsEnumValue, args,
+														(argument, _) -> toObjValue(argument),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case "compareMethods" if (args.length == 2):
-													OcamlExpr.EApp(directReflectRuntimeFunction(e, OcamlReflectRuntimeUseKind.CompareMethods),
-														[toObjValue(args[0]), toObjValue(args[1])]);
+													buildOrderedReflectRuntimeCall(e, OcamlReflectRuntimeUseKind.CompareMethods, args,
+														(argument, _) -> toObjValue(argument),
+														(runtimeFunction, values) -> OcamlExpr.EApp(runtimeFunction, values));
 												case _:
 													#if macro
 													guardrailError("reflaxe.ocaml (M10): Reflect." + cf.name + " is not implemented yet. (bd: haxe.ocaml-k7o)",

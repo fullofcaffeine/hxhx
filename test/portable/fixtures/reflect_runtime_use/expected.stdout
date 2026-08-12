@@ -4,6 +4,16 @@ object=true,false
 enum=true,false
 methods=true
 initializer=true
+field-initializer=ready
 nested=true
 varargs=3
 void=x|y
+field=1
+nested-field=ready
+property=ready
+set=7
+has=true
+fields=name,value
+copy=7,original=9
+delete=true
+field-order=field-object|field-name|property-object|property-name|set-object|set-name|set-value|has-object|has-name|fields-object|copy-object|delete-object|delete-name
