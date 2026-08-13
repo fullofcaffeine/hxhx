@@ -226,7 +226,7 @@ class OcamlBuilder {
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
 	var currentStaticStringPlan:Null<OcamlStaticStringPlan> = null;
-	final standardArrayOutputCounts:Map<String, Int> = [];
+	final runtimeUseOutputCounts:Map<String, Int> = [];
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -388,6 +388,24 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/**
+		Gives a repeated rendering of one sealed helper a distinct output identity.
+
+		Haxe can reuse one typed source occurrence in multiple final branches. The
+		first rendering keeps the plan's original identity. A later rendering must
+		pass through the final-output authority so it cannot spend that permission a
+		second time. Callers pass only the helper identifier introduced at their
+		boundary; receiver, argument, and payload expressions keep their own plans.
+	**/
+	function distinctRuntimeOutput(reference:OcamlExpr, occurrence:OcamlRuntimeUseOccurrence, role:String):OcamlExpr {
+		final outputKey = occurrence.planRevision + "|" + occurrence.id;
+		final previousOutputCount = runtimeUseOutputCounts.get(outputKey);
+		final outputCount = previousOutputCount == null ? 0 : previousOutputCount;
+		runtimeUseOutputCounts.set(outputKey, outputCount + 1);
+		return outputCount == 0 ? reference : ctx.finalRuntimeUses.copyExpressionForOutput(reference, '$role:${occurrence.id}:output:$outputCount',
+			ctx.activateStagedTypeRuntimeUse);
 	}
 
 	/**
@@ -978,7 +996,11 @@ class OcamlBuilder {
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
 				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
-			final signal = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
+			var signal = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
+			// Reconcile the source occurrence before assigning any later output copy.
+			// The payload is owned by other plans and is intentionally not inspected.
+			runtimeAuthority.reconcileExpression(signal);
+			signal = distinctRuntimeOutput(signal, occurrence, "control-return-signal");
 			final expression = switch (decision.mechanism) {
 				case RuntimeReturnSignal:
 					if (payload == null)
@@ -991,15 +1013,6 @@ class OcamlBuilder {
 				case _:
 					return controlPlanInvariant('return decision "${decision.id}" selected unsupported signal mechanism ${decision.mechanism}', position);
 			};
-			// The returned value can contain private helpers owned by other sealed
-			// plans. Check only the signal node introduced here; the request-wide final
-			// authority still walks the complete expression before publication.
-			final signalProof = switch (decision.mechanism) {
-				case RuntimeReturnSignal: OcamlExpr.EApp(signal, [OcamlExpr.EIdent("return_payload_owned_elsewhere")]);
-				case RuntimeVoidReturnSignal: signal;
-				case _: throw "unreachable return-signal proof mechanism";
-			};
-			runtimeAuthority.reconcileExpression(signalProof);
 			expression;
 		} catch (error:Dynamic) {
 			controlPlanInvariant(Std.string(error), position);
@@ -1768,20 +1781,7 @@ class OcamlBuilder {
 			// Receiver and argument expressions may contain private calls owned by
 			// other plans, so reconcile only the identifier introduced here.
 			authority.reconcileExpression(runtimeFunction);
-			final outputKey = occurrence.planRevision + "|" + occurrence.id;
-			final previousOutputCount = standardArrayOutputCounts.get(outputKey);
-			final outputCount = previousOutputCount == null ? 0 : previousOutputCount;
-			standardArrayOutputCounts.set(outputKey, outputCount + 1);
-			if (outputCount > 0) {
-				// Haxe can place one typed source occurrence in more than one final
-				// branch. For example, a wildcard switch can reuse its branch expression
-				// in an earlier null test and in the final fallback. Each generated OCaml
-				// helper still needs a separate checked identity. Copy only this call's
-				// helper reference so nested receiver and argument plans keep ownership of
-				// their own output occurrences.
-				runtimeFunction = ctx.finalRuntimeUses.copyExpressionForOutput(runtimeFunction, 'standard-array-call:${call.id}:output:$outputCount',
-					ctx.activateStagedTypeRuntimeUse);
-			}
+			runtimeFunction = distinctRuntimeOutput(runtimeFunction, occurrence, "standard-array-call");
 			final materialized:Array<{name:String, value:OcamlExpr}> = [];
 			final receiverName = freshTmp("array_receiver");
 			materialized.push({name: receiverName, value: buildExpr(typedField.receiver)});
