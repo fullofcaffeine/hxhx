@@ -179,6 +179,7 @@
     "clean:tmp:verbose": "bash scripts/dev/clean-artifacts.sh --tmp-only --verbose",
     "test:clean-artifacts": "bash scripts/test-clean-artifacts.sh",
     "test:printer": "haxe test/ocaml_ast_printer_test.hxml",
+    "test:reflaxe-ocaml:type-declaration-order": "haxe test/ocaml_type_declaration_planner_test.hxml && PORTABLE_FIXTURE_ALLOWLIST=same_module_class_carrier_order PORTABLE_JOBS=1 bash scripts/test-portable.sh",
     "test:m2": "haxe test/m2_integration_test.hxml",
     "test:m3": "haxe test/m3_integration_test.hxml",
     "test:m4:enum": "haxe test/m4_enum_integration_test.hxml",

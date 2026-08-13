@@ -1,0 +1,7 @@
+-cp cycle-src
+-main CycleMain
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=cycle-out

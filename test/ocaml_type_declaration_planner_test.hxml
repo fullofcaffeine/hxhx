@@ -1,0 +1,5 @@
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OcamlTypeDeclarationPlannerTest
+-D reflaxe_runtime
+--interp

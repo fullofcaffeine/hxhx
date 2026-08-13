@@ -47,6 +47,7 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRecordField;
 import reflaxe.ocaml.ast.OcamlTypeDecl;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
+import reflaxe.ocaml.ast.OcamlTypeDeclarationPlanner;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
@@ -154,6 +155,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateModules:Array<String> = [];
 	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
+	final classCarrierDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
+	final classCarrierOwnerKeys:Map<String, Bool> = [];
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
@@ -433,6 +436,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/** Starts a fresh, revision-keyed target-plan registry for this request. */
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
+		classCarrierDeclarationsByModule.clear();
+		classCarrierOwnerKeys.clear();
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
 		nextStandardMapCarrierOrdinal = 0;
@@ -1081,6 +1086,33 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return printer.printModule(items);
 	}
 
+	/**
+		Prints all class record declarations for one generated OCaml module.
+
+		Class compilation records these declarations without printing them beside
+		constructors or static initializers. Module assembly can then place the types
+		before every class value without changing executable Haxe declaration order.
+	**/
+	function classCarrierPrelude(moduleId:String):String {
+		final declarations = classCarrierDeclarationsByModule.get(moduleId);
+		if (declarations == null || declarations.length == 0)
+			return "";
+		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(declaration -> OcamlModuleItem.IType([declaration], false));
+		return printFinalModule(items, "class-carrier-prelude:" + moduleId);
+	}
+
+	/** Records one structured class carrier for later module-level declaration. */
+	function registerClassCarrier(moduleId:String, ownerTypeName:String, declaration:OcamlTypeDecl):Void {
+		var declarations = classCarrierDeclarationsByModule.get(moduleId);
+		if (declarations == null) {
+			declarations = [];
+			classCarrierDeclarationsByModule.set(moduleId, declarations);
+		}
+		declarations.push(declaration);
+		classCarrierOwnerKeys.set(moduleId + "\n" + ownerTypeName, true);
+		RuntimeUsageCollector.collectFromModuleItems([OcamlModuleItem.IType([declaration], false)], (moduleName) -> ctx.markRuntimeModule(moduleName));
+	}
+
 	public override function generateOutputIterator():Iterator<DataAndFileInfo<reflaxe.output.StringOrBytes>> {
 		// Ensure type declarations (enums/typedefs/abstracts) appear before value
 		// definitions in each module, since OCaml requires constructors/types to
@@ -1168,6 +1200,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 			final b = buckets.get(key);
 			if (b != null) {
+				if (classCarrierOwnerKeys.exists(info.baseType.module + "\n" + info.baseType.name)
+					&& !b.ownerTypeNames.exists("__class_carrier_prelude__")) {
+					final prelude = classCarrierPrelude(info.baseType.module);
+					if (prelude.length > 0)
+						b.parts.push(prelude);
+					b.ownerTypeNames.set("__class_carrier_prelude__", true);
+				}
 				b.parts.push(info.data);
 				b.ownerTypeNames.set(info.baseType.name, true);
 			}
@@ -2021,13 +2060,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 					});
 				}
 				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
-				items.push(OcamlModuleItem.IType([
-					{
-						name: instanceTypeName,
-						params: [],
-						kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
-					}
-				], false));
+				registerClassCarrier(classType.module, classType.name, {
+					name: instanceTypeName,
+					params: [],
+					kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
+				});
 			}
 		}
 
@@ -2361,7 +2398,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				kind: OcamlTypeDeclKind.Record(typeFields)
 			};
 			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
-			items.push(OcamlModuleItem.IType([typeDecl], false));
+			registerClassCarrier(classType.module, classType.name, typeDecl);
 
 			// create: allocate record, run ctor body, return self
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
