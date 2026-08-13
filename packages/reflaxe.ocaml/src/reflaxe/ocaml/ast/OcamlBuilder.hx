@@ -5913,8 +5913,9 @@ class OcamlBuilder {
 					if (hasToString) {
 						final modName = moduleIdToOcamlModuleName(c.module);
 						final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-						final callFn = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent("toString") : OcamlExpr.EField(OcamlExpr.EIdent(modName),
-							"toString");
+						final targetName = ctx.scopedValueName(c.module, c.name, "toString");
+						final callFn = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(modName),
+							targetName);
 						OcamlExpr.EApp(callFn, [buildExpr(inner), OcamlExpr.EConst(OcamlConst.CUnit)]);
 					} else {
 						dynamicStringInvariant("a nominal value without toString reached syntax without its selected Dynamic strategy", inner.pos);
