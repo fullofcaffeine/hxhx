@@ -275,7 +275,9 @@ class OcamlStaticStringPlanner {
 			final order = decisions.length;
 			final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 			final ownerSource = OcamlLoweredOrigin.sourceSpan(owner.pos);
-			final semanticTypeId = TypeTools.toString(expression.t);
+			final semanticTypeId = semanticTypeId(expression.t);
+			if (semanticTypeId == null)
+				throw "reflaxe.ocaml [ocaml-static-string:unsupported-type]: the selected static String occurrence has no canonical String type";
 			final id = "static-string:" + Sha256.encode([
 				binding.functionId,
 				binding.programRevision,
@@ -400,11 +402,23 @@ class OcamlStaticStringPlanner {
 		};
 	}
 
-	static function isStringType(type:Type):Bool {
+	static function isStringType(type:Type):Bool
+		return semanticTypeId(type) != null;
+
+	/**
+		Returns the canonical Haxe String type used by a sealed conversion.
+
+		A typedef changes how source code names a type, but it does not create a
+		new runtime carrier. This helper follows typedefs and still preserves the
+		important difference between `String` and `Null<String>`. It returns null
+		for every type that the static String plan does not own.
+	**/
+	public static function semanticTypeId(type:Type):Null<String> {
 		return switch (followNoAbstracts(type)) {
-			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && isStringType(inner);
-			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String";
-			case _: false;
+			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && semanticTypeId(inner) == "String" ? "Null<String>" : null;
+			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "String" : null;
+			case _:
+				null;
 		};
 	}
 

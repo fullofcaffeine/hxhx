@@ -31,8 +31,12 @@ class StaticStringRuntimeUseFixture {
 		final typed = Context.typeExpr(macro {
 			final nullable:Null<String> = null;
 			final text:String = "text";
+			final textAlias:StaticStringTextAlias = "alias";
+			final nullableTextAlias:StaticStringNullableTextAlias = null;
 			final value:Dynamic = text;
 			Std.string(nullable);
+			Std.string(textAlias);
+			Std.string(nullableTextAlias);
 			text + nullable;
 			var assigned:Null<String> = nullable;
 			assigned += text;
@@ -44,13 +48,13 @@ class StaticStringRuntimeUseFixture {
 
 		final plan = new OcamlStaticStringPlanner(binding).plan(typed);
 		final decisions = plan.decisions();
-		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 1);
+		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 3);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 2);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundLeft, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundRight, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.ReflectFieldName, 1);
-		if (decisions.length != 6)
-			throw 'Expected six outer static String decisions, received ${decisions.length}.';
+		if (decisions.length != 8)
+			throw 'Expected eight outer static String decisions, received ${decisions.length}.';
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);
@@ -64,6 +68,8 @@ class StaticStringRuntimeUseFixture {
 		}));
 		expectFailure("changed source kind", "stale or conflicting runtime facts",
 			() -> OcamlStaticStringPlan.requireDecision(copyDecision(decisions[0], OcamlStaticStringSourceKind.StringConcat)));
+		expectFailure("non-canonical alias spelling", "incomplete or incompatible facts",
+			() -> OcamlStaticStringPlan.requireDecision(copyDecision(decisions[0], decisions[0].sourceKind, null, "StaticStringTextAlias")));
 
 		Sys.println("REFLAXE_OCAML_STATIC_STRING_RUNTIME_USE:PASS");
 		return macro null;
@@ -110,14 +116,14 @@ class StaticStringRuntimeUseFixture {
 	}
 
 	static function copyDecision(source:OcamlStaticStringDecision, sourceKind:OcamlStaticStringSourceKind,
-			?runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>):OcamlStaticStringDecision {
+			?runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>, ?semanticTypeId:String):OcamlStaticStringDecision {
 		return {
 			id: source.id,
 			revision: source.revision,
 			source: {file: source.source.file, min: source.source.min, max: source.source.max},
 			ownerSource: {file: source.ownerSource.file, min: source.ownerSource.min, max: source.ownerSource.max},
 			sourceKind: sourceKind,
-			semanticTypeId: source.semanticTypeId,
+			semanticTypeId: semanticTypeId ?? source.semanticTypeId,
 			inputCarrierTypeId: source.inputCarrierTypeId,
 			order: source.order,
 			profileEligibility: source.profileEligibility.copy(),

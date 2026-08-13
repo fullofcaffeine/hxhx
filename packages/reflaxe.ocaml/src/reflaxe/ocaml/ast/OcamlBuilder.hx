@@ -72,6 +72,7 @@ import reflaxe.ocaml.lowered.OcamlDynamicStringPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringModel;
 import reflaxe.ocaml.lowered.OcamlDynamicStringPlan.OcamlDynamicStringStrategy;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringPlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringSourceKind;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
@@ -3037,7 +3038,9 @@ class OcamlBuilder {
 		}
 		if (decision.sourceKind != expectedKind)
 			return staticStringInvariant('decision "${decision.id}" has source kind ${decision.sourceKind}, not $expectedKind', source.pos);
-		final semanticTypeId = TypeTools.toString(source.t);
+		final semanticTypeId = OcamlStaticStringPlanner.semanticTypeId(source.t);
+		if (semanticTypeId == null)
+			return staticStringInvariant('decision "${decision.id}" reached syntax with a non-String input type', source.pos);
 		if (decision.semanticTypeId != semanticTypeId)
 			return staticStringInvariant('decision "${decision.id}" expects ${decision.semanticTypeId}, not $semanticTypeId', source.pos);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
@@ -5872,6 +5875,9 @@ class OcamlBuilder {
 				return buildExpr(inner);
 			case _:
 		}
+
+		if (OcamlStaticStringPlanner.semanticTypeId(inner.t) != null)
+			return buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
 
 		return switch (e.t) {
 			case TAbstract(aRef, params):
