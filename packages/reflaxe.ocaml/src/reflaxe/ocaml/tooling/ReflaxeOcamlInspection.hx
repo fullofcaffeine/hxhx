@@ -78,13 +78,14 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
-	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v3";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v4";
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_RESULT_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_NULLABLE_ENUM_RESULT_PROOF_ID = "non-generic-instance-nullable-enum-function-result-v1";
+	static inline final NON_GENERIC_STATIC_NULLABLE_ENUM_RESULT_PROOF_ID = "non-generic-static-nullable-enum-function-result-v1";
 	static inline final STATIC_NULLABLE_ANONYMOUS_RESULT_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
@@ -100,7 +101,7 @@ class ReflaxeOcamlInspection {
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v111";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v112";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v30";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 
@@ -2339,7 +2340,9 @@ class ReflaxeOcamlInspection {
 				case "non-generic-instance-effect-only-void-declaration":
 					validateDeclarationEffectOnlyVoidResult(boundary);
 				case "non-generic-instance-nullable-enum-declaration":
-					validateDeclarationNullableEnumResult(boundary);
+					validateDeclarationNullableEnumResult(boundary, false);
+				case "non-generic-static-nullable-enum-declaration":
+					validateDeclarationNullableEnumResult(boundary, true);
 				case "static-nullable-anonymous-declaration":
 					validateDeclarationAnonymousResult(boundary, anonymousStructureById);
 				case _:
@@ -2352,8 +2355,8 @@ class ReflaxeOcamlInspection {
 		return boundaries;
 	}
 
-	/** Validates one direct constructor entering its exact nullable-enum carrier. */
-	static function validateDeclarationNullableEnumResult(boundary:InspectionFunctionResultBoundary):Void {
+	/** Validates one exact enum value entering its nullable-enum result carrier. */
+	static function validateDeclarationNullableEnumResult(boundary:InspectionFunctionResultBoundary, isStatic:Bool):Void {
 		final result = boundary.result;
 		final proof = boundary.nullableEnum;
 		if (boundary.callableBoundaryId != null
@@ -2361,7 +2364,7 @@ class ReflaxeOcamlInspection {
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
-			|| boundary.functionId.indexOf("|instance|function|") < 0
+			|| boundary.functionId.indexOf(isStatic ? "|static|function|" : "|instance|function|") < 0
 			|| boundary.resultKind != "value"
 			|| result == null
 			|| proof == null
@@ -2379,8 +2382,8 @@ class ReflaxeOcamlInspection {
 			|| result.outputRepresentationId != 'representation:${proof.nullableSemanticTypeId}:internal-value'
 			|| result.conversion != "box-exact-enum-to-nullable-enum"
 			|| result.proofId != "nullable-enum-function-result-box-v1"
-			|| boundary.proofId != NON_GENERIC_INSTANCE_NULLABLE_ENUM_RESULT_PROOF_ID) {
-			throw 'Function-result boundary "${boundary.id}" exceeds the direct nullable-enum instance-method slice.';
+			|| boundary.proofId != (isStatic ? NON_GENERIC_STATIC_NULLABLE_ENUM_RESULT_PROOF_ID : NON_GENERIC_INSTANCE_NULLABLE_ENUM_RESULT_PROOF_ID)) {
+			throw 'Function-result boundary "${boundary.id}" exceeds the nullable-enum ${isStatic ? "static-function" : "instance-method"} slice.';
 		}
 	}
 

@@ -73,7 +73,7 @@ for (const control of controls) {
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
 			? 'ocaml-nested-function-plans-v30'
-			: 'ocaml-function-plans-v111')
+			: 'ocaml-function-plans-v112')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason

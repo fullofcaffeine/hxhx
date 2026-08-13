@@ -769,7 +769,7 @@ class OcamlCallPlan {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.outputRepresentationId != 'representation:$nullableSemanticTypeId:internal-value'
 					|| value.proofId != "nullable-enum-function-result-box-v1") {
-					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box one exact enum constructor into its matching nullable-enum result carrier';
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box one exact enum result into its matching nullable-enum result carrier';
 				}
 			case MaterializeOmittedNullableInt:
 				if (!value.parameterOptional

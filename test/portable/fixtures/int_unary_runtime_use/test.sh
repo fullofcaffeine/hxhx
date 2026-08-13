@@ -29,7 +29,7 @@ for (const decision of report.intUnary) {
 		? [finalSymbol, 'HxRuntime.hx_null']
 		: [finalSymbol]
 	if (decision.proofId !== 'int-unary-runtime-use-v1'
-		|| !['ocaml-function-plans-v111', 'ocaml-nested-function-plans-v30', 'ocaml-standalone-expression-plans-v15'].includes(decision.pipelineRevision)
+		|| !['ocaml-function-plans-v112', 'ocaml-nested-function-plans-v30', 'ocaml-standalone-expression-plans-v15'].includes(decision.pipelineRevision)
 		|| decision.runtimeUseOccurrences.map(use => use.exactSymbol).join(',') !== expectedSymbols.join(',')) {
 		throw new Error(`Incomplete integer unary authority: ${JSON.stringify(decision)}`)
 	}
