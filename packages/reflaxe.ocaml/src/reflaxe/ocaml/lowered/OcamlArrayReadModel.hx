@@ -7,6 +7,15 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 
+/** How OCaml learns the result type of one standard Array read. */
+enum abstract OcamlArrayReadResultCarrier(String) from String to String {
+	/** The surrounding OCaml expression already determines the element type. */
+	var Inferred = "inferred";
+
+	/** The final Haxe function type must be attached at the read boundary. */
+	var ExactCallable = "exact-callable";
+}
+
 /** One immutable decision for a numeric bracket read from a standard Haxe Array. */
 typedef OcamlArrayReadDecision = {
 	final id:String;
@@ -16,6 +25,7 @@ typedef OcamlArrayReadDecision = {
 	final elementSemanticTypeId:String;
 	final indexSemanticTypeId:String;
 	final resultSemanticTypeId:String;
+	final resultCarrier:OcamlArrayReadResultCarrier;
 	final evaluationOrder:Array<String>;
 	final profileEligibility:Array<String>;
 	final runtimeRequirementIds:Array<String>;
@@ -30,14 +40,14 @@ typedef OcamlArrayReadDecision = {
 
 /** Closed identities and validation shared by Array-read planning and syntax. */
 class OcamlArrayReadContract {
-	public static inline final MODEL_REVISION = "ocaml-array-read-v1";
+	public static inline final MODEL_REVISION = "ocaml-array-read-v2";
 	public static inline final RUNTIME_CAPABILITY = "haxe-array-index-read";
 	public static inline final PROOF_ID = "standard-array-index-read-v1";
 	public static inline final PROOF_CLAIM = "This occurrence evaluates one standard Haxe Array receiver, then one Int index, and reads that element once through HxArray.get. The claim does not admit a write target, update target, string-key Dynamic access, Bytes access, Array method, or another runtime call.";
 
 	/** Returns the stable identity for one typed read in its enclosing body. */
 	public static function idFor(binding:OcamlFunctionPlanBinding, source:OcamlLoweredSourceSpan, readOrdinal:Int, receiverSemanticTypeId:String,
-			elementSemanticTypeId:String):String {
+			elementSemanticTypeId:String, resultCarrier:OcamlArrayReadResultCarrier):String {
 		return "array-read:" + Sha256.encode([
 			MODEL_REVISION,
 			binding.functionId,
@@ -49,7 +59,8 @@ class OcamlArrayReadContract {
 			Std.string(source.max),
 			Std.string(readOrdinal),
 			receiverSemanticTypeId,
-			elementSemanticTypeId
+			elementSemanticTypeId,
+			resultCarrier
 		].join("\n")).substr(0, 32);
 	}
 
@@ -94,6 +105,8 @@ class OcamlArrayReadContract {
 			|| decision.elementSemanticTypeId.length == 0
 			|| decision.indexSemanticTypeId != "Int"
 			|| decision.resultSemanticTypeId != decision.elementSemanticTypeId
+			|| (decision.resultCarrier != OcamlArrayReadResultCarrier.Inferred
+				&& decision.resultCarrier != OcamlArrayReadResultCarrier.ExactCallable)
 			|| decision.evaluationOrder.join(",") != "receiver,index,runtime-read"
 			|| decision.profileEligibility.join(",") != "metal,portable"
 			|| decision.runtimeRequirementIds.length != 1
@@ -112,8 +125,8 @@ class OcamlArrayReadContract {
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
-		}, decision.source, decision.readOrdinal,
-			decision.receiverSemanticTypeId, decision.elementSemanticTypeId);
+		}, decision.source,
+			decision.readOrdinal, decision.receiverSemanticTypeId, decision.elementSemanticTypeId, decision.resultCarrier);
 		if (decision.id != expectedId)
 			throw 'reflaxe.ocaml [ocaml-array-read:noncanonical-identity]: Array read "${decision.id}" does not match its typed owner and ordinal';
 		final expectedUse = runtimeUse({

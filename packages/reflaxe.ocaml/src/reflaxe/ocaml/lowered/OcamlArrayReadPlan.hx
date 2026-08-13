@@ -10,6 +10,7 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
 
@@ -20,6 +21,7 @@ typedef OcamlArrayReadOccurrence = {
 	final elementSemanticTypeId:String;
 	final indexSemanticTypeId:String;
 	final resultSemanticTypeId:String;
+	final resultCarrier:OcamlArrayReadResultCarrier;
 }
 
 typedef OcamlDynamicBracketReadOccurrence = {
@@ -93,7 +95,8 @@ class OcamlArrayReadPlan {
 		if (decision.receiverSemanticTypeId != occurrence.receiverSemanticTypeId
 			|| decision.elementSemanticTypeId != occurrence.elementSemanticTypeId
 			|| decision.indexSemanticTypeId != occurrence.indexSemanticTypeId
-			|| decision.resultSemanticTypeId != occurrence.resultSemanticTypeId) {
+			|| decision.resultSemanticTypeId != occurrence.resultSemanticTypeId
+			|| decision.resultCarrier != occurrence.resultCarrier) {
 			throw 'reflaxe.ocaml [ocaml-array-read:typed-mismatch]: Array read "${decision.id}" no longer matches its final typed occurrence';
 		}
 		OcamlArrayReadContract.requireDecision(decision);
@@ -155,6 +158,7 @@ class OcamlArrayReadPlan {
 			case TArray(receiver, index):
 				final elementSemanticTypeId = arrayElementSemanticTypeId(receiver.t);
 				final resultSemanticTypeId = TypeTools.toString(expression.t);
+				final resultCarrier = isExactFunctionType(expression.t) ? OcamlArrayReadResultCarrier.ExactCallable : OcamlArrayReadResultCarrier.Inferred;
 				if (elementSemanticTypeId == null
 					|| !OcamlRepresentationRegistry.isExactInt(index.t)
 					|| resultSemanticTypeId != elementSemanticTypeId) {
@@ -166,7 +170,8 @@ class OcamlArrayReadPlan {
 						receiverSemanticTypeId: 'Array<$elementSemanticTypeId>',
 						elementSemanticTypeId: elementSemanticTypeId,
 						indexSemanticTypeId: "Int",
-						resultSemanticTypeId: resultSemanticTypeId
+						resultSemanticTypeId: resultSemanticTypeId,
+						resultCarrier: resultCarrier
 					};
 				}
 			case _:
@@ -225,6 +230,13 @@ class OcamlArrayReadPlan {
 		};
 	}
 
+	static function isExactFunctionType(type:Type):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TFun(_, _): true;
+			case _: false;
+		};
+	}
+
 	function requireLookupCompleteness():Void {
 		final seen:Map<String, Bool> = [];
 		for (expression => id in idByExpression) {
@@ -266,6 +278,7 @@ class OcamlArrayReadPlan {
 			elementSemanticTypeId: decision.elementSemanticTypeId,
 			indexSemanticTypeId: decision.indexSemanticTypeId,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
+			resultCarrier: decision.resultCarrier,
 			evaluationOrder: decision.evaluationOrder.copy(),
 			profileEligibility: decision.profileEligibility.copy(),
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
@@ -356,7 +369,7 @@ class OcamlArrayReadPlanner {
 				if (occurrence != null) {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final id = OcamlArrayReadContract.idFor(binding, source, readOrdinal++, occurrence.receiverSemanticTypeId,
-						occurrence.elementSemanticTypeId);
+						occurrence.elementSemanticTypeId, occurrence.resultCarrier);
 					final profileEligibility = ["metal", "portable"];
 					final decision:OcamlArrayReadDecision = {
 						id: id,
@@ -366,6 +379,7 @@ class OcamlArrayReadPlanner {
 						elementSemanticTypeId: occurrence.elementSemanticTypeId,
 						indexSemanticTypeId: occurrence.indexSemanticTypeId,
 						resultSemanticTypeId: occurrence.resultSemanticTypeId,
+						resultCarrier: occurrence.resultCarrier,
 						evaluationOrder: ["receiver", "index", "runtime-read"],
 						profileEligibility: profileEligibility,
 						runtimeRequirementIds: [OcamlArrayReadContract.runtimeRequirementId(id)],

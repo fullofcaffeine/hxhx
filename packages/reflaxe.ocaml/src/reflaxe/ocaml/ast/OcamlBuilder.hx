@@ -66,6 +66,7 @@ import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorUseKind;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicEqualityKind;
@@ -674,9 +675,12 @@ class OcamlBuilder {
 		For `makeArray()[makeIndex()]`, Haxe evaluates `makeArray()` first and
 		`makeIndex()` second. The temporary bindings preserve that order and prevent
 		either expression from running twice. The runtime authority supplies only the
-		private `HxArray.get` name; nested expressions keep their own decisions.
+		private `HxArray.get` name; nested expressions keep their own decisions. When
+		the element is a function, the sealed decision also attaches its exact function
+		type to the read. This prevents OCaml from treating a later call argument as an
+		unused extra argument.
 	**/
-	function buildArrayRead(decision:OcamlArrayReadDecision, receiver:TypedExpr, index:TypedExpr, position:Position):OcamlExpr {
+	function buildArrayRead(decision:OcamlArrayReadDecision, receiver:TypedExpr, index:TypedExpr, resultType:Type, position:Position):OcamlExpr {
 		return try {
 			final binding:OcamlFunctionPlanBinding = {
 				functionId: decision.functionId,
@@ -696,10 +700,20 @@ class OcamlBuilder {
 			runtimeAuthority.reconcileExpression(runtimeFunction);
 			final receiverName = freshTmp("array_read_receiver");
 			final indexName = freshTmp("array_read_index");
-			OcamlExpr.ELet(receiverName, buildExpr(receiver), OcamlExpr.ELet(indexName, buildExpr(index), OcamlExpr.EApp(runtimeFunction, [
+			final read = OcamlExpr.EApp(runtimeFunction, [
 				coerceArrayReceiver(OcamlExpr.EIdent(receiverName), receiver),
 				OcamlExpr.EIdent(indexName)
-			]), false), false);
+			]);
+			final representedRead = switch (decision.resultCarrier) {
+				case OcamlArrayReadResultCarrier.Inferred:
+					read;
+				case OcamlArrayReadResultCarrier.ExactCallable:
+					switch (TypeTools.follow(resultType)) {
+						case TFun(_, _): OcamlExpr.EAnnot(read, typeExprFromHaxeType(resultType));
+						case _: return arrayReadInvariant('Array read "${decision.id}" selected an exact callable result for a non-function type', position);
+					}
+			};
+			OcamlExpr.ELet(receiverName, buildExpr(receiver), OcamlExpr.ELet(indexName, buildExpr(index), representedRead, false), false);
 		} catch (error:Dynamic) {
 			arrayReadInvariant(Std.string(error), position);
 		}
@@ -3756,7 +3770,7 @@ class OcamlBuilder {
 			case _ if (bytesReadOccurrence != null):
 				bytesReadInvariant("an admitted read-only Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TArray(_, _) if (plannedArrayRead != null && arrayReadOccurrence != null):
-				buildArrayRead(plannedArrayRead, arrayReadOccurrence.receiver, arrayReadOccurrence.index, e.pos);
+				buildArrayRead(plannedArrayRead, arrayReadOccurrence.receiver, arrayReadOccurrence.index, e.t, e.pos);
 			case TArray(_, _) if (arrayReadOccurrence != null):
 				arrayReadInvariant("an admitted standard Array bracket read reached syntax without its sealed decision", e.pos);
 			case TArray(_, _) if (plannedDynamicBracketRead != null && dynamicBracketReadOccurrence != null):

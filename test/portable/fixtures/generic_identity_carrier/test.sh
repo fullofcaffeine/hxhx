@@ -38,7 +38,7 @@ if (carriers.join(',') !== 'Int:int->int,String:string->string') {
 }
 for (const call of calls) {
 	if (call.proofId !== 'direct-static-generic-identity-v1'
-		|| call.pipelineRevision !== 'ocaml-function-plans-v109'
+		|| call.pipelineRevision !== 'ocaml-function-plans-v110'
 		|| call.arguments[0].conversion !== 'identity'
 		|| call.result.conversion !== 'identity') {
 		throw new Error(`Generic identity call ${call.id} lacks its typed carrier proof`)

@@ -53,8 +53,8 @@ const nestedTransfers = report.controls.filter(control =>
 	&& control.functionId.includes('|nested-function|'))
 if (nestedTargets.length !== 1
 	|| nestedTransfers.length !== 2
-	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v29'
-	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v29')) {
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v30'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v30')) {
 	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 
@@ -79,7 +79,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v109') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v110') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }

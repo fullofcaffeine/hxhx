@@ -34,4 +34,8 @@ class ArrayReadCases {
 		final values:Dynamic = [10, 20];
 		return values[1];
 	}
+
+	public static function callableRead(callbacks:Array<String->Int>):Int {
+		return callbacks[0]("hxhx");
+	}
 }

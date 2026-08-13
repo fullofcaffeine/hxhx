@@ -113,7 +113,7 @@ for (const operation of operations) {
 	]
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v109'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v110'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'

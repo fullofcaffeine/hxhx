@@ -5,9 +5,11 @@ import haxe.macro.Expr;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import haxe.ds.ObjectMap;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
@@ -49,6 +51,7 @@ class ArrayReadPlanFixture {
 			|| decision.elementSemanticTypeId != "Int"
 			|| decision.indexSemanticTypeId != "Int"
 			|| decision.resultSemanticTypeId != "Int"
+			|| decision.resultCarrier != OcamlArrayReadResultCarrier.Inferred
 			|| decision.evaluationOrder.join(",") != "receiver,index,runtime-read"
 			|| decision.runtimeRequirementIds.length != 1
 			|| decision.runtimeUseOccurrences.length != 1
@@ -74,6 +77,7 @@ class ArrayReadPlanFixture {
 
 		assertReadCount(fields, "assignmentTarget", 1);
 		assertReadCount(fields, "updateTarget", 1);
+		proveCallableRead(fields);
 		proveDynamicRead(fields);
 
 		expectThrows("duplicate-decision", () -> new OcamlArrayReadPlan([decision, decision]));
@@ -114,6 +118,23 @@ class ArrayReadPlanFixture {
 		proveRuntimeAuthority(decision, owner);
 		Sys.println("REFLAXE_OCAML_ARRAY_READ_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	static function proveCallableRead(fields:Map<String, ClassField>):Void {
+		final body = fieldBody(requiredField(fields, "callableRead"));
+		final plan = new OcamlArrayReadPlanner(binding("callableRead")).plan(body);
+		final read = firstArrayRead(body);
+		if (read == null)
+			Context.error("The callable case did not retain its Array read.", body.pos);
+		final decision = plan.requireFor(read);
+		if (decision.resultSemanticTypeId.length == 0
+			|| decision.resultSemanticTypeId != decision.elementSemanticTypeId
+			|| decision.resultCarrier != OcamlArrayReadResultCarrier.ExactCallable)
+			Context.error("The callable Array read did not seal its exact function carrier.", body.pos);
+		final corrupted = copyWithCarrier(decision, OcamlArrayReadResultCarrier.Inferred);
+		final lookup:ObjectMap<TypedExpr, String> = new ObjectMap();
+		lookup.set(read, corrupted.id);
+		expectThrows("typed-mismatch", () -> new OcamlArrayReadPlan([corrupted], lookup).requireFor(read));
 	}
 
 	static function proveDynamicRead(fields:Map<String, ClassField>):Void {
@@ -188,10 +209,43 @@ class ArrayReadPlanFixture {
 			elementSemanticTypeId: copy.elementSemanticTypeId,
 			indexSemanticTypeId: copy.indexSemanticTypeId,
 			resultSemanticTypeId: copy.resultSemanticTypeId,
+			resultCarrier: copy.resultCarrier,
 			evaluationOrder: copy.evaluationOrder,
 			profileEligibility: copy.profileEligibility,
 			runtimeRequirementIds: requirementIds,
 			runtimeUseOccurrences: uses,
+			proofId: copy.proofId,
+			proofClaim: copy.proofClaim,
+			functionId: copy.functionId,
+			programRevision: copy.programRevision,
+			bodyRevision: copy.bodyRevision,
+			pipelineRevision: copy.pipelineRevision
+		};
+	}
+
+	static function copyWithCarrier(decision:OcamlArrayReadDecision, resultCarrier:OcamlArrayReadResultCarrier):OcamlArrayReadDecision {
+		final copy = OcamlArrayReadPlan.copyDecision(decision);
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: copy.functionId,
+			programRevision: copy.programRevision,
+			bodyRevision: copy.bodyRevision,
+			pipelineRevision: copy.pipelineRevision
+		};
+		final id = OcamlArrayReadContract.idFor(binding, copy.source, copy.readOrdinal, copy.receiverSemanticTypeId, copy.elementSemanticTypeId, resultCarrier);
+		final runtimeUse = OcamlArrayReadContract.runtimeUse(binding, id, copy.source, copy.profileEligibility);
+		return {
+			id: id,
+			source: copy.source,
+			readOrdinal: copy.readOrdinal,
+			receiverSemanticTypeId: copy.receiverSemanticTypeId,
+			elementSemanticTypeId: copy.elementSemanticTypeId,
+			indexSemanticTypeId: copy.indexSemanticTypeId,
+			resultSemanticTypeId: copy.resultSemanticTypeId,
+			resultCarrier: resultCarrier,
+			evaluationOrder: copy.evaluationOrder,
+			profileEligibility: copy.profileEligibility,
+			runtimeRequirementIds: [OcamlArrayReadContract.runtimeRequirementId(id)],
+			runtimeUseOccurrences: [runtimeUse],
 			proofId: copy.proofId,
 			proofClaim: copy.proofClaim,
 			functionId: copy.functionId,

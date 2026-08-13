@@ -121,7 +121,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v109'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v110'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== (expectedRepresentation.get(payload.inputSemanticTypeId)
@@ -167,8 +167,8 @@ for (const { chain, clause } of wrapperClauses) {
 		|| clause.nominalRepresentation !== null
 		|| clause.proofId !== 'represented-value-catch-control-v6'
 		|| chain.proofId !== 'represented-value-catch-control-v6'
-		|| clause.pipelineRevision !== 'ocaml-function-plans-v109'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v109') {
+		|| clause.pipelineRevision !== 'ocaml-function-plans-v110'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v110') {
 		fail(`wrapper catch clause ${clause.id} has an incomplete sealed policy`)
 	}
 }
