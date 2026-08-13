@@ -28,9 +28,18 @@ type 'a t = {
   (* Number of hx_null slots in [0, length) while in ObjStore mode.
      For typed stores this stays at 0. *)
   mutable null_slots : int;
+  marker : Obj.t;
 }
 
 let hx_null : Obj.t = HxRuntime.hx_null
+let array_marker : Obj.t = Obj.repr (ref 0)
+
+(* Reports whether a boxed value is one of this runtime's Haxe arrays.
+
+   The marker gives Type.getClass a stable representation test without
+   inspecting array contents or relying on a generated source name. *)
+let is_value (value : Obj.t) : bool =
+  (not (Obj.is_int value)) && Obj.tag value = 0 && Obj.size value = 4 && Obj.field value 3 == array_marker
 
 type raw_kind =
   | KindObj
@@ -55,7 +64,7 @@ let unwrap_or_empty (a : 'a t) : 'a t option =
     None
   else if Obj.is_int o then
     None
-  else if Obj.size o <> 3 then
+  else if not (is_value o) then
     None
   else
     Some (Obj.obj o)
@@ -93,7 +102,7 @@ let storage_capacity (store : storage) : int =
   | StringStore data -> Stdlib.Array.length data
 
 let create () : 'a t =
-  { store = ObjStore [||]; length = 0; null_slots = 0 }
+  { store = ObjStore [||]; length = 0; null_slots = 0; marker = array_marker }
 
 let length (a : 'a t) : int =
   match unwrap_or_empty a with
