@@ -9580,6 +9580,26 @@ class OcamlBuilder {
 			}
 		}
 		if (needsIfChain) {
+			final builtBranchBySource:Map<String, OcamlExpr> = [];
+			final outputCountBySource:Map<String, Int> = [];
+			function branchSourceKey(source:TypedExpr):String {
+				final span = OcamlLoweredOrigin.sourceSpan(source.pos);
+				return span.file + ":" + span.min + ":" + span.max;
+			}
+			function buildBranch(source:TypedExpr):OcamlExpr {
+				final sourceKey = branchSourceKey(source);
+				final existing = builtBranchBySource.get(sourceKey);
+				if (existing == null) {
+					final built = wrapCaseExpr(source, buildExpr(source));
+					builtBranchBySource.set(sourceKey, built);
+					outputCountBySource.set(sourceKey, 1);
+					return built;
+				}
+				final outputCount = outputCountBySource.get(sourceKey);
+				outputCountBySource.set(sourceKey, outputCount + 1);
+				return ctx.finalRuntimeUses.copyExpressionForOutput(existing, 'switch-branch:$sourceKey:output:$outputCount', ctx.activateStagedTypeRuntimeUse);
+			}
+
 			inline function toDynamicObjExpr(t:Type, expr:OcamlExpr):OcamlExpr {
 				final unwrapped = unwrapNullType(t);
 				if (nullablePrimitiveKind(t) != null || isNullableEnumType(t) != null) {
@@ -9600,7 +9620,7 @@ class OcamlBuilder {
 			final scrutTmp = freshTmp("switch");
 			final scrutVar = OcamlExpr.EIdent(scrutTmp);
 			final scrutObj = toDynamicObjExpr(scrutinee.t, scrutVar);
-			var chain = wrapCaseExpr(edef, defaultExpr);
+			var chain = edef == null ? defaultExpr : buildBranch(edef);
 
 			for (ci in 0...cases.length) {
 				final c = cases[cases.length - 1 - ci];
@@ -9616,7 +9636,7 @@ class OcamlBuilder {
 					cond = cond == null ? thisCond : OcamlExpr.EBinop(OcamlBinop.Or, cond, thisCond);
 				}
 
-				final caseExpr = wrapCaseExpr(c.expr, buildExpr(c.expr));
+				final caseExpr = buildBranch(c.expr);
 				chain = cond == null ? caseExpr : OcamlExpr.EIf(cond, caseExpr, chain);
 			}
 
