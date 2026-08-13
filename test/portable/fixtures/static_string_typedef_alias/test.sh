@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Upstream Haxe 4.3.7 is the independent behavior oracle. The native OCaml
-# program must produce the same text for direct and nullable String aliases.
+# program must produce the same text for direct aliases and for nullable String
+# values inferred from a branch.
 oracle_output="$(mktemp)"
 native_output="$(mktemp)"
 trap 'rm -f "$oracle_output" "$native_output"' EXIT
@@ -20,7 +21,7 @@ const decisions = report.requirements.filter(decision =>
 		&& decision.source.file === 'src/Main.hx'
 )
 const types = decisions.map(decision => decision.subject.id).sort()
-if (types.join(',') !== 'Null<String>,String') {
+if (types.join(',') !== 'Null<String>,Null<String>,String') {
 	throw new Error(`Expected canonical String decisions, received ${types.join(',')}`)
 }
 NODE

@@ -34,10 +34,12 @@ class StaticStringRuntimeUseFixture {
 			final textAlias:StaticStringTextAlias = "alias";
 			final nullableTextAlias:StaticStringNullableTextAlias = null;
 			final value:Dynamic = text;
+			final inferredNullable = if (value == null) text else null;
 			Std.string(nullable);
 			Std.string(textAlias);
 			Std.string(nullableTextAlias);
 			text + nullable;
+			text + inferredNullable;
 			var assigned:Null<String> = nullable;
 			assigned += text;
 			Reflect.field({name: 1}, text);
@@ -49,12 +51,12 @@ class StaticStringRuntimeUseFixture {
 		final plan = new OcamlStaticStringPlanner(binding).plan(typed);
 		final decisions = plan.decisions();
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 3);
-		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 2);
+		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 4);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundLeft, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundRight, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.ReflectFieldName, 1);
-		if (decisions.length != 8)
-			throw 'Expected eight outer static String decisions, received ${decisions.length}.';
+		if (decisions.length != 10)
+			throw 'Expected ten outer static String decisions, received ${decisions.length}.';
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);

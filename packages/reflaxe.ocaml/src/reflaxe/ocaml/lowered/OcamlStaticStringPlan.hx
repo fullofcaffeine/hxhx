@@ -409,13 +409,24 @@ class OcamlStaticStringPlanner {
 		Returns the canonical Haxe String type used by a sealed conversion.
 
 		A typedef changes how source code names a type, but it does not create a
-		new runtime carrier. This helper follows typedefs and still preserves the
-		important difference between `String` and `Null<String>`. It returns null
-		for every type that the static String plan does not own.
+		new runtime carrier. Haxe can also infer nested nullable wrappers from an
+		expression that already permits null. Those wrappers all use the same
+		`Null<String>` runtime carrier. This helper follows typedefs and collapses
+		only that repeated nullable shape. It returns null for every type that the
+		static String plan does not own.
 	**/
 	public static function semanticTypeId(type:Type):Null<String> {
 		return switch (followNoAbstracts(type)) {
-			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && semanticTypeId(inner) == "String" ? "Null<String>" : null;
+			case TAbstract(abstractRef, [inner]):
+				final abstractType = abstractRef.get();
+				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
+					null;
+				} else {
+					switch (semanticTypeId(inner)) {
+						case "String" | "Null<String>": "Null<String>";
+						case _: null;
+					}
+				}
 			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "String" : null;
 			case _:
 				null;
