@@ -996,11 +996,7 @@ class OcamlBuilder {
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
 				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), runtimeUsePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
-			var signal = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
-			// Reconcile the source occurrence before assigning any later output copy.
-			// The payload is owned by other plans and is intentionally not inspected.
-			runtimeAuthority.reconcileExpression(signal);
-			signal = distinctRuntimeOutput(signal, occurrence, "control-return-signal");
+			final signal = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, runtimeUsePlan.planRevision, occurrence.exactSymbol));
 			final expression = switch (decision.mechanism) {
 				case RuntimeReturnSignal:
 					if (payload == null)
@@ -1013,6 +1009,15 @@ class OcamlBuilder {
 				case _:
 					return controlPlanInvariant('return decision "${decision.id}" selected unsupported signal mechanism ${decision.mechanism}', position);
 			};
+			// The returned value can contain private helpers owned by other sealed
+			// plans. Check only the signal node introduced here. The completed function
+			// body later assigns identities to any repeated return outputs.
+			final signalProof = switch (decision.mechanism) {
+				case RuntimeReturnSignal: OcamlExpr.EApp(signal, [OcamlExpr.EIdent("return_payload_owned_elsewhere")]);
+				case RuntimeVoidReturnSignal: signal;
+				case _: throw "unreachable return-signal proof mechanism";
+			};
+			runtimeAuthority.reconcileExpression(signalProof);
 			expression;
 		} catch (error:Dynamic) {
 			controlPlanInvariant(Std.string(error), position);
@@ -9166,6 +9171,8 @@ class OcamlBuilder {
 		}
 		body = wrapFunctionArgDefaults(body, args.map(a -> ({name: a.name, t: a.t, value: a.value})));
 		body = ensureParamUsage(body, params);
+		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
+			"function-return-signal:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
@@ -9370,6 +9377,9 @@ class OcamlBuilder {
 		}
 		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
+		if (nestedDisposition != null)
+			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
+				"nested-function-return-signal:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;

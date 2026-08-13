@@ -68,6 +68,27 @@ class Main {
 		return -1;
 	}
 
+	/** Matches the parser's loop-and-switch shape that reuses one early return. */
+	static function scanStatementBoundary(source:String):Bool {
+		var index = source.length - 1;
+		var sawNewline = false;
+		while (index >= 0) {
+			final character = source.charCodeAt(index);
+			switch (character) {
+				case " ".code | "\t".code | "\r".code:
+					index--;
+				case "\n".code:
+					sawNewline = true;
+					index--;
+				case "}".code:
+					return sawNewline;
+				case _:
+					return false;
+			}
+		}
+		return false;
+	}
+
 	static function nestedBlock(value:Int):Int {
 		{
 			if (value > 0)
@@ -384,6 +405,7 @@ class Main {
 		printLine("branch0=" + branch(0));
 		printLine("branch1=" + branch(1));
 		printLine("loop3=" + loop(3));
+		printLine("statementBoundary=" + scanStatementBoundary("}\n "));
 		printLine("block1=" + nestedBlock(1));
 		printLine("block0=" + nestedBlock(0));
 		printLine("try1=" + throughTry(1));

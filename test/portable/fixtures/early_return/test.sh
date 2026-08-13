@@ -248,12 +248,13 @@ if (writeStringStart < 0
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 56) {
-	fail(`expected 56 represented return decisions, including eight nullable anonymous parse returns, StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
+if (returnControls.length !== 59) {
+	fail(`expected 59 represented return decisions, including the three parser-shaped switch returns, eight nullable anonymous parse returns, StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
 	['loop', 1],
+	['scanStatementBoundary', 3],
 	['nestedBlock', 1],
 	['throughTry', 2],
 	['boolBranch', 1],
@@ -960,9 +961,9 @@ if (report.schemaVersion !== 47
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 56
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 59
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 56 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 59 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -1486,4 +1487,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=56 function_results=55 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=56 producers=4"

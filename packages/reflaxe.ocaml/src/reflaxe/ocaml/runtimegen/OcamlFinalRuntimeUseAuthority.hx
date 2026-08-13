@@ -131,6 +131,48 @@ class OcamlFinalRuntimeUseAuthority {
 		return copiedExpression;
 	}
 
+	/**
+		Gives repeated references of one selected role separate output identities.
+
+		Haxe can place one typed early-return occurrence more than once in the final
+		function tree while it expands control flow. The first reference still
+		represents that source occurrence. Each later reference is a distinct generated
+		output site and receives a checked copy. Callers must use this only after a
+		complete output owner, such as one function body, has been assembled. References
+		with every other role remain unchanged, so the final-output walk still rejects
+		unexplained duplicates.
+	**/
+	public function distinctRepeatedRoleReferencesForOutput(expression:OcamlExpr, occurrenceRole:String, outputRole:String,
+			?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {
+		requireOpen();
+		final requiredRole = requiredOutputRole(occurrenceRole);
+		final stableRole = requiredOutputRole(outputRole);
+		final countsBySource:Map<String, Int> = [];
+		function distinct(reference:OcamlRuntimeReference):OcamlRuntimeReference {
+			final sourceKey = occurrenceKey(reference.planRevision, reference.id);
+			final sourceExpected = expectedByKey.get(sourceKey);
+			if (sourceExpected == null || sourceExpected.occurrence.role != requiredRole)
+				return reference;
+			final previousCount = countsBySource.get(sourceKey);
+			final count = previousCount == null ? 0 : previousCount;
+			countsBySource.set(sourceKey, count + 1);
+			if (count == 0)
+				return reference;
+			return copyReferenceForOutput(reference, '$stableRole:repeat:$count', [], beforeReference);
+		}
+		return OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
+			case ERuntimeIdent(reference): ERuntimeIdent(distinct(reference));
+			case _: current;
+		}, pattern -> switch (pattern) {
+			case PRuntimeConstructor(reference, args): PRuntimeConstructor(distinct(reference), args);
+			case _: pattern;
+		}, type -> switch (type) {
+			case TRuntimeIdent(reference): TRuntimeIdent(distinct(reference));
+			case TRuntimeApp(reference, params): TRuntimeApp(distinct(reference), params);
+			case _: type;
+		});
+	}
+
 	/** Copies one already-accepted private name into a separately counted output site. */
 	function copyReferenceForOutput(reference:OcamlRuntimeReference, stableRole:String, copiedSourceKeys:Map<String, Bool>,
 			beforeReference:Null<OcamlRuntimeReference->Void>):OcamlRuntimeReference {

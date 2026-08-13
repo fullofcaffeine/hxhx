@@ -7,6 +7,7 @@ stdioZeroWrite=0
 branch0=1
 branch1=2
 loop3=3
+statementBoundary=true
 block1=4
 block0=5
 try1=7

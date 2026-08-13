@@ -43,7 +43,8 @@ class RuntimeUseAuthorityFixture {
 	}
 
 	static function occurrence(id:String, order:Int, ?symbol:String = "HxArray.set", ?domain:OcamlRuntimeUseDomain, ?planRevision:String = PLAN_REVISION,
-			?ownerId:String = "place:array-simple-assignment", ?requirementId:String = "place:array:runtime:haxe-array-element-set"):OcamlRuntimeUseOccurrence {
+			?ownerId:String = "place:array-simple-assignment", ?requirementId:String = "place:array:runtime:haxe-array-element-set",
+			?role:String = "store"):OcamlRuntimeUseOccurrence {
 		return {
 			id: id,
 			planRevision: planRevision,
@@ -51,7 +52,7 @@ class RuntimeUseAuthorityFixture {
 			requirementId: requirementId,
 			domain: domain == null ? OcamlRuntimeUseDomain.ExpressionIdentifier : domain,
 			exactSymbol: symbol,
-			role: "store",
+			role: role,
 			order: order,
 			source: {
 				file: "src/Main.hx",
@@ -172,6 +173,35 @@ class RuntimeUseAuthorityFixture {
 		expectFailure("duplicated final subtree", "duplicate final runtime use U1", () -> finalOutput.observeModuleItems([
 			OcamlModuleItem.ILet([{name: "first", expr: expression}, {name: "second", expr: expression}], false)
 		]));
+	}
+
+	/**
+		Proves that a completed function can distinguish duplicated return outputs.
+
+		Only the selected return-signal role receives a new output identity. A helper
+		with another role remains unchanged and therefore still fails the strict final
+		check when it appears twice.
+	**/
+	static function repeatedSelectedRoleGetsDistinctOutputIdentity():Void {
+		final returnOutput = new OcamlFinalRuntimeUseAuthority();
+		returnOutput.beginProgram("program:runtime-use-fixture:repeated-return", PROFILE);
+		final returnOccurrence = occurrence("R1", 0, "HxArray.set", null, PLAN_REVISION, "control:return", requirement().id, "raise-function-return-signal");
+		final returnAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [returnOccurrence], returnOutput);
+		final returnReference = OcamlExpr.ERuntimeIdent(returnAuthority.expressionIdentifier("R1", PLAN_REVISION, "HxArray.set"));
+		returnAuthority.reconcileExpression(returnReference);
+		final distinctReturns = returnOutput.distinctRepeatedRoleReferencesForOutput(OcamlExpr.ESeq([returnReference, returnReference]),
+			"raise-function-return-signal", "function-return-signal:fixture");
+		returnOutput.observeExpression(distinctReturns);
+		returnOutput.finishProgram();
+
+		final otherOutput = new OcamlFinalRuntimeUseAuthority();
+		otherOutput.beginProgram("program:runtime-use-fixture:repeated-other", PROFILE);
+		final otherAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)], otherOutput);
+		final otherReference = OcamlExpr.ERuntimeIdent(otherAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		otherAuthority.reconcileExpression(otherReference);
+		final unchangedOther = otherOutput.distinctRepeatedRoleReferencesForOutput(OcamlExpr.ESeq([otherReference, otherReference]),
+			"raise-function-return-signal", "function-return-signal:fixture");
+		expectFailure("unselected repeated role", "duplicate final runtime use U1", () -> otherOutput.observeExpression(unchangedOther));
 	}
 
 	static function finalOutputContract():Void {
@@ -427,6 +457,7 @@ class RuntimeUseAuthorityFixture {
 		checkedRuntimeTypeUse();
 		duplicateSameSymbolUseFails();
 		duplicatedReconciledSubtreeFailsFinalOutput();
+		repeatedSelectedRoleGetsDistinctOutputIdentity();
 		finalOutputContract();
 		constructionFailures();
 		reconciliationFailures();
