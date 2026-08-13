@@ -834,6 +834,8 @@ class OcamlBuilder {
 				buildExpr(expression);
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
+			case BoxExactEnumToNullableEnum:
+				callPlanInvariant("nullable-enum boxing is owned only by a sealed function-result boundary", expression.pos);
 			case BoxConcreteToDynamic:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
 			case BoxExactBoolToDynamic:
@@ -895,7 +897,7 @@ class OcamlBuilder {
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				body;
-			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
+			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool, BoxExactEnumToNullableEnum:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);
@@ -944,7 +946,7 @@ class OcamlBuilder {
 								buildExpr(value);
 							case PreserveAnonymousCarrier:
 								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-							case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
+							case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier, BoxExactEnumToNullableCarrier:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case _:
 								return
@@ -1065,7 +1067,7 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]);
 			case PreserveNullableCarrier, PreserveAnonymousCarrier, PreserveDynamicReturnCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
-			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
+			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier, BoxExactEnumToNullableCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${payload.conversion}', position);

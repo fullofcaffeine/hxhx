@@ -66,6 +66,7 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final CheckedUnboxNullableInt = "checked-unbox-nullable-int";
 	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
+	final BoxExactEnumToNullableEnum = "box-exact-enum-to-nullable-enum";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
 	final BoxConcreteToDynamic = "box-concrete-to-dynamic";
 	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
@@ -756,6 +757,19 @@ class OcamlCallPlan {
 					|| !isExactNullBoolSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
 					|| value.proofId != "nullable-bool-call-box-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Bool -> bool once into exact Null<Bool> -> Obj.t';
+				}
+			case BoxExactEnumToNullableEnum:
+				final nullableSemanticTypeId = 'Null<${value.inputSemanticTypeId}>';
+				if (expectedIndex != -1
+					|| value.parameterOptional
+					|| value.inputSemanticTypeId.length == 0
+					|| value.inputCarrierTypeId != 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
+					|| value.inputRepresentationId != 'representation:${value.inputSemanticTypeId}:internal-value'
+					|| value.outputSemanticTypeId != nullableSemanticTypeId
+					|| value.outputCarrierTypeId != "Obj.t"
+					|| value.outputRepresentationId != 'representation:$nullableSemanticTypeId:internal-value'
+					|| value.proofId != "nullable-enum-function-result-box-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box one exact enum constructor into its matching nullable-enum result carrier';
 				}
 			case MaterializeOmittedNullableInt:
 				if (!value.parameterOptional
@@ -3147,6 +3161,10 @@ class OcamlCallPlanner {
 			case BoxExactBoolToNullableBool: {
 					id: "nullable-bool-call-box-v1",
 					claim: "The source value produces exact Bool in OCaml bool; one Obj.repr operation stores that value in the selected exact Null<Bool> Obj.t boundary carrier."
+				};
+			case BoxExactEnumToNullableEnum: {
+					id: "nullable-enum-function-result-box-v1",
+					claim: "The source value produces one exact native Haxe enum variant; one Obj.repr operation stores it in the matching Null<Enum> Obj.t function-result carrier."
 				};
 			case MaterializeOmittedNullableInt: {
 					id: "omitted-nullable-int-call-materialization-v1",

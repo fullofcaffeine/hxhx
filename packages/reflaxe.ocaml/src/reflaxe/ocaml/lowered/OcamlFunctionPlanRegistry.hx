@@ -322,7 +322,7 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v110";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v111";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v30";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 

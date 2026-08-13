@@ -367,7 +367,7 @@ class CallPlanFixture {
 				throw "fixture nullable occurrence must select preserve or box";
 			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
 				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeOmittedDynamic, MaterializeExplicitNullString,
-				MaterializeExplicitNullDynamic, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+				MaterializeExplicitNullDynamic, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToNullableEnum:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -422,7 +422,7 @@ class CallPlanFixture {
 				throw "fixture nullable Bool occurrence must select preserve or box";
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
 				MaterializeOmittedString, MaterializeOmittedDynamic, MaterializeExplicitNullString, MaterializeExplicitNullDynamic, PreserveDynamicCarrier,
-				BoxConcreteToDynamic, BoxExactBoolToDynamic:
+				BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToNullableEnum:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}

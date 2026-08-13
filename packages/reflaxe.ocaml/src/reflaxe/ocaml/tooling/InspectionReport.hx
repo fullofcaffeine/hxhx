@@ -764,6 +764,7 @@ typedef InspectionFunctionResultBoundary = {
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
 	final anonymousStructure:Null<InspectionFunctionResultAnonymousStructureProof>;
+	final nullableEnum:Null<InspectionFunctionResultNullableEnumProof>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;
@@ -772,6 +773,16 @@ typedef InspectionFunctionResultBoundary = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+}
+
+/** Exact enum name and source constructor for one nullable-enum result. */
+typedef InspectionFunctionResultNullableEnumProof = {
+	final semanticTypeId:String;
+	final nullableSemanticTypeId:String;
+	final carrierTypeId:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
 }
 
 /** Exact anonymous-object structure and representation reused by a function result. **/

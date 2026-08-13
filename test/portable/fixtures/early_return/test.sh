@@ -597,7 +597,7 @@ for (const control of returnControls) {
 			|| control.source.max < control.source.min
 			|| !rawSha256.test(control.programRevision)
 			|| !bodyRevision.test(control.bodyRevision)
-			|| control.pipelineRevision !== 'ocaml-function-plans-v110') {
+			|| control.pipelineRevision !== 'ocaml-function-plans-v111') {
 			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 		}
 		ids.add(control.id)
@@ -622,7 +622,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v30'
-			: control.pipelineRevision !== 'ocaml-function-plans-v110')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v111')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -795,7 +795,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v110'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v111'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0

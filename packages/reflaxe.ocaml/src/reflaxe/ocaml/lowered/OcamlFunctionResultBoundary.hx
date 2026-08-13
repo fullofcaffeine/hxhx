@@ -14,7 +14,16 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier.OcamlEnumDynamicCarrierIdentity;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 
 /** How the compiler proved a function's completed result without admitting new calls. */
 enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
@@ -23,6 +32,7 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final NonGenericInstanceExactIntDeclaration = "non-generic-instance-exact-int-declaration";
 	final NonGenericInstanceExactStringDeclaration = "non-generic-instance-exact-string-declaration";
 	final NonGenericInstanceEffectOnlyVoidDeclaration = "non-generic-instance-effect-only-void-declaration";
+	final NonGenericInstanceNullableEnumDeclaration = "non-generic-instance-nullable-enum-declaration";
 	final StaticNullableAnonymousDeclaration = "static-nullable-anonymous-declaration";
 }
 
@@ -34,6 +44,14 @@ typedef OcamlFunctionResultAnonymousStructureProof = {
 	final structureProofId:String;
 	final representationId:String;
 	final representationRevision:String;
+}
+
+/** Exact constructor and enum name used by one nullable-enum result crossing. */
+typedef OcamlFunctionResultNullableEnumProof = {
+	final semanticTypeId:String;
+	final nullableSemanticTypeId:String;
+	final carrierTypeId:String;
+	final source:OcamlLoweredSourceSpan;
 }
 
 /**
@@ -57,6 +75,7 @@ typedef OcamlFunctionResultBoundaryPlan = {
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
 	final anonymousStructure:Null<OcamlFunctionResultAnonymousStructureProof>;
+	final nullableEnum:Null<OcamlFunctionResultNullableEnumProof>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;
@@ -69,12 +88,13 @@ typedef OcamlFunctionResultBoundaryPlan = {
 
 /** Builds and validates result-only function boundaries before target syntax. */
 class OcamlFunctionResultBoundary {
-	public static inline final MODEL = "typed-ocaml-function-result-boundary-v2";
+	public static inline final MODEL = "typed-ocaml-function-result-boundary-v3";
 	public static inline final CALLABLE_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
+	public static inline final NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID = "non-generic-instance-nullable-enum-function-result-v1";
 	public static inline final STATIC_NULLABLE_ANONYMOUS_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 
 	/**
@@ -114,6 +134,7 @@ class OcamlFunctionResultBoundary {
 		final exactStringResult = OcamlRepresentationRegistry.isExactString(followedResult);
 		final effectOnlyVoidResult = OcamlCallPlanner.isExactVoid(followedResult);
 		final anonymousSemanticTypeId = nullableAnonymousSemanticTypeId(followedResult);
+		final nullableEnumIdentity = nullableEnumIdentity(followedResult);
 
 		var source:OcamlFunctionResultBoundarySource;
 		var reason:String;
@@ -122,6 +143,7 @@ class OcamlFunctionResultBoundary {
 		var semanticTypeId:String;
 		var resultKind = OcamlCallResultKind.Value;
 		var anonymousStructure:Null<OcamlFunctionResultAnonymousStructureProof> = null;
+		var nullableEnum:Null<OcamlFunctionResultNullableEnumProof> = null;
 		if (data.isStatic) {
 			if (exactIntResult) {
 				final matchesStaticTracer = switch (data.field.kind) {
@@ -186,6 +208,22 @@ class OcamlFunctionResultBoundary {
 				proofId = NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID;
 				proofClaim = "The followed instance-method result and the program representation registry independently select String -> string. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
 				semanticTypeId = "String";
+			} else if (nullableEnumIdentity != null) {
+				final completedEnum = directCompletedEnumValue(data.expr);
+				final completedIdentity = completedEnum == null ? null : OcamlEnumDynamicCarrier.fromDirectValue(completedEnum);
+				if (completedIdentity == null || completedIdentity.semanticTypeId != nullableEnumIdentity.semanticTypeId)
+					return null;
+				nullableEnum = {
+					semanticTypeId: nullableEnumIdentity.semanticTypeId,
+					nullableSemanticTypeId: 'Null<${nullableEnumIdentity.semanticTypeId}>',
+					carrierTypeId: nullableEnumIdentity.carrierTypeId,
+					source: OcamlLoweredOrigin.sourceSpan(completedEnum.pos)
+				};
+				source = OcamlFunctionResultBoundarySource.NonGenericInstanceNullableEnumDeclaration;
+				reason = "The concrete non-generic instance method declares Null<Enum> and its normal completion directly constructs that exact enum. The function boundary stores the native OCaml variant in Obj.t before it enters the nullable result carrier.";
+				proofId = NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID;
+				proofClaim = "The final typed declaration and direct constructor agree on one ordinary Haxe enum identity. Obj.repr preserves that native variant for both normal completion and admitted early returns. The static nullable-enum type retains the enum identity, so this boundary does not create a Dynamic value or admit enum-valued calls, fields, locals, or unrelated constructors.";
+				semanticTypeId = nullableEnum.nullableSemanticTypeId;
 			} else {
 				return null;
 			}
@@ -193,26 +231,78 @@ class OcamlFunctionResultBoundary {
 		final result:Null<OcamlCallValuePlan> = if (resultKind == OcamlCallResultKind.EffectOnlyVoid) {
 			null;
 		} else {
-			final representation = if (anonymousStructure != null) {
-				representations.require(anonymousStructure.representationId, binding.programRevision);
-			} else if (semanticTypeId == "Int") {
-				representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			if (nullableEnum != null) {
+				final inputRepresentation = representations.register({
+					semanticTypeId: nullableEnum.semanticTypeId,
+					domain: OcamlRepresentationDomain.InternalValue,
+					carrierTypeId: nullableEnum.carrierTypeId,
+					nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+					identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+					aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+					storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+					valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+					boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+					implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+					reason: "One directly constructed ordinary Haxe enum completes a sealed nullable-enum function result as its native OCaml variant.",
+					proof: {
+						id: "direct-enum-function-result-input-v1",
+						claim: "The final typed expression exposes the exact constructor and enum identity before syntax generation."
+					},
+					profileEligibility: ["metal", "portable"]
+				});
+				final outputRepresentation = representations.register({
+					semanticTypeId: nullableEnum.nullableSemanticTypeId,
+					domain: OcamlRepresentationDomain.InternalValue,
+					carrierTypeId: "Obj.t",
+					nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+					identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+					aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+					storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+					valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+					boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+					implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+					reason: "The exact nullable enum result uses Obj.t so it can preserve either the Haxe null sentinel or the native enum variant.",
+					proof: {
+						id: "nullable-enum-function-result-output-v1",
+						claim: "The declared core Null<Enum> type and direct constructor fix both the nullable carrier and its exact enum identity."
+					},
+					profileEligibility: ["metal", "portable"]
+				});
+				{
+					index: -1,
+					parameterOptional: false,
+					inputSemanticTypeId: nullableEnum.semanticTypeId,
+					inputCarrierTypeId: nullableEnum.carrierTypeId,
+					inputRepresentationId: inputRepresentation.id,
+					outputSemanticTypeId: nullableEnum.nullableSemanticTypeId,
+					outputCarrierTypeId: "Obj.t",
+					outputRepresentationId: outputRepresentation.id,
+					conversion: OcamlCallCarrierConversion.BoxExactEnumToNullableEnum,
+					proofId: "nullable-enum-function-result-box-v1",
+					proofClaim: "The direct native enum variant enters its declared nullable result through one Obj.repr operation. Its static Null<Enum> type keeps the exact enum identity without a Dynamic runtime-name box."
+				};
 			} else {
-				representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-			};
-			{
-				index: -1,
-				parameterOptional: false,
-				inputSemanticTypeId: representation.semanticTypeId,
-				inputCarrierTypeId: representation.carrierTypeId,
-				inputRepresentationId: representation.id,
-				outputSemanticTypeId: representation.semanticTypeId,
-				outputCarrierTypeId: representation.carrierTypeId,
-				outputRepresentationId: representation.id,
-				conversion: OcamlCallCarrierConversion.Identity,
-				proofId: "identity-call-carrier-v1",
-				proofClaim: 'The final typed function result already uses the exact $semanticTypeId internal carrier, so function completion preserves that carrier without conversion.'
-			};
+				final representation = if (anonymousStructure != null) {
+					representations.require(anonymousStructure.representationId, binding.programRevision);
+				} else if (semanticTypeId == "Int") {
+					representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+				} else {
+					representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+				};
+				{
+					index: -1,
+					parameterOptional: false,
+					inputSemanticTypeId: representation.semanticTypeId,
+					inputCarrierTypeId: representation.carrierTypeId,
+					inputRepresentationId: representation.id,
+					outputSemanticTypeId: representation.semanticTypeId,
+					outputCarrierTypeId: representation.carrierTypeId,
+					outputRepresentationId: representation.id,
+					conversion: OcamlCallCarrierConversion.Identity,
+					proofId: "identity-call-carrier-v1",
+					proofClaim: 'The final typed function result already uses the exact $semanticTypeId internal carrier, so function completion preserves that carrier without conversion.'
+				};
+			}
 		};
 		final selected:OcamlFunctionResultBoundaryPlan = {
 			id: "function-result-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
@@ -224,6 +314,7 @@ class OcamlFunctionResultBoundary {
 			resultKind: resultKind,
 			result: result,
 			anonymousStructure: anonymousStructure,
+			nullableEnum: nullableEnum,
 			profileEligibility: ["metal", "portable"],
 			reason: reason,
 			proofId: proofId,
@@ -264,6 +355,7 @@ class OcamlFunctionResultBoundary {
 			resultKind: callable.resultKind,
 			result: OcamlCallPlan.copyOptionalValue(callable.result),
 			anonymousStructure: null,
+			nullableEnum: null,
 			profileEligibility: callable.profileEligibility.copy(),
 			reason: "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
 			proofId: CALLABLE_RESULT_PROOF_ID,
@@ -289,6 +381,7 @@ class OcamlFunctionResultBoundary {
 			resultKind: boundary.resultKind,
 			result: OcamlCallPlan.copyOptionalValue(boundary.result),
 			anonymousStructure: copyAnonymousProof(boundary.anonymousStructure),
+			nullableEnum: copyNullableEnumProof(boundary.nullableEnum),
 			profileEligibility: boundary.profileEligibility.copy(),
 			reason: boundary.reason,
 			proofId: boundary.proofId,
@@ -330,6 +423,7 @@ class OcamlFunctionResultBoundary {
 				if (boundary.callableBoundaryId == null
 					|| boundary.callableBoundaryId.length == 0
 					|| boundary.anonymousStructure != null
+					|| boundary.nullableEnum != null
 					|| boundary.proofId != CALLABLE_RESULT_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: callable-derived result boundary "${boundary.id}" has no callable owner';
 			case StaticInlineExactIntDeclaration:
@@ -341,6 +435,8 @@ class OcamlFunctionResultBoundary {
 					"string");
 			case NonGenericInstanceEffectOnlyVoidDeclaration:
 				requireDeclarationEffectOnlyVoid(boundary);
+			case NonGenericInstanceNullableEnumDeclaration:
+				requireDeclarationNullableEnum(boundary);
 			case StaticNullableAnonymousDeclaration:
 				requireDeclarationAnonymous(boundary);
 		}
@@ -350,6 +446,7 @@ class OcamlFunctionResultBoundary {
 	static function requireDeclarationEffectOnlyVoid(boundary:OcamlFunctionResultBoundaryPlan):Void {
 		if (boundary.callableBoundaryId != null
 			|| boundary.anonymousStructure != null
+			|| boundary.nullableEnum != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -374,6 +471,7 @@ class OcamlFunctionResultBoundary {
 		final representationId = 'representation:$semanticTypeId:internal-value';
 		if (boundary.callableBoundaryId != null
 			|| boundary.anonymousStructure != null
+			|| boundary.nullableEnum != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -392,11 +490,41 @@ class OcamlFunctionResultBoundary {
 		}
 	}
 
+	/** Rejects a nullable-enum result whose direct constructor proof was changed. */
+	static function requireDeclarationNullableEnum(boundary:OcamlFunctionResultBoundaryPlan):Void {
+		final result = boundary.result;
+		final proof = boundary.nullableEnum;
+		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf("|instance|function|") < 0
+			|| boundary.resultKind != OcamlCallResultKind.Value
+			|| result == null
+			|| proof == null
+			|| proof.semanticTypeId.length == 0
+			|| proof.nullableSemanticTypeId != 'Null<${proof.semanticTypeId}>'
+			|| proof.carrierTypeId != '${OcamlEnumDynamicCarrier.CARRIER_MODEL}:${proof.semanticTypeId}'
+			|| proof.source.file.length == 0
+			|| proof.source.min < 0
+			|| proof.source.max < proof.source.min
+			|| result.inputSemanticTypeId != proof.semanticTypeId
+			|| result.inputCarrierTypeId != proof.carrierTypeId
+			|| result.outputSemanticTypeId != proof.nullableSemanticTypeId
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| result.conversion != OcamlCallCarrierConversion.BoxExactEnumToNullableEnum
+			|| boundary.proofId != NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the direct nullable-enum instance-method slice';
+		}
+	}
+
 	/** Checks the exact anonymous structure reused by a result-only static function. */
 	static function requireDeclarationAnonymous(boundary:OcamlFunctionResultBoundaryPlan):Void {
 		final result = boundary.result;
 		final structure = boundary.anonymousStructure;
 		if (boundary.callableBoundaryId != null
+			|| boundary.nullableEnum != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -441,6 +569,21 @@ class OcamlFunctionResultBoundary {
 		};
 	}
 
+	/** Finds only the direct enum constructor that completes the function body. */
+	static function directCompletedEnumValue(body:TypedExpr):Null<TypedExpr> {
+		final unwrappedBody = unwrapTransparent(body);
+		final completed = switch (unwrappedBody.expr) {
+			case TBlock(expressions) if (expressions.length > 0): unwrapTransparent(expressions[expressions.length - 1]);
+			case _: unwrappedBody;
+		};
+		return switch (completed.expr) {
+			case TReturn(value) if (value != null):
+				final unwrappedValue = unwrapTransparent(value);
+				OcamlEnumDynamicCarrier.fromDirectValue(unwrappedValue) == null ? null : unwrappedValue;
+			case _: null;
+		};
+	}
+
 	static function unwrapTransparent(expression:TypedExpr):TypedExpr {
 		return switch (expression.expr) {
 			case TMeta(_, child), TParenthesis(child): unwrapTransparent(child);
@@ -454,6 +597,14 @@ class OcamlFunctionResultBoundary {
 			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? OcamlAnonymousStructurePlan.semanticTypeIdForType(inner) : null;
 			case _:
 				null;
+		};
+	}
+
+	/** Returns the inner ordinary enum only for the direct core Null<Enum> form. */
+	static function nullableEnumIdentity(type:Type):Null<OcamlEnumDynamicCarrierIdentity> {
+		return switch (type) {
+			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? OcamlEnumDynamicCarrier.fromType(inner) : null;
+			case _: null;
 		};
 	}
 
@@ -477,6 +628,19 @@ class OcamlFunctionResultBoundary {
 			structureProofId: proof.structureProofId,
 			representationId: proof.representationId,
 			representationRevision: proof.representationRevision
+		};
+	}
+
+	static function copyNullableEnumProof(proof:Null<OcamlFunctionResultNullableEnumProof>):Null<OcamlFunctionResultNullableEnumProof> {
+		return proof == null ? null : {
+			semanticTypeId: proof.semanticTypeId,
+			nullableSemanticTypeId: proof.nullableSemanticTypeId,
+			carrierTypeId: proof.carrierTypeId,
+			source: {
+				file: proof.source.file,
+				min: proof.source.min,
+				max: proof.source.max
+			}
 		};
 	}
 

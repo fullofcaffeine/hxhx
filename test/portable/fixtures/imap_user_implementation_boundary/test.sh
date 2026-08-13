@@ -86,7 +86,7 @@ for (const operation of ['set', 'get', 'exists', 'remove', 'keys', 'iterator', '
 		throw new Error(`the interface-call inventory does not exercise ${operation}`)
 }
 for (const call of report.iMapInterfaceCalls) {
-	if (call.pipelineRevision !== 'ocaml-function-plans-v110'
+	if (call.pipelineRevision !== 'ocaml-function-plans-v111'
 		|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 		|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`) {
 		throw new Error(`interface call ${call.id} has a stale or conflicting receiver boundary`)

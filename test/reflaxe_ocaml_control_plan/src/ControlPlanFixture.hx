@@ -131,6 +131,7 @@ class ControlPlanFixture {
 			case PreserveDynamicReturnCarrier: OcamlControlPlan.DYNAMIC_RETURN_PROOF_ID;
 			case BoxExactIntToNullableCarrier: OcamlControlPlan.NULLABLE_INT_CONVERSION_RETURN_PROOF_ID;
 			case BoxExactBoolToNullableCarrier: OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID;
+			case BoxExactEnumToNullableCarrier: OcamlControlPlan.NULLABLE_ENUM_CONVERSION_RETURN_PROOF_ID;
 			case BoxAndRecoverTypedFunctionResult, BoxBoolAndRecoverDynamicTypedFunctionResult: OcamlTypedFunctionResultModel.PROOF_ID;
 			case _: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID;
 		}

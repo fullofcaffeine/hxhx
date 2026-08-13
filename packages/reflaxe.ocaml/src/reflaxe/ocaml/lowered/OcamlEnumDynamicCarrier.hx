@@ -68,11 +68,14 @@ class OcamlEnumDynamicCarrier {
 		}
 		if (constructorEnum == null)
 			return null;
-		final identity = fromType(unwrapped.t);
-		if (identity == null)
+		final pack = constructorEnum.pack ?? [];
+		if (pack.length > 0 && pack[0] == "ocaml")
 			return null;
-		final constructorSemanticTypeId = (constructorEnum.pack ?? []).concat([constructorEnum.name]).join(".");
-		return identity.semanticTypeId == constructorSemanticTypeId ? identity : null;
+		final semanticTypeId = pack.concat([constructorEnum.name]).join(".");
+		return {
+			semanticTypeId: semanticTypeId,
+			carrierTypeId: CARRIER_MODEL + ":" + semanticTypeId
+		};
 	}
 
 	/** Returns the sealed identity for one exact ordinary Haxe enum type. */
