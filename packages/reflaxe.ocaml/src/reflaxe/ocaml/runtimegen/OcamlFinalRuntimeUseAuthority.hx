@@ -88,27 +88,38 @@ class OcamlFinalRuntimeUseAuthority {
 		dispatch constructor used by `super()`. Reusing the same hidden runtime ID
 		would spend one permission twice. This operation clones only already-accepted
 		references and gives the second output site its own exact identities. The
-		optional callback prepares a staged reference before this class copies it.
+		optional callback prepares a staged reference before this class copies it. If
+		the copied subtree already contains one source reference more than once, each
+		occurrence receives a stable numbered identity within this copy operation.
 	**/
 	public function copyExpressionForOutput(expression:OcamlExpr, outputRole:String, ?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {
 		requireOpen();
 		final stableRole = requiredOutputRole(outputRole);
 		final copiedSourceKeys:Map<String, Bool> = [];
+		final copyCountsBySource:Map<String, Int> = [];
+		function copy(reference:OcamlRuntimeReference):OcamlRuntimeReference {
+			final sourceKey = occurrenceKey(reference.planRevision, reference.id);
+			final previousCount = copyCountsBySource.get(sourceKey);
+			final count = previousCount == null ? 0 : previousCount;
+			copyCountsBySource.set(sourceKey, count + 1);
+			final copyRole = count == 0 ? stableRole : '$stableRole:repeat:$count';
+			return copyReferenceForOutput(reference, copyRole, copiedSourceKeys, beforeReference);
+		}
 		final copiedExpression = OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
 			case ERuntimeIdent(reference):
-				ERuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference));
+				ERuntimeIdent(copy(reference));
 			case _:
 				current;
 		}, pattern -> switch (pattern) {
 			case PRuntimeConstructor(reference, args):
-				PRuntimeConstructor(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference), args);
+				PRuntimeConstructor(copy(reference), args);
 			case _:
 				pattern;
 		}, type -> switch (type) {
 			case TRuntimeIdent(reference):
-				TRuntimeIdent(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference));
+				TRuntimeIdent(copy(reference));
 			case TRuntimeApp(reference, params):
-				TRuntimeApp(copyReferenceForOutput(reference, stableRole, copiedSourceKeys, beforeReference), params);
+				TRuntimeApp(copy(reference), params);
 			case _:
 				type;
 		});
@@ -134,13 +145,14 @@ class OcamlFinalRuntimeUseAuthority {
 	/**
 		Gives repeated references of one selected role separate output identities.
 
-		Haxe can place one typed early-return occurrence more than once in the final
-		function tree while it expands control flow. The first reference still
-		represents that source occurrence. Each later reference is a distinct generated
-		output site and receives a checked copy. Callers must use this only after a
-		complete output owner, such as one function body, has been assembled. References
-		with every other role remain unchanged, so the final-output walk still rejects
-		unexplained duplicates.
+		Haxe can place one typed occurrence more than once in the final function tree.
+		For example, control-flow expansion can repeat an early return, and inline
+		expansion can repeat one String-null check. The first reference still represents
+		that source occurrence. Each later reference is a distinct generated output site
+		and receives a checked copy. Callers must use this only after a complete output
+		owner, such as one function body, has been assembled. References with every other
+		role remain unchanged, so the final-output walk still rejects unexplained
+		duplicates.
 	**/
 	public function distinctRepeatedRoleReferencesForOutput(expression:OcamlExpr, occurrenceRole:String, outputRole:String,
 			?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {

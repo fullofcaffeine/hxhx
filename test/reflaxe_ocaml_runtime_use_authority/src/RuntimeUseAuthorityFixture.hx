@@ -202,6 +202,17 @@ class RuntimeUseAuthorityFixture {
 		final unchangedOther = otherOutput.distinctRepeatedRoleReferencesForOutput(OcamlExpr.ESeq([otherReference, otherReference]),
 			"raise-function-return-signal", "function-return-signal:fixture");
 		expectFailure("unselected repeated role", "duplicate final runtime use U1", () -> otherOutput.observeExpression(unchangedOther));
+
+		final stringOutput = new OcamlFinalRuntimeUseAuthority();
+		stringOutput.beginProgram("program:runtime-use-fixture:repeated-string-default", PROFILE);
+		final stringOccurrence = occurrence("S1", 0, "HxArray.set", null, PLAN_REVISION, "string-default", requirement().id, "string-null-default");
+		final stringAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [stringOccurrence], stringOutput);
+		final stringReference = OcamlExpr.ERuntimeIdent(stringAuthority.expressionIdentifier("S1", PLAN_REVISION, "HxArray.set"));
+		stringAuthority.reconcileExpression(stringReference);
+		final distinctStrings = stringOutput.distinctRepeatedRoleReferencesForOutput(OcamlExpr.ESeq([stringReference, stringReference]),
+			"string-null-default", "function-string-default:fixture");
+		stringOutput.observeExpression(distinctStrings);
+		stringOutput.finishProgram();
 	}
 
 	static function finalOutputContract():Void {
@@ -256,6 +267,18 @@ class RuntimeUseAuthorityFixture {
 			], false)
 		]);
 		nestedCopyOutput.finishProgram();
+
+		final repeatedWithinCopyOutput = new OcamlFinalRuntimeUseAuthority();
+		repeatedWithinCopyOutput.beginProgram("program:runtime-use-fixture:repeated-within-copy", PROFILE);
+		final repeatedWithinCopyAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [occurrence("U1", 0)],
+			repeatedWithinCopyOutput);
+		final repeatedWithinCopyOriginal = OcamlExpr.ERuntimeIdent(repeatedWithinCopyAuthority.expressionIdentifier("U1", PLAN_REVISION, "HxArray.set"));
+		repeatedWithinCopyAuthority.reconcileExpression(repeatedWithinCopyOriginal);
+		final repeatedWithinCopy = repeatedWithinCopyOutput.copyExpressionForOutput(OcamlExpr.ESeq([repeatedWithinCopyOriginal, repeatedWithinCopyOriginal]),
+			"duplicated-branch");
+		repeatedWithinCopyOutput.observeExpression(repeatedWithinCopyOriginal);
+		repeatedWithinCopyOutput.observeExpression(repeatedWithinCopy);
+		repeatedWithinCopyOutput.finishProgram();
 
 		final duplicateCopyOutput = new OcamlFinalRuntimeUseAuthority();
 		duplicateCopyOutput.beginProgram("program:runtime-use-fixture:duplicate-copy", PROFILE);

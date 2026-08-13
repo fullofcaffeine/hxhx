@@ -9173,6 +9173,8 @@ class OcamlBuilder {
 		body = ensureParamUsage(body, params);
 		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
 			"function-return-signal:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
+			"function-string-default:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
@@ -9380,6 +9382,9 @@ class OcamlBuilder {
 		if (nestedDisposition != null)
 			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
 				"nested-function-return-signal:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+		if (nestedDisposition != null)
+			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
+				"nested-function-string-default:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
