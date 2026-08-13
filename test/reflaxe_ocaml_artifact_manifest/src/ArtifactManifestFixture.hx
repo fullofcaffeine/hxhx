@@ -157,6 +157,7 @@ class ArtifactManifestFixture {
 		final executableConfig:OcamlNativeSourceDeclaration = {
 			projectName: "fixture",
 			exeName: "fixture",
+			entryName: "fixture",
 			mainModuleId: "Main",
 			pluginMainModuleId: null,
 			pluginRegisterPluginId: null,
@@ -174,6 +175,7 @@ class ArtifactManifestFixture {
 		final reorderedConfig:OcamlNativeSourceDeclaration = {
 			projectName: executableConfig.projectName,
 			exeName: executableConfig.exeName,
+			entryName: executableConfig.entryName,
 			mainModuleId: executableConfig.mainModuleId,
 			pluginMainModuleId: executableConfig.pluginMainModuleId,
 			pluginRegisterPluginId: executableConfig.pluginRegisterPluginId,

@@ -12,6 +12,7 @@ import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceModule;
 typedef OcamlNativeSourceDeclaration = {
 	final projectName:String;
 	final exeName:String;
+	final entryName:String;
 	final mainModuleId:Null<String>;
 	final pluginMainModuleId:Null<String>;
 	final pluginRegisterPluginId:Null<String>;
@@ -32,7 +33,7 @@ typedef OcamlNativeSourceDeclaration = {
 **/
 class OcamlSourceBundleAuthority {
 	public static inline final SEMANTIC_RUNTIME_MODEL = "checked-runtime-source-selection-v1";
-	public static inline final NATIVE_DECLARATION_MODEL = "normalized-native-source-declarations-v1";
+	public static inline final NATIVE_DECLARATION_MODEL = "normalized-native-source-declarations-v2";
 
 	/**
 		Builds the early native-source input revision used before Dune text exists.
@@ -100,6 +101,7 @@ class OcamlSourceBundleAuthority {
 			required(config.projectName, "Dune project name"),
 			required(config.exeName, "Dune executable name"),
 			optional(config.mainModuleId),
+			required(config.entryName, "Dune entry module name"),
 			optional(config.pluginMainModuleId),
 			optional(config.pluginRegisterPluginId),
 			optional(config.pluginRegisterProviderType),

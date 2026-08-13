@@ -4005,6 +4005,22 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		#end
 
+		// Emit every optional root-level OCaml module before choosing a Dune entry
+		// module. The entry selector can then detect real filename ownership instead
+		// of relying on a reserved-name list that can drift as generators evolve.
+		if (ctx.needsOcamlNativeMapSet) {
+			OcamlNativeFunctorEmitter.emitMapSet(output, artifacts);
+		}
+
+		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
+		final emitAliases = emitAliasesValue != null ? emitAliasesValue != "0" : !pluginModeEnabled;
+		if (emitAliases) {
+			final modules:Array<String> = [];
+			for (m => _ in ctx.emittedHaxeModules)
+				modules.push(m);
+			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
+		}
+
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
 		nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarationsDisabled();
@@ -4058,9 +4074,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				out.length > 0 ? out : null;
 			}
 
+			final executableName = DuneProjectEmitter.defaultExeName(outDir);
+			final reservedModuleNames = ctx.emittedOcamlModuleNamesSorted();
 			final duneProjectConfig:DuneProjectConfig = {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
-				exeName: DuneProjectEmitter.defaultExeName(outDir),
+				exeName: executableName,
+				entryName: DuneProjectEmitter.defaultEntryName(executableName, artifacts, reservedModuleNames),
+				reservedModuleNames: reservedModuleNames,
 				mainModuleId: resolvedMainModuleId,
 				pluginMainModuleId: pluginRunsMain ? resolvedMainModuleId : null,
 				pluginRegisterPluginId: pluginRegisterPluginId,
@@ -4087,21 +4107,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
 			semanticRuntimeAuthority = RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(),
 				ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision(), targetReuseRuntimeSourceManifest);
-		}
-
-		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.
-		if (ctx.needsOcamlNativeMapSet) {
-			OcamlNativeFunctorEmitter.emitMapSet(output, artifacts);
-		}
-
-		// Package alias modules (M8): generate dot-path access helpers unless disabled.
-		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
-		final emitAliases = emitAliasesValue != null ? emitAliasesValue != "0" : !pluginModeEnabled;
-		if (emitAliases) {
-			final modules:Array<String> = [];
-			for (m => _ in ctx.emittedHaxeModules)
-				modules.push(m);
-			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
 		}
 
 		// All structured modules and checked generated-text files have now crossed

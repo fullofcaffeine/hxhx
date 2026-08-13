@@ -434,6 +434,15 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_sourcemap=directives`: add line directives for error mapping.
 - `target.threaded` is auto-defined on OCaml target builds (`sys.thread.*` is runtime-backed via `HxThread`).
 
+For the default executable layout, the output-directory basename remains the
+executable filename. For example, `ocaml_output=build/ocaml` builds
+`ocaml.exe`. If that name would also create an entry source such as `Ocaml.ml`
+and another generated module already owns the case-equivalent filename, the
+compiler uses a private `reflaxe_ocaml_entry.ml` driver. Dune still produces
+the requested `ocaml.exe`. Plugin and explicit multi-executable names do not
+use this mapping; choose a non-conflicting name when their diagnostic reports a
+generated-module collision.
+
 Transactional output currently rejects inferred `ocaml_mli` generation because
 those interfaces would otherwise be created after source publication. Existing
 source-owned `.mli` files remain supported.

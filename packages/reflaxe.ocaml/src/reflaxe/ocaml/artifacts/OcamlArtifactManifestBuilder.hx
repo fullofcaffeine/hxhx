@@ -94,6 +94,22 @@ class OcamlArtifactManifestBuilder {
 	}
 
 	/**
+		Returns whether any producer already owns a case-equivalent output path.
+
+		OCaml derives module names from filenames, and common macOS filesystems also
+		treat filename case as equivalent. Entry-module selection uses this check so
+		a requested executable name cannot replace program or package-alias source.
+	**/
+	public function hasCaseEquivalentPath(path:String):Bool {
+		final normalized = OcamlArtifactManifestSchema.normalizeRelativePath(path).toLowerCase();
+		for (ownedPath in claims.keys()) {
+			if (ownedPath.toLowerCase() == normalized)
+				return true;
+		}
+		return false;
+	}
+
+	/**
 		Removes a current claim after an explicit output filter deletes that file.
 
 		This does not delete bytes. The caller must perform the deletion first so an
