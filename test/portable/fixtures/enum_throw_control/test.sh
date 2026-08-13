@@ -32,7 +32,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25') {
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26') {
 	fail('unexpected enum throw report schema or control model')
 }
 

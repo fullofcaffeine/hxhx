@@ -3120,7 +3120,7 @@
     }
   ],
   "containerElementRequiredConversionCount": 0,
-  "iMapInterfaceRevision": "sha256:a07b983ed06df81a5c765f99a2f2fac273a33ae70c66711ebfc416b846454b53",
+  "iMapInterfaceRevision": "sha256:862dddb17c2270b2c1bf48a13a03917adabaaa706096c49d9b2598eda750bdc4",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 4,
   "arrayLiteralProducerRevision": "sha256:ee3d0033ac84ce287ec4d9fe0690ed31ff9708e3b3878426894e5aff7e12968c",
@@ -5597,7 +5597,7 @@
   "representationCount": 23,
   "containerElementConversionModel": "typed-ocaml-container-element-conversions-v1",
   "staticStorageRevision": "sha256:3ffb8d141e552014e6da9fdd51360ced559b8190ab6a60bfc89ea30627615ecf",
-  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v25",
+  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v26",
   "containerElementRequiredConversionIds": [],
   "controlTargetRevision": "sha256:83ae3f1cbb08bf3e11d54a4a3f7d26519ad4d8e0c1311bc8c9fc269fa731625b",
   "iMapInterfaceConversions": [
@@ -6140,6 +6140,542 @@
     {
       "runtimeUseOccurrences": [
         {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "type-marker",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:0:type-marker",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 0,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxType.class_",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-type-reflection",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:get",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:1:standard-map:get",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 1,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.get_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:set",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:2:standard-map:set",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 2,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.set_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:exists",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:3:standard-map:exists",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 3,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.exists_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:remove",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:4:standard-map:remove",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 4,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.remove_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "wrap-iterator:keys",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:5:wrap-iterator:keys",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 5,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.of_array",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:keys",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:6:standard-map:keys",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 6,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.keys_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "wrap-iterator:iterator",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:7:wrap-iterator:iterator",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 7,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.of_array",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:iterator",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:8:standard-map:iterator",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 8,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.values_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "wrap-iterator:keyValueIterator",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:9:wrap-iterator:keyValueIterator",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 9,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.of_array",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:keyValueIterator",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:10:standard-map:keyValueIterator",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 10,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.pairs_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:copy",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:11:standard-map:copy",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 11,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.copy_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-of-array",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:12:format-of-array",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 12,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.of_array",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:toString",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:13:standard-map:toString",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 13,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.pairs_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-create-array",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:14:format-create-array",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 14,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.create",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-array",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-has-next",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:15:format-has-next",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 15,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.hasNext",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-next",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:16:format-next",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 16,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxIterator.next",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-push",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:17:format-push",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 17,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.push",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-array",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-key",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:18:format-key",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 18,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxString.toStdString",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-string-text",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "format-join",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:19:format-join",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 19,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxArray.join",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-array",
+          "domain": "expression-identifier"
+        },
+        {
+          "planRevision": "sha256:94e126ef20726b129149e9b3569676398e3715bce0627576632ad4b4f5715844",
+          "cardinality": 1,
+          "role": "standard-map:clear",
+          "ownerId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+          "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime-use:20:standard-map:clear",
+          "source": {
+            "min": 4429,
+            "max": 4437,
+            "file": "src/Main.hx"
+          },
+          "order": 20,
+          "profileEligibility": [
+            "metal",
+            "portable"
+          ],
+          "exactSymbol": "HxMap.clear_string",
+          "requirementId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+          "domain": "expression-identifier"
+        }
+      ],
+      "sourceCarrierTypeId": "HxMap.string_map",
+      "runtimeCapabilities": [
+        "haxe-map",
+        "haxe-iterator",
+        "haxe-array",
+        "haxe-string-text",
+        "haxe-type-reflection"
+      ],
+      "standardKeyKind": "string",
+      "sourceSemanticTypeId": "HxMap<Int>",
+      "keySemanticTypeId": "String",
+      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
+      "valueStringifier": "exact-int",
+      "proofClaim": "The final typed Haxe occurrence converts either a canonical standard Map declaration or a class proven to implement the exact haxe.Constraints.IMap<K,V> interface into one dispatch record. Standard storage and user methods remain distinct; a key type never proves the runtime receiver implementation.",
+      "role": "local-initializer",
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "methods": [
+        {
+          "resultSemanticTypeId": "Null<Int>",
+          "name": "get",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "set",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String",
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "exists",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "remove",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<String>",
+          "name": "keys",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<Int>",
+          "name": "iterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "KeyValueIterator<String, Int>",
+          "name": "keyValueIterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "haxe.IMap<String, Int>",
+          "name": "copy",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "String",
+          "name": "toString",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "clear",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        }
+      ],
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
+      "proofId": "typed-imap-interface-conversion-v1",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
+      "valueSemanticTypeId": "Int",
+      "targetSemanticTypeId": "haxe.IMap<String, Int>",
+      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
+      "targetCarrierTypeId": "Obj.t(haxe_Constraints.imap_t)",
+      "sourceKind": "standard-string-map",
+      "keyStringifier": "exact-string",
+      "roleIdentity": "lexical-local-v1:ce1520d187869102129cb97c740faabd3eae9626d0f66c5280aa9835869da35e"
+    },
+    {
+      "runtimeUseOccurrences": [
+        {
           "planRevision": "sha256:0171b388e40718869f46a91f9d75e79377163b9b7d1794ae5135cf686d5c4880",
           "cardinality": 1,
           "role": "type-marker",
@@ -6672,542 +7208,6 @@
       "sourceKind": "standard-string-map",
       "keyStringifier": "exact-string",
       "roleIdentity": "call-argument:0"
-    },
-    {
-      "runtimeUseOccurrences": [
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "type-marker",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:0:type-marker",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 0,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxType.class_",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-type-reflection",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:get",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:1:standard-map:get",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 1,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.get_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:set",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:2:standard-map:set",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 2,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.set_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:exists",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:3:standard-map:exists",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 3,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.exists_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:remove",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:4:standard-map:remove",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 4,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.remove_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "wrap-iterator:keys",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:5:wrap-iterator:keys",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 5,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.of_array",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:keys",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:6:standard-map:keys",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 6,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.keys_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "wrap-iterator:iterator",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:7:wrap-iterator:iterator",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 7,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.of_array",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:iterator",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:8:standard-map:iterator",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 8,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.values_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "wrap-iterator:keyValueIterator",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:9:wrap-iterator:keyValueIterator",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 9,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.of_array",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:keyValueIterator",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:10:standard-map:keyValueIterator",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 10,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.pairs_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:copy",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:11:standard-map:copy",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 11,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.copy_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-of-array",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:12:format-of-array",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 12,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.of_array",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:toString",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:13:standard-map:toString",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 13,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.pairs_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-create-array",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:14:format-create-array",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 14,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxArray.create",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-array",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-has-next",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:15:format-has-next",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 15,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.hasNext",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-next",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:16:format-next",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 16,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxIterator.next",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-push",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:17:format-push",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 17,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxArray.push",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-array",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-key",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:18:format-key",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 18,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxString.toStdString",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-string-text",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "format-join",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:19:format-join",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 19,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxArray.join",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-array",
-          "domain": "expression-identifier"
-        },
-        {
-          "planRevision": "sha256:3f3e8b7d3e230b1bff608f8288343b3545be41bd160376bfe05b9bb797792fea",
-          "cardinality": 1,
-          "role": "standard-map:clear",
-          "ownerId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-          "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime-use:20:standard-map:clear",
-          "source": {
-            "min": 4429,
-            "max": 4437,
-            "file": "src/Main.hx"
-          },
-          "order": 20,
-          "profileEligibility": [
-            "metal",
-            "portable"
-          ],
-          "exactSymbol": "HxMap.clear_string",
-          "requirementId": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-          "domain": "expression-identifier"
-        }
-      ],
-      "sourceCarrierTypeId": "HxMap.string_map",
-      "runtimeCapabilities": [
-        "haxe-map",
-        "haxe-iterator",
-        "haxe-array",
-        "haxe-string-text",
-        "haxe-type-reflection"
-      ],
-      "standardKeyKind": "string",
-      "sourceSemanticTypeId": "HxMap<Int>",
-      "keySemanticTypeId": "String",
-      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
-      "valueStringifier": "exact-int",
-      "proofClaim": "The final typed Haxe occurrence converts either a canonical standard Map declaration or a class proven to implement the exact haxe.Constraints.IMap<K,V> interface into one dispatch record. Standard storage and user methods remain distinct; a key type never proves the runtime receiver implementation.",
-      "role": "local-initializer",
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "methods": [
-        {
-          "resultSemanticTypeId": "Null<Int>",
-          "name": "get",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [
-            "String"
-          ],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Void",
-          "name": "set",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [
-            "String",
-            "Int"
-          ],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Bool",
-          "name": "exists",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [
-            "String"
-          ],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Bool",
-          "name": "remove",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [
-            "String"
-          ],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Iterator<String>",
-          "name": "keys",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Iterator<Int>",
-          "name": "iterator",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "KeyValueIterator<String, Int>",
-          "name": "keyValueIterator",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "haxe.IMap<String, Int>",
-          "name": "copy",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "String",
-          "name": "toString",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        },
-        {
-          "resultSemanticTypeId": "Void",
-          "name": "clear",
-          "sourceOwnerTypeName": "IMap",
-          "argumentSemanticTypeIds": [],
-          "sourceOwnerModuleId": "haxe.Constraints"
-        }
-      ],
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
-      "proofId": "typed-imap-interface-conversion-v1",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
-      "valueSemanticTypeId": "Int",
-      "targetSemanticTypeId": "haxe.IMap<String, Int>",
-      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "targetCarrierTypeId": "Obj.t(haxe_Constraints.imap_t)",
-      "sourceKind": "standard-string-map",
-      "keyStringifier": "exact-string",
-      "roleIdentity": "lexical-local-v1:ce1520d187869102129cb97c740faabd3eae9626d0f66c5280aa9835869da35e"
     },
     {
       "runtimeUseOccurrences": [
@@ -8995,7 +8995,7 @@
       "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
       "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "preservedCarrierTypeId": "HxMap.string_map",
-      "id": "imap-storage-alias:0eb2aff5041f3c30ac59edcc",
+      "id": "imap-storage-alias:1da2952f9766e3a9f469636d",
       "source": {
         "min": 4497,
         "max": 4506,
@@ -9003,7 +9003,7 @@
       },
       "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
       "proofId": "typed-standard-map-storage-alias-v2",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "valueSemanticTypeId": "Int",
       "targetSemanticTypeId": "haxe.IMap<String, Int>",
       "uses": [
@@ -9013,6 +9013,76 @@
           "source": {
             "min": 4497,
             "max": 4518,
+            "file": "src/Main.hx"
+          }
+        }
+      ],
+      "nullPolicy": "non-null-source",
+      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34"
+    },
+    {
+      "runtimeUseOccurrences": [],
+      "sourceCarrierTypeId": "HxMap.int_map",
+      "standardKeyKind": "int",
+      "sourceSemanticTypeId": "Map<Int, String>",
+      "keySemanticTypeId": "Int",
+      "runtimeRequirementIds": [],
+      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "preservedCarrierTypeId": "HxMap.int_map",
+      "id": "imap-storage-alias:39bc2be5aba0b4cd6d67f4ec",
+      "source": {
+        "min": 4526,
+        "max": 4539,
+        "file": "src/Main.hx"
+      },
+      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
+      "proofId": "typed-standard-map-storage-alias-v2",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
+      "valueSemanticTypeId": "String",
+      "targetSemanticTypeId": "haxe.IMap<Int, String>",
+      "uses": [
+        {
+          "carrierTypeId": "HxMap.int_map",
+          "nativeOperation": "exists_int",
+          "source": {
+            "min": 4526,
+            "max": 4549,
+            "file": "src/Main.hx"
+          }
+        }
+      ],
+      "nullPolicy": "non-null-source",
+      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34"
+    },
+    {
+      "runtimeUseOccurrences": [],
+      "sourceCarrierTypeId": "HxMap.obj_map",
+      "standardKeyKind": "object-identity",
+      "sourceSemanticTypeId": "Map<_Main.ObjectKey, Int>",
+      "keySemanticTypeId": "_Main.ObjectKey",
+      "runtimeRequirementIds": [],
+      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "preservedCarrierTypeId": "HxMap.obj_map",
+      "id": "imap-storage-alias:3bc7e4fd72b86fffd6d9d404",
+      "source": {
+        "min": 4557,
+        "max": 4573,
+        "file": "src/Main.hx"
+      },
+      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
+      "proofId": "typed-standard-map-storage-alias-v2",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
+      "valueSemanticTypeId": "Int",
+      "targetSemanticTypeId": "haxe.IMap<_Main.ObjectKey, Int>",
+      "uses": [
+        {
+          "carrierTypeId": "HxMap.obj_map",
+          "nativeOperation": "exists_object",
+          "source": {
+            "min": 4557,
+            "max": 4597,
             "file": "src/Main.hx"
           }
         }
@@ -9097,41 +9167,6 @@
       "sourceSemanticTypeId": "Map<Int, String>",
       "keySemanticTypeId": "Int",
       "runtimeRequirementIds": [],
-      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "preservedCarrierTypeId": "HxMap.int_map",
-      "id": "imap-storage-alias:6ac281d43d5b3646c9d91c47",
-      "source": {
-        "min": 4526,
-        "max": 4539,
-        "file": "src/Main.hx"
-      },
-      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
-      "proofId": "typed-standard-map-storage-alias-v2",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
-      "valueSemanticTypeId": "String",
-      "targetSemanticTypeId": "haxe.IMap<Int, String>",
-      "uses": [
-        {
-          "carrierTypeId": "HxMap.int_map",
-          "nativeOperation": "exists_int",
-          "source": {
-            "min": 4526,
-            "max": 4549,
-            "file": "src/Main.hx"
-          }
-        }
-      ],
-      "nullPolicy": "non-null-source",
-      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34"
-    },
-    {
-      "runtimeUseOccurrences": [],
-      "sourceCarrierTypeId": "HxMap.int_map",
-      "standardKeyKind": "int",
-      "sourceSemanticTypeId": "Map<Int, String>",
-      "keySemanticTypeId": "Int",
-      "runtimeRequirementIds": [],
       "bodyRevision": "12:dc6e5e118ef887f17406db365c8428ed846e7c693d876e6024a82e2d8a886ed6",
       "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "preservedCarrierTypeId": "HxMap.int_map",
@@ -9153,41 +9188,6 @@
           "source": {
             "min": 4158,
             "max": 4186,
-            "file": "src/Main.hx"
-          }
-        }
-      ],
-      "nullPolicy": "non-null-source",
-      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34"
-    },
-    {
-      "runtimeUseOccurrences": [],
-      "sourceCarrierTypeId": "HxMap.obj_map",
-      "standardKeyKind": "object-identity",
-      "sourceSemanticTypeId": "Map<_Main.ObjectKey, Int>",
-      "keySemanticTypeId": "_Main.ObjectKey",
-      "runtimeRequirementIds": [],
-      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "preservedCarrierTypeId": "HxMap.obj_map",
-      "id": "imap-storage-alias:fd9830b5c29aac02b3ae6346",
-      "source": {
-        "min": 4557,
-        "max": 4573,
-        "file": "src/Main.hx"
-      },
-      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
-      "proofId": "typed-standard-map-storage-alias-v2",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
-      "valueSemanticTypeId": "Int",
-      "targetSemanticTypeId": "haxe.IMap<_Main.ObjectKey, Int>",
-      "uses": [
-        {
-          "carrierTypeId": "HxMap.obj_map",
-          "nativeOperation": "exists_object",
-          "source": {
-            "min": 4557,
-            "max": 4597,
             "file": "src/Main.hx"
           }
         }
@@ -9345,6 +9345,29 @@
       "functionId": "Main|Main|static|function|runStrings|generics:0|required:haxe.IMap<String, Int>->Void",
       "proofId": "typed-imap-interface-dispatch-v1",
       "pipelineRevision": "ocaml-function-plans-v112",
+      "valueSemanticTypeId": "Int",
+      "operation": "exists",
+      "receiverSemanticTypeId": "haxe.IMap<String, Int>",
+      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
+      "receiverCarrierTypeId": "Obj.t(haxe_Constraints.imap_t)"
+    },
+    {
+      "resultSemanticTypeId": "Bool",
+      "keySemanticTypeId": "String",
+      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
+      "proofClaim": "The final typed Haxe call resolves to one method on the exact haxe.Constraints.IMap<K,V> declaration. The receiver is already the sealed interface carrier, so target syntax evaluates it once, evaluates arguments in source order, and invokes only the recorded dispatch field.",
+      "argumentSemanticTypeIds": [
+        "String"
+      ],
+      "id": "imap-interface-call:2c04249e74796852b89f2fa3",
+      "source": {
+        "min": 4449,
+        "max": 4464,
+        "file": "src/Main.hx"
+      },
+      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
+      "proofId": "typed-imap-interface-dispatch-v1",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "valueSemanticTypeId": "Int",
       "operation": "exists",
       "receiverSemanticTypeId": "haxe.IMap<String, Int>",
@@ -10198,29 +10221,6 @@
       "valueSemanticTypeId": "String",
       "operation": "clear",
       "receiverSemanticTypeId": "haxe.IMap<Int, String>",
-      "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "receiverCarrierTypeId": "Obj.t(haxe_Constraints.imap_t)"
-    },
-    {
-      "resultSemanticTypeId": "Bool",
-      "keySemanticTypeId": "String",
-      "bodyRevision": "0:97bdbe034f832e1edcba2345432bb2c0d8a54bed821853a73cf29c9e26f2f068",
-      "proofClaim": "The final typed Haxe call resolves to one method on the exact haxe.Constraints.IMap<K,V> declaration. The receiver is already the sealed interface carrier, so target syntax evaluates it once, evaluates arguments in source order, and invokes only the recorded dispatch field.",
-      "argumentSemanticTypeIds": [
-        "String"
-      ],
-      "id": "imap-interface-call:d69d1e66dd4f7f9ee1e245cc",
-      "source": {
-        "min": 4449,
-        "max": 4464,
-        "file": "src/Main.hx"
-      },
-      "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
-      "proofId": "typed-imap-interface-dispatch-v1",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
-      "valueSemanticTypeId": "Int",
-      "operation": "exists",
-      "receiverSemanticTypeId": "haxe.IMap<String, Int>",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
       "receiverCarrierTypeId": "Obj.t(haxe_Constraints.imap_t)"
     },
@@ -18274,7 +18274,7 @@
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 94,
-  "runtimeRequirementRevision": "sha256:386239b5c7e6c818ab5104e8206a13ffa7863ca905a66f038dd42737a7f4852a",
+  "runtimeRequirementRevision": "sha256:ff55a69b8f45f0c7d6e1e48bdb34b9d557f321b9404faa382e8d4187087581bc",
   "intUnaryCount": 0,
   "callRevision": "sha256:b846f2200fd2b01eed55f60bcb4d90fba5d053c4414eb627be13620528ec69bd",
   "representedArrayCount": 2,
@@ -20678,7 +20678,7 @@
       "effect": "raise-haxe-value"
     }
   ],
-  "controlAdmissionRevision": "sha256:13847f90f4216ff7bdf5722d2db8c105b888a70ebc22a6f09a93f27aeb41cc0c",
+  "controlAdmissionRevision": "sha256:ad73741956841a41d181c337acb44ca5c7958e859e155438f353fe71e8de6f91",
   "controlCount": 57,
   "unsafeOperationCompleteness": "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
   "controlAdmissionModel": "typed-ocaml-control-admission-v1",
@@ -23574,6 +23574,136 @@
       "rootModules": [
         "HxArray"
       ],
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-array",
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-iterator-v1",
+      "subject": {
+        "id": "haxe.IMap<String, Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-iterator",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
+      "rootModules": [
+        "HxIterator"
+      ],
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-iterator",
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-map-v1",
+      "subject": {
+        "id": "haxe.IMap<String, Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-map",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
+      "rootModules": [
+        "HxMap"
+      ],
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-map",
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-text-v1",
+      "subject": {
+        "id": "haxe.IMap<String, Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-text",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-string-text",
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-type-reflection-v1",
+      "subject": {
+        "id": "haxe.IMap<String, Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-type-reflection",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. Every generated IMap dispatch record carries the exact haxe.IMap runtime type marker used by Haxe reflection.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288:runtime:haxe-type-reflection",
+      "source": {
+        "min": 4429,
+        "max": 4437,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "imap-interface-conversion:491eb78c22bfa2ae4c4a1288",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
+        "id": "haxe.IMap<String, Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
+      "rootModules": [
+        "HxArray"
+      ],
       "id": "imap-interface-conversion:4fd371ce28d3a20dfff4ef4f:runtime:haxe-array",
       "source": {
         "min": 5072,
@@ -23690,136 +23820,6 @@
         "portable"
       ],
       "decisionId": "imap-interface-conversion:4fd371ce28d3a20dfff4ef4f",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
-        "id": "haxe.IMap<String, Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array",
-      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-array",
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "sourceId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-iterator-v1",
-      "subject": {
-        "id": "haxe.IMap<String, Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-iterator",
-      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
-      "rootModules": [
-        "HxIterator"
-      ],
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-iterator",
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "sourceId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-map-v1",
-      "subject": {
-        "id": "haxe.IMap<String, Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-map",
-      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
-      "rootModules": [
-        "HxMap"
-      ],
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-map",
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "sourceId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-text-v1",
-      "subject": {
-        "id": "haxe.IMap<String, Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-text",
-      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-string-text",
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "sourceId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-type-reflection-v1",
-      "subject": {
-        "id": "haxe.IMap<String, Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-type-reflection",
-      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. Every generated IMap dispatch record carries the exact haxe.IMap runtime type marker used by Haxe reflection.",
-      "rootModules": [
-        "HxType"
-      ],
-      "id": "imap-interface-conversion:5c68bc156585dffa41fe3b58:runtime:haxe-type-reflection",
-      "source": {
-        "min": 4429,
-        "max": 4437,
-        "file": "src/Main.hx"
-      },
-      "sourceId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "imap-interface-conversion:5c68bc156585dffa41fe3b58",
       "sourceKind": "haxe-expression"
     },
     {
@@ -24325,7 +24325,7 @@
       "result": "assigned-value"
     }
   ],
-  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v4",
+  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v5",
   "iMapStorageAliasCount": 6,
   "controlAdmissions": [
     {
@@ -24400,9 +24400,9 @@
         }
       ],
       "functionId": "Main|Main|static|function|runInts|generics:0|required:haxe.IMap<Int, String>->Void|nested-function|304715be0d86a52fa913e2d8",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "revision": "sha256:53cdc2e123beadf63c87c3443ea27c99414fa9db019da5474b3bafff14f3dc38"
+      "revision": "sha256:a9c3209ba2b4d2942da671c181d5a9c122dfe24da887045b2fcf4b3074f9360c"
     },
     {
       "catches": [],
@@ -29096,9 +29096,9 @@
         }
       ],
       "functionId": "Main|Main|static|function|runNested|generics:0|->Void|nested-function|68865d048f185cdd945bbbdd",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "revision": "sha256:194a2f07e9a55fe7f4855b1d6f47a63f8c51d697eb5e32ffca536c04a666c871"
+      "revision": "sha256:b990a627ace7d587378e73fb6345859597a6f9b267a3c1b7c93e00be9b716bcf"
     },
     {
       "catches": [],

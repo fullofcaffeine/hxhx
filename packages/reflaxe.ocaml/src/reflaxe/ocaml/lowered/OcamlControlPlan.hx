@@ -1046,7 +1046,8 @@ class OcamlControlPlan {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete typed-function result crossing';
 						}
 					case PreserveNullableCarrier:
-						if (!isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+						if ((!isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+							&& !isExactNullableEnumSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId))
 							|| !samePayloadSides(payload)
 							|| payload.nominalRepresentation != null
 							|| payload.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID
@@ -1529,6 +1530,14 @@ class OcamlControlPlan {
 				&& representationId == "representation:Null<Bool>:internal-value");
 	}
 
+	/** Recognizes a nullable carrier whose exact enum owner is checked separately. */
+	public static function isExactNullableEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return StringTools.startsWith(semanticTypeId, "Null<")
+			&& StringTools.endsWith(semanticTypeId, ">")
+			&& carrierTypeId == "Obj.t"
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
 	/** Whether one side is the exact carrier selected for a sealed anonymous shape. */
 	public static function isAdmittedAnonymousSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return StringTools.startsWith(semanticTypeId, "anonymous{")
@@ -1925,8 +1934,16 @@ class OcamlControlPlan {
 				case _: false;
 			};
 		}
+		if (payload.conversion == OcamlControlPayloadConversion.PreserveNullableCarrier
+			&& isExactNullableEnumSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
+			final unwrapped = unwrapControlTransparent(expression);
+			return switch (unwrapped.expr) {
+				case TConst(TNull): haxe.macro.TypeTools.toString(unwrapped.t) == payload.inputSemanticTypeId;
+				case _: false;
+			};
+		}
 		if (payload.conversion == OcamlControlPayloadConversion.BoxExactEnumToNullableCarrier) {
-			final identity = OcamlEnumDynamicCarrier.fromDirectValue(expression);
+			final identity = exactEnumReturnIdentity(expression);
 			return identity != null
 				&& identity.semanticTypeId == payload.inputSemanticTypeId
 				&& identity.carrierTypeId == payload.inputCarrierTypeId
@@ -1982,6 +1999,25 @@ class OcamlControlPlan {
 		return switch (expression.expr) {
 			case TMeta(_, child), TParenthesis(child): unwrapControlTransparent(child);
 			case _: expression;
+		};
+	}
+
+	/**
+		Returns the exact enum identity only when this return reads a typed local or
+		constructs the enum at the return site.
+
+		The function result boundary proves how that exact enum enters `Null<Enum>`.
+		It does not yet prove arbitrary field reads or function-call results, even if
+		the Haxe type checker gives those expressions the same enum type.
+	**/
+	public static function exactEnumReturnIdentity(expression:TypedExpr):Null<OcamlEnumDynamicCarrierIdentity> {
+		final direct = OcamlEnumDynamicCarrier.fromDirectValue(expression);
+		if (direct != null)
+			return direct;
+		final unwrapped = unwrapControlTransparent(expression);
+		return switch (unwrapped.expr) {
+			case TLocal(_): OcamlEnumDynamicCarrier.fromType(unwrapped.t);
+			case _: null;
 		};
 	}
 
@@ -2971,20 +3007,25 @@ class OcamlControlPlanner {
 			return exact;
 		if (OcamlRepresentationRegistry.isExactDynamic(expression.t))
 			return representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
-		final enumIdentity = switch (unwrapTransparent(expression).expr) {
-			case TCast(child, null): OcamlEnumDynamicCarrier.fromDirectValue(child);
-			case _: OcamlEnumDynamicCarrier.fromDirectValue(expression);
-		};
 		final enumProof = boundary == null ? null : boundary.nullableEnum;
-		if (enumIdentity != null && enumProof != null && enumIdentity.semanticTypeId == enumProof.semanticTypeId) {
-			final enumRepresentation = representations.require('representation:${enumIdentity.semanticTypeId}:internal-value', binding.programRevision);
-			return enumRepresentation.carrierTypeId == enumIdentity.carrierTypeId ? enumRepresentation : null;
-		}
 		final unwrapped = unwrapTransparent(expression);
 		final isNull = switch (unwrapped.expr) {
 			case TConst(TNull): true;
 			case _: false;
 		};
+		if (isNull && enumProof != null && unwrapped.t != null) {
+			final nullRepresentation = representations.require('representation:${enumProof.nullableSemanticTypeId}:internal-value', binding.programRevision);
+			if (nullRepresentation.semanticTypeId == enumProof.nullableSemanticTypeId
+				&& nullRepresentation.carrierTypeId == "Obj.t"
+				&& nullRepresentation.domain == OcamlRepresentationDomain.InternalValue) {
+				return nullRepresentation;
+			}
+		}
+		final enumIdentity = OcamlControlPlan.exactEnumReturnIdentity(expression);
+		if (enumIdentity != null && enumProof != null && enumIdentity.semanticTypeId == enumProof.semanticTypeId) {
+			final enumRepresentation = representations.require('representation:${enumIdentity.semanticTypeId}:internal-value', binding.programRevision);
+			return enumRepresentation.carrierTypeId == enumIdentity.carrierTypeId ? enumRepresentation : null;
+		}
 		final proof = boundary == null ? null : boundary.anonymousStructure;
 		if (!isNull || proof == null || OcamlAnonymousStructurePlan.semanticTypeIdForType(unwrapped.t) != proof.semanticTypeId)
 			return null;
@@ -3236,7 +3277,9 @@ class OcamlControlPlanner {
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxAndRecoverNominalValue, OcamlControlPlan.EXACT_NOMINAL_RETURN_PROOF_ID,
 				proofClaim, nominalRepresentation);
 		}
-		if (sameSide && OcamlControlPlan.isAdmittedNullableSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
+		if (sameSide
+			&& (OcamlControlPlan.isAdmittedNullableSide(input.semanticTypeId, input.carrierTypeId, input.id)
+				|| OcamlControlPlan.isExactNullableEnumSide(input.semanticTypeId, input.carrierTypeId, input.id))) {
 			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal already carries the exact ${input.carrierTypeId} nullable value, so syntax must preserve that carrier without another box, unchecked cast, or boundary recovery.';
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.PreserveNullableCarrier, OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID,
 				proofClaim);
@@ -3281,7 +3324,7 @@ class OcamlControlPlanner {
 		if (input.carrierTypeId == '${OcamlEnumDynamicCarrier.CARRIER_MODEL}:${input.semanticTypeId}'
 			&& output.outputSemanticTypeId == 'Null<${input.semanticTypeId}>'
 			&& output.outputCarrierTypeId == "Obj.t") {
-			final proofClaim = "The final typed Haxe body converts this directly constructed enum return to the function's exact Null<Enum> Obj.t carrier once before the private return signal. The owning function boundary preserves that carrier unchanged.";
+			final proofClaim = "The final typed Haxe body converts this exact enum return to the function's exact Null<Enum> Obj.t carrier once before the private return signal. The owning function boundary preserves that carrier unchanged.";
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxExactEnumToNullableCarrier,
 				OcamlControlPlan.NULLABLE_ENUM_CONVERSION_RETURN_PROOF_ID, proofClaim);
 		}

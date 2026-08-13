@@ -28,7 +28,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v6'
 	|| report.controlCatchCount !== report.controlCatches.length) {
 	fail('unexpected nominal throw/catch report schema, model, or inventory')

@@ -6870,7 +6870,7 @@
   "representationCount": 26,
   "containerElementConversionModel": "typed-ocaml-container-element-conversions-v1",
   "staticStorageRevision": "sha256:fde1774346f14f3f00fb370c057ee29abd255859981d6d6770faf14e3f4c059a",
-  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v25",
+  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v26",
   "containerElementRequiredConversionIds": [],
   "controlTargetRevision": "sha256:a4eb0e536e80e92673830719df167965a74c0cb9422e91d6131240c22111f6de",
   "iMapInterfaceConversions": [],
@@ -15244,7 +15244,7 @@
       "effect": "raise-haxe-value"
     }
   ],
-  "controlAdmissionRevision": "sha256:1fad9369779d3c4dfb651146ac7ce8877640c90a401dc36cc8acf4d4ee5659f0",
+  "controlAdmissionRevision": "sha256:6dfaebbc9a56a85047df04b680ec9204594f5d638b80c3a70be09101b752b952",
   "controlCount": 55,
   "unsafeOperationCompleteness": "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
   "controlAdmissionModel": "typed-ocaml-control-admission-v1",
@@ -20018,7 +20018,7 @@
       "result": "assigned-value"
     }
   ],
-  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v4",
+  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v5",
   "iMapStorageAliasCount": 0,
   "controlAdmissions": [
     {
@@ -23093,9 +23093,9 @@
         }
       ],
       "functionId": "Main|Main|static|function|main|generics:0|->Void|nested-function|ffcebffe27995b89a788a4f6",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
-      "revision": "sha256:dbbff27c1aa1f5de873fc8b579fa4ff98fe66403be56b31f1be56d82010e91d2"
+      "revision": "sha256:b3b19431f9aab5f3945e45b63655deebd99030fd7b587acdb7285cddf587a1ed"
     },
     {
       "catches": [],
@@ -24853,9 +24853,9 @@
         }
       ],
       "functionId": "Main|Main|static|function|main|generics:0|->Void|nested-function|4e31136cc83559e3192302b8",
-      "pipelineRevision": "ocaml-nested-function-plans-v30",
+      "pipelineRevision": "ocaml-nested-function-plans-v31",
       "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
-      "revision": "sha256:18db00e289724bb240357bea91b69154580383bfd45b0e44808511b9ec9ce0ed"
+      "revision": "sha256:daa6df1bd72fb2a0612f0966109f859346cb633b1ccacb65df6fb91878560bdb"
     },
     {
       "catches": [],

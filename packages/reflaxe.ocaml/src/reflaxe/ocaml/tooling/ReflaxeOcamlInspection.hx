@@ -78,7 +78,7 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
-	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v4";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v5";
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
@@ -86,6 +86,7 @@ class ReflaxeOcamlInspection {
 	static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_RESULT_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_NULLABLE_ENUM_RESULT_PROOF_ID = "non-generic-instance-nullable-enum-function-result-v1";
 	static inline final NON_GENERIC_STATIC_NULLABLE_ENUM_RESULT_PROOF_ID = "non-generic-static-nullable-enum-function-result-v1";
+	static inline final NESTED_NULLABLE_ENUM_RESULT_PROOF_ID = "nested-nullable-enum-function-result-v1";
 	static inline final STATIC_NULLABLE_ANONYMOUS_RESULT_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
@@ -102,7 +103,7 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v112";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v30";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v31";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 
 	/** Returns the control-plan schema selected by one report owner. */
@@ -884,7 +885,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v25")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v26")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -1012,6 +1013,20 @@ class ReflaxeOcamlInspection {
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
+							final nullableEnumSemanticTypeId = exactNullableEnumSemanticTypeId(payload.inputSemanticTypeId);
+							final nullableEnumRepresentation = nullableEnumSemanticTypeId == null ? null : representationById.get('representation:$nullableEnumSemanticTypeId:internal-value');
+							final nullableEnumPayloadValid = nullableEnumSemanticTypeId != null
+								&& payload.inputCarrierTypeId == "Obj.t"
+								&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
+								&& sameSides
+								&& nullableEnumRepresentation != null
+								&& nullableEnumRepresentation.semanticTypeId == nullableEnumSemanticTypeId
+								&& nullableEnumRepresentation.carrierTypeId == 'haxe-enum-native-variant-carrier-v1:$nullableEnumSemanticTypeId'
+								&& nullableEnumRepresentation.domain == "internal-value"
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "preserve-nullable-carrier"
+								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
+								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
 							final anonymousDecision = representationById.get(payload.inputRepresentationId);
 							final anonymousPayloadValid = StringTools.startsWith(payload.inputSemanticTypeId, "anonymous{")
 								&& StringTools.endsWith(payload.inputSemanticTypeId, "}")
@@ -1103,9 +1118,10 @@ class ReflaxeOcamlInspection {
 								&& control.proofId == OcamlTypedFunctionResultModel.PROOF_ID;
 							if (!commonPayloadValid
 								|| payload.proofClaim.length == 0
-								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !anonymousPayloadValid && !dynamicPayloadValid
-									&& !nullableIntConversionValid && !nullableBoolConversionValid && !nullableEnumConversionValid && !typedFunctionPayloadValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing.';
+								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !nullableEnumPayloadValid
+									&& !anonymousPayloadValid && !dynamicPayloadValid && !nullableIntConversionValid && !nullableBoolConversionValid
+									&& !nullableEnumConversionValid && !typedFunctionPayloadValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, enum-to-nullable, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
@@ -2329,6 +2345,8 @@ class ReflaxeOcamlInspection {
 						|| !sameFunctionResultValue(boundary.result, callable.result)) {
 						throw 'Function-result boundary "${boundary.id}" disagrees with callable owner "$callableId".';
 					}
+				case "nested-nullable-enum-callable":
+					validateNestedNullableEnumResult(boundary);
 				case "static-inline-exact-int-declaration":
 					validateDeclarationExactResult(boundary, STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID, "|static|function|", "static inline", "Int", "int");
 				case "non-generic-instance-exact-int-declaration":
@@ -2353,6 +2371,39 @@ class ReflaxeOcamlInspection {
 			previousId = boundary.id;
 		}
 		return boundaries;
+	}
+
+	/** Validates a nested helper's exact enum-to-nullable result proof. */
+	static function validateNestedNullableEnumResult(boundary:InspectionFunctionResultBoundary):Void {
+		final result = boundary.result;
+		final proof = boundary.nullableEnum;
+		final expectedCallableBoundaryId = "nested-callable-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24);
+		if (boundary.callableBoundaryId != expectedCallableBoundaryId
+			|| boundary.anonymousStructure != null
+			|| boundary.sourceModuleId.length != 0
+			|| boundary.sourceTypeName.length != 0
+			|| boundary.sourceFieldName.length != 0
+			|| boundary.functionId.indexOf("|nested-function|") < 0
+			|| boundary.resultKind != "value"
+			|| result == null
+			|| proof == null
+			|| proof.semanticTypeId.length == 0
+			|| proof.nullableSemanticTypeId != 'Null<${proof.semanticTypeId}>'
+			|| proof.carrierTypeId != 'haxe-enum-native-variant-carrier-v1:${proof.semanticTypeId}'
+			|| proof.sourceFile.length == 0
+			|| proof.sourceMin < 0
+			|| proof.sourceMax < proof.sourceMin
+			|| result.inputSemanticTypeId != proof.semanticTypeId
+			|| result.inputCarrierTypeId != proof.carrierTypeId
+			|| result.inputRepresentationId != 'representation:${proof.semanticTypeId}:internal-value'
+			|| result.outputSemanticTypeId != proof.nullableSemanticTypeId
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| result.outputRepresentationId != 'representation:${proof.nullableSemanticTypeId}:internal-value'
+			|| result.conversion != "box-exact-enum-to-nullable-enum"
+			|| result.proofId != "nullable-enum-function-result-box-v1"
+			|| boundary.proofId != NESTED_NULLABLE_ENUM_RESULT_PROOF_ID) {
+			throw 'Function-result boundary "${boundary.id}" exceeds the nested nullable-enum callable slice.';
+		}
 	}
 
 	/** Validates one exact enum value entering its nullable-enum result carrier. */
@@ -3255,6 +3306,14 @@ class ReflaxeOcamlInspection {
 			|| representation.domain != "internal-value") {
 			throw '$owner expects $semanticTypeId -> $carrierTypeId in internal-value, but representation ${representation.id} selects ${representation.semanticTypeId} -> ${representation.carrierTypeId} in ${representation.domain}.';
 		}
+	}
+
+	/** Returns the inner enum name from the exact `Null<Enum>` report shape. */
+	static function exactNullableEnumSemanticTypeId(semanticTypeId:String):Null<String> {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return null;
+		final inner = semanticTypeId.substring("Null<".length, semanticTypeId.length - 1);
+		return inner.length == 0 ? null : inner;
 	}
 
 	static function sameCallableBoundary(callValue:InspectionCallValue, boundaryValue:InspectionCallValue, isResult:Bool):Bool {

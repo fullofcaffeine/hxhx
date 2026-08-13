@@ -16,7 +16,7 @@ const admission = report.controlAdmissions.find(entry => entry.functionId === bo
 const returns = admission?.families?.find(entry => entry.family === 'return')
 const earlyReturn = report.controls.find(entry => entry.functionId === boundary?.functionId && entry.kind === 'return')
 
-if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v4'
+if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
 	|| boundary?.source !== 'non-generic-instance-nullable-enum-declaration'
 	|| boundary.callableBoundaryId != null
 	|| boundary.result?.inputSemanticTypeId !== 'Choice'

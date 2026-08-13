@@ -4816,7 +4816,7 @@
   "representationCount": 20,
   "containerElementConversionModel": "typed-ocaml-container-element-conversions-v1",
   "staticStorageRevision": "sha256:26cc8518973829953d2ebf78a46013230a2db4225df92fe40ca0f46a3b20c6d7",
-  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v25",
+  "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v26",
   "containerElementRequiredConversionIds": [],
   "controlTargetRevision": "sha256:454d0890b84995e0dbc0a0ae8f270db6480556011b98671e5a03cd6e034ae0fe",
   "iMapInterfaceConversions": [],
@@ -15893,7 +15893,7 @@
       "result": "assigned-value"
     }
   ],
-  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v4",
+  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v5",
   "iMapStorageAliasCount": 0,
   "controlAdmissions": [
     {

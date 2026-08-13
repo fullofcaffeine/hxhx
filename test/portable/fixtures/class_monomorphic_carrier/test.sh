@@ -19,7 +19,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
 	fail('unexpected lowering-report schema, control model, or representation scope')
 }
@@ -387,7 +387,7 @@ if (
 	echo "The external inspector accepted an early return bound to a stale class layout" >&2
 	exit 1
 fi
-if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$invalid_control_nominal_log"; then
+if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, enum-to-nullable, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$invalid_control_nominal_log"; then
 	echo "The external inspector rejected the stale early-return class layout for an unexpected reason" >&2
 	cat "$invalid_control_nominal_log" >&2
 	exit 1

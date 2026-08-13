@@ -29,7 +29,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')

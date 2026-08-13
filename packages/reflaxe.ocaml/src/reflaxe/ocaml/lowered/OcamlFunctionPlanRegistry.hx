@@ -323,7 +323,7 @@ private typedef OcamlRootIdentityRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v112";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v30";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v31";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 
 	/**
@@ -509,13 +509,16 @@ class OcamlFunctionPlanRegistry {
 		requireBoundaryBinding(plan.callableBoundary, plan.binding);
 		final functionResultBoundary = plan.functionResultBoundary ?? OcamlFunctionResultBoundary.fromCallable(plan.callableBoundary);
 		OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, plan.callableBoundary);
+		final callableResult = plan.callableBoundary.result;
+		final representedResult = callableResult != null
+			&& (callableResult.conversion == OcamlCallCarrierConversion.Identity
+				&& callableResult.inputSemanticTypeId == callableResult.outputSemanticTypeId
+				&& callableResult.inputCarrierTypeId == callableResult.outputCarrierTypeId
+				&& callableResult.inputRepresentationId == callableResult.outputRepresentationId
+				|| OcamlCallPlan.isExactEnumToNullableResult(callableResult));
 		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
 			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
-			|| plan.callableBoundary.result == null
-			|| plan.callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity
-			|| plan.callableBoundary.result.inputSemanticTypeId != plan.callableBoundary.result.outputSemanticTypeId
-			|| plan.callableBoundary.result.inputCarrierTypeId != plan.callableBoundary.result.outputCarrierTypeId
-			|| plan.callableBoundary.result.inputRepresentationId != plan.callableBoundary.result.outputRepresentationId) {
+			|| !representedResult) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
 		plan.controls.requirePlanBinding(plan.binding);
@@ -553,14 +556,13 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted catch occurrence';
 		final returnBoundary = plan.controls.returnBoundaryDecision();
 		final returnPayload = returnBoundary == null ? null : returnBoundary.payload;
-		final callableResult = plan.callableBoundary.result;
 		if (returnBoundary == null
 			|| returnPayload == null
 			|| callableResult == null
 			|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
 			|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
 			|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId) {
-			throw 'reflaxe.ocaml [ocaml-nested-function:return-boundary-mismatch]: nested function "${plan.binding.functionId}" has callable and control plans for different result carriers';
+			throw 'reflaxe.ocaml [ocaml-nested-function:return-boundary-mismatch]: nested function "${plan.binding.functionId}" has callable and control plans for different result carriers: control=${returnPayload == null ? "missing" : returnPayload.outputSemanticTypeId + "/" + returnPayload.outputCarrierTypeId + "/" + returnPayload.outputRepresentationId}, callable=${callableResult == null ? "missing" : callableResult.outputSemanticTypeId + "/" + callableResult.outputCarrierTypeId + "/" + callableResult.outputRepresentationId}';
 		}
 		final stored:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: plan.occurrenceId,
@@ -1707,12 +1709,23 @@ class OcamlFunctionPlanRegistry {
 		return boundaries;
 	}
 
-	/** Returns every emitted declaration's completion boundary without treating it as call admission. */
+	/**
+		Returns declaration boundaries and the nested boundaries that have no public
+		callable inventory owner.
+
+		Ordinary nested helper results stay internal to their sealed nested plan. The
+		nullable-enum slice is reported because its result changes carrier and needs
+		independent inspection of that conversion.
+	**/
 	public function functionResultBoundaries():Array<OcamlFunctionResultBoundaryPlan> {
 		final boundaries:Array<OcamlFunctionResultBoundaryPlan> = [];
 		for (record in sealedFunctions) {
 			if (record.plan.functionResultBoundary != null)
 				boundaries.push(OcamlFunctionResultBoundary.copy(record.plan.functionResultBoundary));
+		}
+		for (record in nestedFunctionsByOccurrence) {
+			if (record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumCallable)
+				boundaries.push(OcamlFunctionResultBoundary.copy(record.functionResultBoundary));
 		}
 		boundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return boundaries;

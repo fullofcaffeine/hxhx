@@ -12,7 +12,7 @@ const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 const boundary = report.functionResultBoundaries.find(entry => entry.functionId.includes('|Main|static|function|rebuild|'))
 
-if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v4'
+if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
 	|| boundary?.source !== 'non-generic-static-nullable-enum-declaration'
 	|| boundary.callableBoundaryId != null
 	|| boundary.result?.inputSemanticTypeId !== 'haxe.macro.FixtureChoice'

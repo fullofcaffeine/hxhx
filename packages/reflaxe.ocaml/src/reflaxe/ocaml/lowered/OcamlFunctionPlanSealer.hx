@@ -463,8 +463,12 @@ class OcamlFunctionPlanSealer {
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
 					final childParentBinding = nestedBinding;
-					final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
-					final functionResultBoundary = boundary == null ? null : OcamlFunctionResultBoundary.fromCallable(boundary);
+					var boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
+					if (boundary == null)
+						boundary = OcamlFunctionResultBoundary.selectNestedNullableEnumCallable(tfunc, representations, nestedBinding);
+					final functionResultBoundary = boundary == null ? null : (boundary.result != null
+						&& OcamlCallPlan.isExactEnumToNullableResult(boundary.result) ? OcamlFunctionResultBoundary.fromNestedNullableEnum(boundary,
+							tfunc) : OcamlFunctionResultBoundary.fromCallable(boundary));
 					// Loop and exception control does not depend on whether the closure's
 					// result carrier is represented. Only return planning consumes this
 					// literal-producer plan and the optional result boundary.

@@ -34,6 +34,7 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final NonGenericInstanceEffectOnlyVoidDeclaration = "non-generic-instance-effect-only-void-declaration";
 	final NonGenericInstanceNullableEnumDeclaration = "non-generic-instance-nullable-enum-declaration";
 	final NonGenericStaticNullableEnumDeclaration = "non-generic-static-nullable-enum-declaration";
+	final NestedNullableEnumCallable = "nested-nullable-enum-callable";
 	final StaticNullableAnonymousDeclaration = "static-nullable-anonymous-declaration";
 }
 
@@ -89,7 +90,7 @@ typedef OcamlFunctionResultBoundaryPlan = {
 
 /** Builds and validates result-only function boundaries before target syntax. */
 class OcamlFunctionResultBoundary {
-	public static inline final MODEL = "typed-ocaml-function-result-boundary-v4";
+	public static inline final MODEL = "typed-ocaml-function-result-boundary-v5";
 	public static inline final CALLABLE_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
@@ -97,6 +98,7 @@ class OcamlFunctionResultBoundary {
 	public static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID = "non-generic-instance-nullable-enum-function-result-v1";
 	public static inline final NON_GENERIC_STATIC_NULLABLE_ENUM_PROOF_ID = "non-generic-static-nullable-enum-function-result-v1";
+	public static inline final NESTED_NULLABLE_ENUM_PROOF_ID = "nested-nullable-enum-function-result-v1";
 	public static inline final STATIC_NULLABLE_ANONYMOUS_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 
 	/**
@@ -244,55 +246,7 @@ class OcamlFunctionResultBoundary {
 			null;
 		} else {
 			if (nullableEnum != null) {
-				final inputRepresentation = representations.register({
-					semanticTypeId: nullableEnum.semanticTypeId,
-					domain: OcamlRepresentationDomain.InternalValue,
-					carrierTypeId: nullableEnum.carrierTypeId,
-					nullPolicy: OcamlRepresentationNullPolicy.NonNull,
-					identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
-					aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
-					storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
-					valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
-					boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
-					implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
-					reason: "One exact ordinary Haxe enum value completes a sealed nullable-enum function result as its native OCaml variant.",
-					proof: {
-						id: "exact-enum-function-result-input-v1",
-						claim: "The final typed expression has the exact enum identity before syntax generation."
-					},
-					profileEligibility: ["metal", "portable"]
-				});
-				final outputRepresentation = representations.register({
-					semanticTypeId: nullableEnum.nullableSemanticTypeId,
-					domain: OcamlRepresentationDomain.InternalValue,
-					carrierTypeId: "Obj.t",
-					nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
-					identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
-					aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
-					storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
-					valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
-					boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
-					implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
-					reason: "The exact nullable enum result uses Obj.t so it can preserve either the Haxe null sentinel or the native enum variant.",
-					proof: {
-						id: "nullable-enum-function-result-output-v1",
-						claim: "The declared core Null<Enum> type and final exact enum value fix both the nullable carrier and its enum identity."
-					},
-					profileEligibility: ["metal", "portable"]
-				});
-				{
-					index: -1,
-					parameterOptional: false,
-					inputSemanticTypeId: nullableEnum.semanticTypeId,
-					inputCarrierTypeId: nullableEnum.carrierTypeId,
-					inputRepresentationId: inputRepresentation.id,
-					outputSemanticTypeId: nullableEnum.nullableSemanticTypeId,
-					outputCarrierTypeId: "Obj.t",
-					outputRepresentationId: outputRepresentation.id,
-					conversion: OcamlCallCarrierConversion.BoxExactEnumToNullableEnum,
-					proofId: "nullable-enum-function-result-box-v1",
-					proofClaim: "The exact native enum variant enters its declared nullable result through one Obj.repr operation. Its static Null<Enum> type keeps the exact enum identity without a Dynamic runtime-name box."
-				};
+				nullableEnumResultValue(nullableEnum, representations);
 			} else {
 				final representation = if (anonymousStructure != null) {
 					representations.require(anonymousStructure.representationId, binding.programRevision);
@@ -341,6 +295,107 @@ class OcamlFunctionResultBoundary {
 	}
 
 	/**
+		Selects the first result-changing boundary for a nested function literal.
+
+		This narrow slice accepts a zero-argument helper declared as `Null<Enum>`
+		when its normal completion has that exact enum type. The callable still
+		exports the nullable `Obj.t` carrier. Only the helper body crosses from the
+		native OCaml enum variant into that carrier. Early returns are accepted later
+		only when the control planner proves each `null` or enum path separately.
+	**/
+	public static function selectNestedNullableEnumCallable(tfunc:haxe.macro.Type.TFunc, representations:OcamlRepresentationRegistry,
+			binding:OcamlFunctionPlanBinding):Null<OcamlCallableBoundaryPlan> {
+		if (tfunc.args.length != 0)
+			return null;
+		final resultType = switch (TypeTools.follow(tfunc.t)) {
+			case TFun(_, result): result;
+			case _: tfunc.t;
+		};
+		final identity = nullableEnumIdentity(resultType);
+		if (identity == null)
+			return null;
+		final completed = completedExactEnumValue(tfunc.expr, identity.semanticTypeId);
+		if (completed == null)
+			return null;
+		final proof = nullableEnumProof(identity, completed);
+		final result = nullableEnumResultValue(proof, representations);
+		final signatureId = '()->${proof.nullableSemanticTypeId}';
+		return {
+			id: "nested-callable-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
+			calleeId: binding.functionId,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.TypedFunctionValue,
+			receiver: null,
+			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
+			result: result,
+			profileEligibility: ["metal", "portable"],
+			reason: "The zero-argument nested helper declares one exact nullable-enum result. Its native enum completion enters Obj.t once, while sealed early returns preserve the same nullable carrier.",
+			proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX + signatureId,
+			proofClaim: "The final typed function literal, its declared core Null<Enum> result, and its normal enum completion agree on one enum identity. This boundary changes only the function result carrier and does not admit enum parameters, fields, or unrelated calls.",
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision
+		};
+	}
+
+	/** Registers both sides of one exact enum-to-nullable result crossing. */
+	static function nullableEnumResultValue(proof:OcamlFunctionResultNullableEnumProof, representations:OcamlRepresentationRegistry):OcamlCallValuePlan {
+		final inputRepresentation = representations.register({
+			semanticTypeId: proof.semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: proof.carrierTypeId,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "One exact ordinary Haxe enum value completes a sealed nullable-enum function result as its native OCaml variant.",
+			proof: {
+				id: "exact-enum-function-result-input-v1",
+				claim: "The final typed expression has the exact enum identity before syntax generation."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+		final outputRepresentation = representations.register({
+			semanticTypeId: proof.nullableSemanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "The exact nullable enum result uses Obj.t so it can preserve either the Haxe null sentinel or the native enum variant.",
+			proof: {
+				id: "nullable-enum-function-result-output-v1",
+				claim: "The declared core Null<Enum> type and final exact enum value fix both the nullable carrier and its enum identity."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+		return {
+			index: -1,
+			parameterOptional: false,
+			inputSemanticTypeId: proof.semanticTypeId,
+			inputCarrierTypeId: proof.carrierTypeId,
+			inputRepresentationId: inputRepresentation.id,
+			outputSemanticTypeId: proof.nullableSemanticTypeId,
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: outputRepresentation.id,
+			conversion: OcamlCallCarrierConversion.BoxExactEnumToNullableEnum,
+			proofId: "nullable-enum-function-result-box-v1",
+			proofClaim: "The exact native enum variant enters its declared nullable result through one Obj.repr operation. Its static Null<Enum> type keeps the exact enum identity without a Dynamic runtime-name box."
+		};
+	}
+
+	/**
 		Drops a declaration-only candidate unless control planning actually used it.
 
 		The selector runs before control planning so the planner can validate an
@@ -372,6 +427,53 @@ class OcamlFunctionResultBoundary {
 			reason: "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
 			proofId: CALLABLE_RESULT_PROOF_ID,
 			proofClaim: "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+			functionId: callable.functionId,
+			programRevision: callable.programRevision,
+			bodyRevision: callable.bodyRevision,
+			pipelineRevision: callable.pipelineRevision
+		};
+		require(selected);
+		return selected;
+	}
+
+	/**
+		Binds a nested nullable-enum body conversion to its callable result.
+
+		The callable tells callers that the helper returns `Null<Enum>` in `Obj.t`.
+		This result record adds the missing body-side fact: normal completion starts
+		as the native enum variant and must enter `Obj.t` before the helper returns.
+	**/
+	public static function fromNestedNullableEnum(callable:OcamlCallableBoundaryPlan, tfunc:haxe.macro.Type.TFunc):OcamlFunctionResultBoundaryPlan {
+		if (callable.kind != OcamlCallKind.TypedFunctionValue
+			|| callable.resultKind != OcamlCallResultKind.Value
+			|| callable.result == null
+			|| !OcamlCallPlan.isExactEnumToNullableResult(callable.result)) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: nested nullable-enum result requires one exact enum-to-nullable callable result';
+		}
+		final resultType = switch (TypeTools.follow(tfunc.t)) {
+			case TFun(_, result): result;
+			case _: tfunc.t;
+		};
+		final identity = nullableEnumIdentity(resultType);
+		final completed = identity == null ? null : completedExactEnumValue(tfunc.expr, identity.semanticTypeId);
+		if (identity == null || completed == null)
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: nested nullable-enum callable lost its declared type or normal enum completion';
+		final proof = nullableEnumProof(identity, completed);
+		final selected:OcamlFunctionResultBoundaryPlan = {
+			id: "function-result-boundary:" + Sha256.encode(callable.functionId).substr(0, 24),
+			source: OcamlFunctionResultBoundarySource.NestedNullableEnumCallable,
+			callableBoundaryId: callable.id,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			resultKind: callable.resultKind,
+			result: OcamlCallPlan.copyOptionalValue(callable.result),
+			anonymousStructure: null,
+			nullableEnum: proof,
+			profileEligibility: callable.profileEligibility.copy(),
+			reason: "The nested helper callable exports one exact Null<Enum> Obj.t result. This body boundary proves that its normal native enum value enters that carrier before the function returns.",
+			proofId: NESTED_NULLABLE_ENUM_PROOF_ID,
+			proofClaim: "The nested callable result, declared Null<Enum> type, normal completion value, function identity, body revision, program revision, and pipeline revision agree on one exact enum-to-nullable crossing.",
 			functionId: callable.functionId,
 			programRevision: callable.programRevision,
 			bodyRevision: callable.bodyRevision,
@@ -451,8 +553,37 @@ class OcamlFunctionResultBoundary {
 				requireDeclarationNullableEnum(boundary, false);
 			case NonGenericStaticNullableEnumDeclaration:
 				requireDeclarationNullableEnum(boundary, true);
+			case NestedNullableEnumCallable:
+				requireNestedNullableEnum(boundary);
 			case StaticNullableAnonymousDeclaration:
 				requireDeclarationAnonymous(boundary);
+		}
+	}
+
+	/** Rejects a nested result record that lost its callable or enum identity. */
+	static function requireNestedNullableEnum(boundary:OcamlFunctionResultBoundaryPlan):Void {
+		final result = boundary.result;
+		final proof = boundary.nullableEnum;
+		final expectedCallableBoundaryId = "nested-callable-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24);
+		if (boundary.callableBoundaryId != expectedCallableBoundaryId
+			|| boundary.anonymousStructure != null
+			|| boundary.sourceModuleId.length != 0
+			|| boundary.sourceTypeName.length != 0
+			|| boundary.sourceFieldName.length != 0
+			|| boundary.functionId.indexOf("|nested-function|") < 0
+			|| boundary.resultKind != OcamlCallResultKind.Value
+			|| result == null
+			|| proof == null
+			|| proof.semanticTypeId.length == 0
+			|| proof.nullableSemanticTypeId != 'Null<${proof.semanticTypeId}>'
+			|| proof.carrierTypeId != '${OcamlEnumDynamicCarrier.CARRIER_MODEL}:${proof.semanticTypeId}'
+			|| result.inputSemanticTypeId != proof.semanticTypeId
+			|| result.inputCarrierTypeId != proof.carrierTypeId
+			|| result.outputSemanticTypeId != proof.nullableSemanticTypeId
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| !OcamlCallPlan.isExactEnumToNullableResult(result)
+			|| boundary.proofId != NESTED_NULLABLE_ENUM_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: nested result boundary "${boundary.id}" exceeds the exact nullable-enum callable slice';
 		}
 	}
 
@@ -690,7 +821,8 @@ class OcamlFunctionResultBoundary {
 	/** Requires a callable-derived result record to remain identical to its owner. */
 	public static function requireCallableMatch(boundary:OcamlFunctionResultBoundaryPlan, callable:OcamlCallableBoundaryPlan):Void {
 		require(boundary);
-		if (boundary.source != OcamlFunctionResultBoundarySource.CallableBoundary
+		if ((boundary.source != OcamlFunctionResultBoundarySource.CallableBoundary
+			&& boundary.source != OcamlFunctionResultBoundarySource.NestedNullableEnumCallable)
 			|| boundary.callableBoundaryId != callable.id
 			|| boundary.functionId != callable.functionId
 			|| boundary.programRevision != callable.programRevision

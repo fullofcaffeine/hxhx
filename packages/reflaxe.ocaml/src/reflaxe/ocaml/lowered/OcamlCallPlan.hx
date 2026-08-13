@@ -759,16 +759,7 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Bool -> bool once into exact Null<Bool> -> Obj.t';
 				}
 			case BoxExactEnumToNullableEnum:
-				final nullableSemanticTypeId = 'Null<${value.inputSemanticTypeId}>';
-				if (expectedIndex != -1
-					|| value.parameterOptional
-					|| value.inputSemanticTypeId.length == 0
-					|| value.inputCarrierTypeId != 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
-					|| value.inputRepresentationId != 'representation:${value.inputSemanticTypeId}:internal-value'
-					|| value.outputSemanticTypeId != nullableSemanticTypeId
-					|| value.outputCarrierTypeId != "Obj.t"
-					|| value.outputRepresentationId != 'representation:$nullableSemanticTypeId:internal-value'
-					|| value.proofId != "nullable-enum-function-result-box-v1") {
+				if (expectedIndex != -1 || !isExactEnumToNullableResult(value)) {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box one exact enum result into its matching nullable-enum result carrier';
 				}
 			case MaterializeOmittedNullableInt:
@@ -816,6 +807,27 @@ class OcamlCallPlan {
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported conversion "${value.conversion}"';
 		}
+	}
+
+	/**
+		Returns whether one function body value enters its exact `Null<Enum>` carrier.
+
+		The input is one native OCaml variant. The output is `Obj.t`, which can also
+		store the Haxe null sentinel. This check does not authorize an enum call or a
+		general `Dynamic` conversion; it validates only a function-result crossing
+		whose two semantic type names agree.
+	**/
+	public static function isExactEnumToNullableResult(value:OcamlCallValuePlan):Bool {
+		final nullableSemanticTypeId = 'Null<${value.inputSemanticTypeId}>';
+		return !value.parameterOptional
+			&& value.inputSemanticTypeId.length > 0
+			&& value.inputCarrierTypeId == 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
+			&& value.inputRepresentationId == 'representation:${value.inputSemanticTypeId}:internal-value'
+			&& value.outputSemanticTypeId == nullableSemanticTypeId
+			&& value.outputCarrierTypeId == "Obj.t"
+			&& value.outputRepresentationId == 'representation:$nullableSemanticTypeId:internal-value'
+			&& value.conversion == OcamlCallCarrierConversion.BoxExactEnumToNullableEnum
+			&& value.proofId == "nullable-enum-function-result-box-v1";
 	}
 
 	/** Rejects a corrupted program-wide declaration before it enters the catalog. */
@@ -1363,14 +1375,17 @@ class OcamlCallPlan {
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner contains an argument outside the function-value signature matrix';
 			}
 		}
+		final directionalNullableEnumResult = result != null && isExactEnumToNullableResult(result);
 		if (resultKind == OcamlCallResultKind.Value
 			&& (result == null
 				|| (!isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-					&& !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId))
+					&& !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					&& !directionalNullableEnumResult)
 				|| (!isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
-					&& !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId))
-				|| !sameRepresentationSides(result)
-				|| result.conversion != OcamlCallCarrierConversion.Identity)) {
+					&& !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+					&& !directionalNullableEnumResult)
+				|| (!directionalNullableEnumResult
+					&& (!sameRepresentationSides(result) || result.conversion != OcamlCallCarrierConversion.Identity)))) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner contains a result outside the function-value signature matrix';
 		}
 		final expectedProofId = functionValueProofId(arguments, resultKind, result);

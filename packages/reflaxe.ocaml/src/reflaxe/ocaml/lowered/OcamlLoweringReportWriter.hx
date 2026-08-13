@@ -355,9 +355,10 @@ class OcamlLoweringReportWriter {
 				requireCallValue(representationById, boundary.result, 'Function result boundary "${boundary.id}" result');
 			if (boundary.callableBoundaryId != null) {
 				final callable = callableById.get(boundary.callableBoundaryId);
-				if (callable == null)
+				if (callable == null && boundary.source != OcamlFunctionResultBoundarySource.NestedNullableEnumCallable)
 					throw 'Function result boundary "${boundary.id}" refers to missing callable boundary "${boundary.callableBoundaryId}".';
-				OcamlFunctionResultBoundary.requireCallableMatch(boundary, callable);
+				if (callable != null)
+					OcamlFunctionResultBoundary.requireCallableMatch(boundary, callable);
 			}
 			functionResultIds.set(boundary.id, true);
 			functionResultByFunction.set(boundary.functionId, boundary);
@@ -969,7 +970,7 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
 			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v25",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v26",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

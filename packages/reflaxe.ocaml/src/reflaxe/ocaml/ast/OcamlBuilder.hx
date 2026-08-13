@@ -942,7 +942,14 @@ class OcamlBuilder {
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case BoxBoolAndRecoverDynamicTypedFunctionResult:
 								buildAuthorizedDynamicBoolReturnPayload(decision, buildExpr(value), position);
-							case PreserveNullableCarrier, PreserveDynamicReturnCarrier:
+							case PreserveNullableCarrier:
+								if (OcamlControlPlan.isExactNullableEnumSide(selectedPayload.inputSemanticTypeId, selectedPayload.inputCarrierTypeId,
+									selectedPayload.inputRepresentationId)) {
+									OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+								} else {
+									buildExpr(value);
+								}
+							case PreserveDynamicReturnCarrier:
 								buildExpr(value);
 							case PreserveAnonymousCarrier:
 								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
@@ -9352,6 +9359,7 @@ class OcamlBuilder {
 				buildExpr(tfunc.expr);
 		}
 
+		var resultConvertedInsideControl = false;
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
 			final plannedReturn = nestedDisposition == null ? null : nestedDisposition.controls.returnBoundaryDecision();
@@ -9378,7 +9386,14 @@ class OcamlBuilder {
 			final fallbackBody = if (isVoidType(functionReturnType)) {
 				exprAsStatement(body);
 			} else {
-				body;
+				if (functionResultBoundary != null
+					&& functionResultBoundary.result != null
+					&& functionResultBoundary.result.conversion != OcamlCallCarrierConversion.Identity) {
+					resultConvertedInsideControl = true;
+					buildPlannedFunctionResult(functionResultBoundary.result, body, tfunc.expr.pos);
+				} else {
+					body;
+				}
 			}
 			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
@@ -9389,7 +9404,8 @@ class OcamlBuilder {
 				return
 					callPlanInvariant('nested function result boundary "${functionResultBoundary.id}" has no represented result for its value-returning typed function',
 					tfunc.expr.pos);
-			body = buildPlannedFunctionResult(functionResultBoundary.result, body, tfunc.expr.pos);
+			if (!resultConvertedInsideControl)
+				body = buildPlannedFunctionResult(functionResultBoundary.result, body, tfunc.expr.pos);
 			body = OcamlExpr.EAnnot(body, callableOutputType(functionResultBoundary.result, tfunc.expr.pos));
 		}
 
