@@ -340,6 +340,14 @@ class OcamlBuilder {
 		throw diagnostic;
 	}
 
+	function enumSwitchInvariant<T>(message:String, position:Position):T {
+		final diagnostic = "reflaxe.ocaml [ocaml-lowering:enum-switch-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
 	function arrayLiteralProducerInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-array-literal:plan-invariant]: " + message;
 		#if macro
@@ -9501,9 +9509,8 @@ class OcamlBuilder {
 						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
 
 						for (c in cases) {
-							// Only support a single constructor index per case for now.
-							final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
-							final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
+							final patRes = buildEnumIndexCasePats(enumType, c.values, c.expr.pos);
+							final pat = patRes.pat;
 
 							final prev = currentEnumParamNames;
 							final prevScrut = currentEnumParamScrutineeLocalId;
@@ -9723,7 +9730,7 @@ class OcamlBuilder {
 		return true;
 	}
 
-	function buildEnumIndexCasePat(enumType:EnumType, indexExpr:TypedExpr):Null<{pat:OcamlPat, enumParams:Map<String, String>}> {
+	function buildEnumIndexCasePat(enumType:EnumType, indexExpr:TypedExpr):Null<{pat:OcamlPat, enumParams:Map<String, String>, payloadArity:Int}> {
 		final idx:Null<Int> = switch (indexExpr.expr) {
 			case TConst(TInt(v)): v;
 			case _: null;
@@ -9765,7 +9772,43 @@ class OcamlBuilder {
 			enumParams.set(field.name + ":" + i, n);
 		}
 
-		return {pat: OcamlPat.PConstructor(ctorName, patArgs), enumParams: enumParams};
+		return {pat: OcamlPat.PConstructor(ctorName, patArgs), enumParams: enumParams, payloadArity: argCount};
+	}
+
+	/**
+			Combines constructor indices from one Haxe case into one OCaml or-pattern.
+			Haxe types these switches through integer constructor indices. Reconstructing
+				the enum patterns keeps each constructor visible in target code. OCaml requires
+				every alternative to bind the same payload variables, so incompatible payload
+				shapes stop generation instead of becoming a wildcard.
+		**/
+	function buildEnumIndexCasePats(enumType:EnumType, values:Array<TypedExpr>, position:Position):{pat:OcamlPat, enumParams:Map<String, String>} {
+		if (values.length == 0)
+			return enumSwitchInvariant("an enum-index switch case has no constructor indices", position);
+
+		final patterns:Array<OcamlPat> = [];
+		final combinedParams:Map<String, String> = [];
+		var expectedPayloadArity:Null<Int> = null;
+		for (value in values) {
+			final result = buildEnumIndexCasePat(enumType, value);
+			if (result == null)
+				return enumSwitchInvariant("an enum-index switch case contains an unknown constructor index", value.pos);
+
+			if (expectedPayloadArity == null) {
+				expectedPayloadArity = result.payloadArity;
+			} else if (expectedPayloadArity != result.payloadArity) {
+				return enumSwitchInvariant("grouped enum constructors bind incompatible payload variables", value.pos);
+			}
+
+			for (key in result.enumParams.keys())
+				combinedParams.set(key, result.enumParams.get(key));
+			patterns.push(result.pat);
+		}
+
+		return {
+			pat: patterns.length == 1 ? patterns[0] : OcamlPat.POr(patterns),
+			enumParams: combinedParams
+		};
 	}
 
 	function buildSwitchValuePat(v:TypedExpr):OcamlPat {
