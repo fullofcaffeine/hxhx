@@ -1,3 +1,5 @@
+typedef FieldTextAlias = String;
+
 /** Exercises direct `String.length` reads through generated and compiled OCaml. */
 class Main {
 	static var receiverCalls = 0;
@@ -11,9 +13,11 @@ class Main {
 
 	static function main():Void {
 		final text = "local";
+		final alias:FieldTextAlias = "alias";
 		final nested = () -> "nested".length;
 
 		Sys.println("local=" + text.length);
+		Sys.println("alias=" + alias.length);
 		Sys.println("standalone=" + standaloneLength);
 		Sys.println("nested=" + nested());
 		Sys.println("side=" + receiver().length);

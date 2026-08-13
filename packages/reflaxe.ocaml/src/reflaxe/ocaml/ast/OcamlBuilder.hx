@@ -7754,7 +7754,7 @@ class OcamlBuilder {
 				false;
 		};
 		if (!fieldMatches
-			|| decision.receiverSemanticTypeId != TypeTools.toString(receiver.t)
+			|| decision.receiverSemanticTypeId != "String"
 			|| decision.resultSemanticTypeId != TypeTools.toString(expression.t))
 			return callPlanInvariant('String field decision "${decision.id}" belongs to another field or type', expression.pos);
 

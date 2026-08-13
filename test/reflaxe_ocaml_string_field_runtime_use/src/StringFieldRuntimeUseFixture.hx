@@ -29,14 +29,17 @@ class StringFieldRuntimeUseFixture {
 	public static macro function run():Expr {
 		final typed = Context.typeExpr(macro {
 			final text = "abc";
+			final alias:FieldTextAlias = "alias";
 			text.length;
+			alias.length;
 		});
 		final plan = new OcamlStringFieldPlanner(binding).plan(typed);
 		final decisions = plan.decisions();
-		if (decisions.length != 1)
-			throw 'Expected one direct String.length decision, received ${decisions.length}.';
+		if (decisions.length != 2)
+			throw 'Expected two direct String.length decisions, received ${decisions.length}.';
 
-		proveRuntimeUse(decisions[0]);
+		for (decision in decisions)
+			proveRuntimeUse(decision);
 		expectFailure("missing decision", "has no sealed source occurrence", () -> plan.requireFor(Context.typeExpr(macro "other".length)));
 		expectFailure("duplicate decision", "sealed more than once", () -> new OcamlStringFieldPlan([decisions[0], decisions[0]]));
 		expectFailure("stale binding", "belongs to another function or target pipeline", () -> plan.requirePlanBinding({
@@ -92,18 +95,20 @@ class StringFieldRuntimeUseFixture {
 		])));
 		expectFailure("changed result", "incomplete or incompatible facts",
 			() -> OcamlStringFieldPlan.requireDecision(copyDecision(decision, decision.runtimeUseOccurrences, "String")));
+		expectFailure("changed receiver", "incomplete or incompatible facts",
+			() -> OcamlStringFieldPlan.requireDecision(copyDecision(decision, decision.runtimeUseOccurrences, null, null, "FieldTextAlias")));
 		expectFailure("changed schedule", "incomplete or incompatible facts",
 			() -> OcamlStringFieldPlan.requireDecision(copyDecision(decision, decision.runtimeUseOccurrences, null, ["runtime-read", "receiver"])));
 	}
 
 	static function copyDecision(source:OcamlStringFieldDecision, runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>, ?resultSemanticTypeId:String,
-			?evaluationOrder:Array<String>):OcamlStringFieldDecision {
+			?evaluationOrder:Array<String>, ?receiverSemanticTypeId:String):OcamlStringFieldDecision {
 		return {
 			id: source.id,
 			revision: source.revision,
 			source: {file: source.source.file, min: source.source.min, max: source.source.max},
 			fieldName: source.fieldName,
-			receiverSemanticTypeId: source.receiverSemanticTypeId,
+			receiverSemanticTypeId: receiverSemanticTypeId ?? source.receiverSemanticTypeId,
 			resultSemanticTypeId: resultSemanticTypeId ?? source.resultSemanticTypeId,
 			evaluationOrder: evaluationOrder == null ? source.evaluationOrder.copy() : evaluationOrder.copy(),
 			order: source.order,

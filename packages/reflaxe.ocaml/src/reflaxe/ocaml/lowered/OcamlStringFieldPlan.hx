@@ -254,7 +254,9 @@ class OcamlStringFieldPlanner {
 					if (isStandardString(owner) && field.name == "length" && field.kind.match(FVar(_, _))) {
 						final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 						final order = decisions.length;
-						final receiverSemanticTypeId = TypeTools.toString(receiver.t);
+						// The resolved owner proves this is the root standard String field.
+						// A typedef changes only the source spelling, not the carrier.
+						final receiverSemanticTypeId = "String";
 						final resultSemanticTypeId = TypeTools.toString(expression.t);
 						final id = "string-field:" + Sha256.encode([
 							binding.functionId,
