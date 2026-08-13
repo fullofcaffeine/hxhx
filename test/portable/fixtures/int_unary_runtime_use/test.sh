@@ -10,7 +10,7 @@ trap 'rm -f "$inspection"' EXIT
 node - "$report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 84
+if (report.schemaVersion !== 85
 	|| report.intUnaryModel !== 'typed-ocaml-int-unary-v1'
 	|| report.intUnaryCount !== 10
 	|| report.intUnary?.length !== 10) {
@@ -29,7 +29,7 @@ for (const decision of report.intUnary) {
 		? [finalSymbol, 'HxRuntime.hx_null']
 		: [finalSymbol]
 	if (decision.proofId !== 'int-unary-runtime-use-v1'
-		|| !['ocaml-function-plans-v107', 'ocaml-nested-function-plans-v28', 'ocaml-standalone-expression-plans-v13'].includes(decision.pipelineRevision)
+		|| !['ocaml-function-plans-v108', 'ocaml-nested-function-plans-v29', 'ocaml-standalone-expression-plans-v14'].includes(decision.pipelineRevision)
 		|| decision.runtimeUseOccurrences.map(use => use.exactSymbol).join(',') !== expectedSymbols.join(',')) {
 		throw new Error(`Incomplete integer unary authority: ${JSON.stringify(decision)}`)
 	}

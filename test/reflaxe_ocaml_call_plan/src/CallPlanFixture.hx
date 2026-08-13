@@ -95,6 +95,8 @@ class CallPlanFixture {
 	static inline final STANDARD_ARRAY_COPY_CALL_ID = "call:standard-array-copy-fixture";
 	static inline final STANDARD_IMAP_SET_CALL_ID = "call:standard-imap-set-fixture";
 	static inline final STANDARD_IMAP_TO_STRING_CALL_ID = "call:standard-imap-to-string-fixture";
+	static inline final GENERIC_IDENTITY_CALLEE_ID = "GenericIdentity|GenericIdentity::identity";
+	static inline final GENERIC_IDENTITY_CALL_ID = "call:generic-identity-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -677,6 +679,31 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function genericIdentityCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: GENERIC_IDENTITY_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 60, max: 61},
+			calleeId: GENERIC_IDENTITY_CALLEE_ID,
+			sourceModuleId: "GenericIdentity",
+			sourceTypeName: "GenericIdentity",
+			sourceFieldName: "identity",
+			kind: OcamlCallKind.DirectStaticGenericIdentity,
+			receiver: null,
+			arguments: [stringValue(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: stringValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(GENERIC_IDENTITY_CALL_ID, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact generic identity call",
+			proofId: OcamlCallPlan.DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID,
+			proofClaim: "fixture exact generic identity call",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -1627,6 +1654,20 @@ class CallPlanFixture {
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final selectedGenericIdentityCall = genericIdentityCall(caller);
+		OcamlCallPlan.requireCall(selectedGenericIdentityCall);
+		final genericIdentityPlan = new OcamlCallPlan([selectedGenericIdentityCall]);
+		if (genericIdentityPlan.runtimeUsePlanFor(selectedGenericIdentityCall.id) != null)
+			Context.error("A concrete generic identity call unexpectedly owns a private runtime-use plan.", Context.currentPos());
+		final genericIdentityRegistry = new OcamlFunctionPlanRegistry();
+		genericIdentityRegistry.beginProgram(PROGRAM_REVISION);
+		seal(genericIdentityRegistry, caller, genericIdentityPlan, null);
+		genericIdentityRegistry.validateCallGraph();
+		final wrongGenericIdentityResult = copyCall(selectedGenericIdentityCall, null, null, null, value(-1));
+		expectThrows("does not preserve one exact generic identity carrier", () -> OcamlCallPlan.requireCall(wrongGenericIdentityResult));
+		final wrongGenericIdentityProof = copyCall(selectedGenericIdentityCall);
+		Reflect.setField(wrongGenericIdentityProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
+		expectThrows("mismatched generic identity proof", () -> OcamlCallPlan.requireCall(wrongGenericIdentityProof));
 		final boolRuntimeCall = copyCall(call(caller), null, null, [boxedDynamicBool]);
 		final boolRuntimeCallPlan = new OcamlCallPlan([boolRuntimeCall]);
 		final boolRuntimeUsePlan = boolRuntimeCallPlan.runtimeUsePlanFor(boolRuntimeCall.id);

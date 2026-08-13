@@ -36,7 +36,7 @@ class ReflaxeOcamlStructuralIteratorInspection {
 			|| call.functionId.length == 0
 			|| call.programRevision.length == 0
 			|| call.bodyRevision.length == 0
-			|| call.pipelineRevision != "ocaml-function-plans-v107"
+			|| call.pipelineRevision != "ocaml-function-plans-v108"
 			|| call.profileEligibility.length != 2
 			|| call.profileEligibility[0] != "metal"
 			|| call.profileEligibility[1] != "portable") {

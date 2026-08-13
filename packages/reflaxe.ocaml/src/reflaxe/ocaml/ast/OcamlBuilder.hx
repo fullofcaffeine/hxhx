@@ -1517,8 +1517,11 @@ class OcamlBuilder {
 				return callPlanInvariant('obsolete standard IMap call "${call.id}" reached syntax after the interface-adapter hard cut', position);
 			if (call.kind == OcamlCallKind.StructuralIteratorMethod)
 				return buildPlannedStructuralIteratorCall(call, callee, arguments, position);
-			if (call.kind != OcamlCallKind.TypedFunctionValue)
+			if (call.kind == OcamlCallKind.DirectStaticHaxeMethod
+				|| call.kind == OcamlCallKind.DirectInstanceHaxeMethod
+				|| call.kind == OcamlCallKind.DirectHaxeConstructor) {
 				functionPlanRegistry.requireCallableDeclaration(call);
+			}
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
@@ -1529,7 +1532,7 @@ class OcamlBuilder {
 					position);
 
 		var target:Null<OcamlExpr> = switch (call.kind) {
-			case OcamlCallKind.DirectStaticHaxeMethod,
+			case OcamlCallKind.DirectStaticHaxeMethod, OcamlCallKind.DirectStaticGenericIdentity,
 				OcamlCallKind.DirectInstanceHaxeMethod: final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId); final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId); final targetName = ctx.scopedValueName(call.sourceModuleId,
 					call.sourceTypeName,
 					call.sourceFieldName); selfModule != null && selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName),
@@ -3746,6 +3749,8 @@ class OcamlBuilder {
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, callee, arguments, e.pos);
+			case TCall(_, _) if (OcamlCallPlanner.isDirectStaticGenericIdentityCall(e)):
+				callPlanInvariant("a direct generic identity call reached syntax without its sealed concrete carrier plan", e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
 				if (functionPlanRegistry.hasOptionalCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))
 					|| functionPlanRegistry.hasEffectOnlyCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):

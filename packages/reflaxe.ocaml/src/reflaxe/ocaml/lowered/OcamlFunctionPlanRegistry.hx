@@ -322,9 +322,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v107";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v28";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v13";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v108";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v29";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v14";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.

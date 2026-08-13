@@ -89,6 +89,7 @@ class ReflaxeOcamlInspection {
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
 	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
+	static inline final DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID = "direct-static-generic-identity-v1";
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
@@ -98,9 +99,9 @@ class ReflaxeOcamlInspection {
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v107";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v28";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v13";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v108";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v29";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v14";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -464,8 +465,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 84) {
-						throw 'Unsupported lowering report schema $version; expected 84.';
+					if (version != 85) {
+						throw 'Unsupported lowering report schema $version; expected 85.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1965,7 +1966,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v29")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v30")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -2047,6 +2048,10 @@ class ReflaxeOcamlInspection {
 			if (call.kind == "typed-function-value") {
 				if (call.sourceModuleId.length != 0 || call.sourceTypeName.length != 0 || call.sourceFieldName.length != 0)
 					throw 'Function-value call "${call.id}" must not report a declaration identity.';
+				callIds.set(call.id, true);
+				continue;
+			}
+			if (call.kind == "direct-static-generic-identity") {
 				callIds.set(call.id, true);
 				continue;
 			}
@@ -2584,6 +2589,7 @@ class ReflaxeOcamlInspection {
 	static function requireCallKind(value:Dynamic):String {
 		final kind = requiredString(value, "kind");
 		if (kind != "direct-static-haxe-method"
+			&& kind != "direct-static-generic-identity"
 			&& kind != "direct-instance-haxe-method"
 			&& kind != "direct-haxe-constructor"
 			&& kind != "typed-function-value"
@@ -2953,6 +2959,29 @@ class ReflaxeOcamlInspection {
 			owner:String):Void {
 		if (kind == "direct-static-haxe-method" && proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
+		if (kind == "direct-static-generic-identity") {
+			if (proofId != DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID)
+				throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID".';
+			final genericResult = result;
+			if (genericResult == null)
+				throw '$owner has no generic identity result.';
+			if (arguments.length != 1
+				|| arguments[0].parameterOptional
+				|| arguments[0].conversion != "identity"
+				|| resultKind != "value"
+				|| genericResult.conversion != "identity"
+				|| arguments[0].inputSemanticTypeId != arguments[0].outputSemanticTypeId
+				|| arguments[0].inputCarrierTypeId != arguments[0].outputCarrierTypeId
+				|| arguments[0].inputRepresentationId != arguments[0].outputRepresentationId
+				|| arguments[0].outputSemanticTypeId != genericResult.inputSemanticTypeId
+				|| arguments[0].outputCarrierTypeId != genericResult.inputCarrierTypeId
+				|| arguments[0].outputRepresentationId != genericResult.inputRepresentationId
+				|| genericResult.inputSemanticTypeId != genericResult.outputSemanticTypeId
+				|| genericResult.inputCarrierTypeId != genericResult.outputCarrierTypeId
+				|| genericResult.inputRepresentationId != genericResult.outputRepresentationId) {
+				throw '$owner does not preserve one exact generic identity carrier.';
+			}
+		}
 		if (kind == "direct-instance-haxe-method") {
 			if (proofId != DIRECT_INSTANCE_SIGNATURE_PROOF_ID)
 				throw '$owner has proof "$proofId" instead of "$DIRECT_INSTANCE_SIGNATURE_PROOF_ID".';

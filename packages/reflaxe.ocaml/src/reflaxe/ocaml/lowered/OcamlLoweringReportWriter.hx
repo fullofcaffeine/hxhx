@@ -74,7 +74,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 84;
+	public static inline final SCHEMA_VERSION = 85;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -370,7 +370,8 @@ class OcamlLoweringReportWriter {
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
-			if (call.kind == OcamlCallKind.TypedFunctionValue
+			if (call.kind == OcamlCallKind.DirectStaticGenericIdentity
+				|| call.kind == OcamlCallKind.TypedFunctionValue
 				|| call.kind == OcamlCallKind.DynamicFunctionValue
 				|| call.kind == OcamlCallKind.StandardArrayMethod
 				|| call.kind == OcamlCallKind.StandardIMapMethod
@@ -945,7 +946,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v29",
+			callModel: "typed-ocaml-directional-call-boundary-v30",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,

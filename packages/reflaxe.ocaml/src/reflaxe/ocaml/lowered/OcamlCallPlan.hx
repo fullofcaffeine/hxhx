@@ -26,6 +26,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIte
 /** The source-language dispatch selected before OCaml syntax is constructed. */
 enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
+	final DirectStaticGenericIdentity = "direct-static-generic-identity";
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
@@ -229,6 +230,7 @@ typedef OcamlCallDecision = {
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
+	public static inline final DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID = "direct-static-generic-identity-v1";
 	public static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	public static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
@@ -294,8 +296,11 @@ class OcamlCallPlan {
 				&& arguments.length == suppliedArgumentCount(decision.arguments)
 				&& classRef.get().constructor != null
 				&& OcamlCallPlanner.calleeId(classRef.get(), classRef.get().constructor.get()) == decision.calleeId;
-			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == suppliedArgumentCount(decision.arguments) && OcamlCallPlanner.calleeId(classRef.get(),
-					fieldRef.get()) == decision.calleeId;
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectStaticGenericIdentity):
+				OcamlCallPlanner.matchesDirectStaticGenericIdentity(decision, classRef.get(), fieldRef.get(), arguments, expression.t);
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectStaticHaxeMethod):
+				arguments.length == suppliedArgumentCount(decision.arguments)
+				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
 			case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectInstanceHaxeMethod):
 				arguments.length == suppliedArgumentCount(decision.arguments)
 				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
@@ -1205,6 +1210,26 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
 				if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-static signature proof';
+			case DirectStaticGenericIdentity:
+				if (receiver != null)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a static generic identity';
+				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete generic identity declaration';
+				if (proofId != DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched generic identity proof';
+				if (arguments.length != 1
+					|| arguments[0].parameterOptional
+					|| arguments[0].conversion != OcamlCallCarrierConversion.Identity
+					|| !sameRepresentationSides(arguments[0])
+					|| resultKind != OcamlCallResultKind.Value
+					|| result == null
+					|| result.conversion != OcamlCallCarrierConversion.Identity
+					|| !sameRepresentationSides(result)
+					|| arguments[0].outputSemanticTypeId != result.outputSemanticTypeId
+					|| arguments[0].outputCarrierTypeId != result.outputCarrierTypeId
+					|| arguments[0].outputRepresentationId != result.outputRepresentationId) {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner does not preserve one exact generic identity carrier';
+				}
 			case DirectInstanceHaxeMethod:
 				if (receiver == null)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has no sealed instance receiver';
@@ -1502,12 +1527,12 @@ private typedef OcamlAdmittedCallSignature = {
 /**
 	Selects the first closed typed-call kinds from final Haxe expressions.
 
-	Only an ordinary, non-extern, non-generic static method whose arguments and
-	result independently select admitted representations, or a local/call-produced
-	function value using that same signature matrix, is admitted. Every other
-	computed-call shape remains on the older syntax path until a later slice gives
-	it an equally complete identity, conversion plan, evaluation schedule, and
-	fail-closed validator.
+	Ordinary methods use a program-wide callable boundary. A direct generic
+	identity function instead stays OCaml-polymorphic and records one concrete
+	carrier at each call. Local and call-produced function values use the same
+	closed representation matrix. Every other computed-call shape remains on the
+	older syntax path until a later slice gives it an equally complete identity,
+	conversion plan, evaluation schedule, and fail-closed validator.
 **/
 class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
@@ -1928,6 +1953,9 @@ class OcamlCallPlanner {
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
+				final genericIdentity = directStaticGenericIdentityDecision(expression, classType, field, arguments);
+				if (genericIdentity != null)
+					return genericIdentity;
 				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
 				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
@@ -2072,6 +2100,168 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	/**
+		Selects one call to a source-level identity function before syntax starts.
+
+		The Haxe function must have the exact shape `static function <T>(value:T):T`
+		and must return that parameter directly. OCaml can keep this definition
+		polymorphic. Each call still records its concrete `Int`, `Bool`, or `String`
+		carrier, so the syntax builder never guesses whether it must use `Obj.t`.
+	**/
+	function directStaticGenericIdentityDecision(expression:TypedExpr, classType:ClassType, field:ClassField,
+			arguments:Array<TypedExpr>):Null<OcamlCallDecision> {
+		if (!isDirectStaticGenericIdentity(classType, field))
+			return null;
+		if (arguments.length != 1)
+			throw 'reflaxe.ocaml [ocaml-call:generic-identity-substitution]: ${calleeId(classType, field)} does not have one concrete call argument';
+		final argumentRepresentation = directGenericIdentityRepresentation(arguments[0].t, representations);
+		final resultRepresentation = directGenericIdentityRepresentation(expression.t, representations);
+		if (argumentRepresentation == null
+			|| resultRepresentation == null
+			|| argumentRepresentation.semanticTypeId != resultRepresentation.semanticTypeId
+			|| argumentRepresentation.carrierTypeId != resultRepresentation.carrierTypeId
+			|| argumentRepresentation.id != resultRepresentation.id) {
+			throw 'reflaxe.ocaml [ocaml-call:generic-identity-substitution]: ${calleeId(classType, field)} does not preserve one supported concrete carrier from argument to result';
+		}
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final selectedCalleeId = calleeId(classType, field);
+		final id = "call:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(source),
+			selectedCalleeId,
+			argumentRepresentation.id
+		].join("|")).substr(0, 24);
+		final argument = identityValue(0, argumentRepresentation);
+		final result = identityValue(-1, resultRepresentation);
+		return {
+			id: id,
+			source: source,
+			calleeId: selectedCalleeId,
+			sourceModuleId: classType.module,
+			sourceTypeName: classType.name,
+			sourceFieldName: field.name,
+			kind: OcamlCallKind.DirectStaticGenericIdentity,
+			receiver: null,
+			arguments: [argument],
+			resultKind: OcamlCallResultKind.Value,
+			result: result,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: 'The final Haxe declaration returns its only generic parameter directly. This call preserves the concrete ${argumentRepresentation.semanticTypeId} value in its ${argumentRepresentation.carrierTypeId} carrier.',
+			proofId: OcamlCallPlan.DIRECT_STATIC_GENERIC_IDENTITY_PROOF_ID,
+			proofClaim: "The final typed declaration is exactly one static generic identity function. The call argument and result select the same concrete representation, so OCaml type inference preserves that carrier without Obj boxing.",
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision
+		};
+	}
+
+	/** Returns whether a final Haxe declaration is the exact generic identity slice. */
+	public static function isDirectStaticGenericIdentity(classType:ClassType, field:ClassField):Bool {
+		if (!ordinaryOwner(classType) || field.name == "new" || field.isExtern || classType.params.length > 0 || field.params.length != 1
+			|| field.overloads.get().length > 0 || !ordinaryMethod(field)) {
+			return false;
+		}
+		final parameterType = field.params[0].t;
+		final signatureMatches = switch (field.type) {
+			case TFun(arguments, result):
+				arguments.length == 1
+				&& !arguments[0].opt
+				&& sameTypeParameter(arguments[0].t, parameterType)
+				&& sameTypeParameter(result, parameterType);
+			case _:
+				false;
+		};
+		if (!signatureMatches)
+			return false;
+		final definition = field.expr();
+		return switch (definition == null ? null : definition.expr) {
+			case TFunction(fn): fn.args.length == 1 && directReturnedLocalId(fn.expr) == fn.args[0].v.id;
+			case _:
+				false;
+		};
+	}
+
+	/** Returns whether a fresh typed call still matches its sealed identity carrier. */
+	public static function matchesDirectStaticGenericIdentity(decision:OcamlCallDecision, classType:ClassType, field:ClassField, arguments:Array<TypedExpr>,
+			resultType:Type):Bool {
+		if (!isDirectStaticGenericIdentity(classType, field)
+			|| arguments.length != 1
+			|| decision.arguments.length != 1
+			|| decision.result == null
+			|| calleeId(classType, field) != decision.calleeId) {
+			return false;
+		}
+		final argumentSemanticType = directGenericIdentitySemanticType(arguments[0].t);
+		final resultSemanticType = directGenericIdentitySemanticType(resultType);
+		return argumentSemanticType != null
+			&& argumentSemanticType == resultSemanticType
+			&& decision.arguments[0].inputSemanticTypeId == argumentSemanticType
+			&& decision.arguments[0].outputSemanticTypeId == argumentSemanticType
+			&& decision.result.inputSemanticTypeId == resultSemanticType
+			&& decision.result.outputSemanticTypeId == resultSemanticType;
+	}
+
+	/** Returns whether syntax must find a sealed plan for this exact call family. */
+	public static function isDirectStaticGenericIdentityCall(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _):
+				isDirectStaticGenericIdentity(classRef.get(), fieldRef.get());
+			case _:
+				false;
+		};
+	}
+
+	static function sameTypeParameter(left:Type, right:Type):Bool {
+		final leftId = typeParameterId(left);
+		return leftId != null && leftId == typeParameterId(right);
+	}
+
+	static function typeParameterId(type:Type):Null<String> {
+		return switch (type) {
+			case TInst(classRef, []):
+				final classType = classRef.get();
+				switch (classType.kind) {
+					case KTypeParameter(_):
+						classType.module + "|" + classType.pack.join(".") + "|" + classType.name;
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function directReturnedLocalId(expression:TypedExpr):Null<Int> {
+		return switch (expression.expr) {
+			case TMeta(_, child), TParenthesis(child), TCast(child, null):
+				directReturnedLocalId(child);
+			case TBlock([child]):
+				directReturnedLocalId(child);
+			case TReturn({expr: TLocal(local)}):
+				local.id;
+			case _:
+				null;
+		};
+	}
+
+	static function directGenericIdentitySemanticType(type:Type):Null<String> {
+		if (OcamlRepresentationRegistry.isExactInt(type))
+			return "Int";
+		if (OcamlRepresentationRegistry.isExactBool(type))
+			return "Bool";
+		return OcamlRepresentationRegistry.isExactString(type) ? "String" : null;
+	}
+
+	static function directGenericIdentityRepresentation(type:Type, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
+		final semanticType = directGenericIdentitySemanticType(type);
+		return semanticType == null ? null : representationForSemanticType(semanticType, representations);
 	}
 
 	/** Builds the sealed occurrence for a call through a Haxe `Dynamic` value. */

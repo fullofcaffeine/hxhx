@@ -31,7 +31,7 @@ assert.doesNotMatch(arrayElementBuilder[0], /fromDirectValue/,
 	'array syntax must consume the sealed enum identity instead of classifying the typed constructor again')
 
 const conversions = lowering.containerElementConversions
-assert.equal(lowering.schemaVersion, 84)
+assert.equal(lowering.schemaVersion, 85)
 assert.equal(conversions.length, 4,
 	'the method-local and static-initializer enum values should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 0, 1, 1])

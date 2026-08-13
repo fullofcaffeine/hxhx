@@ -27,7 +27,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 84
+if (report.schemaVersion !== 85
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
@@ -55,7 +55,7 @@ for (const [name, expectedCount] of expectedRootByFunction) {
 const nestedControls = controls.filter(control => control.functionId.includes('|nested-function|'))
 if (nestedControls.length !== 1
 	|| !nestedControls[0].functionId.includes('|function|nestedClosure|')
-	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v28') {
+	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v29') {
 	fail('the nested Void function did not receive its own effect-only return boundary')
 }
 
@@ -72,8 +72,8 @@ for (const control of controls) {
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
-			? 'ocaml-nested-function-plans-v28'
-			: 'ocaml-function-plans-v107')
+			? 'ocaml-nested-function-plans-v29'
+			: 'ocaml-function-plans-v108')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
