@@ -42,6 +42,13 @@ class Main {
 			default: "other";
 		});
 
+		final source = [2, 3];
+		final copied = switch (ni) {
+			case 1: [1];
+			case _: source.copy();
+		}
+		Sys.println("copied=" + copied.join(","));
+
 		Sys.println("OK switch_case_null");
 	}
 }

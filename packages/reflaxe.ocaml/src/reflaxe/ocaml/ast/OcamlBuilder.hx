@@ -226,6 +226,7 @@ class OcamlBuilder {
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
 	var currentStaticStringPlan:Null<OcamlStaticStringPlan> = null;
+	final standardArrayOutputCounts:Map<String, Int> = [];
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -1763,10 +1764,24 @@ class OcamlBuilder {
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
 				ctx.runtimeRequirementsByIds([occurrence.requirementId]), [occurrence], ctx.finalRuntimeUses);
-			final runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			var runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 			// Receiver and argument expressions may contain private calls owned by
 			// other plans, so reconcile only the identifier introduced here.
 			authority.reconcileExpression(runtimeFunction);
+			final outputKey = occurrence.planRevision + "|" + occurrence.id;
+			final previousOutputCount = standardArrayOutputCounts.get(outputKey);
+			final outputCount = previousOutputCount == null ? 0 : previousOutputCount;
+			standardArrayOutputCounts.set(outputKey, outputCount + 1);
+			if (outputCount > 0) {
+				// Haxe can place one typed source occurrence in more than one final
+				// branch. For example, a wildcard switch can reuse its branch expression
+				// in an earlier null test and in the final fallback. Each generated OCaml
+				// helper still needs a separate checked identity. Copy only this call's
+				// helper reference so nested receiver and argument plans keep ownership of
+				// their own output occurrences.
+				runtimeFunction = ctx.finalRuntimeUses.copyExpressionForOutput(runtimeFunction, 'standard-array-call:${call.id}:output:$outputCount',
+					ctx.activateStagedTypeRuntimeUse);
+			}
 			final materialized:Array<{name:String, value:OcamlExpr}> = [];
 			final receiverName = freshTmp("array_receiver");
 			materialized.push({name: receiverName, value: buildExpr(typedField.receiver)});

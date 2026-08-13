@@ -4,4 +4,5 @@ bool=null
 bool2=true
 float=null
 float2=onehalf
+copied=2,3
 OK switch_case_null
