@@ -16,8 +16,8 @@ const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 const lowering = JSON.parse(fs.readFileSync(loweringPath, 'utf8'))
 const owned = report.requirements.filter(requirement =>
 	requirement.semanticCapability === 'haxe-std-is-of-type' && requirement.source?.file === 'src/Main.hx')
-if (owned.length !== 10) {
-	throw new Error(`Expected ten source-owned Std.isOfType runtime requirements, received ${owned.length}.`)
+if (owned.length !== 13) {
+	throw new Error(`Expected thirteen source-owned Std.isOfType runtime requirements, received ${owned.length}.`)
 }
 for (const requirement of owned) {
 	if (!Array.isArray(requirement.rootModules) || requirement.rootModules.length < 1) {
@@ -32,10 +32,10 @@ const expectedStrategies = new Map([
 	['dynamic-int', 3],
 	['dynamic-float', 1],
 	['dynamic-bool', 2],
-	['runtime-fallback', 4],
+	['runtime-fallback', 7],
 ])
-if (decisions.length !== 12) {
-	throw new Error(`Expected twelve source-owned Std.isOfType decisions, received ${decisions.length}.`)
+if (decisions.length !== 15) {
+	throw new Error(`Expected fifteen source-owned Std.isOfType decisions, received ${decisions.length}.`)
 }
 for (const [strategy, expectedCount] of expectedStrategies) {
 	const actualCount = decisions.filter(decision => decision.strategy === strategy).length

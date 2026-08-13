@@ -37,6 +37,7 @@ class Main {
 		final dynamicInt:Dynamic = 7;
 		final dynamicBool:Dynamic = true;
 		final dynamicString:Dynamic = "ready";
+		final dynamicArray:Dynamic = [1, 2, 3];
 		final dynamicMarker:Dynamic = new SampleMarker();
 		final dynamicKind:Dynamic = SampleKind.Ready;
 		final nested = () -> Std.isOfType(dynamicInt, Int);
@@ -46,9 +47,12 @@ class Main {
 		Sys.println('dynamic-bool=${Std.isOfType(dynamicBool, Bool)}');
 		Sys.println('dynamic-int-bool=${Std.isOfType(dynamicInt, Bool)}');
 		Sys.println('dynamic-string=${Std.isOfType(dynamicString, String)}');
+		Sys.println('dynamic-array=${Std.isOfType(dynamicArray, Array)}');
+		Sys.println('dynamic-string-array=${Std.isOfType(dynamicString, Array)}');
 		Sys.println('dynamic-class=${Std.isOfType(dynamicMarker, SampleMarker)}');
 		Sys.println('dynamic-enum=${Std.isOfType(dynamicKind, SampleKind)}');
 		Sys.println('operator-int=${dynamicInt is Int}');
+		Sys.println('operator-array=${dynamicArray is Array}');
 		Sys.println('nested-int=${nested()}');
 		Sys.println('standalone-string=$initialStringCheck');
 	}
