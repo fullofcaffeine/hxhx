@@ -213,6 +213,17 @@ class RuntimeUseAuthorityFixture {
 			"string-null-default", "function-string-default:fixture");
 		stringOutput.observeExpression(distinctStrings);
 		stringOutput.finishProgram();
+
+		final arrayOutput = new OcamlFinalRuntimeUseAuthority();
+		arrayOutput.beginProgram("program:runtime-use-fixture:repeated-array-call", PROFILE);
+		final arrayOccurrence = occurrence("A1", 0, "HxArray.push", null, PLAN_REVISION, "call:array-push", requirement().id, "standard-array-operation");
+		final arrayAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [requirement()], [arrayOccurrence], arrayOutput);
+		final arrayReference = OcamlExpr.ERuntimeIdent(arrayAuthority.expressionIdentifier("A1", PLAN_REVISION, "HxArray.push"));
+		arrayAuthority.reconcileExpression(arrayReference);
+		final distinctArrays = arrayOutput.distinctRepeatedRoleReferencesForOutput(OcamlExpr.ESeq([arrayReference, arrayReference]),
+			"standard-array-operation", "function-standard-array-call:fixture");
+		arrayOutput.observeExpression(distinctArrays);
+		arrayOutput.finishProgram();
 	}
 
 	static function finalOutputContract():Void {

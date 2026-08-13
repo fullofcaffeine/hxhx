@@ -227,7 +227,6 @@ class OcamlBuilder {
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
 	var currentStaticStringPlan:Null<OcamlStaticStringPlan> = null;
-	final runtimeUseOutputCounts:Map<String, Int> = [];
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -389,24 +388,6 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
-	}
-
-	/**
-		Gives a repeated rendering of one sealed helper a distinct output identity.
-
-		Haxe can reuse one typed source occurrence in multiple final branches. The
-		first rendering keeps the plan's original identity. A later rendering must
-		pass through the final-output authority so it cannot spend that permission a
-		second time. Callers pass only the helper identifier introduced at their
-		boundary; receiver, argument, and payload expressions keep their own plans.
-	**/
-	function distinctRuntimeOutput(reference:OcamlExpr, occurrence:OcamlRuntimeUseOccurrence, role:String):OcamlExpr {
-		final outputKey = occurrence.planRevision + "|" + occurrence.id;
-		final previousOutputCount = runtimeUseOutputCounts.get(outputKey);
-		final outputCount = previousOutputCount == null ? 0 : previousOutputCount;
-		runtimeUseOutputCounts.set(outputKey, outputCount + 1);
-		return outputCount == 0 ? reference : ctx.finalRuntimeUses.copyExpressionForOutput(reference, '$role:${occurrence.id}:output:$outputCount',
-			ctx.activateStagedTypeRuntimeUse);
 	}
 
 	/**
@@ -1805,11 +1786,12 @@ class OcamlBuilder {
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
 				ctx.runtimeRequirementsByIds([occurrence.requirementId]), [occurrence], ctx.finalRuntimeUses);
-			var runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			final runtimeFunction = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 			// Receiver and argument expressions may contain private calls owned by
-			// other plans, so reconcile only the identifier introduced here.
+			// other plans, so reconcile only the identifier introduced here. The
+			// completed function later gives any repeated final output sites their own
+			// identities. This avoids counting temporary syntax trees that are discarded.
 			authority.reconcileExpression(runtimeFunction);
-			runtimeFunction = distinctRuntimeOutput(runtimeFunction, occurrence, "standard-array-call");
 			final materialized:Array<{name:String, value:OcamlExpr}> = [];
 			final receiverName = freshTmp("array_receiver");
 			materialized.push({name: receiverName, value: buildExpr(typedField.receiver)});
@@ -9198,6 +9180,8 @@ class OcamlBuilder {
 			"function-return-signal:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
 			"function-string-default:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
+			"function-standard-array-call:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
@@ -9408,6 +9392,9 @@ class OcamlBuilder {
 		if (nestedDisposition != null)
 			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
 				"nested-function-string-default:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+		if (nestedDisposition != null)
+			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
+				"nested-function-standard-array-call:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;

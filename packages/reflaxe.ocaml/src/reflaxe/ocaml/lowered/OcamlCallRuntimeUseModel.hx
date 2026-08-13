@@ -31,6 +31,7 @@ class OcamlCallRuntimeUseContract {
 	public static inline final HAXE_ARRAY_CALL_CAPABILITY = "haxe-array";
 	public static inline final HAXE_DYNAMIC_FUNCTION_CALL_CAPABILITY = "haxe-dynamic-function-call";
 	public static inline final HAXE_UNTYPED_VOID_RESULT_CAPABILITY = "haxe-untyped-void-result";
+	public static inline final STANDARD_ARRAY_RUNTIME_ROLE = "standard-array-operation";
 
 	/** Returns the exact requirement identity for one Boolean argument slot. */
 	public static function requirementId(callId:String, argumentIndex:Int):String {
@@ -161,7 +162,7 @@ class OcamlCallRuntimeUseContract {
 				requirementId: selectedRequirementId,
 				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
 				exactSymbol: '${standardArrayTarget.runtimeModule}.${standardArrayTarget.runtimeFunction}',
-				role: "standard-array-operation",
+				role: STANDARD_ARRAY_RUNTIME_ROLE,
 				order: occurrences.length,
 				source: {
 					file: call.source.file,
@@ -242,7 +243,7 @@ class OcamlCallRuntimeUseContract {
 
 	/** Returns the one private runtime function selected by a standard Array call. */
 	public static function occurrenceForStandardArray(plan:OcamlCallRuntimeUsePlan):OcamlRuntimeUseOccurrence {
-		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == "standard-array-operation");
+		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == STANDARD_ARRAY_RUNTIME_ROLE);
 		if (matches.length != 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} standard Array runtime uses';
 		return copyOccurrence(matches[0]);
