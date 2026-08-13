@@ -22,7 +22,23 @@ class OcamlCallRuntimeRequirementRecorder {
 		OcamlCallRuntimeUseContract.requireForCall(call, plan);
 		return [
 			for (occurrence in plan.runtimeUseOccurrences)
-				if (call.dynamicFunctionTarget != null && occurrence.role.indexOf("dynamic-call-") == 0) {
+				if (occurrence.role == "untyped-void-result-null") {
+					id: occurrence.requirementId,
+					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+					sourceId: call.id,
+					source: occurrence.source,
+					semanticCapability: OcamlCallRuntimeUseContract.HAXE_UNTYPED_VOID_RESULT_CAPABILITY,
+					cause: OcamlRuntimeRequirementCause.LoweringDecision,
+					decisionId: call.id,
+					subject: {
+						kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+						id: "Dynamic"
+					},
+					implementationFeature: "haxe-untyped-void-result-v1",
+					rootModules: ["HxRuntime"],
+					profileEligibility: occurrence.profileEligibility.copy(),
+					explanation: "The sealed direct call runs an exact Void entrypoint for its effect, then returns Haxe null because the source used the result through untyped Dynamic code."
+				} else if (call.dynamicFunctionTarget != null && occurrence.role.indexOf("dynamic-call-") == 0) {
 					id: occurrence.requirementId,
 					sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
 					sourceId: call.id,

@@ -47,6 +47,17 @@ enum abstract OcamlCallResultKind(String) from String to String {
 	final EffectOnlyVoid = "effect-only-void";
 }
 
+/** How syntax materializes a call result after invoking its sealed target. */
+enum abstract OcamlCallResultMaterialization(String) from String to String {
+	/**
+		An `untyped` use can leave a resolved Void call typed as `Unknown<n>`.
+
+		Haxe exposes that value as Dynamic null. The target must therefore run the
+		Void call for its effects and then produce the canonical Haxe null carrier.
+	**/
+	final UntypedVoidAsDynamicNull = "untyped-void-as-dynamic-null";
+}
+
 /** How one represented value crosses an admitted call boundary. */
 enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final Identity = "identity";
@@ -202,6 +213,7 @@ typedef OcamlCallDecision = {
 	final arguments:Array<OcamlCallValuePlan>;
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
+	final ?resultMaterialization:OcamlCallResultMaterialization;
 	final evaluationSchedule:Array<OcamlCallEvaluationStep>;
 	final profileEligibility:Array<String>;
 	final reason:String;
@@ -300,7 +312,8 @@ class OcamlCallPlan {
 				OcamlCallPlanner.matchesDirectStaticGenericIdentity(decision, classRef.get(), fieldRef.get(), arguments, expression.t);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectStaticHaxeMethod):
 				arguments.length == suppliedArgumentCount(decision.arguments)
-				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
+				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId
+				&& matchesResultMaterialization(decision, expression.t);
 			case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectInstanceHaxeMethod):
 				arguments.length == suppliedArgumentCount(decision.arguments)
 				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
@@ -326,6 +339,13 @@ class OcamlCallPlan {
 			case _:
 				false;
 		}
+	}
+
+	static function matchesResultMaterialization(decision:OcamlCallDecision, resultType:Type):Bool {
+		if (decision.resultKind != OcamlCallResultKind.EffectOnlyVoid)
+			return decision.resultMaterialization == null;
+		return
+			OcamlCallPlanner.isUnresolvedMonomorph(resultType) ? decision.resultMaterialization == OcamlCallResultMaterialization.UntypedVoidAsDynamicNull : decision.resultMaterialization == null;
 	}
 
 	static function suppliedArgumentCount(arguments:Array<OcamlCallValuePlan>):Int {
@@ -429,6 +449,7 @@ class OcamlCallPlan {
 			decision.receiver == null ? "" : valueFingerprint(decision.receiver),
 			decision.arguments.map(valueFingerprint).join(","),
 			resultFingerprint(decision.resultKind, decision.result),
+			decision.resultMaterialization == null ? "" : (decision.resultMaterialization : String),
 			decision.evaluationSchedule.map(evaluationStepFingerprint).join(","),
 			decision.dynamicFunctionTarget == null ? "" : dynamicFunctionTargetFingerprint(decision.dynamicFunctionTarget),
 			decision.standardArrayTarget == null ? "" : OcamlStandardArrayCallContract.fingerprint(decision.standardArrayTarget),
@@ -496,6 +517,7 @@ class OcamlCallPlan {
 			arguments: decision.arguments.map(copyValue),
 			resultKind: decision.resultKind,
 			result: copyOptionalValue(decision.result),
+			resultMaterialization: decision.resultMaterialization,
 			evaluationSchedule: decision.evaluationSchedule.map(copyEvaluationStep),
 			profileEligibility: decision.profileEligibility.copy(),
 			reason: decision.reason,
@@ -837,6 +859,13 @@ class OcamlCallPlan {
 		}
 		if (call.result != null && call.result.conversion != OcamlCallCarrierConversion.Identity)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact declared result carrier';
+		if (call.resultMaterialization != null
+			&& (call.resultMaterialization != OcamlCallResultMaterialization.UntypedVoidAsDynamicNull
+				|| call.kind != OcamlCallKind.DirectStaticHaxeMethod
+				|| call.resultKind != OcamlCallResultKind.EffectOnlyVoid
+				|| call.result != null)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an unsupported result materialization';
+		}
 		for (argument in call.arguments) {
 			if ((isNullableSemanticType(argument.outputSemanticTypeId) || argument.outputSemanticTypeId == "Dynamic")
 				&& argument.conversion == OcamlCallCarrierConversion.Identity) {
@@ -1958,9 +1987,11 @@ class OcamlCallPlanner {
 					return genericIdentity;
 				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
 				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final resultMaterialization = declaration == null ? null : directStaticResultMaterialization(expression.t, declaration);
 				if (declaration == null
 					|| plannedArguments == null
-					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
+					|| (!sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)
+						&& resultMaterialization == null)) {
 					null;
 				} else {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
@@ -1984,6 +2015,7 @@ class OcamlCallPlanner {
 						arguments: plannedArguments,
 						resultKind: declaration.resultKind,
 						result: OcamlCallPlan.copyOptionalValue(declaration.result),
+						resultMaterialization: resultMaterialization,
 						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length, omittedArgumentIndices(plannedArguments)),
 						profileEligibility: ["metal", "portable"],
 						reason: callReason(plannedArguments, declaration.resultKind, declaration.result),
@@ -2694,6 +2726,20 @@ class OcamlCallPlanner {
 			for (argument in arguments)
 				if (OcamlCallPlan.isOmittedConversion(argument.conversion)) argument.index
 		];
+	}
+
+	static function directStaticResultMaterialization(type:Type, declaration:OcamlCallableDeclarationPlan):Null<OcamlCallResultMaterialization> {
+		return declaration.resultKind == OcamlCallResultKind.EffectOnlyVoid
+			&& declaration.result == null
+			&& isUnresolvedMonomorph(type) ? OcamlCallResultMaterialization.UntypedVoidAsDynamicNull : null;
+	}
+
+	/** True when Haxe left an `untyped` expression at its unresolved `Unknown<n>` type. */
+	public static function isUnresolvedMonomorph(type:Type):Bool {
+		return switch (type) {
+			case TMono(reference): reference.get() == null;
+			case _: false;
+		};
 	}
 
 	static function sameResultExpressionType(type:Type, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>,

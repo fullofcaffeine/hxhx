@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultMaterialization;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
@@ -1180,6 +1181,7 @@ class CallPlanFixture {
 			arguments: arguments ?? source.arguments.map(OcamlCallPlan.copyValue),
 			resultKind: resultKind ?? source.resultKind,
 			result: result ?? OcamlCallPlan.copyOptionalValue(source.result),
+			resultMaterialization: source.resultMaterialization,
 			evaluationSchedule: (evaluationSchedule ?? source.evaluationSchedule).map(OcamlCallPlan.copyEvaluationStep),
 			profileEligibility: source.profileEligibility.copy(),
 			reason: source.reason,
@@ -1705,6 +1707,21 @@ class CallPlanFixture {
 		final wrongBoolRuntimeProfile = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
 		Reflect.setField(wrongBoolRuntimeProfile.runtimeUseOccurrences[0], "profileEligibility", ["portable"]);
 		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeProfile));
+		final untypedVoidCall = copyCall(voidCall(caller));
+		Reflect.setField(untypedVoidCall, "resultMaterialization", OcamlCallResultMaterialization.UntypedVoidAsDynamicNull);
+		OcamlCallPlan.requireCall(untypedVoidCall);
+		final untypedVoidCallPlan = new OcamlCallPlan([untypedVoidCall]);
+		final untypedVoidRuntimeUse = untypedVoidCallPlan.runtimeUsePlanFor(untypedVoidCall.id);
+		if (untypedVoidRuntimeUse == null
+			|| untypedVoidRuntimeUse.runtimeRequirementIds.length != 1
+			|| untypedVoidRuntimeUse.runtimeUseOccurrences.length != 1
+			|| untypedVoidRuntimeUse.runtimeUseOccurrences[0].exactSymbol != "HxRuntime.hx_null"
+			|| untypedVoidRuntimeUse.runtimeUseOccurrences[0].role != "untyped-void-result-null") {
+			Context.error("An untyped Void call result does not own one exact Haxe null occurrence.", Context.currentPos());
+		}
+		final wrongUntypedVoidMaterialization = copyCall(untypedVoidCall);
+		Reflect.setField(wrongUntypedVoidMaterialization, "resultMaterialization", "box-ocaml-unit");
+		expectThrows("unsupported result materialization", () -> OcamlCallPlan.requireCall(wrongUntypedVoidMaterialization));
 		final wrongBoolRuntimeCall = OcamlCallRuntimeUseContract.copy(boolRuntimeUsePlan);
 		Reflect.setField(wrongBoolRuntimeCall, "callId", "call:other");
 		expectThrows("invalid-runtime-use", () -> OcamlCallRuntimeUseContract.requireForCall(boolRuntimeCall, wrongBoolRuntimeCall));

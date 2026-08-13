@@ -1,0 +1,9 @@
+-cp src
+-cp negative-src
+-main UnplannedGeneratedEntrypoint
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=negative-out
+

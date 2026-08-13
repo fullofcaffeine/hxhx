@@ -45,6 +45,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultMaterialization;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -1652,6 +1653,28 @@ class OcamlBuilder {
 		if (call.arguments.length == 0)
 			targetArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
 		var out = OcamlExpr.EApp(target, targetArguments);
+		if (call.resultMaterialization == OcamlCallResultMaterialization.UntypedVoidAsDynamicNull) {
+			final callInventory = currentCallPlan;
+			if (callInventory == null)
+				return callPlanInvariant('call "${call.id}" reached untyped Void result materialization without its sealed call inventory', position);
+			final runtimeUsePlan = callInventory.runtimeUsePlanFor(call.id);
+			if (runtimeUsePlan == null)
+				return callPlanInvariant('call "${call.id}" has no exact runtime-use plan for its untyped Void result', position);
+			try {
+				OcamlCallRuntimeUseContract.requireForCall(call, runtimeUsePlan);
+				final occurrence = OcamlCallRuntimeUseContract.occurrenceForUntypedVoidResult(runtimeUsePlan);
+				final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+				final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+					ctx.runtimeRequirementsByIds([occurrence.requirementId]), [occurrence], ctx.finalRuntimeUses);
+				final haxeNull = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+				// The invocation can use runtime helpers owned by nested plans. Validate
+				// only the null value owned by this call before sequencing both values.
+				authority.reconcileExpression(haxeNull);
+				out = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [out]), haxeNull]);
+			} catch (error:Dynamic) {
+				return callPlanInvariant(Std.string(error), position);
+			}
+		}
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);

@@ -646,6 +646,7 @@ typedef InspectionCall = {
 	final arguments:Array<InspectionCallValue>;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
+	final resultMaterialization:Null<String>;
 	final evaluationSchedule:Array<InspectionCallEvaluationStep>;
 	final profileEligibility:Array<String>;
 	final reason:String;

@@ -99,7 +99,7 @@ class ReflaxeOcamlInspection {
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v108";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v109";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v29";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v14";
 
@@ -465,8 +465,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 85) {
-						throw 'Unsupported lowering report schema $version; expected 85.';
+					if (version != 86) {
+						throw 'Unsupported lowering report schema $version; expected 86.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1966,7 +1966,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v30")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v31")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -2042,6 +2042,13 @@ class ReflaxeOcamlInspection {
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				validateCallValue(call.result, representationById, 'Call "${call.id}" result');
+			if (call.resultMaterialization != null
+				&& (call.resultMaterialization != "untyped-void-as-dynamic-null"
+					|| call.kind != "direct-static-haxe-method"
+					|| call.resultKind != "effect-only-void"
+					|| call.result != null)) {
+				throw 'Call "${call.id}" has an unsupported result materialization.';
+			}
 			validateDeclaredCallIdentity(call.kind, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, 'Call "${call.id}"');
 			validateCallSignature(call.kind, call.receiver, call.arguments, call.resultKind, call.result, call.proofId, representationById, false,
 				'Call "${call.id}"');
@@ -2628,6 +2635,7 @@ class ReflaxeOcamlInspection {
 			arguments: arguments,
 			resultKind: resultKind,
 			result: callResult(value, resultKind, kind),
+			resultMaterialization: requiredNullableString(value, "resultMaterialization"),
 			evaluationSchedule: schedule,
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),

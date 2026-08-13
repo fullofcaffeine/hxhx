@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultMaterialization;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -29,6 +30,7 @@ class OcamlCallRuntimeUseContract {
 	public static inline final HAXE_BOOL_CARRIER_CAPABILITY = "haxe-call-bool-carrier";
 	public static inline final HAXE_ARRAY_CALL_CAPABILITY = "haxe-array";
 	public static inline final HAXE_DYNAMIC_FUNCTION_CALL_CAPABILITY = "haxe-dynamic-function-call";
+	public static inline final HAXE_UNTYPED_VOID_RESULT_CAPABILITY = "haxe-untyped-void-result";
 
 	/** Returns the exact requirement identity for one Boolean argument slot. */
 	public static function requirementId(callId:String, argumentIndex:Int):String {
@@ -55,6 +57,16 @@ class OcamlCallRuntimeUseContract {
 		return '$callId:runtime-use:$role';
 	}
 
+	/** Returns the requirement identity for one untyped Void call result. */
+	public static function untypedVoidResultRequirementId(callId:String):String {
+		return '$callId:runtime:$HAXE_UNTYPED_VOID_RESULT_CAPABILITY';
+	}
+
+	/** Returns the runtime-use identity for one untyped Void call result. */
+	public static function untypedVoidResultRuntimeUseId(callId:String):String {
+		return '$callId:runtime-use:untyped-void-result-null';
+	}
+
 	/**
 		Derives the companion plan after the ordinary typed-call contract is valid.
 
@@ -65,7 +77,8 @@ class OcamlCallRuntimeUseContract {
 		final boxedBoolArguments = call.arguments.filter(argument -> argument.conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic);
 		final standardArrayTarget = call.standardArrayTarget;
 		final dynamicFunctionTarget = call.dynamicFunctionTarget;
-		if (boxedBoolArguments.length == 0 && standardArrayTarget == null && dynamicFunctionTarget == null)
+		final materializesUntypedVoidResult = call.resultMaterialization == OcamlCallResultMaterialization.UntypedVoidAsDynamicNull;
+		if (boxedBoolArguments.length == 0 && standardArrayTarget == null && dynamicFunctionTarget == null && !materializesUntypedVoidResult)
 			return null;
 		OcamlCallPlan.requireCall(call);
 		final binding:OcamlFunctionPlanBinding = {
@@ -159,6 +172,27 @@ class OcamlCallRuntimeUseContract {
 				cardinality: 1
 			});
 		}
+		if (materializesUntypedVoidResult) {
+			final selectedRequirementId = untypedVoidResultRequirementId(call.id);
+			requirementIds.push(selectedRequirementId);
+			occurrences.push({
+				id: untypedVoidResultRuntimeUseId(call.id),
+				planRevision: planRevision,
+				ownerId: call.id,
+				requirementId: selectedRequirementId,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: "HxRuntime.hx_null",
+				role: "untyped-void-result-null",
+				order: occurrences.length,
+				source: {
+					file: call.source.file,
+					min: call.source.min,
+					max: call.source.max
+				},
+				profileEligibility: call.profileEligibility.copy(),
+				cardinality: 1
+			});
+		}
 		return {
 			callId: call.id,
 			planRevision: planRevision,
@@ -219,6 +253,14 @@ class OcamlCallRuntimeUseContract {
 		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == role);
 		if (matches.length != 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} runtime uses for Dynamic-call role "$role"';
+		return copyOccurrence(matches[0]);
+	}
+
+	/** Returns the canonical Haxe null use for one untyped Void call result. */
+	public static function occurrenceForUntypedVoidResult(plan:OcamlCallRuntimeUsePlan):OcamlRuntimeUseOccurrence {
+		final matches = plan.runtimeUseOccurrences.filter(occurrence -> occurrence.role == "untyped-void-result-null");
+		if (matches.length != 1)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-runtime-use]: call "${plan.callId}" has ${matches.length} untyped Void result runtime uses';
 		return copyOccurrence(matches[0]);
 	}
 

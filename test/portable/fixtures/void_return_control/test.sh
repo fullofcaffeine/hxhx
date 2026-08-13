@@ -27,7 +27,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 85
+if (report.schemaVersion !== 86
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v25'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
@@ -73,7 +73,7 @@ for (const control of controls) {
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
 			? 'ocaml-nested-function-plans-v29'
-			: 'ocaml-function-plans-v108')
+			: 'ocaml-function-plans-v109')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
