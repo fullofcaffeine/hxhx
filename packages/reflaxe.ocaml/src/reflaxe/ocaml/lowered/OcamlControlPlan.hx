@@ -3005,6 +3005,12 @@ class OcamlControlPlanner {
 		final exact = exactValueRepresentation(expression);
 		if (exact != null)
 			return exact;
+		// Haxe still types this expression as `Null<String>`. The OCaml target does
+		// not need a second carrier because its ordinary String representation uses
+		// a sentinel value for Haxe null. Reuse that proven representation so an
+		// early return and the function's normal result cross the same boundary.
+		if (OcamlRepresentationRegistry.isExactNullString(expression.t))
+			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 		if (OcamlRepresentationRegistry.isExactDynamic(expression.t))
 			return representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 		final enumProof = boundary == null ? null : boundary.nullableEnum;

@@ -9,6 +9,7 @@ import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -33,6 +34,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchUnmatchedPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlEffect;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopKind;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
@@ -41,13 +43,17 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlTypedFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlTypedFunctionResultModel;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
@@ -1876,6 +1882,73 @@ class ControlPlanFixture {
 			refreshedSiblingIdentities);
 		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
 			throw "The same-program reset did not rebuild the exact nested-parent plan";
+
+		// `Null<String>` keeps its Haxe type at the typed boundary, but the OCaml
+		// target represents it with the same sentinel-aware string carrier as
+		// `String`. Exercise the real call and control planners together so an early
+		// return cannot silently create a second, incompatible result carrier.
+		final nullableStringOwnerBody = Context.typeExpr(macro {
+			final resolve = function(flag:Bool, value:Null<String>):Null<String> {
+				if (flag)
+					return value;
+				return null;
+			};
+			resolve(false, null);
+		});
+		final nullableStringExpression = firstFunctionLiteral(nullableStringOwnerBody);
+		final nullableStringFunction = switch (nullableStringExpression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The nullable-String fixture did not type as a function literal";
+		};
+		final nullableStringParent:OcamlFunctionPlanBinding = {
+			functionId: "Main|Main|static|function|nullableStringOwner|generics:0|->String",
+			programRevision: "program:nullable-string-control-fixture",
+			bodyRevision: "0:nullable-string-parent-body",
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+		final nullableStringIdentities = LexicalLocalIdentityPlan.build(nullableStringParent.functionId, nullableStringOwnerBody);
+		final nullableStringExternalLocals = nestedExternalLocals(nullableStringExpression);
+		final nullableStringBinding = nestedFunctionBinding(nullableStringParent, nullableStringExpression, nullableStringExternalLocals,
+			nullableStringIdentities);
+		final nullableStringRepresentations = new OcamlRepresentationRegistry();
+		nullableStringRepresentations.beginProgram(nullableStringParent.programRevision);
+		final nullableStringCallable = new OcamlCallPlanner(nullableStringRepresentations,
+			nullableStringBinding).boundaryForNestedRepresentedResult(nullableStringFunction);
+		if (nullableStringCallable == null || nullableStringCallable.result == null)
+			throw "The nullable-String fixture did not receive a represented callable result";
+		final nullableStringResultBoundary = OcamlFunctionResultBoundary.fromCallable(nullableStringCallable);
+		final nullableStringTypedBoundary = OcamlTypedFunctionResultBoundary.fromNestedFunction(nullableStringFunction, nullableStringBinding);
+		if (nullableStringTypedBoundary.semanticTypeId != "Null<String>")
+			throw "The nullable-String fixture lost its Haxe-level result type";
+		final nullableStringControls = new OcamlControlPlanner(nullableStringRepresentations, new OcamlLocalRepresentationPlan([]), nullableStringBinding,
+			nullableStringIdentities).plan(nullableStringFunction.expr, nullableStringResultBoundary, nullableStringTypedBoundary);
+		final nullableStringRegistry = new OcamlFunctionPlanRegistry();
+		nullableStringRegistry.beginProgram(nullableStringParent.programRevision);
+		nullableStringRegistry.registerRootIdentityPlan(nullableStringParent, nullableStringIdentities);
+		final nullableStringPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: nullableStringIdentities.requireFunctionOccurrence(nullableStringExpression).id,
+			parentBinding: nullableStringParent,
+			binding: nullableStringBinding,
+			callableBoundary: nullableStringCallable,
+			functionResultBoundary: nullableStringResultBoundary,
+			controls: nullableStringControls,
+			arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([]),
+			arrayReads: new OcamlArrayReadPlan([]),
+			arrayIterators: new OcamlArrayIteratorPlan([]),
+			dynamicEquality: new OcamlDynamicEqualityPlan([]),
+			imapInterfaces: emptyIMapInterfacePlan(nullableStringBinding)
+		};
+		nullableStringRegistry.sealNestedFunction(nullableStringExpression, nullableStringExternalLocals, nullableStringBinding.bodyRevision,
+			nullableStringPlan, nullableStringIdentities);
+		final nullableStringControlResult = nullableStringControls.returnBoundaryDecision();
+		if (nullableStringControlResult == null
+			|| nullableStringControlResult.payload == null
+			|| nullableStringControlResult.payload.outputSemanticTypeId != "String"
+			|| nullableStringControlResult.payload.outputCarrierTypeId != "string"
+			|| nullableStringCallable.result.outputSemanticTypeId != "String"
+			|| nullableStringCallable.result.outputCarrierTypeId != "string") {
+			throw "Nullable-String early returns did not reuse the sentinel-aware String result carrier";
+		}
 
 		expectThrows("duplicate-occurrence",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan,
