@@ -1,5 +1,6 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
@@ -7,6 +8,7 @@ import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOperation;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOptionalCarrier;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -20,6 +22,7 @@ using StringTools;
 	The expected method names and helper symbols are written here independently.
 	The fixture does not inspect the target builder or generated OCaml.
 **/
+@:access(reflaxe.ocaml.ast.OcamlBuilder)
 class StringMethodRuntimeUseFixture {
 	static final binding:OcamlFunctionPlanBinding = {
 		functionId: "StringMethodRuntimeUseFixture.main",
@@ -74,6 +77,7 @@ class StringMethodRuntimeUseFixture {
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);
+		proveRepeatedOutput(decisions);
 		expectFailure("stale binding", "belongs to another function or target pipeline", () -> plan.requirePlanBinding({
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
@@ -83,6 +87,48 @@ class StringMethodRuntimeUseFixture {
 
 		Sys.println("REFLAXE_OCAML_STRING_METHOD_RUNTIME_USE:PASS");
 		return macro null;
+	}
+
+	/**
+		Proves that final function assembly can copy one checked method result.
+
+		The planner still owns one source call. Later control or result wrapping can
+		place its checked target expression in two output positions. The builder must
+		give the second position a separate output identity without changing the
+		method decision.
+	**/
+	static function proveRepeatedOutput(decisions:Array<OcamlStringMethodDecision>):Void {
+		final copyRoles = OcamlStringMethodPlan.outputCopyRoles();
+		final ordinaryRoles = OcamlBuilder.repeatedRuntimeUseOutputRoles(binding.functionId, false);
+		final nestedRoles = OcamlBuilder.repeatedRuntimeUseOutputRoles(binding.functionId, true);
+		for (candidate in decisions)
+			for (occurrence in candidate.runtimeUseOccurrences) {
+				if (!copyRoles.contains(occurrence.role))
+					throw 'String-method output copies omit planned role "${occurrence.role}".';
+				assertOutputRole(ordinaryRoles, occurrence.role, 'function-string-method-${occurrence.role}:${binding.functionId}');
+				assertOutputRole(nestedRoles, occurrence.role, 'nested-function-string-method-${occurrence.role}:${binding.functionId}');
+			}
+		final decision = Lambda.find(decisions, candidate -> candidate.operation == OcamlStringMethodOperation.Substring);
+		if (decision == null)
+			throw "The repeated String-method fixture has no substring decision.";
+		final finalUses = new OcamlFinalRuntimeUseAuthority();
+		finalUses.beginProgram(binding.programRevision, "portable");
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, "portable", OcamlRuntimeRequirementLedger.requirementsForStringMethod(decision),
+			decision.runtimeUseOccurrences, finalUses);
+		final references = decision.runtimeUseOccurrences.map(occurrence -> OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id,
+			occurrence.planRevision, occurrence.exactSymbol)));
+		authority.reconcileExpression(OcamlExpr.ESeq(references));
+		final repeatedReferences = references.concat([references[0]]);
+		final output = finalUses.distinctRepeatedRolesForOutput(OcamlExpr.ESeq(repeatedReferences), ordinaryRoles);
+		finalUses.observeExpression(output);
+		finalUses.finishProgram();
+	}
+
+	static function assertOutputRole(roles:Array<reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority.OcamlRepeatedRuntimeUseOutputRole>,
+			occurrenceRole:String, expectedOutputRole:String):Void {
+		final selected = Lambda.find(roles, role -> role.occurrenceRole == occurrenceRole);
+		if (selected == null || selected.outputRole != expectedOutputRole)
+			throw 'Output role "$occurrenceRole" expected "$expectedOutputRole".';
 	}
 
 	static function proveRuntimeUse(decision:OcamlStringMethodDecision):Void {

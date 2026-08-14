@@ -217,6 +217,36 @@ class OcamlStringMethodPlan {
 		return roles;
 	}
 
+	/**
+		Returns every String-method role that final function assembly can copy.
+
+		One planned call can appear at more than one final output position after
+		control and result wrapping. This closed list lets that output boundary give
+		each copy a distinct identity. It does not change the source call's helper
+		inventory or permit an unknown runtime role.
+	**/
+	public static function outputCopyRoles():Array<String> {
+		final roles = [
+			for (operation in [
+				OcamlStringMethodOperation.ToUpperCase,
+				OcamlStringMethodOperation.ToLowerCase,
+				OcamlStringMethodOperation.CharAt,
+				OcamlStringMethodOperation.CharCodeAt,
+				OcamlStringMethodOperation.IndexOf,
+				OcamlStringMethodOperation.LastIndexOf,
+				OcamlStringMethodOperation.Split,
+				OcamlStringMethodOperation.Substr,
+				OcamlStringMethodOperation.Substring,
+				OcamlStringMethodOperation.ToString
+			])
+				"invoke-" + (operation : String)
+		];
+		roles.push("optional-null-sentinel");
+		roles.push("default-receiver-length");
+		roles.push("unwrap-char-code-result");
+		return roles;
+	}
+
 	/** Returns all directly required runtime modules without duplicates. */
 	public static function rootModules(decision:OcamlStringMethodDecision):Array<String> {
 		requireDecision(decision);

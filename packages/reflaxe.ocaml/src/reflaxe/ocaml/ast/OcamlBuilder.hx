@@ -274,6 +274,14 @@ class OcamlBuilder {
 				outputRole: '$prefix-static-string-$occurrenceRole:$functionId'
 			});
 		}
+		// Direct String methods also form one sealed role family. The plan owns
+		// method selection and helper order. This boundary only distinguishes final
+		// output copies after the complete function body exists.
+		for (occurrenceRole in OcamlStringMethodPlan.outputCopyRoles())
+			roles.push({
+				occurrenceRole: occurrenceRole,
+				outputRole: '$prefix-string-method-$occurrenceRole:$functionId'
+			});
 		return roles;
 	}
 
