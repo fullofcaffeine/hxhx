@@ -1,11 +1,13 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringDecision;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringPlanner;
 import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringSourceKind;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -19,6 +21,7 @@ using StringTools;
 	The expected conversion kinds and helper name come from the authored Haxe
 	cases. This fixture does not inspect the target builder or generated OCaml.
 **/
+@:access(reflaxe.ocaml.ast.OcamlBuilder)
 class StaticStringRuntimeUseFixture {
 	static final binding:OcamlFunctionPlanBinding = {
 		functionId: "StaticStringRuntimeUseFixture.main",
@@ -60,6 +63,26 @@ class StaticStringRuntimeUseFixture {
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);
+
+		// A lowering decision names one source conversion. Function assembly can
+		// copy its checked OCaml expression into more than one final branch. This
+		// fixture uses the builder's real output-role policy, so an omitted static
+		// String role fails with the same duplicate-use error as a real target.
+		final repeatedDecision = Lambda.find(decisions, decision -> decision.sourceKind == OcamlStaticStringSourceKind.StringConcat);
+		if (repeatedDecision == null)
+			throw "The repeated static-String fixture has no concatenation decision.";
+		final repeatedOutput = new OcamlFinalRuntimeUseAuthority();
+		repeatedOutput.beginProgram(binding.programRevision, "portable");
+		final repeatedAuthority = new OcamlRuntimeUseAuthority(repeatedDecision.revision, "portable",
+			OcamlRuntimeRequirementLedger.requirementsForStaticString(repeatedDecision), repeatedDecision.runtimeUseOccurrences, repeatedOutput);
+		final repeatedOccurrence = repeatedDecision.runtimeUseOccurrences[0];
+		final repeatedReference = OcamlExpr.ERuntimeIdent(repeatedAuthority.expressionIdentifier(repeatedOccurrence.id, repeatedOccurrence.planRevision,
+			repeatedOccurrence.exactSymbol));
+		repeatedAuthority.reconcileExpression(repeatedReference);
+		final distinctOutput = repeatedOutput.distinctRepeatedRolesForOutput(OcamlExpr.ESeq([repeatedReference, repeatedReference]),
+			OcamlBuilder.repeatedRuntimeUseOutputRoles(binding.functionId, false));
+		repeatedOutput.observeExpression(distinctOutput);
+		repeatedOutput.finishProgram();
 
 		expectFailure("duplicate decision", "sealed more than once", () -> new OcamlStaticStringPlan([decisions[0], decisions[0]]));
 		expectFailure("stale binding", "belongs to another function or target pipeline", () -> plan.requirePlanBinding({

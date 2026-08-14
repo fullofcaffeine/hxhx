@@ -170,6 +170,7 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallCon
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStringDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority.OcamlRepeatedRuntimeUseOutputRole;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
@@ -229,6 +230,52 @@ class OcamlBuilder {
 	var currentDynamicEqualityPlan:Null<OcamlDynamicEqualityPlan> = null;
 	var currentDynamicStringPlan:Null<OcamlDynamicStringPlan> = null;
 	var currentStaticStringPlan:Null<OcamlStaticStringPlan> = null;
+
+	/**
+		Names runtime-use roles that complete function assembly can copy.
+
+		The lowering plan owns one source occurrence. Control and result wrapping can
+		place that checked target expression at more than one final output site. Each
+		listed role receives a distinct output identity; every unlisted duplicate
+		still fails final reconciliation.
+	**/
+	static function repeatedRuntimeUseOutputRoles(functionId:String, nested:Bool):Array<OcamlRepeatedRuntimeUseOutputRole> {
+		final prefix = nested ? "nested-function" : "function";
+		final roles:Array<OcamlRepeatedRuntimeUseOutputRole> = [
+			{occurrenceRole: OcamlReturnRuntimeUseContract.SIGNAL_ROLE, outputRole: '$prefix-return-signal:$functionId'},
+			{occurrenceRole: OcamlStringDefaultPlan.RUNTIME_ROLE, outputRole: '$prefix-string-default:$functionId'},
+			{
+				occurrenceRole: OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
+				outputRole: '$prefix-standard-array-call:$functionId'
+			},
+			{
+				occurrenceRole: OcamlStringFromCharCodePlan.ENCODE_CHARACTER_RUNTIME_ROLE,
+				outputRole: '$prefix-string-from-char-code:$functionId'
+			},
+			{
+				occurrenceRole: OcamlStringFromCharCodePlan.NULLABLE_SENTINEL_RUNTIME_ROLE,
+				outputRole: '$prefix-string-from-char-code-nullable-sentinel:$functionId'
+			}
+		];
+		// Static String planning has one closed source-kind set. Any of these
+		// checked conversions can appear inside an output expression that control
+		// or result wrapping copies. Keep the family complete instead of waiting
+		// for each source kind to fail a compiler-scale workload separately.
+		for (sourceKind in [
+			OcamlStaticStringSourceKind.StdString,
+			OcamlStaticStringSourceKind.StringConcat,
+			OcamlStaticStringSourceKind.StringCompoundLeft,
+			OcamlStaticStringSourceKind.StringCompoundRight,
+			OcamlStaticStringSourceKind.ReflectFieldName
+		]) {
+			final occurrenceRole = OcamlStaticStringPlan.roleFor(sourceKind);
+			roles.push({
+				occurrenceRole: occurrenceRole,
+				outputRole: '$prefix-static-string-$occurrenceRole:$functionId'
+			});
+		}
+		return roles;
+	}
 
 	/**
 		Identifies the root function that sealed the active local plans.
@@ -9216,22 +9263,8 @@ class OcamlBuilder {
 		}
 		body = wrapFunctionArgDefaults(body, args.map(a -> ({name: a.name, t: a.t, value: a.value})));
 		body = ensureParamUsage(body, params);
-		body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, [
-			{occurrenceRole: OcamlReturnRuntimeUseContract.SIGNAL_ROLE, outputRole: "function-return-signal:" + functionPlan.binding.functionId},
-			{occurrenceRole: OcamlStringDefaultPlan.RUNTIME_ROLE, outputRole: "function-string-default:" + functionPlan.binding.functionId},
-			{
-				occurrenceRole: OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
-				outputRole: "function-standard-array-call:" + functionPlan.binding.functionId
-			},
-			{
-				occurrenceRole: OcamlStringFromCharCodePlan.ENCODE_CHARACTER_RUNTIME_ROLE,
-				outputRole: "function-string-from-char-code:" + functionPlan.binding.functionId
-			},
-			{
-				occurrenceRole: OcamlStringFromCharCodePlan.NULLABLE_SENTINEL_RUNTIME_ROLE,
-				outputRole: "function-string-from-char-code-nullable-sentinel:" + functionPlan.binding.functionId
-			}
-		], ctx.activateStagedTypeRuntimeUse);
+		body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, repeatedRuntimeUseOutputRoles(functionPlan.binding.functionId, false),
+			ctx.activateStagedTypeRuntimeUse);
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
@@ -9446,28 +9479,8 @@ class OcamlBuilder {
 		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
 		if (nestedDisposition != null)
-			body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, [
-				{
-					occurrenceRole: OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
-					outputRole: "nested-function-return-signal:" + nestedDisposition.binding.functionId
-				},
-				{
-					occurrenceRole: OcamlStringDefaultPlan.RUNTIME_ROLE,
-					outputRole: "nested-function-string-default:" + nestedDisposition.binding.functionId
-				},
-				{
-					occurrenceRole: OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
-					outputRole: "nested-function-standard-array-call:" + nestedDisposition.binding.functionId
-				},
-				{
-					occurrenceRole: OcamlStringFromCharCodePlan.ENCODE_CHARACTER_RUNTIME_ROLE,
-					outputRole: "nested-function-string-from-char-code:" + nestedDisposition.binding.functionId
-				},
-				{
-					occurrenceRole: OcamlStringFromCharCodePlan.NULLABLE_SENTINEL_RUNTIME_ROLE,
-					outputRole: "nested-function-string-from-char-code-nullable-sentinel:" + nestedDisposition.binding.functionId
-				}
-			], ctx.activateStagedTypeRuntimeUse);
+			body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, repeatedRuntimeUseOutputRoles(nestedDisposition.binding.functionId, true),
+				ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
