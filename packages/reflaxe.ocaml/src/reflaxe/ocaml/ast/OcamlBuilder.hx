@@ -66,6 +66,7 @@ import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorUseKind;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadIndexCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
@@ -692,24 +693,40 @@ class OcamlBuilder {
 			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 			final runtimeAuthority = new OcamlRuntimeUseAuthority(runtimePlanRevision, activeProfile,
 				ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds), decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
-			final occurrence = decision.runtimeUseOccurrences[0];
-			final runtimeFunction = OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, occurrence.planRevision,
-				occurrence.exactSymbol));
-			// The receiver and index can contain private calls from other plans. Check
-			// only the HxArray.get identifier inserted by this read decision.
-			runtimeAuthority.reconcileExpression(runtimeFunction);
+			function runtimeReference(role:String, symbol:String):OcamlExpr {
+				final occurrence = Lambda.find(decision.runtimeUseOccurrences, candidate -> candidate.role == role);
+				if (occurrence == null || occurrence.exactSymbol != symbol)
+					return arrayReadInvariant('Array read "${decision.id}" has no exact $role/$symbol runtime occurrence', position);
+				return OcamlExpr.ERuntimeIdent(runtimeAuthority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			}
+			final runtimeFunction = runtimeReference("read-element", "HxArray.get");
 			final receiverName = freshTmp("array_read_receiver");
 			final indexName = freshTmp("array_read_index");
-			final read = OcamlExpr.EApp(runtimeFunction, [
+			final directRead = OcamlExpr.EApp(runtimeFunction, [
 				coerceArrayReceiver(OcamlExpr.EIdent(receiverName), receiver),
 				OcamlExpr.EIdent(indexName)
 			]);
+			final checkedRead = switch (decision.indexCarrier) {
+				case OcamlArrayReadIndexCarrier.ExactInt:
+					directRead;
+				case OcamlArrayReadIndexCarrier.CheckedNullableInt:
+					final convertedIndexName = freshTmp("array_read_converted_index");
+					final unwrap = OcamlExpr.EApp(runtimeReference("unwrap-index", "HxRuntime.nullable_int_unwrap"), [OcamlExpr.EIdent(indexName)]);
+					final convertedRead = OcamlExpr.EApp(runtimeFunction, [
+						coerceArrayReceiver(OcamlExpr.EIdent(receiverName), receiver),
+						OcamlExpr.EIdent(convertedIndexName)
+					]);
+					OcamlExpr.ELet(convertedIndexName, unwrap, convertedRead, false);
+			};
+			// The receiver and index can contain private calls from other plans. Check
+			// only the runtime identifiers inserted by this read decision.
+			runtimeAuthority.reconcileExpression(checkedRead);
 			final representedRead = switch (decision.resultCarrier) {
 				case OcamlArrayReadResultCarrier.Inferred:
-					read;
+					checkedRead;
 				case OcamlArrayReadResultCarrier.ExactCallable:
 					switch (TypeTools.follow(resultType)) {
-						case TFun(_, _): OcamlExpr.EAnnot(read, typeExprFromHaxeType(resultType));
+						case TFun(_, _): OcamlExpr.EAnnot(checkedRead, typeExprFromHaxeType(resultType));
 						case _: return arrayReadInvariant('Array read "${decision.id}" selected an exact callable result for a non-function type', position);
 					}
 			};

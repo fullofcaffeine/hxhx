@@ -10,6 +10,7 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadIndexCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadContract;
 import reflaxe.ocaml.lowered.OcamlDynamicBracketReadModel.OcamlDynamicBracketReadDecision;
@@ -20,6 +21,7 @@ typedef OcamlArrayReadOccurrence = {
 	final receiverSemanticTypeId:String;
 	final elementSemanticTypeId:String;
 	final indexSemanticTypeId:String;
+	final indexCarrier:OcamlArrayReadIndexCarrier;
 	final resultSemanticTypeId:String;
 	final resultCarrier:OcamlArrayReadResultCarrier;
 }
@@ -95,6 +97,7 @@ class OcamlArrayReadPlan {
 		if (decision.receiverSemanticTypeId != occurrence.receiverSemanticTypeId
 			|| decision.elementSemanticTypeId != occurrence.elementSemanticTypeId
 			|| decision.indexSemanticTypeId != occurrence.indexSemanticTypeId
+			|| decision.indexCarrier != occurrence.indexCarrier
 			|| decision.resultSemanticTypeId != occurrence.resultSemanticTypeId
 			|| decision.resultCarrier != occurrence.resultCarrier) {
 			throw 'reflaxe.ocaml [ocaml-array-read:typed-mismatch]: Array read "${decision.id}" no longer matches its final typed occurrence';
@@ -159,9 +162,14 @@ class OcamlArrayReadPlan {
 				final elementSemanticTypeId = arrayElementSemanticTypeId(receiver.t);
 				final resultSemanticTypeId = TypeTools.toString(expression.t);
 				final resultCarrier = isExactFunctionType(expression.t) ? OcamlArrayReadResultCarrier.ExactCallable : OcamlArrayReadResultCarrier.Inferred;
-				if (elementSemanticTypeId == null
-					|| !OcamlRepresentationRegistry.isExactInt(index.t)
-					|| resultSemanticTypeId != elementSemanticTypeId) {
+				final indexCarrier = if (OcamlRepresentationRegistry.isExactInt(index.t)) {
+					OcamlArrayReadIndexCarrier.ExactInt;
+				} else if (OcamlRepresentationRegistry.isExactNullInt(index.t)) {
+					OcamlArrayReadIndexCarrier.CheckedNullableInt;
+				} else {
+					null;
+				}
+				if (elementSemanticTypeId == null || indexCarrier == null || resultSemanticTypeId != elementSemanticTypeId) {
 					null;
 				} else {
 					{
@@ -169,7 +177,8 @@ class OcamlArrayReadPlan {
 						index: index,
 						receiverSemanticTypeId: 'Array<$elementSemanticTypeId>',
 						elementSemanticTypeId: elementSemanticTypeId,
-						indexSemanticTypeId: "Int",
+						indexSemanticTypeId: indexCarrier == OcamlArrayReadIndexCarrier.ExactInt ? "Int" : "Null<Int>",
+						indexCarrier: indexCarrier,
 						resultSemanticTypeId: resultSemanticTypeId,
 						resultCarrier: resultCarrier
 					};
@@ -277,6 +286,7 @@ class OcamlArrayReadPlan {
 			receiverSemanticTypeId: decision.receiverSemanticTypeId,
 			elementSemanticTypeId: decision.elementSemanticTypeId,
 			indexSemanticTypeId: decision.indexSemanticTypeId,
+			indexCarrier: decision.indexCarrier,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrier: decision.resultCarrier,
 			evaluationOrder: decision.evaluationOrder.copy(),
@@ -369,7 +379,7 @@ class OcamlArrayReadPlanner {
 				if (occurrence != null) {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final id = OcamlArrayReadContract.idFor(binding, source, readOrdinal++, occurrence.receiverSemanticTypeId,
-						occurrence.elementSemanticTypeId, occurrence.resultCarrier);
+						occurrence.elementSemanticTypeId, occurrence.indexCarrier, occurrence.resultCarrier);
 					final profileEligibility = ["metal", "portable"];
 					final decision:OcamlArrayReadDecision = {
 						id: id,
@@ -378,12 +388,14 @@ class OcamlArrayReadPlanner {
 						receiverSemanticTypeId: occurrence.receiverSemanticTypeId,
 						elementSemanticTypeId: occurrence.elementSemanticTypeId,
 						indexSemanticTypeId: occurrence.indexSemanticTypeId,
+						indexCarrier: occurrence.indexCarrier,
 						resultSemanticTypeId: occurrence.resultSemanticTypeId,
 						resultCarrier: occurrence.resultCarrier,
 						evaluationOrder: ["receiver", "index", "runtime-read"],
 						profileEligibility: profileEligibility,
-						runtimeRequirementIds: [OcamlArrayReadContract.runtimeRequirementId(id)],
-						runtimeUseOccurrences: [OcamlArrayReadContract.runtimeUse(binding, id, source, profileEligibility)],
+						runtimeRequirementIds: OcamlArrayReadContract.runtimeRequirementIdsFor(id, occurrence.indexCarrier),
+						runtimeUseOccurrences: OcamlArrayReadContract.runtimeUseOccurrencesFor(binding, id, source, profileEligibility,
+							occurrence.indexCarrier),
 						proofId: OcamlArrayReadContract.PROOF_ID,
 						proofClaim: OcamlArrayReadContract.PROOF_CLAIM,
 						functionId: binding.functionId,

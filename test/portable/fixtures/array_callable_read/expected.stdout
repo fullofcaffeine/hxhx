@@ -1,2 +1,6 @@
 after
 typed=4
+guarded=20
+missing=-1
+direct=20
+null-index=rejected

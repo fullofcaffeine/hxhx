@@ -38,4 +38,10 @@ class ArrayReadCases {
 	public static function callableRead(callbacks:Array<String->Int>):Int {
 		return callbacks[0]("hxhx");
 	}
+
+	public static function guardedNullableIndex(values:Array<Int>, index:Null<Int>):Int {
+		if (index != null)
+			return values[index];
+		return -1;
+	}
 }

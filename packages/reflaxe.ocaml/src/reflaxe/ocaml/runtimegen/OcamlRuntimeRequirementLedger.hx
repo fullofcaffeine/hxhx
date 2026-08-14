@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralPro
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadIndexCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorContract;
 import reflaxe.ocaml.lowered.OcamlArrayIteratorPlan.OcamlArrayIteratorDecision;
 import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
@@ -823,25 +824,44 @@ class OcamlRuntimeRequirementLedger {
 	/** Returns the runtime reason selected by one standard Array bracket read. */
 	public static function requirementsForArrayRead(decision:OcamlArrayReadDecision):Array<OcamlRuntimeRequirement> {
 		OcamlArrayReadContract.requireDecision(decision);
-		return [
-			normalize({
-				id: OcamlArrayReadContract.runtimeRequirementId(decision.id),
+		final requirements = new Array<OcamlRuntimeRequirement>();
+		if (decision.indexCarrier == OcamlArrayReadIndexCarrier.CheckedNullableInt) {
+			requirements.push(normalize({
+				id: OcamlArrayReadContract.nullableIntRuntimeRequirementId(decision.id),
 				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
 				sourceId: decision.id,
 				source: decision.source,
-				semanticCapability: OcamlArrayReadContract.RUNTIME_CAPABILITY,
+				semanticCapability: OcamlArrayReadContract.NULLABLE_INT_RUNTIME_CAPABILITY,
 				cause: OcamlRuntimeRequirementCause.LoweringDecision,
 				decisionId: decision.id,
 				subject: {
 					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
-					id: decision.receiverSemanticTypeId
+					id: decision.indexSemanticTypeId
 				},
-				implementationFeature: "haxe-array-v1",
-				rootModules: ["HxArray"],
+				implementationFeature: "nullable-int-checked-read-v1",
+				rootModules: ["HxRuntime"],
 				profileEligibility: decision.profileEligibility,
-				explanation: "The sealed Array bracket read evaluates its receiver before its Int index and then reads the selected element once through HxArray."
-			})
-		];
+				explanation: "The sealed Array read accepts an exact core Null<Int> index. HxRuntime rejects null and returns the contained Int before HxArray reads the element."
+			}));
+		}
+		requirements.push(normalize({
+			id: OcamlArrayReadContract.runtimeRequirementId(decision.id),
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: OcamlArrayReadContract.RUNTIME_CAPABILITY,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: decision.receiverSemanticTypeId
+			},
+			implementationFeature: "haxe-array-v1",
+			rootModules: ["HxArray"],
+			profileEligibility: decision.profileEligibility,
+			explanation: "The sealed Array bracket read evaluates its receiver before its Int index and then reads the selected element once through HxArray."
+		}));
+		return requirements;
 	}
 
 	/** Records the runtime dependency selected by one standard Array bracket read. */

@@ -9,6 +9,7 @@ import haxe.ds.ObjectMap;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadContract;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadDecision;
+import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadIndexCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayReadModel.OcamlArrayReadResultCarrier;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan;
 import reflaxe.ocaml.lowered.OcamlArrayReadPlan.OcamlArrayReadPlanner;
@@ -77,6 +78,8 @@ class ArrayReadPlanFixture {
 
 		assertReadCount(fields, "assignmentTarget", 1);
 		assertReadCount(fields, "updateTarget", 1);
+		assertReadCount(fields, "guardedNullableIndex", 1);
+		proveGuardedNullableIndex(fields);
 		proveCallableRead(fields);
 		proveDynamicRead(fields);
 
@@ -135,6 +138,23 @@ class ArrayReadPlanFixture {
 		final lookup:ObjectMap<TypedExpr, String> = new ObjectMap();
 		lookup.set(read, corrupted.id);
 		expectThrows("typed-mismatch", () -> new OcamlArrayReadPlan([corrupted], lookup).requireFor(read));
+	}
+
+	static function proveGuardedNullableIndex(fields:Map<String, ClassField>):Void {
+		final body = fieldBody(requiredField(fields, "guardedNullableIndex"));
+		final plan = new OcamlArrayReadPlanner(binding("guardedNullableIndex")).plan(body);
+		final read = firstArrayRead(body);
+		if (read == null)
+			Context.error("The guarded nullable-index case did not retain its Array read.", body.pos);
+		final decision = plan.requireFor(read);
+		if (decision.indexSemanticTypeId != "Null<Int>"
+			|| decision.indexCarrier != OcamlArrayReadIndexCarrier.CheckedNullableInt
+			|| decision.runtimeRequirementIds.length != 2
+			|| decision.runtimeUseOccurrences.length != 2
+			|| decision.runtimeUseOccurrences[0].exactSymbol != "HxRuntime.nullable_int_unwrap"
+			|| decision.runtimeUseOccurrences[1].exactSymbol != "HxArray.get") {
+			Context.error("The guarded nullable-index case did not seal its checked index before the Array read.", body.pos);
+		}
 	}
 
 	static function proveDynamicRead(fields:Map<String, ClassField>):Void {
@@ -208,6 +228,7 @@ class ArrayReadPlanFixture {
 			receiverSemanticTypeId: copy.receiverSemanticTypeId,
 			elementSemanticTypeId: copy.elementSemanticTypeId,
 			indexSemanticTypeId: copy.indexSemanticTypeId,
+			indexCarrier: copy.indexCarrier,
 			resultSemanticTypeId: copy.resultSemanticTypeId,
 			resultCarrier: copy.resultCarrier,
 			evaluationOrder: copy.evaluationOrder,
@@ -231,8 +252,8 @@ class ArrayReadPlanFixture {
 			bodyRevision: copy.bodyRevision,
 			pipelineRevision: copy.pipelineRevision
 		};
-		final id = OcamlArrayReadContract.idFor(binding, copy.source, copy.readOrdinal, copy.receiverSemanticTypeId, copy.elementSemanticTypeId, resultCarrier);
-		final runtimeUse = OcamlArrayReadContract.runtimeUse(binding, id, copy.source, copy.profileEligibility);
+		final id = OcamlArrayReadContract.idFor(binding, copy.source, copy.readOrdinal, copy.receiverSemanticTypeId, copy.elementSemanticTypeId,
+			copy.indexCarrier, resultCarrier);
 		return {
 			id: id,
 			source: copy.source,
@@ -240,12 +261,13 @@ class ArrayReadPlanFixture {
 			receiverSemanticTypeId: copy.receiverSemanticTypeId,
 			elementSemanticTypeId: copy.elementSemanticTypeId,
 			indexSemanticTypeId: copy.indexSemanticTypeId,
+			indexCarrier: copy.indexCarrier,
 			resultSemanticTypeId: copy.resultSemanticTypeId,
 			resultCarrier: resultCarrier,
 			evaluationOrder: copy.evaluationOrder,
 			profileEligibility: copy.profileEligibility,
-			runtimeRequirementIds: [OcamlArrayReadContract.runtimeRequirementId(id)],
-			runtimeUseOccurrences: [runtimeUse],
+			runtimeRequirementIds: OcamlArrayReadContract.runtimeRequirementIdsFor(id, copy.indexCarrier),
+			runtimeUseOccurrences: OcamlArrayReadContract.runtimeUseOccurrencesFor(binding, id, copy.source, copy.profileEligibility, copy.indexCarrier),
 			proofId: copy.proofId,
 			proofClaim: copy.proofClaim,
 			functionId: copy.functionId,
