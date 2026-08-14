@@ -1981,7 +1981,16 @@ class OcamlControlPlan {
 			case "Bool": OcamlRepresentationRegistry.isExactBool(expression.t);
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(expression.t);
 			case "Null<Bool>": OcamlRepresentationRegistry.isExactNullBool(expression.t);
-			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
+			case "String":
+				if (OcamlRepresentationRegistry.isExactString(expression.t)) {
+					true;
+				} else {
+					// Only return control can reuse the sentinel-aware String carrier for
+					// a Haxe `Null<String>` expression. Throw planning does not admit this
+					// conversion, so a corrupted throw occurrence must still fail lookup.
+					payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverExactValue && OcamlRepresentationRegistry.isExactNullString(expression.t)
+					;
+				}
 			case "Dynamic":
 				switch (haxe.macro.TypeTools.follow(expression.t)) {
 					case TDynamic(_): isAdmittedDynamicReturnPayload(payload) || isAdmittedDynamicThrowPayload(payload);

@@ -1922,6 +1922,8 @@ class ControlPlanFixture {
 			throw "The nullable-String fixture lost its Haxe-level result type";
 		final nullableStringControls = new OcamlControlPlanner(nullableStringRepresentations, new OcamlLocalRepresentationPlan([]), nullableStringBinding,
 			nullableStringIdentities).plan(nullableStringFunction.expr, nullableStringResultBoundary, nullableStringTypedBoundary);
+		if (nullableStringControls.decisionFor(firstReturn(nullableStringFunction.expr)) == null)
+			throw "The nullable-String early return lost its exact sealed control decision";
 		final nullableStringRegistry = new OcamlFunctionPlanRegistry();
 		nullableStringRegistry.beginProgram(nullableStringParent.programRevision);
 		nullableStringRegistry.registerRootIdentityPlan(nullableStringParent, nullableStringIdentities);
