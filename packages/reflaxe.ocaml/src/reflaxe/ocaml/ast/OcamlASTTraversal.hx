@@ -11,6 +11,21 @@ private enum OcamlASTWalkItem {
 	TypeExpression(type:OcamlTypeExpr);
 }
 
+private enum OcamlASTMapWorkItem {
+	VisitExpression(expression:OcamlExpr);
+	RebuildExpression(expression:OcamlExpr, childCount:Int);
+	VisitPattern(pattern:OcamlPat);
+	RebuildPattern(pattern:OcamlPat, childCount:Int);
+	VisitTypeExpression(type:OcamlTypeExpr);
+	RebuildTypeExpression(type:OcamlTypeExpr, childCount:Int);
+}
+
+private enum OcamlASTMapResult {
+	MappedExpression(expression:OcamlExpr);
+	MappedPattern(pattern:OcamlPat);
+	MappedTypeExpression(type:OcamlTypeExpr);
+}
+
 /**
 	Defines the authoritative structural child contract for the OCaml target AST.
 
@@ -141,19 +156,123 @@ class OcamlASTTraversal {
 		}
 	}
 
-	/** Applies post-order transformations to a complete expression subtree. */
+	/**
+		Applies post-order transformations to a complete expression subtree.
+
+		The mapper uses explicit work and result stacks. Compiler-generated functions
+		can contain tens of thousands of nested target expressions, so recursive
+		mapping can exhaust the Haxe process call stack before valid output is printed.
+	**/
 	public static function mapExprTree(expression:OcamlExpr, mapExpression:OcamlExpr->OcamlExpr, mapPattern:OcamlPat->OcamlPat,
 			mapType:OcamlTypeExpr->OcamlTypeExpr):OcamlExpr {
-		function visitType(type:OcamlTypeExpr):OcamlTypeExpr {
-			return mapType(mapTypeImmediate(type, visitType));
+		final work:Array<OcamlASTMapWorkItem> = [VisitExpression(expression)];
+		final results:Array<OcamlASTMapResult> = [];
+		final children:Array<OcamlASTMapWorkItem> = [];
+		while (work.length > 0) {
+			final current = work.pop();
+			if (current == null)
+				break;
+			switch (current) {
+				case VisitExpression(currentExpression):
+					children.resize(0);
+					mapExprImmediate(currentExpression, child -> {
+						children.push(VisitExpression(child));
+						return child;
+					}, child -> {
+						children.push(VisitPattern(child));
+						return child;
+					}, child -> {
+						children.push(VisitTypeExpression(child));
+						return child;
+					});
+					work.push(RebuildExpression(currentExpression, children.length));
+					pushMapChildren(work, children);
+				case RebuildExpression(currentExpression, childCount):
+					final resultStart = checkedMapResultStart(results, childCount, "expression");
+					var resultIndex = resultStart;
+					final withMappedChildren = mapExprImmediate(currentExpression, _ -> switch (results[resultIndex++]) {
+						case MappedExpression(child): child;
+						case _: throw "OCaml AST mapper received a non-expression child while rebuilding an expression.";
+					}, _ -> switch (results[resultIndex++]) {
+						case MappedPattern(child): child;
+						case _: throw "OCaml AST mapper received a non-pattern child while rebuilding an expression.";
+					}, _ -> switch (results[resultIndex++]) {
+						case MappedTypeExpression(child): child;
+						case _: throw "OCaml AST mapper received a non-type child while rebuilding an expression.";
+					});
+					checkConsumedMapResults(resultIndex, results.length, "expression");
+					results.resize(resultStart);
+					results.push(MappedExpression(mapExpression(withMappedChildren)));
+				case VisitPattern(currentPattern):
+					children.resize(0);
+					mapPatternImmediate(currentPattern, child -> {
+						children.push(VisitPattern(child));
+						return child;
+					}, child -> {
+						children.push(VisitTypeExpression(child));
+						return child;
+					});
+					work.push(RebuildPattern(currentPattern, children.length));
+					pushMapChildren(work, children);
+				case RebuildPattern(currentPattern, childCount):
+					final resultStart = checkedMapResultStart(results, childCount, "pattern");
+					var resultIndex = resultStart;
+					final withMappedChildren = mapPatternImmediate(currentPattern, _ -> switch (results[resultIndex++]) {
+						case MappedPattern(child): child;
+						case _: throw "OCaml AST mapper received a non-pattern child while rebuilding a pattern.";
+					}, _ -> switch (results[resultIndex++]) {
+						case MappedTypeExpression(child): child;
+						case _: throw "OCaml AST mapper received a non-type child while rebuilding a pattern.";
+					});
+					checkConsumedMapResults(resultIndex, results.length, "pattern");
+					results.resize(resultStart);
+					results.push(MappedPattern(mapPattern(withMappedChildren)));
+				case VisitTypeExpression(currentType):
+					children.resize(0);
+					mapTypeImmediate(currentType, child -> {
+						children.push(VisitTypeExpression(child));
+						return child;
+					});
+					work.push(RebuildTypeExpression(currentType, children.length));
+					pushMapChildren(work, children);
+				case RebuildTypeExpression(currentType, childCount):
+					final resultStart = checkedMapResultStart(results, childCount, "type");
+					var resultIndex = resultStart;
+					final withMappedChildren = mapTypeImmediate(currentType, _ -> switch (results[resultIndex++]) {
+						case MappedTypeExpression(child): child;
+						case _: throw "OCaml AST mapper received a non-type child while rebuilding a type.";
+					});
+					checkConsumedMapResults(resultIndex, results.length, "type");
+					results.resize(resultStart);
+					results.push(MappedTypeExpression(mapType(withMappedChildren)));
+			}
 		}
-		function visitPattern(pattern:OcamlPat):OcamlPat {
-			return mapPattern(mapPatternImmediate(pattern, visitPattern, visitType));
+		if (results.length != 1)
+			throw 'OCaml AST mapper produced ${results.length} root results; expected one expression.';
+		return switch (results[0]) {
+			case MappedExpression(mapped): mapped;
+			case _: throw "OCaml AST mapper produced a non-expression root.";
 		}
-		function visitExpression(current:OcamlExpr):OcamlExpr {
-			return mapExpression(mapExprImmediate(current, visitExpression, visitPattern, visitType));
+	}
+
+	static function pushMapChildren(work:Array<OcamlASTMapWorkItem>, children:Array<OcamlASTMapWorkItem>):Void {
+		var index = children.length;
+		while (index > 0) {
+			index--;
+			work.push(children[index]);
 		}
-		return visitExpression(expression);
+	}
+
+	static function checkedMapResultStart(results:Array<OcamlASTMapResult>, childCount:Int, owner:String):Int {
+		final resultStart = results.length - childCount;
+		if (resultStart < 0)
+			throw 'OCaml AST mapper cannot rebuild $owner: expected $childCount child results but found ${results.length}.';
+		return resultStart;
+	}
+
+	static function checkConsumedMapResults(resultIndex:Int, resultLength:Int, owner:String):Void {
+		if (resultIndex != resultLength)
+			throw 'OCaml AST mapper rebuilt $owner with ${resultLength - resultIndex} unused child results.';
 	}
 
 	/**

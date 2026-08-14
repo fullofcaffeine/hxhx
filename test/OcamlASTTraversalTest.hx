@@ -113,9 +113,45 @@ class OcamlASTTraversalTest {
 	}
 
 	static function allTypeConstructors():OcamlTypeExpr {
+		final source:OcamlLoweredSourceSpan = {file: "Traversal.hx", min: 11, max: 12};
+		final requirementId = "traversal-type:runtime:haxe-array-element-set";
+		final requirement = OcamlRuntimeRequirementLedger.requirementForPlaceCapability("traversal-type", "traversal-type", "traversal-type", source, "Int",
+			requirementId);
+		final authority = new OcamlRuntimeUseAuthority("plan:traversal-type", "portable", [requirement], [
+			{
+				id: "traversal:runtime-use:type-ident",
+				planRevision: "plan:traversal-type",
+				ownerId: "traversal-type",
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.TypeIdentifier,
+				exactSymbol: "HxArray.t",
+				role: "type-ident",
+				order: 0,
+				source: source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			},
+			{
+				id: "traversal:runtime-use:type-app",
+				planRevision: "plan:traversal-type",
+				ownerId: "traversal-type",
+				requirementId: requirementId,
+				domain: OcamlRuntimeUseDomain.TypeIdentifier,
+				exactSymbol: "HxArray.t",
+				role: "type-app",
+				order: 1,
+				source: source,
+				profileEligibility: ["metal", "portable"],
+				cardinality: 1
+			}
+		]);
+		final runtimeIdent = authority.typeIdentifier("traversal:runtime-use:type-ident", "plan:traversal-type", "HxArray.t");
+		final runtimeApp = authority.typeIdentifier("traversal:runtime-use:type-app", "plan:traversal-type", "HxArray.t");
 		return OcamlTypeExpr.TRecord([
 			{name: "ident", isMutable: false, typ: OcamlTypeExpr.TIdent("type_ident")},
+			{name: "runtimeIdent", isMutable: false, typ: OcamlTypeExpr.TRuntimeIdent(runtimeIdent)},
 			{name: "app", isMutable: false, typ: OcamlTypeExpr.TApp("type_app", [OcamlTypeExpr.TVar("a")])},
+			{name: "runtimeApp", isMutable: false, typ: OcamlTypeExpr.TRuntimeApp(runtimeApp, [OcamlTypeExpr.TVar("runtime")])},
 			{name: "arrow", isMutable: false, typ: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("type_from"), OcamlTypeExpr.TIdent("type_to"))},
 			{name: "tuple", isMutable: true, typ: OcamlTypeExpr.TTuple([OcamlTypeExpr.TIdent("type_tuple")])}
 		]);
@@ -344,6 +380,29 @@ class OcamlASTTraversalTest {
 		assertTrue(modules.exists("HxDeep"), "runtime usage collection must reach the leaf of a deeply nested expression");
 	}
 
+	static function verifyDeepMapIsStackSafe():Void {
+		var expression:OcamlExpr = OcamlExpr.EIdent("deep_leaf");
+		final nestingDepth = 50000;
+		for (_ in 0...nestingDepth)
+			expression = OcamlExpr.EUnop(OcamlUnop.Not, expression);
+
+		final mapped = OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
+			case EIdent("deep_leaf"): EIdent("mapped_leaf");
+			case _: current;
+		}, pattern -> pattern, type -> type);
+		var visitedExpressions = 0;
+		var mappedLeafCount = 0;
+		OcamlASTTraversal.walkExprPre(mapped, current -> {
+			visitedExpressions++;
+			switch (current) {
+				case EIdent("mapped_leaf"): mappedLeafCount++;
+				case _:
+			}
+		}, _ -> {}, _ -> {});
+		assertTrue(visitedExpressions == nestingDepth + 1, "deep expression mapping must preserve every target AST node");
+		assertTrue(mappedLeafCount == 1, "deep expression mapping must transform the leaf exactly once");
+	}
+
 	public static function run():Void {
 		final root = allExpressionConstructors();
 		verifyConstructorCoverage(root);
@@ -351,6 +410,7 @@ class OcamlASTTraversalTest {
 		verifyIdentityAndWalkFoldOrder(root);
 		verifyRuntimeUsageMigration();
 		verifyDeepWalkIsStackSafe();
+		verifyDeepMapIsStackSafe();
 		Sys.println("OCAML_AST_TRAVERSAL:PASS");
 	}
 }

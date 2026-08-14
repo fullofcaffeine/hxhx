@@ -19,18 +19,28 @@ const nullable = fixtureDecisions.filter(entry =>
 const functionValues = fixtureDecisions.filter(entry =>
 	entry.subject.id === 'String.fromCharCode function value'
 )
+const nullableBySource = new Map()
+for (const entry of nullable) {
+	const key = `${entry.source.file}:${entry.source.min}:${entry.source.max}`
+	const entries = nullableBySource.get(key) ?? []
+	entries.push(entry)
+	nullableBySource.set(key, entries)
+}
+const copiedNullableSites = [...nullableBySource.values()].filter(entries => entries.length === 2)
 
-if (fixtureDecisions.length !== 9
-	|| nullable.length !== 1
-	|| nullable[0].rootModules.join(',') !== 'HxRuntime,HxString'
+if (fixtureDecisions.length !== 11
+	|| nullable.length !== 3
+	|| nullable.some(entry => entry.rootModules.join(',') !== 'HxRuntime,HxString')
+	|| copiedNullableSites.length !== 1
+	|| copiedNullableSites[0][0].id === copiedNullableSites[0][1].id
 	|| functionValues.length !== 1
 	|| functionValues[0].rootModules.join(',') !== 'HxString') {
 	throw new Error(`Unexpected String.fromCharCode runtime authority: ${JSON.stringify(fixtureDecisions)}`)
 }
 NODE
 
-if [ "$(grep -Eo 'HxString\.fromCharCode' "$generated" | wc -l | tr -d ' ')" -ne 9 ]; then
-	echo "Generated Main.ml does not contain the nine expected character-encoder uses" >&2
+if [ "$(grep -Eo 'HxString\.fromCharCode' "$generated" | wc -l | tr -d ' ')" -ne 12 ]; then
+	echo "Generated Main.ml does not contain the twelve expected character-encoder output sites" >&2
 	exit 1
 fi
 

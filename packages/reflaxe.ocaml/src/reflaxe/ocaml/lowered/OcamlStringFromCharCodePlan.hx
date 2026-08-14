@@ -62,6 +62,8 @@ class OcamlStringFromCharCodePlan {
 	public static inline final PROOF_ID = "string-from-char-code-runtime-use-v1";
 	public static inline final PROOF_CLAIM = "The final typed expression is the root String.fromCharCode intrinsic. Its call or function-value form and exact argument carrier select every private runtime identifier before target syntax.";
 	public static inline final RUNTIME_CAPABILITY = "haxe-string-from-char-code";
+	public static inline final ENCODE_CHARACTER_RUNTIME_ROLE = "encode-character";
+	public static inline final NULLABLE_SENTINEL_RUNTIME_ROLE = "nullable-null-sentinel";
 
 	final ordered:Array<OcamlStringFromCharCodeDecision>;
 	final byId:Map<String, OcamlStringFromCharCodeDecision> = [];
@@ -174,7 +176,7 @@ class OcamlStringFromCharCodePlan {
 	/** Returns stable roles for the selected helper sequence. */
 	public static function rolesFor(form:OcamlStringFromCharCodeForm, argumentCarrier:Null<OcamlStringFromCharCodeArgumentCarrier>):Array<String> {
 		return form == DirectCall
-			&& argumentCarrier == NullableInt ? ["encode-character", "nullable-null-sentinel"] : ["encode-character"];
+			&& argumentCarrier == NullableInt ? [ENCODE_CHARACTER_RUNTIME_ROLE, NULLABLE_SENTINEL_RUNTIME_ROLE] : [ENCODE_CHARACTER_RUNTIME_ROLE];
 	}
 
 	/** Returns the direct runtime modules required by the decision. */

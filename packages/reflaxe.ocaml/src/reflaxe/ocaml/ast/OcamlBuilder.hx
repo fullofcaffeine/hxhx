@@ -9216,12 +9216,22 @@ class OcamlBuilder {
 		}
 		body = wrapFunctionArgDefaults(body, args.map(a -> ({name: a.name, t: a.t, value: a.value})));
 		body = ensureParamUsage(body, params);
-		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
-			"function-return-signal:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
-		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
-			"function-string-default:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
-		body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
-			"function-standard-array-call:" + functionPlan.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+		body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, [
+			{occurrenceRole: OcamlReturnRuntimeUseContract.SIGNAL_ROLE, outputRole: "function-return-signal:" + functionPlan.binding.functionId},
+			{occurrenceRole: OcamlStringDefaultPlan.RUNTIME_ROLE, outputRole: "function-string-default:" + functionPlan.binding.functionId},
+			{
+				occurrenceRole: OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
+				outputRole: "function-standard-array-call:" + functionPlan.binding.functionId
+			},
+			{
+				occurrenceRole: OcamlStringFromCharCodePlan.ENCODE_CHARACTER_RUNTIME_ROLE,
+				outputRole: "function-string-from-char-code:" + functionPlan.binding.functionId
+			},
+			{
+				occurrenceRole: OcamlStringFromCharCodePlan.NULLABLE_SENTINEL_RUNTIME_ROLE,
+				outputRole: "function-string-from-char-code-nullable-sentinel:" + functionPlan.binding.functionId
+			}
+		], ctx.activateStagedTypeRuntimeUse);
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
@@ -9436,14 +9446,28 @@ class OcamlBuilder {
 		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
 		if (nestedDisposition != null)
-			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
-				"nested-function-return-signal:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
-		if (nestedDisposition != null)
-			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlStringDefaultPlan.RUNTIME_ROLE,
-				"nested-function-string-default:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
-		if (nestedDisposition != null)
-			body = ctx.finalRuntimeUses.distinctRepeatedRoleReferencesForOutput(body, OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
-				"nested-function-standard-array-call:" + nestedDisposition.binding.functionId, ctx.activateStagedTypeRuntimeUse);
+			body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, [
+				{
+					occurrenceRole: OcamlReturnRuntimeUseContract.SIGNAL_ROLE,
+					outputRole: "nested-function-return-signal:" + nestedDisposition.binding.functionId
+				},
+				{
+					occurrenceRole: OcamlStringDefaultPlan.RUNTIME_ROLE,
+					outputRole: "nested-function-string-default:" + nestedDisposition.binding.functionId
+				},
+				{
+					occurrenceRole: OcamlCallRuntimeUseContract.STANDARD_ARRAY_RUNTIME_ROLE,
+					outputRole: "nested-function-standard-array-call:" + nestedDisposition.binding.functionId
+				},
+				{
+					occurrenceRole: OcamlStringFromCharCodePlan.ENCODE_CHARACTER_RUNTIME_ROLE,
+					outputRole: "nested-function-string-from-char-code:" + nestedDisposition.binding.functionId
+				},
+				{
+					occurrenceRole: OcamlStringFromCharCodePlan.NULLABLE_SENTINEL_RUNTIME_ROLE,
+					outputRole: "nested-function-string-from-char-code-nullable-sentinel:" + nestedDisposition.binding.functionId
+				}
+			], ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;

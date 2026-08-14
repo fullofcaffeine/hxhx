@@ -18,6 +18,17 @@ private typedef OcamlFinalRuntimeUseExpected = {
 }
 
 /**
+	Selects one planned runtime-use role whose repeated output sites need unique identities.
+
+	`occurrenceRole` identifies the lowering decision. `outputRole` names copies that
+	the compiler creates while it assembles one complete function body.
+**/
+typedef OcamlRepeatedRuntimeUseOutputRole = {
+	final occurrenceRole:String;
+	final outputRole:String;
+}
+
+/**
 	Checks how many authorized private-runtime references reach final OCaml output.
 
 	A lowering plan first passes its smaller local check. Only then may it register
@@ -156,21 +167,51 @@ class OcamlFinalRuntimeUseAuthority {
 	**/
 	public function distinctRepeatedRoleReferencesForOutput(expression:OcamlExpr, occurrenceRole:String, outputRole:String,
 			?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {
+		return distinctRepeatedRolesForOutput(expression, [{occurrenceRole: occurrenceRole, outputRole: outputRole}], beforeReference);
+	}
+
+	/**
+		Gives repeated references of selected roles separate output identities.
+
+		A completed Haxe function can contain repeated output sites for more than one
+		planned runtime operation. This method handles all selected roles in one tree
+		walk. The first site keeps the source identity. Each later site gets a checked
+		copy identity. Unselected roles stay unchanged, so the final authority still
+		rejects an unexplained duplicate.
+
+		Call this only after the complete function body is assembled. Repeated calls for
+		different roles would traverse very large compiler functions more than necessary.
+	**/
+	public function distinctRepeatedRolesForOutput(expression:OcamlExpr, roles:Array<OcamlRepeatedRuntimeUseOutputRole>,
+			?beforeReference:OcamlRuntimeReference->Void):OcamlExpr {
 		requireOpen();
-		final requiredRole = requiredOutputRole(occurrenceRole);
-		final stableRole = requiredOutputRole(outputRole);
+		if (roles == null || roles.length == 0)
+			throw "Final runtime-use output roles cannot be empty.";
+		final outputRoleByOccurrence:Map<String, String> = [];
+		for (role in roles) {
+			if (role == null)
+				throw "Final runtime-use output role cannot be null.";
+			final occurrenceRole = requiredOutputRole(role.occurrenceRole);
+			final outputRole = requiredOutputRole(role.outputRole);
+			if (outputRoleByOccurrence.exists(occurrenceRole))
+				throw 'Final runtime-use output role $occurrenceRole was selected more than once.';
+			outputRoleByOccurrence.set(occurrenceRole, outputRole);
+		}
 		final countsBySource:Map<String, Int> = [];
 		function distinct(reference:OcamlRuntimeReference):OcamlRuntimeReference {
 			final sourceKey = occurrenceKey(reference.planRevision, reference.id);
 			final sourceExpected = expectedByKey.get(sourceKey);
-			if (sourceExpected == null || sourceExpected.occurrence.role != requiredRole)
+			if (sourceExpected == null)
+				return reference;
+			final outputRole = outputRoleByOccurrence.get(sourceExpected.occurrence.role);
+			if (outputRole == null)
 				return reference;
 			final previousCount = countsBySource.get(sourceKey);
 			final count = previousCount == null ? 0 : previousCount;
 			countsBySource.set(sourceKey, count + 1);
 			if (count == 0)
 				return reference;
-			return copyReferenceForOutput(reference, '$stableRole:repeat:$count', [], beforeReference);
+			return copyReferenceForOutput(reference, '$outputRole:repeat:$count', [], beforeReference);
 		}
 		return OcamlASTTraversal.mapExprTree(expression, current -> switch (current) {
 			case ERuntimeIdent(reference): ERuntimeIdent(distinct(reference));

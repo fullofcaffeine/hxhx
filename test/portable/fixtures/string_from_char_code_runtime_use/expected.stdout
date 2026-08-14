@@ -6,5 +6,7 @@ side=C
 calls=1
 value=B
 nullable=1:0
+switch-value=A
+switch-null=1:0
 nested=D
 standalone=E

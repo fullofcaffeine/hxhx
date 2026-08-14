@@ -224,6 +224,30 @@ class RuntimeUseAuthorityFixture {
 			"standard-array-operation", "function-standard-array-call:fixture");
 		arrayOutput.observeExpression(distinctArrays);
 		arrayOutput.finishProgram();
+
+		final characterOutput = new OcamlFinalRuntimeUseAuthority();
+		characterOutput.beginProgram("program:runtime-use-fixture:repeated-character-encoder", PROFILE);
+		final characterOccurrence = occurrence("C1", 0, "HxString.fromCharCode", null, PLAN_REVISION, "string-from-char-code", requirement().id,
+			"encode-character");
+		final sentinelOccurrence = occurrence("C2", 1, "HxRuntime.hx_null", null, PLAN_REVISION, "string-from-char-code", requirement().id,
+			"nullable-null-sentinel");
+		final characterRequirement = Reflect.copy(requirement());
+		Reflect.setField(characterRequirement, "rootModules", ["HxRuntime", "HxString"]);
+		final characterAuthority = new OcamlRuntimeUseAuthority(PLAN_REVISION, PROFILE, [cast characterRequirement],
+			[characterOccurrence, sentinelOccurrence], characterOutput);
+		final characterReference = OcamlExpr.ERuntimeIdent(characterAuthority.expressionIdentifier("C1", PLAN_REVISION, "HxString.fromCharCode"));
+		final sentinelReference = OcamlExpr.ERuntimeIdent(characterAuthority.expressionIdentifier("C2", PLAN_REVISION, "HxRuntime.hx_null"));
+		characterAuthority.reconcileExpression(OcamlExpr.ESeq([characterReference, sentinelReference]));
+		final distinctCharacters = characterOutput.distinctRepeatedRolesForOutput(OcamlExpr.ESeq([characterReference, sentinelReference, characterReference, sentinelReference]),
+			[
+			{
+				occurrenceRole: "encode-character",
+				outputRole: "function-string-from-char-code:fixture"
+			},
+			{occurrenceRole: "nullable-null-sentinel", outputRole: "function-string-from-char-code-nullable-sentinel:fixture"}
+		]);
+		characterOutput.observeExpression(distinctCharacters);
+		characterOutput.finishProgram();
 	}
 
 	static function finalOutputContract():Void {
