@@ -32,7 +32,7 @@ if [[ ! -f "$GENERATED" || ! -x "$EXE" ]]; then
   exit 1
 fi
 
-throw_literal_count="$(rg -o '"unexpected"' "$GENERATED" | wc -l | tr -d ' ')"
+throw_literal_count="$({ grep -o '"unexpected"' "$GENERATED" || true; } | wc -l | tr -d ' ')"
 if [[ "$throw_literal_count" != "2" ]]; then
   echo "Expected one source throw to occupy two final nullable-switch sites; found $throw_literal_count." >&2
   exit 1
