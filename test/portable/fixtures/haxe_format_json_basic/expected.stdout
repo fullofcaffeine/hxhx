@@ -3,4 +3,5 @@ sum=6
 ok=true
 answer=42
 text=hello
+longText=portable-json-value
 flag=false

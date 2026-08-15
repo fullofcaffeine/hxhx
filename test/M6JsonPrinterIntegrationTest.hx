@@ -95,7 +95,8 @@ class M6JsonPrinterIntegrationTest {
 			assertEquals(lines[2], "ok=true", "parsed ok");
 			assertEquals(lines[3], "answer=42", "encoded answer");
 			assertEquals(lines[4], "text=hello", "encoded text");
-			assertEquals(lines[5], "flag=false", "encoded flag");
+			assertEquals(lines[5], "longText=portable-json-value", "encoded long text");
+			assertEquals(lines[6], "flag=false", "encoded flag");
 		}
 	}
 }
