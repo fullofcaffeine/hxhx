@@ -1,0 +1,7 @@
+-cp test/reflaxe_ocaml_throw_runtime_use/src
+-main ThrowOutputCopyMain
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=.tmp/reflaxe-ocaml-throw-output-copy/out
