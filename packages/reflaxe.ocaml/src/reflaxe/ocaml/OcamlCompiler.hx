@@ -219,6 +219,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 	inline function profileNowS():Float
 		return haxe.Timer.stamp();
 
+	inline function profileElapsedMilliseconds():Int
+		return profileStartS == 0.0 ? 0 : elapsedMilliseconds(profileStartS);
+
 	function profileTryOpenLog():Void {
 		try {
 			final path = Sys.getEnv("REFLAXE_OCAML_PROGRESS_FILE");
@@ -435,6 +438,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	/** Starts a fresh, revision-keyed target-plan registry for this request. */
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
+		#if macro
+		profileLogLine("reflaxe.ocaml: program_revision_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		super.beginProgramRevision(revision);
 		classCarrierDeclarationsByModule.clear();
 		classCarrierOwnerKeys.clear();
@@ -448,10 +454,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.beginRuntimeRequirementProgram(revision.id, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
 		#if macro
 		try {
+			profileLogLine("reflaxe.ocaml: monomorphic_plan_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 			OcamlMonomorphicClassPlanner.plan(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, ctx, representationRegistry,
 				isAdmittedMonomorphicClass);
+			profileLogLine("reflaxe.ocaml: monomorphic_plan_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+			profileLogLine("reflaxe.ocaml: callable_plan_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 			planCallableDeclarations(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, revision.id);
+			profileLogLine("reflaxe.ocaml: callable_plan_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+			profileLogLine("reflaxe.ocaml: static_storage_plan_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
+			profileLogLine("reflaxe.ocaml: static_storage_plan_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		} catch (error:Dynamic) {
 			Context.error(Std.string(error), Context.currentPos());
 		}
@@ -509,6 +521,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		OCaml tree before starting the expensive work that the cached result replaces.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
+		profileLogLine("reflaxe.ocaml: filter_types_begin moduleTypes=" + Std.string(moduleTypes.length) + " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
 		OcamlSourcePositionMapper.beginRequest();
 		pendingPublishedOutputBuild = null;
 		stagedTargetReuseCandidate = null;
@@ -517,8 +531,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		nativeSourceDeclarationAuthority = null;
 		skippedTargetGenerationWarnings = 0;
 		final started = haxe.Timer.stamp();
+		profileLogLine("reflaxe.ocaml: target_revision_observation_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		targetReuseObservation = captureTargetReuseObservation();
 		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
+		profileLogLine("reflaxe.ocaml: target_revision_observation_end dt_ms=" + Std.string(targetRevisionObservationMilliseconds) + " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
 		targetMissPreparationMilliseconds = 0;
 		targetReuseLookupMilliseconds = 0;
 		targetReusePayloadValidationMilliseconds = 0;
@@ -528,7 +545,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		targetMissPreparationRan = false;
 		targetReplaySucceeded = false;
 		targetReusePayloadBytes = null;
+		profileLogLine("reflaxe.ocaml: strict_mode_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
+		profileLogLine("reflaxe.ocaml: strict_mode_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
 
@@ -540,6 +560,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		or ineligible request runs it normally.
 	**/
 	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
+		#if macro
+		profileLogLine("reflaxe.ocaml: prepare_final_program_begin moduleTypes="
+			+ Std.string(moduleTypes.length)
+			+ " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
+		#end
 		final probe = targetReuseProbe;
 		if (probe == null)
 			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
@@ -559,6 +585,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
 		targetMissPreparationMilliseconds = elapsedMilliseconds(started);
+		#if macro
+		profileLogLine("reflaxe.ocaml: prepare_final_program_end dt_ms=" + Std.string(targetMissPreparationMilliseconds) + " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
+		#end
 	}
 
 	public override function targetReuseNamespace():Null<String> {
@@ -566,11 +596,29 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	public override function targetReuseRevisionComponents(snapshot:FinalProgramFingerprintSnapshot):Array<TargetReuseRevisionComponent> {
-		return OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation());
+		#if macro
+		profileLogLine("reflaxe.ocaml: target_reuse_revision_components_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		final components = OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation());
+		#if macro
+		profileLogLine("reflaxe.ocaml: target_reuse_revision_components_end count="
+			+ Std.string(components.length)
+			+ " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
+		#end
+		return components;
 	}
 
 	public override function targetReuseBlockers(snapshot:FinalProgramFingerprintSnapshot):Array<String> {
-		return OcamlTargetReuseContract.blockers(requireTargetReuseObservation());
+		#if macro
+		profileLogLine("reflaxe.ocaml: target_reuse_blockers_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		final blockers = OcamlTargetReuseContract.blockers(requireTargetReuseObservation());
+		#if macro
+		profileLogLine("reflaxe.ocaml: target_reuse_blockers_end count=" + Std.string(blockers.length) + " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
+		#end
+		return blockers;
 	}
 
 	/**
