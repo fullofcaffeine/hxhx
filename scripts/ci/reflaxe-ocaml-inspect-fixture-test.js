@@ -66,7 +66,7 @@ try {
 	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'checked-runtime-source-selection-v1')
 	assert.match(report.artifactManifest.semanticRuntime.revision, sha256Revision)
 	assert.strictEqual(report.artifactManifest.nativeDependencies.status, 'complete')
-	assert.strictEqual(report.artifactManifest.nativeDependencies.model, 'normalized-native-source-declarations-v1')
+	assert.strictEqual(report.artifactManifest.nativeDependencies.model, 'normalized-native-source-declarations-v2')
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'reflaxe-framework' && owner.count > 0))
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'runtime-copier' && owner.count > 0))
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'dune-project-emitter' && owner.count > 0))
