@@ -541,6 +541,7 @@ private typedef OcamlTuplePairLocalProof = {
 private typedef OcamlLocalInitializer = {
 	final hostLocalId:Int;
 	final semanticTypeId:String;
+	final resolvedSemanticTypeId:String;
 	final expression:TypedExpr;
 }
 
@@ -843,6 +844,7 @@ class OcamlStructuralFieldPlanner {
 					initializers.push({
 						hostLocalId: local.id,
 						semanticTypeId: TypeTools.toString(local.t),
+						resolvedSemanticTypeId: resolvedSemanticTypeId(local.t),
 						expression: initializer
 					});
 					TypedExprTools.iter(initializer, visit);
@@ -897,13 +899,13 @@ class OcamlStructuralFieldPlanner {
 				};
 			} else {
 				final targetNative = OcamlStandardMapCarrierContract.pairProducerForExpression(expression);
-				if (targetNative != null && targetNative.iteratorSemanticTypeId == initializer.semanticTypeId)
+				if (targetNative != null && initializer.resolvedSemanticTypeId == resolvedSemanticTypeId(expression.t))
 					proof = {
 						producerKind: "target-native-standard-map-call",
 						producerId: targetNative.proofId,
 						producerSourceId: targetNative.sourceDeclarationId,
 						iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id,
-						iteratorSemanticTypeId: targetNative.iteratorSemanticTypeId,
+						iteratorSemanticTypeId: initializer.semanticTypeId,
 						keySemanticTypeId: targetNative.keySemanticTypeId,
 						valueSemanticTypeId: targetNative.valueSemanticTypeId
 					};
@@ -971,6 +973,19 @@ class OcamlStructuralFieldPlanner {
 			case TCast(inner, null): transparentExpression(inner);
 			case _: expression;
 		}
+	}
+
+	/**
+		Checks whether a local typedef and its inlined initializer describe one
+		resolved structural type without mutating compiler unification state.
+
+		`Map.keyValueIterator()` keeps the public `KeyValueIterator<K,V>` typedef on
+		the local, while its exact native helper has the equivalent `Iterator<{key,
+		value}>` type. The producer proof retains the public local type so the later
+		`next()` receiver can match it exactly.
+	**/
+	static function resolvedSemanticTypeId(type:Type):String {
+		return TypeTools.toString(TypeTools.follow(type));
 	}
 
 	static function localExpressionId(expression:TypedExpr):Null<Int> {

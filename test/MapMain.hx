@@ -6,7 +6,18 @@ private class ObjKey {
 	}
 }
 
+private typedef StoredEntry = {
+	var key:String;
+	var value:Int;
+}
+
 class MapMain {
+	static function validateStoredEntry(entry:StoredEntry):Int {
+		if (entry.key != "plain")
+			throw "stored_entry_key";
+		return entry.value;
+	}
+
 	static function main() {
 		// String keys -> StringMap specialization
 		final sm:Map<String, Int> = new Map();
@@ -55,6 +66,10 @@ class MapMain {
 		if (kvSum != sum)
 			throw "sm_kv_sum";
 
+		final stored:StoredEntry = {key: "plain", value: 7};
+		if (validateStoredEntry(stored) != 7)
+			throw "stored_entry_value";
+
 		// Int keys -> IntMap specialization
 		final im:Map<Int, String> = new Map();
 		im.set(10, "x");
@@ -72,6 +87,17 @@ class MapMain {
 		if (ikeys.join(",") != "10,20")
 			throw "im_keys";
 
+		var intPairCount = 0;
+		final ikvi = im.keyValueIterator();
+		while (ikvi.hasNext()) {
+			final kv = ikvi.next();
+			if (!im.exists(kv.key) || kv.value.length != 1)
+				throw "im_kv";
+			intPairCount++;
+		}
+		if (intPairCount != 2)
+			throw "im_kv_count";
+
 		// Object keys -> ObjectMap specialization (identity)
 		final om:Map<ObjKey, Int> = new Map();
 		final o1 = new ObjKey(1);
@@ -83,6 +109,18 @@ class MapMain {
 			throw "om_identity";
 		if (!om.exists(o1))
 			throw "om_exists";
+
+		var objectPairCount = 0;
+		final okvi = om.keyValueIterator();
+		while (okvi.hasNext()) {
+			final kv = okvi.next();
+			if (kv.key != o1 || kv.value != 123)
+				throw "om_kv";
+			objectPairCount++;
+		}
+		if (objectPairCount != 1)
+			throw "om_kv_count";
+
 		if (!om.remove(o1))
 			throw "om_remove";
 		if (om.exists(o1))
