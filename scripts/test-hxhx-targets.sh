@@ -2271,7 +2271,17 @@ type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^resolved_modules=6$"
-echo "$out" | grep -q "^typed_modules=11$"
+# The resolver supplies demo.A, demo.Util, demo.Point, Math, Std, and String.
+# Typing then loads Array plus its ArrayKeyValueIterator, ArraySort, and
+# ArrayIterator support modules. Older typing re-read indexed function
+# signatures from source hints and redundantly loaded Class as an eleventh
+# module; indexed semantic signatures now preserve the same type without that
+# extra load.
+if ! echo "$out" | grep -q "^typed_modules=10$"; then
+  echo "Expected Stage3 type-only full graph to type exactly 10 real modules." >&2
+  printf "%s\n" "$out" >&2
+  exit 1
+fi
 echo "$out" | grep -q "^header_only_modules=0$"
 parsed_methods_total="$(printf "%s\n" "$out" | sed -n 's/^parsed_methods_total=//p')"
 # This fixture has 95 real method bodies under the pinned Haxe 4.3.7 stdlib.
