@@ -291,6 +291,77 @@ class M14ConditionalCompilationIntegrationTest {
 		ParserStage.parse(filtered, "ConditionalAsyncProbe.hx");
 	}
 
+	static function testMultilineInlineConditionalKeepsStructuredElseBody():Void {
+		final source = [
+			"class MultilineInlineConditional {",
+			"  static function run(probe:Dynamic):Void {",
+			"    var count = 0;",
+			"    if (#if alpha try",
+			"      probe.ready != null",
+			"    catch (_:Dynamic)",
+			"      false #elseif (beta || gamma) Reflect.hasField(probe, \"ready\")",
+			"      #else probe.ready != null #end) {",
+			"      selected();",
+			"    } else {",
+			"      count += 1;",
+			"      #if alpha",
+			"      targetOnly();",
+			"      #else",
+			"      fallback(probe);",
+			"      #end",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final filtered = HxConditionalCompilation.filterSource(source, defines([]));
+		assertTrue(filtered.length == source.length, "multiline inline filtering should preserve source offsets");
+		assertContains(filtered, "probe.ready != null", "the active inline #else condition should remain parseable");
+		assertContains(filtered, "count += 1", "the statement-level else body should remain active");
+		assertContains(filtered, "fallback(probe)", "the nested active block conditional should remain active");
+		assertNotContains(filtered, "Reflect.hasField", "inactive inline branches should be blanked");
+		assertNotContains(filtered, "targetOnly", "inactive nested block branches should be blanked");
+		assertNotContains(filtered, "#", "all conditional directives should be blanked before parsing");
+		final alphaFiltered = HxConditionalCompilation.filterSource(source, defines(["alpha"]));
+		assertContains(alphaFiltered, "try", "a matching multiline first branch should keep its expression payload");
+		assertContains(alphaFiltered, "targetOnly", "a nested block should use the same active definition set");
+		assertNotContains(alphaFiltered, "Reflect.hasField", "later multiline branches should be blanked after a match");
+		assertNotContains(alphaFiltered, "fallback(probe)", "the nested inactive block fallback should be blanked");
+		final inactiveOuter = [
+			"#if outer",
+			"var hidden = #if secret firstValue",
+			"#else",
+			"secondValue",
+			"#end;",
+			"#end",
+			"var visible = 1;",
+		].join("\n");
+		final inactiveResult = HxConditionalCompilation.filterSourceObserved(inactiveOuter, defines([]));
+		assertContains(inactiveResult.getFilteredSource(), "var visible = 1", "an inactive multiline inline block should not consume later source");
+		assertNotContains(inactiveResult.getFilteredSource(), "firstValue", "an inactive outer block should blank its inline first branch");
+		assertNotContains(inactiveResult.getFilteredSource(), "secondValue", "an inactive outer block should blank its inline fallback branch");
+		assertTrue(inactiveResult.getObservation().getObservedDefineNames().join(",") == "outer",
+			"an inactive outer block should not evaluate definitions used only by a nested inline conditional");
+
+		final parsed = ParserStage.parse(filtered, "MultilineInlineConditional.hx");
+		final classes = HxModuleDecl.getClasses(parsed.getDecl());
+		assertTrue(classes.length == 1, "multiline inline fixture should parse one class");
+		final functions = HxClassDecl.getFunctions(classes[0]);
+		assertTrue(functions.length == 1, "multiline inline fixture should parse one function");
+		final body = HxFunctionDecl.getBody(functions[0]);
+		assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(body), "multiline inline fixture should not leave opaque expressions");
+		switch (body) {
+			case [
+				SVar("count", _, EInt(0), _),
+				SIf(EBinop("!=", EField(EIdent("probe"), "ready"), ENull), SBlock([SExpr(ECall(EIdent("selected"), []), _)], _), SBlock([
+					SExpr(EBinop("+=", EIdent("count"), EInt(1)), _),
+					SExpr(ECall(EIdent("fallback"), [EIdent("probe")]), _)
+				], _), _)
+			]:
+			case _:
+				throw "multiline inline filtering should preserve condition, call, and mutation structure";
+		}
+	}
+
 	static function testConditionalObservation():Void {
 		assertTrue(CompilerDependencyKindTools.name(CompilerDependencyKind.ConditionalCompilation) == "conditional-compilation"
 			&& CompilerDependencyKindTools.name(CompilerDependencyKind.FeatureSelection) == "feature-selection",
@@ -379,6 +450,7 @@ class M14ConditionalCompilationIntegrationTest {
 		testActiveNativeLibraryExternImports();
 		testInlineInactiveModifierKeepsSuffix();
 		testBlockConditionalEndWithSemicolonAfterInlineGuard();
+		testMultilineInlineConditionalKeepsStructuredElseBody();
 		testConditionalObservation();
 	}
 }

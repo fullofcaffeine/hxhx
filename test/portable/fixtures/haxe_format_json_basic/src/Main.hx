@@ -9,10 +9,16 @@ class Main {
 		Sys.println("sum=" + sum);
 		Sys.println("ok=" + ok);
 
-		final encoded = haxe.format.JsonPrinter.print({answer: 42, text: "hello", flag: false});
+		final encoded = haxe.format.JsonPrinter.print({
+			answer: 42,
+			text: "hello",
+			longText: "portable-json-value",
+			flag: false
+		});
 		final reparsed = haxe.format.JsonParser.parse(encoded);
 		Sys.println("answer=" + Reflect.field(reparsed, "answer"));
 		Sys.println("text=" + Reflect.field(reparsed, "text"));
+		Sys.println("longText=" + Reflect.field(reparsed, "longText"));
 		Sys.println("flag=" + (Reflect.field(reparsed, "flag") == true));
 	}
 }

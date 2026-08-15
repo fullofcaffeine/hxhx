@@ -130,16 +130,9 @@ let get (o : Obj.t) (field : string) : Obj.t =
     let obj = anon_of_obj o in
     let idx = slot_index obj field in
     if idx >= 0 && Stdlib.Array.get obj.present idx then Stdlib.Array.get obj.values idx else HxRuntime.hx_null
-  else if
-    Obj.is_block o
-    && Obj.size o = 3
-    && Obj.field o 0 != marker
-    && Obj.is_int (Obj.field o 1)
-    && Obj.is_int (Obj.field o 2)
-    && Obj.is_block (Obj.field o 0)
-    && Obj.tag (Obj.field o 0) = 0
-    && Obj.size (Obj.field o 0) = 1
-  then
+  (* Use the array runtime's marker instead of inspecting a guessed record layout.
+     Other blocks, including strings, can have the same size as an old array record. *)
+  else if HxArray.is_value o then
     let a : Obj.t HxArray.t = Obj.obj o in
     (match field with
     | "iterator" -> Obj.repr (fun () -> HxIterator.of_array a)

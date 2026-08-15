@@ -240,27 +240,33 @@ The fork then added target-neutral lifecycle and scalability repairs:
   least-recently-used eviction, reset, quarantine, and redacted counters. It
   does not yet authorize a target cache hit.
 
-As of 2026-08-01, upstream `SomeRanDev/reflaxe` remains at
-`73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `ad25a8ba52adf48a7bf69c5311b274f1c9417ba6`, published on branch
-`hxhx-agent/function-occurrence-identity`, with
-path-independent content digest
-`65f5cb6406cfb90d5aea72b4c4d7471059446a48672f0122a424e0bd549bcad7`.
+As of 2026-08-15, upstream `SomeRanDev/reflaxe` remains at
+`73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` is
+`577f9e8eede0c8ea4ef6bae54e066cf526e15119`. The `hxhx` consumer pins that
+reviewed merge commit with path-independent content digest
+`891f4aa69dae20cb5a648c489769ec6cc252e8e00673cbd948a601e2d6493c9f`.
 The last repository-validated rollback pin is
-`6ca210f526007ff6f4a44694b169538eba4f969c` with digest
-`593d8603829d1fb99d814191c7b9c136cc6b9e92cb653b4d7942e0de2415b9e0`;
+`ad25a8ba52adf48a7bf69c5311b274f1c9417ba6` with digest
+`65f5cb6406cfb90d5aea72b4c4d7471059446a48672f0122a424e0bd549bcad7`;
 restoring both values together is the bounded rollback.
 
-The current candidate also gives each nested function literal a stable
+Fork PR #21 gives each nested function literal a stable
 structural identity during the existing lexical traversal. A target can now
 identify `function():Int return 1` directly even though the literal has no
 parameter identity to reuse. The typed expression remains a request-local
 lookup key; only the enclosing owner and structural path enter the published
 identity. Each occurrence also names its immediate enclosing function literal,
 so a target can reject a real child that is paired with the wrong sibling
-parent. Fork PR #21 reviews this additive framework API separately from the
-older target-reuse lifecycle PR.
+parent. PR #21 merged this additive framework API separately from the older
+target-reuse lifecycle work.
+
+Fork PR #22 reduces the cold cost of the same program fingerprint without
+changing its bytes. Macro execution now hashes each normalized function body one
+SHA-256 block at a time instead of retaining another compiler-sized word array.
+Three fresh hxhx compiler profiles reduced the median fingerprint phase from
+221,991 ms to 137,287 ms, or 38.2%. The consumer still requires complete
+generated-tree, bootstrap, native-binary, and watchdog evidence before treating
+that phase improvement as a complete bootstrap result.
 
 Fork PR #19 makes Haxe 4.3.7's all-null abstract resolve-hook placeholder an
 explicit fingerprint fact. A missing hook, the exact host placeholder, and a

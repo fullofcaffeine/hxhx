@@ -5,6 +5,20 @@ class M6MapIntegrationTest {
 		}
 	}
 
+	static function assertCount(haystack:String, needle:String, expected:Int, label:String):Void {
+		var count = 0;
+		var offset = 0;
+		while (true) {
+			final found = haystack.indexOf(needle, offset);
+			if (found < 0)
+				break;
+			count++;
+			offset = found + needle.length;
+		}
+		if (count != expected)
+			throw label + ": expected " + expected + " occurrences of '" + needle + "', found " + count;
+	}
+
 	static function hasCommand(cmd:String):Bool {
 		try {
 			final p = new sys.io.Process(cmd, ["--version"]);
@@ -79,10 +93,16 @@ class M6MapIntegrationTest {
 		assertContains(content, "HxMap.create_int", "IntMap create");
 		assertContains(content, "HxMap.set_int", "IntMap set");
 		assertContains(content, "HxMap.get_int", "IntMap get");
+		assertContains(content, "HxMap.pairs_int", "IntMap keyValueIterator pairs");
 
 		assertContains(content, "HxMap.create_object", "ObjectMap create");
 		assertContains(content, "HxMap.set_object", "ObjectMap set");
 		assertContains(content, "HxMap.get_object", "ObjectMap get");
+		assertContains(content, "HxMap.pairs_object", "ObjectMap keyValueIterator pairs");
+
+		assertCount(content, "Stdlib.fst", 3, "Map pair key projection");
+		assertCount(content, "Stdlib.snd", 3, "Map pair value projection");
+		assertCount(content, "HxAnon.get", 2, "ordinary anonymous key/value field access");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {

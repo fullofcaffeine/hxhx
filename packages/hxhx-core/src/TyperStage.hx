@@ -1007,17 +1007,23 @@ class TyperStage {
 		The receiver becomes the first argument for ordinary overload selection.
 		The result retains both the static declaration and the using provider, so
 		backends do not repeat directive precedence or inheritance lookup.
+
+		Resolution is speculative. Callers remain responsible for typing the receiver
+		and arguments once in source order; this helper uses an isolated inference
+		snapshot so a receiver-local declaration cannot enter the function catalog a
+		second time while candidates are inspected.
 	**/
 	static function resolveExtensionCall(receiver:HxExpr, field:String, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):Null<TyExtensionCallResolution> {
-		final receiverType = inferExprType(receiver, scope, ctx, pos);
+		final inferenceScope = scope.copyForInference();
+		final receiverType = inferExprType(receiver, inferenceScope, ctx, pos);
 		final receiverOwner = nominalInfoForType(ctx.getIndex(), receiverType);
 		if (receiverOwner != null && receiverOwner.instanceMethodCandidates(field).length > 0)
 			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
 		for (extension in ctx.extensionMethods(field)) {
-			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments, scope, ctx, pos,
-				extension.getCandidates());
+			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments,
+				inferenceScope.copyForInference(), ctx, pos, extension.getCandidates());
 			if (resolution.declaration != null)
 				return {
 					type: resolution.type,
@@ -1444,10 +1450,10 @@ class TyperStage {
 									if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
 										resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 									} else {
+										for (a in args)
+											inferExprType(a, scope, ctx, pos);
 										final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
 										if (extension == null) {
-											for (a in args)
-												inferExprType(a, scope, ctx, pos);
 											TyType.unknown();
 										} else {
 											extension.type;
@@ -1459,10 +1465,10 @@ class TyperStage {
 								if (c != null && c.instanceMethodCandidates(field).length > 0) {
 									resolveMethodCall(c, field, false, args, scope, ctx, pos).type;
 								} else {
+									for (a in args)
+										inferExprType(a, scope, ctx, pos);
 									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
 									if (extension == null) {
-										for (a in args)
-											inferExprType(a, scope, ctx, pos);
 										TyType.unknown();
 									} else {
 										extension.type;
@@ -1492,10 +1498,10 @@ class TyperStage {
 								if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
 									resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 								} else {
+									for (a in args)
+										inferExprType(a, scope, ctx, pos);
 									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
 									if (extension == null) {
-										for (a in args)
-											inferExprType(a, scope, ctx, pos);
 										TyType.unknown();
 									} else {
 										extension.type;

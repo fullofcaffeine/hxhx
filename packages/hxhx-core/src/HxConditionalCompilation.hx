@@ -21,16 +21,17 @@
 	  because it contains no literal `#if` tokens.
 
 	How
-	- Scan line-by-line and recognize directives only at the beginning of a physical line
-	  (after optional whitespace).
+	- Scan block directives line-by-line. Before an active line is emitted, select any
+	  inline conditional that starts on that line, including one whose branches span
+	  multiple physical lines.
 	- Evaluate a small boolean expression subset:
 	  - identifiers, `!`, `&&`, `||`, parentheses
 	  - `ident == "string"` and `ident != "string"` comparisons
 	- Unknown identifiers are treated as false (conservative).
 
 	Gotchas
-	- This is not a full Haxe preprocessor: it intentionally ignores directives that appear
-	  mid-line or inside strings/comments.
+	- This is not a full Haxe preprocessor. Inline scanning skips quoted strings and comments,
+	  but it still supports only the expression subset described above.
 	- It is meant to unblock Gate bring-up; grow it only when a gate/test requires it.
 **/
 class HxConditionalCompilation {
@@ -101,7 +102,7 @@ class HxConditionalCompilation {
 		if (source == null || source.length == 0)
 			return new CompilerConditionalCompilationResult(source, new CompilerConditionalCompilationObservation(decisions));
 
-		final lines = splitLinesPreserveNewlines(source);
+		var lines = splitLinesPreserveNewlines(source);
 		final out = new StringBuf();
 
 		// Each stack frame represents a single `#if ...` block.
@@ -112,31 +113,59 @@ class HxConditionalCompilation {
 		final stack = new Array<{parentActive:Bool, branchActive:Bool, seenTrue:Bool}>();
 		var currentActive = true;
 
-		for (line in lines) {
+		var lineIndex = 0;
+		while (lineIndex < lines.length) {
+			var line = lines[lineIndex];
 			final directive = parseDirectiveLine(line);
 			if (directive == null) {
 				if (!currentActive) {
+					// Consume a multiline inline block as one inactive region. Otherwise,
+					// a line-leading #else or #end inside it could be mistaken for the
+					// enclosing block directive and reactivate source too early.
+					if (line.indexOf("#if") >= 0) {
+						var filteredRemaining = false;
+						var inlineFiltered = filterInlineConditionals(line, evaluate, false);
+						if (inlineFiltered == null) {
+							filteredRemaining = true;
+							inlineFiltered = filterInlineConditionals(lines.slice(lineIndex).join(""), evaluate, false);
+						}
+						if (inlineFiltered != null) {
+							if (filteredRemaining)
+								lines = lines.slice(0, lineIndex).concat(splitLinesPreserveNewlines(inlineFiltered));
+							else
+								lines[lineIndex] = inlineFiltered;
+							line = lines[lineIndex];
+						}
+					}
 					out.add(makeBlankLineLike(line));
+					lineIndex++;
 					continue;
 				}
 
-				// Bootstrap preprocessor extension: handle a small subset of inline conditionals.
+				// Inline conditionals can begin inside an expression and finish on a later
+				// physical line. Filter the remaining source so the chosen payload keeps its
+				// original offsets, then continue the ordinary block-directive pass over it.
 				//
-				// Why
-				// - Upstream stdlib frequently uses inline `#if ... #else ... #end` in expressions, e.g.:
-				//     var b = #if (js || hl) @:privateAccess s.b #else s.getData() #end;
-				// - The stage1/stage3 frontends are not full preprocessors, so leaving `#` tokens in
-				//   the active source causes parse failures / unsupported-expr diagnostics.
-				//
-				// What
-				// - We rewrite the line to keep only the active branch (best-effort) while blanking
-				//   the directive tokens and inactive branch with spaces (newlines preserved).
-				//
-				// Non-goals
-				// - Full nested inline preprocessing.
-				// - Correct handling inside strings/comments (best-effort heuristics only).
-				final inlineFiltered = filterInlineConditionals(line, evaluate);
-				out.add(inlineFiltered == null ? line : inlineFiltered);
+				// Only inspect the remaining source when the current line has a possible
+				// opener. Same-line conditionals stay on the cheap line-local path; only
+				// an opener without a local terminator scans the remaining source.
+				while (line.indexOf("#if") >= 0) {
+					var filteredRemaining = false;
+					var inlineFiltered = filterInlineConditionals(line, evaluate);
+					if (inlineFiltered == null) {
+						filteredRemaining = true;
+						inlineFiltered = filterInlineConditionals(lines.slice(lineIndex).join(""), evaluate);
+					}
+					if (inlineFiltered == null)
+						break;
+					if (filteredRemaining)
+						lines = lines.slice(0, lineIndex).concat(splitLinesPreserveNewlines(inlineFiltered));
+					else
+						lines[lineIndex] = inlineFiltered;
+					line = lines[lineIndex];
+				}
+				out.add(line);
+				lineIndex++;
 				continue;
 			}
 
@@ -190,6 +219,7 @@ class HxConditionalCompilation {
 					break;
 				}
 			}
+			lineIndex++;
 		}
 
 		return new CompilerConditionalCompilationResult(out.toString(), new CompilerConditionalCompilationObservation(decisions));
@@ -300,137 +330,220 @@ class HxConditionalCompilation {
 	}
 
 	/**
-		Filter a single physical line that contains an inline `#if ... #else ... #end`.
+		Select the first inline conditional that begins on the first physical line.
 
-		Returns `null` if the line does not contain a supported inline construct.
+		The selected payload and all source outside the conditional keep their original
+		offsets. Directive text and inactive payloads become spaces, with line endings
+		preserved. Nested directives are used to find the matching `#end`; a selected
+		nested directive remains for a later filtering pass. When `selectBranch` is false,
+		the complete conditional is blanked without evaluating its definitions; this keeps
+		conditionals inside an inactive outer block inert.
 	**/
-	private static function filterInlineConditionals(line:String, evaluate:String->Bool):Null<String> {
-		if (line == null || line.length == 0)
-			return null;
-		// Fast-path: avoid scanning most lines.
-		if (line.indexOf("#if") == -1)
+	private static function filterInlineConditionals(source:String, evaluate:String->Bool, selectBranch:Bool = true):Null<String> {
+		if (source == null || source.length == 0 || source.indexOf("#if") == -1 || source.indexOf("#end") == -1)
 			return null;
 
-		// Only attempt when there's a matching `#end` somewhere later.
-		if (line.indexOf("#end") == -1)
+		final tokens = findConditionalDirectiveTokens(source);
+		final firstLineEnd = source.indexOf("\n") < 0 ? source.length : source.indexOf("\n");
+		var openerIndex = -1;
+		var openerCondStart = -1;
+		var openerCondEnd = -1;
+		for (i in 0...tokens.length) {
+			final token = tokens[i];
+			if (token.start >= firstLineEnd)
+				break;
+			if (token.kind != "if")
+				continue;
+			var condStart = token.end;
+			while (condStart < source.length && isLineWs(source.charCodeAt(condStart)))
+				condStart++;
+			final condEnd = parseInlineCondEnd(source, condStart, source.length);
+			if (condEnd <= condStart || condEnd > firstLineEnd)
+				continue;
+			final linePayload = stripLineCommentOutsideStrings(source.substr(condEnd, firstLineEnd - condEnd));
+			final hasSameLineDirective = i + 1 < tokens.length && tokens[i + 1].start < firstLineEnd;
+			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective)
+				continue;
+			openerIndex = i;
+			openerCondStart = condStart;
+			openerCondEnd = condEnd;
+			break;
+		}
+		if (openerIndex < 0)
 			return null;
 
-		// Find a `#if` token outside string literals.
-		final idxIf = findTokenOutsideStrings(line, "#if", 0);
-		if (idxIf < 0)
+		var depth = 0;
+		var endIndex = -1;
+		final branchTokenIndexes = new Array<Int>();
+		for (i in openerIndex...tokens.length) {
+			final token = tokens[i];
+			switch (token.kind) {
+				case "if":
+					depth++;
+				case "end":
+					depth--;
+					if (depth == 0) {
+						endIndex = i;
+						break;
+					}
+				case "elseif" | "else":
+					if (depth == 1)
+						branchTokenIndexes.push(i);
+				case _:
+			}
+			if (endIndex >= 0)
+				break;
+		}
+		if (endIndex < 0)
 			return null;
 
-		final idxEnd = findTokenOutsideStrings(line, "#end", idxIf + 3);
-		if (idxEnd < 0)
-			return null;
-
-		// Parse the condition boundary so we can separate it from the "then" expression.
-		var condStart = idxIf + 3;
-		while (condStart < line.length && isLineWs(line.charCodeAt(condStart)))
-			condStart++;
-		if (condStart >= line.length)
-			return null;
-
-		var condEnd = parseInlineCondEnd(line, condStart, idxEnd);
-		if (condEnd <= condStart)
-			return null;
-
-		final condText = StringTools.trim(line.substr(condStart, condEnd - condStart));
+		final endToken = tokens[endIndex];
 		final branches = new Array<{cond:Null<String>, start:Int, end:Int}>();
-		var branchCond:Null<String> = condText;
-		var payloadStart = condEnd;
-		var scanFrom = payloadStart;
-		var done = false;
-		while (!done) {
-			final idxElseIf = findDirectiveTokenOutsideStrings(line, "#elseif", scanFrom, idxEnd);
-			final idxElse = findDirectiveTokenOutsideStrings(line, "#else", scanFrom, idxEnd);
-			var next = idxEnd;
-			var nextKind = "";
-			if (idxElseIf >= 0 && idxElseIf < next) {
-				next = idxElseIf;
-				nextKind = "elseif";
+		final firstBranchEnd = branchTokenIndexes.length == 0 ? endToken.start : tokens[branchTokenIndexes[0]].start;
+		branches.push({
+			cond: StringTools.trim(source.substr(openerCondStart, openerCondEnd - openerCondStart)),
+			start: openerCondEnd,
+			end: firstBranchEnd
+		});
+		for (i in 0...branchTokenIndexes.length) {
+			final token = tokens[branchTokenIndexes[i]];
+			final branchEnd = i + 1 < branchTokenIndexes.length ? tokens[branchTokenIndexes[i + 1]].start : endToken.start;
+			if (token.kind == "else") {
+				branches.push({cond: null, start: token.end, end: branchEnd});
+				continue;
 			}
-			if (idxElse >= 0 && idxElse < next) {
-				next = idxElse;
-				nextKind = "else";
-			}
-
-			branches.push({cond: branchCond, start: payloadStart, end: next});
-			if (next == idxEnd) {
-				done = true;
-			} else if (nextKind == "elseif") {
-				condStart = next + 7; // "#elseif".length == 7
-				while (condStart < line.length && isLineWs(line.charCodeAt(condStart)))
-					condStart++;
-				condEnd = parseInlineCondEnd(line, condStart, idxEnd);
-				if (condEnd <= condStart)
-					return null;
-				branchCond = StringTools.trim(line.substr(condStart, condEnd - condStart));
-				payloadStart = condEnd;
-				scanFrom = payloadStart;
-			} else {
-				branches.push({cond: null, start: next + 5, end: idxEnd}); // "#else".length == 5
-				done = true;
-			}
+			var condStart = token.end;
+			while (condStart < source.length && isLineWs(source.charCodeAt(condStart)))
+				condStart++;
+			final condEnd = parseInlineCondEnd(source, condStart, branchEnd);
+			if (condEnd <= condStart)
+				return null;
+			branches.push({
+				cond: StringTools.trim(source.substr(condStart, condEnd - condStart)),
+				start: condEnd,
+				end: branchEnd
+			});
 		}
 
-		// Decide which branch is active.
 		var keepStart = -1;
 		var keepEnd = -1;
-		for (branch in branches) {
-			if (branch.cond == null || evaluate(branch.cond)) {
-				keepStart = branch.start;
-				keepEnd = branch.end;
-				break;
+		if (selectBranch) {
+			for (branch in branches) {
+				if (branch.cond == null || evaluate(branch.cond)) {
+					keepStart = branch.start;
+					keepEnd = branch.end;
+					break;
+				}
 			}
 		}
-		// Build an output line of the same length that keeps:
-		// - prefix before #if
-		// - chosen branch payload, if any
-		// - suffix after #end
-		//
-		// If no branch matches and there is no #else, only the conditional payload is blanked.
-		// The suffix still matters for inline modifier patterns such as:
-		//   #if someTarget inline #end public static function f() {}
-		final outCodes = new Array<Int>();
-		outCodes.resize(line.length);
-		for (i in 0...line.length) {
-			final c = line.charCodeAt(i);
-			outCodes[i] = (c == "\n".code || c == "\r".code) ? c : " ".code;
-		}
 
-		inline function copyRange(a:Int, b:Int):Void {
-			var i = a;
-			while (i < b && i < line.length) {
-				outCodes[i] = line.charCodeAt(i);
+		final outCodes = [for (i in 0...source.length) source.charCodeAt(i)];
+		var i = tokens[openerIndex].start;
+		while (i < endToken.end) {
+			final c = source.charCodeAt(i);
+			outCodes[i] = c == "\n".code || c == "\r".code ? c : " ".code;
+			i++;
+		}
+		if (keepStart >= 0) {
+			i = keepStart;
+			while (i < keepEnd) {
+				outCodes[i] = source.charCodeAt(i);
 				i++;
 			}
 		}
 
-		copyRange(0, idxIf);
-		if (keepStart >= 0 && keepEnd >= keepStart)
-			copyRange(keepStart, keepEnd);
-		copyRange(idxEnd + 4, line.length); // "#end".length == 4
-
-		final b = new StringBuf();
+		final out = new StringBuf();
 		for (c in outCodes)
-			b.addChar(c);
-		return b.toString();
+			out.addChar(c);
+		return out.toString();
 	}
 
-	private static function findDirectiveTokenOutsideStrings(line:String, token:String, from:Int, max:Int):Int {
-		var pos = from;
-		while (pos < max) {
-			final idx = findTokenOutsideStrings(line, token, pos);
-			if (idx < 0 || idx >= max)
-				return -1;
-			if (token == "#else" && line.substr(idx, 7) == "#elseif") {
-				pos = idx + 1;
+	/**
+		Find conditional directive keywords that can affect inline branch nesting.
+
+		Quoted strings and line or block comments are skipped so text such as `"#end"`
+		does not close a real source conditional. Each result keeps exact source offsets;
+		the caller owns condition parsing and matching nested `#if`/`#end` pairs.
+	**/
+	private static function findConditionalDirectiveTokens(source:String):Array<{kind:String, start:Int, end:Int}> {
+		final out = new Array<{kind:String, start:Int, end:Int}>();
+		var i = 0;
+		var quote = 0;
+		var lineComment = false;
+		var blockComment = false;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (lineComment) {
+				if (c == "\n".code)
+					lineComment = false;
+				i++;
 				continue;
 			}
-			return idx;
+			if (blockComment) {
+				if (c == "*".code && i + 1 < source.length && source.charCodeAt(i + 1) == "/".code) {
+					blockComment = false;
+					i += 2;
+				} else {
+					i++;
+				}
+				continue;
+			}
+			if (quote != 0) {
+				if (c == "\\".code) {
+					i += 2;
+				} else {
+					if (c == quote)
+						quote = 0;
+					i++;
+				}
+				continue;
+			}
+			if (c == "/".code && i + 1 < source.length) {
+				final next = source.charCodeAt(i + 1);
+				if (next == "/".code) {
+					lineComment = true;
+					i += 2;
+					continue;
+				}
+				if (next == "*".code) {
+					blockComment = true;
+					i += 2;
+					continue;
+				}
+			}
+			if (c == "\"".code || c == "'".code) {
+				quote = c;
+				i++;
+				continue;
+			}
+			if (c == "#".code) {
+				var kind:Null<String> = null;
+				var length = 0;
+				for (candidate in ["elseif", "else", "end", "if"]) {
+					if (source.substr(i + 1, candidate.length) != candidate)
+						continue;
+					final after = i + 1 + candidate.length;
+					if (after < source.length) {
+						final boundary = source.charCodeAt(after);
+						if ((boundary >= "a".code && boundary <= "z".code)
+							|| (boundary >= "A".code && boundary <= "Z".code)
+							|| (boundary >= "0".code && boundary <= "9".code)
+							|| boundary == "_".code)
+							continue;
+					}
+					kind = candidate;
+					length = candidate.length + 1;
+					break;
+				}
+				if (kind != null) {
+					out.push({kind: kind, start: i, end: i + length});
+					i += length;
+					continue;
+				}
+			}
+			i++;
 		}
-		return -1;
+		return out;
 	}
 
 	private static function parseInlineCondEnd(line:String, start:Int, max:Int):Int {
@@ -478,46 +591,6 @@ class HxConditionalCompilation {
 			i++;
 		}
 		return i;
-	}
-
-	private static function findTokenOutsideStrings(line:String, token:String, from:Int):Int {
-		if (line == null || token == null)
-			return -1;
-		if (token.length == 0)
-			return -1;
-
-		var i = from < 0 ? 0 : from;
-		var inQuote = 0; // 0 = none, otherwise quote charcode
-		while (i <= line.length - token.length) {
-			final c = line.charCodeAt(i);
-			if (inQuote != 0) {
-				if (c == "\\".code) {
-					i += 2;
-					continue;
-				}
-				if (c == inQuote) {
-					inQuote = 0;
-				}
-				i++;
-				continue;
-			}
-
-			if (c == "\"".code || c == "'".code) {
-				inQuote = c;
-				i++;
-				continue;
-			}
-
-			// Very small comment heuristic: do not match inside `//` comment tails.
-			if (c == "/".code && i + 1 < line.length && line.charCodeAt(i + 1) == "/".code) {
-				return -1;
-			}
-
-			if (line.substr(i, token.length) == token)
-				return i;
-			i++;
-		}
-		return -1;
 	}
 
 	private static function splitLinesPreserveNewlines(s:String):Array<String> {

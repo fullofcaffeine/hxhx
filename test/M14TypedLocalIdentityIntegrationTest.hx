@@ -134,9 +134,46 @@ class M14TypedLocalIdentityIntegrationTest {
 		assertTrue(bindingOfStatement(statements[7]).getType().isDynamic(), "an unknown local should still infer Dynamic from a Dynamic initializer");
 	}
 
+	/**
+		Extension lookup must not replay a receiver expression on the live function
+		environment. The comprehension binding is a source declaration, so recording it
+		twice would shift the next switch-pattern identity and fail typed-body replay.
+	**/
+	static function assertPatternAfterComprehensionReceiverReplay():Void {
+		final position = new HxPos(0, 1, 1);
+		final expression = ESwitch(EString("value"), [PEnumExtract("First", [PBind("items")]), PEnumExtract("Second", [PBind("next")])], [
+			ECall(EField(EArrayComprehension("item", EIdent("items"), null, EIdent("item")), "join"), [EString("")]),
+			EIdent("next")
+		]);
+		final sourceFunction = new HxFunctionDecl("check", Public, true, [], "String", [SReturn(expression, position)], "", [], position);
+		final sourceClass = new HxClassDecl("ReplayOrder", true, [sourceFunction], []);
+		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "ReplayOrder.hx");
+		final typed = TyperStage.typeModule(parsed).getTypedClasses()[0].getFunctions()[0];
+		final environment = typed.getEnvironment();
+		assertTrue(environment != null, "pattern/comprehension replay fixture lost its function environment");
+		final locals = environment.getLocals();
+		assertTrue(locals.length == 3, "extension lookup recorded a source-local declaration more than once");
+		assertTrue(locals[0].getName() == "items" && locals[0].getKind() == PatternVariable, "first switch branch lost its pattern declaration");
+		assertTrue(locals[1].getName() == "item" && locals[1].getKind() == ComprehensionVariable,
+			"array-comprehension receiver lost its declaration role or source order");
+		assertTrue(locals[2].getName() == "next" && locals[2].getKind() == PatternVariable, "later switch branch did not follow the comprehension declaration");
+
+		final typedSwitch = typed.getBody().getStatements()[0].getExpressions()[0];
+		final patternBindings = typedSwitch.getLocalBindings();
+		assertTrue(patternBindings.length == 2, "typed switch did not retain both pattern bindings");
+		assertTrue(bindingOfRead(typedSwitch.getExpressions()[2]).getIdentity().equals(patternBindings[1].getIdentity()),
+			"later switch branch did not read its exact pattern identity");
+		final comprehension = typedSwitch.getExpressions()[1].getExpressions()[0].getExpressions()[0];
+		final comprehensionBinding = comprehension.getLocalBindings()[0];
+		final comprehensionValue = comprehension.getExpressions()[comprehension.getExpressions().length - 1];
+		assertTrue(bindingOfRead(comprehensionValue).getIdentity().equals(comprehensionBinding.getIdentity()),
+			"receiver comprehension did not read its exact local identity");
+	}
+
 	static function main():Void {
 		assertCompilerTemporaryIdentity();
 		assertIncompatibleAssignmentKeepsLocalContract();
+		assertPatternAfterComprehensionReceiverReplay();
 		final typed = typedFunction();
 		final statements = typed.getBody().getStatements();
 		final outer = bindingOfStatement(statements[0]);

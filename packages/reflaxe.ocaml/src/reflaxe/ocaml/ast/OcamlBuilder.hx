@@ -9628,6 +9628,11 @@ class OcamlBuilder {
 	function buildSwitch(scrutinee:TypedExpr, cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>, edef:Null<TypedExpr>, switchType:Type):OcamlExpr {
 		final wantUnit = isVoidType(switchType);
 
+		inline function branchSourceKey(source:TypedExpr):String {
+			final span = OcamlLoweredOrigin.sourceSpan(source.pos);
+			return span.file + ":" + span.min + ":" + span.max;
+		}
+
 		inline function wrapCaseExpr(source:Null<TypedExpr>, expr:OcamlExpr):OcamlExpr {
 			return wantUnit ? exprAsStatement(expr, source) : expr;
 		}
@@ -9701,10 +9706,6 @@ class OcamlBuilder {
 		if (needsIfChain) {
 			final builtBranchBySource:Map<String, OcamlExpr> = [];
 			final outputCountBySource:Map<String, Int> = [];
-			function branchSourceKey(source:TypedExpr):String {
-				final span = OcamlLoweredOrigin.sourceSpan(source.pos);
-				return span.file + ":" + span.min + ":" + span.max;
-			}
 			function buildBranch(source:TypedExpr):OcamlExpr {
 				final sourceKey = branchSourceKey(source);
 				final existing = builtBranchBySource.get(sourceKey);
@@ -9849,7 +9850,10 @@ class OcamlBuilder {
 
 					nonNullArms.push({pat: pat, guard: null, expr: expr});
 				}
-				nonNullArms.push({pat: OcamlPat.PAny, guard: null, expr: defaultBranch});
+				final nonNullDefaultBranch = firstNullCaseExpr == null
+					&& edef != null ? ctx.finalRuntimeUses.copyExpressionForOutput(defaultBranch, 'nullable-switch-default:${branchSourceKey(edef)}:non-null',
+						ctx.activateStagedTypeRuntimeUse) : defaultBranch;
+				nonNullArms.push({pat: OcamlPat.PAny, guard: null, expr: nonNullDefaultBranch});
 
 				final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]);
 				return OcamlExpr.ELet(tmp, buildExpr(scrutinee),
