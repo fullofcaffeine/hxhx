@@ -1132,10 +1132,9 @@ class OcamlBuilder {
 		Recovers the sealed early-return payload at its exact function boundary.
 
 		A typed-function fallback does not publish an OCaml carrier in its control
-		plan. The owning Haxe function still provides the result type, and the
-		recovery expression must state that type explicitly. Without the annotation,
-		older OCaml compilers can infer `unit` from an infinite-loop fallback before
-		they examine the exception handler.
+		plan. The owning Haxe function still provides the result type, so this
+		recovery expression states that type explicitly. The caller also annotates
+		the complete `try` boundary when no callable result plan owns its output.
 	**/
 	function buildPlannedReturnBoundary(decision:OcamlControlDecision, returnVarName:String, position:Position):OcamlExpr {
 		try {
@@ -9254,7 +9253,12 @@ class OcamlBuilder {
 					body;
 				}
 			}
-			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			final returnBoundary = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			body = if (!isVoidType(resolvedReturnType) && completionBoundaryId == null) {
+				OcamlExpr.EAnnot(returnBoundary, typeExprFromHaxeType(resolvedReturnType));
+			} else {
+				returnBoundary;
+			}
 		}
 		if (isVoidType(resolvedReturnType)) {
 			if (completionBoundaryId != null && (completionResultKind != OcamlCallResultKind.EffectOnlyVoid || completionResult != null)) {
@@ -9477,7 +9481,12 @@ class OcamlBuilder {
 					body;
 				}
 			}
-			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			final returnBoundary = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			body = if (!isVoidType(functionReturnType) && functionResultBoundary == null) {
+				OcamlExpr.EAnnot(returnBoundary, typeExprFromHaxeType(functionReturnType));
+			} else {
+				returnBoundary;
+			}
 		}
 		if (isVoidType(functionReturnType)) {
 			body = exprAsStatement(body);

@@ -23,8 +23,8 @@ if (hasMapTextReturns.length !== 2
 const generatedSource = fs.readFileSync('out/Main.ml', 'utf8')
 const hasMapTextSource = generatedSource.match(/let hasMapText = [\s\S]*?\nlet runStrings =/)?.[0]
 if (!hasMapTextSource
-	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : bool\)/.test(hasMapTextSource)) {
-	throw new Error('the Boolean helper did not recover its early-return value with an explicit OCaml type')
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : bool\)\s*: bool\)/.test(hasMapTextSource)) {
+	throw new Error('the Boolean helper did not type its complete early-return boundary as an OCaml bool')
 }
 if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 5

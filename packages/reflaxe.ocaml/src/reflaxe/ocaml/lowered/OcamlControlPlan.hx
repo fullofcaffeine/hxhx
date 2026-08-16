@@ -1866,9 +1866,10 @@ class OcamlControlPlan {
 		Reports whether one private return uses its exact Haxe-typed function owner.
 
 		The carrier name is a policy marker, not an OCaml type. `Obj.t` exists only
-		while the private exception is in flight. The matching function handler uses
-		the owning Haxe function result type to annotate the recovered value. Thus,
-		the plan does not invent a callable carrier or use `Obj.magic` as evidence.
+		while the private exception is in flight. The matching function boundary uses
+		the owning Haxe function result type to annotate both the recovered value and,
+		when no callable result plan owns the output, the complete `try` expression.
+		Thus, the plan does not invent a callable carrier or use `Obj.magic` as evidence.
 	**/
 	public static function isAdmittedTypedFunctionReturnPayload(payload:OcamlControlPayloadPlan, functionId:String):Bool {
 		final needsTaggedBoolBox = payload.inputSemanticTypeId == "Bool" && payload.outputSemanticTypeId == "Dynamic";
