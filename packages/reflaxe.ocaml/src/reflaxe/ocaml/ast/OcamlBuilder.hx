@@ -3703,6 +3703,14 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Whether the typed expression is the exact, effect-free `true` literal. */
+	static function isLiteralTrue(expression:TypedExpr):Bool {
+		return switch (unwrap(expression).expr) {
+			case TConst(TBool(true)): true;
+			case _: false;
+		}
+	}
+
 	/**
 		Reports whether a String-concatenation operand is safe to print without
 		an OCaml sequencing binding.
@@ -5720,6 +5728,22 @@ class OcamlBuilder {
 					]);
 					final loop = OcamlExpr.ELet(loopName, OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], loopBody), repeat, true);
 					return breakCase == null ? loop : OcamlExpr.ETry(loop, [breakCase]);
+				}
+
+				final breakCase = loopCases == null ? null : loopCases.breakCase;
+				if (isLiteralTrue(cond) && breakCase == null) {
+					// OCaml fixes its built-in while expression to unit. A tail-recursive
+					// loop has the same runtime behavior here and keeps the non-completing
+					// result polymorphic for an enclosing typed return boundary.
+					var iterationBody = builtBody;
+					final continueCase = loopCases == null ? null : loopCases.continueCase;
+					if (continueCase != null) {
+						iterationBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
+					}
+					final loopName = freshTmp("while_loop");
+					final repeat = OcamlExpr.EApp(OcamlExpr.EIdent(loopName), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					final loopBody = OcamlExpr.ESeq([iterationBody, repeat]);
+					return OcamlExpr.ELet(loopName, OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], loopBody), repeat, true);
 				}
 
 				if (loopCases != null) {

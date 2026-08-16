@@ -423,16 +423,6 @@ let exprparser_bump = fun self () -> ignore (ignore (let __assign_7 = Obj.magic 
 let exprparser_parseStringLit = fun self () -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in match _g with
     | TIdent _p0 -> let _g2 = (_p0 : string) in let s = (_g2 : string) in (
-      ignore (let __assign_55 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-        (Obj.magic self : exprparser_t).cur <- __assign_55;
-        __assign_55
-      ));
-      let __assign_56 = (s : string) in (
-        tempResult := __assign_56;
-        __assign_56
-      )
-    )
-    | TString _p0 -> let _g2 = (_p0 : string) in let s = (_g2 : string) in (
       ignore (let __assign_57 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
         (Obj.magic self : exprparser_t).cur <- __assign_57;
         __assign_57
@@ -442,33 +432,43 @@ let exprparser_parseStringLit = fun self () -> let tempResult = ref (HxString.hx
         __assign_58
       )
     )
-    | _ -> let __assign_54 = ("" : string) in (
-      tempResult := __assign_54;
-      __assign_54
+    | TString _p0 -> let _g2 = (_p0 : string) in let s = (_g2 : string) in (
+      ignore (let __assign_59 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+        (Obj.magic self : exprparser_t).cur <- __assign_59;
+        __assign_59
+      ));
+      let __assign_60 = (s : string) in (
+        tempResult := __assign_60;
+        __assign_60
+      )
+    )
+    | _ -> let __assign_56 = ("" : string) in (
+      tempResult := __assign_56;
+      __assign_56
     ));
   !tempResult
 )
 
 let exprparser_definedValue = fun self (name : string) -> (try (
-  ignore (if name == HxString.hx_null_string || (let __string_receiver_59 = name in HxString.length __string_receiver_59) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if name == HxString.hx_null_string || (let __string_receiver_61 = name in HxString.length __string_receiver_61) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let access = Obj.magic (CompilerConditionalDefineAccess.Value) in (
-    ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_60 = name in HxString.length __string_receiver_60) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
+    ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_62 = name in HxString.length __string_receiver_62) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
     let tempResult = ref (HxString.hx_null_string : string) in let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
-      ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_61 = (HxMap.get_string (Obj.magic _this) (name : string) : string) in (
-        tempResult := __assign_61;
-        __assign_61
-      ) else let __assign_62 = ("" : string) in (
-        tempResult := __assign_62;
-        __assign_62
+      ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_63 = (HxMap.get_string (Obj.magic _this) (name : string) : string) in (
+        tempResult := __assign_63;
+        __assign_63
+      ) else let __assign_64 = ("" : string) in (
+        tempResult := __assign_64;
+        __assign_64
       ));
       !tempResult
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_63 -> (Obj.obj __ret_63 : string) : string)
+  | HxRuntime.Hx_return __ret_65 -> (Obj.obj __ret_65 : string) : string)
 
 let exprparser_parseIdentTail = fun self (name : string) -> (try let tempShortCircuit = ref (false : bool) in (
-  ignore (if let __string_eq_left_26 = name in let __string_eq_right_27 = "defined" in HxString.equals __string_eq_left_26 __string_eq_right_27 then let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
+  ignore (if let __string_eq_left_28 = name in let __string_eq_right_29 = "defined" in HxString.equals __string_eq_left_28 __string_eq_right_29 then let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
     | TIdent _ -> 0
     | TString _ -> 1
     | TNot -> 2
@@ -478,41 +478,41 @@ let exprparser_parseIdentTail = fun self (name : string) -> (try let tempShortCi
     | TRParen -> 6
     | TEq -> 7
     | TNeq -> 8
-    | TEof -> 9) = 5 then let __assign_28 = true in (
-    tempShortCircuit := __assign_28;
-    __assign_28
-  ) else let __assign_29 = false in (
-    tempShortCircuit := __assign_29;
-    __assign_29
-  ) else let __assign_30 = false in (
+    | TEof -> 9) = 5 then let __assign_30 = true in (
     tempShortCircuit := __assign_30;
     __assign_30
+  ) else let __assign_31 = false in (
+    tempShortCircuit := __assign_31;
+    __assign_31
+  ) else let __assign_32 = false in (
+    tempShortCircuit := __assign_32;
+    __assign_32
   ));
   ignore (if !tempShortCircuit then (
-    ignore (let __assign_31 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-      (Obj.magic self : exprparser_t).cur <- __assign_31;
-      __assign_31
+    ignore (let __assign_33 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+      (Obj.magic self : exprparser_t).cur <- __assign_33;
+      __assign_33
     ));
     let key = ref ("" : string) in (
       ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in match _g with
         | TIdent _p0 -> ignore (let _g2 = (_p0 : string) in let n = (_g2 : string) in (
-          ignore (let __assign_32 = (n : string) in (
-            key := __assign_32;
-            __assign_32
-          ));
-          let __assign_33 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-            (Obj.magic self : exprparser_t).cur <- __assign_33;
-            __assign_33
-          )
-        ))
-        | TString _p0 -> ignore (let _g2 = (_p0 : string) in let s = (_g2 : string) in (
-          ignore (let __assign_34 = (s : string) in (
+          ignore (let __assign_34 = (n : string) in (
             key := __assign_34;
             __assign_34
           ));
           let __assign_35 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
             (Obj.magic self : exprparser_t).cur <- __assign_35;
             __assign_35
+          )
+        ))
+        | TString _p0 -> ignore (let _g2 = (_p0 : string) in let s = (_g2 : string) in (
+          ignore (let __assign_36 = (s : string) in (
+            key := __assign_36;
+            __assign_36
+          ));
+          let __assign_37 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+            (Obj.magic self : exprparser_t).cur <- __assign_37;
+            __assign_37
           )
         ))
         | _ -> ignore ());
@@ -527,26 +527,26 @@ let exprparser_parseIdentTail = fun self (name : string) -> (try let tempShortCi
           | TRParen -> 6
           | TEq -> 7
           | TNeq -> 8
-          | TEof -> 9) = 6 then let __assign_36 = true in (
-          tempBool := __assign_36;
-          __assign_36
-        ) else let __assign_37 = false in (
-          tempBool := __assign_37;
-          __assign_37
-        ));
-        ignore (if !tempBool then ignore (let __assign_38 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-          (Obj.magic self : exprparser_t).cur <- __assign_38;
+          | TEof -> 9) = 6 then let __assign_38 = true in (
+          tempBool := __assign_38;
           __assign_38
+        ) else let __assign_39 = false in (
+          tempBool := __assign_39;
+          __assign_39
+        ));
+        ignore (if !tempBool then ignore (let __assign_40 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+          (Obj.magic self : exprparser_t).cur <- __assign_40;
+          __assign_40
         )) else ());
         let access = Obj.magic (CompilerConditionalDefineAccess.Presence) in (
-          ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || !key == HxString.hx_null_string || (let __string_receiver_39 = !key in HxString.length __string_receiver_39) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (!key : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (!key : string) access) else ()));
+          ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || !key == HxString.hx_null_string || (let __string_receiver_41 = !key in HxString.length __string_receiver_41) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (!key : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (!key : string) access) else ()));
           let tempShortCircuit1 = ref (false : bool) in (
-            ignore (if (let __string_receiver_40 = !key in HxString.length __string_receiver_40) > 0 then let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_41 = HxMap.exists_string (Obj.magic _this) (!key : string) in (
-              tempShortCircuit1 := __assign_41;
-              __assign_41
-            ) else let __assign_42 = false in (
-              tempShortCircuit1 := __assign_42;
-              __assign_42
+            ignore (if (let __string_receiver_42 = !key in HxString.length __string_receiver_42) > 0 then let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_43 = HxMap.exists_string (Obj.magic _this) (!key : string) in (
+              tempShortCircuit1 := __assign_43;
+              __assign_43
+            ) else let __assign_44 = false in (
+              tempShortCircuit1 := __assign_44;
+              __assign_44
             ));
             raise (HxRuntime.Hx_return (Obj.repr (!tempShortCircuit1)))
           )
@@ -557,79 +557,85 @@ let exprparser_parseIdentTail = fun self (name : string) -> (try let tempShortCi
   let tempResult = ref (false : bool) in (
     ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in match _g with
       | TEq -> (
-        ignore (let __assign_45 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-          (Obj.magic self : exprparser_t).cur <- __assign_45;
-          __assign_45
+        ignore (let __assign_47 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+          (Obj.magic self : exprparser_t).cur <- __assign_47;
+          __assign_47
         ));
-        let lit = (exprparser_parseStringLit (Obj.magic self) () : string) in let __assign_46 = let __string_eq_left_47 = exprparser_definedValue (Obj.magic self) (name : string) in let __string_eq_right_48 = lit in HxString.equals __string_eq_left_47 __string_eq_right_48 in (
-          tempResult := __assign_46;
-          __assign_46
+        let lit = (exprparser_parseStringLit (Obj.magic self) () : string) in let __assign_48 = let __string_eq_left_49 = exprparser_definedValue (Obj.magic self) (name : string) in let __string_eq_right_50 = lit in HxString.equals __string_eq_left_49 __string_eq_right_50 in (
+          tempResult := __assign_48;
+          __assign_48
         )
       )
       | TNeq -> (
-        ignore (let __assign_49 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-          (Obj.magic self : exprparser_t).cur <- __assign_49;
-          __assign_49
+        ignore (let __assign_51 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+          (Obj.magic self : exprparser_t).cur <- __assign_51;
+          __assign_51
         ));
-        let lit = (exprparser_parseStringLit (Obj.magic self) () : string) in let __assign_50 = let __string_eq_left_51 = exprparser_definedValue (Obj.magic self) (name : string) in let __string_eq_right_52 = lit in not (HxString.equals __string_eq_left_51 __string_eq_right_52) in (
-          tempResult := __assign_50;
-          __assign_50
+        let lit = (exprparser_parseStringLit (Obj.magic self) () : string) in let __assign_52 = let __string_eq_left_53 = exprparser_definedValue (Obj.magic self) (name : string) in let __string_eq_right_54 = lit in not (HxString.equals __string_eq_left_53 __string_eq_right_54) in (
+          tempResult := __assign_52;
+          __assign_52
         )
       )
       | _ -> let access = Obj.magic (CompilerConditionalDefineAccess.Presence) in (
-        ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_43 = name in HxString.length __string_receiver_43) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess1 = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess1) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
-        let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_44 = HxMap.exists_string (Obj.magic _this) (name : string) in (
-          tempResult := __assign_44;
-          __assign_44
+        ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_45 = name in HxString.length __string_receiver_45) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess1 = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess1) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
+        let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_46 = HxMap.exists_string (Obj.magic _this) (name : string) in (
+          tempResult := __assign_46;
+          __assign_46
         )
       ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_53 -> (Obj.obj __ret_53 : bool) : bool)
+  | HxRuntime.Hx_return __ret_55 -> (Obj.obj __ret_55 : bool) : bool)
 
-let rec exprparser_parseOr = fun self () -> (try let left = ref (exprparser_parseAnd (Obj.magic self) ()) in while true do ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
-  | TIdent _ -> 0
-  | TString _ -> 1
-  | TNot -> 2
-  | TAnd -> 3
-  | TOr -> 4
-  | TLParen -> 5
-  | TRParen -> 6
-  | TEq -> 7
-  | TNeq -> 8
-  | TEof -> 9) = 4 then ignore ((
-  ignore (let __assign_8 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-    (Obj.magic self : exprparser_t).cur <- __assign_8;
-    __assign_8
-  ));
-  let __assign_9 = !left || exprparser_parseAnd (Obj.magic self) () in (
-    left := __assign_9;
-    __assign_9
-  )
-)) else raise (HxRuntime.Hx_return (Obj.repr (!left)))) done with
-  | HxRuntime.Hx_return __ret_10 -> (Obj.obj __ret_10 : bool) : bool)
-and exprparser_parseAnd = fun self () -> (try let left = ref (exprparser_parseUnary (Obj.magic self) ()) in while true do ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
-  | TIdent _ -> 0
-  | TString _ -> 1
-  | TNot -> 2
-  | TAnd -> 3
-  | TOr -> 4
-  | TLParen -> 5
-  | TRParen -> 6
-  | TEq -> 7
-  | TNeq -> 8
-  | TEof -> 9) = 3 then ignore ((
-  ignore (let __assign_11 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-    (Obj.magic self : exprparser_t).cur <- __assign_11;
-    __assign_11
-  ));
-  let __assign_12 = !left && exprparser_parseUnary (Obj.magic self) () in (
-    left := __assign_12;
-    __assign_12
-  )
-)) else raise (HxRuntime.Hx_return (Obj.repr (!left)))) done with
-  | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : bool) : bool)
+let rec exprparser_parseOr = fun self () -> (try let left = ref (exprparser_parseAnd (Obj.magic self) ()) in let rec __while_loop_10 = fun () -> (
+  ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
+    | TIdent _ -> 0
+    | TString _ -> 1
+    | TNot -> 2
+    | TAnd -> 3
+    | TOr -> 4
+    | TLParen -> 5
+    | TRParen -> 6
+    | TEq -> 7
+    | TNeq -> 8
+    | TEof -> 9) = 4 then ignore ((
+    ignore (let __assign_8 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+      (Obj.magic self : exprparser_t).cur <- __assign_8;
+      __assign_8
+    ));
+    let __assign_9 = !left || exprparser_parseAnd (Obj.magic self) () in (
+      left := __assign_9;
+      __assign_9
+    )
+  )) else raise (HxRuntime.Hx_return (Obj.repr (!left))));
+  __while_loop_10 ()
+) in __while_loop_10 () with
+  | HxRuntime.Hx_return __ret_11 -> (Obj.obj __ret_11 : bool) : bool)
+and exprparser_parseAnd = fun self () -> (try let left = ref (exprparser_parseUnary (Obj.magic self) ()) in let rec __while_loop_14 = fun () -> (
+  ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
+    | TIdent _ -> 0
+    | TString _ -> 1
+    | TNot -> 2
+    | TAnd -> 3
+    | TOr -> 4
+    | TLParen -> 5
+    | TRParen -> 6
+    | TEq -> 7
+    | TNeq -> 8
+    | TEof -> 9) = 3 then ignore ((
+    ignore (let __assign_12 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+      (Obj.magic self : exprparser_t).cur <- __assign_12;
+      __assign_12
+    ));
+    let __assign_13 = !left && exprparser_parseUnary (Obj.magic self) () in (
+      left := __assign_13;
+      __assign_13
+    )
+  )) else raise (HxRuntime.Hx_return (Obj.repr (!left))));
+  __while_loop_14 ()
+) in __while_loop_14 () with
+  | HxRuntime.Hx_return __ret_15 -> (Obj.obj __ret_15 : bool) : bool)
 and exprparser_parseUnary = fun self () -> let tempResult = ref (false : bool) in (
   ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in if (match _g with
     | TIdent _ -> 0
@@ -642,36 +648,36 @@ and exprparser_parseUnary = fun self () -> let tempResult = ref (false : bool) i
     | TEq -> 7
     | TNeq -> 8
     | TEof -> 9) = 2 then (
-    ignore (let __assign_14 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-      (Obj.magic self : exprparser_t).cur <- __assign_14;
-      __assign_14
+    ignore (let __assign_16 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+      (Obj.magic self : exprparser_t).cur <- __assign_16;
+      __assign_16
     ));
-    let __assign_15 = not (exprparser_parseUnary (Obj.magic self) ()) in (
-      tempResult := __assign_15;
-      __assign_15
+    let __assign_17 = not (exprparser_parseUnary (Obj.magic self) ()) in (
+      tempResult := __assign_17;
+      __assign_17
     )
-  ) else let __assign_16 = exprparser_parsePrimary (Obj.magic self) () in (
-    tempResult := __assign_16;
-    __assign_16
+  ) else let __assign_18 = exprparser_parsePrimary (Obj.magic self) () in (
+    tempResult := __assign_18;
+    __assign_18
   ));
   !tempResult
 )
 and exprparser_parsePrimary = fun self () -> let tempResult = ref (false : bool) in (
   ignore (let _g = Obj.magic ((Obj.magic self : exprparser_t).cur) in match _g with
     | TIdent _p0 -> let _g2 = (_p0 : string) in let name = (_g2 : string) in (
-      ignore (let __assign_19 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-        (Obj.magic self : exprparser_t).cur <- __assign_19;
-        __assign_19
-      ));
-      let __assign_20 = exprparser_parseIdentTail (Obj.magic self) (name : string) in (
-        tempResult := __assign_20;
-        __assign_20
-      )
-    )
-    | TLParen -> (
       ignore (let __assign_21 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
         (Obj.magic self : exprparser_t).cur <- __assign_21;
         __assign_21
+      ));
+      let __assign_22 = exprparser_parseIdentTail (Obj.magic self) (name : string) in (
+        tempResult := __assign_22;
+        __assign_22
+      )
+    )
+    | TLParen -> (
+      ignore (let __assign_23 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+        (Obj.magic self : exprparser_t).cur <- __assign_23;
+        __assign_23
       ));
       let v = exprparser_parseOr (Obj.magic self) () in let tempBool = ref (false : bool) in let _g2 = Obj.magic ((Obj.magic self : exprparser_t).cur) in (
         ignore (if (match _g2 with
@@ -684,31 +690,31 @@ and exprparser_parsePrimary = fun self () -> let tempResult = ref (false : bool)
           | TRParen -> 6
           | TEq -> 7
           | TNeq -> 8
-          | TEof -> 9) = 6 then let __assign_22 = true in (
-          tempBool := __assign_22;
-          __assign_22
-        ) else let __assign_23 = false in (
-          tempBool := __assign_23;
-          __assign_23
-        ));
-        ignore (if !tempBool then ignore (let __assign_24 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-          (Obj.magic self : exprparser_t).cur <- __assign_24;
+          | TEof -> 9) = 6 then let __assign_24 = true in (
+          tempBool := __assign_24;
           __assign_24
-        )) else ());
-        let __assign_25 = v in (
-          tempResult := __assign_25;
+        ) else let __assign_25 = false in (
+          tempBool := __assign_25;
           __assign_25
+        ));
+        ignore (if !tempBool then ignore (let __assign_26 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+          (Obj.magic self : exprparser_t).cur <- __assign_26;
+          __assign_26
+        )) else ());
+        let __assign_27 = v in (
+          tempResult := __assign_27;
+          __assign_27
         )
       )
     )
     | _ -> (
-      ignore (let __assign_17 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
-        (Obj.magic self : exprparser_t).cur <- __assign_17;
-        __assign_17
+      ignore (let __assign_19 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
+        (Obj.magic self : exprparser_t).cur <- __assign_19;
+        __assign_19
       ));
-      let __assign_18 = false in (
-        tempResult := __assign_18;
-        __assign_18
+      let __assign_20 = false in (
+        tempResult := __assign_20;
+        __assign_20
       )
     ));
   !tempResult
@@ -717,7 +723,7 @@ and exprparser_parsePrimary = fun self () -> let tempResult = ref (false : bool)
 let exprparser_parse = fun self () -> let v = exprparser_parseOr (Obj.magic self) () in v
 
 let exprparser_observe = fun self (name : string) (access : CompilerConditionalDefineAccess.compilerconditionaldefineaccess) -> ignore (ignore (try ignore ((
-  ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_64 = name in HxString.length __string_receiver_64) = 0 then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || (let __string_receiver_66 = name in HxString.length __string_receiver_66) = 0 then raise (HxRuntime.Hx_return_void) else ());
   let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()
 )) with
   | HxRuntime.Hx_return_void -> ()))
