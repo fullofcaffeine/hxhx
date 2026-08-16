@@ -5225,6 +5225,9 @@ class HxParser {
 			var parenDepth = 0;
 			var bracketDepth = 0;
 			var angleDepth = 0;
+			// A generic type can contain an anonymous structure, such as `Array<{ value:Int }>`. Its
+			// field semicolons belong to that structure and must not end the surrounding typedef.
+			var nestedTypeBraceDepth = 0;
 			while (!cur.kind.match(TEof)) {
 				if (bodyDepth > 0) {
 					switch (cur.kind) {
@@ -5265,15 +5268,20 @@ class HxParser {
 							angleDepth--;
 						bump();
 					case TLBrace:
-						if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
+						if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0 && nestedTypeBraceDepth == 0) {
 							bodyDepth = 1;
-							bump();
 						} else {
-							bump();
+							nestedTypeBraceDepth++;
 						}
+						bump();
+					case TRBrace:
+						if (nestedTypeBraceDepth > 0)
+							nestedTypeBraceDepth--;
+						bump();
 					case TSemicolon:
 						bump();
-						return;
+						if (nestedTypeBraceDepth == 0)
+							return;
 					case _:
 						bump();
 				}

@@ -16,6 +16,16 @@ class M14HihModuleTypeDeclarationSkipIntegrationTest {
 		return null;
 	}
 
+	static function assertRejects(source:String, expectedMessage:String):Void {
+		var diagnostic = "";
+		try {
+			new HxParser(source).parseModule("Main");
+		} catch (error:HxParseError) {
+			diagnostic = error.toString();
+		}
+		assertTrue(diagnostic.indexOf(expectedMessage) >= 0, 'expected "$expectedMessage" in parser diagnostic, got "$diagnostic"');
+	}
+
 	static function main():Void {
 		final source = [
 			"package js.lib.intl;",
@@ -31,6 +41,10 @@ class M14HihModuleTypeDeclarationSkipIntegrationTest {
 			"  final locale:String;",
 			"  final numberingSystem:String;",
 			"}",
+			"typedef NestedPayloads = Array<{",
+			"  var required:Int;",
+			"  var ?optional:String;",
+			"}>;",
 			"enum abstract NumberFormatStyle(String) {",
 			"  var Decimal = \"decimal\";",
 			"}",
@@ -50,6 +64,13 @@ class M14HihModuleTypeDeclarationSkipIntegrationTest {
 		assertTrue(HxClassDecl.getFunctions(mainClass).length == 1, "typedef, enum, or abstract members leaked into Main as module-level functions");
 		assertTrue(HxFunctionDecl.getName(HxClassDecl.getFunctions(mainClass)[0]) == "main", "Main lost its actual entrypoint");
 		assertTrue(HxClassDecl.getFields(numberFormat).length == 0, "later typedef members leaked backward into the extern class");
+		assertRejects([
+			"typedef NestedPayloads = Array<{",
+			"  var required:Int;",
+			"  var ?optional:String;",
+			"}>;",
+			"class {}"
+		].join("\n"), "Expected class name");
 		Sys.println("M14_HIH_MODULE_TYPE_DECLARATION_SKIP:PASS");
 	}
 }
