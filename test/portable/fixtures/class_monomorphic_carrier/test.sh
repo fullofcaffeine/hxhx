@@ -226,7 +226,7 @@ const nullReturnStart = source.indexOf('let chooseNull =')
 const nullReturnEnd = source.indexOf('\nlet ', nullReturnStart + 1)
 const nullReturnSource = nullReturnStart < 0 ? '' : source.slice(nullReturnStart, nullReturnEnd < 0 ? source.length : nullReturnEnd)
 if (!/HxRuntime\.Hx_return \(Obj\.repr \(Obj\.magic \(HxRuntime\.hx_null\)\)\)/.test(nullReturnSource)
-	|| !/HxRuntime\.Hx_return __ret_\d+ -> Obj\.obj __ret_\d+ : counter_t/.test(nullReturnSource)
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : counter_t\) : counter_t\)/.test(nullReturnSource)
 	|| /HxRuntime\.Hx_return __ret_\d+ -> Obj\.magic __ret_\d+/.test(nullReturnSource)) {
 	fail('the null-to-nominal return did not recover its Haxe-typed result through the private function boundary')
 }
