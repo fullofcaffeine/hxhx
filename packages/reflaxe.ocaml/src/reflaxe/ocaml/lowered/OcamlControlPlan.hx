@@ -1867,8 +1867,8 @@ class OcamlControlPlan {
 
 		The carrier name is a policy marker, not an OCaml type. `Obj.t` exists only
 		while the private exception is in flight. The matching function handler uses
-		OCaml type inference to recover the value into the same function body, so the
-		plan does not invent a callable carrier or use `Obj.magic` as evidence.
+		the owning Haxe function result type to annotate the recovered value. Thus,
+		the plan does not invent a callable carrier or use `Obj.magic` as evidence.
 	**/
 	public static function isAdmittedTypedFunctionReturnPayload(payload:OcamlControlPayloadPlan, functionId:String):Bool {
 		final needsTaggedBoolBox = payload.inputSemanticTypeId == "Bool" && payload.outputSemanticTypeId == "Dynamic";

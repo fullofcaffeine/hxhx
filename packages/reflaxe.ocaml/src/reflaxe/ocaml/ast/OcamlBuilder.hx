@@ -1128,7 +1128,15 @@ class OcamlBuilder {
 		}
 	}
 
-	/** Recovers the sealed early-return payload at its exact function boundary. */
+	/**
+		Recovers the sealed early-return payload at its exact function boundary.
+
+		A typed-function fallback does not publish an OCaml carrier in its control
+		plan. The owning Haxe function still provides the result type, and the
+		recovery expression must state that type explicitly. Without the annotation,
+		older OCaml compilers can infer `unit` from an infinite-loop fallback before
+		they examine the exception handler.
+	**/
 	function buildPlannedReturnBoundary(decision:OcamlControlDecision, returnVarName:String, position:Position):OcamlExpr {
 		try {
 			OcamlControlPlan.requireDecision(decision);
@@ -1143,7 +1151,13 @@ class OcamlBuilder {
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case BoxAndRecoverTypedFunctionResult, BoxBoolAndRecoverDynamicTypedFunctionResult:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]);
+				final returnType = currentFunctionReturnType;
+				if (returnType == null) {
+					controlPlanInvariant('return decision "${decision.id}" reached syntax without its owning Haxe function result type', position);
+				} else {
+					OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
+						typeExprFromHaxeType(returnType));
+				}
 			case PreserveNullableCarrier, PreserveAnonymousCarrier, PreserveDynamicReturnCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier, BoxExactEnumToNullableCarrier:
