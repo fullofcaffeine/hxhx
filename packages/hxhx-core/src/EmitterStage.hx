@@ -6252,12 +6252,6 @@ class EmitterStage {
 			+ "let deleteField o f = HxAnon.delete o f\n"
 			+ "let copy = HxAnon.copy\n"));
 
-		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "IgnoredFixture",
-			"(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n"
-			+ "type t = Obj.t\n"
-			+ "let notIgnored _ = (Obj.magic 0)\n"
-			+ "let ignored _ = (Obj.magic 0)\n"));
-
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "HxPosInfos",
 			"(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n"
 			+ "type t = {\n"

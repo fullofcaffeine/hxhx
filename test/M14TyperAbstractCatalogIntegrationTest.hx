@@ -103,6 +103,20 @@ class M14TyperAbstractCatalogIntegrationTest {
 		File.saveContent(carrierPath, carrierSource);
 		File.saveContent(decoyPath, decoySource);
 
+		final primaryAbstractSource = [
+			"abstract Ticket(String) {",
+			"  public inline function new(value:String) this = value;",
+			"  public static function empty():Ticket return new Ticket(null);",
+			"}",
+		].join("\n");
+		final primaryAbstract = ParserStage.parse(primaryAbstractSource, haxe.io.Path.join([srcDir, "Ticket.hx"]));
+		assertEquals(HxClassDecl.getName(HxModuleDecl.getMainClass(primaryAbstract.getDecl())), "Ticket",
+			"a module's file-matching abstract must be its primary declaration");
+		assertTrue(HxClassDecl.getFunctions(HxModuleDecl.getMainClass(primaryAbstract.getDecl())).filter(function(fn) {
+			return HxFunctionDecl.getName(fn) == "empty" && HxFunctionDecl.getIsStatic(fn);
+		}).length == 1,
+			"the primary abstract lost its public static function before semantic indexing");
+
 		final parsed = ParserStage.parse(source, catalogPath);
 		final resolved = new ResolvedModule("demo.Catalog", catalogPath, parsed);
 		final carrierResolved = new ResolvedModule("support.Carrier", carrierPath, ParserStage.parse(carrierSource, carrierPath));
