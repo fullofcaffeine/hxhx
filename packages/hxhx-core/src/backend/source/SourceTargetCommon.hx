@@ -6293,7 +6293,8 @@ class SourceTargetCommon {
 		if (arity == null)
 			return null;
 		final actualArity = args == null ? 0 : args.length;
-		return actualArity < arity.min || actualArity > arity.max;
+		final mismatch:Null<Bool> = actualArity < arity.min || actualArity > arity.max;
+		return mismatch;
 	}
 
 	static function helperFunctionCallArityTypeErrorWithFrame(frame:SourceFunctionRenderFrame, callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
@@ -6312,7 +6313,8 @@ class SourceTargetCommon {
 		if (arity == null)
 			return null;
 		final actualArity = args == null ? 0 : args.length;
-		return actualArity < arity.min || actualArity > arity.max;
+		final mismatch:Null<Bool> = actualArity < arity.min || actualArity > arity.max;
+		return mismatch;
 	}
 
 	static function phpFunctionTypeArityRange(typeHint:String):Null<{min:Int, max:Int}> {
@@ -6554,7 +6556,8 @@ class SourceTargetCommon {
 		for (name in expected.keys())
 			if (!seen.exists(name))
 				return true;
-		return false;
+		final result:Null<Bool> = false;
+		return result;
 	}
 
 	static function helperAnonLiteralHasDuplicateFields(fieldNames:Array<String>):Bool {

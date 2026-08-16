@@ -25258,7 +25258,8 @@ class CppTargetCore {
 			if (isNull)
 				found = true;
 		}
-		return found;
+		final result:Null<Bool> = found;
+		return result;
 	}
 
 	static function stmtHasValueReturn(stmt:HxStmt):Bool {

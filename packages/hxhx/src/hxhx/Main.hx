@@ -138,7 +138,10 @@ class Main {
 
 	static function runRepoScript(scriptRelPath:String, scriptArgs:Array<String>):Void {
 		final scriptPath = repoScriptPath(scriptRelPath);
-		final code = Sys.command("bash", [scriptPath].concat(scriptArgs));
+		final commandArgs = [scriptPath];
+		for (arg in scriptArgs)
+			commandArgs.push(arg);
+		final code = Sys.command("bash", commandArgs);
 		Sys.exit(code);
 	}
 
@@ -731,7 +734,9 @@ class Main {
 				#if hxhx_stage0_no_stage3
 				fatal("hxhx: native target lanes unavailable in stage0 no-stage3 profiling lane");
 				#else
-				final stage3Args = ["--hxhx-backend", plan.backendId].concat(plan.forwarded);
+				final stage3Args = ["--hxhx-backend", plan.backendId];
+				for (arg in plan.forwarded)
+					stage3Args.push(arg);
 				final code = Stage3Compiler.run(stage3Args);
 				Sys.exit(code);
 				#end

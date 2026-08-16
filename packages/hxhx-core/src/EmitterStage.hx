@@ -855,34 +855,6 @@ class EmitterStage {
 		return value == null ? null : cast value;
 	}
 
-	/**
-		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
-	**/
-	static function mapHasRaw<TMap>(mapLike:Null<TMap>, key:String):Bool {
-		if (mapLike == null || key == null)
-			return false;
-		final mapLikeObj:{} = cast mapLike;
-		final existsFn = Reflect.field(mapLikeObj, "exists");
-		if (existsFn == null)
-			return mapGetRaw(mapLike, key) != null;
-		final existsValue = Reflect.callMethod(mapLikeObj, existsFn, [key]);
-		return existsValue == true;
-	}
-
-	/**
-		Get a string-key iterator from a map-like object, if available.
-	**/
-	static function mapKeysRaw<TMap>(mapLike:Null<TMap>):Null<Iterator<String>> {
-		if (mapLike == null)
-			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final keysFn = Reflect.field(mapLikeObj, "keys");
-		if (keysFn == null)
-			return null;
-		final keysValue = Reflect.callMethod(mapLikeObj, keysFn, []);
-		return keysValue == null ? null : cast keysValue;
-	}
-
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
 	static function eraseBoundary<TIn, TOut>(value:TIn):TOut {
 		return cast value;
@@ -1085,17 +1057,21 @@ class EmitterStage {
 	}
 
 	static function staticImportModuleForStage3(name:String, ?staticImportByIdent:Map<String, String>):String {
-		final resolved = mapGetRaw(staticImportByIdent, name);
-		if (resolved != null)
-			return cast resolved;
-		final globalResolved = mapGetRaw(currentGlobalImportAliasByIdent, name);
-		return globalResolved == null ? null : cast globalResolved;
+		if (staticImportByIdent != null) {
+			final resolved = staticImportByIdent.get(name);
+			if (resolved != null)
+				return resolved;
+		}
+		final globalResolved = currentGlobalImportAliasByIdent.get(name);
+		return globalResolved == null ? null : globalResolved;
 	}
 
 	static function moduleNameForStage3Key(key:String, ?moduleNameByPkgAndClass:Map<String, String>):String {
-		final resolved = mapGetRaw(moduleNameByPkgAndClass, key);
-		if (resolved != null)
-			return cast resolved;
+		if (moduleNameByPkgAndClass != null) {
+			final resolved = moduleNameByPkgAndClass.get(key);
+			if (resolved != null)
+				return resolved;
+		}
 		for (entry in currentModuleNameEntries)
 			if (entry.key == key)
 				return entry.moduleName;
@@ -1138,15 +1114,16 @@ class EmitterStage {
 	}
 
 	static function stage3HasArity(name:String, ?arityByIdent:Map<String, Int>):Bool {
-		return mapHasRaw(arityByIdent, name);
+		return arityByIdent != null && arityByIdent.exists(name);
 	}
 
 	static function stage3ArityFor(name:String, ?arityByIdent:Map<String, Int>):Int {
-		final resolved = mapGetRaw(arityByIdent, name);
+		if (arityByIdent == null)
+			return 0;
+		final resolved = arityByIdent.get(name);
 		if (resolved == null)
 			return 0;
-		final arity:Int = cast resolved;
-		return arity;
+		return resolved;
 	}
 
 	/**
@@ -1210,12 +1187,12 @@ class EmitterStage {
 		return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
 	}
 
-	static function extendTyByIdentForStage3<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
+	static function extendTyByIdentForStage3(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
+		final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
 		if (keys != null)
 			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
@@ -1223,12 +1200,12 @@ class EmitterStage {
 		return out;
 	}
 
-	static function extendTyByIdentManyForStage3<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
+	static function extendTyByIdentManyForStage3(ty:Map<String, TyType>, names:Array<String>, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
+		final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
 		if (keys != null)
 			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
@@ -4140,10 +4117,10 @@ class EmitterStage {
 		final staticImportByIdentRaw:Null<Map<String, String>> = cast staticImportByIdent;
 		final moduleNameByPkgAndClassRaw:Null<Map<String, String>> = cast moduleNameByPkgAndClass;
 		final callSigByCalleeRaw:Null<Map<String, EmitterCallSig>> = cast callSigByCallee;
-		final tyKeys:Null<Iterator<String>> = mapKeysRaw(tyByIdentRaw);
+		final tyKeys:Null<Iterator<String>> = tyByIdentRaw == null ? null : tyByIdentRaw.keys();
 		if (tyKeys != null)
 			for (name in tyKeys) {
-				final ty = mapGetRaw(tyByIdentRaw, name);
+				final ty = tyByIdentRaw.get(name);
 				if (ty != null)
 					emissionTyByIdent.set(name, ty);
 			}
@@ -7511,7 +7488,7 @@ class EmitterStage {
 								final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
 								if (membersRaw == null)
 									continue;
-								final memberKeys:Null<Iterator<String>> = mapKeysRaw(cast membersRaw);
+								final memberKeys:Null<Iterator<String>> = membersRaw.keys();
 								if (memberKeys == null)
 									continue;
 								for (name in memberKeys)
@@ -7739,7 +7716,7 @@ class EmitterStage {
 							final callsRaw:Map<String, Bool> = fnCallsByName.get(nameRaw);
 							if (callsRaw == null)
 								continue;
-							final callKeys:Null<Iterator<String>> = mapKeysRaw(cast callsRaw);
+							final callKeys:Null<Iterator<String>> = callsRaw.keys();
 							if (callKeys == null)
 								continue;
 							for (callee in callKeys) {

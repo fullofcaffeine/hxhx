@@ -71,7 +71,8 @@ private enum MacroHostReadResult {
 	  bring-up on OCaml with strict dune warning/error settings.
 **/
 class MacroHostClient {
-	static function withClient<T>(run:MacroClient->T):T {
+	/** Runs one string-producing operation and always closes its client. */
+	static function withClient(run:MacroClient->String):String {
 		final client = connect();
 		try {
 			final out = run(client);
@@ -83,7 +84,21 @@ class MacroHostClient {
 		}
 	}
 
-	static function withSession<T>(run:MacroHostSession->T):T {
+	/** Runs one string-array operation and always closes its macro-host session. */
+	static function withStringArraySession(run:MacroHostSession->Array<String>):Array<String> {
+		final session = openSession();
+		try {
+			final out = run(session);
+			session.close();
+			return out;
+		} catch (e:String) {
+			session.close();
+			throw e;
+		}
+	}
+
+	/** Runs one string-producing operation and always closes its macro-host session. */
+	static function withStringSession(run:MacroHostSession->String):String {
 		final session = openSession();
 		try {
 			final out = run(session);
@@ -134,13 +149,13 @@ class MacroHostClient {
 	}
 
 	public static function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
-		return withSession(function(session) {
+		return withStringArraySession(function(session) {
 			return session.loadNativeModule(modulePath, pluginId);
 		});
 	}
 
 	public static function runNativeModuleExpr(modulePath:String, pluginId:String, expr:String):String {
-		return withSession(function(session) {
+		return withStringSession(function(session) {
 			session.loadNativeModule(modulePath, pluginId);
 			return session.runNativeExpr(expr);
 		});
@@ -177,7 +192,7 @@ class MacroHostClient {
 		  may add reuse/caching.
 	**/
 	public static function runAll(exprs:Array<String>):Array<String> {
-		return withSession(function(session) {
+		return withStringArraySession(function(session) {
 			final out = new Array<String>();
 			for (expr in exprs)
 				out.push(session.run(expr));

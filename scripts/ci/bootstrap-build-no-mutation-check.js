@@ -75,6 +75,8 @@ const retiredBootstrapPatchCommands = [
   'patch-instance-call-this-binding',
   'patch-instance-method-value-binding',
   'patch-instance-call-preapplied-arity',
+  'patch-emitter-preapplied-sig-fallback',
+  'patch-plugin-dune-layout',
   'patch-typerstage-lowercase-static-receiver-guard',
   'patch-hxparser-uppercase-helper-call',
 ]

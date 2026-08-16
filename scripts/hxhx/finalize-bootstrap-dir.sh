@@ -314,21 +314,6 @@ patch_bootstrap_hxparser_generic_function_decl() {
   run_bootstrap_patch_helper patch-hxparser-generic-function-decl "$parser_path"
 }
 
-patch_bootstrap_emitter_preapplied_sig_fallback() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if ! file_contains_literal '&& not (receiverPreApplied)' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-emitter-preapplied-sig-fallback "$emitter_path"
-}
-
 patch_bootstrap_emitter_allowed_ident_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -742,22 +727,6 @@ patch_bootstrap_emitter_float_modulo_mutable_local() {
   run_bootstrap_patch_helper patch-float-modulo-mutable-local "$emitter_path"
 }
 
-patch_bootstrap_emitter_plugin_dune_layout() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: plugin dune layout repair *)'
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-plugin-dune-layout "$emitter_path"
-}
-
 patch_bootstrap_js_target_core_systools_static_bodies() {
   local build_dir="$1"
   local target_core_path="$build_dir/backend_js_JsTargetCore.ml"
@@ -860,11 +829,9 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_mutable_int64_assignment "$build_dir"
   patch_bootstrap_emitter_int64_mixed_binops "$build_dir"
   patch_bootstrap_emitter_int64_static_helpers "$build_dir"
-  patch_bootstrap_emitter_preapplied_sig_fallback "$build_dir"
   patch_bootstrap_emitter_float_compare_unknown_numeric "$build_dir"
   patch_bootstrap_emitter_int_compare_precedence "$build_dir"
   patch_bootstrap_emitter_float_modulo_mutable_local "$build_dir"
-  patch_bootstrap_emitter_plugin_dune_layout "$build_dir"
   patch_bootstrap_js_target_core_systools_static_bodies "$build_dir"
   patch_bootstrap_clirouting_ocaml_eval_hxml "$build_dir"
   patch_bootstrap_emitter_interactive_cli_progress "$build_dir"
