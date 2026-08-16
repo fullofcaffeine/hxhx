@@ -96,7 +96,7 @@
       "name": "Gate 2 / Upstream Macro Workloads",
       "workflow": ".github/workflows/gate2.yml",
       "kind": "release-evidence",
-      "events": ["schedule"],
+      "events": ["schedule", "workflow_dispatch"],
       "freshnessHours": 192
     },
     {
@@ -305,7 +305,7 @@
     {
       "id": "m7-failure-29683132615",
       "checkId": "m7-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "unknown",
       "bead": "haxe_ocaml-d516o",
@@ -321,7 +321,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29683132615"
       },
       "reproductionOrEvidence": "Artifact 8442233112 records that shared native artifacts, strict stage0 policy, display, builtin smoke, and plugins passed, while ci:guards, Gate1 unit-macro, Gate2 runci Macro, and Gate3 targets failed. The independent causes still require classification.",
-      "closureGate": "Classify and repair every independent failure, then require one complete M7 successor with both strict PASS markers and validated artifacts."
+      "closureGate": "Classify and repair every independent failure, then require one complete M7 successor with both strict PASS markers and validated artifacts.",
+      "supersededBy": {
+        "runId": 31306044495,
+        "runAttempt": 1,
+        "headSha": "a9fb54ae7954754a0297ebed5b9bf562ce78336e",
+        "conclusion": "failure",
+        "updatedAt": "2026-08-09T11:44:46Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31306044495"
+      }
     },
     {
       "id": "full1-plugin-29158896644",
@@ -384,7 +392,7 @@
     {
       "id": "full1-aggregate-29643317922",
       "checkId": "full1-aggregate-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "expected-no-go",
       "bead": "haxe.ocaml-f1cl",
@@ -400,7 +408,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29643317922"
       },
       "reproductionOrEvidence": "The newest scheduled aggregate remained an expected no-go: the extended target and strict suite lanes failed and macro/eval evidence was unavailable, while plugin parity passed.",
-      "closureGate": "One candidate SHA must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts, and the aggregate must derive its pass from them."
+      "closureGate": "One candidate SHA must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts, and the aggregate must derive its pass from them.",
+      "supersededBy": {
+        "runId": 31881774241,
+        "runAttempt": 1,
+        "headSha": "dcce51b1b9628a740c13a1c57ee093344737f30d",
+        "conclusion": "failure",
+        "updatedAt": "2026-08-15T11:53:18Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31881774241"
+      }
     },
     {
       "id": "reflaxe-package-macos-29708386355",
@@ -579,7 +595,7 @@
     {
       "id": "gate2-nullfloat-compound-29739402762",
       "checkId": "gate2-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-yd0my",
@@ -595,7 +611,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29739402762"
       },
       "reproductionOrEvidence": "The strict null-safety workload rejects NullFloat += NullFloat because the selected addOp1 declaration accepts Float on the right and the required conversion is not applied.",
-      "closureGate": "Shared operator conversion and compound-assignment tests must pass, followed by one successful current Gate 2 schedule or manual-equivalent successor."
+      "closureGate": "Shared operator conversion and compound-assignment tests must pass, followed by one successful current Gate 2 schedule or manual-equivalent successor.",
+      "supersededBy": {
+        "runId": 31916785908,
+        "runAttempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "conclusion": "failure",
+        "updatedAt": "2026-08-16T00:18:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916785908"
+      }
     },
     {
       "id": "macro-runtime-flash-copy-29735161816",
@@ -674,6 +698,174 @@
         "updatedAt": "2026-07-13T20:47:58Z",
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29283471461"
       }
+    },
+    {
+      "id": "gate1-typed-return-31916786026",
+      "checkId": "gate1-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-nsj94",
+      "recordedAt": "2026-08-16T00:45:15Z",
+      "run": {
+        "id": 31916786026,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "workflow_dispatch",
+        "conclusion": "failure",
+        "createdAt": "2026-08-16T00:15:38Z",
+        "updatedAt": "2026-08-16T00:17:58Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916786026"
+      },
+      "reproductionOrEvidence": "The hosted OCaml compiler rejects two generated conditional-expression loops because their unannotated private return handlers are inferred as unit instead of Bool.",
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 1 successor on the repair commit must complete successfully."
+    },
+    {
+      "id": "gate2-typed-return-31916785908",
+      "checkId": "gate2-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-nsj94",
+      "recordedAt": "2026-08-16T00:52:00Z",
+      "run": {
+        "id": 31916785908,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "workflow_dispatch",
+        "conclusion": "failure",
+        "createdAt": "2026-08-16T00:15:38Z",
+        "updatedAt": "2026-08-16T00:18:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916785908"
+      },
+      "reproductionOrEvidence": "Both Gate 2 jobs stop while building hxhx because the hosted OCaml compiler infers the generated conditional-expression loop as unit instead of Bool.",
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 2 successor on the repair commit must complete successfully."
+    },
+    {
+      "id": "macro-runtime-typed-return-31916786108",
+      "checkId": "macro-runtime-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-nsj94",
+      "recordedAt": "2026-08-16T00:52:00Z",
+      "run": {
+        "id": 31916786108,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "workflow_dispatch",
+        "conclusion": "failure",
+        "createdAt": "2026-08-16T00:15:38Z",
+        "updatedAt": "2026-08-16T00:18:34Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916786108"
+      },
+      "reproductionOrEvidence": "Both macro-runtime modes stop while building hxhx because the hosted OCaml compiler infers the generated conditional-expression loop as unit instead of Bool.",
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch macro-runtime successor on the repair commit must complete successfully."
+    },
+    {
+      "id": "tier1-cancelled-31916032680",
+      "checkId": "portable-tier1-pr",
+      "state": "open",
+      "evidenceState": "cancelled-no-successor",
+      "failureClass": "timeout-performance",
+      "bead": "haxe_ocaml-hk48e",
+      "recordedAt": "2026-08-16T00:57:00Z",
+      "run": {
+        "id": 31916032680,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "push",
+        "conclusion": "cancelled",
+        "createdAt": "2026-08-15T23:57:15Z",
+        "updatedAt": "2026-08-16T00:42:36Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916032680"
+      },
+      "reproductionOrEvidence": "The required Tier1 portable-stdlib job ran for about 45 minutes, then ended as cancelled without a newer exact-head successor.",
+      "closureGate": "Identify the cancellation source and require a completed successful exact-head Tier1 successor before resolving the incident."
+    },
+    {
+      "id": "m7-current-31306044495",
+      "checkId": "m7-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "unknown",
+      "bead": "haxe_ocaml-d516o",
+      "recordedAt": "2026-08-16T00:57:00Z",
+      "run": {
+        "id": 31306044495,
+        "attempt": 1,
+        "headSha": "a9fb54ae7954754a0297ebed5b9bf562ce78336e",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-08-09T09:29:52Z",
+        "updatedAt": "2026-08-09T11:44:46Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31306044495"
+      },
+      "reproductionOrEvidence": "The latest qualifying M7 schedule failed after more than two hours in the replacement-ready bundle and did not emit its required markers.",
+      "closureGate": "Classify the retained bundle evidence and require one complete current M7 successor with both strict PASS markers."
+    },
+    {
+      "id": "full1-plugin-timeout-31892556777",
+      "checkId": "full1-plugin-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "timeout-performance",
+      "bead": "haxe_ocaml-xsg6m",
+      "recordedAt": "2026-08-16T00:57:00Z",
+      "run": {
+        "id": 31892556777,
+        "attempt": 1,
+        "headSha": "dcce51b1b9628a740c13a1c57ee093344737f30d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-08-15T15:23:03Z",
+        "updatedAt": "2026-08-15T15:55:45Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31892556777"
+      },
+      "reproductionOrEvidence": "The upstream-host plugin proofs pass, but the hxhx-to-hxhx proof exceeds its 1,800-second stage0 fail-fast limit.",
+      "closureGate": "The bounded bootstrap path must complete within policy and a current plugin-parity successor must emit the aggregate PASS marker."
+    },
+    {
+      "id": "full1-current-31881774241",
+      "checkId": "full1-aggregate-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "expected-no-go",
+      "bead": "haxe.ocaml-f1cl",
+      "recordedAt": "2026-08-16T00:57:00Z",
+      "run": {
+        "id": 31881774241,
+        "attempt": 1,
+        "headSha": "dcce51b1b9628a740c13a1c57ee093344737f30d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-08-15T11:20:03Z",
+        "updatedAt": "2026-08-15T11:53:18Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31881774241"
+      },
+      "reproductionOrEvidence": "The current aggregate remains an expected no-go because extended targets, native eval, server mode, macro evidence, and plugin parity are not all green on one commit.",
+      "closureGate": "One candidate commit must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts and emit the aggregate PASS marker."
+    },
+    {
+      "id": "package-profile-comparison-31916032648",
+      "checkId": "reflaxe-ocaml-package-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "repository-policy",
+      "bead": "haxe_ocaml-bfohp",
+      "recordedAt": "2026-08-16T00:57:00Z",
+      "run": {
+        "id": 31916032648,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-08-15T23:57:15Z",
+        "updatedAt": "2026-08-16T00:22:47Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916032648"
+      },
+      "reproductionOrEvidence": "Linux and macOS examples compile and run, but both platform reports reject the missing positive portable-versus-metal profile medians.",
+      "closureGate": "Restore complete profile measurement and report assembly, then require a successful current package-matrix successor on both hosts."
     }
   ]
 }

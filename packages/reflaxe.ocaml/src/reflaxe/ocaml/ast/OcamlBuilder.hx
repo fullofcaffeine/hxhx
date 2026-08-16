@@ -1128,7 +1128,14 @@ class OcamlBuilder {
 		}
 	}
 
-	/** Recovers the sealed early-return payload at its exact function boundary. */
+	/**
+		Recovers the sealed early-return payload at its exact function boundary.
+
+		A typed-function fallback does not publish an OCaml carrier in its control
+		plan. The owning Haxe function still provides the result type, so this
+		recovery expression states that type explicitly. The caller also annotates
+		the complete `try` boundary when no callable result plan owns its output.
+	**/
 	function buildPlannedReturnBoundary(decision:OcamlControlDecision, returnVarName:String, position:Position):OcamlExpr {
 		try {
 			OcamlControlPlan.requireDecision(decision);
@@ -1143,7 +1150,13 @@ class OcamlBuilder {
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case BoxAndRecoverTypedFunctionResult, BoxBoolAndRecoverDynamicTypedFunctionResult:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]);
+				final returnType = currentFunctionReturnType;
+				if (returnType == null) {
+					controlPlanInvariant('return decision "${decision.id}" reached syntax without its owning Haxe function result type', position);
+				} else {
+					OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
+						typeExprFromHaxeType(returnType));
+				}
 			case PreserveNullableCarrier, PreserveAnonymousCarrier, PreserveDynamicReturnCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier, BoxExactEnumToNullableCarrier:
@@ -3690,6 +3703,14 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Whether the typed expression is the exact, effect-free `true` literal. */
+	static function isLiteralTrue(expression:TypedExpr):Bool {
+		return switch (unwrap(expression).expr) {
+			case TConst(TBool(true)): true;
+			case _: false;
+		}
+	}
+
 	/**
 		Reports whether a String-concatenation operand is safe to print without
 		an OCaml sequencing binding.
@@ -5707,6 +5728,22 @@ class OcamlBuilder {
 					]);
 					final loop = OcamlExpr.ELet(loopName, OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], loopBody), repeat, true);
 					return breakCase == null ? loop : OcamlExpr.ETry(loop, [breakCase]);
+				}
+
+				final breakCase = loopCases == null ? null : loopCases.breakCase;
+				if (isLiteralTrue(cond) && breakCase == null) {
+					// OCaml fixes its built-in while expression to unit. A tail-recursive
+					// loop has the same runtime behavior here and keeps the non-completing
+					// result polymorphic for an enclosing typed return boundary.
+					var iterationBody = builtBody;
+					final continueCase = loopCases == null ? null : loopCases.continueCase;
+					if (continueCase != null) {
+						iterationBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
+					}
+					final loopName = freshTmp("while_loop");
+					final repeat = OcamlExpr.EApp(OcamlExpr.EIdent(loopName), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					final loopBody = OcamlExpr.ESeq([iterationBody, repeat]);
+					return OcamlExpr.ELet(loopName, OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], loopBody), repeat, true);
 				}
 
 				if (loopCases != null) {
@@ -9240,7 +9277,12 @@ class OcamlBuilder {
 					body;
 				}
 			}
-			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			final returnBoundary = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			body = if (!isVoidType(resolvedReturnType) && completionBoundaryId == null) {
+				OcamlExpr.EAnnot(returnBoundary, typeExprFromHaxeType(resolvedReturnType));
+			} else {
+				returnBoundary;
+			}
 		}
 		if (isVoidType(resolvedReturnType)) {
 			if (completionBoundaryId != null && (completionResultKind != OcamlCallResultKind.EffectOnlyVoid || completionResult != null)) {
@@ -9463,7 +9505,12 @@ class OcamlBuilder {
 					body;
 				}
 			}
-			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			final returnBoundary = OcamlExpr.ETry(fallbackBody, [returnCase]);
+			body = if (!isVoidType(functionReturnType) && functionResultBoundary == null) {
+				OcamlExpr.EAnnot(returnBoundary, typeExprFromHaxeType(functionReturnType));
+			} else {
+				returnBoundary;
+			}
 		}
 		if (isVoidType(functionReturnType)) {
 			body = exprAsStatement(body);

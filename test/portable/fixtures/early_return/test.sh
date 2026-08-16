@@ -714,6 +714,9 @@ for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry', 'boolBranch',
 		|| body.includes('Obj.magic')) {
 		fail(`${name} did not hard-cut to the sealed exact-value return mechanism`)
 	}
+	if (name === 'loop' && !/let rec __while_loop_\d+ = fun \(\) ->/.test(body)) {
+		fail('the literal-true loop without a break did not keep a polymorphic non-completing OCaml result')
+	}
 }
 const tryStart = source.indexOf('let throughTry =')
 const tryEnd = source.indexOf('\nlet nestedClosure =', tryStart)

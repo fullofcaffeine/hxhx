@@ -20,6 +20,12 @@ if (hasMapTextReturns.length !== 2
 		|| control.proofId !== 'typed-function-result-early-return-control-v1')) {
 	throw new Error('the Boolean helper has no sealed typed-function result fallback')
 }
+const generatedSource = fs.readFileSync('out/Main.ml', 'utf8')
+const hasMapTextSource = generatedSource.match(/let hasMapText = [\s\S]*?\nlet runStrings =/)?.[0]
+if (!hasMapTextSource
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : bool\)\s*: bool\)/.test(hasMapTextSource)) {
+	throw new Error('the Boolean helper did not type its complete early-return boundary as an OCaml bool')
+}
 if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 5
 	|| report.iMapInterfaceCallCount !== 55

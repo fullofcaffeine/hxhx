@@ -236,6 +236,18 @@ function main() {
       gate1.events.includes('schedule') && gate1.events.includes('workflow_dispatch'),
       'Gate 1 evidence must accept both its scheduled and enabled manual routes'
     )
+    const gate2 = manifest.checks.find(check => check.id === 'gate2-weekly')
+    assert(gate2, 'production manifest is missing gate2-weekly')
+    assert(
+      gate2.events.includes('schedule') && gate2.events.includes('workflow_dispatch'),
+      'Gate 2 evidence must accept both its scheduled and enabled manual routes'
+    )
+    const noOpenGate1Manifest = structuredClone(manifest)
+    noOpenGate1Manifest.incidents = noOpenGate1Manifest.incidents.filter(incident => (
+      incident.state !== 'open' || incident.checkId !== gate1.id
+    ))
+    const noOpenGate1ManifestPath = path.join(tmpDir, 'no-open-gate1.manifest.json')
+    writeJson(noOpenGate1ManifestPath, noOpenGate1Manifest)
     const manualGate1Success = structuredClone(baseSnapshot)
     manualGate1Success.runs[gate1.id] = [
       syntheticRun(gate1, 99100000006, {
@@ -253,7 +265,7 @@ function main() {
     const manualGate1SuccessPath = path.join(tmpDir, 'manual-gate1-success.snapshot.json')
     writeJson(manualGate1SuccessPath, manualGate1Success)
     const manualGate1SuccessResult = runEvaluator(
-      productionManifestPath,
+      noOpenGate1ManifestPath,
       productionBeadsPath,
       manualGate1SuccessPath
     )
