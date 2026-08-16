@@ -15,13 +15,13 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperStage" } : t)
 
 let isStrict = fun () -> let v = (HxSys.getEnv ("HXHX_TYPER_STRICT" : string) : string) in (let __string_eq_left_1 = v in let __string_eq_right_2 = "1" in HxString.equals __string_eq_left_1 __string_eq_right_2) || (let __string_eq_left_3 = v in let __string_eq_right_4 = "true" in HxString.equals __string_eq_left_3 __string_eq_right_4) || (let __string_eq_left_5 = v in let __string_eq_right_6 = "yes" in HxString.equals __string_eq_left_5 __string_eq_right_6)
 
-let assignedLocalType = fun existing incoming -> try (
+let assignedLocalType = fun existing incoming -> (try (
   ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic existing) ()) && not (TyType.isDynamic (Obj.magic existing) ()) && incoming != Obj.magic (HxRuntime.hx_null) && TyType.isDynamic (Obj.magic incoming) () then raise (HxRuntime.Hx_return (Obj.repr existing)) else ());
   TyType.unify (Obj.magic existing) (Obj.magic incoming)
 ) with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : TyType.t) : TyType.t)
 
-let arrayElementType = fun t -> try (
+let arrayElementType = fun t -> (try (
   ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let arguments = Obj.magic (TyType.getTypeArguments (Obj.magic t) ()) in (
     ignore (if HxArray.length arguments = 1 then ignore (let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic t) ()) in let tempString = ref (HxString.hx_null_string : string) in (
@@ -51,9 +51,9 @@ let arrayElementType = fun t -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30
+  | HxRuntime.Hx_return __ret_30 -> (Obj.obj __ret_30 : TyType.t) : TyType.t)
 
-let rec resolveTypeInContext = fun hx_type ctx -> try (
+let rec resolveTypeInContext = fun hx_type ctx -> (try (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyType.unknown ()))) else ());
   ignore (if TyType.isNullable (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (TyType.nullable (Obj.magic (resolveTypeInContext (Obj.magic (TyType.getNullableInner (Obj.magic hx_type) ())) (Obj.magic ctx))) (TyType.getDisplay (Obj.magic hx_type) () : string)))) else ());
   ignore (if TyType.isFunction (Obj.magic hx_type) () then let result = Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ()) in let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in let _g2 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
@@ -105,9 +105,9 @@ let rec resolveTypeInContext = fun hx_type ctx -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
+  | HxRuntime.Hx_return __ret_56 -> (Obj.obj __ret_56 : TyType.t) : TyType.t)
 
-let typeFromHintInContext = fun hint ctx -> try let tempString = ref (HxString.hx_null_string : string) in (
+let typeFromHintInContext = fun hint ctx -> (try let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if hint == HxString.hx_null_string then let __assign_31 = "" in (
     tempString := __assign_31;
     __assign_31
@@ -123,9 +123,9 @@ let typeFromHintInContext = fun hint ctx -> try let tempString = ref (HxString.h
     resolveTypeInContext (Obj.magic (TyType.fromHintText (raw : string))) (Obj.magic ctx)
   )
 ) with
-  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
+  | HxRuntime.Hx_return __ret_35 -> (Obj.obj __ret_35 : TyType.t) : TyType.t)
 
-let nominalInfoForType = fun index hx_type -> try (
+let nominalInfoForType = fun index hx_type -> (try (
   ignore (if index == Obj.magic (HxRuntime.hx_null) || hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
     ignore (if identity == Obj.magic (HxRuntime.hx_null) then let __assign_57 = Obj.magic (Obj.magic (TyperIndex.getByFullName (Obj.magic index) (TyType.getDisplay (Obj.magic hx_type) () : string))) in (
@@ -138,9 +138,9 @@ let nominalInfoForType = fun index hx_type -> try (
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
+  | HxRuntime.Hx_return __ret_59 -> (Obj.obj __ret_59 : TyNominalInfo.t) : TyNominalInfo.t)
 
-let exactDirectiveProvider = fun path packagePath sourceDirectives index loader -> try (
+let exactDirectiveProvider = fun path packagePath sourceDirectives index loader -> (try (
   ignore (if index == Obj.magic (HxRuntime.hx_null) || path == HxString.hx_null_string || (let __string_receiver_60 = path in HxString.length __string_receiver_60) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let provider = ref (Obj.magic (TyperIndex.getByFullName (Obj.magic index) (path : string))) in (
     ignore (if !provider == Obj.magic (HxRuntime.hx_null) && loader != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -162,9 +162,9 @@ let exactDirectiveProvider = fun path packagePath sourceDirectives index loader 
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_65 -> Obj.obj __ret_65
+  | HxRuntime.Hx_return __ret_65 -> (Obj.obj __ret_65 : TyNominalInfo.t) : TyNominalInfo.t)
 
-let usingDirectiveProvider = fun path packagePath modulePath sourceDirectives index loader -> try (
+let usingDirectiveProvider = fun path packagePath modulePath sourceDirectives index loader -> (try (
   ignore (if index == Obj.magic (HxRuntime.hx_null) || path == HxString.hx_null_string || (let __string_receiver_66 = path in HxString.length __string_receiver_66) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let provider = ref (Obj.magic (TyperIndex.resolveTypePath (Obj.magic index) (path : string) (packagePath : string) (Obj.magic sourceDirectives) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (modulePath : string))) in (
     ignore (if !provider == Obj.magic (HxRuntime.hx_null) && loader != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -177,9 +177,9 @@ let usingDirectiveProvider = fun path packagePath modulePath sourceDirectives in
     !provider
   )
 ) with
-  | HxRuntime.Hx_return __ret_68 -> Obj.obj __ret_68
+  | HxRuntime.Hx_return __ret_68 -> (Obj.obj __ret_68 : TyNominalInfo.t) : TyNominalInfo.t)
 
-let providerDefinesStaticMember = fun provider memberName -> try (
+let providerDefinesStaticMember = fun provider memberName -> (try (
   ignore (if provider == Obj.magic (HxRuntime.hx_null) || memberName == HxString.hx_null_string || (let __string_receiver_69 = memberName in HxString.length __string_receiver_69) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let field = Obj.magic ((Obj.magic provider : TyNominalInfo.t).fieldInfo (Obj.magic provider) (memberName : string)) in (
     ignore (if field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.getIsStatic (Obj.magic field) () && TyFieldInfo.getIsPublic (Obj.magic field) () then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
@@ -195,14 +195,14 @@ let providerDefinesStaticMember = fun provider memberName -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
+  | HxRuntime.Hx_return __ret_74 -> (Obj.obj __ret_74 : bool) : bool)
 
-let moduleDirectiveProviders = fun path packagePath sourceDirectives index loader -> try (
+let moduleDirectiveProviders = fun path packagePath sourceDirectives index loader -> (try (
   ignore (if path == HxString.hx_null_string || (let __string_receiver_75 = path in HxString.length __string_receiver_75) = 0 || index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __arr_76 = HxArray.create () in __arr_76))) else ());
   ignore (if loader != Obj.magic (HxRuntime.hx_null) then ignore ((Obj.magic loader : ModuleLoader.t).ensureTypeAvailable (Obj.magic loader) (path : string) (packagePath : string) (Obj.magic sourceDirectives) (Obj.magic (HxRuntime.hx_null))) else ());
   TyperIndex.getByModulePath (Obj.magic index) (path : string)
 ) with
-  | HxRuntime.Hx_return __ret_77 -> Obj.obj __ret_77
+  | HxRuntime.Hx_return __ret_77 -> (Obj.obj __ret_77 : TyNominalInfo.t HxArray.t) : TyNominalInfo.t HxArray.t)
 
 let providerIdentities = fun providers -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t HxArray.t) in (
   ignore (if providers == Obj.magic (HxRuntime.hx_null) then let __assign_78 = Obj.magic (let __arr_79 = HxArray.create () in __arr_79) in (
@@ -339,7 +339,7 @@ let resolveModuleDirectives = fun sourceDirectives packagePath modulePath index 
   out
 )
 
-let declaredMemberReadType = fun owner name isStatic -> try (
+let declaredMemberReadType = fun owner name isStatic -> (try (
   ignore (if owner == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let fieldType = Obj.magic ((Obj.magic owner : TyNominalInfo.t).fieldType (Obj.magic owner) (name : string)) in (
     ignore (if fieldType != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr fieldType)) else ());
@@ -364,9 +364,9 @@ let declaredMemberReadType = fun owner name isStatic -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_152 -> Obj.obj __ret_152
+  | HxRuntime.Hx_return __ret_152 -> (Obj.obj __ret_152 : TyType.t) : TyType.t)
 
-let currentThisType = fun ctx -> try (
+let currentThisType = fun ctx -> (try (
   ignore (if ctx == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyType.unknown ()))) else ());
   let current = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in (
     ignore (if current == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyType.unknown ()))) else ());
@@ -374,7 +374,7 @@ let currentThisType = fun ctx -> try (
     TyType.nominal (Obj.magic ((Obj.magic current : TyNominalInfo.t).getIdentity (Obj.magic current) ())) (Obj.magic (let __arr_167 = HxArray.create () in __arr_167)) ((Obj.magic current : TyNominalInfo.t).getFullName (Obj.magic current) () : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_168 -> Obj.obj __ret_168
+  | HxRuntime.Hx_return __ret_168 -> (Obj.obj __ret_168 : TyType.t) : TyType.t)
 
 let declarePatternBindings = fun scope pattern baseTy -> ignore (TySwitchPatternBindings.declare (Obj.magic scope) (Obj.magic pattern) (Obj.magic baseTy))
 
@@ -431,7 +431,7 @@ let isUpperStartName = fun (name : string) -> (try (
 ) with
   | HxRuntime.Hx_return __ret_349 -> (Obj.obj __ret_349 : bool) : bool)
 
-let helperCompileTimeProbeName = fun callee -> try let path = (dottedFieldPath (Obj.magic callee) : string) in let name = "typeError" in (
+let helperCompileTimeProbeName = fun callee -> (try let path = (dottedFieldPath (Obj.magic callee) : string) in let name = "typeError" in (
   ignore (if (let __string_eq_left_350 = path in let __string_eq_right_351 = name in HxString.equals __string_eq_left_350 __string_eq_right_351) || (let __string_eq_left_352 = path in let __string_eq_right_353 = "HelperMacros." ^ HxString.toStdString name in HxString.equals __string_eq_left_352 __string_eq_right_353) || (let __call_arg_0_354 = path in let __call_arg_1_355 = ".HelperMacros." ^ HxString.toStdString name in StringTools.endsWith __call_arg_0_354 __call_arg_1_355) then raise (HxRuntime.Hx_return (Obj.repr name)) else ());
   let name = "typeErrorText" in (
     ignore (if (let __string_eq_left_356 = path in let __string_eq_right_357 = name in HxString.equals __string_eq_left_356 __string_eq_right_357) || (let __string_eq_left_358 = path in let __string_eq_right_359 = "HelperMacros." ^ HxString.toStdString name in HxString.equals __string_eq_left_358 __string_eq_right_359) || (let __call_arg_0_360 = path in let __call_arg_1_361 = ".HelperMacros." ^ HxString.toStdString name in StringTools.endsWith __call_arg_0_360 __call_arg_1_361) then raise (HxRuntime.Hx_return (Obj.repr name)) else ());
@@ -447,7 +447,7 @@ let helperCompileTimeProbeName = fun callee -> try let path = (dottedFieldPath (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_380 -> Obj.obj __ret_380
+  | HxRuntime.Hx_return __ret_380 -> (Obj.obj __ret_380 : string) : string)
 
 let extractRawDiagnostic = fun (message : string) -> (try (
   ignore (if message == HxString.hx_null_string || not (let __call_arg_0_381 = message in let __call_arg_1_382 = "__HXHX_RAW_DIAGNOSTIC__:" in StringTools.startsWith __call_arg_0_381 __call_arg_1_382) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -478,7 +478,7 @@ let diagnosticFileName = fun (filePath : string) -> (try (
 
 let isRangeIdentCode = fun (code : int) -> (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 95 : bool)
 
-let callRange = fun filePath pos -> try let tempNumber = ref (0 : int) in (
+let callRange = fun filePath pos -> (try let tempNumber = ref (0 : int) in (
   ignore (if pos == Obj.magic (HxRuntime.hx_null) || HxPos.getColumn (Obj.magic pos) () <= 0 then let __assign_398 = 0 in (
     tempNumber := __assign_398;
     __assign_398
@@ -535,9 +535,9 @@ let callRange = fun filePath pos -> try let tempNumber = ref (0 : int) in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_429 -> Obj.obj __ret_429
+  | HxRuntime.Hx_return __ret_429 -> (Obj.obj __ret_429 : Obj.t) : Obj.t)
 
-let declarationLineRange = fun filePath pos -> try let tempNumber = ref (0 : int) in (
+let declarationLineRange = fun filePath pos -> (try let tempNumber = ref (0 : int) in (
   ignore (if pos == Obj.magic (HxRuntime.hx_null) || HxPos.getColumn (Obj.magic pos) () <= 0 then let __assign_430 = 1 in (
     tempNumber := __assign_430;
     __assign_430
@@ -576,7 +576,7 @@ let declarationLineRange = fun filePath pos -> try let tempNumber = ref (0 : int
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_447 -> Obj.obj __ret_447
+  | HxRuntime.Hx_return __ret_447 -> (Obj.obj __ret_447 : Obj.t) : Obj.t)
 
 let functionNameRange = fun filePath name pos -> let tempNumber = ref (0 : int) in (
   ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_448 = 0 in (
@@ -605,7 +605,7 @@ let functionNameRange = fun filePath name pos -> let tempNumber = ref (0 : int) 
   )
 )
 
-let renderArgType = fun hx_sig index -> try let args = Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ()) in let optional = Obj.magic (TyFunSig.getArgOptional (Obj.magic hx_sig) ()) in let tempString = ref (HxString.hx_null_string : string) in (
+let renderArgType = fun hx_sig index -> (try let args = Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ()) in let optional = Obj.magic (TyFunSig.getArgOptional (Obj.magic hx_sig) ()) in let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if index < HxArray.length args then let __assign_461 = (TyType.getDisplay (Obj.magic (let __array_read_receiver_462 = args in let __array_read_index_463 = index in HxArray.get (Obj.magic __array_read_receiver_462) __array_read_index_463)) () : string) in (
     tempString := __assign_461;
     __assign_461
@@ -618,7 +618,7 @@ let renderArgType = fun hx_sig index -> try let args = Obj.magic (TyFunSig.getAr
     raw
   )
 ) with
-  | HxRuntime.Hx_return __ret_469 -> Obj.obj __ret_469
+  | HxRuntime.Hx_return __ret_469 -> (Obj.obj __ret_469 : string) : string)
 
 let renderOverloadCandidate = fun filePath hx_sig -> let pos = Obj.magic (TyFunSig.getPos (Obj.magic hx_sig) ()) in let range = functionNameRange (filePath : string) (TyFunSig.getName (Obj.magic hx_sig) () : string) (Obj.magic pos) in let names = Obj.magic (TyFunSig.getArgNames (Obj.magic hx_sig) ()) in let optional = Obj.magic (TyFunSig.getArgOptional (Obj.magic hx_sig) ()) in let args = Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ()) in let parts = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxArray.length args in (
   ignore (while !_g < _g1 do ignore (let i = let __old_470 = !_g in let __new_471 = HxInt.add __old_470 1 in (
@@ -655,7 +655,7 @@ let renderOverloadCandidate = fun filePath hx_sig -> let pos = Obj.magic (TyFunS
   )
 )
 
-let normalizeOverloadTypeName = fun ty -> try (
+let normalizeOverloadTypeName = fun ty -> (try (
   ignore (if ty == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "Unknown")) else ());
   let s = ref (let __call_arg_0_500 = TyType.getDisplay (Obj.magic ty) () in StringTools.trim __call_arg_0_500) in (
     ignore (while (let __call_arg_0_501 = !s in let __call_arg_1_502 = "Null<" in StringTools.startsWith __call_arg_0_501 __call_arg_1_502) && (let __call_arg_0_503 = !s in let __call_arg_1_504 = ">" in StringTools.endsWith __call_arg_0_503 __call_arg_1_504) do ignore (let __assign_505 = let __call_arg_0_506 = let __string_receiver_507 = !s in let __string_argument_0_508 = 5 in let __string_argument_1_509 = HxInt.sub (let __string_receiver_510 = !s in HxString.length __string_receiver_510) 6 in HxString.substr __string_receiver_507 __string_argument_0_508 __string_argument_1_509 in StringTools.trim __call_arg_0_506 in (
@@ -665,7 +665,7 @@ let normalizeOverloadTypeName = fun ty -> try (
     !s
   )
 ) with
-  | HxRuntime.Hx_return __ret_511 -> Obj.obj __ret_511
+  | HxRuntime.Hx_return __ret_511 -> (Obj.obj __ret_511 : string) : string)
 
 let normalizeFunctionTypeSegment = fun (s : string) -> (let out = ref (let __call_arg_0_512 = s in StringTools.trim __call_arg_0_512) in (
   ignore (while (let __call_arg_0_513 = !out in let __call_arg_1_514 = "(" in StringTools.startsWith __call_arg_0_513 __call_arg_1_514) && (let __call_arg_0_515 = !out in let __call_arg_1_516 = ")" in StringTools.endsWith __call_arg_0_515 __call_arg_1_516) do ignore (let __assign_517 = let __call_arg_0_518 = let __string_receiver_519 = !out in let __string_argument_0_520 = 1 in let __string_argument_1_521 = HxInt.sub (let __string_receiver_522 = !out in HxString.length __string_receiver_522) 2 in HxString.substr __string_receiver_519 __string_argument_0_520 __string_argument_1_521 in StringTools.trim __call_arg_0_518 in (
@@ -675,7 +675,7 @@ let normalizeFunctionTypeSegment = fun (s : string) -> (let out = ref (let __cal
   !out
 ) : string)
 
-let functionTypeSegments = fun display -> try let trimmed = let __call_arg_0_523 = display in StringTools.trim __call_arg_0_523 in (
+let functionTypeSegments = fun display -> (try let trimmed = let __call_arg_0_523 = display in StringTools.trim __call_arg_0_523 in (
   ignore (if (let __string_receiver_524 = trimmed in let __string_argument_0_525 = "->" in HxString.indexOf __string_receiver_524 __string_argument_0_525 0) < 0 then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_526 = HxArray.create () in __represented_array_526))) else ());
   let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (let __string_receiver_527 = trimmed in let __string_argument_0_528 = "->" in HxString.split __string_receiver_527 __string_argument_0_528) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let part = (let __array_read_receiver_529 = _g1 in let __array_read_index_530 = !_g in HxArray.get (Obj.magic __array_read_receiver_529) __array_read_index_530 : string) in (
@@ -700,7 +700,7 @@ let functionTypeSegments = fun display -> try let trimmed = let __call_arg_0_523
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_541 -> Obj.obj __ret_541
+  | HxRuntime.Hx_return __ret_541 -> (Obj.obj __ret_541 : string HxArray.t) : string HxArray.t)
 
 let flatOverloadTypeScore = fun (exp : string) (act : string) -> (try (
   ignore (if let __string_eq_left_542 = exp in let __string_eq_right_543 = act in HxString.equals __string_eq_left_542 __string_eq_right_543 then raise (HxRuntime.Hx_return (Obj.repr 4)) else ());
@@ -726,7 +726,7 @@ let functionOverloadTypeScore = fun (exp : string) (act : string) -> (try let ex
 ) with
   | HxRuntime.Hx_return __ret_571 -> (Obj.obj __ret_571 : int) : int)
 
-let rec overloadArgScore = fun expected actual methodTypeParameters -> try (
+let rec overloadArgScore = fun expected actual methodTypeParameters -> (try (
   ignore (if expected == Obj.magic (HxRuntime.hx_null) || actual == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
   ignore (if TyMethodGenericBinding.isInferableParameter (Obj.magic expected) (Obj.magic methodTypeParameters) then let tempResult = ref (0 : int) in (
     ignore (if TyType.isUnknown (Obj.magic actual) () || TyType.isDynamic (Obj.magic actual) () then let __assign_572 = 0 in (
@@ -782,9 +782,9 @@ let rec overloadArgScore = fun expected actual methodTypeParameters -> try (
     let exp = (normalizeOverloadTypeName (Obj.magic expected) : string) in let act = (normalizeOverloadTypeName (Obj.magic actual) : string) in let __call_arg_0_590 = exp in let __call_arg_1_591 = act in functionOverloadTypeScore __call_arg_0_590 __call_arg_1_591
   )
 ) with
-  | HxRuntime.Hx_return __ret_592 -> Obj.obj __ret_592
+  | HxRuntime.Hx_return __ret_592 -> (Obj.obj __ret_592 : int) : int)
 
-let overloadCandidateScore = fun hx_sig argTypes suppliedArity methodTypeParameters -> try (
+let overloadCandidateScore = fun hx_sig argTypes suppliedArity methodTypeParameters -> (try (
   ignore (if not (TyFunSig.acceptsArity (Obj.magic hx_sig) suppliedArity) then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
   let expected = Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ()) in let score = ref 0 in let _g = ref 0 in let _g1 = suppliedArity in (
     ignore (while !_g < _g1 do ignore (let i = let __old_593 = !_g in let __new_594 = HxInt.add __old_593 1 in (
@@ -824,9 +824,9 @@ let overloadCandidateScore = fun hx_sig argTypes suppliedArity methodTypeParamet
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_605 -> Obj.obj __ret_605
+  | HxRuntime.Hx_return __ret_605 -> (Obj.obj __ret_605 : int) : int)
 
-let selectedMethodCallResolution = fun owner signature argTypes -> try let declaration = Obj.magic ((Obj.magic owner : TyNominalInfo.t).declarationForSignature (Obj.magic owner) (Obj.magic signature)) in (
+let selectedMethodCallResolution = fun owner signature argTypes -> (try let declaration = Obj.magic ((Obj.magic owner : TyNominalInfo.t).declarationForSignature (Obj.magic owner) (Obj.magic signature)) in (
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_606 = HxAnon.create () in (
     ignore (HxAnon.set __anon_606 "type" (Obj.repr (TyFunSig.getReturnType (Obj.magic signature) ())));
     ignore (HxAnon.set __anon_606 "declaration" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
@@ -838,7 +838,7 @@ let selectedMethodCallResolution = fun owner signature argTypes -> try let decla
     __anon_607
   )
 ) with
-  | HxRuntime.Hx_return __ret_608 -> Obj.obj __ret_608
+  | HxRuntime.Hx_return __ret_608 -> (Obj.obj __ret_608 : Obj.t) : Obj.t)
 
 let functionReferenceType = fun hx_sig -> let parts = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (let __array_read_receiver_708 = _g1 in let __array_read_index_709 = !_g in HxArray.get (Obj.magic __array_read_receiver_708) __array_read_index_709) in (
@@ -853,7 +853,7 @@ let functionReferenceType = fun hx_sig -> let parts = Obj.magic (HxArray.create 
   TyType.functionType (Obj.magic (TyFunSig.getArgs (Obj.magic hx_sig) ())) (Obj.magic (TyFunSig.getReturnType (Obj.magic hx_sig) ())) (HxArray.join parts "->" (fun x -> x) : string)
 )
 
-let inferNullCoalesceType = fun left right -> try (
+let inferNullCoalesceType = fun left right -> (try (
   ignore (if right != Obj.magic (HxRuntime.hx_null) && TyType.isNoNormalCompletion (Obj.magic right) () then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
     ignore (if left == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic left) () then let __assign_725 = Obj.magic (TyType.unknown ()) in (
       tempResult := __assign_725;
@@ -880,18 +880,18 @@ let inferNullCoalesceType = fun left right -> try (
   ) else ());
   TyType.unknown ()
 ) with
-  | HxRuntime.Hx_return __ret_730 -> Obj.obj __ret_730
+  | HxRuntime.Hx_return __ret_730 -> (Obj.obj __ret_730 : TyType.t) : TyType.t)
 
-let currentStaticMethodReferenceType = fun name ctx -> try let c = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in (
+let currentStaticMethodReferenceType = fun name ctx -> (try let c = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in (
   ignore (if c == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let candidates = Obj.magic ((Obj.magic c : TyNominalInfo.t).staticMethodCandidates (Obj.magic c) (name : string)) in (
     ignore (if HxArray.length candidates <> 1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     functionReferenceType (Obj.magic (let __array_read_receiver_731 = candidates in let __array_read_index_732 = 0 in HxArray.get (Obj.magic __array_read_receiver_731) __array_read_index_732))
   )
 ) with
-  | HxRuntime.Hx_return __ret_733 -> Obj.obj __ret_733
+  | HxRuntime.Hx_return __ret_733 -> (Obj.obj __ret_733 : TyType.t) : TyType.t)
 
-let importedStaticMethodReferenceType = fun name ctx -> try let importedMethod = Obj.magic (TyperContext.importedStaticMethod (Obj.magic ctx) (name : string)) in (
+let importedStaticMethodReferenceType = fun name ctx -> (try let importedMethod = Obj.magic (TyperContext.importedStaticMethod (Obj.magic ctx) (name : string)) in (
   ignore (if importedMethod == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let candidates = Obj.magic (TyImportedStaticMethod.getCandidates (Obj.magic importedMethod) ()) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
     ignore (if HxArray.length candidates = 1 then let __assign_734 = Obj.magic (Obj.magic (functionReferenceType (Obj.magic (let __array_read_receiver_735 = candidates in let __array_read_index_736 = 0 in HxArray.get (Obj.magic __array_read_receiver_735) __array_read_index_736)))) in (
@@ -904,7 +904,7 @@ let importedStaticMethodReferenceType = fun name ctx -> try let importedMethod =
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_738 -> Obj.obj __ret_738
+  | HxRuntime.Hx_return __ret_738 -> (Obj.obj __ret_738 : TyType.t) : TyType.t)
 
 let currentFieldReferenceType = fun name ctx -> let current = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
   ignore (if current == Obj.magic (HxRuntime.hx_null) then let __assign_739 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -917,7 +917,7 @@ let currentFieldReferenceType = fun name ctx -> let current = Obj.magic (TyperCo
   !tempResult
 )
 
-let rec accessorPropertyForAccess = fun expression scope ctx position -> try let receiver = ref (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null))) : Obj.t) in let field = ref ("" : string) in (
+let rec accessorPropertyForAccess = fun expression scope ctx position -> (try let receiver = ref (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null))) : Obj.t) in let field = ref ("" : string) in (
   ignore (if (match expression with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -1037,9 +1037,9 @@ let rec accessorPropertyForAccess = fun expression scope ctx position -> try let
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_165 -> Obj.obj __ret_165
+  | HxRuntime.Hx_return __ret_165 -> (Obj.obj __ret_165 : TyPropertyInfo.t) : TyPropertyInfo.t)
 and typeErrorProbe = fun expression scope ctx position -> ignore (inferExprType (Obj.magic expression) (Obj.magic (TyFunctionEnv.copyForInference (Obj.magic scope) ())) (Obj.magic ctx) (Obj.magic position))
-and resolveMethodCall = fun c field isStatic args scope ctx pos admittedCandidates -> try let argTypes = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+and resolveMethodCall = fun c field isStatic args scope ctx pos admittedCandidates -> (try let argTypes = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let a = Obj.magic (let __array_read_receiver_609 = args in let __array_read_index_610 = !_g in HxArray.get (Obj.magic __array_read_receiver_609) __array_read_index_610) in (
     ignore (let __old_611 = !_g in let __new_612 = HxInt.add __old_611 1 in (
       ignore (_g := __new_612);
@@ -1116,8 +1116,8 @@ and resolveMethodCall = fun c field isStatic args scope ctx pos admittedCandidat
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_660 -> Obj.obj __ret_660
-and resolveExtensionCall = fun receiver field args scope ctx pos -> try let inferenceScope = Obj.magic (TyFunctionEnv.copyForInference (Obj.magic scope) ()) in let receiverType = Obj.magic (inferExprType (Obj.magic receiver) (Obj.magic inferenceScope) (Obj.magic ctx) (Obj.magic pos)) in let receiverOwner = Obj.magic (nominalInfoForType (Obj.magic (TyperContext.getIndex (Obj.magic ctx) ())) (Obj.magic receiverType)) in (
+  | HxRuntime.Hx_return __ret_660 -> (Obj.obj __ret_660 : Obj.t) : Obj.t)
+and resolveExtensionCall = fun receiver field args scope ctx pos -> (try let inferenceScope = Obj.magic (TyFunctionEnv.copyForInference (Obj.magic scope) ()) in let receiverType = Obj.magic (inferExprType (Obj.magic receiver) (Obj.magic inferenceScope) (Obj.magic ctx) (Obj.magic pos)) in let receiverOwner = Obj.magic (nominalInfoForType (Obj.magic (TyperContext.getIndex (Obj.magic ctx) ())) (Obj.magic receiverType)) in (
   ignore (if receiverOwner != Obj.magic (HxRuntime.hx_null) && HxArray.length ((Obj.magic receiverOwner : TyNominalInfo.t).instanceMethodCandidates (Obj.magic receiverOwner) (field : string)) > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
     ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_661 = Obj.magic (let __arr_662 = HxArray.create () in __arr_662) in (
@@ -1147,8 +1147,8 @@ and resolveExtensionCall = fun receiver field args scope ctx pos -> try let infe
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_672 -> Obj.obj __ret_672
-and inferFunctionValueCall = fun callee args scope ctx pos -> try let calleeType = Obj.magic (inferExprType (Obj.magic callee) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let _g = ref 0 in (
+  | HxRuntime.Hx_return __ret_672 -> (Obj.obj __ret_672 : Obj.t) : Obj.t)
+and inferFunctionValueCall = fun callee args scope ctx pos -> (try let calleeType = Obj.magic (inferExprType (Obj.magic callee) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let argument = Obj.magic (let __array_read_receiver_718 = args in let __array_read_index_719 = !_g in HxArray.get (Obj.magic __array_read_receiver_718) __array_read_index_719) in (
     ignore (let __old_720 = !_g in let __new_721 = HxInt.add __old_720 1 in (
       ignore (_g := __new_721);
@@ -1168,8 +1168,8 @@ and inferFunctionValueCall = fun callee args scope ctx pos -> try let calleeType
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_724 -> Obj.obj __ret_724
-and inferExprType = fun expr scope ctx pos -> try let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  | HxRuntime.Hx_return __ret_724 -> (Obj.obj __ret_724 : TyType.t) : TyType.t)
+and inferExprType = fun expr scope ctx pos -> (try let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
   ignore (match expr with
     | HxExpr.ENull -> let __assign_764 = Obj.magic (TyType.fromHintText ("Null" : string)) in (
       tempResult := __assign_764;
@@ -2738,7 +2738,7 @@ and inferExprType = fun expr scope ctx pos -> try let tempResult = ref (Obj.magi
     ));
   !tempResult
 ) with
-  | HxRuntime.Hx_return __ret_1126 -> Obj.obj __ret_1126
+  | HxRuntime.Hx_return __ret_1126 -> (Obj.obj __ret_1126 : TyType.t) : TyType.t)
 
 let inferReturnType = fun statements scope ctx -> let out = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : TyType.t) in let unifyInto = fun t pos -> ignore (try ignore ((
   ignore (if !out == Obj.magic (HxRuntime.hx_null) then (
@@ -3061,7 +3061,7 @@ let typeFunction = fun fn ctx functionIdentity semanticDeclaration -> let params
   )
 )
 
-let resolveCallDeclaration = fun callee args scope ctx pos -> try (
+let resolveCallDeclaration = fun callee args scope ctx pos -> (try (
   ignore (match callee with
     | HxExpr.EEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let moduleEnumConstructor = Obj.magic (TyperContext.moduleEnumConstructorMethod (Obj.magic ctx) (name : string)) in (
       ignore (if moduleEnumConstructor != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get (resolveMethodCall (Obj.magic (TyImportedStaticMethod.getProvider (Obj.magic moduleEnumConstructor) ())) (TyImportedStaticMethod.getMemberName (Obj.magic moduleEnumConstructor) () : string) true (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos) (Obj.magic (TyImportedStaticMethod.getCandidates (Obj.magic moduleEnumConstructor) ()))) "declaration")))) else ());
@@ -3185,7 +3185,7 @@ let resolveCallDeclaration = fun callee args scope ctx pos -> try (
     | _ -> ignore ());
   Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_707 -> Obj.obj __ret_707
+  | HxRuntime.Hx_return __ret_707 -> (Obj.obj __ret_707 : TyDeclarationInfo.t) : TyDeclarationInfo.t)
 
 let rec resolveFieldDeclaration = fun expression scope ctx pos -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
   ignore (match expression with
@@ -3425,7 +3425,7 @@ let buildTypedClasses = fun parsed index loader modulePath deferProgramLowering 
             ));
             let requiresOwnerQualification = !tempShortCircuit in TypedCallResolution.create (Obj.magic (!declaration2)) requiresOwnerQualification (Obj.magic (!extensionProvider))
           )
-        ) in let fieldResolver = fun expression position lexicalEnvironment -> try let field = Obj.magic (resolveFieldDeclaration (Obj.magic expression) (Obj.magic (TyFunctionEnv.copyForInference (Obj.magic lexicalEnvironment) ())) (Obj.magic context) (Obj.magic position)) in (
+        ) in let fieldResolver = fun expression position lexicalEnvironment -> (try let field = Obj.magic (resolveFieldDeclaration (Obj.magic expression) (Obj.magic (TyFunctionEnv.copyForInference (Obj.magic lexicalEnvironment) ())) (Obj.magic context) (Obj.magic position)) in (
           ignore (if field == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
           let tempBool = ref (false : bool) in (
             ignore (if (match expression with
@@ -3479,7 +3479,7 @@ let buildTypedClasses = fun parsed index loader modulePath deferProgramLowering 
             let importedBareField = !tempBool in TypedFieldResolution.create (Obj.magic field) importedBareField
           )
         ) with
-          | HxRuntime.Hx_return __ret_192 -> Obj.obj __ret_192 in let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic classDeclaration)) in (
+          | HxRuntime.Hx_return __ret_192 -> (Obj.obj __ret_192 : TypedFieldResolution.t) : TypedFieldResolution.t) in let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic classDeclaration)) in (
           ignore (while !_g2 < HxArray.length _g3 do try ignore (let field = Obj.magic (let __array_read_receiver_193 = _g3 in let __array_read_index_194 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_193) __array_read_index_194) in (
             ignore (let __old_195 = !_g2 in let __new_196 = HxInt.add __old_195 1 in (
               ignore (_g2 := __new_196);

@@ -855,34 +855,6 @@ class EmitterStage {
 		return value == null ? null : cast value;
 	}
 
-	/**
-		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
-	**/
-	static function mapHasRaw<TMap>(mapLike:Null<TMap>, key:String):Bool {
-		if (mapLike == null || key == null)
-			return false;
-		final mapLikeObj:{} = cast mapLike;
-		final existsFn = Reflect.field(mapLikeObj, "exists");
-		if (existsFn == null)
-			return mapGetRaw(mapLike, key) != null;
-		final existsValue = Reflect.callMethod(mapLikeObj, existsFn, [key]);
-		return existsValue == true;
-	}
-
-	/**
-		Get a string-key iterator from a map-like object, if available.
-	**/
-	static function mapKeysRaw<TMap>(mapLike:Null<TMap>):Null<Iterator<String>> {
-		if (mapLike == null)
-			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final keysFn = Reflect.field(mapLikeObj, "keys");
-		if (keysFn == null)
-			return null;
-		final keysValue = Reflect.callMethod(mapLikeObj, keysFn, []);
-		return keysValue == null ? null : cast keysValue;
-	}
-
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
 	static function eraseBoundary<TIn, TOut>(value:TIn):TOut {
 		return cast value;
@@ -926,7 +898,7 @@ class EmitterStage {
 		final tyByIdentRaw = tyByIdent;
 
 		function tyLookup(name:String):Null<TyType> {
-			return cast mapGetRaw(tyByIdentRaw, name);
+			return tyByIdentRaw == null ? null : tyByIdentRaw.get(name);
 		}
 
 		function stmtTyLookup(name:String):String {
@@ -944,7 +916,7 @@ class EmitterStage {
 		}
 
 		function localHintLookup(name:String):Null<TyType> {
-			return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
+			return currentFunctionLocalTypeHints == null ? null : currentFunctionLocalTypeHints.get(name);
 		}
 
 		inline function resolveTyIdentName(name:String):String {
@@ -1085,17 +1057,21 @@ class EmitterStage {
 	}
 
 	static function staticImportModuleForStage3(name:String, ?staticImportByIdent:Map<String, String>):String {
-		final resolved = mapGetRaw(staticImportByIdent, name);
-		if (resolved != null)
-			return cast resolved;
-		final globalResolved = mapGetRaw(currentGlobalImportAliasByIdent, name);
-		return globalResolved == null ? null : cast globalResolved;
+		if (staticImportByIdent != null) {
+			final resolved = staticImportByIdent.get(name);
+			if (resolved != null)
+				return resolved;
+		}
+		final globalResolved = currentGlobalImportAliasByIdent.get(name);
+		return globalResolved == null ? null : globalResolved;
 	}
 
 	static function moduleNameForStage3Key(key:String, ?moduleNameByPkgAndClass:Map<String, String>):String {
-		final resolved = mapGetRaw(moduleNameByPkgAndClass, key);
-		if (resolved != null)
-			return cast resolved;
+		if (moduleNameByPkgAndClass != null) {
+			final resolved = moduleNameByPkgAndClass.get(key);
+			if (resolved != null)
+				return resolved;
+		}
 		for (entry in currentModuleNameEntries)
 			if (entry.key == key)
 				return entry.moduleName;
@@ -1138,15 +1114,16 @@ class EmitterStage {
 	}
 
 	static function stage3HasArity(name:String, ?arityByIdent:Map<String, Int>):Bool {
-		return mapHasRaw(arityByIdent, name);
+		return arityByIdent != null && arityByIdent.exists(name);
 	}
 
 	static function stage3ArityFor(name:String, ?arityByIdent:Map<String, Int>):Int {
-		final resolved = mapGetRaw(arityByIdent, name);
+		if (arityByIdent == null)
+			return 0;
+		final resolved = arityByIdent.get(name);
 		if (resolved == null)
 			return 0;
-		final arity:Int = cast resolved;
-		return arity;
+		return resolved;
 	}
 
 	/**
@@ -1210,12 +1187,12 @@ class EmitterStage {
 		return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
 	}
 
-	static function extendTyByIdentForStage3<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
+	static function extendTyByIdentForStage3(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
+		final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
 		if (keys != null)
 			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
@@ -1223,12 +1200,12 @@ class EmitterStage {
 		return out;
 	}
 
-	static function extendTyByIdentManyForStage3<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
+	static function extendTyByIdentManyForStage3(ty:Map<String, TyType>, names:Array<String>, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
+		final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
 		if (keys != null)
 			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
@@ -1732,11 +1709,11 @@ class EmitterStage {
 	}
 
 	static function stage3LocalHintLookup(name:String):Null<TyType> {
-		return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
+		return currentFunctionLocalTypeHints == null ? null : currentFunctionLocalTypeHints.get(name);
 	}
 
 	static function stage3TyLookup(name:String, ?tyByIdent:Map<String, TyType>):Null<TyType> {
-		return cast mapGetRaw(tyByIdent, name);
+		return tyByIdent == null ? null : tyByIdent.get(name);
 	}
 
 	static function stage3ResolveTyIdentName(name:String, ?tyByIdent:Map<String, TyType>):String {
@@ -3167,10 +3144,12 @@ class EmitterStage {
 				final c = if (instanceCallName != null) {
 					if (receiverAlreadyForwarded) {
 						ocamlValueIdent(instanceCallName);
-					} else if (stage3HasThisBinding(tyByIdentRaw)) {
-						ocamlValueIdent(instanceCallName) + " (this_)";
 					} else {
-						ocamlValueIdent(instanceCallName);
+						// An unqualified current-class instance method always uses the current
+						// receiver. Bootstrap typing can omit the synthetic `this` entry from
+						// `tyByIdent`, but that incomplete map must not turn the receiver into a
+						// null argument.
+						ocamlValueIdent(instanceCallName) + " (this_)";
 					}
 				} else {
 					exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -3377,7 +3356,11 @@ class EmitterStage {
 					}
 
 					var sig = callSigForStage3(c, callSigByCalleeRaw);
-					if (sig == null && !receiverPreApplied) {
+					// A pre-applied receiver changes how the final call is rendered, but it
+					// does not make the method signature known. Keep resolving the signature
+					// so omitted optional arguments are filled without adding poison values
+					// to an already complete zero-argument instance call.
+					if (sig == null) {
 						final firstSpace = c.indexOf(" ");
 						if (firstSpace > 0)
 							sig = callSigForStage3(c.substr(0, firstSpace), callSigByCalleeRaw);
@@ -3391,6 +3374,7 @@ class EmitterStage {
 							}
 						}
 					}
+					final preAppliedReceiverCount = receiverPreApplied && sig != null && sig.needsReceiver ? 1 : 0;
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
 					//
 					// Why
@@ -3403,7 +3387,7 @@ class EmitterStage {
 					// - If we have a known signature and the call site passes *more* args than the
 					//   function can accept (and it is not a rest-arg function), collapse the call
 					//   to bring-up poison rather than emitting invalid OCaml.
-					if (sig != null && !sig.hasRest && args.length > sig.expected) {
+					if (sig != null && !sig.hasRest && args.length + preAppliedReceiverCount > sig.expected) {
 						return "(Obj.magic 0)";
 					}
 					// Also guard against mismatches between parsed call signatures and the *emitted*
@@ -3489,15 +3473,17 @@ class EmitterStage {
 						if (!forceImplicitThis && sig != null && sig.needsReceiver && fullArgs.length + 1 == sig.expected && c.indexOf(" (this_)") == -1) {
 							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
 						}
-						if (sig != null && sig.needsReceiver && fullArgs.length < sig.required) {
+						if (sig != null && sig.needsReceiver && !receiverPreApplied && fullArgs.length < sig.required) {
 							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
 						}
 
 						var missingCount = missing;
-						if (missingCount == 0 && sig != null) {
+						if (sig != null) {
 							final expected = sig.expected;
-							if (expected > fullArgs.length)
-								missingCount = expected - fullArgs.length;
+							final supplied = fullArgs.length + preAppliedReceiverCount;
+							// The resolved signature is more precise than the early arity estimate,
+							// especially when bootstrap typing omitted the current receiver.
+							missingCount = expected > supplied ? expected - supplied : 0;
 						}
 
 						// Stage 3 bring-up: upstream often passes `pos` as the last argument to APIs declared
@@ -3507,14 +3493,14 @@ class EmitterStage {
 						// Our bootstrap typer/emitter does not model that unification yet. To keep OCaml output
 						// type-correct, we insert missing args as `null` immediately *before* a trailing `pos`
 						// identifier when we have a signature for the callee.
-						if (sig != null && sig.expected > fullArgs.length && fullArgs.length > 0) {
+						if (sig != null && sig.expected > fullArgs.length + preAppliedReceiverCount && fullArgs.length > 0) {
 							final last = fullArgs[fullArgs.length - 1];
 							final isTrailingPos = switch (last) {
 								case EIdent("pos"): true;
 								case _: false;
 							};
 							if (isTrailingPos) {
-								final missingBefore = sig.expected - fullArgs.length;
+								final missingBefore = sig.expected - fullArgs.length - preAppliedReceiverCount;
 								final adjusted = new Array<HxExpr>();
 								final prefixLen = fullArgs.length - 1;
 								for (i in 0...prefixLen)
@@ -3579,7 +3565,7 @@ class EmitterStage {
 
 						final renderedArgs = new Array<String>();
 						for (argIndex in 0...fullArgs.length) {
-							final renderedArg = "(" + renderCallArgWithSig(fullArgs[argIndex], argIndex) + ")";
+							final renderedArg = "(" + renderCallArgWithSig(fullArgs[argIndex], argIndex + preAppliedReceiverCount) + ")";
 							renderedArgs.push(renderedArg);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
@@ -4140,10 +4126,10 @@ class EmitterStage {
 		final staticImportByIdentRaw:Null<Map<String, String>> = cast staticImportByIdent;
 		final moduleNameByPkgAndClassRaw:Null<Map<String, String>> = cast moduleNameByPkgAndClass;
 		final callSigByCalleeRaw:Null<Map<String, EmitterCallSig>> = cast callSigByCallee;
-		final tyKeys:Null<Iterator<String>> = mapKeysRaw(tyByIdentRaw);
+		final tyKeys:Null<Iterator<String>> = tyByIdentRaw == null ? null : tyByIdentRaw.keys();
 		if (tyKeys != null)
 			for (name in tyKeys) {
-				final ty = mapGetRaw(tyByIdentRaw, name);
+				final ty = tyByIdentRaw.get(name);
 				if (ty != null)
 					emissionTyByIdent.set(name, ty);
 			}
@@ -4155,14 +4141,14 @@ class EmitterStage {
 		final emissionTyByIdentRaw = emissionTyByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(emissionTyByIdentRaw, name) != null)
+			if (emissionTyByIdentRaw.get(name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(emissionTyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && emissionTyByIdentRaw.get(lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(emissionTyByIdentRaw, resolveTyIdentName(name)) != null;
+			return emissionTyByIdentRaw.get(resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -4174,14 +4160,13 @@ class EmitterStage {
 		}
 
 		function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(emissionTyByIdentRaw, resolveTyIdentName(name));
-			final t:Null<TyType> = cast resolved;
+			final t = emissionTyByIdentRaw.get(resolveTyIdentName(name));
 			final ts = t == null ? "" : t.toString();
-			final shouldUseLocalHint = resolved == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
+			final shouldUseLocalHint = t == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
 			if (shouldUseLocalHint) {
 				final localHints:Null<Map<String, TyType>> = cast currentFunctionLocalTypeHints;
 				if (localHints != null) {
-					final hinted:Null<TyType> = cast mapGetRaw(localHints, name);
+					final hinted = localHints.get(name);
 					if (hinted != null) {
 						final hintedS = hinted.toString();
 						if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
@@ -4189,7 +4174,7 @@ class EmitterStage {
 					}
 					final lowered = ocamlValueIdent(name);
 					if (lowered != name) {
-						final loweredHint:Null<TyType> = cast mapGetRaw(localHints, lowered);
+						final loweredHint = localHints.get(lowered);
 						if (loweredHint != null) {
 							final loweredHintS = loweredHint.toString();
 							if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
@@ -7511,7 +7496,7 @@ class EmitterStage {
 								final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
 								if (membersRaw == null)
 									continue;
-								final memberKeys:Null<Iterator<String>> = mapKeysRaw(cast membersRaw);
+								final memberKeys:Null<Iterator<String>> = membersRaw.keys();
 								if (memberKeys == null)
 									continue;
 								for (name in memberKeys)
@@ -7739,7 +7724,7 @@ class EmitterStage {
 							final callsRaw:Map<String, Bool> = fnCallsByName.get(nameRaw);
 							if (callsRaw == null)
 								continue;
-							final callKeys:Null<Iterator<String>> = mapKeysRaw(cast callsRaw);
+							final callKeys:Null<Iterator<String>> = callsRaw.keys();
 							if (callKeys == null)
 								continue;
 							for (callee in callKeys) {

@@ -817,6 +817,18 @@ class Helper2 {
 }
 
 class MultiStage3 {
+  static function identity(value:Int):Int {
+    return value;
+  }
+
+  static function selectLeft(left:Int, right:Int):Int {
+    return identity(left);
+  }
+
+  static function selectRight(left:Int, right:Int):Int {
+    return identity(right);
+  }
+
   static function main() {
     // Exercise both resolution shapes:
     // - unqualified helper type (`Helper`)
@@ -826,7 +838,7 @@ class MultiStage3 {
     // link-time regression check that providers for module-local helper types are emitted.
     var a = Helper.answer;
     var b = MultiStage3.Helper2.answer;
-    Sys.println(Std.string(a + b));
+    Sys.println(Std.string(a + b + selectLeft(3, 7) + selectRight(3, 7)));
   }
 }
 HX
@@ -834,14 +846,28 @@ HX
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   if [ -f "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml" ]; then
-    if grep -q "let rec floatToI32 (f : float) : int = _floatToI32 ((Obj.magic 0))" "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml"; then
-      echo "Stage3 regression: FPHelper.floatToI32 emitted partial-application fallback (_floatToI32 without f)." >&2
+    if ! grep -Eq '^let rec floatToI32 \(f : float\) : int = _floatToI32 \(f\)$' "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml"; then
+      echo "Stage3 regression: FPHelper.floatToI32 did not forward exactly its typed parameter to _floatToI32." >&2
+      exit 1
+    fi
+  fi
+  if [ -f "$tmpdir/out_stage3_helper/MultiStage3.ml" ]; then
+    if ! grep -Eq '^(let rec|and) selectLeft \(left : int\) \(right : int\) : int = identity \(left\)$' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
+      echo "Stage3 regression: selectLeft did not forward its selected typed parameter." >&2
+      exit 1
+    fi
+    if ! grep -Eq '^(let rec|and) selectRight \(left : int\) \(right : int\) : int = identity \(right\)$' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
+      echo "Stage3 regression: selectRight did not follow the call expression's parameter choice." >&2
       exit 1
     fi
   fi
   if [ -f "$tmpdir/out_stage3_helper/Haxe_io_Input.ml" ]; then
     if grep -Eq '(^|[^A-Za-z0-9_])FPHelper\.i32ToFloat' "$tmpdir/out_stage3_helper/Haxe_io_Input.ml"; then
       echo "Stage3 regression: unqualified FPHelper module reference in Haxe_io_Input.ml (expected Haxe_io_FPHelper)." >&2
+      exit 1
+    fi
+    if grep -Fq 'readInt32 ((Obj.magic HxRuntime.hx_null)) ((Obj.magic HxRuntime.hx_null))' "$tmpdir/out_stage3_helper/Haxe_io_Input.ml"; then
+      echo "Stage3 regression: Input.readFloat added poison arguments after its instance receiver was already applied." >&2
       exit 1
     fi
   fi
@@ -934,8 +960,9 @@ HX
   test -f "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
   grep -q "Haxe_Int64.ofInt" "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
   grep -q "Haxe_Int64.make" "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
-  if rg -n "(^|[^A-Za-z0-9_])Int64\\.ofInt\\b" "$tmpdir/out_stage3_int64_fphelper" >/dev/null 2>&1; then
+  if rg -n --glob '*.ml' "(^|[^A-Za-z0-9_])Int64\\.ofInt\\b" "$tmpdir/out_stage3_int64_fphelper" >/dev/null 2>&1; then
     echo "Stage3 Int64 regression: found bare Int64.ofInt call in emitted OCaml output." >&2
+    rg -n --glob '*.ml' "(^|[^A-Za-z0-9_])Int64\\.ofInt\\b" "$tmpdir/out_stage3_int64_fphelper" >&2
     exit 1
   fi
 
@@ -1871,12 +1898,10 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
 echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^x=3$"
+echo "$out" | grep -q "^y=3$"
 echo "$out" | grep -q "^hex=A$"
 echo "$out" | grep -q '^dollar=\$\$$'
-if printf '%s\n' "$out" | grep -Eq '^x=|^y='; then
-  echo "Stage3 regression: interpolation fallback unexpectedly changed (`x=`/`y=` lines reappeared)." >&2
-  exit 1
-fi
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: package type paths lower to OCaml modules"

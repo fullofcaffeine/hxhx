@@ -91,7 +91,8 @@ class Stage3RunSupport {
 		}
 		if (matched == null)
 			return null;
-		return runCommandInCwd("java", ["-jar", matched], cwd);
+		final result:Null<Int> = runCommandInCwd("java", ["-jar", matched], cwd);
+		return result;
 	}
 
 	public static function runSafePythonHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
@@ -111,7 +112,8 @@ class Stage3RunSupport {
 		}
 		if (matched == null)
 			return null;
-		return runCommandInCwd(matched.command, [matched.script], cwd);
+		final result:Null<Int> = runCommandInCwd(matched.command, [matched.script], cwd);
+		return result;
 	}
 
 	public static function runSafeNekoHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String, ?nekoPathEntries:Array<String>):Null<Int> {
@@ -131,7 +133,8 @@ class Stage3RunSupport {
 		}
 		if (matched == null)
 			return null;
-		return runNekoCommandInCwd([matched], cwd, nekoPathEntries);
+		final result:Null<Int> = runNekoCommandInCwd([matched], cwd, nekoPathEntries);
+		return result;
 	}
 
 	public static function runSafeLuaCommands(commands:Array<String>, cwd:String):Null<Int> {
