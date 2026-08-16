@@ -219,6 +219,15 @@ class ParserStage {
 					break;
 				}
 			}
+			for (c in abstractDecls) {
+				final nm = HxClassDecl.getName(c);
+				if (nm == expectedMainClass) {
+					main = c;
+					mainName = nm;
+					changed = true;
+					break;
+				}
+			}
 		}
 
 		final classes = new Array<HxClassDecl>();
