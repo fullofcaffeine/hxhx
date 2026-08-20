@@ -1946,6 +1946,7 @@ class ParserStageScanHelpers {
 						var expectArg = true;
 						var pendingOptional = false;
 						var pendingRest = false;
+						var pendingArgumentMetadata = new Array<String>();
 						var argIndex = 0;
 
 						while (true) {
@@ -1956,6 +1957,14 @@ class ParserStageScanHelpers {
 
 							if (!at.isIdent) {
 								switch (at.text) {
+									case "@":
+										if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) {
+											final meta = scanMetadataText(i);
+											if (meta.text.length > 0) {
+												pendingArgumentMetadata.push(StringTools.trim(source.substring(at.startPos, meta.nextPos)));
+												i = meta.nextPos;
+											}
+										}
 									case "(":
 										parenDepth += 1;
 									case ")":
@@ -1982,6 +1991,7 @@ class ParserStageScanHelpers {
 											expectArg = true;
 											pendingOptional = false;
 											pendingRest = false;
+											pendingArgumentMetadata = [];
 										}
 									case "?":
 										if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0)
@@ -2003,6 +2013,7 @@ class ParserStageScanHelpers {
 							var argType = "";
 							var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
 							var defaultValueText = "";
+							final argumentMetadata = pendingArgumentMetadata.copy();
 							final colonTok = scanNextToken(source, i);
 							if (colonTok.text == ":") {
 								final scannedType = scanTypeHintUntil(colonTok.nextPos, true);
@@ -2016,11 +2027,12 @@ class ParserStageScanHelpers {
 								defaultValue = scannedDefaultValueFromText(defaultValueText);
 								i = scannedDefault.nextPos;
 							}
-							args.push(new HxFunctionArg(argName, argType, defaultValue, pendingOptional, pendingRest, defaultValueText));
+							args.push(new HxFunctionArg(argName, argType, defaultValue, pendingOptional, pendingRest, defaultValueText, argumentMetadata));
 							argIndex += 1;
 							expectArg = false;
 							pendingOptional = false;
 							pendingRest = false;
+							pendingArgumentMetadata = [];
 						}
 					} else {
 						i = sigTok.startPos;

@@ -257,6 +257,7 @@ class CompilerTypedModuleRevision {
 					out.push(HxFunctionArg.getTypeHint(argument));
 					out.push(HxFunctionArg.getIsOptional(argument) ? "optional" : "required");
 					out.push(HxFunctionArg.getIsRest(argument) ? "rest" : "ordinary");
+					addStrings(out, HxFunctionArg.getMetadata(argument));
 				}
 			}
 		}

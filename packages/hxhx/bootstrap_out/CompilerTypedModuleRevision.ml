@@ -280,7 +280,8 @@ let addPublicClassFacts = fun out typedClass -> ignore (let sourceClass = Obj.ma
                           tempMaybeString8 := __assign_242;
                           __assign_242
                         ));
-                        let __array_receiver_243 = out in let __array_arg_0_244 = !tempMaybeString8 in HxArray.push __array_receiver_243 __array_arg_0_244
+                        ignore (let __array_receiver_243 = out in let __array_arg_0_244 = !tempMaybeString8 in HxArray.push __array_receiver_243 __array_arg_0_244);
+                        addStrings (Obj.magic out) (Obj.magic (HxFunctionArg.getMetadata (Obj.magic argument)))
                       )
                     )
                   )) done

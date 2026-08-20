@@ -1307,7 +1307,7 @@ let functionDeclaration = fun typedFunction catalog -> let source = Obj.magic (T
               tempString1 := __assign_622;
               __assign_622
             ));
-            let projectedName = (!tempString1 : string) in let __array_receiver_625 = _g in let __array_arg_0_626 = HxFunctionArg.create (projectedName : string) (renderedHint : string) (Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic argument))) (HxFunctionArg.getIsOptional (Obj.magic argument)) (HxFunctionArg.getIsRest (Obj.magic argument)) (HxFunctionArg.getDefaultValueText (Obj.magic argument) : string) in HxArray.push __array_receiver_625 __array_arg_0_626
+            let projectedName = (!tempString1 : string) in let __array_receiver_625 = _g in let __array_arg_0_626 = HxFunctionArg.create (projectedName : string) (renderedHint : string) (Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic argument))) (HxFunctionArg.getIsOptional (Obj.magic argument)) (HxFunctionArg.getIsRest (Obj.magic argument)) (HxFunctionArg.getDefaultValueText (Obj.magic argument) : string) (Obj.magic (HxFunctionArg.getMetadata (Obj.magic argument))) in HxArray.push __array_receiver_625 __array_arg_0_626
           )
         )) done);
         let tempRight = Obj.magic _g in let arguments = Obj.magic tempRight in (

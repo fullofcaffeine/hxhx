@@ -342,7 +342,7 @@ let specializedLineageFindInstanceMethodArguments = fun lineage targetName -> (t
             ignore (_g4 := __new_622);
             __new_622
           ));
-          let __array_receiver_623 = _g3 in let __array_arg_0_624 = HxFunctionArg.create (Obj.obj (HxAnon.get argument "name") : string) (Obj.obj (HxAnon.get argument "typeDisplay") : string) (Obj.magic (HxDefaultValue.NoDefault)) (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional")) (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest")) (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_623 __array_arg_0_624
+          let __array_receiver_623 = _g3 in let __array_arg_0_624 = HxFunctionArg.create (Obj.obj (HxAnon.get argument "name") : string) (Obj.obj (HxAnon.get argument "typeDisplay") : string) (Obj.magic (HxDefaultValue.NoDefault)) (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional")) (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest")) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_623 __array_arg_0_624
         )) done);
         ignore (let __assign_625 = Obj.magic _g3 in (
           tempResult := __assign_625;

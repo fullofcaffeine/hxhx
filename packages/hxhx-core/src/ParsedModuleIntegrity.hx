@@ -79,6 +79,7 @@ class ParsedModuleIntegrity {
 				add(out, HxFunctionArg.getIsOptional(arg) ? "optional" : "required");
 				add(out, HxFunctionArg.getIsRest(arg) ? "rest" : "ordinary");
 				add(out, HxFunctionArg.getDefaultValueText(arg));
+				addStrings(out, HxFunctionArg.getMetadata(arg));
 				switch (HxFunctionArg.getDefaultValue(arg)) {
 					case NoDefault:
 						add(out, "no-default");

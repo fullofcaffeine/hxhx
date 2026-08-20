@@ -58611,7 +58611,7 @@ and eRegIntCallArgExpr = fun arg preserveOptionalStorage scope -> (try let liter
         tempString := __assign_27582;
         __assign_27582
       ));
-      let param = Obj.magic (HxFunctionArg.create (!tempString : string) ("Int" : string) (Obj.magic (HxDefaultValue.NoDefault)) preserveOptionalStorage false (Obj.magic (HxRuntime.hx_null))) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+      let param = Obj.magic (HxFunctionArg.create (!tempString : string) ("Int" : string) (Obj.magic (HxDefaultValue.NoDefault)) preserveOptionalStorage false (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (if preserveOptionalStorage then let __assign_27583 = Obj.magic ("std::optional<int>" : string) in (
           tempMaybeString := __assign_27583;
           __assign_27583

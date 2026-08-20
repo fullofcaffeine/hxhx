@@ -4882,6 +4882,9 @@ class HxParser {
 		final args = new Array<HxFunctionArg>();
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
+				final argumentMetadata = new Array<String>();
+				while (isOtherChar("@"))
+					argumentMetadata.push(parseMetadataText());
 				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
 				if (isRest) {
 					// Rest argument: `...name:Type`
@@ -4919,7 +4922,7 @@ class HxParser {
 					isOptional = true;
 				}
 
-				args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest, defaultValueText));
+				args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest, defaultValueText, argumentMetadata));
 				if (cur.kind.match(TComma)) {
 					bump();
 					continue;

@@ -630,7 +630,7 @@ class TypedBodySource {
 				final projectedName = catalog == null
 					|| environment == null ? HxFunctionArg.getName(argument) : catalog.projectedName(parameterBindings[index]);
 				new HxFunctionArg(projectedName, renderedHint, HxFunctionArg.getDefaultValue(argument), HxFunctionArg.getIsOptional(argument),
-					HxFunctionArg.getIsRest(argument), HxFunctionArg.getDefaultValueText(argument));
+					HxFunctionArg.getIsRest(argument), HxFunctionArg.getDefaultValueText(argument), HxFunctionArg.getMetadata(argument));
 			}
 		];
 		if (declaration != null) {

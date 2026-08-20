@@ -4027,7 +4027,7 @@ let phpFunctionTypeParams = fun typeHint -> (try let text = let __call_arg_0_743
             ignore (_g2 := __new_7447);
             __new_7447
           ));
-          let __array_receiver_7448 = params in let __array_arg_0_7449 = HxFunctionArg.create (let __string_part_7450 = "arg" in let __string_part_7451 = string_of_int (HxArray.length params) in __string_part_7450 ^ __string_part_7451 : string) (let __call_arg_0_7452 = argText in phpFunctionTypeArgTypeHint __call_arg_0_7452 : string) (Obj.magic (HxDefaultValue.NoDefault)) (let __call_arg_0_7453 = argText in phpFunctionTypeArgIsOptional __call_arg_0_7453) false (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_7448 __array_arg_0_7449
+          let __array_receiver_7448 = params in let __array_arg_0_7449 = HxFunctionArg.create (let __string_part_7450 = "arg" in let __string_part_7451 = string_of_int (HxArray.length params) in __string_part_7450 ^ __string_part_7451 : string) (let __call_arg_0_7452 = argText in phpFunctionTypeArgTypeHint __call_arg_0_7452 : string) (Obj.magic (HxDefaultValue.NoDefault)) (let __call_arg_0_7453 = argText in phpFunctionTypeArgIsOptional __call_arg_0_7453) false (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_7448 __array_arg_0_7449
         )) done
       )) with
         | HxRuntime.Hx_continue -> () done);

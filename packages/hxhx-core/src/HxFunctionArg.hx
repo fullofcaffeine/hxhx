@@ -9,6 +9,7 @@
 	- Name.
 	- Optional type hint text (not yet parsed into a full type tree).
 	- Optional default value expression (very small subset for now).
+	- Source metadata that changes how the compiler treats this argument.
 
 	How:
 	- We intentionally store type hints as raw text initially to avoid blocking
@@ -21,14 +22,17 @@ class HxFunctionArg {
 	public final isOptional:Bool;
 	public final isRest:Bool;
 	public final defaultValueText:String;
+	public final metadata:Array<String>;
 
-	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false, isRest:Bool = false, ?defaultValueText:String) {
+	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false, isRest:Bool = false, ?defaultValueText:String,
+			?metadata:Array<String>) {
 		this.name = name;
 		this.typeHint = typeHint;
 		this.defaultValue = defaultValue;
 		this.isOptional = isOptional;
 		this.isRest = isRest;
 		this.defaultValueText = defaultValueText == null ? "" : defaultValueText;
+		this.metadata = metadata == null ? [] : metadata;
 	}
 
 	/**
@@ -53,4 +57,7 @@ class HxFunctionArg {
 
 	public static function getDefaultValueText(a:HxFunctionArg):String
 		return a.defaultValueText;
+
+	public static function getMetadata(a:HxFunctionArg):Array<String>
+		return a.metadata;
 }

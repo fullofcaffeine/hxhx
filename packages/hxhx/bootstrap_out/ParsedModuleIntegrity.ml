@@ -197,6 +197,7 @@ let addClass = fun out parsedClass -> ignore ((
                               ));
                               ignore (add (Obj.magic out) (!tempMaybeString8 : string));
                               ignore (add (Obj.magic out) (HxFunctionArg.getDefaultValueText (Obj.magic arg) : string));
+                              ignore (addStrings (Obj.magic out) (Obj.magic (HxFunctionArg.getMetadata (Obj.magic arg))));
                               let _g3 = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic arg)) in match _g3 with
                                 | HxDefaultValue.NoDefault -> ignore (add (Obj.magic out) ("no-default" : string))
                                 | HxDefaultValue.Default _p0 -> ignore (let _g4 = Obj.magic _p0 in let expression = Obj.magic _g4 in add (Obj.magic out) (TypedBodyFingerprint.forExpression (HxEnum.box_if_needed "HxExpr" (Obj.repr expression)) : string))

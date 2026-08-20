@@ -1898,7 +1898,8 @@ let init () : unit =
     let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
     let a5 = if len > 5 then Obj.obj ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (HxFunctionArg.create a0 a1 a2 a3 a4 a5)
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFunctionArg.create a0 a1 a2 a3 a4 a5 a6)
   );
   HxType.register_class_ctor "HxFunctionDecl" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -3772,8 +3773,8 @@ let init () : unit =
   HxType.register_class_static_fields "HxDefineMap" [ "addRawDefine"; "fromRawDefines"; "mergeInto" ];
   HxType.register_class_instance_fields "HxFieldDecl" [ "endPos"; "init"; "initText"; "isFinal"; "isStatic"; "metadata"; "name"; "pos"; "propertyGet"; "propertySet"; "typeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFieldDecl" [ "getEndPos"; "getInit"; "getInitText"; "getIsFinal"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getPropertyGet"; "getPropertySet"; "getTypeHint"; "getVisibility" ];
-  HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "defaultValueText"; "isOptional"; "isRest"; "name"; "typeHint" ];
-  HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getName"; "getTypeHint" ];
+  HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "defaultValueText"; "isOptional"; "isRest"; "metadata"; "name"; "typeHint" ];
+  HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getMetadata"; "getName"; "getTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "hasBody"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getHasBody"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility"; "normalizeReturnTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionTypeParamMetadata" [];
