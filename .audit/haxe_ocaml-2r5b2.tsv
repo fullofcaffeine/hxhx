@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-08-14T07:50:23Z	implementation	Matched only the preapplied-signature predicate	Generated String temporaries are incidental and changed after standard String lowering improved	scripts/hxhx/bootstrap_patch_helper.py	fresh output patched at three exact occurrences
+2026-08-14T07:50:23Z	verification	Split the later plugin Dune-layout failure into haxe_ocaml-n4hoo	The complete finalizer passed this repair before the next independent anchor failed	haxe_ocaml-n4hoo	focused checks pass; next blocker recorded
+2026-08-14T07:51:48Z	verification	Completed the full finalizer on retained stage0 output	The predicate fix and later plugin retirement detector both match current generated output	scripts/hxhx/finalize-bootstrap-dir.sh packages/hxhx/out	finalizer exit 0

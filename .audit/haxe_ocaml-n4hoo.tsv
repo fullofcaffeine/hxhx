@@ -1,0 +1,3 @@
+ts	phase	decision	why	evidence	result
+2026-08-14T07:52:06Z	implementation	Retired the legacy plugin layout patch when the complete Haxe-owned implementation is present	Current source owns richer provider and macro plugin behavior than the old generated patch	packages/hxhx-core/src/EmitterStage.hx:6446	source-owned, legacy, and malformed fixtures pass
+2026-08-14T07:52:06Z	verification	Completed the full finalizer on retained stage0 output	The source-owned detector now accepts current generated output without changing it	scripts/hxhx/finalize-bootstrap-dir.sh packages/hxhx/out	finalizer exit 0

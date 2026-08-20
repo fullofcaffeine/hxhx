@@ -1,0 +1,4 @@
+timestamp	decision	reason	evidence	result
+2026-08-14T17:16:00Z	Trace both resolver and lazy-loader inventories	A count change is safe to accept only after identifying the represented modules	HXHX_TRACE_RESOLVER_DEPS and HXHX_TRACE_MODULE_LOADER on the focused type-only workload	Six resolver modules and four unique Array support modules explain typed_modules=10
+2026-08-14T17:18:00Z	Keep the exact method-body invariant at 95	The unchanged body count proves the lower module count did not omit executable declarations	Focused output reports parsed_methods_total=95 and no unsupported expressions	No compiler behavior change is needed
+2026-08-14T17:20:00Z	Replace the stale silent grep with an explained exact assertion	The old value 11 had no matching current module and hid its actual output on failure	scripts/test-hxhx-targets.sh now documents the 6+4 inventory and prints output on mismatch	Focused check and full prebuilt target suite pass

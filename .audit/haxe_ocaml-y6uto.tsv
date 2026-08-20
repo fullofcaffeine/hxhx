@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-08-14T06:55:21Z	frame	Kept the fix in the sealed Array call contract	The existing target and HxArray.concat runtime helper already own this operation	packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlStandardArrayCallModel.hx	implementation present; verification pending
+2026-08-14T07:00:17Z	focused	Accepted String and nullable String concat only when both use the OCaml string carrier	Other element conversions remain rejected until lowering records them	test/reflaxe_ocaml_call_plan/src/CallPlanFixture.hx	call plan, Array runtime, runtime requirement, runtime-use, and portable string-array checks pass
+2026-08-14T07:47:07Z	bootstrap	Accepted the Array fix and split the later finalizer error into haxe_ocaml-2r5b2	Stage0 emission passed Array.concat before snapshot finalization failed at a separate helper boundary	haxe_ocaml-2r5b2	Array task ready to close; bootstrap finalizer remains open
