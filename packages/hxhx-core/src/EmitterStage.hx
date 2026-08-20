@@ -2305,7 +2305,10 @@ class EmitterStage {
 				}
 			case ELambda(args, body):
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-				final ty2 = extendTyByIdentManyForStage3(tyByIdent, args, TyType.fromHintText("Dynamic"));
+				// An untyped compiler temporary has no affirmative Dynamic type fact.
+				// Keep it unknown so OCaml can infer one concrete representation from the
+				// applied value. Explicitly typed temporaries use the ECast branch above.
+				final ty2 = extendTyByIdentManyForStage3(tyByIdent, args, TyType.unknown());
 				return "(fun "
 					+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
 					+ " -> "

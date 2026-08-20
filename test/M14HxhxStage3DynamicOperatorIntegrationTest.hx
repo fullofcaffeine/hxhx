@@ -25,6 +25,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final sourceDir = haxe.io.Path.join([root, "src"]);
 		final outputDir = haxe.io.Path.join([root, "out"]);
 		final invalidOutputDir = haxe.io.Path.join([root, "out_invalid"]);
+		final dateToolsOutputDir = haxe.io.Path.join([root, "out_datetools"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
 		FileSystem.createDirectory(sourceDir);
@@ -155,6 +156,19 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			"The ExprTools-shaped Dynamic local did not use checked bitwise complement.");
 		assertTrue(generated.indexOf("not (read)") < 0 && generated.indexOf("-(read)") < 0 && generated.indexOf("HxInt.lognot (read)") < 0,
 			"The ExprTools-shaped Dynamic local still reached a raw OCaml operator.");
+
+		// DateTools projects this inferred local as an untyped temporary. Lack of a
+		// temporary type is not evidence that the source value uses Dynamic.
+		final dateToolsPath = haxe.io.Path.normalize("vendor/haxe/std/DateTools.hx");
+		final dateToolsSource = File.getContent(dateToolsPath);
+		final parsedDateTools = ParserStage.parse(dateToolsSource, dateToolsPath);
+		final typedDateTools = TyperStage.typeModule(parsedDateTools);
+		final expandedDateTools = MacroStage.expandProgram([typedDateTools], []);
+		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, true, false);
+		final generatedDateTools = File.getContent(haxe.io.Path.join([dateToolsOutputDir, "DateTools.ml"]));
+		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
+			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
+		assertTrue(generatedDateTools.indexOf("(hour) = (0)") >= 0, "An inferred Date.getHours() Int local did not keep primitive integer equality.");
 
 		final result = new sys.io.Process(executable, []);
 		final stdout = result.stdout.readAll().toString();
