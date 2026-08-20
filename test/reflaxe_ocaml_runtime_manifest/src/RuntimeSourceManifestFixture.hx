@@ -95,6 +95,10 @@ class RuntimeSourceManifestFixture {
 		assertTrue(first.modules.length == 31, "the locked catalog should own all 31 runtime modules");
 		assertTrue(first.revision == second.revision, "unchanged runtime sources should have one deterministic revision");
 		assertTrue(first.revision.startsWith("sha256:"), "the runtime revision should identify its digest algorithm");
+		final dynamicSource = File.getContent(Path.join([runtimeDirectory, "HxDynamic.ml"]));
+		assertTrue(dynamicSource.contains("Stdlib.List.rev"),
+			"the Dynamic runtime should keep OCaml List operations stable when generated code defines a List module");
+		assertTrue(!dynamicSource.contains("(List.rev"), "the Dynamic runtime should not use a List name that generated Haxe modules can shadow");
 		final reflectClosure = RuntimeSourceManifest.resolveClosure(first, ["HxReflect"], "portable", false);
 		assertArrayEquals([
 			"HxAnon",

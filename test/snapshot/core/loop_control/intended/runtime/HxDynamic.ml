@@ -45,7 +45,7 @@ and anonymousToStdString (value : Obj.t) : string =
     let field_value = HxAnon.get value name in
     parts := (name ^ ": " ^ toStdString field_value) :: !parts
   done;
-  "{" ^ Stdlib.String.concat ", " (List.rev !parts) ^ "}"
+  "{" ^ Stdlib.String.concat ", " (Stdlib.List.rev !parts) ^ "}"
 
 and classToStdString (value : Obj.t) : string =
   HxType.ensure_registry_initialized ();
