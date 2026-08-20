@@ -351,6 +351,9 @@ class EmitterStage {
 	}
 
 	static function ocamlTypeFromTy(t:TyType):String {
+		final dynamicCarrier = backend.ocaml.OcamlDynamicOperatorLowering.carrierType(t);
+		if (dynamicCarrier != null)
+			return dynamicCarrier;
 		return switch (t.toString()) {
 			case "Int": "int";
 			case "Float": "float";
@@ -582,7 +585,8 @@ class EmitterStage {
 			fixed: fixedCount,
 			hasRest: hasRest,
 			needsReceiver: needsReceiver,
-			paramTypeHints: paramTypeHints
+			paramTypeHints: paramTypeHints,
+			resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
 		};
 	}
 
@@ -965,9 +969,10 @@ class EmitterStage {
 			return switch (cond) {
 				case EBool(v):
 					v ? "true" : "false";
-				case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
+				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					s == "(Obj.magic 0)" ? "true" : s;
+					final checked = stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + s + ")" : s;
+					checked == "(Obj.magic 0)" ? "true" : checked;
 				case EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _), EBinop("&&", _, _),
 					EBinop("||", _, _):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -1042,6 +1047,21 @@ class EmitterStage {
 						+ ocamlReadValueIdent(name) + "))");
 				case EIdent(name) if (tyForIdent(name) == "Array"):
 					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+				case _ if (stage3IsBoolExpr(expr, tyByIdent, callSigByCallee)):
+					final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
+					final boolValue = switch (expr) {
+						case EUnop(op, fixity, inner)
+							if (op == HxUnaryOperator.LogicalNot
+								&& fixity == HxUnaryFixity.Prefix
+								&& stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee)):
+							"HxRuntime.unbox_bool_or_obj ("
+							+ rendered
+							+ ")";
+						case _:
+							rendered;
+					}
+					"string_of_bool (" + boolValue + ")";
 				case _:
 					// Bring-up default: prefer *some* stringification over `<unsupported>` so
 					// upstream harness logs remain readable (and don't change meaning).
@@ -1885,19 +1905,44 @@ class EmitterStage {
 		}
 	}
 
-	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
 		return switch (expr) {
 			case EBool(_):
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "Bool";
-			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-				stage3IsBoolExpr(inner, tyByIdent);
+			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
+					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Bool";
+			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
+					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
+					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Bool";
+			case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
+				true;
 			case EBinop(op, _, _): op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||";
-			case ETernary(_cond, thenExpr, elseExpr): stage3IsBoolExpr(thenExpr, tyByIdent) && stage3IsBoolExpr(elseExpr, tyByIdent);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsBoolExpr(thenExpr, tyByIdent,
+					callSigByCallee) && stage3IsBoolExpr(elseExpr, tyByIdent, callSigByCallee);
 			case _:
 				false;
 		}
+	}
+
+	/** Reports whether an expression produces the reviewed `Obj.t` Dynamic carrier. */
+	static function stage3IsDynamicExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		return switch (expr) {
+			case EIdent(name):
+				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(stage3TyForIdent(name, tyByIdent));
+			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
+					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
+			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
+					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
+					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
+			case ECast(_, typeHint):
+				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(typeHint);
+			case EUntyped(inner):
+				stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee);
+			case _:
+				false;
+		};
 	}
 
 	static function stage3IsUnknownNumericIdent(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
@@ -3411,7 +3456,7 @@ class EmitterStage {
 
 					function renderCallArgWithSig(arg:HxExpr, argIndex:Int):String {
 						final hint = (sig == null || sig.paramTypeHints == null || argIndex < 0 || argIndex >= sig.paramTypeHints.length) ? "" : sig.paramTypeHints[argIndex];
-						return switch (arg) {
+						final rendered = switch (arg) {
 							case ENull:
 								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 							case _ if (stage3IsFloatParamHint(hint)):
@@ -3422,7 +3467,17 @@ class EmitterStage {
 									exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 										callSigByCallee),
 									tyByIdentRaw);
+						};
+						if (sig != null && sig.needsReceiver && argIndex == 0)
+							return rendered;
+						final carrier = if (stage3IsBoolExpr(arg, tyByIdentRaw, callSigByCalleeRaw)) {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
+						} else if (stage3IsDynamicExpr(arg, tyByIdentRaw, callSigByCalleeRaw)) {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
+						} else {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
 						}
+						return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
 					}
 
 					// Rest-args lowering (Stage3 bring-up)
@@ -3646,6 +3701,12 @@ class EmitterStage {
 				}
 			case EUnop(op, fixity, expr):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				final renderedUnaryOperand = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee);
+				final dynamicUnary = backend.ocaml.OcamlDynamicOperatorLowering.unary(op, stage3IsDynamicExpr(expr, tyByIdentRaw, callSigByCalleeRaw),
+					renderedUnaryOperand);
+				if (dynamicUnary != null)
+					return dynamicUnary;
 				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
 				// fixtures can become non-trivial.
 				//
@@ -3712,6 +3773,20 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				}
 			case EBinop(op, a, b):
+				final dynamicLeft = stage3IsDynamicExpr(a, tyByIdentRaw, callSigByCalleeRaw);
+				final dynamicRight = stage3IsDynamicExpr(b, tyByIdentRaw, callSigByCalleeRaw);
+				function dynamicCarrier(value:HxExpr, isDynamic:Bool):backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier {
+					if (stage3IsBoolExpr(value, tyByIdentRaw, callSigByCalleeRaw))
+						return backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
+					return
+						isDynamic ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+				}
+				final dynamicBinary = backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft), dynamicCarrier(b, dynamicRight),
+					dynamicLeft, dynamicRight,
+					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+				if (dynamicBinary != null)
+					return dynamicBinary;
 				// Stage 3 expansion: support a small set of binary ops so `if` conditions can
 				// become meaningful (avoid the earlier "everything is true" collapse).
 				//
@@ -5129,9 +5204,10 @@ class EmitterStage {
 			return switch (e) {
 				case EBool(v):
 					v ? "true" : "false";
-				case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee));
+				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
+					final rendered = returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+					boolOrTrue(stage3IsDynamicExpr(inner, tyCtx, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + rendered + ")" : rendered);
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
 					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
@@ -5674,12 +5750,25 @@ class EmitterStage {
 				case SReturnVoid(_pos):
 					"raise (" + returnExc + " (Obj.repr ()))";
 				case SReturn(expr, _pos):
-					"raise ("
-					+ returnExc
-					+ " (Obj.repr ("
-					+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee)
-					+ ")))";
+					final rendered = returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					final declaredReturn = currentFunctionName == null
+						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
+					final dynamicReturn = declaredReturn != null
+						&& backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(declaredReturn.toString());
+					final payload = if (dynamicReturn) {
+						final carrier = if (stage3IsBoolExpr(expr, cast tyCtx, callSigByCallee)) {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
+						} else if (stage3IsDynamicExpr(expr, cast tyCtx, callSigByCallee)) {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
+						} else {
+							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+						}
+						backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, rendered);
+					} else {
+						"Obj.repr (" + rendered + ")";
+					}
+					"raise (" + returnExc + " (" + payload + "))";
 				case SExpr(expr, _pos):
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
@@ -7008,7 +7097,8 @@ class EmitterStage {
 				fixed: fixedCount,
 				hasRest: hasRest,
 				needsReceiver: needsReceiver,
-				paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver)
+				paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver),
+				resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
 			};
 			final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
 			globalCallSigByCallee.set(key0, sig0);
@@ -7445,7 +7535,8 @@ class EmitterStage {
 							fixed: fixedCount,
 							hasRest: hasRest,
 							needsReceiver: needsReceiver,
-							paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver)
+							paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver),
+							resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
 						});
 					}
 

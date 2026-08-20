@@ -59,9 +59,9 @@ class M14Stage3MacroPrinterReturnTypeIntegrationTest {
 			final printerMl = haxe.io.Path.join([outDir, 'Haxe_macro_Printer.ml']);
 			assertTrue(FileSystem.exists(printerMl), 'Expected Haxe_macro_Printer.ml in emitted output.');
 			final ocaml = File.getContent(printerMl);
-			assertTrue(ocaml.indexOf('printComplexType (this_ : _) (ct : _) : string') >= 0,
+			assertTrue(ocaml.indexOf('printComplexType (this_ : _) (ct : Obj.t) : string') >= 0,
 				'Stage3 macro Printer return override did not type printComplexType as string.');
-			assertTrue(ocaml.indexOf('printBinop (this_ : _) (op : _) : string') >= 0,
+			assertTrue(ocaml.indexOf('printBinop (this_ : _) (op : Obj.t) : string') >= 0,
 				'Stage3 macro Printer return override did not type printBinop as string.');
 			assertTrue(ocaml.indexOf('printComplexType (this_ : _) (ct : _) : unit') < 0,
 				'Stage3 macro Printer regression: printComplexType was emitted as unit.');

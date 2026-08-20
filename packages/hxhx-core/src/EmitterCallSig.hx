@@ -23,4 +23,7 @@ typedef EmitterCallSig = {
 
 	/** Parameter type hints after lowering, aligned with emitted OCaml arguments. */
 	final paramTypeHints:Array<String>;
+
+	/** Declared Haxe result type used to classify a call expression before target emission. */
+	final resultTypeHint:String;
 }
