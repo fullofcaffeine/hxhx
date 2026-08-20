@@ -995,7 +995,10 @@ let isRestLikeArg = fun arg -> (try (
   | HxRuntime.Hx_return __ret_468 -> (Obj.obj __ret_468 : bool) : bool)
 
 let staticImportModuleForStage3 = fun name staticImportByIdent -> (try (
-  ignore (if staticImportByIdent != Obj.magic (HxRuntime.hx_null) then ignore (let resolved = (HxMap.get_string (Obj.magic staticImportByIdent) (name : string) : string) in if resolved != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr resolved)) else ()) else ());
+  ignore (if staticImportByIdent != Obj.magic (HxRuntime.hx_null) then let resolved = (HxMap.get_string (Obj.magic staticImportByIdent) (name : string) : string) in (
+    ignore (if resolved != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr resolved)) else ());
+    raise (HxRuntime.Hx_return (Obj.repr HxString.hx_null_string))
+  ) else ());
   let this1 = !currentGlobalImportAliasByIdent in let tempMaybeString = (HxMap.get_string this1 (name : string) : string) in let tempResult = ref (HxString.hx_null_string : string) in (
     ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_788 = HxString.hx_null_string in (
       tempResult := __assign_788;
