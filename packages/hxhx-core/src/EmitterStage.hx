@@ -1077,11 +1077,19 @@ class EmitterStage {
 		return emitStringExpr(e);
 	}
 
+	/**
+		Resolves a short type or static-member name without borrowing another
+		module's imports. A supplied map is the complete import context for the
+		module being emitted, so a missing entry means that the name is not an
+		import there. The graph-wide fallback remains available only to legacy
+		emission contexts that cannot supply a module-local map.
+	**/
 	static function staticImportModuleForStage3(name:String, ?staticImportByIdent:Map<String, String>):String {
 		if (staticImportByIdent != null) {
 			final resolved = staticImportByIdent.get(name);
 			if (resolved != null)
 				return resolved;
+			return null;
 		}
 		final globalResolved = currentGlobalImportAliasByIdent.get(name);
 		return globalResolved == null ? null : globalResolved;

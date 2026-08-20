@@ -55,6 +55,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		FileSystem.createDirectory(srcDir);
 		FileSystem.createDirectory(haxeSrcDir);
 		FileSystem.createDirectory(phpSrcDir);
+		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'haxe']));
+		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'haxe', 'macro']));
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'utest']));
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'php']));
 		FileSystem.createDirectory(haxe.io.Path.join([haxeSrcDir, 'haxe']));
@@ -80,6 +82,22 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function codeOptional(code:String, ?args:Array<Dynamic>):Dynamic;',
 			'}',
 		].join("\n"));
+
+		final macroTypeHx = haxe.io.Path.join([srcDir, 'haxe', 'macro', 'Type.hx']);
+		final macroTypeSrc = ['package haxe.macro;', 'enum Type {', '  TDynamic(inner:Type);', '}',].join("\n");
+		File.saveContent(macroTypeHx, macroTypeSrc);
+
+		final macroConsumerHx = haxe.io.Path.join([srcDir, 'MacroConsumer.hx']);
+		final macroConsumerSrc = [
+			'package unit;',
+			'import haxe.macro.Type;',
+			'class MacroConsumer {',
+			'  static function make():Type {',
+			'    return Type.TDynamic(null);',
+			'  }',
+			'}',
+		].join("\n");
+		File.saveContent(macroConsumerHx, macroConsumerSrc);
 
 		final mainHx = haxe.io.Path.join([srcDir, 'Main.hx']);
 		final src = [
@@ -118,6 +136,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
 			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Lambda.array(Type.getClassFields(c)) != null && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
 			'  }',
+			'  static function construct(edecl:Enum<Dynamic>):Dynamic {',
+			'    return Type.createEnum(edecl, "A");',
+			'  }',
 			'  static function main() {',
 			'    check(Main, "main");',
 			'    render();',
@@ -135,8 +156,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		var thrown:Dynamic = null;
 		try {
 			final expanded = program([srcDir], [
+				new ResolvedModule("haxe.macro.Type", macroTypeHx, ParserStage.parse(macroTypeSrc, macroTypeHx)),
 				new ResolvedModule("utest.Assert", assertHx, ParserStage.parse(File.getContent(assertHx), assertHx)),
 				new ResolvedModule("php.Syntax", phpSyntaxHx, ParserStage.parse(File.getContent(phpSyntaxHx), phpSyntaxHx)),
+				new ResolvedModule("unit.MacroConsumer", macroConsumerHx, ParserStage.parse(macroConsumerSrc, macroConsumerHx)),
 				new ResolvedModule("unit.Main", mainHx, ParserStage.parse(src, mainHx))
 			]);
 			EmitterStage.emitToDir(expanded, outDir, true, false);
@@ -152,6 +175,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			assertTrue(ocaml.indexOf('Lambda.array') >= 0, 'Expected root stdlib short name to remain `Lambda.array`.');
 			assertTrue(ocaml.indexOf('Type.getClassFields') >= 0, 'Expected root stdlib short name to remain `Type.getClassFields`.');
 			assertTrue(ocaml.indexOf('Type.getEnum') >= 0, 'Expected root stdlib short name to remain `Type.getEnum`.');
+			assertTrue(ocaml.indexOf('Type.createEnum') >= 0,
+				'Expected root `Type.createEnum` to remain independent from another module\'s macro Type import.');
+			assertTrue(ocaml.indexOf('Haxe_macro_Type.createEnum') < 0,
+				'Found another module\'s `haxe.macro.Type` import leaking into root `Type.createEnum`.');
 			assertTrue(ocaml.indexOf('Reflect.compare') >= 0, 'Expected root stdlib short name to remain `Reflect.compare`.');
 			assertTrue(ocaml.indexOf('HxSys.time') >= 0, 'Expected `Sys.time()` to lower to the HxSys runtime seam.');
 			assertTrue(ocaml.indexOf('sumRest (1) (HxBootArray.create ())') >= 0,
@@ -170,6 +197,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			assertTrue(ocaml.indexOf('Unit_Type.') < 0, 'Found bad package-local qualification `Unit_Type`.');
 			assertTrue(ocaml.indexOf('Unit_Reflect.') < 0, 'Found bad package-local qualification `Unit_Reflect`.');
 			assertTrue(ocaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package qualification `Haxe_Sys`.');
+			final macroConsumerMl = haxe.io.Path.join([outDir, 'Unit_MacroConsumer.ml']);
+			assertTrue(FileSystem.exists(macroConsumerMl), 'Expected the macro Type import consumer to be emitted.');
+			assertTrue(File.getContent(macroConsumerMl).indexOf('Haxe_macro_Type.tDynamic') >= 0,
+				'Expected the explicit `haxe.macro.Type` import to keep its macro enum provider.');
 			final typeShim = haxe.io.Path.join([outDir, 'Type.ml']);
 			assertTrue(FileSystem.exists(typeShim), 'Expected Type.ml bootstrap import shim.');
 			final typeShimOcaml = File.getContent(typeShim);
