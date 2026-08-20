@@ -26,6 +26,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final outputDir = haxe.io.Path.join([root, "out"]);
 		final invalidOutputDir = haxe.io.Path.join([root, "out_invalid"]);
 		final dateToolsOutputDir = haxe.io.Path.join([root, "out_datetools"]);
+		final numericCarrierOutputDir = haxe.io.Path.join([root, "out_numeric_carrier"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
 		FileSystem.createDirectory(sourceDir);
@@ -122,6 +123,59 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		oracleProcess.close();
 		assertTrue(oracleCode == 0, "Haxe 4.3.7 Dynamic operator oracle failed: " + oracleStderr);
 		assertTrue(oracleStdout == expected, "Unexpected Haxe 4.3.7 Dynamic operator output:\n" + oracleStdout);
+
+		final numericCarrierDir = haxe.io.Path.join([sourceDir, "std"]);
+		FileSystem.createDirectory(numericCarrierDir);
+		final numericCarrierPath = haxe.io.Path.join([numericCarrierDir, "NestedIntegerCarrier.hx"]);
+		final numericCarrierSource = [
+			"class NestedIntegerCarrier {",
+			"  public function new() {}",
+			"  public function addBits(left, right) {",
+			"    return (left & 0xffff) + (right & 0xffff);",
+			"  }",
+			"  public function rotate(value, count) {",
+			"    return (value << count) | (value >>> (32 - count));",
+			"  }",
+			"  public function combine(q, a, b, x, s, t) {",
+			"    return addBits(rotate(addBits(addBits(a, q), addBits(x, t)), s), b);",
+			"  }",
+			"}",
+		].join("\n");
+		File.saveContent(numericCarrierPath, numericCarrierSource);
+		final numericCarrierMainPath = haxe.io.Path.join([sourceDir, "NumericCarrierMain.hx"]);
+		final numericCarrierMainSource = [
+			"class NumericCarrierMain {",
+			"  static function main() {",
+			"    Sys.println(new NestedIntegerCarrier().combine(1, 2, 3, 4, 5, 6));",
+			"  }",
+			"}",
+		].join("\n");
+		File.saveContent(numericCarrierMainPath, numericCarrierMainSource);
+		final numericOracle = new sys.io.Process("haxe", [
+			"-cp",
+			sourceDir,
+			"-cp",
+			numericCarrierDir,
+			"-main",
+			"NumericCarrierMain",
+			"--interp"
+		]);
+		final numericOracleStdout = numericOracle.stdout.readAll().toString();
+		final numericOracleStderr = numericOracle.stderr.readAll().toString();
+		final numericOracleCode = numericOracle.exitCode();
+		numericOracle.close();
+		assertTrue(numericOracleCode == 0, "Haxe 4.3.7 nested integer oracle failed: " + numericOracleStderr);
+		assertTrue(numericOracleStdout == "419\n", "Unexpected Haxe 4.3.7 nested integer result:\n" + numericOracleStdout);
+
+		final numericCarrierMain = TyperStage.typeModule(ParserStage.parse(numericCarrierMainSource, numericCarrierMainPath));
+		final numericCarrierHelper = TyperStage.typeModule(ParserStage.parse(numericCarrierSource, numericCarrierPath));
+		final numericCarrierProgram = MacroStage.expandProgram([numericCarrierMain, numericCarrierHelper], []);
+		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, true);
+		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
+		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
+		assertTrue(numericCarrierGenerated.indexOf(": Obj.t = Obj.repr (addBits") >= 0,
+			"A concrete nested integer result did not cross its inferred Dynamic return boundary exactly once.");
+		assertTrue(numericCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0, "Nested integer arguments were boxed before concrete integer parameters.");
 
 		final exprToolsSource = File.getContent("vendor/haxe/std/haxe/macro/ExprTools.hx");
 		for (shape in [

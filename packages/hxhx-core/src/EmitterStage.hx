@@ -4500,6 +4500,23 @@ class EmitterStage {
 			}
 		}
 
+		// Stubbed non-root modules return their first expression directly instead of
+		// using the statement-return exception path. Preserve the same reviewed
+		// Dynamic carrier conversion at both boundaries so a concrete Int, Float, or
+		// String result is represented as Obj.t exactly once.
+		if (expectedReturnType != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(expectedReturnType.toString())) {
+			final rendered = exprToOcaml(expr, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+				callSigByCalleeRaw);
+			final carrier = if (stage3IsBoolExpr(expr, emissionTyByIdent, callSigByCalleeRaw)) {
+				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
+			} else if (stage3IsDynamicExpr(expr, emissionTyByIdent, callSigByCalleeRaw)) {
+				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
+			} else {
+				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+			}
+			return backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, rendered);
+		}
+
 		// Stage 3 bring-up: numeric coercions based on the declared return type.
 		//
 		// Why
