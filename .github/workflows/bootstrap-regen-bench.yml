@@ -31,6 +31,10 @@ on:
         description: "Upload the generated bootstrap snapshot for review (0/1)"
         required: true
         default: "0"
+      stage0_failfast_secs:
+        description: "Absolute Stage0 emit timeout in seconds"
+        required: true
+        default: "3600"
 
 permissions:
   contents: read
@@ -119,6 +123,7 @@ jobs:
           HXHX_BOOTSTRAP_BENCH_DUNE_JOBS="${{ github.event.inputs.dune_jobs }}" \
           HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES="${{ github.event.inputs.compare_stage0_policies }}" \
           HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY="${{ github.event.inputs.stage0_policy }}" \
+          HXHX_STAGE0_FAILFAST_SECS="${{ github.event.inputs.stage0_failfast_secs }}" \
           HXHX_BOOTSTRAP_BENCH_REPORT_DIR="$REPORT_DIR" \
           npm run hxhx:bench:bootstrap-regen
 

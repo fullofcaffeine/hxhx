@@ -551,6 +551,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
     - Set `upload_snapshot=1` in the manual `Utility / Bootstrap Regen Benchmark` workflow to upload the generated `packages/hxhx/bootstrap_out` tree.
     - The workflow keeps that snapshot for 14 days. Use it only to review or recover the exact source-generated output from that run.
+    - Set `stage0_failfast_secs` when the complete source graph needs more than the default 3,600-second emit limit.
     - The benchmark report remains the timing and provenance record.
     - `warm` reuses generated output, not compiler-server state: every measured sample gets a fresh server matched to the selected upstream-Haxe wrapper/direct-binary policy.
     - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The current peak-RSS column excludes the server process.
