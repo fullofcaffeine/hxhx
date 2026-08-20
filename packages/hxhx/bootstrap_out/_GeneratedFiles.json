@@ -195,6 +195,7 @@
 		"backend_js_JsTargetCore.ml",
 		"backend_js_JsWriter.ml",
 		"backend_ocaml_MetalProfileVerifier.ml",
+		"backend_ocaml_OcamlDynamicOperatorLowering.ml",
 		"backend_ocaml_OcamlStage3Backend.ml",
 		"backend_ocaml_OcamlTargetCore.ml",
 		"backend_ocaml_PortableMetalizationPlan.ml",

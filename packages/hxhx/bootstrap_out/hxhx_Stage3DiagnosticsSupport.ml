@@ -1052,65 +1052,87 @@ let printTypedFunctionSummary = fun rootTyped output -> ignore (let fns = Obj.ma
   )
 )) done)
 
+let macroDefineDiagnosticValue = fun (name : string) (value : string) -> (let tempBool = ref (false : bool) in (
+  ignore (match name with
+    | "HXHX_AFTER_TYPING" | "HXHX_EXTERNAL" | "HXHX_HAXELIB_INIT" | "HXHX_HAXELIB_INIT_AFTER_GENERATE" | "HXHX_HAXELIB_INIT_AFTER_TYPING" | "HXHX_HAXELIB_INIT_ON_GENERATE" | "HXHX_HXGEN" | "HXHX_ON_GENERATE" | "HXHX_PLUGIN_FIXTURE" | "HXHX_PLUGIN_FIXTURE_AFTER_TYPING" | "HXHX_PLUGIN_FIXTURE_ON_GENERATE" | "HXHX_SMOKE" -> let __assign_447 = true in (
+      tempBool := __assign_447;
+      __assign_447
+    )
+    | _ -> let __assign_446 = false in (
+      tempBool := __assign_446;
+      __assign_446
+    ));
+  let isStableLifecycleFlag = !tempBool in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if isStableLifecycleFlag && (let __string_eq_left_448 = value in let __string_eq_right_449 = "1" in HxString.equals __string_eq_left_448 __string_eq_right_449) then let __assign_450 = "1" in (
+      tempResult := __assign_450;
+      __assign_450
+    ) else let __assign_451 = "<set>" in (
+      tempResult := __assign_451;
+      __assign_451
+    ));
+    !tempResult
+  )
+) : string)
+
 let printHxMacroDefines = fun prefix output -> ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in while !_g < HxArray.length _g1 do ignore (let name = (let __array_read_receiver_432 = _g1 in let __array_read_index_433 = !_g in HxArray.get (Obj.magic __array_read_receiver_432) __array_read_index_433 : string) in (
   ignore (let __old_434 = !_g in let __new_435 = HxInt.add __old_434 1 in (
     ignore (_g := __new_435);
     __new_435
   ));
-  if let __call_arg_0_436 = name in let __call_arg_1_437 = "HXHX_" in StringTools.startsWith __call_arg_0_436 __call_arg_1_437 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_439 = HxString.toStdString prefix in let __string_part_440 = "[" in let __string_part_441 = HxString.toStdString name in let __string_part_442 = "]=" in let __string_part_443 = HxString.toStdString (let __call_arg_0_438 = name in Hxhx_macro_MacroState.definedValue __call_arg_0_438) in (((__string_part_439 ^ __string_part_440) ^ __string_part_441) ^ __string_part_442) ^ __string_part_443 : string)) else ()
+  if let __call_arg_0_436 = name in let __call_arg_1_437 = "HXHX_" in StringTools.startsWith __call_arg_0_436 __call_arg_1_437 then ignore (let value = let __call_arg_0_438 = name in Hxhx_macro_MacroState.definedValue __call_arg_0_438 in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_441 = HxString.toStdString prefix in let __string_part_442 = "[" in let __string_part_443 = HxString.toStdString name in let __string_part_444 = "]=" in let __string_part_445 = HxString.toStdString (let __call_arg_0_439 = name in let __call_arg_1_440 = value in macroDefineDiagnosticValue __call_arg_0_439 __call_arg_1_440) in (((__string_part_441 ^ __string_part_442) ^ __string_part_443) ^ __string_part_444) ^ __string_part_445 : string)) else ()
 )) done)
 
 let formatException = fun e -> let pos = Obj.magic (TyperError.getPos (Obj.magic e) ()) in let tempNumber = ref (0 : int) in (
-  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_444 = 0 in (
-    tempNumber := __assign_444;
-    __assign_444
-  ) else let __assign_445 = HxPos.getLine (Obj.magic pos) () in (
-    tempNumber := __assign_445;
-    __assign_445
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_452 = 0 in (
+    tempNumber := __assign_452;
+    __assign_452
+  ) else let __assign_453 = HxPos.getLine (Obj.magic pos) () in (
+    tempNumber := __assign_453;
+    __assign_453
   ));
   let line = !tempNumber in let tempNumber1 = ref (0 : int) in (
-    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_446 = 0 in (
-      tempNumber1 := __assign_446;
-      __assign_446
-    ) else let __assign_447 = HxPos.getColumn (Obj.magic pos) () in (
-      tempNumber1 := __assign_447;
-      __assign_447
+    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_454 = 0 in (
+      tempNumber1 := __assign_454;
+      __assign_454
+    ) else let __assign_455 = HxPos.getColumn (Obj.magic pos) () in (
+      tempNumber1 := __assign_455;
+      __assign_455
     ));
-    let col = !tempNumber1 in let __string_part_448 = HxString.toStdString (TyperError.getFilePath (Obj.magic e) ()) in let __string_part_449 = ":" in let __string_part_450 = string_of_int line in let __string_part_451 = ":" in let __string_part_452 = string_of_int col in let __string_part_453 = ": " in let __string_part_454 = HxString.toStdString (TyperError.getMessage (Obj.magic e) ()) in (((((__string_part_448 ^ __string_part_449) ^ __string_part_450) ^ __string_part_451) ^ __string_part_452) ^ __string_part_453) ^ __string_part_454
+    let col = !tempNumber1 in let __string_part_456 = HxString.toStdString (TyperError.getFilePath (Obj.magic e) ()) in let __string_part_457 = ":" in let __string_part_458 = string_of_int line in let __string_part_459 = ":" in let __string_part_460 = string_of_int col in let __string_part_461 = ": " in let __string_part_462 = HxString.toStdString (TyperError.getMessage (Obj.magic e) ()) in (((((__string_part_456 ^ __string_part_457) ^ __string_part_458) ^ __string_part_459) ^ __string_part_460) ^ __string_part_461) ^ __string_part_462
   )
 )
 
-let rawTyperDiagnostic = fun e -> let __call_arg_0_455 = TyperError.getMessage (Obj.magic e) () in TyperStage.extractRawDiagnostic __call_arg_0_455
+let rawTyperDiagnostic = fun e -> let __call_arg_0_463 = TyperError.getMessage (Obj.magic e) () in TyperStage.extractRawDiagnostic __call_arg_0_463
 
 let formatDynamicException = fun (error : Obj.t) -> (try (
-  ignore (if let __isOfTypeValue_456 = error in HxType.isOfType __isOfTypeValue_456 (HxType.class_ "haxe.Exception") then ignore (let ex = Obj.magic (Obj.obj error) in if (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () != HxString.hx_null_string && (let __string_receiver_457 = (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () in HxString.length __string_receiver_457) > 0 then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) ()))) else ()) else ());
+  ignore (if let __isOfTypeValue_464 = error in HxType.isOfType __isOfTypeValue_464 (HxType.class_ "haxe.Exception") then ignore (let ex = Obj.magic (Obj.obj error) in if (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () != HxString.hx_null_string && (let __string_receiver_465 = (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () in HxString.length __string_receiver_465) > 0 then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) ()))) else ()) else ());
   let tempMaybeVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-    ignore (try let __assign_463 = Obj.magic (let __reflect_arg_0_464 = error in let __reflect_arg_1_465 = "message" in Obj.obj (HxAnon.get __reflect_arg_0_464 __reflect_arg_1_465)) in (
-      tempMaybeVar := __assign_463;
-      __assign_463
+    ignore (try let __assign_471 = Obj.magic (let __reflect_arg_0_472 = error in let __reflect_arg_1_473 = "message" in Obj.obj (HxAnon.get __reflect_arg_0_472 __reflect_arg_1_473)) in (
+      tempMaybeVar := __assign_471;
+      __assign_471
     ) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_459 -> raise (HxRuntime.Hx_return __ret_459)
+      | HxRuntime.Hx_return __ret_467 -> raise (HxRuntime.Hx_return __ret_467)
       | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-      | HxRuntime.Hx_exception (__exn_v_460, __exn_tags_461) -> if true then let _hx = (__exn_v_460 : Obj.t) in (
+      | HxRuntime.Hx_exception (__exn_v_468, __exn_tags_469) -> if true then let _hx = (__exn_v_468 : Obj.t) in (
         ignore _hx;
-        let __assign_458 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeVar := __assign_458;
-          __assign_458
+        let __assign_466 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeVar := __assign_466;
+          __assign_466
         )
-      ) else HxRuntime.hx_throw_typed __exn_v_460 __exn_tags_461
-      | __exn_462 -> if true then let _hx = (Obj.repr __exn_462 : Obj.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_468 __exn_tags_469
+      | __exn_470 -> if true then let _hx = (Obj.repr __exn_470 : Obj.t) in (
         ignore _hx;
-        let __assign_458 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeVar := __assign_458;
-          __assign_458
+        let __assign_466 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeVar := __assign_466;
+          __assign_466
         )
-      ) else raise (__exn_462));
+      ) else raise (__exn_470));
     let reflectedMessage = Obj.repr (Obj.magic (!tempMaybeVar)) in (
-      ignore (if reflectedMessage != Obj.magic (HxRuntime.hx_null) then ignore (let message = ("<unsupported>" : string) in if (let __string_receiver_466 = message in HxString.length __string_receiver_466) > 0 then raise (HxRuntime.Hx_return (Obj.repr message)) else ()) else ());
+      ignore (if reflectedMessage != Obj.magic (HxRuntime.hx_null) then ignore (let message = ("<unsupported>" : string) in if (let __string_receiver_474 = message in HxString.length __string_receiver_474) > 0 then raise (HxRuntime.Hx_return (Obj.repr message)) else ()) else ());
       HxDynamic.toStdString error
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_467 -> (Obj.obj __ret_467 : string) : string)
+  | HxRuntime.Hx_return __ret_475 -> (Obj.obj __ret_475 : string) : string)

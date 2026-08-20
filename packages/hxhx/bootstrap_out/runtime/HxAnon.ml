@@ -130,6 +130,15 @@ let get (o : Obj.t) (field : string) : Obj.t =
     let obj = anon_of_obj o in
     let idx = slot_index obj field in
     if idx >= 0 && Stdlib.Array.get obj.present idx then Stdlib.Array.get obj.values idx else HxRuntime.hx_null
+  else if Obj.is_block o && Obj.tag o = Obj.string_tag then
+    let s : string = Obj.obj o in
+    (match field with
+    | "cca" -> Obj.repr (fun (i : int) -> HxString.cca s i)
+    | "indexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.indexOf s sub startIndex)
+    | "lastIndexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.lastIndexOf s sub startIndex)
+    | "substr" -> Obj.repr (fun (pos : int) (len : int) -> HxString.substr s pos len)
+    | "substring" -> Obj.repr (fun (startIndex : int) (endIndex : int) -> HxString.substring s startIndex endIndex)
+    | _ -> HxRuntime.hx_null)
   (* Use the array runtime's marker instead of inspecting a guessed record layout.
      Other blocks, including strings, can have the same size as an old array record. *)
   else if HxArray.is_value o then
@@ -140,15 +149,6 @@ let get (o : Obj.t) (field : string) : Obj.t =
     | "indexOf" -> Obj.repr (fun (x : Obj.t) (fromIndex : int) -> HxArray.indexOf a x fromIndex)
     | "lastIndexOf" -> Obj.repr (fun (x : Obj.t) (fromIndex : int) -> HxArray.lastIndexOf a x fromIndex)
     | "slice" -> Obj.repr (fun (pos : int) (end_ : int) -> HxArray.slice a pos end_)
-    | _ -> HxRuntime.hx_null)
-  else if Obj.is_block o && Obj.tag o = Obj.string_tag then
-    let s : string = Obj.obj o in
-    (match field with
-    | "cca" -> Obj.repr (fun (i : int) -> HxString.cca s i)
-    | "indexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.indexOf s sub startIndex)
-    | "lastIndexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.lastIndexOf s sub startIndex)
-    | "substr" -> Obj.repr (fun (pos : int) (len : int) -> HxString.substr s pos len)
-    | "substring" -> Obj.repr (fun (startIndex : int) (endIndex : int) -> HxString.substring s startIndex endIndex)
     | _ -> HxRuntime.hx_null)
   else
     HxRuntime.hx_null
