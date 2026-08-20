@@ -2361,7 +2361,7 @@ echo "== Stage3 bring-up: runs a non-builtin macro entrypoint with a String arg"
 stage3_out5="$tmpdir/out_stage3_arg_macro"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/workloads/hih-compiler/fixtures/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
-echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=<set>$"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage4 bring-up: fixture plugin exercises defines + classpath injection + hook emission"

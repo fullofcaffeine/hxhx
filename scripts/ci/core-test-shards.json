@@ -95,6 +95,7 @@
     "test:m14:native-backend-plugin-host-abi": "compiler",
     "test:m14:native-macro-module-host-abi": "compiler",
     "test:m14:macro-runtime-mode-switch": "compiler",
+    "test:m14:stage3-macro-define-diagnostic-privacy": "compiler",
     "test:m14:macro-host-runtime-api": "macro-host-integration",
     "test:m14:runtime-build-fields": "macro-host-integration",
     "test:m14:stage3-global-build-metadata": "compiler",

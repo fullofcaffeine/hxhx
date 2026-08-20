@@ -248,6 +248,19 @@ This is intentionally conservative:
   - Opt-in: set `HXHX_RUN_HAXELIB_MACROS=1` to execute `--macro ...` lines printed by `haxelib path`.
   - This staging avoids surprising failures when a library’s macros are not compiled into the current macro host yet.
 
+#### Internal define diagnostics
+
+Macro execution receives the exact value of each internal `HXHX_` define.
+Ordinary compiler output does not print most of these values.
+
+Paths, macro arguments, environment data, and unknown defines appear as
+`<set>`. A small allowlist of lifecycle flags can print the exact value `1`.
+An unexpected value for an allowlisted flag also appears as `<set>`.
+
+This policy keeps logs stable across workspace roots. It also prevents a new
+internal define from exposing its value by default. There is no option that
+prints all raw internal values.
+
 Why this staging is OK:
 
 - It keeps bring-up deterministic and reduces the macro surface we need to emulate early.

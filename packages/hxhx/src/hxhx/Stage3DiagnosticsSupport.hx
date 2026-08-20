@@ -17,6 +17,7 @@ private typedef UnsupportedTraceCounters = {
 	- Counts unsupported expressions across expressions, statements, functions, and modules.
 	- Collects raw unsupported snippets for trace logging.
 	- Formats Stage3 typer and runtime diagnostics consistently.
+	- Reports internal macro defines without exposing paths, arguments, or unknown values.
 	- Prints repeated type-only/no-emit diagnostic reports.
 
 	How
@@ -24,6 +25,8 @@ private typedef UnsupportedTraceCounters = {
 	- Expose only the helper surface already used by `Stage3Compiler`.
 **/
 class Stage3DiagnosticsSupport {
+	static inline final PRIVATE_DEFINE_MARKER = "<set>";
+
 	static function bool01(v:Bool):String {
 		return v ? "1" : "0";
 	}
@@ -371,12 +374,36 @@ class Stage3DiagnosticsSupport {
 		}
 	}
 
+	/**
+		Print a privacy-safe summary of internal macro defines.
+
+		A macro define is a name and value that the compiler gives to compile-time
+		code. Some values contain source paths, user arguments, or environment data.
+		Ordinary compiler output therefore reports only that those values exist.
+
+		The small allowlist contains lifecycle flags whose complete contract is the
+		exact value `1`. An unexpected value also becomes `<set>`. This function does
+		not change `MacroState`, so macro execution still receives the original value.
+	**/
 	public static function printHxMacroDefines(prefix:String, ?output:CompilationRequestOutput):Void {
 		for (name in hxhx.macro.MacroState.listDefineNames()) {
 			if (StringTools.startsWith(name, "HXHX_")) {
-				CompilationRequestOutput.writeStdoutLine(output, prefix + "[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+				final value = hxhx.macro.MacroState.definedValue(name);
+				CompilationRequestOutput.writeStdoutLine(output, prefix + "[" + name + "]=" + macroDefineDiagnosticValue(name, value));
 			}
 		}
+	}
+
+	static function macroDefineDiagnosticValue(name:String, value:String):String {
+		final isStableLifecycleFlag = switch (name) {
+			case "HXHX_SMOKE" | "HXHX_AFTER_TYPING" | "HXHX_ON_GENERATE" | "HXHX_EXTERNAL" | "HXHX_PLUGIN_FIXTURE" | "HXHX_PLUGIN_FIXTURE_AFTER_TYPING" |
+				"HXHX_PLUGIN_FIXTURE_ON_GENERATE" | "HXHX_HAXELIB_INIT" | "HXHX_HAXELIB_INIT_AFTER_TYPING" | "HXHX_HAXELIB_INIT_ON_GENERATE" |
+				"HXHX_HAXELIB_INIT_AFTER_GENERATE" | "HXHX_HXGEN":
+				true;
+			case _:
+				false;
+		};
+		return isStableLifecycleFlag && value == "1" ? "1" : PRIVATE_DEFINE_MARKER;
 	}
 
 	public static function formatException(e:TyperError):String {
