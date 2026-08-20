@@ -34,6 +34,7 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final NonGenericInstanceEffectOnlyVoidDeclaration = "non-generic-instance-effect-only-void-declaration";
 	final NonGenericInstanceNullableEnumDeclaration = "non-generic-instance-nullable-enum-declaration";
 	final NonGenericStaticNullableEnumDeclaration = "non-generic-static-nullable-enum-declaration";
+	final NonGenericStaticAllReturnNullableBoolDeclaration = "non-generic-static-all-return-nullable-bool-declaration";
 	final NestedNullableEnumCallable = "nested-nullable-enum-callable";
 	final StaticNullableAnonymousDeclaration = "static-nullable-anonymous-declaration";
 }
@@ -98,6 +99,7 @@ class OcamlFunctionResultBoundary {
 	public static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID = "non-generic-instance-nullable-enum-function-result-v1";
 	public static inline final NON_GENERIC_STATIC_NULLABLE_ENUM_PROOF_ID = "non-generic-static-nullable-enum-function-result-v1";
+	public static inline final NON_GENERIC_STATIC_ALL_RETURN_NULLABLE_BOOL_PROOF_ID = "non-generic-static-all-return-nullable-bool-function-result-v1";
 	public static inline final NESTED_NULLABLE_ENUM_PROOF_ID = "nested-nullable-enum-function-result-v1";
 	public static inline final STATIC_NULLABLE_ANONYMOUS_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 
@@ -137,6 +139,8 @@ class OcamlFunctionResultBoundary {
 		final exactIntResult = OcamlRepresentationRegistry.isExactInt(followedResult);
 		final exactStringResult = OcamlRepresentationRegistry.isExactString(followedResult);
 		final effectOnlyVoidResult = OcamlCallPlanner.isExactVoid(followedResult);
+		final nullableBoolResult = OcamlRepresentationRegistry.isExactNullBool(followedResult);
+		final completedNullableBool = nullableBoolResult ? directCompletedValue(data.expr) : null;
 		final anonymousSemanticTypeId = nullableAnonymousSemanticTypeId(followedResult);
 		final nullableEnumIdentity = nullableEnumIdentity(followedResult);
 
@@ -165,6 +169,19 @@ class OcamlFunctionResultBoundary {
 				proofId = STATIC_INLINE_EXACT_INT_PROOF_ID;
 				proofClaim = "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.";
 				semanticTypeId = "Int";
+			} else if (completedNullableBool != null
+				&& OcamlRepresentationRegistry.isExactBool(completedNullableBool.t)
+				&& OcamlControlFlowFacts.definitelyReturns(data.expr)) {
+				switch (data.field.kind) {
+					case FMethod(MethNormal):
+					case _:
+						return null;
+				}
+				source = OcamlFunctionResultBoundarySource.NonGenericStaticAllReturnNullableBoolDeclaration;
+				reason = "The concrete non-generic static function declares Null<Bool>, and every path in its final typed body exits through function-owned return control. The result-only boundary can therefore recover the selected Obj.t carrier without deciding how its parameters or call sites are represented.";
+				proofId = NON_GENERIC_STATIC_ALL_RETURN_NULLABLE_BOOL_PROOF_ID;
+				proofClaim = "The declared core Null<Bool> result selects the existing Obj.t carrier, the final normal-completion value is exact Bool, and control-flow facts prove every other path returns. The completion value and each return occurrence must independently enter the nullable carrier. This proof authorizes no parameter or call ABI.";
+				semanticTypeId = "Null<Bool>";
 			} else if (nullableEnumIdentity != null) {
 				switch (data.field.kind) {
 					case FMethod(MethNormal):
@@ -247,6 +264,22 @@ class OcamlFunctionResultBoundary {
 		} else {
 			if (nullableEnum != null) {
 				nullableEnumResultValue(nullableEnum, representations);
+			} else if (semanticTypeId == "Null<Bool>") {
+				final input = representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
+				final output = representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
+				{
+					index: -1,
+					parameterOptional: false,
+					inputSemanticTypeId: input.semanticTypeId,
+					inputCarrierTypeId: input.carrierTypeId,
+					inputRepresentationId: input.id,
+					outputSemanticTypeId: output.semanticTypeId,
+					outputCarrierTypeId: output.carrierTypeId,
+					outputRepresentationId: output.id,
+					conversion: OcamlCallCarrierConversion.BoxExactBoolToNullableBool,
+					proofId: "nullable-bool-call-box-v1",
+					proofClaim: "The exact Bool normal-completion value is boxed once into the declared Null<Bool> Obj.t carrier."
+				};
 			} else {
 				final representation = if (anonymousStructure != null) {
 					representations.require(anonymousStructure.representationId, binding.programRevision);
@@ -553,6 +586,8 @@ class OcamlFunctionResultBoundary {
 				requireDeclarationNullableEnum(boundary, false);
 			case NonGenericStaticNullableEnumDeclaration:
 				requireDeclarationNullableEnum(boundary, true);
+			case NonGenericStaticAllReturnNullableBoolDeclaration:
+				requireDeclarationNullableBool(boundary);
 			case NestedNullableEnumCallable:
 				requireNestedNullableEnum(boundary);
 			case StaticNullableAnonymousDeclaration:
@@ -635,6 +670,31 @@ class OcamlFunctionResultBoundary {
 		}
 	}
 
+	/** Rejects a result-only nullable Boolean boundary that widened into call authority. */
+	static function requireDeclarationNullableBool(boundary:OcamlFunctionResultBoundaryPlan):Void {
+		final result = boundary.result;
+		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
+			|| boundary.nullableEnum != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf("|static|function|") < 0
+			|| boundary.resultKind != OcamlCallResultKind.Value
+			|| result == null
+			|| result.inputSemanticTypeId != "Bool"
+			|| result.inputCarrierTypeId != "bool"
+			|| result.inputRepresentationId != "representation:Bool:internal-value"
+			|| result.outputSemanticTypeId != "Null<Bool>"
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| result.outputRepresentationId != "representation:Null<Bool>:internal-value"
+			|| result.conversion != OcamlCallCarrierConversion.BoxExactBoolToNullableBool
+			|| result.proofId != "nullable-bool-call-box-v1"
+			|| boundary.proofId != NON_GENERIC_STATIC_ALL_RETURN_NULLABLE_BOOL_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the non-generic static all-return Null<Bool> slice';
+		}
+	}
+
 	/** Rejects a nullable-enum result whose exact enum identity proof was changed. */
 	static function requireDeclarationNullableEnum(boundary:OcamlFunctionResultBoundaryPlan, isStatic:Bool):Void {
 		final result = boundary.result;
@@ -710,6 +770,19 @@ class OcamlFunctionResultBoundary {
 					case TObjectDecl(_): unwrappedValue;
 					case _: null;
 				}
+			case _: null;
+		};
+	}
+
+	/** Returns the value from the final direct return that completes a function body. */
+	static function directCompletedValue(body:TypedExpr):Null<TypedExpr> {
+		final unwrappedBody = unwrapTransparent(body);
+		final completed = switch (unwrappedBody.expr) {
+			case TBlock(expressions) if (expressions.length > 0): unwrapTransparent(expressions[expressions.length - 1]);
+			case _: unwrappedBody;
+		};
+		return switch (completed.expr) {
+			case TReturn(value) if (value != null): unwrapTransparent(value);
 			case _: null;
 		};
 	}
