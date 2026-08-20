@@ -1926,6 +1926,10 @@ class EmitterStage {
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "String";
+			case ECast(inner, _):
+				stage3IsStringExpr(inner, tyByIdent);
+			case EUntyped(inner):
+				stage3IsStringExpr(inner, tyByIdent);
 			case EBinop("+", a, b): stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsStringExpr(thenExpr, tyByIdent) && stage3IsStringExpr(elseExpr, tyByIdent);
 			case _:

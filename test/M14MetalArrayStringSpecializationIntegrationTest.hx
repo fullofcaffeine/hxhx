@@ -61,6 +61,7 @@ class M14MetalArrayStringSpecializationIntegrationTest {
 	static function main():Void {
 		final stringArrayHints:Array<TypeHintSpec> = [{name: "words", hint: "Array<String>"}];
 		final intArrayHints:Array<TypeHintSpec> = [{name: "numbers", hint: "Array<Int>"}];
+		final dynamicStringKeyHints:Array<TypeHintSpec> = [{name: "payload", hint: "Dynamic"}, {name: "key", hint: "String"}];
 
 		final portableMap = emitExpr(ECall(EField(EIdent("words"), "map"), [EIdent("transform")]), OcamlProfile.Portable, stringArrayHints);
 		assertContains(portableMap, "HxBootArray.map_dyn", "portable profile should keep dynamic map fallback");
@@ -83,6 +84,14 @@ class M14MetalArrayStringSpecializationIntegrationTest {
 
 		final portableMixedArrayLiteral = emitExpr(EArrayDecl([EInt(1), EString("x")]), OcamlProfile.Portable);
 		assertContains(portableMixedArrayLiteral, "Obj.magic", "portable profile should keep mixed-array fallback wrapping");
+
+		final portableCastStringKey = emitExpr(EArrayAccess(EIdent("payload"), ECast(EIdent("key"), "")), OcamlProfile.Portable, dynamicStringKeyHints);
+		assertContains(portableCastStringKey, "HxAnon.get", "cast-wrapped String keys should use Dynamic field access");
+		assertTrue(portableCastStringKey.indexOf("HxBootArray.get") < 0, "cast-wrapped String keys should not use integer array access");
+
+		final portableUntypedStringKey = emitExpr(EArrayAccess(EIdent("payload"), EUntyped(EIdent("key"))), OcamlProfile.Portable, dynamicStringKeyHints);
+		assertContains(portableUntypedStringKey, "HxAnon.get", "untyped-wrapped String keys should use Dynamic field access");
+		assertTrue(portableUntypedStringKey.indexOf("HxBootArray.get") < 0, "untyped-wrapped String keys should not use integer array access");
 
 		expectEmitFailure(EArrayDecl([EInt(1), EString("x")]), OcamlProfile.Metal, "mixed-type array literals are not allowed");
 		expectEmitFailure(ECall(EField(EIdent("numbers"), "join"), [EString(",")]), OcamlProfile.Metal, "Array.join requires Array<String> receiver",
