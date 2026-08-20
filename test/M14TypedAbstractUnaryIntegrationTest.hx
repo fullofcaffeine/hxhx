@@ -4,6 +4,11 @@ import TypedStmt.TypedStmtTag;
 
 /** Focused contract for shared exact abstract-unary selection and lowering. **/
 class M14TypedAbstractUnaryIntegrationTest {
+	/** Haxe 4.3.7 accepts this during ordinary typing before null-safety analysis. **/
+	static function hostNullablePostfix(value:Null<Int>):Null<Int> {
+		return value++;
+	}
+
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
 			throw message;
@@ -212,6 +217,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  public function arbitraryPrimitiveNeg():Ordinary return this;",
 			"}",
 			"class Main {",
+			"  static function shouldFail(value:Dynamic):Void {}",
 			"  static function main() {",
 			"    var classValue:ClassNeg = new ClassNeg(new Carrier(1));",
 			"    var classResult = -classValue;",
@@ -236,6 +242,10 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"    var ordinaryNumber = -7;",
 			"    var ordinaryObject = new Ordinary();",
 			"    var ordinaryControl = -ordinaryObject;",
+			"    var nullableValue:Null<Int> = null;",
+			"    var nullablePostfixResult = nullableValue++;",
+			"    var nullablePrefixResult = ++nullableValue;",
+			"    shouldFail(nullableValue++);",
 			"  }",
 			"}",
 		].join("\n");
@@ -342,6 +352,28 @@ class M14TypedAbstractUnaryIntegrationTest {
 		final ordinaryControl = initializer(main, "ordinaryControl");
 		assertTrue(ordinaryControl.getTag() == TypedExprTag.Unary && ordinaryControl.getDeclaration() == null,
 			"ordinary class acquired operator behavior from a similarly named method");
+		final nullablePostfixResult = initializer(main, "nullablePostfixResult");
+		final nullablePrefixResult = initializer(main, "nullablePrefixResult");
+		assertTrue(nullablePostfixResult.getTag() == TypedExprTag.Unary
+			&& nullablePostfixResult.getUnaryFixity() == HxUnaryFixity.Postfix
+			&& nullablePostfixResult.getType().getSemanticKey() == "nullable:primitive:Int",
+			"nullable postfix update did not retain its ordinary Haxe expression type");
+		assertTrue(nullablePrefixResult.getTag() == TypedExprTag.Unary
+			&& nullablePrefixResult.getUnaryFixity() == HxUnaryFixity.Prefix
+			&& nullablePrefixResult.getType().getSemanticKey() == "nullable:primitive:Int",
+			"nullable prefix update did not retain its ordinary Haxe expression type");
+		var nullableCall:Null<TypedExpr> = null;
+		for (statement in main.getBody().getStatements())
+			for (expression in statement.getExpressions()) {
+				final candidate = declarationExpression(expression, "shouldFail");
+				if (candidate != null)
+					nullableCall = candidate;
+			}
+		assertTrue(nullableCall != null
+			&& nullableCall.getExpressions().length == 2
+			&& nullableCall.getExpressions()[1].getTag() == TypedExprTag.Unary
+			&& nullableCall.getExpressions()[1].getType().getSemanticKey() == "nullable:primitive:Int",
+			"nullable postfix expression was not preserved through the validation call boundary");
 
 		typingFailure([
 			"abstract Missing(Int) { public inline function new(value:Int) this = value; }",
@@ -351,6 +383,9 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"class Ordinary { public function new() {} }",
 			"class Main { static function main() { var value = new Ordinary(); var result = value++; } }",
 		].join("\n"), "Ordinary should be Int");
+		typingFailure([
+			"class Main { static function main() { var value:Null<String> = null; var result = value++; } }",
+		].join("\n"), "Null<String> should be Int");
 		typingFailure([
 			"abstract Ambiguous(Int) {",
 			"  public inline function new(value:Int) this = value;",

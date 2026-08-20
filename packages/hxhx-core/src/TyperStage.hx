@@ -1639,12 +1639,14 @@ class TyperStage {
 					else if (_op == Negate)
 						inner.isNumeric() ? inner : TyType.unknown();
 					else {
+						// Haxe types `Null<Int>` and `Null<Float>` updates as nullable numeric
+						// expressions. Strict null-safety reports unsafe access later.
 						if ((_op == Increment || _op == Decrement)
 							&& !isPropertyUpdate // Stage3 still models an abstract backing carrier as
 							// `this` in a small compatibility subset. Its explicit
 							// write-back is validated by the typed abstract lowering.
 							&& !e.match(EThis)
-							&& !inner.isNumeric()
+							&& !inner.unwrapNull().isNumeric()
 							&& !inner.isDynamic()
 							&& !inner.isUnknown()
 							&& !inner.isUnresolved())

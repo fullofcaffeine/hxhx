@@ -2100,7 +2100,7 @@ and inferExprType = fun expr scope ctx pos -> (try let tempResult = ref (Obj.mag
           tempShortCircuit := __assign_1000;
           __assign_1000
         ));
-        ignore (if !tempShortCircuit && not (TyType.isNumeric (Obj.magic inner) ()) && not (TyType.isDynamic (Obj.magic inner) ()) && not (TyType.isUnknown (Obj.magic inner) ()) && not (TyType.isUnresolved (Obj.magic inner) ()) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic ctx) () : string) (Obj.magic pos) (let __string_part_1001 = HxString.toStdString (TyType.getDisplay (Obj.magic inner) ()) in let __string_part_1002 = " should be Int" in __string_part_1001 ^ __string_part_1002 : string))) ["Dynamic"] else ());
+        ignore (if !tempShortCircuit && not (TyType.isNumeric (Obj.magic (TyType.unwrapNull (Obj.magic inner) ())) ()) && not (TyType.isDynamic (Obj.magic inner) ()) && not (TyType.isUnknown (Obj.magic inner) ()) && not (TyType.isUnresolved (Obj.magic inner) ()) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic ctx) () : string) (Obj.magic pos) (let __string_part_1001 = HxString.toStdString (TyType.getDisplay (Obj.magic inner) ()) in let __string_part_1002 = " should be Int" in __string_part_1001 ^ __string_part_1002 : string))) ["Dynamic"] else ());
         let __assign_1003 = Obj.magic inner in (
           tempResult := __assign_1003;
           __assign_1003
