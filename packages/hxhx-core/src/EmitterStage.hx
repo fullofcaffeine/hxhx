@@ -3302,6 +3302,13 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				} else {
 					final receiverPreApplied = c.indexOf(" (this_)") != -1;
+					final invokesReturnedCallable = switch (callee) {
+						case ECall(_, _): true;
+						case _: false;
+					};
+					final returnedCallableTarget = canonicalCallTargetForStage3(c, arityByIdentRaw);
+					final invokesModuleReturnedCallable = invokesReturnedCallable
+						&& (returnedCallableTarget != c || returnedCallableTarget.indexOf(".") >= 0);
 
 					function callSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
 						return switch (expr) {
@@ -3430,7 +3437,7 @@ class EmitterStage {
 					// to an already complete zero-argument instance call.
 					if (sig == null) {
 						final firstSpace = c.indexOf(" ");
-						if (firstSpace > 0)
+						if (!invokesModuleReturnedCallable && firstSpace > 0)
 							sig = callSigForStage3(c.substr(0, firstSpace), callSigByCalleeRaw);
 						if (sig == null)
 							sig = callSigForExpr(callee);
@@ -3649,30 +3656,30 @@ class EmitterStage {
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
 						final canonicalCallee = canonicalCallTargetForStage3(c, arityByIdentRaw);
 						final isContextLoadFlattenedCall = canonicalCallee == "Haxe_macro_Context.load" && renderedArgs.length > 2;
-						final isContextLoadFollowupCall = StringTools.startsWith(canonicalCallee, "Haxe_macro_Context.load ")
-							&& renderedArgs.length > 0;
 
-						if (isContextLoadFlattenedCall || isContextLoadFollowupCall) {
-							// Stage3 macro bring-up: parsed call shapes can represent
-							// `Context.load(name, nargs)(...)` either as a flattened single call or as a
-							// follow-up call where `c` already includes `load name nargs`.
-							// Both forms can trigger OCaml Warning 20 over-application.
+						if (isContextLoadFlattenedCall || invokesModuleReturnedCallable) {
+							// A nested call such as `factory()(args)` invokes the value returned by the
+							// inner call. Its outer arguments must not be padded from the inner function's
+							// signature. Some recovered Context.load calls are flattened into one call,
+							// so keep that equivalent form on the same callable boundary.
 							//
-							// Rebuild the two-step callable form explicitly and cast by the observed
-							// tail arity to keep this warning-clean while preserving bring-up behavior.
-							final loadCall = isContextLoadFlattenedCall ? (c + " " + renderedArgs[0] + " " + renderedArgs[1]) : c;
+							// Cast by the observed outer arity. Zero-argument callables use OCaml's unit
+							// argument, while positive arities use dynamic value carriers.
+							final callable = isContextLoadFlattenedCall ? (c + " " + renderedArgs[0] + " " + renderedArgs[1]) : c;
 							final tailArgs = isContextLoadFlattenedCall ? renderedArgs.slice(2) : renderedArgs;
-							if (tailArgs.length <= 5) {
+							if (tailArgs.length == 0) {
+								"(Obj.magic ((Obj.magic (" + callable + ") : unit -> Obj.t) ()))";
+							} else if (tailArgs.length <= 5) {
 								var fnTy = "Obj.t";
 								for (_ in 0...tailArgs.length)
 									fnTy = "Obj.t -> " + fnTy;
-								var renderedCall = "((Obj.magic (" + loadCall + ") : " + fnTy + ")";
+								var renderedCall = "((Obj.magic (" + callable + ") : " + fnTy + ")";
 								for (argCode in tailArgs)
 									renderedCall += " (Obj.repr " + argCode + ")";
 								renderedCall += ")";
 								"(Obj.magic " + renderedCall + ")";
 							} else {
-								loadCall + " " + tailArgs.join(" ");
+								callable + " " + tailArgs.join(" ");
 							}
 						} else if (isHxAnonDynamicCall) {
 							// Stage3 emit-runner hardening: dynamic-field call targets lowered through

@@ -122,6 +122,31 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			assertNotContains(macroContextMl, 'Obj.magic (load ("shadow") (2)) : Obj.t -> Obj.t -> Obj.t',
 				'A shadowing load parameter should not acquire the module function identity.');
 
+			final callableFactoryOutDir = haxe.io.Path.join([tmpRoot, 'callable_factory_out']);
+			final callableFactoryHx = haxe.io.Path.join([srcDir, 'CallableFactory.hx']);
+			final callableFactorySrc = [
+				'class CallableFactory {',
+				'  static function load(name:String, arity:Int):Dynamic return null;',
+				'  public static function get():Dynamic {',
+				'    return load("get", 0)();',
+				'  }',
+				'  public static function invoke(value:Dynamic, pretty:Bool):Dynamic {',
+				'    return load("invoke", 2)(value, pretty);',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(callableFactoryHx, callableFactorySrc);
+			final callableFactoryParsed = ParserStage.parse(callableFactorySrc, callableFactoryHx);
+			final callableFactoryTyped = TyperStage.typeModule(callableFactoryParsed);
+			EmitterStage.emitToDir(MacroStage.expandProgram([callableFactoryTyped], []), callableFactoryOutDir, true, false);
+			final callableFactoryMl = File.getContent(haxe.io.Path.join([callableFactoryOutDir, 'CallableFactory.ml']));
+			assertTrue(callableFactoryMl.indexOf('Obj.magic (load ("get") (0)) : unit -> Obj.t') >= 0,
+				'A zero-argument returned callable should use a unit-call cast.');
+			assertNotContains(callableFactoryMl, 'load ("get") (0) ((Obj.magic HxRuntime.hx_null))',
+				'A returned callable should not reuse the inner factory signature.');
+			assertTrue(callableFactoryMl.indexOf('Obj.magic (load ("invoke") (2)) : Obj.t -> Obj.t -> Obj.t') >= 0,
+				'A positive-arity returned callable should keep its observed argument count.');
+
 			final resolvedOverloadHx = haxe.io.Path.join([srcDir, 'OverloadResolved.hx']);
 			final resolvedOverloadSrc = [
 				'extern class ResolvedTool {',
