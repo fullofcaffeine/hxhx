@@ -107,6 +107,7 @@ class EmitterStage {
 	static var currentModuleFilePath:Null<String> = null;
 	static var currentFunctionName:Null<String> = null;
 	static var currentFunctionLocalTypeHints:Null<Map<String, TyType>> = null;
+	static var currentFunctionShadowingValueNames:Null<Map<String, Bool>> = null;
 	static var currentStmtTyEntries:Array<_LocalTyEntry> = [];
 	static var currentLocalCallSigCache:Null<Map<String, EmitterCallSig>> = null;
 
@@ -1205,6 +1206,25 @@ class EmitterStage {
 			return moduleName.substr(prefix.length);
 		final lastUnderscore = moduleName.lastIndexOf("_");
 		return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
+	}
+
+	/**
+		Return a canonical identity for an emitted call target without changing its
+		rendered OCaml name. Unqualified function calls belong to the current module
+		unless a parameter or local value shadows that name.
+	**/
+	static function canonicalCallTargetForStage3(renderedCallee:String, ?arityByIdent:Map<String, Int>):String {
+		if (renderedCallee == null || renderedCallee.length == 0 || currentOcamlModuleName == null)
+			return renderedCallee;
+		final firstSpace = renderedCallee.indexOf(" ");
+		final head = firstSpace < 0 ? renderedCallee : renderedCallee.substr(0, firstSpace);
+		if (head.length == 0
+			|| head.indexOf(".") >= 0
+			|| head.indexOf("(") >= 0
+			|| !stage3HasArity(head, arityByIdent)
+			|| (currentFunctionShadowingValueNames != null && currentFunctionShadowingValueNames.exists(head)))
+			return renderedCallee;
+		return currentOcamlModuleName + "." + renderedCallee;
 	}
 
 	static function extendTyByIdentForStage3(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
@@ -3627,8 +3647,10 @@ class EmitterStage {
 							renderedArgs.push(renderedArg);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
-						final isContextLoadFlattenedCall = c == "Haxe_macro_Context.load" && renderedArgs.length > 2;
-						final isContextLoadFollowupCall = StringTools.startsWith(c, "Haxe_macro_Context.load ") && renderedArgs.length > 0;
+						final canonicalCallee = canonicalCallTargetForStage3(c, arityByIdentRaw);
+						final isContextLoadFlattenedCall = canonicalCallee == "Haxe_macro_Context.load" && renderedArgs.length > 2;
+						final isContextLoadFollowupCall = StringTools.startsWith(canonicalCallee, "Haxe_macro_Context.load ")
+							&& renderedArgs.length > 0;
 
 						if (isContextLoadFlattenedCall || isContextLoadFollowupCall) {
 							// Stage3 macro bring-up: parsed call shapes can represent
@@ -7923,6 +7945,7 @@ class EmitterStage {
 							final previousFunctionName = currentFunctionName;
 							currentFunctionName = nameRaw;
 							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
+							final previousFunctionShadowingValueNames = currentFunctionShadowingValueNames;
 							final previousRegionKey = currentPortableMetalizationRegionKey;
 							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
 								nameRaw);
@@ -7974,6 +7997,12 @@ class EmitterStage {
 								}
 							}
 							currentFunctionLocalTypeHints = localTypeHints;
+							final shadowingValueNames:Map<String, Bool> = new Map();
+							for (arg in args)
+								shadowingValueNames.set(arg.getName(), true);
+							for (localName in localTypeHints.keys())
+								shadowingValueNames.set(localName, true);
+							currentFunctionShadowingValueNames = shadowingValueNames;
 							for (localName in localTypeHints.keys()) {
 								if (localName == null || localName.length == 0)
 									continue;
@@ -8052,6 +8081,7 @@ class EmitterStage {
 							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
+							currentFunctionShadowingValueNames = previousFunctionShadowingValueNames;
 							currentPortableMetalizationRegionKey = previousRegionKey;
 						}
 					}

@@ -92,6 +92,36 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			assertTrue(ocaml.indexOf('add (other) (n)') >= 0, 'Stage3 receiver-call emit missing `add (other) (n)` call shape.');
 			assertTrue(ocaml.indexOf('add (this_) (other) (n)') < 0, 'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.');
 
+			final macroContextDir = haxe.io.Path.join([srcDir, 'haxe', 'macro']);
+			final macroContextOutDir = haxe.io.Path.join([tmpRoot, 'macro_context_out']);
+			FileSystem.createDirectory(macroContextDir);
+			final macroContextHx = haxe.io.Path.join([macroContextDir, 'Context.hx']);
+			final macroContextSrc = [
+				'package haxe.macro;',
+				'class Context {',
+				'  static function load(name:String, arity:Int):Dynamic return null;',
+				'  public static function render(value:Dynamic, pretty:Bool):String {',
+				'    return load("render", 2)(value, pretty);',
+				'  }',
+				'  public static function renderWith(load:Dynamic, value:Dynamic, pretty:Bool):Dynamic {',
+				'    return load("shadow", 2)(value, pretty);',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(macroContextHx, macroContextSrc);
+			final macroContextParsed = ParserStage.parse(macroContextSrc, macroContextHx);
+			final macroContextTyped = TyperStage.typeModule(macroContextParsed);
+			EmitterStage.emitToDir(MacroStage.expandProgram([macroContextTyped], []), macroContextOutDir, true, false);
+			final macroContextMl = File.getContent(haxe.io.Path.join([macroContextOutDir, 'Haxe_macro_Context.ml']));
+			assertTrue(macroContextMl.indexOf('Obj.magic (load ("render") (2)) : Obj.t -> Obj.t -> Obj.t') >= 0,
+				'An immediate local Context.load call should use its returned callable arity.');
+			assertNotContains(macroContextMl, 'load ("render") (2) (value) (pretty)',
+				'An immediate local Context.load call should not over-apply the load function itself.');
+			assertTrue(macroContextMl.indexOf('load ("shadow") (2) (value) (pretty)') >= 0,
+				'A parameter named load should keep shadowing the module function.');
+			assertNotContains(macroContextMl, 'Obj.magic (load ("shadow") (2)) : Obj.t -> Obj.t -> Obj.t',
+				'A shadowing load parameter should not acquire the module function identity.');
+
 			final resolvedOverloadHx = haxe.io.Path.join([srcDir, 'OverloadResolved.hx']);
 			final resolvedOverloadSrc = [
 				'extern class ResolvedTool {',
