@@ -1,6 +1,7 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Proves that qualified calls keep declared argument carriers and complete optional arguments. */
 class M14Stage3WarningCleanShadowTraceIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -65,8 +66,9 @@ class M14Stage3WarningCleanShadowTraceIntegrationTest {
 			final traceMl = haxe.io.Path.join([traceOutDir, 'TraceUse.ml']);
 			assertTrue(FileSystem.exists(traceMl), 'Expected TraceUse.ml in emitted output.');
 			final traceOcaml = File.getContent(traceMl);
-			assertTrue(traceOcaml.indexOf('Haxe_Log.trace (s) ((Obj.magic HxRuntime.hx_null))') >= 0,
-				'Expected haxe.Log.trace(value) to include a null PosInfos argument.');
+			assertTrue(traceOcaml.indexOf('Haxe_Log.trace (Obj.repr (s)) ((Obj.magic HxRuntime.hx_null))') >= 0,
+				'Expected haxe.Log.trace(value) to box its String argument and include a null PosInfos argument.');
+			assertTrue(traceOcaml.indexOf('Haxe_Log.trace (s)') < 0, 'Expected the concrete String not to cross the declared Dynamic boundary without boxing.');
 			assertTrue(traceOcaml.indexOf('Haxe_Log.trace (s));') < 0, 'Expected haxe.Log.trace(value) not to remain partially applied.');
 
 			emitOne(shadowSrc, shadowPath, shadowOutDir);

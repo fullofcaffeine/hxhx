@@ -1965,6 +1965,16 @@ class EmitterStage {
 		};
 	}
 
+	/** Selects how one typed expression crosses a declared Dynamic boundary. */
+	static function stage3DynamicArgumentCarrier(expr:HxExpr, ?tyByIdent:Map<String, TyType>,
+			?callSigByCallee:Map<String, EmitterCallSig>):backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier {
+		if (stage3IsBoolExpr(expr, tyByIdent, callSigByCallee))
+			return backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
+		if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee))
+			return backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
+		return backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+	}
+
 	static function stage3IsUnknownNumericIdent(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
 			case EIdent(name): final t = stage3TyForIdent(name,
@@ -2447,8 +2457,10 @@ class EmitterStage {
 					+ ")";
 			case ECall(EField(EField(EIdent("haxe"), "Log"), "trace"), [arg]) | ECall(EField(EIdent("Haxe_Log"), "trace"), [arg]) |
 				ECall(EField(EIdent("Log"), "trace"), [arg]):
+				final rendered = exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final carrier = stage3DynamicArgumentCarrier(arg, tyByIdent, callSigByCallee);
 				return "Haxe_Log.trace ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, rendered)
 					+ ") ((Obj.magic HxRuntime.hx_null))";
 			case ECall(EField(EIdent("Sys"), "println"), [arg]):
 				return "print_endline ("
@@ -3500,13 +3512,7 @@ class EmitterStage {
 						};
 						if (sig != null && sig.needsReceiver && argIndex == 0)
 							return rendered;
-						final carrier = if (stage3IsBoolExpr(arg, tyByIdentRaw, callSigByCalleeRaw)) {
-							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
-						} else if (stage3IsDynamicExpr(arg, tyByIdentRaw, callSigByCalleeRaw)) {
-							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
-						} else {
-							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
-						}
+						final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
 						return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
 					}
 
@@ -4507,13 +4513,7 @@ class EmitterStage {
 		if (expectedReturnType != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(expectedReturnType.toString())) {
 			final rendered = exprToOcaml(expr, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
 				callSigByCalleeRaw);
-			final carrier = if (stage3IsBoolExpr(expr, emissionTyByIdent, callSigByCalleeRaw)) {
-				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
-			} else if (stage3IsDynamicExpr(expr, emissionTyByIdent, callSigByCalleeRaw)) {
-				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue;
-			} else {
-				backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
-			}
+			final carrier = stage3DynamicArgumentCarrier(expr, emissionTyByIdent, callSigByCalleeRaw);
 			return backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, rendered);
 		}
 
