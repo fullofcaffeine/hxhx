@@ -257,6 +257,18 @@ class ArrayMain {
 		if (orderedConcat.length != 2 || orderedConcat[0] != 7 || orderedConcat[1] != 8)
 			throw "concat_once";
 
+		// A nullable field can join an Array<String> because Haxe's typer already
+		// proved that String values are valid in the receiver's element type. The
+		// OCaml target must preserve that typed compatibility instead of requiring
+		// the two displayed element-type names to be identical.
+		final route:{backendId:Null<String>, forwarded:Array<String>} = {
+			backendId: "ocaml-stage3",
+			forwarded: ["-main", "Main"]
+		};
+		final nullableConcat = ["--hxhx-backend", route.backendId].concat(route.forwarded);
+		if (nullableConcat.join(",") != "--hxhx-backend,ocaml-stage3,-main,Main")
+			throw "concat_typed_compatible_array";
+
 		callOrder = [];
 		final orderedPushLength = makeReceiver().push(makeMutationArgument());
 		if (callOrder.join(",") != "receiver,argument" || orderedPushLength != 2)

@@ -353,7 +353,7 @@ class OcamlStandardArrayCallContract {
 		if (sourceArguments.length != parameters.length || Lambda.exists(sourceArguments, argument -> argument.length == 0))
 			return false;
 		return switch (operation) {
-			case Concat: sourceArguments[0] == parameters[0];
+			case Concat: concatArgumentsShareCarrier(sourceArguments[0], parameters[0]);
 			case Insert: sourceArguments[0] == "Int";
 			case Resize: sourceArguments[0] == "Int";
 			case Splice: sourceArguments[0] == "Int" && sourceArguments[1] == "Int";
@@ -365,6 +365,22 @@ class OcamlStandardArrayCallContract {
 			case Copy | Pop | Shift | Reverse: true;
 			case _: false;
 		}
+	}
+
+	/**
+		Accepts only concat argument types that need no element conversion.
+
+		Haxe can preserve `Null<String>` in a typed Array method signature even
+		though `String` already uses the same nullable OCaml string carrier. This
+		one pair can therefore share `HxArray.concat` directly. Other compatible
+		Haxe types can need boxing or another carrier, so they remain unsupported
+		until lowering records their element conversion explicitly.
+	**/
+	static function concatArgumentsShareCarrier(sourceArgument:String, parameter:String):Bool {
+		if (sourceArgument == parameter)
+			return true;
+		return (sourceArgument == "Array<String>" && parameter == "Array<Null<String>>")
+			|| (sourceArgument == "Array<Null<String>>" && parameter == "Array<String>");
 	}
 
 	static function expectedResultSemanticTypeId(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String,
