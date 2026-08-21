@@ -362,14 +362,53 @@ class TyperStage {
 					TypedBodyBuilder.buildExpression(initializer, HxFieldDecl.getPos(field), fieldEnvironment, typeResolver, callResolver, fieldResolver)));
 			}
 			final sourceFunctions = HxClassDecl.getFunctions(classDeclaration);
+			final semanticDeclarations = new Array<Null<TyDeclarationInfo>>();
+			final functionIdentities = new Array<String>();
 			for (functionIndex in 0...sourceFunctions.length) {
 				final sourceFunction = sourceFunctions[functionIndex];
 				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(sourceFunction);
 				final functionIdentity = TypedFunction.stableIdentityFor(className, functionIndex, sourceFunction, semanticDeclaration);
 				final functionEnvironment = typeFunction(sourceFunction, context, functionIdentity, semanticDeclaration);
+				semanticDeclarations.push(semanticDeclaration);
+				functionIdentities.push(functionIdentity);
 				functionEnvironments.push(functionEnvironment);
-				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunction, semanticDeclaration, functionEnvironment,
-					typeResolver, callResolver, fieldResolver));
+				if (semanticDeclaration != null && semanticDeclaration.getSignature().getReturnType().isUnknown())
+					context.recordInferredReturnType(semanticDeclaration, functionEnvironment.getReturnExprType());
+			}
+
+			// The declaration index is built before bodies are typed, so an unannotated
+			// method initially has an Unknown result. Retry only unresolved callers after
+			// every concrete body result in this class is available. This keeps method
+			// order from changing inference without retyping already settled functions.
+			var pendingReturnInference = [
+				for (functionIndex in 0...sourceFunctions.length)
+					if (semanticDeclarations[functionIndex] != null
+						&& semanticDeclarations[functionIndex].getSignature().getReturnType().isUnknown()
+						&& (functionEnvironments[functionIndex].getReturnExprType().isUnknown()
+							|| functionEnvironments[functionIndex].getReturnExprType().isDynamic())) functionIndex
+			];
+			while (pendingReturnInference.length > 0) {
+				var progress = false;
+				final stillPending = new Array<Int>();
+				for (functionIndex in pendingReturnInference) {
+					final functionEnvironment = typeFunction(sourceFunctions[functionIndex], context, functionIdentities[functionIndex],
+						semanticDeclarations[functionIndex]);
+					functionEnvironments[functionIndex] = functionEnvironment;
+					if (context.recordInferredReturnType(semanticDeclarations[functionIndex], functionEnvironment.getReturnExprType())) {
+						progress = true;
+					} else if (functionEnvironment.getReturnExprType().isUnknown()
+						|| functionEnvironment.getReturnExprType().isDynamic()) {
+						stillPending.push(functionIndex);
+					}
+				}
+				if (!progress)
+					break;
+				pendingReturnInference = stillPending;
+			}
+
+			for (functionIndex in 0...sourceFunctions.length) {
+				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunctions[functionIndex],
+					semanticDeclarations[functionIndex], functionEnvironments[functionIndex], typeResolver, callResolver, fieldResolver));
 			}
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
@@ -936,11 +975,12 @@ class TyperStage {
 		return TyMethodGenericBinding.argumentsAreConsistent(sig, argTypes, suppliedArity, methodTypeParameters) ? score : -1;
 	}
 
-	static function selectedMethodCallResolution(owner:TyNominalInfo, signature:TyFunSig, argTypes:Array<TyType>):TyMethodCallResolution {
+	static function selectedMethodCallResolution(owner:TyNominalInfo, signature:TyFunSig, argTypes:Array<TyType>, ctx:TyperContext):TyMethodCallResolution {
 		final declaration = owner.declarationForSignature(signature);
 		if (declaration == null)
 			return {type: signature.getReturnType(), declaration: null};
-		return {type: TyMethodGenericBinding.specializeResult(declaration, signature, argTypes), declaration: declaration};
+		final indexedResult = TyMethodGenericBinding.specializeResult(declaration, signature, argTypes);
+		return {type: ctx.refinedMethodReturnType(declaration, indexedResult), declaration: declaration};
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
@@ -973,11 +1013,11 @@ class TyperStage {
 		}
 		if (bestMatches.length == 1 && bestScore > 0) {
 			final selected = bestMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx);
 		}
 		if (bestMatches.length == 1 && arityMatches.length == 1) {
 			final selected = bestMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx);
 		}
 		if (arityMatches.length > 1) {
 			final range = callRange(ctx.getFilePath(), pos);
@@ -995,7 +1035,7 @@ class TyperStage {
 		}
 		if (arityMatches.length == 1) {
 			final selected = arityMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx);
 		}
 
 		return {type: TyType.unknown(), declaration: null};

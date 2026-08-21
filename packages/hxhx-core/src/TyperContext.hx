@@ -23,6 +23,7 @@ class TyperContext {
 	final directives:Array<HxModuleDirective>;
 	final resolvedDirectives:Array<TyModuleDirective>;
 	final classFullName:String;
+	final inferredReturnTypes:haxe.ds.StringMap<TyType>;
 
 	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, directives:Array<HxModuleDirective>, classFullName:String,
 			?loader:LazyTypeLoader, ?resolvedDirectives:Array<TyModuleDirective>) {
@@ -34,6 +35,7 @@ class TyperContext {
 		this.directives = directives == null ? [] : directives.copy();
 		this.resolvedDirectives = resolvedDirectives == null ? [] : resolvedDirectives.copy();
 		this.classFullName = classFullName == null ? "" : classFullName;
+		this.inferredReturnTypes = new haxe.ds.StringMap<TyType>();
 	}
 
 	/**
@@ -76,6 +78,38 @@ class TyperContext {
 
 	public function currentClass():Null<TyNominalInfo> {
 		return classFullName.length == 0 ? null : resolveType(classFullName);
+	}
+
+	/**
+		Record a concrete body result for an indexed declaration whose written
+		signature did not provide one.
+
+		The declaration index exists before bodies are typed. Calls between methods
+		in the same class can use this refinement without mutating the shared index
+		or replacing the declaration identity selected by overload resolution.
+	**/
+	public function recordInferredReturnType(declaration:TyDeclarationInfo, type:TyType):Bool {
+		if (declaration == null || type == null || type.isUnknown() || type.isDynamic())
+			return false;
+		final key = declaration.getIdentity().getCanonicalKey();
+		final existing = inferredReturnTypes.get(key);
+		if (existing == null) {
+			inferredReturnTypes.set(key, type);
+			return true;
+		}
+		final unified = TyType.unify(existing, type);
+		if (unified == null || unified.getSemanticKey() == existing.getSemanticKey())
+			return false;
+		inferredReturnTypes.set(key, unified);
+		return true;
+	}
+
+	/** Return the body-inferred result for one exact method, or its indexed result. **/
+	public function refinedMethodReturnType(declaration:TyDeclarationInfo, indexedType:TyType):TyType {
+		if (declaration == null)
+			return indexedType;
+		final inferred = inferredReturnTypes.get(declaration.getIdentity().getCanonicalKey());
+		return inferred == null ? indexedType : inferred;
 	}
 
 	/**

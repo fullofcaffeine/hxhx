@@ -49,6 +49,17 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			'  function callOn(other:Main, n:Int):Int {',
 			'    return other.add(n);',
 			'  }',
+			'  static function inferredLabel() {',
+			'    var owner = new Main();',
+			'    return owner.label();',
+			'  }',
+			'  static function dynamicLabel():Dynamic {',
+			'    var owner = new Main();',
+			'    return owner.label();',
+			'  }',
+			'  function label() {',
+			'    return "typed";',
+			'  }',
 			'  static function main() {',
 			'    var m = new Main();',
 			'    Sys.println(Std.string(m.callOn(m, 41)));',
@@ -68,9 +79,20 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				return false;
 			});
 			loader.markResolvedAlready([resolved]);
-			TyperStage.typeResolvedModule(resolved, index, loader);
+			final resolvedTyped = TyperStage.typeResolvedModule(resolved, index, loader);
 			assertTrue(missingTypeAttempts.indexOf("m") < 0, 'Stage3 typer treated lower-case receiver `m` as a type path.');
 			assertTrue(missingTypeAttempts.indexOf("other") < 0, 'Stage3 typer treated lower-case receiver `other` as a type path.');
+			final inferredLabel = resolvedTyped.getEnv()
+				.getMainClass()
+				.getFunctions()
+				.filter(fn -> fn.getName() == "inferredLabel")[0];
+			assertTrue(inferredLabel.getReturnType().getDisplay() == "String",
+				"An unannotated wrapper lost the declared String result of its typed instance call.");
+			final dynamicLabel = resolvedTyped.getEnv()
+				.getMainClass()
+				.getFunctions()
+				.filter(fn -> fn.getName() == "dynamicLabel")[0];
+			assertTrue(dynamicLabel.getReturnType().getDisplay() == "Dynamic", "An explicit Dynamic return was narrowed by instance-call inference.");
 
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
