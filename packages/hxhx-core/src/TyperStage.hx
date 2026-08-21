@@ -332,11 +332,20 @@ class TyperStage {
 						case _:
 					}
 				}
-				final requiresOwnerQualification = (declaration != null && declaration.getIsEnumConstructor()) || switch (callee) {
-					case EIdent(name) if (declaration != null && lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
-							|| current.staticMethodCandidates(name).length == 0) && context.importedStaticMethod(name) != null;
-					case _: false;
-				};
+				final current = context.currentClass();
+				final inheritedInstanceCall = declaration != null
+					&& !declaration.getIsStatic()
+					&& current != null
+					&& declaration.getOwner().getCanonicalName() != current.getIdentity().getCanonicalName();
+				final requiresOwnerQualification = inheritedInstanceCall
+					|| (declaration != null && declaration.getIsEnumConstructor())
+					|| switch (callee) {
+						case EIdent(name) if (declaration != null
+							&& declaration.getIsStatic()
+							&& lexicalEnvironment.resolveSymbol(name) == null): (current == null
+								|| current.staticMethodCandidates(name).length == 0) && context.importedStaticMethod(name) != null;
+						case _: false;
+					};
 				return new TypedCallResolution(declaration, requiresOwnerQualification, extensionProvider);
 			};
 			final fieldResolver:TypedFieldDeclarationResolver = function(expression, position, lexicalEnvironment) {
@@ -1081,8 +1090,9 @@ class TyperStage {
 				if (scope.resolveSymbol(name) != null)
 					return null;
 				final owner = ctx.currentClass();
-				if (owner != null && !scope.isStaticContext() && owner.instanceMethodCandidates(name).length > 0)
-					return resolveMethodCall(owner, name, false, args, scope, ctx, pos).declaration;
+				final instanceOwner = !scope.isStaticContext() ? ctx.instanceMethodOwner(name) : null;
+				if (instanceOwner != null)
+					return resolveMethodCall(instanceOwner, name, false, args, scope, ctx, pos).declaration;
 				if (owner != null && owner.staticMethodCandidates(name).length > 0)
 					return resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
 				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
@@ -1443,8 +1453,9 @@ class TyperStage {
 						// same declaration lookup as the structural typed-call builder so
 						// the expression result retains its nominal semantic type.
 						final owner = scope.resolveSymbol(name) == null ? ctx.currentClass() : null;
-						if (owner != null && !scope.isStaticContext() && owner.instanceMethodCandidates(name).length > 0) {
-							resolveMethodCall(owner, name, false, args, scope, ctx, pos).type;
+						final instanceOwner = owner != null && !scope.isStaticContext() ? ctx.instanceMethodOwner(name) : null;
+						if (instanceOwner != null) {
+							resolveMethodCall(instanceOwner, name, false, args, scope, ctx, pos).type;
 						} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
 							resolveMethodCall(owner, name, true, args, scope, ctx, pos).type;
 						} else {

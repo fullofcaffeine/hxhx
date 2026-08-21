@@ -114,6 +114,55 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			assertTrue(ocaml.indexOf('add (other) (n)') >= 0, 'Stage3 receiver-call emit missing `add (other) (n)` call shape.');
 			assertTrue(ocaml.indexOf('add (this_) (other) (n)') < 0, 'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.');
 
+			final inheritedOutDir = haxe.io.Path.join([tmpRoot, 'inherited_call_out']);
+			final inheritedBaseHx = haxe.io.Path.join([srcDir, 'InheritedBase.hx']);
+			final inheritedBaseSrc = [
+				'class InheritedBase {',
+				'  public function new() {}',
+				'  public function eq(left:String, right:String):Bool return left == right;',
+				'}',
+			].join("\n");
+			File.saveContent(inheritedBaseHx, inheritedBaseSrc);
+			final importedOpsHx = haxe.io.Path.join([srcDir, 'ImportedOps.hx']);
+			final importedOpsSrc = [
+				'class ImportedOps {',
+				'  public static function eq(left:Int, right:Int):Bool return left == right;',
+				'  public static function onlyImported(value:Int):Int return value;',
+				'}',
+			].join("\n");
+			File.saveContent(importedOpsHx, importedOpsSrc);
+			final inheritedCollisionHx = haxe.io.Path.join([srcDir, 'InheritedCollision.hx']);
+			final inheritedCollisionSrc = [
+				'import ImportedOps.*;',
+				'class InheritedCollision extends InheritedBase {',
+				'  public function new() { super(); }',
+				'  public function inheritedCall():Bool return eq("a", "b");',
+				'  public function importedCall():Int return onlyImported(7);',
+				'  public static function importedStaticCall():Bool return eq(1, 2);',
+				'}',
+			].join("\n");
+			File.saveContent(inheritedCollisionHx, inheritedCollisionSrc);
+			final inheritedBaseResolved = new ResolvedModule('InheritedBase', inheritedBaseHx, ParserStage.parse(inheritedBaseSrc, inheritedBaseHx));
+			final importedOpsResolved = new ResolvedModule('ImportedOps', importedOpsHx, ParserStage.parse(importedOpsSrc, importedOpsHx));
+			final inheritedCollisionResolved = new ResolvedModule('InheritedCollision', inheritedCollisionHx,
+				ParserStage.parse(inheritedCollisionSrc, inheritedCollisionHx));
+			final inheritedIndex = TyperIndex.build([inheritedBaseResolved, importedOpsResolved, inheritedCollisionResolved]);
+			final inheritedLoader = new ModuleLoader([srcDir], new StringMap<String>(), inheritedIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			inheritedLoader.markResolvedAlready([inheritedBaseResolved, importedOpsResolved, inheritedCollisionResolved]);
+			final inheritedBaseTyped = TyperStage.typeResolvedModule(inheritedBaseResolved, inheritedIndex, inheritedLoader);
+			final importedOpsTyped = TyperStage.typeResolvedModule(importedOpsResolved, inheritedIndex, inheritedLoader);
+			final inheritedCollisionTyped = TyperStage.typeResolvedModule(inheritedCollisionResolved, inheritedIndex, inheritedLoader);
+			EmitterStage.emitToDir(MacroStage.expandProgram([inheritedBaseTyped, importedOpsTyped, inheritedCollisionTyped], []), inheritedOutDir, true, false);
+			final inheritedOcaml = File.getContent(haxe.io.Path.join([inheritedOutDir, 'InheritedCollision.ml']));
+			assertTrue(inheritedOcaml.indexOf('ImportedOps.eq ("a") ("b")') < 0, 'An imported static method displaced a same-name inherited instance method.');
+			assertTrue(inheritedOcaml.indexOf('InheritedBase.eq (this_) ("a") ("b")') >= 0,
+				'An inherited instance call lost its exact declaring owner or receiver.');
+			assertTrue(inheritedOcaml.indexOf('ImportedOps.onlyImported (7)') >= 0,
+				'A bare imported static call without an instance-method collision lost its provider.');
+			assertTrue(inheritedOcaml.indexOf('ImportedOps.eq (1) (2)') >= 0, 'A static context should still select the imported static method.');
+
 			final macroContextDir = haxe.io.Path.join([srcDir, 'haxe', 'macro']);
 			final macroContextOutDir = haxe.io.Path.join([tmpRoot, 'macro_context_out']);
 			FileSystem.createDirectory(macroContextDir);

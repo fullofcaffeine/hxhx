@@ -487,6 +487,9 @@ class TypedBodySource {
 						case EField(receiver, method):
 							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
 								method, typedExpression.getType().getDisplay(), receiver, arguments);
+						case EIdent(method) if (typedExpression.getRequiresOwnerQualification()):
+							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+								method, typedExpression.getType().getDisplay(), EThis, arguments);
 						case _:
 							ECall(callee, arguments);
 					}

@@ -1,6 +1,6 @@
 /**
-	The exact declaration selected for one call and whether a bare imported name
-	must be projected through its owning Haxe type.
+	The exact declaration selected for one call and whether a bare name must be
+	projected through its declaring Haxe type.
 
 	For example, `import model.Api.twice as double; double(2)` selects `Api.twice`
 	and requires owner qualification when the typed body is projected. An ordinary
@@ -15,8 +15,8 @@ class TypedCallResolution {
 		this.declaration = declaration;
 		this.requiresOwnerQualification = requiresOwnerQualification;
 		this.extensionProvider = extensionProvider;
-		if (requiresOwnerQualification && (declaration == null || !declaration.getIsStatic()))
-			throw "owner-qualified call resolution requires an exact static declaration";
+		if (requiresOwnerQualification && declaration == null)
+			throw "owner-qualified call resolution requires an exact declaration";
 		if (extensionProvider != null && (declaration == null || !declaration.getIsStatic()))
 			throw "extension call resolution requires an exact static declaration";
 	}

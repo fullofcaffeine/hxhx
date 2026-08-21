@@ -1539,6 +1539,20 @@ class EmitterStage {
 				+ ")) : int)";
 		}
 
+		// Exact inherited instance calls arrive with their declaring type as the
+		// receiver path and `this` already inserted as the first argument. Instance
+		// methods are top-level OCaml functions, so a known qualified call signature
+		// is sufficient to expose that ABI without treating the method as a static
+		// Haxe field.
+		if (isTypePathExpr(obj)) {
+			final ownerParts = tryExtractTypePathPartsFromExpr(obj);
+			if (ownerParts != null && ownerParts.length > 0) {
+				final qualifiedMethod = ocamlModuleNameFromTypePathParts(ownerParts) + "." + ocamlValueIdent(field);
+				if (callSigForStage3(qualifiedMethod, callSigByCallee) != null)
+					return qualifiedMethod;
+			}
+		}
+
 		final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 		return staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
 			+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -2742,9 +2756,19 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 		final exactCall = TypedExactCallSource.decodeInstance(e);
-		if (exactCall != null)
+		if (exactCall != null) {
+			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
+			if (exactCall.receiver.match(EThis) && ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
+				final ownerParts = exactCall.owner.split(".");
+				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
+				for (partIndex in 1...ownerParts.length)
+					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
+				return exprToOcaml(ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments)), arityByIdentRaw,
+					tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+			}
 			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
 				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+		}
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 			moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -4318,6 +4342,15 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final exactCall = TypedExactCallSource.decodeInstance(e);
+			if (exactCall != null) {
+				if (hasBringupPoison(exactCall.receiver))
+					return true;
+				for (argument in exactCall.arguments)
+					if (hasBringupPoison(argument))
+						return true;
+				return false;
+			}
 			return switch (e) {
 				case EUnsupported(_):
 					true;
