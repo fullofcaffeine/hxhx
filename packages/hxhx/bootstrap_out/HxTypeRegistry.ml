@@ -187,6 +187,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.js.JsWriter");
   ignore (HxType.class_ "backend.ocaml.MetalProfileVerifier");
   ignore (HxType.class_ "backend.ocaml.OcamlDynamicOperatorLowering");
+  ignore (HxType.class_ "backend.ocaml.OcamlExplicitStringCast");
   ignore (HxType.class_ "backend.ocaml.OcamlLocalCallDependency");
   ignore (HxType.class_ "backend.ocaml.OcamlStage3Backend");
   ignore (HxType.class_ "backend.ocaml.OcamlTargetCore");
@@ -2732,6 +2733,9 @@ let init () : unit =
   HxType.register_class_ctor "backend.ocaml.OcamlDynamicOperatorLowering" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_OcamlDynamicOperatorLowering.create ())
   );
+  HxType.register_class_ctor "backend.ocaml.OcamlExplicitStringCast" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_OcamlExplicitStringCast.create ())
+  );
   HxType.register_class_ctor "backend.ocaml.OcamlLocalCallDependency" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_OcamlLocalCallDependency.create ())
   );
@@ -3549,6 +3553,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.js.JsWriter" (fun () -> Obj.repr (Backend_js_JsWriter.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.MetalProfileVerifier" (fun () -> Obj.repr (Backend_ocaml_MetalProfileVerifier.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlDynamicOperatorLowering" (fun () -> Obj.repr (Backend_ocaml_OcamlDynamicOperatorLowering.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.OcamlExplicitStringCast" (fun () -> Obj.repr (Backend_ocaml_OcamlExplicitStringCast.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlLocalCallDependency" (fun () -> Obj.repr (Backend_ocaml_OcamlLocalCallDependency.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlStage3Backend" (fun () -> Obj.repr (Backend_ocaml_OcamlStage3Backend.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlTargetCore" (fun () -> Obj.repr (Backend_ocaml_OcamlTargetCore.__empty ()));
@@ -4056,6 +4061,8 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ocaml.MetalProfileVerifier" [ "addViolation"; "collectViolationSummaries"; "collectViolations"; "formatContext"; "formatViolations"; "isDynamicTypeHint"; "normalizeTypeHint"; "reflectionCallName"; "summarizeRaw"; "verifyExplicitDynamicTypeHint"; "verifyExpr"; "verifyProgram"; "verifyStmt"; "verifyTypedModule" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlDynamicOperatorLowering" [];
   HxType.register_class_static_fields "backend.ocaml.OcamlDynamicOperatorLowering" [ "binary"; "callArgument"; "carrierType"; "isDynamicTypeHint"; "runtimeBinary"; "unary" ];
+  HxType.register_class_instance_fields "backend.ocaml.OcamlExplicitStringCast" [];
+  HxType.register_class_static_fields "backend.ocaml.OcamlExplicitStringCast" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlLocalCallDependency" [];
   HxType.register_class_static_fields "backend.ocaml.OcamlLocalCallDependency" [ "calleeName" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlStage3Backend" [ "capabilities"; "delegate"; "describe"; "emit"; "id" ];
@@ -4549,6 +4556,7 @@ let init () : unit =
   HxType.register_class_tags "backend.js.JsWriter" [ "backend.js.JsWriter" ];
   HxType.register_class_tags "backend.ocaml.MetalProfileVerifier" [ "backend.ocaml.MetalProfileVerifier" ];
   HxType.register_class_tags "backend.ocaml.OcamlDynamicOperatorLowering" [ "backend.ocaml.OcamlDynamicOperatorLowering" ];
+  HxType.register_class_tags "backend.ocaml.OcamlExplicitStringCast" [ "backend.ocaml.OcamlExplicitStringCast" ];
   HxType.register_class_tags "backend.ocaml.OcamlLocalCallDependency" [ "backend.ocaml.OcamlLocalCallDependency" ];
   HxType.register_class_tags "backend.ocaml.OcamlStage3Backend" [ "backend.IBackend"; "backend.ocaml.OcamlStage3Backend" ];
   HxType.register_class_tags "backend.ocaml.OcamlTargetCore" [ "backend.ITargetCore"; "backend.ocaml.OcamlTargetCore" ];
