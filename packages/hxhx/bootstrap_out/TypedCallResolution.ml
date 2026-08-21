@@ -20,7 +20,7 @@ let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 -> 
       (Obj.magic self : t).extensionProvider <- __assign_4;
       __assign_4
     ));
-    ignore (if requiresOwnerQualification2 && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact static declaration") ["Dynamic"] else ());
+    ignore (if requiresOwnerQualification2 && declaration2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact declaration") ["Dynamic"] else ());
     if extensionProvider2 != Obj.magic (HxRuntime.hx_null) && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then HxType.hx_throw_typed_rtti (Obj.repr "extension call resolution requires an exact static declaration") ["Dynamic"] else ()
   )));
   self

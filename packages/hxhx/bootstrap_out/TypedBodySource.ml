@@ -810,7 +810,7 @@ and expression = fun typedExpression catalog -> let texts = Obj.magic (TypedExpr
       tempResult := __assign_347;
       __assign_347
     )
-    | TypedExpr.Call -> let callee = Obj.magic (expression (Obj.magic (let __array_read_receiver_352 = expressions in let __array_read_index_353 = 0 in HxArray.get (Obj.magic __array_read_receiver_352) __array_read_index_353)) (Obj.magic catalog)) in let arguments = Obj.magic (expressionTail (Obj.magic expressions) 1 (Obj.magic catalog)) in let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic typedExpression) ()) in let extensionProvider = Obj.magic (TypedExpr.getExtensionProvider (Obj.magic typedExpression) ()) in if extensionProvider != Obj.magic (HxRuntime.hx_null) then (
+    | TypedExpr.Call -> (let callee = Obj.magic (expression (Obj.magic (let __array_read_receiver_352 = expressions in let __array_read_index_353 = 0 in HxArray.get (Obj.magic __array_read_receiver_352) __array_read_index_353)) (Obj.magic catalog)) in let arguments = Obj.magic (expressionTail (Obj.magic expressions) 1 (Obj.magic catalog)) in let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic typedExpression) ()) in let extensionProvider = Obj.magic (TypedExpr.getExtensionProvider (Obj.magic typedExpression) ()) in if extensionProvider != Obj.magic (HxRuntime.hx_null) then (
       ignore (if declaration == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ()) then HxType.hx_throw_typed_rtti (Obj.repr "typed extension call is missing its exact static declaration") ["Dynamic"] else ());
       if (match callee with
         | HxExpr.ENull -> 0
@@ -930,53 +930,22 @@ and expression = fun typedExpression catalog -> let texts = Obj.magic (TypedExpr
       ) else let __assign_378 = Obj.magic (HxExpr.ECall (Obj.magic callee, Obj.magic arguments)) in (
       tempResult := __assign_378;
       __assign_378
-    ) else if (match callee with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match callee with
-      | HxExpr.EField (__enum_param_379, _) -> __enum_param_379
-      | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
-      | HxExpr.EField (_, __enum_param_380) -> __enum_param_380
-      | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let hx_method = (_g1 : string) in let __assign_381 = Obj.magic (TypedExactCallSource.encodeInstance (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (hx_method : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) () : string) (Obj.magic receiver) (Obj.magic arguments)) in (
-      tempResult := __assign_381;
-      __assign_381
-    ) else let __assign_382 = Obj.magic (HxExpr.ECall (Obj.magic callee, Obj.magic arguments)) in (
-      tempResult := __assign_382;
-      __assign_382
-    )
+    ) else match callee with
+      | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in let hx_method = (_g2 : string) in if TypedExpr.getRequiresOwnerQualification (Obj.magic typedExpression) () then let __assign_380 = Obj.magic (TypedExactCallSource.encodeInstance (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (hx_method : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) () : string) (Obj.magic (HxExpr.EThis)) (Obj.magic arguments)) in (
+        tempResult := __assign_380;
+        __assign_380
+      ) else let __assign_381 = Obj.magic (HxExpr.ECall (Obj.magic callee, Obj.magic arguments)) in (
+        tempResult := __assign_381;
+        __assign_381
+      )
+      | HxExpr.EField (_p0, _p1) -> let _g2 = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g2 in let hx_method = (_g1 : string) in let __assign_382 = Obj.magic (TypedExactCallSource.encodeInstance (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (hx_method : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) () : string) (Obj.magic receiver) (Obj.magic arguments)) in (
+        tempResult := __assign_382;
+        __assign_382
+      )
+      | _ -> let __assign_379 = Obj.magic (HxExpr.ECall (Obj.magic callee, Obj.magic arguments)) in (
+        tempResult := __assign_379;
+        __assign_379
+      ))
     | TypedExpr.MacroExpr -> let __assign_383 = Obj.magic (HxExpr.EMacroExpr (Obj.magic (expression (Obj.magic (let __array_read_receiver_384 = expressions in let __array_read_index_385 = 0 in HxArray.get (Obj.magic __array_read_receiver_384) __array_read_index_385)) (Obj.magic catalog)), Obj.magic (let __array_receiver_386 = texts in HxArray.copy __array_receiver_386))) in (
       tempResult := __assign_383;
       __assign_383
