@@ -4257,9 +4257,10 @@ class EmitterStage {
 				// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
 				// a range in expression position, collapse to poison.
 				"(Obj.magic 0)";
-			case ECast(expr, _hint):
-				// Bring-up: treat casts as identity.
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+			case ECast(expr, hint):
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
+				stringCast == null ? value : stringCast;
 			case EUntyped(expr):
 				// Bring-up: preserve shape by emitting the inner expression.
 				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
