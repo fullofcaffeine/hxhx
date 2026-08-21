@@ -8340,14 +8340,7 @@ class EmitterStage {
 											}
 										}
 									case ECall(callee, args):
-										var calleeName:Null<String> = null;
-										switch (callee) {
-											case EIdent(name):
-												calleeName = name;
-											case EField(_obj, field):
-												calleeName = field;
-											case _:
-										}
+										final calleeName = backend.ocaml.OcamlLocalCallDependency.calleeName(e);
 
 										if (calleeName != null && calleeName.length > 0 && restIndexByName.exists(calleeName)) {
 											final j = restIndexByName.get(calleeName);

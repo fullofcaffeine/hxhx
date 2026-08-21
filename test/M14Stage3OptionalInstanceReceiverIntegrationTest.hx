@@ -76,7 +76,7 @@ class M14Stage3OptionalInstanceReceiverIntegrationTest {
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
 			assertTrue(generated.indexOf("deq (this_) (this_)") < 0,
 				"Stage3 emitted the already-forwarded instance receiver twice when an optional argument was omitted");
-			assertTrue(generated.indexOf("deq (this_) (0) (numericCast (0)) ((Obj.magic HxRuntime.hx_null))") >= 0,
+			assertTrue(generated.indexOf("deq (this_) (Obj.repr (0)) (Obj.repr (numericCast (0))) ((Obj.magic HxRuntime.hx_null))") >= 0,
 				"Stage3 did not preserve one receiver and append only the omitted optional position argument");
 
 			final executed = commandOutput(executable);
