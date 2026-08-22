@@ -44,60 +44,77 @@ let getExpectedType = fun self () -> (Obj.magic self : t).expectedType
 
 let getViaType = fun self () -> (Obj.magic self : t).viaType
 
+let isAbstractTo = fun self () -> let __string_eq_left_7 = (Obj.magic self : t).kind in let __string_eq_right_8 = "abstract-to" in HxString.equals __string_eq_left_7 __string_eq_right_8
+
+let isRepresentationPreservingAbstractTo = fun self (index : TyperIndex.t) -> (try (
+  ignore (if not (isAbstractTo (Obj.magic self) ()) || index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let actualIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic ((Obj.magic self : t).actualType)) ()) in let tempMaybeTyAbstractInfo = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractInfo.t) in (
+    ignore (if actualIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_9 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempMaybeTyAbstractInfo := __assign_9;
+      __assign_9
+    ) else let __assign_10 = Obj.magic (Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic actualIdentity) () : string))) in (
+      tempMaybeTyAbstractInfo := __assign_10;
+      __assign_10
+    ));
+    let abstractInfo = Obj.magic (!tempMaybeTyAbstractInfo) in abstractInfo != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_11 = TyType.getSemanticKey (Obj.magic ((Obj.magic abstractInfo : TyAbstractInfo.t).getUnderlyingType (Obj.magic abstractInfo) ())) () in let __string_eq_right_12 = TyType.getSemanticKey (Obj.magic ((Obj.magic self : t).expectedType)) () in HxString.equals __string_eq_left_11 __string_eq_right_12)
+  )
+) with
+  | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : bool) : bool)
+
 let apply = fun self (expression : TypedExpr.t) -> (try (
-  ignore (if let __string_eq_left_7 = (Obj.magic self : t).kind in let __string_eq_right_8 = "exact" in HxString.equals __string_eq_left_7 __string_eq_right_8 then raise (HxRuntime.Hx_return (Obj.repr (TypedExpr.withType (Obj.magic expression) (Obj.magic ((Obj.magic self : t).expectedType))))) else ());
+  ignore (if let __string_eq_left_14 = (Obj.magic self : t).kind in let __string_eq_right_15 = "exact" in HxString.equals __string_eq_left_14 __string_eq_right_15 then raise (HxRuntime.Hx_return (Obj.repr (TypedExpr.withType (Obj.magic expression) (Obj.magic ((Obj.magic self : t).expectedType))))) else ());
   TypedExpr.castValue (Obj.magic expression) (TyType.getDisplay (Obj.magic ((Obj.magic self : t).expectedType)) () : string) (Obj.magic ((Obj.magic self : t).expectedType)) (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()))
 ) with
-  | HxRuntime.Hx_return __ret_9 -> (Obj.obj __ret_9 : TypedExpr.t) : TypedExpr.t)
+  | HxRuntime.Hx_return __ret_16 -> (Obj.obj __ret_16 : TypedExpr.t) : TypedExpr.t)
 
 let rec nullableCompatible = fun expected actual -> (try (
   ignore (if expected == Obj.magic (HxRuntime.hx_null) || actual == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (if let __string_eq_left_10 = TyType.getSemanticKey (Obj.magic expected) () in let __string_eq_right_11 = TyType.getSemanticKey (Obj.magic actual) () in HxString.equals __string_eq_left_10 __string_eq_right_11 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if let __string_eq_left_17 = TyType.getSemanticKey (Obj.magic expected) () in let __string_eq_right_18 = TyType.getSemanticKey (Obj.magic actual) () in HxString.equals __string_eq_left_17 __string_eq_right_18 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if TyType.isNullable (Obj.magic expected) () then raise (HxRuntime.Hx_return (Obj.repr (nullableCompatible (Obj.magic (TyType.getNullableInner (Obj.magic expected) ())) (Obj.magic actual)))) else ());
   ignore (if TyType.isNullable (Obj.magic actual) () then raise (HxRuntime.Hx_return (Obj.repr (nullableCompatible (Obj.magic expected) (Obj.magic (TyType.getNullableInner (Obj.magic actual) ()))))) else ());
   false
 ) with
-  | HxRuntime.Hx_return __ret_12 -> (Obj.obj __ret_12 : bool) : bool)
+  | HxRuntime.Hx_return __ret_19 -> (Obj.obj __ret_19 : bool) : bool)
 
 let uniqueCompatible = fun types expected -> (try let selected = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : TyType.t) in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length types do try ignore (let hx_type = Obj.magic (let __array_read_receiver_13 = types in let __array_read_index_14 = !_g in HxArray.get (Obj.magic __array_read_receiver_13) __array_read_index_14) in (
-    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-      ignore (_g := __new_16);
-      __new_16
+  ignore (while !_g < HxArray.length types do try ignore (let hx_type = Obj.magic (let __array_read_receiver_20 = types in let __array_read_index_21 = !_g in HxArray.get (Obj.magic __array_read_receiver_20) __array_read_index_21) in (
+    ignore (let __old_22 = !_g in let __new_23 = HxInt.add __old_22 1 in (
+      ignore (_g := __new_23);
+      __new_23
     ));
     ignore (if not (nullableCompatible (Obj.magic expected) (Obj.magic hx_type)) then raise (HxRuntime.Hx_continue) else ());
-    ignore (if !selected != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_17 = TyType.getSemanticKey (Obj.magic (!selected)) () in let __string_eq_right_18 = TyType.getSemanticKey (Obj.magic hx_type) () in not (HxString.equals __string_eq_left_17 __string_eq_right_18)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let __assign_19 = Obj.magic (Obj.magic hx_type) in (
-      selected := __assign_19;
-      __assign_19
+    ignore (if !selected != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_24 = TyType.getSemanticKey (Obj.magic (!selected)) () in let __string_eq_right_25 = TyType.getSemanticKey (Obj.magic hx_type) () in not (HxString.equals __string_eq_left_24 __string_eq_right_25)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    let __assign_26 = Obj.magic (Obj.magic hx_type) in (
+      selected := __assign_26;
+      __assign_26
     )
   )) with
     | HxRuntime.Hx_continue -> () done);
   !selected
 ) with
-  | HxRuntime.Hx_return __ret_20 -> (Obj.obj __ret_20 : TyType.t) : TyType.t)
+  | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : TyType.t) : TyType.t)
 
 let select = fun index expected actual -> (try (
   ignore (if expected == Obj.magic (HxRuntime.hx_null) || actual == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic expected) () || TyType.isUnknown (Obj.magic actual) () then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if let __string_eq_left_21 = TyType.getSemanticKey (Obj.magic expected) () in let __string_eq_right_22 = TyType.getSemanticKey (Obj.magic actual) () in HxString.equals __string_eq_left_21 __string_eq_right_22 then raise (HxRuntime.Hx_return (Obj.repr (create ("exact" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic (Obj.magic (HxRuntime.hx_null))) 4))) else ());
-  ignore (if (let __string_eq_left_23 = TyType.getDisplay (Obj.magic expected) () in let __string_eq_right_24 = "Float" in HxString.equals __string_eq_left_23 __string_eq_right_24) && (let __string_eq_left_25 = TyType.getDisplay (Obj.magic actual) () in let __string_eq_right_26 = "Int" in HxString.equals __string_eq_left_25 __string_eq_right_26) then raise (HxRuntime.Hx_return (Obj.repr (create ("numeric-widening" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic (Obj.magic (HxRuntime.hx_null))) 3))) else ());
+  ignore (if let __string_eq_left_28 = TyType.getSemanticKey (Obj.magic expected) () in let __string_eq_right_29 = TyType.getSemanticKey (Obj.magic actual) () in HxString.equals __string_eq_left_28 __string_eq_right_29 then raise (HxRuntime.Hx_return (Obj.repr (create ("exact" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic (Obj.magic (HxRuntime.hx_null))) 4))) else ());
+  ignore (if (let __string_eq_left_30 = TyType.getDisplay (Obj.magic expected) () in let __string_eq_right_31 = "Float" in HxString.equals __string_eq_left_30 __string_eq_right_31) && (let __string_eq_left_32 = TyType.getDisplay (Obj.magic actual) () in let __string_eq_right_33 = "Int" in HxString.equals __string_eq_left_32 __string_eq_right_33) then raise (HxRuntime.Hx_return (Obj.repr (create ("numeric-widening" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic (Obj.magic (HxRuntime.hx_null))) 3))) else ());
   let actualIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic actual) ()) in let tempMaybeTyAbstractInfo = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractInfo.t) in (
-    ignore (if actualIdentity == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempMaybeTyAbstractInfo := __assign_27;
-      __assign_27
-    ) else let __assign_28 = Obj.magic (Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic actualIdentity) () : string))) in (
-      tempMaybeTyAbstractInfo := __assign_28;
-      __assign_28
+    ignore (if actualIdentity == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let __assign_34 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempMaybeTyAbstractInfo := __assign_34;
+      __assign_34
+    ) else let __assign_35 = Obj.magic (Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic actualIdentity) () : string))) in (
+      tempMaybeTyAbstractInfo := __assign_35;
+      __assign_35
     ));
     let actualAbstract = Obj.magic (!tempMaybeTyAbstractInfo) in (
       ignore (if actualAbstract != Obj.magic (HxRuntime.hx_null) then ignore (let via = Obj.magic (uniqueCompatible (Obj.magic ((Obj.magic actualAbstract : TyAbstractInfo.t).getImplicitToTypes (Obj.magic actualAbstract) ())) (Obj.magic expected)) in if via != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (create ("abstract-to" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic via) 2))) else ()) else ());
       let expectedIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic expected) ()) in let tempMaybeTyAbstractInfo1 = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractInfo.t) in (
-        ignore (if expectedIdentity == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let __assign_29 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-          tempMaybeTyAbstractInfo1 := __assign_29;
-          __assign_29
-        ) else let __assign_30 = Obj.magic (Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic expectedIdentity) () : string))) in (
-          tempMaybeTyAbstractInfo1 := __assign_30;
-          __assign_30
+        ignore (if expectedIdentity == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let __assign_36 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+          tempMaybeTyAbstractInfo1 := __assign_36;
+          __assign_36
+        ) else let __assign_37 = Obj.magic (Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic expectedIdentity) () : string))) in (
+          tempMaybeTyAbstractInfo1 := __assign_37;
+          __assign_37
         ));
         let expectedAbstract = Obj.magic (!tempMaybeTyAbstractInfo1) in (
           ignore (if expectedAbstract != Obj.magic (HxRuntime.hx_null) then ignore (let via = Obj.magic (uniqueCompatible (Obj.magic ((Obj.magic expectedAbstract : TyAbstractInfo.t).getImplicitFromTypes (Obj.magic expectedAbstract) ())) (Obj.magic actual)) in if via != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (create ("abstract-from" : string) (Obj.magic actual) (Obj.magic expected) (Obj.magic via) 2))) else ()) else ());
@@ -108,4 +125,4 @@ let select = fun index expected actual -> (try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_31 -> (Obj.obj __ret_31 : t) : t)
+  | HxRuntime.Hx_return __ret_38 -> (Obj.obj __ret_38 : t) : t)
