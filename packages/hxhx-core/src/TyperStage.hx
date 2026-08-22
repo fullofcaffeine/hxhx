@@ -1202,6 +1202,53 @@ class TyperStage {
 		return result == null ? TyType.unknown() : result;
 	}
 
+	/**
+		Select the value type produced by the parser's expression-level try sentinel.
+
+		A normally completing concrete try branch remains authoritative when a
+		`Dynamic` catch branch flows into it. This matches Haxe's typed expression:
+		the catch expression itself stays Dynamic, while the complete try expression
+		keeps the concrete successful result. Other branch combinations continue to
+		use the typer's ordinary bounded unification.
+	**/
+	static function inferStructuralTryResult(args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyType> {
+		final structure = switch (args) {
+			case [ELambda(tryArguments, tryBody), EArrayDecl(entries), tail] if (tryArguments.length == 0):
+				final lambda:HxExpr = ELambda(tryArguments, tryBody);
+				{tryLambda: lambda, catches: entries, continuation: tail};
+			case _: null;
+		};
+		if (structure == null)
+			return null;
+
+		final handlers = new Array<HxExpr>();
+		for (entry in structure.catches)
+			switch (entry) {
+				case EArrayDecl([EString(_), EString(_), ELambda(handlerArguments, handlerBody)]) if (handlerArguments.length == 1):
+					final handler:HxExpr = ELambda(handlerArguments, handlerBody);
+					handlers.push(handler);
+				case _:
+					return null;
+			}
+
+		final tryFunctionType = inferExprType(structure.tryLambda, scope, ctx, pos);
+		var result = tryFunctionType.getFunctionReturn();
+		if (result == null)
+			result = TyType.unknown();
+		for (handler in handlers) {
+			final handlerType = inferExprType(handler, scope, ctx, pos);
+			final catchResult = handlerType.getFunctionReturn();
+			if (catchResult == null)
+				continue;
+			if (!result.isUnknown() && !result.isDynamic() && catchResult.isDynamic())
+				continue;
+			final unified = TyType.unify(result, catchResult);
+			result = unified == null ? TyType.fromHintText("Dynamic") : unified;
+		}
+		inferExprType(structure.continuation, scope, ctx, pos);
+		return result;
+	}
+
 	static function inferNullCoalesceType(left:TyType, right:TyType):TyType {
 		if (right != null && right.isNoNormalCompletion())
 			return left == null || left.isUnknown() ? TyType.unknown() : (left.isNullWrapped() ? left.unwrapNull() : left);
@@ -1429,6 +1476,9 @@ class TyperStage {
 				switch (callee) {
 					case EIdent("__hxhx_parenthesized") if (args.length == 1):
 						return inferExprType(args[0], scope, ctx, pos);
+					case EIdent("__hxhx_try"):
+						final tryResult = inferStructuralTryResult(args, scope, ctx, pos);
+						if (tryResult != null) return tryResult;
 					case ENullSafeField(obj, field):
 						final result = inferExprType(ECall(EField(obj, field), args), scope, ctx, pos);
 						return result.isNullable() ? result : TyType.nullable(result);

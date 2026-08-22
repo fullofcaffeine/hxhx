@@ -21,6 +21,46 @@ class TypedBodyBuilder {
 		];
 	}
 
+	/**
+		Expose the concrete conversion selected for a Dynamic catch result.
+
+		The internal try sentinel stores handlers inside array-shaped metadata. When
+		the whole try expression has a concrete type, each Dynamic handler result must
+		be converted at the handler boundary so every target receives two closures
+		with the same result contract. A genuinely Dynamic try remains unchanged.
+	**/
+	static function alignStructuralTryCatchResults(arguments:Array<TypedExpr>, resultType:TyType):Array<TypedExpr> {
+		if (arguments.length != 3 || resultType == null || resultType.isUnknown() || resultType.isDynamic() || resultType.isNoNormalCompletion()
+			|| resultType.isVoid())
+			return arguments;
+		final catches = arguments[1];
+		if (catches.getTag() != ArrayDecl)
+			return arguments;
+
+		final alignedCatches = new Array<TypedExpr>();
+		for (entry in catches.getExpressions()) {
+			final children = entry.getExpressions();
+			if (entry.getTag() != ArrayDecl || children.length != 3 || children[2].getTag() != Lambda) {
+				alignedCatches.push(entry);
+				continue;
+			}
+			final handler = children[2];
+			final handlerExpressions = handler.getExpressions();
+			if (handlerExpressions.length != 1 || !handlerExpressions[0].getType().isDynamic()) {
+				alignedCatches.push(entry);
+				continue;
+			}
+			final convertedBody = TypedExpr.castValue(handlerExpressions[0], resultType.getCanonicalDisplay(), resultType, handlerExpressions[0].getPosition());
+			final handlerType = TyType.functionType(handler.getType().getFunctionArguments(), resultType);
+			final convertedHandler = TypedExpr.lambda(handler.getTexts(), convertedBody, handlerType, handler.getPosition(), handler.getLocalBindings());
+			alignedCatches.push(TypedExpr.arrayDecl([children[0], children[1], convertedHandler], entry.getType(), entry.getPosition()));
+		}
+
+		final aligned = arguments.copy();
+		aligned[1] = TypedExpr.arrayDecl(alignedCatches, catches.getType(), catches.getPosition());
+		return aligned;
+	}
+
 	static function exactPosition(position:HxPos):Null<HxPos> {
 		if (position == null)
 			return null;
@@ -563,9 +603,11 @@ class TypedBodyBuilder {
 					final resolution = callResolver == null
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-					final typedArguments = applyCallArgumentConversions(buildExpressions(arguments, diagnosticPosition, environment, typeResolver,
-						callResolver, fieldResolver),
+					var typedArguments = applyCallArgumentConversions(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver,
+						fieldResolver),
 						resolution.getArgumentConversions());
+					if (callee.match(EIdent("__hxhx_try")))
+						typedArguments = alignStructuralTryCatchResults(typedArguments, nodeType);
 					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
 						resolution.getExtensionProvider());
 				}

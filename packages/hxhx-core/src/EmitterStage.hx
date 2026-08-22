@@ -4498,6 +4498,14 @@ class EmitterStage {
 				// - This only whitelists the exact `__ocaml__("<string literal>")` shape.
 				case ECall(EIdent("__ocaml__"), [arg]) if (constFoldString(arg) != null):
 					false;
+				// These exact private shapes are produced by typed-body projection and
+				// consumed by `tryExprToOcamlStage3LambdaTryIntrinsic`. Treating their
+				// compiler-owned names as unbound user calls would replace a fully typed
+				// try expression before that intrinsic can validate and lower it.
+				case ECall(EIdent("__hxhx_try"), [ELambda(tryArguments, _), EArrayDecl(_), _]) if (tryArguments.length == 0):
+					false;
+				case ECall(EIdent("__hxhx_throw"), [value]):
+					hasBringupPoison(value);
 				case ECall(callee, args):
 					if (hasBringupPoison(callee))
 						return true;
