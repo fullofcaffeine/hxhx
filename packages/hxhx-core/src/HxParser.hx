@@ -4977,6 +4977,37 @@ class HxParser {
 			startPos, cur.getPos(), bodyText, hasBody);
 	}
 
+	/**
+		Skip a conditional modifier placed after an unconditional `static` marker.
+
+		Standard-library declarations can spell a target-specific modifier as
+		`static #if target inline #end function`. Some bootstrap input reaches this
+		parser before conditional filtering. The conditional clause must not split
+		the declaration and erase the already observed `static` fact.
+	**/
+	function skipConditionalStaticModifier():Void {
+		var depth = 0;
+		while (!cur.kind.match(TEof)) {
+			if (isOtherChar("#")) {
+				bump();
+				switch (cur.kind) {
+					case TKeyword(KIf):
+						depth += 1;
+						bump();
+					case TIdent("end"):
+						depth -= 1;
+						bump();
+						if (depth <= 0)
+							return;
+					case _:
+						bump();
+				}
+			} else {
+				bump();
+			}
+		}
+	}
+
 	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		final funcs = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
@@ -5009,6 +5040,9 @@ class HxParser {
 							keep = true;
 						} else if (acceptKeyword(KStatic)) {
 							isStatic = true;
+							keep = true;
+						} else if (isStatic && isOtherChar("#") && peekKind().match(TKeyword(KIf))) {
+							skipConditionalStaticModifier();
 							keep = true;
 						} else if (acceptKeyword(KInline)) {
 							// Keep the declaration fact available to semantic indexing. Inlining is
