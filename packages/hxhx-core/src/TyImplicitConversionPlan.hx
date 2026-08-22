@@ -107,6 +107,24 @@ class TyImplicitConversionPlan {
 	public function getViaType():Null<TyType>
 		return viaType;
 
+	/** Whether this plan projects an abstract through a declared `to` type. **/
+	public function isAbstractTo():Bool
+		return kind == ABSTRACT_TO;
+
+	/**
+		Whether this abstract `to` conversion only exposes its existing storage.
+
+		A different destination can require executable conversion logic. The shared
+		typed body must not replace that logic with a plain representation cast.
+	**/
+	public function isRepresentationPreservingAbstractTo(index:TyperIndex):Bool {
+		if (!isAbstractTo() || index == null)
+			return false;
+		final actualIdentity = actualType.getNominalIdentity();
+		final abstractInfo = actualIdentity == null ? null : index.getAbstractByFullName(actualIdentity.getCanonicalName());
+		return abstractInfo != null && abstractInfo.getUnderlyingType().getSemanticKey() == expectedType.getSemanticKey();
+	}
+
 	/** Materialize the already-selected conversion in the shared typed body. **/
 	public function apply(expression:TypedExpr):TypedExpr {
 		if (kind == EXACT)

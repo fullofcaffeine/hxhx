@@ -451,6 +451,9 @@ class ParserStageScanHelpers {
 
 			final enumName = nameTok.text;
 			i = nameTok.nextPos;
+			final abstractTypeParams = isEnumAbstract ? scanTypeParameterNames(source, i) : {params: [], nextPos: i};
+			final abstractUnderlying = isEnumAbstract ? scanAbstractUnderlyingType(source, i) : "";
+			final abstractConversions = isEnumAbstract ? scanAbstractHeaderConversions(source, i) : {fromTypes: [], toTypes: []};
 
 			if (enumName == null || enumName.length == 0)
 				continue;
@@ -518,7 +521,18 @@ class ParserStageScanHelpers {
 				}
 			}
 
-			final classMetadata = isEnumAbstract ? enumMetadata.concat(["__hxhx_abstract"]) : enumMetadata;
+			final classMetadata = if (isEnumAbstract) {
+				final metadata = enumMetadata.concat(["__hxhx_abstract"]).concat(typeParamsMetadata(abstractTypeParams.params));
+				if (abstractUnderlying.length > 0)
+					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
+				for (fromType in abstractConversions.fromTypes)
+					metadata.push("__hxhx_abstract_from=" + fromType);
+				for (toType in abstractConversions.toTypes)
+					metadata.push("__hxhx_abstract_to=" + toType);
+				metadata;
+			} else {
+				enumMetadata;
+			};
 			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility));
 		}
 

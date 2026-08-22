@@ -9,6 +9,18 @@
 	location of the complete construct.
 **/
 class TypedBodyBuilder {
+	/** Apply exact call conversions after every argument has its source type. **/
+	static function applyCallArgumentConversions(arguments:Array<TypedExpr>, conversions:Array<Null<TyImplicitConversionPlan>>):Array<TypedExpr> {
+		if (conversions.length == 0)
+			return arguments;
+		if (conversions.length != arguments.length)
+			throw "typed call argument conversions do not align with the source arguments";
+		return [
+			for (index in 0...arguments.length)
+				conversions[index] == null ? arguments[index] : conversions[index].apply(arguments[index])
+		];
+	}
+
 	static function exactPosition(position:HxPos):Null<HxPos> {
 		if (position == null)
 			return null;
@@ -551,7 +563,9 @@ class TypedBodyBuilder {
 					final resolution = callResolver == null
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-					final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedArguments = applyCallArgumentConversions(buildExpressions(arguments, diagnosticPosition, environment, typeResolver,
+						callResolver, fieldResolver),
+						resolution.getArgumentConversions());
 					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
 						resolution.getExtensionProvider());
 				}

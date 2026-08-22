@@ -346,7 +346,9 @@ class TyperStage {
 								|| current.staticMethodCandidates(name).length == 0) && context.importedStaticMethod(name) != null;
 						case _: false;
 					};
-				return new TypedCallResolution(declaration, requiresOwnerQualification, extensionProvider);
+				final argumentConversions = callArgumentConversions(declaration, extensionProvider, arguments, lexicalEnvironment.copyForInference(), context,
+					position);
+				return new TypedCallResolution(declaration, requiresOwnerQualification, extensionProvider, argumentConversions);
 			};
 			final fieldResolver:TypedFieldDeclarationResolver = function(expression, position, lexicalEnvironment) {
 				final field = resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
@@ -920,7 +922,7 @@ class TyperStage {
 		compared structurally so `Array<T>` can accept `Array<String>` without
 		turning the backend carrier into the binding key.
 	**/
-	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>):Int {
+	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, semanticIndex:TyperIndex):Int {
 		if (expected == null || actual == null)
 			return -1;
 		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
@@ -928,7 +930,7 @@ class TyperStage {
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
 		if (expected.isNullable() || actual.isNullable())
-			return overloadArgScore(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters);
+			return overloadArgScore(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, semanticIndex);
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return -1;
@@ -938,7 +940,7 @@ class TyperStage {
 				return -1;
 			var score = 0;
 			for (index in 0...expectedArguments.length) {
-				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters);
+				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters, semanticIndex);
 				if (argumentScore < 0)
 					return -1;
 				score += argumentScore;
@@ -947,7 +949,7 @@ class TyperStage {
 			final actualReturn = actual.getFunctionReturn();
 			if (expectedReturn == null || actualReturn == null)
 				return -1;
-			final returnScore = overloadArgScore(expectedReturn, actualReturn, methodTypeParameters);
+			final returnScore = overloadArgScore(expectedReturn, actualReturn, methodTypeParameters, semanticIndex);
 			return returnScore < 0 ? -1 : score + returnScore;
 		}
 		final expectedArguments = expected.getTypeArguments();
@@ -957,26 +959,30 @@ class TyperStage {
 			&& TyMethodGenericBinding.sameTypeConstructor(expected, actual)) {
 			var score = 2;
 			for (index in 0...expectedArguments.length) {
-				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters);
+				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters, semanticIndex);
 				if (argumentScore < 0)
 					return -1;
 				score += argumentScore;
 			}
 			return score;
 		}
+		final implicitConversion = TyImplicitConversionPlan.select(semanticIndex, expected, actual);
+		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractTo(semanticIndex))
+			return implicitConversion.getScore();
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
 		return functionOverloadTypeScore(exp, act);
 	}
 
-	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>):Int {
+	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,
+			semanticIndex:TyperIndex):Int {
 		if (!sig.acceptsArity(suppliedArity))
 			return -1;
 		final expected = sig.getArgs();
 		var score = 0;
 		for (i in 0...suppliedArity) {
 			final argScore = overloadArgScore(i < expected.length ? expected[i] : TyType.fromHintText("Dynamic"),
-				i < argTypes.length ? argTypes[i] : TyType.unknown(), methodTypeParameters);
+				i < argTypes.length ? argTypes[i] : TyType.unknown(), methodTypeParameters, semanticIndex);
 			if (argScore < 0)
 				return -1;
 			score += argScore;
@@ -990,6 +996,41 @@ class TyperStage {
 			return {type: signature.getReturnType(), declaration: null};
 		final indexedResult = TyMethodGenericBinding.specializeResult(declaration, signature, argTypes);
 		return {type: ctx.refinedMethodReturnType(declaration, indexedResult), declaration: declaration};
+	}
+
+	/**
+		Select representation-safe conversions for explicit call arguments.
+
+		A declared `to` conversion proves that the call is legal. This helper emits a
+		plain typed cast only when the abstract's storage type is also the exact
+		parameter type. Custom conversion methods need a separate typed call model and
+		must not be mistaken for storage projection here.
+	**/
+	static function callArgumentConversions(declaration:Null<TyDeclarationInfo>, extensionProvider:Null<TyNominalTypeId>, arguments:Array<HxExpr>,
+			scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Array<Null<TyImplicitConversionPlan>> {
+		if (declaration == null || arguments.length == 0)
+			return [];
+		final signature = declaration.getSignature();
+		final expectedTypes = signature.getArgs();
+		final restArguments = signature.getArgRest();
+		final parameterOffset = extensionProvider == null ? 0 : 1;
+		final conversions = new Array<Null<TyImplicitConversionPlan>>();
+		var found = false;
+		for (argumentIndex in 0...arguments.length) {
+			final parameterIndex = argumentIndex + parameterOffset;
+			if (parameterIndex >= expectedTypes.length || (parameterIndex < restArguments.length && restArguments[parameterIndex])) {
+				conversions.push(null);
+				continue;
+			}
+			final actualType = inferExprType(arguments[argumentIndex], scope, ctx, pos);
+			final expectedType = expectedTypes[parameterIndex];
+			final conversion = TyImplicitConversionPlan.select(ctx.getIndex(), expectedType, actualType);
+			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractTo(ctx.getIndex());
+			conversions.push(representationSafe ? conversion : null);
+			if (representationSafe)
+				found = true;
+		}
+		return found ? conversions : [];
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
@@ -1008,7 +1049,7 @@ class TyperStage {
 		for (candidate in candidates) {
 			final declaration = c.declarationForSignature(candidate);
 			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
-			final score = overloadCandidateScore(candidate, argTypes, args.length, methodTypeParameters);
+			final score = overloadCandidateScore(candidate, argTypes, args.length, methodTypeParameters, ctx.getIndex());
 			if (score >= 0) {
 				arityMatches.push(candidate);
 				if (score > bestScore) {

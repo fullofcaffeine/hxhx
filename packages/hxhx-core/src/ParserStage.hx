@@ -38,6 +38,14 @@ class ParserStage {
 			if (nm != null && nm.length > 0 && !scannedOverlayByName.exists(nm))
 				scannedOverlayByName.set(nm, c);
 		}
+		for (c in enumDecls) {
+			final nm = c == null ? null : HxClassDecl.getName(c);
+			if (nm != null
+				&& nm.length > 0
+				&& HxClassDecl.getMetadata(c).indexOf("__hxhx_abstract") >= 0
+				&& !scannedOverlayByName.exists(nm))
+				scannedOverlayByName.set(nm, c);
+		}
 		for (c in typedefDecls) {
 			final nm = c == null ? null : HxClassDecl.getName(c);
 			if (nm != null && nm.length > 0)
