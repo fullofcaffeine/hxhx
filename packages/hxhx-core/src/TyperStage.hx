@@ -559,6 +559,7 @@ class TyperStage {
 
 	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext):TyType {
 		var out:Null<TyType> = null;
+		var sawUnresolvedValueReturn = false;
 
 		function unifyInto(t:TyType, pos:HxPos):Void {
 			if (out == null) {
@@ -694,17 +695,14 @@ class TyperStage {
 					unifyInto(TyType.fromHintText("Void"), pos);
 				case SReturn(e, pos):
 					final t = inferExprType(e, scope, ctx, pos);
-					// Bring-up rule: if we *see* `return <expr>` but can't infer a concrete type for
-					// the expression yet, treat it as `Dynamic` instead of leaving the return type
-					// as `Unknown`.
-					//
-					// Why
-					// - A function that returns an expression is almost never intended to be `Void`.
-					// - Leaving it as `Unknown` causes `typeFunction` to default to `Void`, which then
-					//   makes the Stage3 bootstrap emitter produce OCaml like:
-					//     `let f () : unit = <int expr>`
-					//   and fail typechecking.
-					unifyInto(t.isUnknown() ? TyType.fromHintText("Dynamic") : t, pos);
+					if (t.isUnknown()) {
+						// An unresolved exit is missing evidence, not evidence of a Dynamic result.
+						// Keep looking through later branches and statement-level try/catch bodies;
+						// one concrete return can still determine the function's result.
+						sawUnresolvedValueReturn = true;
+					} else {
+						unifyInto(t, pos);
+					}
 				case SExpr(e, pos):
 					inferExprType(e, scope, ctx, pos);
 				case SThrow(expr, pos):
@@ -718,7 +716,13 @@ class TyperStage {
 		// For bootstrap bring-up we return `Unknown` here so `typeFunction` can:
 		// - trust an explicit return type hint, or
 		// - default to `Void` when no hint is provided.
-		return out == null ? TyType.unknown() : out;
+		if (out == null)
+			return sawUnresolvedValueReturn ? TyType.fromHintText("Dynamic") : TyType.unknown();
+		// A value-returning path with no known value type cannot safely collapse to
+		// Void merely because another branch uses a bare return.
+		if (sawUnresolvedValueReturn && out.getDisplay() == "Void")
+			return TyType.fromHintText("Dynamic");
+		return out;
 	}
 
 	/**
