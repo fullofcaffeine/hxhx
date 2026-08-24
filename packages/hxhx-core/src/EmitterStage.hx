@@ -3862,8 +3862,14 @@ class EmitterStage {
 					dynamicLeft, dynamicRight,
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
-				if (dynamicBinary != null)
+				if (dynamicBinary != null) {
+					// A String-led Haxe addition stays String even when a Dynamic operand
+					// selects runtime dispatch. Restore that concrete result before a
+					// parent addition uses OCaml's typed string concatenation.
+					if (op == "+" && (stage3IsStringExpr(a, tyByIdentRaw) || stage3IsStringExpr(b, tyByIdentRaw)))
+						return "HxDynamic.toStdString (" + dynamicBinary + ")";
 					return dynamicBinary;
+				}
 				// Stage 3 expansion: support a small set of binary ops so `if` conditions can
 				// become meaningful (avoid the earlier "everything is true" collapse).
 				//

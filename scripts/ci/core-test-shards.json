@@ -159,6 +159,7 @@
     "test:m14:hih-string-abstract-cast": "compiler",
     "test:m14:hih-dynamic-catch-result": "compiler",
     "test:m14:hih-dynamic-float-boundary": "compiler",
+    "test:m14:hih-dynamic-string-concat": "compiler",
     "test:m14:hxhx-display-exproft-completion": "compiler",
     "test:m14:compilation-server-request-dispatcher": "compiler",
     "test:m14:compilation-server-source-cache": "compiler",
