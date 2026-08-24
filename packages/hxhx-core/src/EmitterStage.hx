@@ -2163,6 +2163,9 @@ class EmitterStage {
 					callSigByCallee) + "))";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
+			case _ if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee)):
+				"HxDynamic.floatValue (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + ")";
 			case _ if (stage3IsInfNanFieldExpr(expr)):
 				"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + ") : float)";

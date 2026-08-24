@@ -66,6 +66,17 @@ let numeric_value (operation : string) (value : Obj.t) : numeric_value =
   else
     invalid_operator operation "Int or Float"
 
+(* Convert a Dynamic value at a compiler-selected Float boundary.
+
+   The Haxe-authored emitter chooses this helper only when an exact call
+   declaration requires Float but the typed argument remains Dynamic. The
+   runtime validates the carrier before unboxing it and applies Haxe's ordinary
+   Int-to-Float widening. *)
+let floatValue (value : Obj.t) : float =
+  match numeric_value "Float conversion" value with
+  | DynamicInt value -> float_of_int value
+  | DynamicFloat value -> value
+
 let subtract (left : Obj.t) (right : Obj.t) : Obj.t =
   match numeric_value "subtraction" left, numeric_value "subtraction" right with
   | DynamicInt a, DynamicInt b -> Obj.repr (HxInt.sub a b)
