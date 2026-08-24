@@ -1908,7 +1908,14 @@ class EmitterStage {
 		}
 	}
 
-	static function stage3IsFloatExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+	/**
+		Reports whether Stage3 can rely on an expression producing a Float.
+
+		A call's result type belongs to its selected declaration, not to its syntax.
+		Use the existing call-signature index so mixed arithmetic can retain that
+		Float result while it recursively classifies both operands.
+	**/
+	static function stage3IsFloatExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
 		return switch (expr) {
 			case EFloat(_):
 				true;
@@ -1916,13 +1923,21 @@ class EmitterStage {
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "Float";
+			case ECall(EIdent(name), _): var signature = callSigForStage3(name,
+					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
+					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Float";
+			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
+					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
+					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Float";
 			case EBinop("/", a, b): !(stage3IsInt64Expr(a,
 					tyByIdent) || stage3IsInt64Expr(b,
-						tyByIdent)) && (stage3IsFloatExpr(a, tyByIdent)
-					|| stage3IsFloatExpr(b, tyByIdent)
+						tyByIdent)) && (stage3IsFloatExpr(a, tyByIdent, callSigByCallee)
+					|| stage3IsFloatExpr(b, tyByIdent, callSigByCallee)
 					|| (stage3IsIntExpr(a, tyByIdent) && stage3IsIntExpr(b, tyByIdent)));
-			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"): stage3IsFloatExpr(a, tyByIdent) || stage3IsFloatExpr(b, tyByIdent);
-			case ETernary(_cond, thenExpr, elseExpr): stage3IsFloatExpr(thenExpr, tyByIdent) && stage3IsFloatExpr(elseExpr, tyByIdent);
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"): stage3IsFloatExpr(a, tyByIdent,
+					callSigByCallee) || stage3IsFloatExpr(b, tyByIdent, callSigByCallee);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsFloatExpr(thenExpr, tyByIdent,
+					callSigByCallee) && stage3IsFloatExpr(elseExpr, tyByIdent, callSigByCallee);
 			case _:
 				false;
 		}
@@ -2078,7 +2093,9 @@ class EmitterStage {
 		return switch (expr) {
 			case EInt(_), EFloat(_), EBool(_), EIdent(_):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			case _ if (stage3IsIntExpr(expr, tyByIdent) || stage3IsFloatExpr(expr, tyByIdent) || stage3IsBoolExpr(expr, tyByIdent)):
+			case _ if (stage3IsIntExpr(expr, tyByIdent)
+				|| stage3IsFloatExpr(expr, tyByIdent, callSigByCallee)
+				|| stage3IsBoolExpr(expr, tyByIdent)):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
 				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -2175,20 +2192,22 @@ class EmitterStage {
 	}
 
 	static function tryExprToOcamlStage3NumericStringIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
-			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
 			case ECall(EField(EIdent("Math"), "abs"), [arg]):
-				final absFn = stage3IsFloatExpr(arg, tyByIdent) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
+				final absFn = stage3IsFloatExpr(arg, tyByIdent, callSigByCallee) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
 				return absFn
 					+ "("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ")";
 			case ECall(EField(EIdent("Math"), "round"), [arg]):
 				return "(int_of_float (floor (("
-					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee)
 					+ ") +. 0.5)))";
 			case ECall(EField(obj, "toString"), []) if (stage3IsStringExpr(obj, tyByIdent)):
-				return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
 		}
 		return null;
@@ -2779,7 +2798,7 @@ class EmitterStage {
 			return coreIntrinsic;
 
 		final numericStringIntrinsic = tryExprToOcamlStage3NumericStringIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
-			currentPackagePath, moduleNameByPkgAndClassRaw);
+			currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		if (numericStringIntrinsic != null)
 			return numericStringIntrinsic;
 
@@ -3836,7 +3855,7 @@ class EmitterStage {
 							// Defaulting unknown expressions to float (`-.`) can break integer call sites
 							// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
 							final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-							if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw)) {
+							if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw, callSigByCalleeRaw)) {
 								"(-.(" + renderedExpr + "))";
 							} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
 								"(HxInt.neg (" + renderedExpr + "))";
@@ -3876,8 +3895,8 @@ class EmitterStage {
 				// Important: this emitter does not have reliable type information yet, so we
 				// intentionally only support operators that are unambiguous enough for our
 				// bring-up fixtures (primarily `Int` + boolean comparisons).
-				final la = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-				final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final la = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				function exprToOcamlAsFloat(e:HxExpr):String {
 					// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
 					return switch (e) {
@@ -3889,9 +3908,10 @@ class EmitterStage {
 						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
 							"float_of_int " + ocamlReadValueIdent(name);
 						case EField(_obj, "length"):
-							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case _:
-							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					}
 				}
 
@@ -3975,8 +3995,8 @@ class EmitterStage {
 							// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
 							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
 							//   overloaded cases (e.g. upstream Int64 tests).
-							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw);
-							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw);
+							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw);
+							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw);
 							final aIsI = stage3IsIntExpr(a, tyByIdentRaw);
 							final bIsI = stage3IsIntExpr(b, tyByIdentRaw);
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
@@ -4004,8 +4024,8 @@ class EmitterStage {
 							// - if both sides look like floats, use OCaml float operators,
 							// - if both sides look like ints, use OCaml int operators,
 							// - otherwise, collapse to bring-up poison to avoid type errors.
-							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw);
-							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw);
+							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw);
+							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw);
 							final aIsI = stage3IsIntExpr(a, tyByIdentRaw);
 							final bIsI = stage3IsIntExpr(b, tyByIdentRaw);
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
@@ -4057,19 +4077,22 @@ class EmitterStage {
 							}
 						}
 					case "==":
-						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw)
+							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") = (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") = (" + rb + "))";
 						}
 					case "!=":
-						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw)
+							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") <> (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") <> (" + rb + "))";
 						}
 					case "<" | ">" | "<=" | ">=":
-						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw)
+							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") " + op + " (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") " + op + " (" + rb + "))";
