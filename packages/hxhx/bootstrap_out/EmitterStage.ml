@@ -5264,53 +5264,57 @@ let resetRequestState = fun () -> ignore ((
     currentFunctionLocalTypeHints := __assign_9067;
     __assign_9067
   ));
-  ignore (let __assign_9068 = Obj.magic (let __arr_9069 = HxArray.create () in __arr_9069) in (
-    currentStmtTyEntries := __assign_9068;
+  ignore (let __assign_9068 = HxRuntime.hx_null in (
+    currentFunctionShadowingValueNames := __assign_9068;
     __assign_9068
   ));
-  ignore (let __assign_9070 = HxRuntime.hx_null in (
-    currentLocalCallSigCache := __assign_9070;
-    __assign_9070
+  ignore (let __assign_9069 = Obj.magic (let __arr_9070 = HxArray.create () in __arr_9070) in (
+    currentStmtTyEntries := __assign_9069;
+    __assign_9069
   ));
-  ignore (let __assign_9071 = Obj.magic (HxRuntime.hx_null) in (
-    currentImportInt64 := __assign_9071;
+  ignore (let __assign_9071 = HxRuntime.hx_null in (
+    currentLocalCallSigCache := __assign_9071;
     __assign_9071
   ));
-  ignore (let __assign_9072 = Obj.magic (let __arr_9073 = HxArray.create () in __arr_9073) in (
-    currentModuleNameEntries := __assign_9072;
+  ignore (let __assign_9072 = Obj.magic (HxRuntime.hx_null) in (
+    currentImportInt64 := __assign_9072;
     __assign_9072
   ));
-  ignore (let __assign_9074 = HxMap.create_string () in (
-    currentKnownModuleNames := __assign_9074;
-    __assign_9074
+  ignore (let __assign_9073 = Obj.magic (let __arr_9074 = HxArray.create () in __arr_9074) in (
+    currentModuleNameEntries := __assign_9073;
+    __assign_9073
   ));
   ignore (let __assign_9075 = HxMap.create_string () in (
-    currentGlobalImportAliasByIdent := __assign_9075;
+    currentKnownModuleNames := __assign_9075;
     __assign_9075
   ));
-  ignore (let __assign_9076 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    currentInstanceFieldsByTypePath := __assign_9076;
+  ignore (let __assign_9076 = HxMap.create_string () in (
+    currentGlobalImportAliasByIdent := __assign_9076;
     __assign_9076
   ));
   ignore (let __assign_9077 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    currentInstanceMethodsByTypePath := __assign_9077;
+    currentInstanceFieldsByTypePath := __assign_9077;
     __assign_9077
   ));
-  ignore (let __assign_9078 = Obj.magic (let __represented_array_9079 = HxArray.create () in __represented_array_9079) in (
-    currentMutableLocalRefNames := __assign_9078;
+  ignore (let __assign_9078 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    currentInstanceMethodsByTypePath := __assign_9078;
     __assign_9078
   ));
-  ignore (let __assign_9080 = ("portable" : string) in (
-    currentOcamlProfile := __assign_9080;
-    __assign_9080
+  ignore (let __assign_9079 = Obj.magic (let __represented_array_9080 = HxArray.create () in __represented_array_9080) in (
+    currentMutableLocalRefNames := __assign_9079;
+    __assign_9079
   ));
-  ignore (let __assign_9081 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    currentPortableMetalizationPlan := __assign_9081;
+  ignore (let __assign_9081 = ("portable" : string) in (
+    currentOcamlProfile := __assign_9081;
     __assign_9081
   ));
-  let __place_rhs_9082 = "" in (
-    currentPortableMetalizationRegionKey := __place_rhs_9082;
-    __place_rhs_9082
+  ignore (let __assign_9082 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    currentPortableMetalizationPlan := __assign_9082;
+    __assign_9082
+  ));
+  let __place_rhs_9083 = "" in (
+    currentPortableMetalizationRegionKey := __place_rhs_9083;
+    __place_rhs_9083
   )
 ))
 
@@ -5326,13 +5330,13 @@ let __init_currentFunctionLocalTypeHints = currentFunctionLocalTypeHints := Obj.
 
 let __init_currentFunctionShadowingValueNames = currentFunctionShadowingValueNames := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_9083 = HxArray.create () in __arr_9083)
+let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_9084 = HxArray.create () in __arr_9084)
 
 let __init_currentLocalCallSigCache = currentLocalCallSigCache := Obj.magic (HxRuntime.hx_null)
 
 let __init_currentImportInt64 = currentImportInt64 := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_9084 = HxArray.create () in __arr_9084)
+let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_9085 = HxArray.create () in __arr_9085)
 
 let __init_currentKnownModuleNames = currentKnownModuleNames := HxMap.create_string ()
 
@@ -5342,7 +5346,7 @@ let __init_currentInstanceFieldsByTypePath = currentInstanceFieldsByTypePath := 
 
 let __init_currentInstanceMethodsByTypePath = currentInstanceMethodsByTypePath := Obj.magic (Obj.magic (HxRuntime.hx_null))
 
-let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_9085 = HxArray.create () in __arr_9085)
+let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_9086 = HxArray.create () in __arr_9086)
 
 let backendDialect = Obj.magic (HihOcamlBackendDialect.create ())
 
