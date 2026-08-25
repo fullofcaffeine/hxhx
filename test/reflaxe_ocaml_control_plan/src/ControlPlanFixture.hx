@@ -772,6 +772,11 @@ class ControlPlanFixture {
 		}
 		if (forward.returnBoundaryDecision() == null)
 			throw "Admitted control plan lost its return boundary";
+		if (OcamlControlPlan.isExactNullableEnumSide("Null<Int>", "Obj.t", "representation:Null<Int>:internal-value")
+			|| OcamlControlPlan.isExactNullableEnumSide("Null<Bool>", "Obj.t", "representation:Null<Bool>:internal-value")
+			|| !OcamlControlPlan.isExactNullableEnumSide("Null<fixture.Signal>", "Obj.t", "representation:Null<fixture.Signal>:internal-value")) {
+			throw "Nullable primitive carriers were confused with an exact nullable enum";
+		}
 
 		final copied = forward.decisions();
 		copied[0].profileEligibility.push("corrupted");
@@ -1284,6 +1289,36 @@ class ControlPlanFixture {
 				{expression: typedBreaks[0], decisionId: sameSourceBreakA.id},
 				{expression: typedBreaks[0], decisionId: ambiguousSourceBreakB.id}
 			]));
+
+		final typedReturnsRoot = Context.typeExpr(macro function():Int {
+			if (true)
+				return 1;
+			return 2;
+		});
+		final typedReturns:Array<TypedExpr> = [];
+		function collectReturnNodes(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TReturn(_):
+					typedReturns.push(expression);
+				case _:
+			}
+			TypedExprTools.iter(expression, collectReturnNodes);
+		}
+		collectReturnNodes(typedReturnsRoot);
+		if (typedReturns.length != 2)
+			throw "The exact return occurrence fixture did not produce two return nodes";
+		final sameSourceReturnA = returnDecision("control:return:same-source:a", 210);
+		final sameSourceReturnB = returnDecision("control:return:same-source:b", 210);
+		Reflect.setField(sameSourceReturnA, "source", OcamlLoweredOrigin.sourceSpan(typedReturns[0].pos));
+		Reflect.setField(sameSourceReturnB, "source", OcamlLoweredOrigin.sourceSpan(typedReturns[1].pos));
+		final indexedReturns = new OcamlControlPlan(true, false, false, binding(), [], [sameSourceReturnA, sameSourceReturnB], [], [
+			{expression: typedReturns[0], decisionId: sameSourceReturnA.id},
+			{expression: typedReturns[1], decisionId: sameSourceReturnB.id}
+		]);
+		if (indexedReturns.decisionFor(typedReturns[0])?.id != sameSourceReturnA.id
+			|| indexedReturns.decisionFor(typedReturns[1])?.id != sameSourceReturnB.id) {
+			throw "The typed occurrence index collapsed distinct same-span return nodes";
+		}
 
 		final typedThrowsRoot = Context.typeExpr(macro {
 			if (true)

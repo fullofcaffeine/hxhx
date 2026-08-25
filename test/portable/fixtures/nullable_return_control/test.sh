@@ -264,7 +264,7 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	echo "Public inspection accepted a primitive-to-nullable return with a conflicting output family" >&2
 	exit 1
 fi
-if ! grep -q "exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$TAMPER_INSPECTION"; then
+if ! grep -q "exact-value, nominal, nullable-carrier, enum-to-nullable, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing" "$TAMPER_INSPECTION"; then
 	echo "Public inspection rejected the corrupt primitive-to-nullable return without an actionable reason" >&2
 	cat "$TAMPER_INSPECTION" >&2
 	exit 1

@@ -1532,7 +1532,8 @@ class OcamlControlPlan {
 
 	/** Recognizes a nullable carrier whose exact enum owner is checked separately. */
 	public static function isExactNullableEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
-		return StringTools.startsWith(semanticTypeId, "Null<")
+		return !isAdmittedNullableSide(semanticTypeId, carrierTypeId, representationId)
+			&& StringTools.startsWith(semanticTypeId, "Null<")
 			&& StringTools.endsWith(semanticTypeId, ">")
 			&& carrierTypeId == "Obj.t"
 			&& representationId == 'representation:$semanticTypeId:internal-value';
@@ -1925,6 +1926,13 @@ class OcamlControlPlan {
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
 		if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
 			|| payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
+			return haxe.macro.TypeTools.toString(expression.t) == payload.inputSemanticTypeId;
+		}
+		if (payload.conversion == OcamlControlPayloadConversion.PreserveNullableCarrier
+			&& isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
+			// The same typed occurrence can expose a different raw `Type` wrapper after
+			// later planners resolve lazy or monomorphic nodes. Its semantic type remains
+			// stable, and the sealed payload still owns the exact nullable carrier.
 			return haxe.macro.TypeTools.toString(expression.t) == payload.inputSemanticTypeId;
 		}
 		if (payload.conversion == OcamlControlPayloadConversion.PreserveAnonymousCarrier) {
