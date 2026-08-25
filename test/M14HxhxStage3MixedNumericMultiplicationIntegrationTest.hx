@@ -109,10 +109,24 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 	static function main():Void {
 		final root = haxe.io.Path.normalize(".tmp/m14_hxhx_stage3_mixed_numeric_multiplication");
 		final sourceDir = haxe.io.Path.join([root, "src"]);
+		final dependencyDir = haxe.io.Path.join([root, "dependency"]);
 		final outDir = haxe.io.Path.join([root, "out"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
 		FileSystem.createDirectory(sourceDir);
+		FileSystem.createDirectory(haxe.io.Path.join([dependencyDir, "clock"]));
+
+		final timerPath = haxe.io.Path.join([dependencyDir, "clock", "Timer.hx"]);
+		final timer = [
+			"package clock;",
+			"class Timer {",
+			"  public static function stamp():Float return 1.25;",
+			"}",
+		].join("\n");
+		File.saveContent(timerPath, timer);
+		final collidingTimerPath = haxe.io.Path.join([sourceDir, "Timer.hx"]);
+		final collidingTimer = ["class Timer {", "  public static function stamp():Int return 1;", "}",].join("\n");
+		File.saveContent(collidingTimerPath, collidingTimer);
 
 		final timeSourcePath = haxe.io.Path.join([sourceDir, "TimeSource.hx"]);
 		final timeSource = [
@@ -126,7 +140,10 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		File.saveContent(timeSourcePath, timeSource);
 		final sourcePath = haxe.io.Path.join([sourceDir, "MixedNumericMultiplication.hx"]);
 		final source = [
+			"import clock.Timer;",
 			"class MixedNumericMultiplication {",
+			"  final startTime:Float;",
+			"  function new(startTime:Float) this.startTime = startTime;",
 			"  static function observed(label:String, value:Float):Float {",
 			"    Sys.println('read=' + label);",
 			"    return value;",
@@ -137,6 +154,10 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 			"    return timeout - Math.round(1000 * (now - start));",
 			"  static function roundedCall(timeout:Int):Int",
 			"    return timeout - Math.round(1000 * TimeSource.stamp());",
+			"  function roundedInstance(timeout:Int):Int",
+			"    return timeout - Math.round(1000 * (TimeSource.stamp() - startTime));",
+			"  function roundedImportedTimer(timeout:Int):Int",
+			"    return timeout - Math.round(1000 * (Timer.stamp() - startTime));",
 			"  static function roundScaled(scale:Int, value:Float):Int return Math.round(scale * value);",
 			"  static function pureInt():Int return 6 * 7;",
 			"  static function main():Void {",
@@ -144,6 +165,7 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 			"    Sys.println(Math.round(floatLeft() * 100));",
 			"    Sys.println(rounded(5000, 8.875, 10.125));",
 			"    Sys.println(roundedCall(5000));",
+			"    Sys.println(new MixedNumericMultiplication(0.25).roundedInstance(5000));",
 			"    Sys.println(roundScaled(3, -0.5));",
 			"    Sys.println(pureInt());",
 			"  }",
@@ -196,23 +218,31 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		final upstream = run("haxe", [
 			"-cp",
 			sourceDir,
+			"-cp",
+			dependencyDir,
 			"-main",
 			"MixedNumericMultiplication",
 			"--interp",
 			"--macro",
 			"MixedNumericMultiplicationProbe.verify()"
 		]);
-		final expected = "read=left\n500\nread=right\n500\n3750\nread=now\n3750\n-1\n42\n";
+		final expected = "read=left\n500\nread=right\n500\n3750\nread=now\n3750\nread=now\n4000\n-1\n42\n";
 		assertTrue(upstream.exitCode == 0, "Haxe 4.3.7 rejected the mixed numeric contract: " + upstream.stderr);
 		assertTrue(upstream.stdout == expected, "unexpected Haxe 4.3.7 mixed numeric output: " + upstream.stdout);
 
+		final parsedTimer = ParserStage.parse(timer, timerPath);
+		final resolvedTimer = new ResolvedModule("clock.Timer", timerPath, parsedTimer);
+		final parsedCollidingTimer = ParserStage.parse(collidingTimer, collidingTimerPath);
+		final resolvedCollidingTimer = new ResolvedModule("Timer", collidingTimerPath, parsedCollidingTimer);
 		final parsedTimeSource = ParserStage.parse(timeSource, timeSourcePath);
 		final resolvedTimeSource = new ResolvedModule("TimeSource", timeSourcePath, parsedTimeSource);
 		final parsed = ParserStage.parse(source, sourcePath);
 		final resolved = new ResolvedModule("MixedNumericMultiplication", sourcePath, parsed);
-		final index = TyperIndex.build([resolvedTimeSource, resolved]);
-		final loader = new ModuleLoader([sourceDir], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolvedTimeSource, resolved]);
+		final index = TyperIndex.build([resolvedTimer, resolvedCollidingTimer, resolvedTimeSource, resolved]);
+		final loader = new ModuleLoader([sourceDir, dependencyDir], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolvedTimer, resolvedCollidingTimer, resolvedTimeSource, resolved]);
+		final typedTimer = TyperStage.typeResolvedModule(resolvedTimer, index, loader);
+		final typedCollidingTimer = TyperStage.typeResolvedModule(resolvedCollidingTimer, index, loader);
 		final typedTimeSource = TyperStage.typeResolvedModule(resolvedTimeSource, index, loader);
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "intLeft"), "*", "primitive:Int", "primitive:Float", "primitive:Float");
@@ -225,11 +255,21 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		final roundedCall = findFunction(typed, "MixedNumericMultiplication", "roundedCall");
 		requireBinary(roundedCall, "*", "primitive:Int", "primitive:Float", "primitive:Float");
 		requireCall(roundedCall, "round", "primitive:Int", "primitive:Float");
+		final roundedInstance = findFunction(typed, "MixedNumericMultiplication", "roundedInstance");
+		requireBinary(roundedInstance, "-", "primitive:Float", "primitive:Float", "primitive:Float");
+		requireBinary(roundedInstance, "*", "primitive:Int", "primitive:Float", "primitive:Float");
+		requireBinary(roundedInstance, "-", "primitive:Int", "primitive:Int", "primitive:Int");
+		requireCall(roundedInstance, "round", "primitive:Int", "primitive:Float");
+		final roundedImportedTimer = findFunction(typed, "MixedNumericMultiplication", "roundedImportedTimer");
+		requireBinary(roundedImportedTimer, "-", "primitive:Float", "primitive:Float", "primitive:Float");
+		requireBinary(roundedImportedTimer, "*", "primitive:Int", "primitive:Float", "primitive:Float");
+		requireBinary(roundedImportedTimer, "-", "primitive:Int", "primitive:Int", "primitive:Int");
+		requireCall(roundedImportedTimer, "round", "primitive:Int", "primitive:Float");
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "pureInt"), "*", "primitive:Int", "primitive:Int", "primitive:Int");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource, typedTimer, typedCollidingTimer], []), outDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "MixedNumericMultiplication.ml"]));
-		assertTrue(countOccurrences(generated, "*.") >= 5, "mixed multiplication did not use Float operators: " + generated);
+		assertTrue(countOccurrences(generated, "*.") >= 6, "mixed multiplication did not use Float operators: " + generated);
 		assertTrue(generated.indexOf("HxInt.mul (1000)") < 0, "the elapsed-time scale still used Int multiplication: " + generated);
 		assertTrue(generated.indexOf("HxInt.mul (6) (7)") >= 0, "pure Int multiplication lost HxInt semantics: " + generated);
 
