@@ -9751,19 +9751,22 @@ class OcamlBuilder {
 			}
 		}
 		if (needsIfChain) {
-			final builtBranchBySource:Map<String, OcamlExpr> = [];
-			final outputCountBySource:Map<String, Int> = [];
+			// Distinct branch expressions can share one source span after Haxe types a
+			// switch. Reuse output only for the same typed expression object; otherwise
+			// a case can accidentally receive the default branch's generated value.
+			final builtBranchByExpression:haxe.ds.ObjectMap<TypedExpr, OcamlExpr> = new haxe.ds.ObjectMap();
+			final outputCountByExpression:haxe.ds.ObjectMap<TypedExpr, Int> = new haxe.ds.ObjectMap();
 			function buildBranch(source:TypedExpr):OcamlExpr {
-				final sourceKey = branchSourceKey(source);
-				final existing = builtBranchBySource.get(sourceKey);
+				final existing = builtBranchByExpression.get(source);
 				if (existing == null) {
 					final built = wrapCaseExpr(source, buildExpr(source));
-					builtBranchBySource.set(sourceKey, built);
-					outputCountBySource.set(sourceKey, 1);
+					builtBranchByExpression.set(source, built);
+					outputCountByExpression.set(source, 1);
 					return built;
 				}
-				final outputCount = outputCountBySource.get(sourceKey);
-				outputCountBySource.set(sourceKey, outputCount + 1);
+				final outputCount = outputCountByExpression.get(source);
+				outputCountByExpression.set(source, outputCount + 1);
+				final sourceKey = branchSourceKey(source);
 				return ctx.finalRuntimeUses.copyExpressionForOutput(existing, 'switch-branch:$sourceKey:output:$outputCount', ctx.activateStagedTypeRuntimeUse);
 			}
 
