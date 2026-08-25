@@ -1169,6 +1169,29 @@ class EmitterStage {
 		return resolved == null ? null : cast resolved;
 	}
 
+	/**
+		Resolves the selected declaration for a static type-path call.
+
+		The signature index stores qualified keys such as `Timer.stamp`. Numeric
+		classification must keep that owner, or an unrelated local name can hide the
+		declared result type.
+	**/
+	static function qualifiedCallSigForStage3(owner:HxExpr, field:String, ?callSigByCallee:Map<String, EmitterCallSig>):Null<EmitterCallSig> {
+		final parts = tryExtractTypePathPartsFromExpr(owner);
+		if (parts == null || parts.length == 0 || !isUpperStart(parts[parts.length - 1]))
+			return null;
+		final loweredField = ocamlValueIdent(field);
+		final moduleName = ocamlModuleNameFromTypePathParts(parts);
+		var signature = callSigForStage3(moduleName + "." + loweredField, callSigByCallee);
+		if (signature == null && loweredField != field)
+			signature = callSigForStage3(moduleName + "." + field, callSigByCallee);
+		if (signature == null)
+			signature = resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName, field, loweredField);
+		if (signature == null && currentModuleFilePath != null && currentModuleFilePath.length > 0)
+			signature = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, field, loweredField);
+		return signature;
+	}
+
 	static function resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName:String, field:String, loweredField:String,
 			?currentPackagePath:String):Null<EmitterCallSig> {
 		if (moduleName == null || moduleName.length == 0 || currentModuleFilePath == null || currentModuleFilePath.length == 0)
@@ -1926,7 +1949,8 @@ class EmitterStage {
 			case ECall(EIdent(name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Float";
-			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
+			case ECall(EField(owner, name), _): var signature = qualifiedCallSigForStage3(owner, name,
+					callSigByCallee); if (signature == null) signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && StringTools.trim(signature.resultTypeHint) == "Float";
 			case EBinop("/", a, b): !(stage3IsInt64Expr(a,

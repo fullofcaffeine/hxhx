@@ -114,6 +114,16 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		FileSystem.createDirectory(root);
 		FileSystem.createDirectory(sourceDir);
 
+		final timeSourcePath = haxe.io.Path.join([sourceDir, "TimeSource.hx"]);
+		final timeSource = [
+			"class TimeSource {",
+			"  public static function stamp():Float {",
+			"    Sys.println('read=now');",
+			"    return 1.25;",
+			"  }",
+			"}",
+		].join("\n");
+		File.saveContent(timeSourcePath, timeSource);
 		final sourcePath = haxe.io.Path.join([sourceDir, "MixedNumericMultiplication.hx"]);
 		final source = [
 			"class MixedNumericMultiplication {",
@@ -126,7 +136,7 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 			"  static function rounded(timeout:Int, start:Float, now:Float):Int",
 			"    return timeout - Math.round(1000 * (now - start));",
 			"  static function roundedCall(timeout:Int):Int",
-			"    return timeout - Math.round(1000 * observed('now', 1.25));",
+			"    return timeout - Math.round(1000 * TimeSource.stamp());",
 			"  static function roundScaled(scale:Int, value:Float):Int return Math.round(scale * value);",
 			"  static function pureInt():Int return 6 * 7;",
 			"  static function main():Void {",
@@ -196,11 +206,14 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		assertTrue(upstream.exitCode == 0, "Haxe 4.3.7 rejected the mixed numeric contract: " + upstream.stderr);
 		assertTrue(upstream.stdout == expected, "unexpected Haxe 4.3.7 mixed numeric output: " + upstream.stdout);
 
+		final parsedTimeSource = ParserStage.parse(timeSource, timeSourcePath);
+		final resolvedTimeSource = new ResolvedModule("TimeSource", timeSourcePath, parsedTimeSource);
 		final parsed = ParserStage.parse(source, sourcePath);
 		final resolved = new ResolvedModule("MixedNumericMultiplication", sourcePath, parsed);
-		final index = TyperIndex.build([resolved]);
+		final index = TyperIndex.build([resolvedTimeSource, resolved]);
 		final loader = new ModuleLoader([sourceDir], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
+		loader.markResolvedAlready([resolvedTimeSource, resolved]);
+		final typedTimeSource = TyperStage.typeResolvedModule(resolvedTimeSource, index, loader);
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "intLeft"), "*", "primitive:Int", "primitive:Float", "primitive:Float");
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "floatLeft"), "*", "primitive:Float", "primitive:Int", "primitive:Float");
@@ -214,7 +227,7 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		requireCall(roundedCall, "round", "primitive:Int", "primitive:Float");
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "pureInt"), "*", "primitive:Int", "primitive:Int", "primitive:Int");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource], []), outDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "MixedNumericMultiplication.ml"]));
 		assertTrue(countOccurrences(generated, "*.") >= 5, "mixed multiplication did not use Float operators: " + generated);
 		assertTrue(generated.indexOf("HxInt.mul (1000)") < 0, "the elapsed-time scale still used Int multiplication: " + generated);
