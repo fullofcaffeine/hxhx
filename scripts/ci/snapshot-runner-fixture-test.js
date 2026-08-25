@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * Proves that a snapshot compiler cannot consume the runner's fixture list.
+ * Proves the snapshot runner's stream isolation and comparison boundary.
  *
  * The fake compiler deliberately drains standard input. Both snapshot projects
  * must still run, which requires the parent runner to isolate compiler stdin
- * from its NUL-delimited discovery stream.
+ * from its NUL-delimited discovery stream. It also emits the observation-only
+ * runtime-selection report, which has dedicated semantic tests and must not be
+ * treated as generated-code shape.
  */
 
 const childProcess = require('child_process')
@@ -42,6 +44,10 @@ function main() {
 set -euo pipefail
 cat >/dev/null
 cp -R intended out
+printf '%s\\n' '{"observationOnly":true}' > out/ocaml_runtime_selection_shadow_report.json
+if [[ "\${HXHX_SNAPSHOT_MUTATE_MAIN:-}" == "1" ]]; then
+  printf '%s\\n' 'let fixture_name = "unexpected drift"' > out/Main.ml
+fi
 printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
 `
     )
@@ -77,7 +83,25 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
     if (!result.stdout.includes(path.join(snapshotRoot, 'second'))) fail('second fixture was not reported')
     if (!result.stdout.includes('✓ Snapshots OK')) fail('runner did not print its final success marker')
 
-    console.log('SNAPSHOT_RUNNER_STDIN_ISOLATION:PASS')
+    const driftResult = childProcess.spawnSync('bash', [path.join(repoRoot, 'scripts', 'test-snapshots.sh')], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HAXE_BIN: fakeHaxe,
+        HXHX_SNAPSHOT_DIR: snapshotRoot,
+        HXHX_SNAPSHOT_RUN_LOG: runLog,
+        HXHX_SNAPSHOT_MUTATE_MAIN: '1'
+      }
+    })
+
+    if (driftResult.error) fail(`drift check could not start: ${driftResult.error.message}`)
+    if (driftResult.status === 0) fail('ordinary generated OCaml drift was not rejected')
+    if (!`${driftResult.stdout}\n${driftResult.stderr}`.includes('unexpected drift')) {
+      fail('ordinary generated OCaml drift did not appear in the failure output')
+    }
+
+    console.log('SNAPSHOT_RUNNER_BOUNDARY:PASS')
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true })
   }
