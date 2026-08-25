@@ -11,6 +11,10 @@ MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
 NEGATIVE_COMPILE="$(mktemp)"
+repeat_build_args=(-D ocaml_build=native)
+if [ "${PORTABLE_NATIVE_SURFACE_STRICT:-0}" = "1" ]; then
+	repeat_build_args+=(-D ocaml_portable_native_surface=error)
+fi
 trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION" "$NEGATIVE_COMPILE"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$REQUIREMENTS_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
@@ -248,7 +252,7 @@ NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
 cp "$MANIFEST_FILE" "$MANIFEST_COPY"
-haxe build.hxml
+haxe build.hxml "${repeat_build_args[@]}"
 if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	echo "The exact same typed program produced a different catch-control report" >&2
 	diff -u "$REPORT_COPY" "$REPORT_FILE" >&2 || true

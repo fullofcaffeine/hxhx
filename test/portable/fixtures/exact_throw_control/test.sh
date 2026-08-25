@@ -9,6 +9,10 @@ MANIFEST_FILE="out/ocaml_artifact_manifest.json"
 MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
+repeat_build_args=(-D ocaml_build=native)
+if [ "${PORTABLE_NATIVE_SURFACE_STRICT:-0}" = "1" ]; then
+	repeat_build_args+=(-D ocaml_portable_native_surface=error)
+fi
 trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
@@ -277,7 +281,7 @@ NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
 cp "$MANIFEST_FILE" "$MANIFEST_COPY"
-haxe build.hxml
+haxe build.hxml "${repeat_build_args[@]}"
 if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	echo "The exact same typed program produced a different throw-control report" >&2
 	diff -u "$REPORT_COPY" "$REPORT_FILE" >&2 || true
