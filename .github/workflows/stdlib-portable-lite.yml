@@ -97,4 +97,7 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Run stdlib portable tier1 suite
+        env:
+          PORTABLE_FIXTURE_TIMEOUT_SECONDS: "1800"
+          PORTABLE_JOBS: "4"
         run: npm run test:stdlib:portable:tier1
