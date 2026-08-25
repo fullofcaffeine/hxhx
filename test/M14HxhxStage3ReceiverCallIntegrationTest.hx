@@ -18,6 +18,33 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			throw message + " (unexpected `" + needle + "`)";
 	}
 
+	/**
+		Prove that request cleanup removes a local name left by an aborted emit.
+
+		A function parameter can shadow a module function during one request. If an
+		emit stops before normal restoration, the next request must still resolve its
+		unshadowed call against the new current module.
+	**/
+	static function assertRequestResetDropsAbortedFunctionShadowing():Void {
+		final arityByIdent = new Map<String, Int>();
+		arityByIdent.set("load", 2);
+		final staleShadowing = new Map<String, Bool>();
+		staleShadowing.set("load", true);
+		@:privateAccess EmitterStage.currentOcamlModuleName = "Haxe_macro_Context";
+		@:privateAccess EmitterStage.currentFunctionShadowingValueNames = staleShadowing;
+		final contaminatedTarget = @:privateAccess EmitterStage.canonicalCallTargetForStage3("load", arityByIdent);
+		assertEquals(contaminatedTarget, "load", "The request-reset probe did not establish stale function shadowing.");
+
+		CompilerRequestStaticState.reset();
+		final shadowingAfterReset = @:privateAccess EmitterStage.currentFunctionShadowingValueNames;
+		assertTrue(shadowingAfterReset == null, "Request cleanup retained a function-local shadowing name from an aborted emit.");
+
+		@:privateAccess EmitterStage.currentOcamlModuleName = "Haxe_macro_Context";
+		final cleanTarget = @:privateAccess EmitterStage.canonicalCallTargetForStage3("load", arityByIdent);
+		assertEquals(cleanTarget, "Haxe_macro_Context.load", "Stale function shadowing changed the next request's module call target.");
+		CompilerRequestStaticState.reset();
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -32,6 +59,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 	}
 
 	static function main():Void {
+		assertRequestResetDropsAbortedFunctionShadowing();
 		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_hxhx_stage3_receiver_call_' + Std.string(Date.now().getTime()));
 		final srcDir = haxe.io.Path.join([tmpRoot, 'src']);
 		final outDir = haxe.io.Path.join([tmpRoot, 'out']);

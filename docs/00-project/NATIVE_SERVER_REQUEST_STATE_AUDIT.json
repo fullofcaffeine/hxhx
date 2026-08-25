@@ -69,6 +69,7 @@
         "var:currentModuleFilePath",
         "var:currentFunctionName",
         "var:currentFunctionLocalTypeHints",
+        "var:currentFunctionShadowingValueNames",
         "var:currentStmtTyEntries",
         "var:currentLocalCallSigCache",
         "var:currentImportInt64",

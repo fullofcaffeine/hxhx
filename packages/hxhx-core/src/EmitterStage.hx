@@ -9107,6 +9107,7 @@ class EmitterStage {
 		currentModuleFilePath = null;
 		currentFunctionName = null;
 		currentFunctionLocalTypeHints = null;
+		currentFunctionShadowingValueNames = null;
 		currentStmtTyEntries = [];
 		currentLocalCallSigCache = null;
 		currentImportInt64 = null;
