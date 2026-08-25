@@ -84,6 +84,24 @@ function parseTimeoutSeconds(value) {
 	return Number(raw)
 }
 
+/** Parses the optional zero-based shard selected by the hosted workflow. */
+function parseShard(indexValue, countValue) {
+	if ((indexValue == null || indexValue === '') && (countValue == null || countValue === '')) {
+		return { index: 0, count: 1 }
+	}
+	const indexRaw = String(indexValue == null ? '' : indexValue)
+	const countRaw = String(countValue == null ? '' : countValue)
+	if (!/^[0-9]+$/.test(indexRaw) || !/^[1-9][0-9]*$/.test(countRaw) || Number(indexRaw) >= Number(countRaw)) {
+		fail(`PORTABLE_SHARD_INDEX/PORTABLE_SHARD_COUNT must select a zero-based shard, got: ${indexRaw}/${countRaw}`)
+	}
+	return { index: Number(indexRaw), count: Number(countRaw) }
+}
+
+/** Partitions the stable fixture order without omissions or overlap. */
+function selectShard(fixtures, shard) {
+	return fixtures.filter((_, index) => index % shard.count === shard.index)
+}
+
 /** Signals only one child process tree owned by this runner. */
 function signalOwnedProcessTree(child, signal) {
 	if (child.pid == null) return
@@ -227,9 +245,12 @@ async function main() {
 	const suiteStartedAt = Date.now()
 	const jobs = parseJobs(process.argv.slice(2))
 	const timeoutSeconds = parseTimeoutSeconds(process.env.PORTABLE_FIXTURE_TIMEOUT_SECONDS)
-	const fixtures = discoverFixtures(fixtureRoot, process.env.PORTABLE_FIXTURE_ALLOWLIST)
+	const allFixtures = discoverFixtures(fixtureRoot, process.env.PORTABLE_FIXTURE_ALLOWLIST)
+	const shard = parseShard(process.env.PORTABLE_SHARD_INDEX, process.env.PORTABLE_SHARD_COUNT)
+	const fixtures = selectShard(allFixtures, shard)
+	if (fixtures.length === 0) fail(`Portable shard ${shard.index}/${shard.count} selected no fixtures`)
 	const activeChildren = new Map()
-	console.log(`[portable-pool] fixtures=${fixtures.length} jobs=${Math.min(jobs, fixtures.length)} fixture_timeout_seconds=${timeoutSeconds}`)
+	console.log(`[portable-pool] fixtures=${fixtures.length}/${allFixtures.length} shard=${shard.index}/${shard.count} jobs=${Math.min(jobs, fixtures.length)} fixture_timeout_seconds=${timeoutSeconds}`)
 	let shuttingDown = false
 	const stopForSignal = signal => {
 		if (shuttingDown) return
@@ -295,7 +316,9 @@ module.exports = {
 	discoverFixtures,
 	parseAllowlist,
 	parseJobs,
+	parseShard,
 	parseTimeoutSeconds,
 	runOwnedCommand,
-	runPool
+	runPool,
+	selectShard
 }

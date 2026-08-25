@@ -7,9 +7,11 @@ const path = require('path')
 const {
 	parseAllowlist,
 	parseJobs,
+	parseShard,
 	parseTimeoutSeconds,
 	runOwnedCommand,
-	runPool
+	runPool,
+	selectShard
 } = require('./run-portable-fixtures')
 
 function processExists(pid) {
@@ -37,6 +39,16 @@ async function main() {
 	assert.throws(() => parseJobs(['--jobs', '0']), /positive integer/)
 	assert.strictEqual(parseTimeoutSeconds('9'), 9)
 	assert.throws(() => parseTimeoutSeconds('0'), /integer from 1 through 3600/)
+	assert.deepStrictEqual(parseShard(null, null), { index: 0, count: 1 })
+	assert.deepStrictEqual(parseShard('1', '2'), { index: 1, count: 2 })
+	assert.throws(() => parseShard('2', '2'), /zero-based shard/)
+	assert.throws(() => parseShard('', '2'), /zero-based shard/)
+	const shardInput = ['a', 'b', 'c', 'd', 'e']
+	const evenShard = selectShard(shardInput, { index: 0, count: 2 })
+	const oddShard = selectShard(shardInput, { index: 1, count: 2 })
+	assert.deepStrictEqual(evenShard, ['a', 'c', 'e'])
+	assert.deepStrictEqual(oddShard, ['b', 'd'])
+	assert.deepStrictEqual([...evenShard, ...oddShard].sort(), shardInput)
 
 	let active = 0
 	let maximumActive = 0
@@ -73,6 +85,9 @@ async function main() {
 	const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/stdlib-portable-lite.yml'), 'utf8')
 	assert.match(workflow, /PORTABLE_JOBS: "4"/)
 	assert.match(workflow, /PORTABLE_FIXTURE_TIMEOUT_SECONDS: "1800"/)
+	assert.match(workflow, /PORTABLE_SHARD_COUNT: "2"/)
+	assert.match(workflow, /PORTABLE_SHARD_INDEX: "\$\{\{ matrix\.shard_index \}\}"/)
+	assert.match(workflow, /shard_index: \[0, 1\]/)
 	assert.doesNotMatch(workflow, /PORTABLE_FIXTURE_ALLOWLIST/)
 
 	const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'portable-pool-fixture-'))
