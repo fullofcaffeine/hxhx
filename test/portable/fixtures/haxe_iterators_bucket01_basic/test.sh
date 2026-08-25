@@ -4,7 +4,10 @@ set -euo pipefail
 node <<'NODE'
 const fs = require('fs')
 
-const interfaceModule = fs.readFileSync('out/Haxe_Constraints.ml', 'utf8')
+const interfaceModulePath = 'out/haxe_Constraints.ml'
+if (!fs.existsSync(interfaceModulePath))
+	throw new Error(`missing generated interface module with exact target filename: ${interfaceModulePath}`)
+const interfaceModule = fs.readFileSync(interfaceModulePath, 'utf8')
 const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
 const interfaceType = interfaceModule.split('\n').find(line => line.startsWith('type imap_t ='))
 const adapter = generatedMain.split('\n').find(line => line.includes('__adapt_standard_imap_'))
