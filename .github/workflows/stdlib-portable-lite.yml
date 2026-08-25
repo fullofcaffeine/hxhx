@@ -32,13 +32,13 @@ env:
 
 jobs:
   stdlib_portable_tier1:
-    name: Stdlib portable tier1 (shard ${{ matrix.shard_index }}/2)
+    name: Stdlib portable tier1 (shard ${{ matrix.shard_index }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        shard_index: [0, 1]
+        shard_index: [0, 1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,8 +102,8 @@ jobs:
 
       - name: Run stdlib portable tier1 suite
         env:
-          PORTABLE_FIXTURE_TIMEOUT_SECONDS: "1800"
+          PORTABLE_FIXTURE_TIMEOUT_SECONDS: "2100"
           PORTABLE_JOBS: "4"
-          PORTABLE_SHARD_COUNT: "2"
+          PORTABLE_SHARD_COUNT: "3"
           PORTABLE_SHARD_INDEX: "${{ matrix.shard_index }}"
         run: npm run test:stdlib:portable:tier1
