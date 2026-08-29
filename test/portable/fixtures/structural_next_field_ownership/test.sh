@@ -125,8 +125,8 @@ if (!generated.includes('HxAnon.get') || !generated.includes('HxAnon.set'))
 	throw new Error('generated ListSort did not exercise both stored next operations')
 if (/HxIterator\.(hasNext|next)/.test(generated))
 	throw new Error('generated ListSort still mistakes an ordinary next field for an Iterator method')
-if (!/HxRuntime\.Hx_return __ret_\d+ -> Obj\.obj __ret_\d+/.test(generated)
-	|| /HxRuntime\.Hx_return __ret_\d+ -> Obj\.magic __ret_\d+/.test(generated)) {
+if (!/HxRuntime\.Hx_return (__ret_\d+) -> \(Obj\.obj \1 : Obj\.t\) : Obj\.t\)/.test(generated)
+	|| /HxRuntime\.Hx_return __ret_\d+ -> [^\n]*Obj\.magic/.test(generated)) {
 	throw new Error('generated ListSort did not recover its generic result through the private typed boundary')
 }
 
