@@ -465,7 +465,8 @@ function main() {
     const portable = summary.scenarios.find(entry => entry.id === 'ro-perf-05')
     const metal = summary.scenarios.find(entry => entry.id === 'ro-perf-06')
     if (portable && metal && portable.measured && metal.measured
-      && portable.measured.run.medianMs > 0 && portable.measured.build.medianMs > 0) {
+      && portable.measured.run.medianMs > 0 && portable.measured.build.medianMs > 0
+      && metal.measured.run.medianMs > 0 && metal.measured.build.medianMs > 0) {
       const metalVsPortable = {
         runMedianPctOfPortable: Math.round((metal.measured.run.medianMs / portable.measured.run.medianMs) * 100),
         buildMedianPctOfPortable: Math.round((metal.measured.build.medianMs / portable.measured.build.medianMs) * 100)

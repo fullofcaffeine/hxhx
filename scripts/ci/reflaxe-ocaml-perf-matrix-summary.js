@@ -154,6 +154,9 @@ function validateScenario(scenario, platform) {
 			fail(`${platform} scenario ${scenario.id} native runtime failed`)
 		}
 		validateStats(scenario.measured.run, contract.runReps, `${platform}.${scenario.id}.run`)
+		if (scenario.measured.build.medianMs <= 0 || scenario.measured.run.medianMs <= 0) {
+			fail(`${platform} scenario ${scenario.id} must retain positive build and run medians`)
+		}
 	}
 	return {
 		id: scenario.id,

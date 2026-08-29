@@ -9,6 +9,7 @@ import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
+import reflaxe.ocaml.macros.StrictModeSourceAnnotation.hasExplicitDynamicLocal;
 
 private typedef StrictModeSnapshot = {
 	final mode:String;
@@ -164,7 +165,7 @@ class StrictModeEnforcer {
 						violationIds);
 				}
 			case TVar(variable, _):
-				if (isDynamicType(variable.t)) {
+				if (isDynamicType(variable.t) && hasExplicitDynamicLocal(variable.name, expr.pos)) {
 					emitStrictViolation("dynamic_var", "ocaml metal strict mode forbids explicit `Dynamic` variable annotations in application code.",
 						expr.pos, strictHardError, reported, violationIds);
 				}

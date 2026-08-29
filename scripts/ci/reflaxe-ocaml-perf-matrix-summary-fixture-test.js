@@ -323,6 +323,11 @@ try {
 	expectRejected(baseReceipts, 'negative duration', receipts => {
 		receipts[0].scenarios[4].measured.run.samplesMs[0] = -1
 	}, /finite number >= 0/)
+	expectRejected(baseReceipts, 'zero metal runtime median', receipts => {
+		const metal = receipts[0].scenarios.find(scenario => scenario.id === 'ro-perf-06')
+		metal.measured.run = stats(Array(9).fill(0))
+		receipts[0].profileComparison.runMedianPctOfPortable = 0
+	}, /positive build and run medians/)
 	expectRejected(baseReceipts, 'checkout fallback', receipts => {
 		receipts[0].provenance.installation.targetResolvedOutsideCheckout = false
 	}, /did not measure the proven isolated installation/)

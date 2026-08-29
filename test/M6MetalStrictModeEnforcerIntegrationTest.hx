@@ -118,6 +118,12 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 		assertTrue(metalDynamic.exitCode != 0, "metal profile should reject explicit Dynamic annotations");
 		assertContains(combinedOutput(metalDynamic), "Dynamic", "metal dynamic failure should mention Dynamic policy");
 
+		final metalInferredStringConcat = compileFixture("inferred_string_concat", ["ocaml_profile=metal"]);
+		assertTrue(metalInferredStringConcat.exitCode == 0,
+			"metal profile should accept compiler-generated Dynamic temporaries for typed string concatenation");
+		assertNotContains(combinedOutput(metalInferredStringConcat), "Dynamic variable annotations",
+			"inferred string concatenation should not be reported as an explicit Dynamic annotation");
+
 		final fallbackInjection = compileFixture("injection", ["ocaml_profile=metal", "ocaml_metal_allow_fallback"]);
 		assertTrue(fallbackInjection.exitCode == 0, "metal fallback should allow compilation");
 		assertContains(combinedOutput(fallbackInjection), "ocaml_metal_allow_fallback", "fallback build should emit warning message");
