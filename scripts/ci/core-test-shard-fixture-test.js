@@ -65,14 +65,20 @@ function main() {
   )
 
   const expectedCounts = {
-    compiler: 120,
+    'compiler-foundation': 18,
+    'compiler-packaging': 11,
+    'compiler-focused': 91,
     'macro-host-integration': 3,
-    'target-packages': 3,
+    portable: 1,
+    'target-packages': 2,
     'hxhx-targets': 1
   }
   const expectedShardMinimumTiers = {
-    compiler: 'Q2',
+    'compiler-foundation': 'Q2',
+    'compiler-packaging': 'Q2',
+    'compiler-focused': 'Q2',
     'macro-host-integration': 'Q2',
+    portable: 'Q2',
     'target-packages': 'Q2',
     'hxhx-targets': 'Q3'
   }
@@ -101,6 +107,16 @@ function main() {
       `${shard.id} list order differs from npm test order`
     )
   }
+  assert(!plan.shards.some(shard => shard.id === 'compiler'), 'the timed-out broad compiler shard still exists')
+  assert(
+    JSON.stringify(plan.shards.find(shard => shard.id === 'portable').commands) === JSON.stringify(['test:portable']),
+    'portable fixture ownership must remain isolated from snapshots and examples'
+  )
+  assert(
+    JSON.stringify(plan.shards.find(shard => shard.id === 'target-packages').commands) ===
+      JSON.stringify(['test:snapshot', 'test:examples']),
+    'target-packages must retain snapshots and examples without rerunning portable fixtures'
+  )
   const macroShard = plan.shards.find(shard => shard.id === 'macro-host-integration')
   const macroHostPlan = loadMacroHostPlan(repoRoot)
   assert(macroShard.preparation.kind === 'shared-macro-host', 'macro-host shard must prepare one shared host')
@@ -173,7 +189,7 @@ function main() {
   )
 
   const misplacedPreparation = structuredClone(plan.manifest)
-  misplacedPreparation.shards.find(shard => shard.id === 'compiler').preparation = {
+  misplacedPreparation.shards.find(shard => shard.id === 'compiler-foundation').preparation = {
     kind: 'shared-macro-host',
     plan: 'scripts/ci/macro-host-integration-plan.json'
   }
@@ -301,6 +317,41 @@ function main() {
   assert(
     !workflow.slice(q2MatrixStart, q3HxhxStart).includes('shard: hxhx-targets'),
     'Q2 matrix still contains the large hxhx target shard'
+  )
+  const q2Matrix = workflow.slice(q2MatrixStart, q3HxhxStart)
+  const expectedBoundedRows = [
+    ['compiler-foundation', 'Compiler foundations and runtime'],
+    ['compiler-packaging', 'OCaml packaging and metal profile'],
+    ['compiler-focused', 'Focused compiler regressions'],
+    ['macro-host-integration', 'Macro-host integration'],
+    ['target-packages', 'Snapshots and examples']
+  ]
+  for (const [shard, label] of expectedBoundedRows) {
+    requireIncludes(
+      q2Matrix,
+      `          - shard: ${shard}\n            label: ${label}\n            timeout_minutes: 40`,
+      `Core bounded shard ${shard}`
+    )
+  }
+  assert(
+    (q2Matrix.match(/          - shard: portable\n/g) || []).length === 3,
+    'Core workflow must run exactly three portable fixture partitions'
+  )
+  for (const index of [0, 1, 2]) {
+    requireIncludes(
+      q2Matrix,
+      `          - shard: portable\n            label: Portable fixtures (${index + 1}/3)\n            timeout_minutes: 50\n            portable_shard_index: "${index}"\n            portable_shard_count: "3"\n            portable_jobs: "4"\n            portable_fixture_timeout_seconds: "2100"`,
+      `Core portable fixture partition ${index}`
+    )
+  }
+  requireIncludes(q2Matrix, '    timeout-minutes: ${{ matrix.timeout_minutes }}', 'Core test shard timeout budget')
+  requireIncludes(q2Matrix, 'PORTABLE_SHARD_INDEX: ${{ matrix.portable_shard_index }}', 'Core portable shard index')
+  requireIncludes(q2Matrix, 'PORTABLE_SHARD_COUNT: ${{ matrix.portable_shard_count }}', 'Core portable shard count')
+  requireIncludes(q2Matrix, 'PORTABLE_JOBS: ${{ matrix.portable_jobs }}', 'Core portable worker budget')
+  requireIncludes(
+    q2Matrix,
+    'PORTABLE_FIXTURE_TIMEOUT_SECONDS: ${{ matrix.portable_fixture_timeout_seconds }}',
+    'Core portable fixture deadline'
   )
   requireIncludes(workflow, '  hxhx-e2e:\n    name: Tests / hxhx target end-to-end', 'Q3 hxhx E2E job')
   requireIncludes(workflow, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')

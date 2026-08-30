@@ -476,15 +476,48 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: compiler
-            label: Compiler and focused regressions
+          - shard: compiler-foundation
+            label: Compiler foundations and runtime
+            timeout_minutes: 40
+          - shard: compiler-packaging
+            label: OCaml packaging and metal profile
+            timeout_minutes: 40
+          - shard: compiler-focused
+            label: Focused compiler regressions
+            timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
+            timeout_minutes: 40
           - shard: target-packages
-            label: Portable, snapshots, and examples
-    # Q2 keeps the three bounded compiler/target families. The large hxhx
-    # application workload has its own Q3 job below.
-    timeout-minutes: 40
+            label: Snapshots and examples
+            timeout_minutes: 40
+          - shard: portable
+            label: Portable fixtures (1/3)
+            timeout_minutes: 50
+            portable_shard_index: "0"
+            portable_shard_count: "3"
+            portable_jobs: "4"
+            portable_fixture_timeout_seconds: "2100"
+          - shard: portable
+            label: Portable fixtures (2/3)
+            timeout_minutes: 50
+            portable_shard_index: "1"
+            portable_shard_count: "3"
+            portable_jobs: "4"
+            portable_fixture_timeout_seconds: "2100"
+          - shard: portable
+            label: Portable fixtures (3/3)
+            timeout_minutes: 50
+            portable_shard_index: "2"
+            portable_shard_count: "3"
+            portable_jobs: "4"
+            portable_fixture_timeout_seconds: "2100"
+    # Run 31916032645 measured 20m05s for compiler foundations and 13m53s
+    # for packaging before the old broad compiler shard timed out. Portable
+    # run 33281077534 measured 36m22s for its slowest third, including one
+    # 32m16s fixture. The per-row budgets preserve setup and variance headroom.
+    # The large hxhx application workload retains its own Q3 job below.
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -540,6 +573,10 @@ jobs:
           HXHX_FORCE_STAGE0: "0"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
+          PORTABLE_SHARD_INDEX: ${{ matrix.portable_shard_index }}
+          PORTABLE_SHARD_COUNT: ${{ matrix.portable_shard_count }}
+          PORTABLE_JOBS: ${{ matrix.portable_jobs }}
+          PORTABLE_FIXTURE_TIMEOUT_SECONDS: ${{ matrix.portable_fixture_timeout_seconds }}
         run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
       - name: Upload shared macro-host evidence
         if: ${{ always() && matrix.shard == 'macro-host-integration' }}
