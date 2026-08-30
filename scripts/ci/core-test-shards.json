@@ -6,25 +6,25 @@
       "id": "compiler-foundation",
       "label": "Compiler foundations and runtime",
       "minimumTier": "Q2",
-      "baselineSeconds": 1204.876
+      "baselineSeconds": 1255.271
     },
     {
       "id": "compiler-packaging",
       "label": "OCaml packaging and metal profile",
       "minimumTier": "Q2",
-      "baselineSeconds": 832.975
+      "baselineSeconds": 871.388
     },
     {
       "id": "compiler-focused",
       "label": "Focused compiler regressions",
       "minimumTier": "Q2",
-      "baselineSeconds": 480
+      "baselineSeconds": 264.158
     },
     {
       "id": "macro-host-integration",
       "label": "Macro-host integration",
       "minimumTier": "Q2",
-      "baselineSeconds": 805.742,
+      "baselineSeconds": 679.222,
       "preparation": {
         "kind": "shared-macro-host",
         "plan": "scripts/ci/macro-host-integration-plan.json"
@@ -34,19 +34,19 @@
       "id": "portable",
       "label": "Portable fixtures",
       "minimumTier": "Q2",
-      "baselineSeconds": 2043.66
+      "baselineSeconds": 2181.824
     },
     {
       "id": "target-packages",
       "label": "Snapshots and examples",
       "minimumTier": "Q2",
-      "baselineSeconds": 600
+      "baselineSeconds": 671.738
     },
     {
       "id": "hxhx-targets",
       "label": "hxhx target end-to-end",
       "minimumTier": "Q3",
-      "baselineSeconds": 1184.522
+      "baselineSeconds": 533.083
     }
   ],
   "aggregateJobs": [

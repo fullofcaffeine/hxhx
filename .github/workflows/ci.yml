@@ -512,10 +512,9 @@ jobs:
             portable_shard_count: "3"
             portable_jobs: "4"
             portable_fixture_timeout_seconds: "2100"
-    # Run 31916032645 measured 20m05s for compiler foundations and 13m53s
-    # for packaging before the old broad compiler shard timed out. Portable
-    # run 33281077534 measured 36m22s for its slowest third, including one
-    # 32m16s fixture. The per-row budgets preserve setup and variance headroom.
+    # Current-layout runs 33284703349 and 33289157979 measured the slowest
+    # 40-minute row at 23m06s and the slowest portable row at 38m25s. These
+    # budgets retain at least 16m54s and 11m35s of hosted-runner headroom.
     # The large hxhx application workload retains its own Q3 job below.
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
@@ -592,8 +591,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [route, guards]
     if: ${{ needs.route.outputs.run_q3 == 'true' && needs.guards.result == 'success' }}
-    # This one serialized application workload measured about 24 minutes on a
-    # hosted runner. Reserve it for Q3 while retaining normal setup headroom.
+    # Current-layout runs 33284703349 and 33289157979 measured this serialized
+    # job at 11m05s and 10m46s. Reserve it for Q3 with at least 28m55s headroom.
     timeout-minutes: 40
     steps:
       - name: Checkout
