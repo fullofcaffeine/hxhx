@@ -20,6 +20,30 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		}
 	}
 
+	/**
+		Returns the standard-library root for the exact stage0 Haxe version used as
+		the behavior oracle. CI installs that compiler through Lix, while a local
+		developer can select another complete installation with HAXE_STD_PATH.
+	**/
+	static function requiredStage0StdPath(version:String):String {
+		final configured = Sys.getEnv("HAXE_STD_PATH");
+		if (configured != null && configured != "" && FileSystem.isDirectory(configured))
+			return configured;
+
+		final home = Sys.getEnv("HOME");
+		if (home != null && home != "") {
+			final lixManaged = haxe.io.Path.join([home, "haxe", "versions", version, "std"]);
+			if (FileSystem.isDirectory(lixManaged))
+				return lixManaged;
+		}
+
+		final localOracle = haxe.io.Path.normalize("vendor/haxe/std");
+		if (FileSystem.isDirectory(localOracle))
+			return localOracle;
+
+		throw 'Could not locate the Haxe $version standard library. Set HAXE_STD_PATH or install that version through Lix.';
+	}
+
 	static function main():Void {
 		final root = haxe.io.Path.normalize(".tmp/m14_hxhx_stage3_dynamic_operator");
 		final sourceDir = haxe.io.Path.join([root, "src"]);
@@ -114,8 +138,11 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final versionError = versionProcess.stderr.readAll().toString();
 		final versionCode = versionProcess.exitCode();
 		versionProcess.close();
-		assertTrue(versionCode == 0 && StringTools.startsWith(StringTools.trim(haxeVersion), "4.3.7"),
-			"The Dynamic operator oracle requires Haxe 4.3.7: " + versionError);
+		final trimmedHaxeVersion = StringTools.trim(haxeVersion);
+		assertTrue(versionCode == 0
+			&& StringTools.startsWith(trimmedHaxeVersion, "4.3.7"), "The Dynamic operator oracle requires Haxe 4.3.7: "
+			+ versionError);
+		final stage0StdPath = requiredStage0StdPath(trimmedHaxeVersion);
 		final oracleProcess = new sys.io.Process("haxe", ["-cp", sourceDir, "-main", "Main", "--interp"]);
 		final oracleStdout = oracleProcess.stdout.readAll().toString();
 		final oracleStderr = oracleProcess.stderr.readAll().toString();
@@ -177,7 +204,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			"A concrete nested integer result did not cross its inferred Dynamic return boundary exactly once.");
 		assertTrue(numericCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0, "Nested integer arguments were boxed before concrete integer parameters.");
 
-		final exprToolsSource = File.getContent("vendor/haxe/std/haxe/macro/ExprTools.hx");
+		final exprToolsSource = File.getContent(haxe.io.Path.join([stage0StdPath, "haxe", "macro", "ExprTools.hx"]));
 		for (shape in [
 			"var e1:Dynamic = getValue(e1);",
 			"case OpNot: !e1;",
@@ -213,7 +240,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 
 		// DateTools projects this inferred local as an untyped temporary. Lack of a
 		// temporary type is not evidence that the source value uses Dynamic.
-		final dateToolsPath = haxe.io.Path.normalize("vendor/haxe/std/DateTools.hx");
+		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
 		final dateToolsSource = File.getContent(dateToolsPath);
 		final parsedDateTools = ParserStage.parse(dateToolsSource, dateToolsPath);
 		final typedDateTools = TyperStage.typeModule(parsedDateTools);
