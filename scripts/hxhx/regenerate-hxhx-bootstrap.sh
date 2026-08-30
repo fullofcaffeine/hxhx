@@ -448,6 +448,7 @@ stage0_timeout_elapsed_sec=0
 stage0_last_progress_elapsed_sec=0
 stage0_last_progress_reason="process-start"
 stage0_timeout_cleanup="not-needed"
+stage0_connected_server_observed=0
 script_status="ok"
 script_exit_code=0
 script_report_written=0
@@ -461,6 +462,7 @@ stage0_haxe_switched=0
 resolved_haxe_connect="$HAXE_CONNECT"
 repo_server_started_here=0
 repo_server_was_running=0
+repo_server_selected=0
 current_fingerprint=""
 
 ensure_state_dir() {
@@ -565,6 +567,27 @@ cleanup_repo_server() {
 	fi
 }
 
+# Return only PIDs that the repository server helper revalidates against its
+# recorded process identity. A manual --connect endpoint is not treated as
+# owned and is never added to watchdog observation or cleanup.
+repo_server_owned_pids() {
+	if [ "$repo_server_selected" != "1" ] || [ ! -x "$HAXE_SERVER_HELPER" ]; then
+		return 0
+	fi
+	HAXE_BIN="$stage0_haxe_resolved" "$HAXE_SERVER_HELPER" owned-pids 2>/dev/null \
+		| paste -sd' ' -
+}
+
+cleanup_repo_server_after_watchdog_timeout() {
+	if [ "$repo_server_selected" != "1" ] || [ ! -x "$HAXE_SERVER_HELPER" ]; then
+		return 0
+	fi
+	# --keep-repo-server applies only after a request exits normally. A timed-out
+	# connected request cannot be detached safely, so stop this exact owned
+	# server and remove its identity files before returning control.
+	HAXE_BIN="$stage0_haxe_resolved" "$HAXE_SERVER_HELPER" stop >/dev/null 2>&1 || true
+}
+
 run_haxe_server_preflight() {
 	if [ "$HXHX_HAXE_SERVER_PREFLIGHT" != "1" ]; then
 		echo "== Haxe server preflight: skipped (HXHX_HAXE_SERVER_PREFLIGHT=0)"
@@ -621,6 +644,7 @@ resolve_connect_arg() {
 	if [ "$repo_server_was_running" = "0" ]; then
 		repo_server_started_here=1
 	fi
+	repo_server_selected=1
 	resolved_haxe_connect="$("$HAXE_SERVER_HELPER" port)"
 }
 
@@ -869,7 +893,8 @@ write_report_json() {
     "timeout_elapsed_seconds": $stage0_timeout_elapsed_sec,
     "last_progress_elapsed_seconds": $stage0_last_progress_elapsed_sec,
     "last_progress_reason": "$(json_escape "$stage0_last_progress_reason")",
-    "timeout_cleanup": "$(json_escape "$stage0_timeout_cleanup")"
+    "timeout_cleanup": "$(json_escape "$stage0_timeout_cleanup")",
+    "connected_server_observed": $([ "$stage0_connected_server_observed" = "1" ] && echo true || echo false)
   },
   "phase_seconds": {
     "preflight": $phase_preflight_sec,
@@ -916,7 +941,7 @@ run_stage0_emit() {
 	local emit_code
 	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
 	metrics_file="$(create_stage0_log_file hxhx-stage0-metrics)"
-	printf '0\t0\t0\tnone\t0\t0\tprocess-start\tnot-needed\n' >"$metrics_file"
+	printf '0\t0\t0\tnone\t0\t0\tprocess-start\tnot-needed\t0\n' >"$metrics_file"
 	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
 	echo "== Stage0 emit log: $log_file"
 	if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
@@ -937,6 +962,7 @@ run_stage0_emit() {
 		local last_progress_elapsed_local=0
 		local last_progress_reason_local="process-start"
 		local timeout_cleanup_local="not-needed"
+		local connected_server_observed_local=0
 		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		else
@@ -960,12 +986,23 @@ run_stage0_emit() {
 
 		local elapsed_hb=0
 		local status_elapsed=0
+		local repo_server_poll_elapsed="$HXHX_STAGE0_PROGRESS_POLL_SECS"
+		local repo_server_pids_local=""
 		stage0_watchdog_init
 		while kill -0 "$pid" >/dev/null 2>&1; do
 			sleep 1 || true
 			elapsed_hb="$((elapsed_hb + 1))"
 			status_elapsed="$((status_elapsed + 1))"
-			stage0_watchdog_poll "$elapsed_hb" "$pid" "$log_file"
+			repo_server_poll_elapsed="$((repo_server_poll_elapsed + 1))"
+			if [ "$repo_server_selected" = "1" ] \
+				&& [ "$repo_server_poll_elapsed" -ge "$HXHX_STAGE0_PROGRESS_POLL_SECS" ]; then
+				repo_server_pids_local="$(repo_server_owned_pids || true)"
+				repo_server_poll_elapsed=0
+				if [ -n "$repo_server_pids_local" ]; then
+					connected_server_observed_local=1
+				fi
+			fi
+			stage0_watchdog_poll "$elapsed_hb" "$pid" "$log_file" "$repo_server_pids_local"
 			timeout_kind_local="$STAGE0_WATCHDOG_TIMEOUT_KIND"
 			timeout_elapsed_local="$STAGE0_WATCHDOG_TIMEOUT_ELAPSED"
 			last_progress_elapsed_local="$STAGE0_WATCHDOG_LAST_PROGRESS_ELAPSED"
@@ -977,15 +1014,19 @@ run_stage0_emit() {
 				set +e
 				wait "$pid" >/dev/null 2>&1
 				set -e
+				cleanup_repo_server_after_watchdog_timeout
 				stage0_watchdog_record_cleanup_result
+				if [ -n "$(repo_server_owned_pids || true)" ]; then
+					STAGE0_WATCHDOG_CLEANUP="incomplete"
+				fi
 				timeout_cleanup_local="$STAGE0_WATCHDOG_CLEANUP"
 				echo "Stage0 emit watchdog cleanup=$timeout_cleanup_local pid=$pid process_tree=\"$STAGE0_WATCHDOG_TERMINATED_TREE_PIDS\"." >&2
 				echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 				tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
 					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-					"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
+					"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
 				exit 124
 			fi
 			if [ "$interval" = "0" ]; then
@@ -999,7 +1040,7 @@ run_stage0_emit() {
 			local child_pid
 			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
 			local tree_pids
-			tree_pids="$(stage0_watchdog_collect_process_tree_pids "$pid")"
+			tree_pids="$(stage0_watchdog_collect_observed_pids "$pid" "$repo_server_pids_local")"
 			local rss_probe_pid="$pid"
 			local rss_kb=""
 			local tree_rss_kb=0
@@ -1039,6 +1080,9 @@ run_stage0_emit() {
 			if [ -n "$log_bytes" ]; then
 				heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
 			fi
+			if [ -n "$repo_server_pids_local" ]; then
+				heartbeat_suffix="$heartbeat_suffix owned_server_pids=$(printf '%s' "$repo_server_pids_local" | tr ' ' ',')"
+			fi
 			heartbeat_suffix="$heartbeat_suffix last_progress_elapsed=${last_progress_elapsed_local}s last_progress_reason=${last_progress_reason_local}"
 			if [ -n "$rss_kb" ]; then
 				local rss_mb
@@ -1050,14 +1094,15 @@ run_stage0_emit() {
 				if [ "$tree_rss_mb" -gt "$heartbeat_peak_tree_rss_mb_local" ]; then
 					heartbeat_peak_tree_rss_mb_local="$tree_rss_mb"
 				fi
-				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
 					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-					"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
+					"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
 				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
-					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"child_pid":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
+					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"child_pid":"%s","owned_server_pids":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
 						"$elapsed_hb" "$rss_mb" "$tree_rss_mb" "$pid" "$rss_probe_pid" \
-						"$(json_escape "$child_pid")" "$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
+						"$(json_escape "$child_pid")" "$(json_escape "$repo_server_pids_local")" \
+						"$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
 						>>"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
 				fi
 				if [ -n "$child_pid" ]; then
@@ -1067,8 +1112,9 @@ run_stage0_emit() {
 				fi
 			else
 				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
-					printf '{"elapsed_sec":%s,"pid":%s,"child_pid":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
-						"$elapsed_hb" "$pid" "$(json_escape "$child_pid")" "$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
+					printf '{"elapsed_sec":%s,"pid":%s,"child_pid":"%s","owned_server_pids":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
+						"$elapsed_hb" "$pid" "$(json_escape "$child_pid")" "$(json_escape "$repo_server_pids_local")" \
+						"$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
 						>>"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
 				fi
 				if [ -n "$child_pid" ]; then
@@ -1094,16 +1140,16 @@ run_stage0_emit() {
 		if [ "$code" != "0" ]; then
 			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 				"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
 				"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-				"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
+				"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
 			exit "$code"
 		fi
-		printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+		printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 			"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
 			"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-			"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
+			"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
 	)
 	emit_code="$?"
 	set -e
@@ -1117,9 +1163,10 @@ run_stage0_emit() {
 		local observed_last_progress_elapsed=""
 		local observed_last_progress_reason=""
 		local observed_timeout_cleanup=""
+		local observed_connected_server=""
 		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak \
 			observed_timeout_kind observed_timeout_elapsed observed_last_progress_elapsed \
-			observed_last_progress_reason observed_timeout_cleanup <"$metrics_file" || true
+			observed_last_progress_reason observed_timeout_cleanup observed_connected_server <"$metrics_file" || true
 		if [ -n "$observed_samples" ] && [ "$observed_samples" -gt "$stage0_heartbeat_samples" ]; then
 			stage0_heartbeat_samples="$observed_samples"
 		fi
@@ -1133,6 +1180,7 @@ run_stage0_emit() {
 		stage0_timeout_elapsed_sec="${observed_timeout_elapsed:-0}"
 		stage0_last_progress_elapsed_sec="${observed_last_progress_elapsed:-0}"
 		stage0_last_progress_reason="${observed_last_progress_reason:-process-start}"
+		stage0_connected_server_observed="${observed_connected_server:-0}"
 		stage0_timeout_cleanup="${observed_timeout_cleanup:-not-needed}"
 	fi
 	cleanup_stage0_log_file "$metrics_file"

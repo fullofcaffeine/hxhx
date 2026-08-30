@@ -646,15 +646,27 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     `timeout_kind: "hard"`, records elapsed time and the last progress reason, and records whether
     descendant cleanup completed. This makes a real hang distinguishable from a slow successful
     compile in local logs and CI evidence.
+  - With `--use-repo-server`, the watchdog also observes the server PIDs that
+    `haxe-server.sh owned-pids` verifies. Server CPU and memory therefore count as the work of the
+    connected request. The report sets `connected_server_observed` when those PIDs were present.
+    A manual `--connect` endpoint has no repository ownership record, so the watchdog does not
+    inspect or stop it.
+  - A connected timeout stops both the client and the exact repository-owned server. This rule also
+    applies with `--keep-repo-server`, because the script cannot safely detach a timed-out request
+    from the single server. A normal success or compiler error still follows the requested keep
+    policy.
   - Implementation ownership:
     - `scripts/hxhx/regenerate-hxhx-bootstrap.sh` owns configuration, starts and waits for Haxe,
-      prints heartbeat diagnostics, and writes the final report.
-    - `scripts/hxhx/stage0-process-watchdog.sh` owns progress observation and cleanup of the supplied
-      compiler process tree. It takes one fixed process-table snapshot per observation so monitoring
-      a busy compiler cannot itself become an unbounded process walk.
+      supplies verified server PIDs, prints heartbeat diagnostics, stops an owned server after a
+      timeout, and writes the final report.
+    - `scripts/hxhx/stage0-process-watchdog.sh` owns progress observation and client-tree cleanup. It
+      takes one fixed process-table snapshot per observation so monitoring a busy compiler cannot
+      itself become an unbounded process walk.
     - `scripts/ci/bootstrap-regen-watchdog-fixture-test.sh` checks a silent CPU-active compiler, a
       stalled compiler with descendants, the absolute ceiling, cleanup, reports, and a high-fan-out
       process tree.
+    - `scripts/ci/bootstrap-regen-server-lifecycle-fixture-test.sh` checks busy and idle connected
+      servers, combined memory telemetry, exact owned-server cleanup, and keep-alive behavior.
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Autocreated `.tmp/hxhx-bootstrap-build.*` workdirs are pruned on later runs; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` or disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.

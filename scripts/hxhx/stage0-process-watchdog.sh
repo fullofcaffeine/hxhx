@@ -9,11 +9,12 @@
 # genuinely stuck compiler could occupy CPU, memory, and CI capacity forever.
 #
 # What this module decides:
-# The soft stall limit resets when the owned compiler tree accumulates CPU
-# time, grows its log, or changes process shape. The separate hard limit always
-# measures total elapsed time and cannot be extended by progress. Timeout
-# cleanup is limited to the process tree rooted at the PID supplied by the
-# caller.
+# The soft stall limit resets when an observed compiler process accumulates CPU
+# time, grows its log, or changes process shape. The caller supplies one client
+# root and can add already-verified PIDs from a separate owned compilation
+# server. The separate hard limit always measures total elapsed time and cannot
+# be extended by progress. Timeout cleanup in this module remains limited to
+# the client tree; the caller owns cleanup for any separately managed server.
 #
 # How ownership is divided:
 # The regeneration script starts the compiler, calls these functions once per
@@ -60,6 +61,26 @@ stage0_watchdog_collect_process_tree_pids() {
 		'
 }
 
+# Return the foreground client tree plus any additional PIDs whose ownership
+# the caller already verified. This module must not discover unrelated Haxe
+# servers by command name, port, or executable spelling.
+stage0_watchdog_collect_observed_pids() {
+	local root_pid="$1"
+	local additional_owned_pids="${2:-}"
+
+	{
+		stage0_watchdog_collect_process_tree_pids "$root_pid" | tr ' ' '\n'
+		printf '%s\n' "$additional_owned_pids" | tr ' ' '\n'
+	} | awk '
+		/^[0-9]+$/ && !seen[$1]++ { ordered[++count] = $1 }
+		END {
+			for (i = 1; i <= count; i++)
+				printf "%s%s", (i == 1 ? "" : " "), ordered[i]
+			printf "\n"
+		}
+	'
+}
+
 stage0_watchdog_process_tree_cpu_signature() {
 	local tree_pids="$1"
 	local tree_pid=""
@@ -93,6 +114,7 @@ stage0_watchdog_poll() {
 	local elapsed="$1"
 	local root_pid="$2"
 	local log_file="$3"
+	local additional_owned_pids="${4:-}"
 
 	if [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ] \
 		&& [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
@@ -108,7 +130,7 @@ stage0_watchdog_poll() {
 	STAGE0_WATCHDOG_POLL_ELAPSED=0
 
 	local tree_pids
-	tree_pids="$(stage0_watchdog_collect_process_tree_pids "$root_pid")"
+	tree_pids="$(stage0_watchdog_collect_observed_pids "$root_pid" "$additional_owned_pids")"
 	local cpu_signature
 	cpu_signature="$(stage0_watchdog_process_tree_cpu_signature "$tree_pids")"
 	local log_bytes
