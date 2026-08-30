@@ -765,7 +765,7 @@
     {
       "id": "tier1-cancelled-31916032680",
       "checkId": "portable-tier1-pr",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "cancelled-no-successor",
       "failureClass": "timeout-performance",
       "bead": "haxe_ocaml-hk48e",
@@ -781,7 +781,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916032680"
       },
       "reproductionOrEvidence": "The required Tier1 portable-stdlib job ran for about 45 minutes, then ended as cancelled without a newer exact-head successor.",
-      "closureGate": "Identify the cancellation source and require a completed successful exact-head Tier1 successor before resolving the incident."
+      "closureGate": "Identify the cancellation source and require a completed successful exact-head Tier1 successor before resolving the incident.",
+      "supersededBy": {
+        "runId": 31935649859,
+        "runAttempt": 1,
+        "headSha": "4c2785365588bfefbb5688f9dedc808dd999588d",
+        "conclusion": "cancelled",
+        "updatedAt": "2026-08-16T08:52:46Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31935649859"
+      }
     },
     {
       "id": "m7-current-31306044495",
@@ -849,7 +857,7 @@
     {
       "id": "package-profile-comparison-31916032648",
       "checkId": "reflaxe-ocaml-package-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "repository-policy",
       "bead": "haxe_ocaml-bfohp",
@@ -865,7 +873,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916032648"
       },
       "reproductionOrEvidence": "Linux and macOS examples compile and run, but both platform reports reject the missing positive portable-versus-metal profile medians.",
-      "closureGate": "Restore complete profile measurement and report assembly, then require a successful current package-matrix successor on both hosts."
+      "closureGate": "Restore complete profile measurement and report assembly, then require a successful current package-matrix successor on both hosts.",
+      "resolution": {
+        "runId": 33281077585,
+        "runAttempt": 1,
+        "headSha": "42c5e91c77e60b2d235adb23dde6cb573e2699d7",
+        "conclusion": "success",
+        "resolvedAt": "2026-08-29T23:53:28Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/33281077585"
+      }
     }
   ]
 }
