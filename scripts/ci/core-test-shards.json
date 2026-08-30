@@ -12,13 +12,13 @@
       "id": "compiler-packaging",
       "label": "OCaml packaging and metal profile",
       "minimumTier": "Q2",
-      "baselineSeconds": 871.388
+      "baselineSeconds": 873.120
     },
     {
       "id": "compiler-focused",
       "label": "Focused compiler regressions",
       "minimumTier": "Q2",
-      "baselineSeconds": 264.158
+      "baselineSeconds": 293.549
     },
     {
       "id": "macro-host-integration",
