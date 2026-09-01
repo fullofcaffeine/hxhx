@@ -53,8 +53,8 @@ const nestedTransfers = report.controls.filter(control =>
 	&& control.functionId.includes('|nested-function|'))
 if (nestedTargets.length !== 1
 	|| nestedTransfers.length !== 2
-	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v31'
-	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v31')) {
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v32'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v32')) {
 	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 

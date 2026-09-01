@@ -36,7 +36,7 @@ if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
 	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
-		? 'ocaml-nested-function-plans-v31'
+		? 'ocaml-nested-function-plans-v32'
 		: 'ocaml-function-plans-v112')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
@@ -45,7 +45,7 @@ if (calls.some(call =>
 const nestedCalls = calls.filter(call => call.functionId.includes('|nested-function|'))
 if (nestedCalls.length !== 1
 	|| nestedCalls[0].operation !== 'exists'
-	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v31') {
+	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v32') {
 	throw new Error('the nested function did not keep its exact IMap interface call plan')
 }
 const operations = new Set(calls.map(call => call.operation))
@@ -81,7 +81,7 @@ const nestedConversions = conversions.filter(conversion => conversion.functionId
 if (nestedConversions.length !== 1
 	|| nestedConversions[0].role !== 'local-initializer'
 	|| nestedConversions[0].sourceKind !== 'standard-string-map'
-	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v31') {
+	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v32') {
 	throw new Error('the nested function did not keep its exact concrete-to-IMap conversion plan')
 }
 const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKind))
@@ -110,7 +110,7 @@ const expectedAliases = [
 for (const expected of expectedAliases) {
 	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
 		&& candidate.standardKeyKind === expected.kind)
-	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v31' : 'ocaml-function-plans-v112'
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v32' : 'ocaml-function-plans-v112'
 	if (!alias
 		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
 		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`

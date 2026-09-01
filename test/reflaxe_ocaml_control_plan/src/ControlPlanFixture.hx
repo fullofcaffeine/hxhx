@@ -1,10 +1,8 @@
 import haxe.crypto.Sha256;
 import haxe.macro.Expr;
 import haxe.macro.Context;
-import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
-import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -60,7 +58,6 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 private typedef NestedReturnOnlyFixture = {
 	final expression:TypedExpr;
-	final externalLocals:Array<TVar>;
 	final binding:OcamlFunctionPlanBinding;
 	final plan:OcamlSealedNestedFunctionPlan;
 }
@@ -70,7 +67,7 @@ private typedef NestedReturnOnlyFixture = {
 
 	The portable fixture proves behavior from a real typed Haxe program. This
 	macro fixture deliberately corrupts return payloads, loop targets, and
-	transfer records so an invalid family combination or stale body revision
+	transfer records so an invalid family combination or stale root revision
 	cannot reach OCaml syntax.
 **/
 class ControlPlanFixture {
@@ -82,17 +79,12 @@ class ControlPlanFixture {
 	}
 
 	/** Builds the exact nested binding that the registry will accept for a typed literal. **/
-	static function nestedFunctionBinding(parent:OcamlFunctionPlanBinding, expression:TypedExpr, externalLocals:Array<TVar>,
-			identities:LexicalLocalIdentityPlan):OcamlFunctionPlanBinding {
-		final nestedFunction = switch (expression.expr) {
-			case TFunction(tfunc): tfunc;
-			case _: throw "The nested-function binding fixture requires a typed function literal";
-		}
+	static function nestedFunctionBinding(parent:OcamlFunctionPlanBinding, expression:TypedExpr, identities:LexicalLocalIdentityPlan):OcamlFunctionPlanBinding {
 		final occurrence = identities.requireFunctionOccurrence(expression);
 		return {
 			functionId: OcamlFunctionPlanRegistry.nestedFunctionId(parent.functionId, occurrence.id),
 			programRevision: parent.programRevision,
-			bodyRevision: FunctionBodyRevision.initial(nestedFunction.expr, externalLocals).id,
+			bodyRevision: parent.bodyRevision,
 			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
 		};
 	}
@@ -580,22 +572,6 @@ class ControlPlanFixture {
 		throw 'Expected failure containing "$marker"';
 	}
 
-	/** Returns the signature-ordered locals needed to fingerprint a fixture function literal. */
-	static function nestedExternalLocals(expression:TypedExpr):Array<TVar> {
-		return switch (expression.expr) {
-			case TFunction(tfunc): tfunc.args.map(argument -> argument.v);
-			case _: throw "The nested-function catalog fixture requires a typed function literal";
-		}
-	}
-
-	/** Fingerprints the current body using the exact locals supplied to the nested catalog. */
-	static function nestedBodyRevision(expression:TypedExpr, externalLocals:Array<TVar>):String {
-		return switch (expression.expr) {
-			case TFunction(tfunc): FunctionBodyRevision.initial(tfunc.expr, externalLocals).id;
-			case _: throw "The nested-function catalog fixture requires a typed function literal";
-		}
-	}
-
 	/** Returns one admitted exact carrier used on both sides of a fixture callable boundary. */
 	static function nestedCallValue(index:Int, semanticTypeId:String = "Int"):OcamlCallValuePlan {
 		final carrierTypeId = switch (semanticTypeId) {
@@ -706,15 +682,13 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The return-only nested fixture requires a typed function literal";
 		};
-		final externalLocals = nestedExternalLocals(expression);
-		final planBinding = nestedFunctionBinding(parent, expression, externalLocals, identities);
+		final planBinding = nestedFunctionBinding(parent, expression, identities);
 		final returned = firstReturn(nestedFunction.expr);
 		final source = OcamlLoweredOrigin.sourceSpan(returned.pos);
 		final decision = returnDecision(decisionId, source.min, planBinding.functionId, null, null, "Int", null, null, planBinding, source);
 		final controls = new OcamlControlPlan(true, true, true, planBinding, [], [decision], [], [{expression: returned, decisionId: decision.id}], [], []);
 		return {
 			expression: expression,
-			externalLocals: externalLocals,
 			binding: planBinding,
 			plan: {
 				occurrenceId: identities.requireFunctionOccurrence(expression).id,
@@ -1497,37 +1471,34 @@ class ControlPlanFixture {
 		final missingExpression = Context.typeExpr(macro function(flag:Bool):Int {
 			return flag ? 1 : 0;
 		});
-		final nestedExternalLocalList = nestedExternalLocals(nestedExpression);
-		final nestedObservedBodyRevision = nestedBodyRevision(nestedExpression, nestedExternalLocalList);
 		final deferredRegistry = new OcamlFunctionPlanRegistry();
 		deferredRegistry.beginProgram(nestedParent.programRevision);
 		final deferredIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, nestedExpression);
 		deferredRegistry.registerRootIdentityPlan(nestedParent, deferredIdentities);
-		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, nestedExternalLocalList, deferredIdentities);
+		final deferredBinding = nestedFunctionBinding(nestedParent, nestedExpression, deferredIdentities);
 		final deferredIdentity = nestedFunctionIdentity(nestedParent, deferredBinding, nestedExpression, deferredIdentities);
 		final deferredControls = new OcamlControlPlan(false, true, true, deferredBinding, [], []);
-		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision, deferredIdentities,
-			emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]),
-			deferredControls, "fixture explicitly defers one observed literal");
-		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent) != null)
+		deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, deferredIdentities, emptyIMapInterfacePlan(deferredBinding),
+			new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), deferredControls,
+			"fixture explicitly defers one observed literal");
+		if (deferredRegistry.nestedFunctionPlanFor(nestedExpression, nestedParent, nestedParent) != null)
 			throw "An explicitly deferred nested function unexpectedly returned an admitted plan";
-		final deferredDisposition = deferredRegistry.nestedFunctionSyntaxDispositionFor(nestedExpression, nestedParent);
+		final deferredDisposition = deferredRegistry.nestedFunctionSyntaxDispositionFor(nestedExpression, nestedParent, nestedParent);
 		deferredDisposition.controls.requirePlanBinding(deferredBinding);
 		if (!deferredDisposition.controls.loopFamilyAdmitted)
 			throw "An explicitly deferred nested function discarded its admitted loop-control family";
 		expectThrows("duplicate-occurrence",
-			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, nestedExternalLocalList, nestedObservedBodyRevision,
-				deferredIdentities, emptyIMapInterfacePlan(deferredBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]),
-				new OcamlDynamicEqualityPlan([]), deferredControls, "fixture duplicate"));
-		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent));
-		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent));
+			() -> deferredRegistry.deferNestedFunction(nestedExpression, deferredIdentity, deferredIdentities, emptyIMapInterfacePlan(deferredBinding),
+				new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), deferredControls, "fixture duplicate"));
+		expectThrows("unobserved-occurrence", () -> deferredRegistry.nestedFunctionPlanFor(missingExpression, nestedParent, nestedParent));
+		expectThrows("parent-mismatch", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, otherParent, nestedParent));
 		final staleParent:OcamlFunctionPlanBinding = {
 			functionId: nestedParent.functionId,
 			programRevision: "program:stale",
 			bodyRevision: nestedParent.bodyRevision,
 			pipelineRevision: nestedParent.pipelineRevision
 		};
-		expectThrows("stale-parent", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, staleParent));
+		expectThrows("stale-parent", () -> deferredRegistry.nestedFunctionPlanFor(nestedExpression, staleParent, nestedParent));
 
 		final admittedOwnerBody = Context.typeExpr(macro {
 			final local = function(value:Int):Int {
@@ -1542,11 +1513,10 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The admitted nested-function fixture did not type as a function literal";
 		};
-		final admittedExternalLocals = nestedExternalLocals(admittedExpression);
 		final admittedIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedOwnerBody);
 		nestedRegistry.registerRootIdentityPlan(nestedParent, admittedIdentities);
 		final admittedOccurrence = admittedIdentities.requireFunctionOccurrence(admittedExpression);
-		final admittedBinding = nestedFunctionBinding(nestedParent, admittedExpression, admittedExternalLocals, admittedIdentities);
+		final admittedBinding = nestedFunctionBinding(nestedParent, admittedExpression, admittedIdentities);
 		final admittedReturn = firstReturn(admittedFunction.expr);
 		final admittedReturnSource = OcamlLoweredOrigin.sourceSpan(admittedReturn.pos);
 		final admittedDecision = returnDecision("control:return:nested-admitted", admittedReturnSource.min, admittedBinding.functionId, null, null, "Int",
@@ -1570,7 +1540,7 @@ class ControlPlanFixture {
 		final noncanonicalOccurrence = noncanonicalIdentities.requireFunctionOccurrence(admittedExpression);
 		if (noncanonicalOccurrence.id == admittedOccurrence.id)
 			throw "The noncanonical identity fixture did not move the literal to a different structural path";
-		final noncanonicalBinding = nestedFunctionBinding(nestedParent, admittedExpression, admittedExternalLocals, noncanonicalIdentities);
+		final noncanonicalBinding = nestedFunctionBinding(nestedParent, admittedExpression, noncanonicalIdentities);
 		final noncanonicalDecision = returnDecision("control:return:nested-noncanonical", admittedReturnSource.min, noncanonicalBinding.functionId, null,
 			null, "Int", null, null, noncanonicalBinding, admittedReturnSource);
 		final noncanonicalControls = new OcamlControlPlan(true, true, true, noncanonicalBinding, [], [noncanonicalDecision], [],
@@ -1587,9 +1557,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(noncanonicalBinding)
 		};
-		expectThrows("foreign-root-identities",
-			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, noncanonicalBinding.bodyRevision, noncanonicalPlan,
-				noncanonicalIdentities));
+		expectThrows("foreign-root-identities", () -> nestedRegistry.sealNestedFunction(admittedExpression, noncanonicalPlan, noncanonicalIdentities));
 		final wrongNestedBinding:OcamlFunctionPlanBinding = {
 			functionId: nestedParent.functionId + "|nested-function|plausible-but-wrong",
 			programRevision: admittedBinding.programRevision,
@@ -1608,9 +1576,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(wrongNestedBinding)
 		};
-		expectThrows("binding-mismatch",
-			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, wrongNestedBindingPlan,
-				admittedIdentities));
+		expectThrows("binding-mismatch", () -> nestedRegistry.sealNestedFunction(admittedExpression, wrongNestedBindingPlan, admittedIdentities));
 		final staleRootParent:OcamlFunctionPlanBinding = {
 			functionId: nestedParent.functionId,
 			programRevision: nestedParent.programRevision,
@@ -1629,9 +1595,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
-		expectThrows("stale-root-binding",
-			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, staleRootPlan,
-				admittedIdentities));
+		expectThrows("stale-root-binding", () -> nestedRegistry.sealNestedFunction(admittedExpression, staleRootPlan, admittedIdentities));
 		expectThrows("conflicting-root-binding", () -> nestedRegistry.registerRootIdentityPlan(staleRootParent, admittedIdentities));
 		final rootIMapSubstitution:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: admittedPlan.occurrenceId,
@@ -1645,11 +1609,9 @@ class ControlPlanFixture {
 			dynamicEquality: admittedPlan.dynamicEquality,
 			imapInterfaces: emptyIMapInterfacePlan(nestedParent)
 		};
-		expectThrows("ocaml-imap-interface:stale-plan",
-			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, rootIMapSubstitution,
-				admittedIdentities));
-		nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan, admittedIdentities);
-		final sealedAdmittedPlan = nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent);
+		expectThrows("ocaml-imap-interface:stale-plan", () -> nestedRegistry.sealNestedFunction(admittedExpression, rootIMapSubstitution, admittedIdentities));
+		nestedRegistry.sealNestedFunction(admittedExpression, admittedPlan, admittedIdentities);
+		final sealedAdmittedPlan = nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent, nestedParent);
 		if (sealedAdmittedPlan == null)
 			throw "An admitted nested function did not return its sealed plan";
 		if (sealedAdmittedPlan.arrayLiteralProducers.decisions().length != 0)
@@ -1673,8 +1635,7 @@ class ControlPlanFixture {
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
 		expectThrows("missing-identity",
-			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
-				admittedBinding.bodyRevision, malformedOccurrencePlan, malformedOccurrenceIdentities));
+			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, malformedOccurrencePlan, malformedOccurrenceIdentities));
 		final foreignOccurrencePlan:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: nestedOccurrenceId("valid-but-foreign"),
 			parentBinding: admittedPlan.parentBinding,
@@ -1687,9 +1648,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: admittedPlan.imapInterfaces
 		};
-		expectThrows("foreign-occurrence",
-			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
-				admittedBinding.bodyRevision, foreignOccurrencePlan, admittedIdentities));
+		expectThrows("foreign-occurrence", () -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, foreignOccurrencePlan, admittedIdentities));
 		final crossRootOwnerId = "Main|Main|static|function|crossRootOwner|generics:0|->Int";
 		final ordinaryImpostorParent:OcamlFunctionPlanBinding = {
 			functionId: crossRootOwnerId + "|nested-function|ordinary-impostor",
@@ -1717,8 +1676,7 @@ class ControlPlanFixture {
 			imapInterfaces: emptyIMapInterfacePlan(ordinaryImpostorBinding)
 		};
 		expectThrows("foreign-root-identities",
-			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
-				admittedBinding.bodyRevision, ordinaryImpostorPlan, malformedOccurrenceIdentities));
+			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, ordinaryImpostorPlan, malformedOccurrenceIdentities));
 
 		// A function ID is text, so an ordinary function can legitimately contain
 		// the nested-function separator in its own name. Register a child below that
@@ -1733,10 +1691,9 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The impostor-root fixture did not type as a function literal";
 		};
-		final impostorRootExternalLocals = nestedExternalLocals(impostorRootExpression);
 		final impostorRootIdentities = LexicalLocalIdentityPlan.build(ordinaryImpostorParent.functionId, impostorRootExpression);
 		nestedRegistry.registerRootIdentityPlan(ordinaryImpostorParent, impostorRootIdentities);
-		final impostorRootBinding = nestedFunctionBinding(ordinaryImpostorParent, impostorRootExpression, impostorRootExternalLocals, impostorRootIdentities);
+		final impostorRootBinding = nestedFunctionBinding(ordinaryImpostorParent, impostorRootExpression, impostorRootIdentities);
 		final impostorRootReturn = firstReturn(impostorRootFunction.expr);
 		final impostorRootReturnSource = OcamlLoweredOrigin.sourceSpan(impostorRootReturn.pos);
 		final impostorRootDecision = returnDecision("control:return:nested-impostor-root", impostorRootReturnSource.min, impostorRootBinding.functionId, null,
@@ -1755,8 +1712,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(impostorRootBinding)
 		};
-		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
-			impostorRootIdentities);
+		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootPlan, impostorRootIdentities);
 
 		final crossRootChildExpression = Context.typeExpr(macro function(value:Int):Int {
 			if (value > 0)
@@ -1767,7 +1723,6 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The cross-root child fixture did not type as a function literal";
 		};
-		final crossRootChildExternalLocals = nestedExternalLocals(crossRootChildExpression);
 		final crossRootChildIdentities = LexicalLocalIdentityPlan.build(crossRootOwnerId, crossRootChildExpression);
 		final crossRootOwnerBinding:OcamlFunctionPlanBinding = {
 			functionId: crossRootOwnerId,
@@ -1776,8 +1731,7 @@ class ControlPlanFixture {
 			pipelineRevision: nestedParent.pipelineRevision
 		};
 		nestedRegistry.registerRootIdentityPlan(crossRootOwnerBinding, crossRootChildIdentities);
-		final crossRootChildBinding = nestedFunctionBinding(impostorRootBinding, crossRootChildExpression, crossRootChildExternalLocals,
-			crossRootChildIdentities);
+		final crossRootChildBinding = nestedFunctionBinding(impostorRootBinding, crossRootChildExpression, crossRootChildIdentities);
 		final crossRootChildReturn = firstReturn(crossRootChildFunction.expr);
 		final crossRootChildReturnSource = OcamlLoweredOrigin.sourceSpan(crossRootChildReturn.pos);
 		final crossRootChildDecision = returnDecision("control:return:nested-cross-root", crossRootChildReturnSource.min, crossRootChildBinding.functionId,
@@ -1797,8 +1751,7 @@ class ControlPlanFixture {
 			imapInterfaces: emptyIMapInterfacePlan(crossRootChildBinding)
 		};
 		expectThrows("foreign-parent-occurrence",
-			() -> nestedRegistry.sealNestedFunction(crossRootChildExpression, crossRootChildExternalLocals, crossRootChildBinding.bodyRevision,
-				crossRootChildPlan, crossRootChildIdentities));
+			() -> nestedRegistry.sealNestedFunction(crossRootChildExpression, crossRootChildPlan, crossRootChildIdentities));
 
 		final siblingRegistry = new OcamlFunctionPlanRegistry();
 		siblingRegistry.beginProgram("program:same-root-parent-fixture");
@@ -1833,26 +1786,24 @@ class ControlPlanFixture {
 		siblingRegistry.registerRootIdentityPlan(siblingRoot, siblingIdentities);
 		final siblingA = nestedReturnOnlyFixture(siblingRoot, siblingExpressions[0], siblingIdentities, "control:return:sibling-a");
 		final siblingB = nestedReturnOnlyFixture(siblingRoot, siblingExpressions[1], siblingIdentities, "control:return:sibling-b");
-		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan, siblingIdentities);
-		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.plan, siblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.plan, siblingIdentities);
 		final wrongSiblingChild = nestedReturnOnlyFixture(siblingA.binding, siblingExpressions[2], siblingIdentities, "control:return:wrong-sibling-child");
 		expectThrows("foreign-parent-occurrence",
-			() -> siblingRegistry.sealNestedFunction(wrongSiblingChild.expression, wrongSiblingChild.externalLocals, wrongSiblingChild.binding.bodyRevision,
-				wrongSiblingChild.plan, siblingIdentities));
+			() -> siblingRegistry.sealNestedFunction(wrongSiblingChild.expression, wrongSiblingChild.plan, siblingIdentities));
 		final siblingChild = nestedReturnOnlyFixture(siblingB.binding, siblingExpressions[2], siblingIdentities, "control:return:sibling-child");
-		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.externalLocals, siblingChild.binding.bodyRevision, siblingChild.plan,
-			siblingIdentities);
-		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
+		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.plan, siblingIdentities);
+		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding, siblingRoot) == null)
 			throw "The exact same-root nested parent did not retain its child plan";
 		final deferredChildRegistry = new OcamlFunctionPlanRegistry();
 		deferredChildRegistry.beginProgram(siblingRoot.programRevision);
 		deferredChildRegistry.registerRootIdentityPlan(siblingRoot, siblingIdentities);
-		deferredChildRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
+		deferredChildRegistry.sealNestedFunction(siblingB.expression, siblingB.plan, siblingIdentities);
 		final deferredChildIdentity = nestedFunctionIdentity(siblingB.binding, siblingChild.binding, siblingChild.expression, siblingIdentities);
-		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingChild.externalLocals,
-			siblingChild.binding.bodyRevision, siblingIdentities, emptyIMapInterfacePlan(siblingChild.binding), new OcamlArrayReadPlan([]),
-			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), siblingChild.plan.controls, "fixture child uses the older result path");
-		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) != null)
+		deferredChildRegistry.deferNestedFunction(siblingChild.expression, deferredChildIdentity, siblingIdentities,
+			emptyIMapInterfacePlan(siblingChild.binding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]),
+			siblingChild.plan.controls, "fixture child uses the older result path");
+		if (deferredChildRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding, siblingRoot) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
 		// The outer function returns another function, so its result behavior stays
@@ -1883,19 +1834,16 @@ class ControlPlanFixture {
 		final deferredParentIdentities = LexicalLocalIdentityPlan.build(deferredParentRoot.functionId, deferredParentOwnerBody);
 		deferredParentRegistry.registerRootIdentityPlan(deferredParentRoot, deferredParentIdentities);
 		final deferredParentExpression = deferredParentExpressions[0];
-		final deferredParentExternalLocals = nestedExternalLocals(deferredParentExpression);
-		final deferredParentBinding = nestedFunctionBinding(deferredParentRoot, deferredParentExpression, deferredParentExternalLocals,
-			deferredParentIdentities);
+		final deferredParentBinding = nestedFunctionBinding(deferredParentRoot, deferredParentExpression, deferredParentIdentities);
 		final deferredParentIdentity = nestedFunctionIdentity(deferredParentRoot, deferredParentBinding, deferredParentExpression, deferredParentIdentities);
 		final deferredParentControls = new OcamlControlPlan(false, true, true, deferredParentBinding, [], []);
-		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentExternalLocals,
-			deferredParentBinding.bodyRevision, deferredParentIdentities, emptyIMapInterfacePlan(deferredParentBinding), new OcamlArrayReadPlan([]),
-			new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]), deferredParentControls, "fixture outer function uses the older result path");
+		deferredParentRegistry.deferNestedFunction(deferredParentExpression, deferredParentIdentity, deferredParentIdentities,
+			emptyIMapInterfacePlan(deferredParentBinding), new OcamlArrayReadPlan([]), new OcamlArrayIteratorPlan([]), new OcamlDynamicEqualityPlan([]),
+			deferredParentControls, "fixture outer function uses the older result path");
 		final representedChild = nestedReturnOnlyFixture(deferredParentBinding, deferredParentExpressions[1], deferredParentIdentities,
 			"control:return:deferred-parent-child");
-		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.externalLocals, representedChild.binding.bodyRevision,
-			representedChild.plan, deferredParentIdentities);
-		if (deferredParentRegistry.nestedFunctionPlanFor(representedChild.expression, deferredParentBinding) == null)
+		deferredParentRegistry.sealNestedFunction(representedChild.expression, representedChild.plan, deferredParentIdentities);
+		if (deferredParentRegistry.nestedFunctionPlanFor(representedChild.expression, deferredParentBinding, deferredParentRoot) == null)
 			throw "A represented child of a deferred parent did not retain its plan";
 
 		// Starting another request with the same program name must still discard all
@@ -1903,19 +1851,14 @@ class ControlPlanFixture {
 		// lookup and sealing the same literals proves the old expression, occurrence,
 		// nested-parent, and root records cannot authorize the new request.
 		siblingRegistry.beginProgram(siblingRoot.programRevision);
-		expectThrows("stale-parent", () -> siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding));
-		expectThrows("foreign-root-identities",
-			() -> siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan,
-				siblingIdentities));
+		expectThrows("stale-parent", () -> siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding, siblingRoot));
+		expectThrows("foreign-root-identities", () -> siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.plan, siblingIdentities));
 		final refreshedSiblingIdentities = LexicalLocalIdentityPlan.build(siblingRoot.functionId, siblingOwnerBody);
 		siblingRegistry.registerRootIdentityPlan(siblingRoot, refreshedSiblingIdentities);
-		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan,
-			refreshedSiblingIdentities);
-		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan,
-			refreshedSiblingIdentities);
-		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.externalLocals, siblingChild.binding.bodyRevision, siblingChild.plan,
-			refreshedSiblingIdentities);
-		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
+		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.plan, refreshedSiblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.plan, refreshedSiblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.plan, refreshedSiblingIdentities);
+		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding, siblingRoot) == null)
 			throw "The same-program reset did not rebuild the exact nested-parent plan";
 
 		// `Null<String>` keeps its Haxe type at the typed boundary, but the OCaml
@@ -1942,9 +1885,7 @@ class ControlPlanFixture {
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
 		};
 		final nullableStringIdentities = LexicalLocalIdentityPlan.build(nullableStringParent.functionId, nullableStringOwnerBody);
-		final nullableStringExternalLocals = nestedExternalLocals(nullableStringExpression);
-		final nullableStringBinding = nestedFunctionBinding(nullableStringParent, nullableStringExpression, nullableStringExternalLocals,
-			nullableStringIdentities);
+		final nullableStringBinding = nestedFunctionBinding(nullableStringParent, nullableStringExpression, nullableStringIdentities);
 		final nullableStringRepresentations = new OcamlRepresentationRegistry();
 		nullableStringRepresentations.beginProgram(nullableStringParent.programRevision);
 		final nullableStringCallable = new OcamlCallPlanner(nullableStringRepresentations,
@@ -1975,8 +1916,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(nullableStringBinding)
 		};
-		nullableStringRegistry.sealNestedFunction(nullableStringExpression, nullableStringExternalLocals, nullableStringBinding.bodyRevision,
-			nullableStringPlan, nullableStringIdentities);
+		nullableStringRegistry.sealNestedFunction(nullableStringExpression, nullableStringPlan, nullableStringIdentities);
 		final nullableStringControlResult = nullableStringControls.returnBoundaryDecision();
 		if (nullableStringControlResult == null
 			|| nullableStringControlResult.payload == null
@@ -1987,9 +1927,7 @@ class ControlPlanFixture {
 			throw "Nullable-String early returns did not reuse the sentinel-aware String result carrier";
 		}
 
-		expectThrows("duplicate-occurrence",
-			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan,
-				admittedIdentities));
+		expectThrows("duplicate-occurrence", () -> nestedRegistry.sealNestedFunction(admittedExpression, admittedPlan, admittedIdentities));
 
 		final mismatchedExpression = Context.typeExpr(macro function(value:Int):Int {
 			if (value > 0)
@@ -2000,10 +1938,9 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The nested result-mismatch fixture did not type as a function literal";
 		};
-		final mismatchedExternalLocals = nestedExternalLocals(mismatchedExpression);
 		final mismatchedIdentities = LexicalLocalIdentityPlan.build(otherParent.functionId, mismatchedExpression);
 		nestedRegistry.registerRootIdentityPlan(otherParent, mismatchedIdentities);
-		final mismatchedBinding = nestedFunctionBinding(otherParent, mismatchedExpression, mismatchedExternalLocals, mismatchedIdentities);
+		final mismatchedBinding = nestedFunctionBinding(otherParent, mismatchedExpression, mismatchedIdentities);
 		final mismatchedReturn = firstReturn(mismatchedFunction.expr);
 		final mismatchedReturnSource = OcamlLoweredOrigin.sourceSpan(mismatchedReturn.pos);
 		final mismatchedDecision = returnDecision("control:return:nested-result-mismatch", mismatchedReturnSource.min, mismatchedBinding.functionId, null,
@@ -2022,9 +1959,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
-		expectThrows("return-boundary-mismatch",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan,
-				mismatchedIdentities));
+		expectThrows("return-boundary-mismatch", () -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedPlan, mismatchedIdentities));
 
 		// An unsupported throw is removed from the planner's decision list. This
 		// deliberately corrupt plan proves the catalog checks the family flag and
@@ -2043,9 +1978,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
-		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan,
-				mismatchedIdentities));
+		expectThrows("unsupported-control", () -> nestedRegistry.sealNestedFunction(mismatchedExpression, unadmittedThrowPlan, mismatchedIdentities));
 
 		final unadmittedLoopControls = new OcamlControlPlan(true, false, true, mismatchedBinding, [], [mismatchedDecision], [],
 			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
@@ -2061,9 +1994,7 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(mismatchedBinding)
 		};
-		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan,
-				mismatchedIdentities));
+		expectThrows("unsupported-control", () -> nestedRegistry.sealNestedFunction(mismatchedExpression, unadmittedLoopPlan, mismatchedIdentities));
 
 		// A loop target or transfer sealed for an ordinary function must not become
 		// valid merely because a nested plan has the same control kind. These records
@@ -2085,7 +2016,6 @@ class ControlPlanFixture {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The nested catch-completeness fixture did not type as a function literal";
 		};
-		final caughtExternalLocals = nestedExternalLocals(caughtExpression);
 		final caughtParent:OcamlFunctionPlanBinding = {
 			functionId: "Main|Main|static|function|caughtOwner|generics:0|->Int",
 			programRevision: nestedParent.programRevision,
@@ -2094,7 +2024,7 @@ class ControlPlanFixture {
 		};
 		final caughtIdentities = LexicalLocalIdentityPlan.build(caughtParent.functionId, caughtExpression);
 		nestedRegistry.registerRootIdentityPlan(caughtParent, caughtIdentities);
-		final caughtBinding = nestedFunctionBinding(caughtParent, caughtExpression, caughtExternalLocals, caughtIdentities);
+		final caughtBinding = nestedFunctionBinding(caughtParent, caughtExpression, caughtIdentities);
 		final caughtReturn = firstReturn(caughtFunction.expr);
 		final caughtReturnSource = OcamlLoweredOrigin.sourceSpan(caughtReturn.pos);
 		final caughtDecision = returnDecision("control:return:nested-caught", caughtReturnSource.min, caughtBinding.functionId, null, null, "Int", null, null,
@@ -2132,11 +2062,15 @@ class ControlPlanFixture {
 			dynamicEquality: new OcamlDynamicEqualityPlan([]),
 			imapInterfaces: emptyIMapInterfacePlan(caughtBinding)
 		};
-		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(caughtExpression, caughtExternalLocals, caughtBinding.bodyRevision, caughtPlan, caughtIdentities));
+		expectThrows("unsupported-control", () -> nestedRegistry.sealNestedFunction(caughtExpression, caughtPlan, caughtIdentities));
 
-		Reflect.setField(admittedFunction, "expr", Context.typeExpr(macro 99));
-		expectThrows("stale-body", () -> nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent));
+		final staleSyntaxRoot:OcamlFunctionPlanBinding = {
+			functionId: nestedParent.functionId,
+			programRevision: nestedParent.programRevision,
+			bodyRevision: nestedParent.bodyRevision + ":stale",
+			pipelineRevision: nestedParent.pipelineRevision
+		};
+		expectThrows("stale-root-binding", () -> nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent, staleSyntaxRoot));
 
 		Sys.println("REFLAXE_OCAML_CONTROL_PLAN_FIXTURE:PASS");
 		return macro null;

@@ -207,6 +207,7 @@ class OcamlBuilder {
 	final representationRegistry:OcamlRepresentationRegistry;
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
+	var currentRootFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 	var currentAnonymousStructurePlan:Null<OcamlAnonymousStructurePlan> = null;
 	var currentStructuralFieldPlan:Null<OcamlStructuralFieldPlan> = null;
 	var currentBytesAccessPlan:Null<OcamlBytesAccessPlan> = null;
@@ -9100,6 +9101,7 @@ class OcamlBuilder {
 		final storagePlan = functionPlan.localStorage;
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousRootFunctionPlanBinding = currentRootFunctionPlanBinding;
 		final previousLocalPlanBinding = currentLocalPlanBinding;
 		final previousPlacePlanBinding = currentPlacePlanBinding;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
@@ -9127,6 +9129,7 @@ class OcamlBuilder {
 		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
+		currentRootFunctionPlanBinding = functionPlan.binding;
 		currentLocalPlanBinding = functionPlan.binding;
 		currentPlacePlanBinding = functionPlan.binding;
 		functionPlan.bytesAccesses.requireRepresentations(representationRegistry);
@@ -9323,6 +9326,7 @@ class OcamlBuilder {
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentRootFunctionPlanBinding = previousRootFunctionPlanBinding;
 		currentLocalPlanBinding = previousLocalPlanBinding;
 		currentPlacePlanBinding = previousPlacePlanBinding;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
@@ -9371,7 +9375,9 @@ class OcamlBuilder {
 		if (storagePlan == null)
 			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
 		final parentBinding = currentFunctionPlanBinding;
-		final nestedDisposition = parentBinding == null ? null : functionPlanRegistry.nestedFunctionSyntaxDispositionFor(expression, parentBinding);
+		final rootBinding = currentRootFunctionPlanBinding;
+		final nestedDisposition = parentBinding == null
+			|| rootBinding == null ? null : functionPlanRegistry.nestedFunctionSyntaxDispositionFor(expression, parentBinding, rootBinding);
 		final nestedPlan:Null<OcamlSealedNestedFunctionPlan> = nestedDisposition == null ? null : nestedDisposition.plan;
 		final callableBoundary = nestedPlan == null ? null : nestedPlan.callableBoundary;
 		final functionResultBoundary = nestedPlan == null ? null : nestedPlan.functionResultBoundary;

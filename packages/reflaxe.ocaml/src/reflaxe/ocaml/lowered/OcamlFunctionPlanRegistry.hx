@@ -4,7 +4,6 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
 import haxe.ds.StringMap;
-import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
@@ -280,8 +279,6 @@ private typedef OcamlNestedFunctionRecord = {
 	final binding:OcamlFunctionPlanBinding;
 	final parentBinding:OcamlFunctionPlanBinding;
 	final controls:OcamlControlPlan;
-	final bodyExternalLocals:Array<TVar>;
-	final observedBodyRevision:String;
 	final occurrenceId:String;
 	final imapInterfaces:OcamlIMapInterfacePlan;
 	final arrayReads:OcamlArrayReadPlan;
@@ -323,7 +320,7 @@ private typedef OcamlRootIdentityRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v112";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v31";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v32";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 
 	/**
@@ -432,15 +429,15 @@ class OcamlFunctionPlanRegistry {
 		If no row exists, planning and syntax did not see the same final body and the
 		request fails instead of guessing.
 	**/
-	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, bodyExternalLocals:Array<TVar>,
-			observedBodyRevision:String, localIdentities:LexicalLocalIdentityPlan, imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan,
-			arrayIterators:OcamlArrayIteratorPlan, dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String,
-			?dynamicString:OcamlDynamicStringPlan, ?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan,
-			?stdIsOfType:OcamlStdIsOfTypePlan, ?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan,
-			?stringEquality:OcamlStringEqualityPlan, ?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
+	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, localIdentities:LexicalLocalIdentityPlan,
+			imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan, arrayIterators:OcamlArrayIteratorPlan,
+			dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
+			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan,
+			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
+			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
-		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
+		requireNestedFunctionIdentity(expression, identity, localIdentities);
 		imapInterfaces.requirePlanBinding(identity.binding);
 		arrayReads.requirePlanBinding(identity.binding);
 		arrayIterators.requirePlanBinding(identity.binding);
@@ -468,8 +465,6 @@ class OcamlFunctionPlanRegistry {
 			binding: copyBinding(identity.binding),
 			parentBinding: copyBinding(identity.parentBinding),
 			controls: controls,
-			bodyExternalLocals: bodyExternalLocals.copy(),
-			observedBodyRevision: observedBodyRevision,
 			occurrenceId: identity.occurrenceId,
 			imapInterfaces: imapInterfaces,
 			arrayReads: arrayReads,
@@ -493,18 +488,17 @@ class OcamlFunctionPlanRegistry {
 		Seals one represented nested function before target syntax starts.
 
 		The parent binding proves which final method owns the literal. The nested
-		binding proves which lexical occurrence and body revision own its return,
+		binding proves which lexical occurrence and exact ordinary-root revision own its return,
 		loop, throw, and catch decisions. Neither identity may be substituted by
 		another parent or request.
 	**/
-	public function sealNestedFunction(expression:TypedExpr, bodyExternalLocals:Array<TVar>, observedBodyRevision:String, plan:OcamlSealedNestedFunctionPlan,
-			localIdentities:LexicalLocalIdentityPlan):Void {
+	public function sealNestedFunction(expression:TypedExpr, plan:OcamlSealedNestedFunctionPlan, localIdentities:LexicalLocalIdentityPlan):Void {
 		final identity:OcamlNestedFunctionIdentity = {
 			occurrenceId: plan.occurrenceId,
 			parentBinding: plan.parentBinding,
 			binding: plan.binding
 		};
-		requireNestedFunctionIdentity(expression, identity, observedBodyRevision, localIdentities);
+		requireNestedFunctionIdentity(expression, identity, localIdentities);
 		OcamlCallPlan.requireCallableBoundary(plan.callableBoundary);
 		requireBoundaryBinding(plan.callableBoundary, plan.binding);
 		final functionResultBoundary = plan.functionResultBoundary ?? OcamlFunctionResultBoundary.fromCallable(plan.callableBoundary);
@@ -590,8 +584,6 @@ class OcamlFunctionPlanRegistry {
 			binding: copyBinding(plan.binding),
 			parentBinding: copyBinding(plan.parentBinding),
 			controls: plan.controls,
-			bodyExternalLocals: bodyExternalLocals.copy(),
-			observedBodyRevision: observedBodyRevision,
 			occurrenceId: plan.occurrenceId,
 			imapInterfaces: plan.imapInterfaces,
 			arrayReads: plan.arrayReads,
@@ -617,15 +609,12 @@ class OcamlFunctionPlanRegistry {
 
 		This validation does not claim that the function's result or control behavior
 		is represented. It proves only the stable occurrence, immediate parent, root
-		owner, body revision, and current request that syntax can rely on.
+		owner, root body revision, and current request that syntax can rely on.
 	**/
-	function requireNestedFunctionIdentity(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, observedBodyRevision:String,
-			localIdentities:LexicalLocalIdentityPlan):Void {
+	function requireNestedFunctionIdentity(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, localIdentities:LexicalLocalIdentityPlan):Void {
 		requireCurrentParentBinding(identity.parentBinding);
 		if (!LexicalLocalIdentityPlan.isReusableFunctionOccurrenceId(identity.occurrenceId) || identity.binding.functionId.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-identity]: a nested function requires stable occurrence and function identities";
-		if (observedBodyRevision.length == 0)
-			throw "reflaxe.ocaml [ocaml-nested-function:missing-body-revision]: a nested function requires the exact observed body revision";
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(localIdentities.ownerId);
 		if (canonicalRoot == null || canonicalRoot.identities != localIdentities)
 			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-root-identities]: nested function "${identity.binding.functionId}" does not use the one whole-body identity lookup registered for root "${localIdentities.ownerId}"';
@@ -659,15 +648,15 @@ class OcamlFunctionPlanRegistry {
 		final expectedFunctionId = nestedFunctionId(identity.parentBinding.functionId, identity.occurrenceId);
 		if (identity.binding.programRevision != identity.parentBinding.programRevision
 			|| identity.binding.pipelineRevision != NESTED_FUNCTION_PIPELINE_REVISION
-			|| identity.binding.functionId != expectedFunctionId) {
+			|| identity.binding.functionId != expectedFunctionId
+			|| identity.binding.bodyRevision != canonicalRoot.binding.bodyRevision
+			|| identity.parentBinding.bodyRevision != canonicalRoot.binding.bodyRevision) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:binding-mismatch]: nested function "${identity.binding.functionId}" does not belong to parent "${identity.parentBinding.functionId}"';
 		}
 		if (nestedFunctionBindingsByOccurrence.exists(identity.occurrenceId))
 			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-identity]: nested occurrence "${identity.occurrenceId}" was observed more than once';
 		if (nestedFunctionsByFunctionId.exists(identity.binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-identity]: nested function "${identity.binding.functionId}" was observed more than once';
-		if (observedBodyRevision != identity.binding.bodyRevision)
-			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: nested function "${identity.binding.functionId}" was planned for ${identity.binding.bodyRevision}, but its exact typed body is $observedBodyRevision';
 	}
 
 	/** Stores one validated identity after its represented or deferred choice is final. */
@@ -685,26 +674,28 @@ class OcamlFunctionPlanRegistry {
 		missing row, changed parent, or stale request is an error because falling back
 		there would let syntax choose behavior the planner never authorized.
 	**/
-	public function nestedFunctionPlanFor(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding):Null<OcamlSealedNestedFunctionPlan> {
-		return nestedFunctionSyntaxDispositionFor(expression, parentBinding).plan;
+	public function nestedFunctionPlanFor(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding,
+			rootBinding:OcamlFunctionPlanBinding):Null<OcamlSealedNestedFunctionPlan> {
+		return nestedFunctionSyntaxDispositionFor(expression, parentBinding, rootBinding).plan;
 	}
 
 	/**
 		Returns the parent identity and behavior choice for one exact function literal.
 
-		Syntax uses the binding for every observed function body. It uses the optional
-		plan only when planning represented the complete result and control behavior.
+		The caller supplies the ordinary-root binding that `functionSyntaxInputFor`
+		freshly rechecked. Syntax uses the nested binding for every observed function
+		body and the optional plan only when planning represented the complete result
+		and control behavior.
 	**/
-	public function nestedFunctionSyntaxDispositionFor(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding):OcamlNestedFunctionSyntaxDisposition {
+	public function nestedFunctionSyntaxDispositionFor(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding,
+			rootBinding:OcamlFunctionPlanBinding):OcamlNestedFunctionSyntaxDisposition {
 		requireCurrentParentBinding(parentBinding);
 		final record = nestedFunctionsByExpression.get(expression);
 		if (record == null)
 			throw 'reflaxe.ocaml [ocaml-nested-function:unobserved-occurrence]: a function literal in parent "${parentBinding.functionId}" reached syntax without a planning disposition';
 		if (!sameBinding(record.parentBinding, parentBinding))
 			throw 'reflaxe.ocaml [ocaml-nested-function:parent-mismatch]: a function literal planned for "${record.parentBinding.functionId}" was requested by "${parentBinding.functionId}"';
-		final observedBodyRevision = observeNestedBodyRevision(expression, record.bodyExternalLocals);
-		if (observedBodyRevision != record.observedBodyRevision)
-			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: a function literal in parent "${parentBinding.functionId}" changed from ${record.observedBodyRevision} to $observedBodyRevision after planning';
+		requireCurrentRootSyntaxBinding(rootBinding, record);
 		return {
 			binding: copyBinding(record.binding),
 			controls: record.controls,
@@ -725,6 +716,26 @@ class OcamlFunctionPlanRegistry {
 		};
 	}
 
+	/**
+		Requires the freshly rechecked ordinary root that authorized syntax construction.
+
+		`functionSyntaxInputFor` observes the complete final root immediately before
+		the builder starts. No target callback or typed-tree rewrite may run during
+		that handoff, so every nested literal is covered by the same exact revision.
+	**/
+	function requireCurrentRootSyntaxBinding(rootBinding:OcamlFunctionPlanBinding, record:OcamlNestedFunctionRecord):Void {
+		if (rootBinding.pipelineRevision != PIPELINE_REVISION || rootBinding.programRevision != currentProgramRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-root-binding]: nested function "${record.binding.functionId}" did not receive a current ordinary-root syntax binding';
+		final canonicalRoot = rootIdentityRecordsByFunctionId.get(rootBinding.functionId);
+		if (canonicalRoot == null || !sameBinding(canonicalRoot.binding, rootBinding))
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-root-binding]: nested function "${record.binding.functionId}" did not receive the exact root binding that registered its whole-body identities';
+		if (nestedFunctionRootOwnerById.get(record.binding.functionId) != rootBinding.functionId
+			|| record.binding.bodyRevision != rootBinding.bodyRevision
+			|| record.parentBinding.bodyRevision != rootBinding.bodyRevision) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-root-binding]: nested function "${record.binding.functionId}" does not belong to freshly checked root "${rootBinding.functionId}"';
+		}
+	}
+
 	function requireCurrentParentBinding(binding:OcamlFunctionPlanBinding):Void {
 		if (binding.programRevision != currentProgramRevision)
 			throw 'reflaxe.ocaml [ocaml-nested-function:stale-parent]: parent "${binding.functionId}" does not belong to current program $currentProgramRevision';
@@ -736,13 +747,6 @@ class OcamlFunctionPlanRegistry {
 				return;
 		}
 		throw 'reflaxe.ocaml [ocaml-nested-function:stale-parent]: parent "${binding.functionId}" has no current sealed ordinary or nested function binding';
-	}
-
-	static function observeNestedBodyRevision(expression:TypedExpr, bodyExternalLocals:Array<TVar>):String {
-		return switch (expression.expr) {
-			case TFunction(tfunc): FunctionBodyRevision.initial(tfunc.expr, bodyExternalLocals).id;
-			case _: throw "reflaxe.ocaml [ocaml-nested-function:not-a-function]: a nested-function catalog entry no longer contains a typed function literal";
-		}
 	}
 
 	/** Records how one early protection identity became one final plan origin. */

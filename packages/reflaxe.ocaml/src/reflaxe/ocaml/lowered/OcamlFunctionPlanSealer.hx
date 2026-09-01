@@ -3,12 +3,10 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
-import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
-import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
@@ -356,8 +354,10 @@ class OcamlFunctionPlanSealer {
 		that names lexical locals, so zero-argument and argument-taking functions share
 		one identity model. The typed expression remains only a request-local lookup
 		key; target plans retain the stable identity and never retain another host
-		object for cross-request reuse. A nested function gets a complete behavior
-		plan only when the planner represented every return, loop transfer, and throw.
+		object for cross-request reuse. Every nested binding also keeps the exact
+		ordinary-root body revision. The registry rechecks that complete root immediately
+		before syntax, so a literal does not render and hash its overlapping subtree again.
+		A nested function gets a complete behavior plan only when the planner represented every return, loop transfer, and throw.
 		A blocked non-empty catch is never deferred: sealing fails before syntax so a
 		nested function cannot reintroduce the removed catch compiler.
 	**/
@@ -366,8 +366,6 @@ class OcamlFunctionPlanSealer {
 		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
 			switch (expression.expr) {
 				case TFunction(tfunc):
-					final bodyExternalLocals = nestedBodyExternalLocals(tfunc, localIdentities);
-					final observedBodyRevision = FunctionBodyRevision.initial(tfunc.expr, bodyExternalLocals).id;
 					final occurrence = try {
 						localIdentities.requireFunctionOccurrence(expression);
 					} catch (error:Dynamic) {
@@ -382,7 +380,7 @@ class OcamlFunctionPlanSealer {
 					final nestedBinding:OcamlFunctionPlanBinding = {
 						functionId: nestedFunctionId,
 						programRevision: lexicalParentBinding.programRevision,
-						bodyRevision: observedBodyRevision,
+						bodyRevision: parentBinding.bodyRevision,
 						pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
 					};
 					final nestedIdentity:OcamlNestedFunctionIdentity = {
@@ -486,9 +484,8 @@ class OcamlFunctionPlanSealer {
 					validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
 					recordControlRuntimeRequirements(controls);
 					if (boundary == null) {
-						registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities, imapInterfaces,
-							arrayReads, arrayIterators, dynamicEquality, controls,
-							"The typed function literal is outside the existing represented-result callable boundary.", dynamicString, staticString,
+						registry.deferNestedFunction(expression, nestedIdentity, localIdentities, imapInterfaces, arrayReads, arrayIterators, dynamicEquality,
+							controls, "The typed function literal is outside the existing represented-result callable boundary.", dynamicString, staticString,
 							reflectRuntimeUses, stdIsOfType, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields);
 					} else {
 						// A nested function can read a local declared by its enclosing function.
@@ -503,8 +500,8 @@ class OcamlFunctionPlanSealer {
 						final allControlFamiliesAdmitted = controls.returnFamilyAdmitted && controls.loopFamilyAdmitted && controls.throwFamilyAdmitted;
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
 						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
-							registry.deferNestedFunction(expression, nestedIdentity, bodyExternalLocals, observedBodyRevision, localIdentities,
-								imapInterfaces, arrayReads, arrayIterators, dynamicEquality, controls,
+							registry.deferNestedFunction(expression, nestedIdentity, localIdentities, imapInterfaces, arrayReads, arrayIterators,
+								dynamicEquality, controls,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
 								dynamicString, staticString, reflectRuntimeUses, stdIsOfType, intUnary, stringFromCharCode, stringEquality, stringMethods,
 								stringFields);
@@ -534,7 +531,7 @@ class OcamlFunctionPlanSealer {
 							};
 							for (decision in arrayLiteralProducers.decisions())
 								context.recordArrayLiteralRuntimeRequirements(decision);
-							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
+							registry.sealNestedFunction(expression, plan, localIdentities);
 						}
 					}
 					TypedExprTools.iter(tfunc.expr, child -> visit(child, childParentBinding));
@@ -543,47 +540,6 @@ class OcamlFunctionPlanSealer {
 			}
 		}
 		visit(body, parentBinding);
-	}
-
-	/**
-		Returns the parameters and captured outer locals needed to fingerprint one
-		nested body without using process-local Haxe variable numbers.
-
-		The function's own parameters come first in signature order. Captures then
-		use the enclosing lexical plan's stable source path, so compiling unrelated
-		code first cannot change the body revision. Locals declared inside this
-		function or a deeper literal are not captures.
-	**/
-	static function nestedBodyExternalLocals(tfunc:haxe.macro.Type.TFunc, localIdentities:LexicalLocalIdentityPlan):Array<TVar> {
-		final declared:Map<Int, Bool> = [];
-		final referenced:Map<Int, TVar> = [];
-		for (argument in tfunc.args)
-			declared.set(argument.v.id, true);
-		function collect(expression:TypedExpr):Void {
-			switch (expression.expr) {
-				case TLocal(local):
-					referenced.set(local.id, local);
-				case TVar(local, _):
-					declared.set(local.id, true);
-				case TFunction(nested):
-					for (argument in nested.args)
-						declared.set(argument.v.id, true);
-				case TFor(local, _, _):
-					declared.set(local.id, true);
-				case TTry(_, catches):
-					for (caught in catches)
-						declared.set(caught.v.id, true);
-				case _:
-			}
-			TypedExprTools.iter(expression, collect);
-		}
-		collect(tfunc.expr);
-		final captures:Array<TVar> = [];
-		for (hostId => local in referenced)
-			if (!declared.exists(hostId))
-				captures.push(local);
-		captures.sort((left, right) -> Reflect.compare(localIdentities.require(left).path, localIdentities.require(right).path));
-		return tfunc.args.map(argument -> argument.v).concat(captures);
 	}
 
 	/**

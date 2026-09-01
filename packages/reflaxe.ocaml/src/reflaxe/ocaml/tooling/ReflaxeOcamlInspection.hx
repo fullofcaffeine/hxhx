@@ -103,7 +103,7 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v112";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v31";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v32";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
 
 	/** Returns the control-plan schema selected by one report owner. */
