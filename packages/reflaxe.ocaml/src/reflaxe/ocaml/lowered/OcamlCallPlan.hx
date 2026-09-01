@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import haxe.ds.ObjectMap;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
@@ -379,7 +380,11 @@ class OcamlCallPlan {
 
 	/** Returns whether one exact argument preserves the sealed `Null<Bool>` carrier. */
 	public function preservesNullableBoolArgument(expression:TypedExpr, argumentIndex:Int):Bool {
-		final decision = decisionFor(expression);
+		return decisionPreservesNullableBoolArgument(decisionFor(expression), argumentIndex);
+	}
+
+	/** Checks one already-selected call for an exact preserved `Null<Bool>` argument. */
+	public static function decisionPreservesNullableBoolArgument(decision:Null<OcamlCallDecision>, argumentIndex:Int):Bool {
 		if (decision == null || argumentIndex < 0 || argumentIndex >= decision.arguments.length)
 			return false;
 		final argument = decision.arguments[argumentIndex];
@@ -392,7 +397,11 @@ class OcamlCallPlan {
 
 	/** Returns whether one exact call produces the sealed `Null<Bool>` carrier. */
 	public function producesNullableBool(expression:TypedExpr):Bool {
-		final decision = decisionFor(expression);
+		return decisionProducesNullableBool(decisionFor(expression));
+	}
+
+	/** Checks one already-selected call for an exact `Null<Bool>` result. */
+	public static function decisionProducesNullableBool(decision:Null<OcamlCallDecision>):Bool {
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "Null<Bool>";
 		return decision != null
@@ -407,7 +416,11 @@ class OcamlCallPlan {
 
 	/** Returns whether one exact call produces the sealed core String carrier. */
 	public function producesExactString(expression:TypedExpr):Bool {
-		final decision = decisionFor(expression);
+		return decisionProducesExactString(decisionFor(expression));
+	}
+
+	/** Checks one already-selected call for the exact core String result carrier. */
+	public static function decisionProducesExactString(decision:Null<OcamlCallDecision>):Bool {
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "String";
 		return decision != null
@@ -1582,6 +1595,11 @@ private typedef OcamlAdmittedCallSignature = {
 	final resultSemanticTypeId:Null<String>;
 }
 
+/** Distinguishes a reusable negative preliminary result from an unobserved call. */
+private typedef OcamlPreliminaryCallReuse = {
+	final decision:Null<OcamlCallDecision>;
+}
+
 /**
 	Selects the first closed typed-call kinds from final Haxe expressions.
 
@@ -1597,6 +1615,11 @@ class OcamlCallPlanner {
 	final binding:OcamlFunctionPlanBinding;
 	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
 	final localIdentities:Null<LexicalLocalIdentityPlan>;
+	final preliminaryDecisionsByExpression:ObjectMap<TypedExpr, OcamlCallDecision> = new ObjectMap();
+	final observedPreliminaryExpressions:ObjectMap<TypedExpr, Bool> = new ObjectMap();
+	#if reflaxe_lifecycle_test
+	var preliminaryDecisionEvaluationCount = 0;
+	#end
 
 	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan,
 			?localIdentities:LexicalLocalIdentityPlan) {
@@ -1605,6 +1628,47 @@ class OcamlCallPlanner {
 		this.localRepresentations = localRepresentations;
 		this.localIdentities = localIdentities;
 	}
+
+	/**
+		Checks one local-representation dependency without scanning the function.
+
+		Local representation planning asks about only the calls that can feed its
+		closed nullable-Bool or exact-String carrier families. The final call plan
+		still visits and seals every admitted call after local representations exist.
+	**/
+	public function preliminaryPreservesNullableBoolArgument(expression:TypedExpr, argumentIndex:Int):Bool {
+		return OcamlCallPlan.decisionPreservesNullableBoolArgument(preliminaryDecisionFor(expression), argumentIndex);
+	}
+
+	/** Checks one requested call for an exact `Null<Bool>` result without a whole-body scan. */
+	public function preliminaryProducesNullableBool(expression:TypedExpr):Bool {
+		return OcamlCallPlan.decisionProducesNullableBool(preliminaryDecisionFor(expression));
+	}
+
+	/** Checks one requested call for an exact core String result without a whole-body scan. */
+	public function preliminaryProducesExactString(expression:TypedExpr):Bool {
+		return OcamlCallPlan.decisionProducesExactString(preliminaryDecisionFor(expression));
+	}
+
+	function preliminaryDecisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
+		if (observedPreliminaryExpressions.exists(expression))
+			return preliminaryDecisionsByExpression.get(expression);
+		observedPreliminaryExpressions.set(expression, true);
+		#if reflaxe_lifecycle_test
+		preliminaryDecisionEvaluationCount += 1;
+		#end
+		final decision = decisionFor(expression);
+		if (decision != null)
+			preliminaryDecisionsByExpression.set(expression, decision);
+		return decision;
+	}
+
+	#if reflaxe_lifecycle_test
+	/** Returns how many distinct call expressions an on-demand fixture evaluated. */
+	public function getPreliminaryDecisionEvaluationCount():Int {
+		return preliminaryDecisionEvaluationCount;
+	}
+	#end
 
 	/** Selects the callable boundary exported by this function, if admitted. */
 	public function boundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
@@ -1947,17 +2011,61 @@ class OcamlCallPlanner {
 		return foundDirect;
 	}
 
-	/** Plans every admitted call occurrence in one exact final function body. */
-	public function plan(expression:TypedExpr):OcamlCallPlan {
+	/**
+		Plans every admitted call occurrence in one exact final function body.
+
+		A preliminary planner may supply decisions it already evaluated for local
+		representation questions. A negative decision is reused only when local
+		representation planning cannot make that call newly admissible. The one
+		current dependent shape—an ordinary instance call through a local nominal
+		receiver—is always evaluated again.
+	**/
+	public function plan(expression:TypedExpr, ?preliminary:OcamlCallPlanner):OcamlCallPlan {
+		if (preliminary != null)
+			requireReusablePreliminaryPlanner(preliminary);
 		final decisions:Array<OcamlCallDecision> = [];
 		function visit(current:TypedExpr):Void {
-			final decision = decisionFor(current);
+			final reuse = preliminary == null ? null : preliminary.reusablePreliminaryDecisionFor(current);
+			final decision = reuse == null ? decisionFor(current) : reuse.decision;
 			if (decision != null)
 				decisions.push(decision);
 			TypedExprTools.iter(current, visit);
 		}
 		visit(expression);
 		return new OcamlCallPlan(decisions);
+	}
+
+	function requireReusablePreliminaryPlanner(preliminary:OcamlCallPlanner):Void {
+		if (preliminary == this
+			|| preliminary.representations != representations
+			|| preliminary.localRepresentations != null
+			|| preliminary.localIdentities != null
+			|| preliminary.binding.functionId != binding.functionId
+			|| preliminary.binding.programRevision != binding.programRevision
+			|| preliminary.binding.bodyRevision != binding.bodyRevision
+			|| preliminary.binding.pipelineRevision != binding.pipelineRevision) {
+			throw "reflaxe.ocaml [ocaml-call:invalid-preliminary-reuse]: final call planning requires the matching local-free planner from the same function and representation request";
+		}
+	}
+
+	function reusablePreliminaryDecisionFor(expression:TypedExpr):Null<OcamlPreliminaryCallReuse> {
+		if (!observedPreliminaryExpressions.exists(expression))
+			return null;
+		final decision = preliminaryDecisionsByExpression.get(expression);
+		if (decision == null && mayBecomeAdmittedAfterLocalPlanning(expression))
+			return null;
+		return {decision: decision};
+	}
+
+	static function mayBecomeAdmittedAfterLocalPlanning(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TCall({expr: TField(receiver, FInstance(_, _, _))}, _):
+				switch (unwrapTransparent(receiver).expr) {
+					case TLocal(_): true;
+					case _: false;
+				}
+			case _: false;
+		}
 	}
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {

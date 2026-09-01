@@ -33,6 +33,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayResultKind;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallTarget;
@@ -1491,6 +1492,42 @@ class CallPlanFixture {
 		expectThrows("planned-body-revision-mismatch", () -> registry.functionSyntaxInputFor(data));
 	}
 
+	/** Proves preliminary carrier questions evaluate only the requested calls. */
+	static function assertPreliminaryCallFactsAreLazy():Void {
+		final representations = new OcamlRepresentationRegistry();
+		representations.beginProgram(PROGRAM_REVISION);
+		final caller = binding("PreliminaryCallFactsFixture|PreliminaryCallFactsFixture::caller", "body:preliminary-call-facts");
+		final typed = Context.typeExpr(macro {
+			PreliminaryCallFactsFixture.identity("first");
+			PreliminaryCallFactsFixture.identity("second");
+			PreliminaryCallFactsFixture.identity("third");
+		});
+		final expressions = switch (typed.expr) {
+			case TBlock(children): children;
+			case _: Context.error("The preliminary-call fixture did not type as a block.", typed.pos);
+		}
+		final complete = new OcamlCallPlanner(representations, caller).plan(typed);
+		if (complete.decisions().length != 3)
+			Context.error("The complete call planner did not observe all three fixture calls.", typed.pos);
+
+		final preliminary = new OcamlCallPlanner(representations, caller);
+		if (!preliminary.preliminaryProducesExactString(expressions[0])
+			|| preliminary.preliminaryProducesNullableBool(expressions[0])
+			|| preliminary.preliminaryPreservesNullableBoolArgument(expressions[0], 0)) {
+			Context.error("The on-demand preliminary facts disagree with the complete exact-String call plan.", expressions[0].pos);
+		}
+		if (preliminary.getPreliminaryDecisionEvaluationCount() != 1)
+			Context.error("Repeated facts for one call evaluated more than that one call occurrence.", expressions[0].pos);
+		if (!preliminary.preliminaryProducesExactString(expressions[1]) || preliminary.getPreliminaryDecisionEvaluationCount() != 2)
+			Context.error("Requesting a second preliminary call did not evaluate exactly one additional occurrence.", expressions[1].pos);
+
+		final reused = new OcamlCallPlanner(representations, caller).plan(typed, preliminary);
+		if (reused.revision != complete.revision || reused.decisions().length != complete.decisions().length)
+			Context.error("Reusing on-demand preliminary decisions changed the complete final call plan.", typed.pos);
+		final foreign = new OcamlCallPlanner(representations, binding("PreliminaryCallFactsFixture|foreign", "body:foreign"));
+		expectThrows("invalid-preliminary-reuse", () -> new OcamlCallPlanner(representations, caller).plan(typed, foreign));
+	}
+
 	static function expectThrows(code:String, operation:Void->Void):Void {
 		expectedFailureIndex += 1;
 		var message:Null<String> = null;
@@ -1546,6 +1583,7 @@ class CallPlanFixture {
 
 	public static macro function run():Expr {
 		assertFunctionSyntaxInputUsesOneObservation();
+		assertPreliminaryCallFactsAreLazy();
 		final exactArrayType = Context.typeExpr(macro([] : Array<Int>)).t;
 		if (!OcamlStandardArrayCallContract.isArrayType(exactArrayType))
 			Context.error("The standard Array call contract rejected an exact Array<Int> receiver.", Context.currentPos());

@@ -180,9 +180,8 @@ class OcamlFunctionPlanSealer {
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
-		final preliminaryCalls = callPlanner.plan(data.expr);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
-			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
+			callPlanner.preliminaryPreservesNullableBoolArgument, callPlanner.preliminaryProducesNullableBool, callPlanner.preliminaryProducesExactString);
 		localRepresentations.requirePlanBinding(binding);
 		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
 		containerElements.requirePlanBinding(binding);
@@ -219,7 +218,7 @@ class OcamlFunctionPlanSealer {
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
 		for (alias in imapInterfaces.storageAliases())
 			context.recordIMapStorageAliasRuntimeRequirements(alias);
-		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
+		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr, callPlanner);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		for (decision in reflectCompare.decisions())
 			context.recordReflectCompareRuntimeRequirements(decision);
