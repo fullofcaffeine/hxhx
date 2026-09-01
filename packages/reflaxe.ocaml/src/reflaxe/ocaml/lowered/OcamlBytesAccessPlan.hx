@@ -455,10 +455,12 @@ class OcamlBytesAccessPlanner {
 	public function plan(root:TypedExpr):OcamlBytesAccessPlan {
 		final decisions:Array<OcamlBytesAccessDecision> = [];
 		final occurrences:Array<OcamlBytesAccessDecisionOccurrence> = [];
-		function visit(expression:TypedExpr, path:String):Void {
-			final occurrenceId = occurrenceIdFor(path);
-			final decision = decisionFor(expression, occurrenceId);
-			if (decision != null) {
+		final childPath:Array<Int> = [];
+		function visit(expression:TypedExpr):Void {
+			final occurrence = OcamlBytesAccessPlan.admittedOccurrence(expression);
+			if (occurrence != null) {
+				final occurrenceId = occurrenceIdFor(childPath);
+				final decision = decisionForOccurrence(expression, occurrenceId, occurrence);
 				decisions.push(decision);
 				occurrences.push({
 					expression: expression,
@@ -468,19 +470,17 @@ class OcamlBytesAccessPlanner {
 			}
 			var childIndex = 0;
 			TypedExprTools.iter(expression, child -> {
-				final childPath = path + "/child:" + childIndex;
+				childPath.push(childIndex);
 				childIndex++;
-				visit(child, childPath);
+				visit(child);
+				childPath.pop();
 			});
 		}
-		visit(root, "root");
+		visit(root);
 		return new OcamlBytesAccessPlan(decisions, occurrences);
 	}
 
-	function decisionFor(expression:TypedExpr, occurrenceId:String):Null<OcamlBytesAccessDecision> {
-		final occurrence = OcamlBytesAccessPlan.admittedOccurrence(expression);
-		if (occurrence == null)
-			return null;
+	function decisionForOccurrence(expression:TypedExpr, occurrenceId:String, occurrence:OcamlBytesAccessOccurrence):OcamlBytesAccessDecision {
 		final receiverRepresentation = occurrence.receiver == null ? null : representations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
 		final argumentInputRepresentations = occurrence.arguments.map(argument -> inputRepresentation(argument.t));
 		final argumentRepresentations = occurrence.arguments.map(argument -> outputRepresentation(argument.t));
@@ -550,8 +550,14 @@ class OcamlBytesAccessPlanner {
 		return decision;
 	}
 
-	function occurrenceIdFor(path:String):String {
-		return OcamlBytesAccessContract.OCCURRENCE_ID_PREFIX + Sha256.encode(binding.functionId + "|" + path).substr(0, 24);
+	function occurrenceIdFor(childPath:Array<Int>):String {
+		final path = new StringBuf();
+		path.add("root");
+		for (childIndex in childPath) {
+			path.add("/child:");
+			path.add(childIndex);
+		}
+		return OcamlBytesAccessContract.OCCURRENCE_ID_PREFIX + Sha256.encode(binding.functionId + "|" + path.toString()).substr(0, 24);
 	}
 
 	function inputRepresentation(type:Type):OcamlRepresentationDecision {
