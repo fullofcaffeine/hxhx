@@ -1982,8 +1982,7 @@ class Main {
 }
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpopt/src" -main runci.targets.Main --hxhx-out "$tmpopt/out")"
-# Keep this as emit+run smoke in bootstrap lane; value-level optional-arg
-# dispatch parity is covered by deeper stage3/runtime gates.
+echo "$out" | grep -q "^retry$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: sys.io.File whole-file ops map to runtime"

@@ -566,44 +566,48 @@ class EmitterStage {
 			fixedCount = argCount - 1;
 		}
 		var requiredCount = 0;
+		final paramNames = new Array<String>();
+		final paramFillable = new Array<Bool>();
+		final paramTypeHints = new Array<String>();
+		if (needsReceiver) {
+			paramNames.push("this");
+			paramFillable.push(false);
+			paramTypeHints.push("Dynamic");
+		}
 		for (i in 0...fixedCount) {
 			final a = fnArgs[i];
 			final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
 				case Default(_): true;
 				case _: false;
 			};
-			if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
+			final fillable = HxFunctionArg.getIsOptional(a) || hasDefault;
+			paramNames.push(HxFunctionArg.getName(a));
+			paramFillable.push(fillable);
+			paramTypeHints.push(StringTools.trim(HxFunctionArg.getTypeHint(a)));
+			if (!fillable)
 				requiredCount += 1;
 		}
 		if (needsReceiver) {
 			fixedCount += 1;
 			requiredCount += 1;
 		}
-		final paramTypeHints = callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver);
+		if (hasRest) {
+			final restArg = fnArgs[argCount - 1];
+			paramNames.push(HxFunctionArg.getName(restArg));
+			paramFillable.push(false);
+			paramTypeHints.push("Array");
+		}
 		return {
 			expected: fixedCount + (hasRest ? 1 : 0),
 			required: requiredCount,
 			fixed: fixedCount,
 			hasRest: hasRest,
 			needsReceiver: needsReceiver,
+			paramNames: paramNames,
+			paramFillable: paramFillable,
 			paramTypeHints: paramTypeHints,
 			resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
 		};
-	}
-
-	static function callSigParamTypeHints(fnArgs:Array<HxFunctionArg>, loweredFixedCount:Int, hasRest:Bool, needsReceiver:Bool):Array<String> {
-		final out = new Array<String>();
-		if (needsReceiver)
-			out.push("Dynamic");
-		final argCount = fnArgs == null ? 0 : fnArgs.length;
-		final sourceFixedCount = hasRest ? argCount - 1 : argCount;
-		for (i in 0...sourceFixedCount)
-			out.push(StringTools.trim(HxFunctionArg.getTypeHint(fnArgs[i])));
-		if (hasRest)
-			out.push("Array");
-		while (out.length < loweredFixedCount + (hasRest ? 1 : 0))
-			out.push("");
-		return out;
 	}
 
 	static function stage3IsFloatParamHint(hint:String):Bool {
@@ -2038,6 +2042,106 @@ class EmitterStage {
 		};
 	}
 
+	/**
+		Return the narrow expression type facts that may justify optional-argument
+		skipping.
+
+		An unresolved, Dynamic, or merely plausible type stays unknown. The planner
+		can place such an argument in its current slot, but it cannot use that weak
+		fact to move the argument across declaration positions.
+	**/
+	static function stage3CallArgumentType(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
+			?staticImportByIdent:Map<String, String>):TyType {
+		if (expr == null)
+			return TyType.unknown();
+		return switch (expr) {
+			case ENull:
+				TyType.fromHintText("Null");
+			case EBool(_):
+				TyType.fromHintText("Bool");
+			case EString(_) | EEnumValue(_):
+				TyType.fromHintText("String");
+			case EInt(_):
+				TyType.fromHintText("Int");
+			case EFloat(_):
+				TyType.fromHintText("Float");
+			case EIdent(name):
+				final hint = StringTools.trim(stage3TyForIdent(name, tyByIdent));
+				(hint.length == 0 || hint == "Unknown" || hint == "Dynamic") ? TyType.unknown() : TyType.fromHintText(hint);
+			case ECast(inner, typeHint):
+				final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+				hint.length == 0 ? stage3CallArgumentType(inner, tyByIdent, callSigByCallee, staticImportByIdent) : TyType.fromHintText(hint);
+			case ENew(typePath, _):
+				final hint = StringTools.trim(typePath == null ? "" : typePath);
+				hint.length == 0 ? TyType.unknown() : TyType.fromHintText(hint);
+			case EArrayDecl(_):
+				TyType.fromHintText("Array");
+			case ECall(EIdent(name), _):
+				var signature = callSigForStage3(name, callSigByCallee);
+				if (signature == null)
+					signature = callSigForStage3(ocamlValueIdent(name), callSigByCallee);
+				final hint = signature == null ? "" : StringTools.trim(signature.resultTypeHint);
+					(hint.length == 0 || hint == "Unknown" || hint == "Dynamic") ? TyType.unknown() : TyType.fromHintText(hint);
+			case ECall(EField(owner, name), _):
+				var signature = qualifiedCallSigForStage3(owner, name, callSigByCallee, staticImportByIdent);
+				if (signature == null)
+					signature = callSigForStage3(name, callSigByCallee);
+				if (signature == null)
+					signature = callSigForStage3(ocamlValueIdent(name), callSigByCallee);
+				final hint = signature == null ? "" : StringTools.trim(signature.resultTypeHint);
+					(hint.length == 0 || hint == "Unknown" || hint == "Dynamic") ? TyType.unknown() : TyType.fromHintText(hint);
+			case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
+				TyType.fromHintText("Bool");
+			case EBinop("==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||", _, _):
+				TyType.fromHintText("Bool");
+			case EBinop("+", left, right) if (stage3IsStringExpr(left, tyByIdent) || stage3IsStringExpr(right, tyByIdent)):
+				TyType.fromHintText("String");
+			case ETernary(_, thenExpr, elseExpr):
+				final thenType = stage3CallArgumentType(thenExpr, tyByIdent, callSigByCallee, staticImportByIdent);
+				final elseType = stage3CallArgumentType(elseExpr, tyByIdent, callSigByCallee, staticImportByIdent);
+				(!thenType.isUnknown() && thenType.getSemanticKey() == elseType.getSemanticKey()) ? thenType : TyType.unknown();
+			case _:
+				TyType.unknown();
+		};
+	}
+
+	/** Compare one source argument with a declared parameter without treating incomplete typing as proof. **/
+	static function stage3CallArgumentCompatibility(expr:HxExpr, paramTypeHint:String, paramFillable:Bool, ?tyByIdent:Map<String, TyType>,
+			?callSigByCallee:Map<String, EmitterCallSig>, ?staticImportByIdent:Map<String, String>):EmitterCallArgCompatibility {
+		var expected = TyType.fromHintText(paramTypeHint);
+		if (expected.isUnknown() || expected.isDynamic() || expected.isTypeParameter())
+			return Unknown;
+		final actual = stage3CallArgumentType(expr, tyByIdent, callSigByCallee, staticImportByIdent);
+		if (actual.isUnknown() || actual.isDynamic() || actual.isTypeParameter())
+			return Unknown;
+		if (actual.getDisplay() == "Null")
+			return (paramFillable || expected.isNullable()) ? Compatible : Incompatible;
+		if (expected.isNullable())
+			expected = expected.unwrapNull();
+		if (expected.getDisplay() == "Float" && actual.getDisplay() == "Int")
+			return Compatible;
+		if (expected.getDisplay() == "Int" && actual.getDisplay() == "Float")
+			return Incompatible;
+		return expected.getSemanticKey() == actual.getSemanticKey() ? Compatible : Incompatible;
+	}
+
+	static function stage3CallDiagnosticName(callee:HxExpr, rendered:String):String {
+		return switch (callee) {
+			case EIdent(name) | EField(_, name):
+				name;
+			case _:
+				final canonical = canonicalCallTargetForStage3(rendered, null);
+				canonical.length == 0 ? "<call>" : canonical;
+		};
+	}
+
+	static function stage3MissingCallArgumentDiagnostic(calleeName:String, signature:EmitterCallSig, paramIndex:Int, paramName:String):String {
+		if (signature.needsReceiver && paramIndex == 0)
+			return "stage3 emitter: call `" + calleeName + "` is missing required receiver";
+		final sourcePosition = paramIndex - (signature.needsReceiver ? 1 : 0) + 1;
+		return "stage3 emitter: call `" + calleeName + "` is missing required argument #" + sourcePosition + " (`" + paramName + "`)";
+	}
+
 	/** Selects how one typed expression crosses a declared Dynamic boundary. */
 	static function stage3DynamicArgumentCarrier(expr:HxExpr, ?tyByIdent:Map<String, TyType>,
 			?callSigByCallee:Map<String, EmitterCallSig>):backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier {
@@ -2933,33 +3037,26 @@ class EmitterStage {
 					};
 				}
 
-				// Stage 3 bring-up: avoid partial applications when Haxe calls a function
-				// with omitted optional/default parameters.
-				//
-				// Example (stdlib):
-				// - `Bytes.readString(pos, len)` calls `getString(pos, len)` where `getString` is declared
-				//   as `getString(pos, len, ?encoding)`.
-				// - Without a default/optional-arg model, emitting `getString pos len` becomes a partial
-				//   application and fails OCaml typechecking.
-				//
-				// In this bring-up emitter we don't implement real default-arg semantics; we simply
-				// append `(Obj.magic 0)` for any missing arguments when the callee is a known in-module
-				// identifier and the call provides fewer args than the declaration.
-				final missing = switch (callee) {
-					case EIdent(name) if (stage3HasArity(name, arityByIdentRaw)):
-						final expectedRaw = stage3ArityFor(name, arityByIdentRaw);
-						final isInstance = hasCurrentInstanceMethod(name);
-						final callerHasThis = stage3HasThisBinding(tyByIdentRaw);
-						final receiverIsForwarded = isInstance && args.length > 0 && args.length >= expectedRaw && looksLikeForwardedReceiverExpr(args[0]);
-						final expected = (isInstance && callerHasThis && !receiverIsForwarded) ? (expectedRaw - 1) : expectedRaw;
-						expected > args.length ? (expected - args.length) : 0;
-					case EField(EThis, name) if (stage3HasArity(name, arityByIdentRaw)):
-						final expectedRaw = stage3ArityFor(name, arityByIdentRaw);
-						final receiverIsForwarded = args.length > 0 && args.length >= expectedRaw && looksLikeForwardedReceiverExpr(args[0]);
-						final expected = receiverIsForwarded ? expectedRaw : (expectedRaw - 1);
-						expected > args.length ? (expected - args.length) : 0;
-					case _:
-						0;
+				function renderCallArgForSignature(arg:HxExpr, argIndex:Int, signature:Null<EmitterCallSig>):String {
+					final hint = signature == null
+						|| signature.paramTypeHints == null
+						|| argIndex < 0
+						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
+					final rendered = switch (arg) {
+						case ENull:
+							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						case _ if (stage3IsFloatParamHint(hint)):
+							exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
+						case _:
+							stage3Int64CarrierValue(hint, arg,
+								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+								tyByIdentRaw);
+					};
+					if (signature != null && signature.needsReceiver && argIndex == 0)
+						return rendered;
+					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
+					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
 				}
 
 				final runtimeIntrinsic = tryExprToOcamlStage3RuntimeIntrinsic(callee, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
@@ -3279,15 +3376,57 @@ class EmitterStage {
 					case EField(obj, field) if (stage3HasArity(field, arityByIdentRaw)
 						&& hasCurrentInstanceMethod(field)
 						&& !isTypePathExpr(obj)):
+						final loweredField = ocamlValueIdent(field);
+						var signature = callSigForStage3(loweredField, callSigByCalleeRaw);
+						if (signature == null)
+							signature = callSigForStage3(field, callSigByCalleeRaw);
+						if (signature == null) {
+							final rendered = new Array<String>();
+							rendered.push("("
+								+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								+ ")");
+							for (arg in args)
+								rendered.push("("
+									+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+										callSigByCallee)
+									+ ")");
+							return loweredField + " " + rendered.join(" ");
+						}
+
+						final planned = EmitterCallArgPolicy.plan(signature, args.length, 1, (sourceIndex, paramIndex) -> {
+							final fillable = signature.paramFillable != null
+								&& paramIndex >= 0
+								&& paramIndex < signature.paramFillable.length
+								&& signature.paramFillable[paramIndex];
+							final hint = signature.paramTypeHints == null
+								|| paramIndex < 0
+								|| paramIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[paramIndex];
+							return stage3CallArgumentCompatibility(args[sourceIndex], hint, fillable, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
+						});
 						final rendered = new Array<String>();
 						rendered.push("("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")");
-						for (a in args)
-							rendered.push("("
-								+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ")");
-						return ocamlValueIdent(field) + " " + rendered.join(" ");
+						switch (planned) {
+							case MissingRequired(paramIndex, paramName):
+								throw stage3MissingCallArgumentDiagnostic(field, signature, paramIndex, paramName);
+							case Planned(plan):
+								final sourceIndices = plan.getFixedSourceIndices();
+								for (paramIndex in plan.getFirstRenderedParam()...signature.fixed) {
+									final sourceIndex = sourceIndices[paramIndex];
+									final arg:HxExpr = sourceIndex == null ? HxExpr.ENull : args[sourceIndex];
+									rendered.push("(" + renderCallArgForSignature(arg, paramIndex, signature) + ")");
+								}
+								if (signature.hasRest) {
+									final restArgs = args.slice(plan.getRestSourceStart());
+									final restCode = restArgs.length == 0 ? "HxBootArray.create ()" : ("HxBootArray.of_list ["
+										+ restArgs.map(arg -> exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+											moduleNameByPkgAndClass, callSigByCallee))
+											.join("; ") + "]");
+									rendered.push("(" + restCode + ")");
+								}
+						}
+						return loweredField + " " + rendered.join(" ");
 					case _:
 				}
 				final instanceCallName = switch (callee) {
@@ -3339,62 +3478,6 @@ class EmitterStage {
 					if (isEscapeMetaTrue) {
 						return "(fun __arg -> Haxe_SysTools.quoteWinArg (__arg) (true))";
 					}
-				}
-				// Stage3 stdlib bring-up guard:
-				// - `haxe.io.Bytes.readString(pos, len)` lowers to `getString(pos, len)`.
-				// - The current typed call facts can miss the implicit receiver/optional encoding argument.
-				// - Emit the receiver-aware form directly to avoid OCaml partial application.
-				if (c == "getString" && args.length == 2) {
-					return c
-						+ " (this_)"
-						+ " ("
-						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ") ("
-						+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ") ((Obj.magic HxRuntime.hx_null))";
-				}
-				// Stage3 stdlib bring-up guard:
-				// - `haxe.io.Bytes.getDouble/getFloat/getInt64` call `getInt32(pos)` in instance context.
-				// - The current typed call facts can lose the implicit receiver for the unqualified helper call.
-				// - Emit the receiver-aware call form directly to avoid OCaml partial applications.
-				if (c == "getInt32" && args.length == 1) {
-					return c
-						+ " (this_)"
-						+ " ("
-						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ")";
-				}
-				// Stage3 stdlib bring-up guard:
-				// - `haxe.ds.EnumValueMap.compareArg` calls `compare(v1, v2)` in instance context.
-				// - In some recovered AST paths, implicit receiver insertion can still be skipped,
-				//   yielding partial application in emitted OCaml.
-				// - Emit receiver-aware call form directly for this known shape.
-				if (c == "compare" && stage3HasThisBinding(tyByIdentRaw) && args.length == 2) {
-					return c
-						+ " (this_)"
-						+ " ("
-						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ") ("
-						+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ")";
-				}
-				// Stage3 stdlib bring-up guard:
-				// - Some parser-recovery paths collapse `compare(v1, v2)` into `compare()` in
-				//   `haxe.ds.EnumValueMap.compareArg`.
-				// - The generic missing-arg filler then inserts poison values and still misses
-				//   the receiver, producing a partial application.
-				// - Recover the known local-param call shape directly when available.
-				if (c == "compare"
-					&& stage3HasThisBinding(tyByIdentRaw)
-					&& args.length == 0
-					&& stage3HasTyIdent("v1", tyByIdentRaw)
-					&& stage3HasTyIdent("v2", tyByIdentRaw)) {
-					return c
-						+ " (this_) ("
-						+ exprToOcaml(EIdent("v1"), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ") ("
-						+ exprToOcaml(EIdent("v2"), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-						+ ")";
 				}
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
 				//
@@ -3588,167 +3671,91 @@ class EmitterStage {
 							return "(Obj.magic 0)";
 					}
 
-					function renderCallArgWithSig(arg:HxExpr, argIndex:Int):String {
-						final hint = (sig == null || sig.paramTypeHints == null || argIndex < 0 || argIndex >= sig.paramTypeHints.length) ? "" : sig.paramTypeHints[argIndex];
-						final rendered = switch (arg) {
-							case ENull:
-								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-							case _ if (stage3IsFloatParamHint(hint)):
-								exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee);
-							case _:
-								stage3Int64CarrierValue(hint, arg,
-									exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-										callSigByCallee),
-									tyByIdentRaw);
-						};
-						if (sig != null && sig.needsReceiver && argIndex == 0)
-							return rendered;
-						final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
-						return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
-					}
-
-					// Rest-args lowering (Stage3 bring-up)
-					//
-					// Haxe: `function f(a:Int, ...rest:String)` has a single rest parameter which can be
-					// omitted or supplied with multiple values at call sites.
-					//
-					// OCaml emission strategy:
-					// - Lower to a fixed-arity function where the last parameter is an `Array<T>` of rest values
-					//   (empty array when omitted).
-					// - Call sites pack trailing arguments into an `HxBootArray`.
-					if (sig != null && sig.hasRest) {
-						final fixedCount = sig.fixed;
-						final fixedArgs = new Array<HxExpr>();
-						for (i in 0...fixedCount)
-							fixedArgs.push(i < args.length ? args[i] : ENull);
-						final restArgs = (args.length > fixedCount) ? args.slice(fixedCount) : [];
-						final restCode = (restArgs.length == 0) ? "HxBootArray.create ()" : ("HxBootArray.of_list ["
-							+ restArgs.map(a -> exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee))
-								.join("; ") + "]");
-
-						final argCodes = new Array<String>();
-						for (argIndex in 0...fixedArgs.length) {
-							argCodes.push("(" + renderCallArgWithSig(fixedArgs[argIndex], argIndex) + ")");
-						}
-						argCodes.push("(" + restCode + ")");
-
-						c + " " + argCodes.join(" ");
-					} else {
-						var fullArgs = args.copy();
-						final forceImplicitThis = switch (callee) {
-							case EIdent(name): stage3HasThisBinding(tyByIdentRaw) && stage3HasArity(name,
-									arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
-							case EField(EThis, name): stage3HasArity(name, arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
+					var fullArgs = args.copy();
+					final sourceAlreadyCarriesThis = fullArgs.length > 0 && switch (fullArgs[0]) {
+						case EThis: true;
+						case _: false;
+					};
+					final needsRecoveredQualifiedReceiver = sig != null && sig.needsReceiver && !receiverPreApplied && !sourceAlreadyCarriesThis
+						&& fullArgs.length < sig.required && switch (callee) {
+							case EField(obj, _) if (isTypePathExpr(obj)):
+								true;
 							case _:
 								false;
 						};
-						if (forceImplicitThis && c.indexOf(" (this_)") == -1)
-							fullArgs.insert(0, EThis);
+					if (needsRecoveredQualifiedReceiver) {
+						// Bootstrap recovery can preserve an instance declaration behind a
+						// type-qualified call such as `Type.method(a, b)`. Keep its missing
+						// receiver in the receiver slot so source arguments still align with
+						// their declared parameters and fail-closed diagnostics count only
+						// source arguments.
+						fullArgs.insert(0, ENull);
+					}
+					final forceImplicitThis = sig != null && sig.needsReceiver && !receiverPreApplied && switch (callee) {
+						case EIdent(name): stage3HasThisBinding(tyByIdentRaw) && stage3HasArity(name,
+								arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
+						case EField(EThis, name): stage3HasArity(name, arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
+						case _:
+							false;
+					};
+					if (forceImplicitThis)
+						fullArgs.insert(0, EThis);
 
-						// Stage3 widened-closure hardening: some recovered call signatures include an
-						// implicit receiver parameter (`this_` + args). If a call-site provides fewer
-						// args than the receiver-aware signature requires, prepend the receiver explicitly.
-						//
-						// - In instance contexts, forward `this`.
-						// - Outside instance contexts (for static/qualified call-shapes), use a sentinel.
-						if (!forceImplicitThis && sig != null && sig.needsReceiver && fullArgs.length + 1 == sig.expected && c.indexOf(" (this_)") == -1) {
-							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
+					var firstRenderedParam = 0;
+					var restSourceStart = fullArgs.length;
+					if (sig != null) {
+						final planned = EmitterCallArgPolicy.plan(sig, fullArgs.length, preAppliedReceiverCount, (sourceIndex, paramIndex) -> {
+							final fillable = sig.paramFillable != null
+								&& paramIndex >= 0
+								&& paramIndex < sig.paramFillable.length
+								&& sig.paramFillable[paramIndex];
+							final hint = sig.paramTypeHints == null
+								|| paramIndex < 0
+								|| paramIndex >= sig.paramTypeHints.length ? "" : sig.paramTypeHints[paramIndex];
+							return stage3CallArgumentCompatibility(fullArgs[sourceIndex], hint, fillable, tyByIdentRaw, callSigByCalleeRaw,
+								staticImportByIdentRaw);
+						});
+						switch (planned) {
+							case MissingRequired(paramIndex, paramName):
+								final callName = stage3CallDiagnosticName(callee, c);
+								throw stage3MissingCallArgumentDiagnostic(callName, sig, paramIndex, paramName);
+							case Planned(plan):
+								firstRenderedParam = plan.getFirstRenderedParam();
+								restSourceStart = plan.getRestSourceStart();
+								final sourceIndices = plan.getFixedSourceIndices();
+								final aligned = new Array<HxExpr>();
+								for (paramIndex in firstRenderedParam...sig.fixed) {
+									final sourceIndex = sourceIndices[paramIndex];
+									aligned.push(sourceIndex == null ? ENull : fullArgs[sourceIndex]);
+								}
+								if (!sig.hasRest) fullArgs = aligned; else {
+									final restArgs = fullArgs.slice(restSourceStart);
+									fullArgs = aligned;
+									for (restArg in restArgs)
+										fullArgs.push(restArg);
+								}
 						}
-						if (sig != null && sig.needsReceiver && !receiverPreApplied && fullArgs.length < sig.required) {
-							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
-						}
+					}
 
-						var missingCount = missing;
-						if (sig != null) {
-							final expected = sig.expected;
-							final supplied = fullArgs.length + preAppliedReceiverCount;
-							// The resolved signature is more precise than the early arity estimate,
-							// especially when bootstrap typing omitted the current receiver.
-							missingCount = expected > supplied ? expected - supplied : 0;
-						}
-
-						// Stage 3 bring-up: upstream often passes `pos` as the last argument to APIs declared
-						// as `(required..., ?msg:String, ?pos:haxe.PosInfos)`, relying on Haxe's optional-arg
-						// skipping to interpret `f(x, pos)` as `f(x, null, pos)`.
-						//
-						// Our bootstrap typer/emitter does not model that unification yet. To keep OCaml output
-						// type-correct, we insert missing args as `null` immediately *before* a trailing `pos`
-						// identifier when we have a signature for the callee.
-						if (sig != null && sig.expected > fullArgs.length + preAppliedReceiverCount && fullArgs.length > 0) {
-							final last = fullArgs[fullArgs.length - 1];
-							final isTrailingPos = switch (last) {
-								case EIdent("pos"): true;
-								case _: false;
-							};
-							if (isTrailingPos) {
-								final missingBefore = sig.expected - fullArgs.length - preAppliedReceiverCount;
-								final adjusted = new Array<HxExpr>();
-								final prefixLen = fullArgs.length - 1;
-								for (i in 0...prefixLen)
-									adjusted.push(fullArgs[i]);
-								for (_ in 0...missingBefore)
-									adjusted.push(ENull);
-								adjusted.push(last);
-								fullArgs = adjusted;
-								missingCount = 0;
-							}
-						}
-
-						// Stage 3 bring-up: emulate upstream optional-arg "skipping" for a small set of
-						// Gate2 harness calls that intentionally pass a later argument type.
-						//
-						// Example (upstream runci):
-						// - `haxelibInstallGit(account, repo, true)` is accepted by Haxe even though the
-						//   third parameter is `?branch:String`. Haxe effectively interprets this as:
-						//     `haxelibInstallGit(account, repo, null, null, true, null)`
-						//
-						// Our bootstrap emitter doesn't model full optional-arg unification, so we special-case
-						// this shape to keep Stage3 emit-runner compiling.
-						if (sig != null && c == "Runci_System.haxelibInstallGit" && args.length == 3) {
-							switch (args[2]) {
-								case EBool(_):
-									fullArgs = [args[0], args[1], ENull, ENull, args[2], ENull];
-									missingCount = 0;
-								case _:
-							}
-						}
-						// Stage 3 Gate2 emit-runner: upstream `runci.System.runSysTest` calls
-						// `getDisplayCmd(cmd, args, null)` while our bootstrap parser currently recovers
-						// `getDisplayCmd` as an instance method shape (`this_`, `cmd`, `args`).
-						//
-						// Normalize the 3-arg static-looking call into the recovered instance signature.
-						if ((c == "getDisplayCmd" || c == "Runci_System.getDisplayCmd") && args.length >= 2) {
-							fullArgs = [ENull, ECall(EField(EIdent("Std"), "string"), [args[0]]), args[1]];
-							missingCount = 0;
-						}
-						// Stage 3 bring-up: php boot checks `class_exists(name)` / `interface_exists(name)`
-						// where the second optional `autoload` arg is omitted.
-						//
-						// Some upstream extern surfaces are currently recovered without enough
-						// signature metadata in `callSigByCallee`, so we patch this known shape to avoid
-						// OCaml partial application errors during Gate1 emit runs.
-						if (sig == null && args.length == 1 && (c == "Php_Global.class_exists" || c == "Php_Global.interface_exists")) {
-							fullArgs = [args[0], ENull];
-							missingCount = 0;
-						}
-						// Stage3 stdlib bring-up: `haxe.io.Bytes.readString(pos, len)` calls
-						// `getString(pos, len)` while `getString` has receiver + optional encoding.
-						//
-						// The current typed call facts can miss the implicit receiver/optional insertion
-						// for this unqualified call shape, yielding partial application at OCaml link-time.
-						// Normalize to the receiver-aware call form here.
-						if (c == "getString" && stage3HasThisBinding(tyByIdentRaw) && fullArgs.length == 2) {
-							fullArgs = [EThis, fullArgs[0], fullArgs[1], ENull];
-							missingCount = 0;
-						}
-						for (_ in 0...missingCount)
-							fullArgs.push(ENull);
-
+					// Rest arguments become one array parameter after declaration-proven fixed
+					// omissions and receiver accounting have been resolved.
+					if (sig != null && sig.hasRest) {
+						final fixedRenderedCount = sig.fixed - firstRenderedParam;
+						final fixedArgs = fullArgs.slice(0, fixedRenderedCount);
+						final restArgs = fullArgs.slice(fixedRenderedCount);
+						final restCode = restArgs.length == 0 ? "HxBootArray.create ()" : ("HxBootArray.of_list ["
+							+ restArgs.map(a -> exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee))
+								.join("; ") + "]");
+						final argCodes = new Array<String>();
+						for (argIndex in 0...fixedArgs.length)
+							argCodes.push("(" + renderCallArgForSignature(fixedArgs[argIndex], firstRenderedParam + argIndex, sig) + ")");
+						argCodes.push("(" + restCode + ")");
+						c + " " + argCodes.join(" ");
+					} else {
 						final renderedArgs = new Array<String>();
 						for (argIndex in 0...fullArgs.length) {
-							final renderedArg = "(" + renderCallArgWithSig(fullArgs[argIndex], argIndex + preAppliedReceiverCount) + ")";
+							final renderedArg = "(" + renderCallArgForSignature(fullArgs[argIndex], argIndex + firstRenderedParam, sig) + ")";
 							renderedArgs.push(renderedArg);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
@@ -7237,38 +7244,7 @@ class EmitterStage {
 			final fnNameRaw = HxFunctionDecl.getName(fn);
 			if (fnNameRaw == null || fnNameRaw.length == 0)
 				return;
-			final fnArgs = HxFunctionDecl.getArgs(fn);
-			final argCount = fnArgs == null ? 0 : fnArgs.length;
-			final needsReceiver = !HxFunctionDecl.getIsStatic(fn);
-			var hasRest = false;
-			var fixedCount = argCount;
-			if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
-				hasRest = true;
-				fixedCount = argCount - 1;
-			}
-			var requiredCount = 0;
-			for (i in 0...fixedCount) {
-				final a = fnArgs[i];
-				final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
-					case Default(_): true;
-					case _: false;
-				};
-				if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
-					requiredCount += 1;
-			}
-			if (needsReceiver) {
-				fixedCount += 1;
-				requiredCount += 1;
-			}
-			final sig0:EmitterCallSig = {
-				expected: fixedCount + (hasRest ? 1 : 0),
-				required: requiredCount,
-				fixed: fixedCount,
-				hasRest: hasRest,
-				needsReceiver: needsReceiver,
-				paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver),
-				resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
-			};
+			final sig0 = callSigFromFunction(fn);
 			final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
 			globalCallSigByCallee.set(key0, sig0);
 			final aliasShorts = aliasShortsByTarget.get(modName);
@@ -7313,36 +7289,8 @@ class EmitterStage {
 						continue;
 
 					final fnArgs = HxFunctionDecl.getArgs(fn);
-					final argCount = fnArgs == null ? 0 : fnArgs.length;
-					final needsReceiver = !HxFunctionDecl.getIsStatic(fn);
-					// Robust rest detection:
-					// - In valid Haxe syntax, the rest arg (if present) is the *last* parameter.
-					// - During bring-up, we prefer a rule that can't be confused by accidental rest
-					//   markings on earlier parameters (which would otherwise pack all args).
-					var hasRest = false;
-					var fixedCount = argCount;
-					if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
-						hasRest = true;
-						fixedCount = argCount - 1;
-					}
-
-					var requiredCount = 0;
-					for (i in 0...fixedCount) {
-						final a = fnArgs[i];
-						final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
-							case Default(_): true;
-							case _: false;
-						};
-						if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
-							requiredCount += 1;
-					}
-
-					if (needsReceiver) {
-						fixedCount += 1;
-						requiredCount += 1;
-					}
-
-					EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
+					final sig = callSigFromFunction(fn);
+					EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest, sig.needsReceiver);
 					recordFunctionSig(modName, fn);
 				}
 			}
@@ -7670,43 +7618,11 @@ class EmitterStage {
 						final fnNameRaw = HxFunctionDecl.getName(fn);
 						if (fnNameRaw == null || fnNameRaw.length == 0)
 							continue;
-						final isStaticFn = HxFunctionDecl.getIsStatic(fn);
 						final fnArgs = HxFunctionDecl.getArgs(fn);
-						final argCount = fnArgs == null ? 0 : fnArgs.length;
-						var hasRest = false;
-						var fixedCount = argCount;
-						if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
-							hasRest = true;
-							fixedCount = argCount - 1;
-						}
-
-						var requiredCount = 0;
-						for (i in 0...fixedCount) {
-							final a = fnArgs[i];
-							final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
-								case Default(_): true;
-								case _: false;
-							};
-							if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
-								requiredCount += 1;
-						}
-
-						if (!isStaticFn) {
-							fixedCount += 1;
-							requiredCount += 1;
-						}
-						final expected = fixedCount + (hasRest ? 1 : 0);
-						final needsReceiver = !isStaticFn;
-						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
-						callSigByCallee.set(ocamlValueIdent(fnNameRaw), {
-							expected: expected,
-							required: requiredCount,
-							fixed: fixedCount,
-							hasRest: hasRest,
-							needsReceiver: needsReceiver,
-							paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver),
-							resultTypeHint: HxFunctionDecl.getReturnTypeHint(fn)
-						});
+						final sig = callSigFromFunction(fn);
+						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
+							sig.needsReceiver);
+						callSigByCallee.set(ocamlValueIdent(fnNameRaw), sig);
 					}
 
 					// Project resolved type and static-member imports to generated OCaml module names.
@@ -8203,20 +8119,6 @@ class EmitterStage {
 								+ retTy
 								+ ")";
 							};
-							// Stage3 stdlib bring-up guard:
-							// - `haxe.ds.EnumValueMap.compareArg` can recover as
-							//   `compare ((Obj.magic 0)) ((Obj.magic 0))`, which misses receiver/arg
-							//   forwarding and fails with partial-application type errors.
-							// - Normalize that exact degraded body to the receiver-aware local-param call.
-							if (mainModuleName == "Haxe_ds_EnumValueMap"
-								&& nameRaw == "compareArg"
-								&& !isStaticFn
-								&& args.length >= 2
-								&& body == "compare ((Obj.magic 0)) ((Obj.magic 0))") {
-								final arg0 = ocamlReadValueIdent(args[0].getName());
-								final arg1 = ocamlReadValueIdent(args[1].getName());
-								body = "compare (this_) (" + arg0 + ") (" + arg1 + ")";
-							}
 							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
 
 							final kw = i == 0 ? "let rec" : "and";

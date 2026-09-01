@@ -1128,6 +1128,31 @@ class TyperStage {
 		return null;
 	}
 
+	/**
+		Retain one unambiguous declaration when its call arity is invalid.
+
+		The ordinary type result stays unresolved, but the structural typed call keeps
+		the exact declaration. Backends can then reject a missing required argument
+		instead of replacing the call with an unbound-expression fallback.
+	**/
+	static function resolveCallDeclarationCandidate(owner:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv,
+			ctx:TyperContext, pos:HxPos, ?admittedCandidates:Array<TyFunSig>):Null<TyDeclarationInfo> {
+		final resolved = resolveMethodCall(owner, field, isStatic, args, scope, ctx, pos, admittedCandidates).declaration;
+		if (resolved != null)
+			return resolved;
+		final candidates = admittedCandidates == null ? (isStatic ? owner.staticMethodCandidates(field) : owner.instanceMethodCandidates(field)) : admittedCandidates;
+		if (candidates.length != 1)
+			return null;
+		final candidate = candidates[0];
+		final optional = candidate.getArgOptional();
+		final rest = candidate.getArgRest();
+		var required = 0;
+		for (index in 0...candidate.getArgs().length)
+			if (!(index < optional.length && optional[index]) && !(index < rest.length && rest[index]))
+				required++;
+		return args.length < required ? owner.declarationForSignature(candidate) : null;
+	}
+
 	/** Best-effort exact declaration selection for ordinary call nodes. **/
 	static function resolveCallDeclaration(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyDeclarationInfo> {
 		switch (callee) {
@@ -1137,32 +1162,32 @@ class TyperStage {
 				final owner = ctx.currentClass();
 				final instanceOwner = !scope.isStaticContext() ? ctx.instanceMethodOwner(name) : null;
 				if (instanceOwner != null)
-					return resolveMethodCall(instanceOwner, name, false, args, scope, ctx, pos).declaration;
+					return resolveCallDeclarationCandidate(instanceOwner, name, false, args, scope, ctx, pos);
 				if (owner != null && owner.staticMethodCandidates(name).length > 0)
-					return resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
+					return resolveCallDeclarationCandidate(owner, name, true, args, scope, ctx, pos);
 				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
 				if (moduleEnumConstructor != null)
-					return resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
-						moduleEnumConstructor.getCandidates()).declaration;
+					return resolveCallDeclarationCandidate(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx,
+						pos, moduleEnumConstructor.getCandidates());
 				final importedMethod = ctx.importedStaticMethod(name);
-				return importedMethod == null ? null : resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx,
-					pos, importedMethod.getCandidates()).declaration;
+				return importedMethod == null ? null : resolveCallDeclarationCandidate(importedMethod.getProvider(), importedMethod.getMemberName(), true,
+					args, scope, ctx, pos, importedMethod.getCandidates());
 			case EEnumValue(name):
 				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
 				if (moduleEnumConstructor != null)
-					return resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
-						moduleEnumConstructor.getCandidates()).declaration;
+					return resolveCallDeclarationCandidate(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx,
+						pos, moduleEnumConstructor.getCandidates());
 				final importedMethod = ctx.importedStaticMethod(name);
-				return importedMethod == null ? null : resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx,
-					pos, importedMethod.getCandidates()).declaration;
+				return importedMethod == null ? null : resolveCallDeclarationCandidate(importedMethod.getProvider(), importedMethod.getMemberName(), true,
+					args, scope, ctx, pos, importedMethod.getCandidates());
 			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
 						final staticOwner = isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
-						if (staticOwner != null) return resolveMethodCall(staticOwner, field, true, args, scope, ctx, pos).declaration;
+						if (staticOwner != null) return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
 					case EThis:
 						final owner = ctx.currentClass();
-						return owner == null ? null : resolveMethodCall(owner, field, false, args, scope, ctx, pos).declaration;
+						return owner == null ? null : resolveCallDeclarationCandidate(owner, field, false, args, scope, ctx, pos);
 					case _:
 						final dotted = dottedFieldPath(object);
 						if (dotted.length > 0) {
@@ -1171,7 +1196,7 @@ class TyperStage {
 							if (isUpperStartName(last)) {
 								final staticOwner = ctx.resolveType(dotted);
 								if (staticOwner != null)
-									return resolveMethodCall(staticOwner, field, true, args, scope, ctx, pos).declaration;
+									return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
 							}
 						}
 				}
@@ -1179,7 +1204,7 @@ class TyperStage {
 				final receiverType = inferExprType(object, scope, ctx, pos);
 				final index = ctx.getIndex();
 				final owner = nominalInfoForType(index, receiverType);
-				return owner == null ? null : resolveMethodCall(owner, field, false, args, scope, ctx, pos).declaration;
+				return owner == null ? null : resolveCallDeclarationCandidate(owner, field, false, args, scope, ctx, pos);
 			case _:
 		}
 		return null;

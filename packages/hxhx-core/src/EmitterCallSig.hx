@@ -21,6 +21,12 @@ typedef EmitterCallSig = {
 	/** Whether this lowered call expects a synthetic receiver parameter. */
 	final needsReceiver:Bool;
 
+	/** Parameter names after lowering, aligned with emitted OCaml arguments. */
+	final paramNames:Array<String>;
+
+	/** Whether each lowered fixed parameter can be filled from an omitted Haxe argument. */
+	final paramFillable:Array<Bool>;
+
 	/** Parameter type hints after lowering, aligned with emitted OCaml arguments. */
 	final paramTypeHints:Array<String>;
 
