@@ -546,8 +546,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 		targetReplaySucceeded = false;
 		targetReusePayloadBytes = null;
 		profileLogLine("reflaxe.ocaml: strict_mode_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
-		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
-		profileLogLine("reflaxe.ocaml: strict_mode_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes, profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null);
+		final strictPerformance = StrictModeEnforcer.performanceSnapshot();
+		profileLogLine("reflaxe.ocaml: strict_mode_end visits="
+			+ Std.string(strictPerformance.expressionVisits)
+			+ " strict_checks="
+			+ Std.string(strictPerformance.strictChecks)
+			+ " portable_native_surface_checks="
+			+ Std.string(strictPerformance.portableNativeSurfaceChecks)
+			+ " atomic_semantics_checks="
+			+ Std.string(strictPerformance.atomicSemanticsChecks)
+			+ " elapsed_ms="
+			+ Std.string(profileElapsedMilliseconds()));
 		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
