@@ -250,6 +250,17 @@ The last repository-validated rollback pin is
 `65f5cb6406cfb90d5aea72b4c4d7471059446a48672f0122a424e0bd549bcad7`;
 restoring both values together is the bounded rollback.
 
+On 2026-09-01, fork `main` advanced to
+`f824253f37724523fa9576be0e8ba93046006d53`. The semantic lifecycle now reuses
+the observation taken after one preprocessing pass as the observation before
+the next pass. No compiler step can run between those two boundaries, so this
+removes a duplicate complete-function traversal without removing a safety
+check. The `hxhx` consumer pins that commit with content digest
+`cc40fe41916aa12e6f0f1fcbc12573c46f1e6f85c05f87afcf3861206376ac1b`.
+The immediate rollback is the previous `577f9e8eede0c8ea4ef6bae54e066cf526e15119`
+pin with digest
+`891f4aa69dae20cb5a648c489769ec6cc252e8e00673cbd948a601e2d6493c9f`.
+
 Fork PR #21 gives each nested function literal a stable
 structural identity during the existing lexical traversal. A target can now
 identify `function():Int return 1` directly even though the literal has no
