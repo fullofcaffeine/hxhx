@@ -1,5 +1,7 @@
 package backend.js;
 
+import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
+
 /**
 	Expression-to-JS lowering for `js-native` MVP.
 
@@ -34,6 +36,9 @@ class JsExprEmitter {
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
+		final exactEnumConstructor = TypedExactEnumConstructorSource.decode(expr);
+		if (exactEnumConstructor != null)
+			return emitExactEnumConstructor(exactEnumConstructor, scope);
 		return switch (expr) {
 			case ENull:
 				"null";
@@ -955,7 +960,7 @@ class JsExprEmitter {
 			case EField(EIdent("Std"), "string") if (args.length == 1):
 				// Shared typed lowering uses this call to make Haxe string-concat
 				// coercion explicit even when no Std class module was loaded.
-				return "String(" + emit(args[0], scope) + ")";
+				return "__hx_string(" + emit(args[0], scope) + ")";
 			case EIdent("typeErrorText") | EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
 				final diagnostic = helperTypeErrorText(args);
 				if (diagnostic != null)
@@ -997,29 +1002,65 @@ class JsExprEmitter {
 	}
 
 	static function emitEnumMatch(subject:HxExpr, pattern:HxExpr, scope:JsEmitScope):String {
+		if (TypedExactEnumConstructorSource.decode(pattern) != null)
+			return emitEnumMatchValue(subject, pattern, scope);
 		return switch (pattern) {
 			case ECall(EEnumValue(_), _):
-				final subjectJs = emit(subject, scope);
-				final patternJs = emit(pattern, scope);
-				"(function(__hx_v, __hx_p) {"
-				+ "if (__hx_v == null || __hx_p == null) return false;"
-				+ "if (__hx_v.__hx_ctor !== __hx_p.__hx_ctor) return false;"
-				+ "var __hx_vp = Array.isArray(__hx_v.__hx_params) ? __hx_v.__hx_params : [];"
-				+ "var __hx_pp = Array.isArray(__hx_p.__hx_params) ? __hx_p.__hx_params : [];"
-				+ "if (__hx_vp.length !== __hx_pp.length) return false;"
-				+ "for (var __hx_i = 0; __hx_i < __hx_pp.length; __hx_i++) {"
-				+ "if (JSON.stringify(__hx_vp[__hx_i]) !== JSON.stringify(__hx_pp[__hx_i])) return false;"
-				+ "}"
-				+ "return true;"
-				+ "})("
-				+ subjectJs
-				+ ", "
-				+ patternJs
-				+ ")";
+				emitEnumMatchValue(subject, pattern, scope);
 			case _:
 				final calleeJs = emit(EField(subject, "match"), scope);
 				calleeJs + "(" + emitCallArg(pattern, scope) + ")";
 		}
+	}
+
+	static function emitEnumMatchValue(subject:HxExpr, pattern:HxExpr, scope:JsEmitScope):String {
+		final subjectJs = emit(subject, scope);
+		final patternJs = emit(pattern, scope);
+		return "(function(__hx_v, __hx_p) {"
+			+ "if (__hx_v == null || __hx_p == null) return false;"
+			+ "if (__hx_v.__hx_enum != null && __hx_p.__hx_enum != null && __hx_v.__hx_enum !== __hx_p.__hx_enum) return false;"
+			+ "if (__hx_v.__hx_ctor !== __hx_p.__hx_ctor) return false;"
+			+ "var __hx_vp = Array.isArray(__hx_v.__hx_params) ? __hx_v.__hx_params : [];"
+			+ "var __hx_pp = Array.isArray(__hx_p.__hx_params) ? __hx_p.__hx_params : [];"
+			+ "if (__hx_vp.length !== __hx_pp.length) return false;"
+			+ "for (var __hx_i = 0; __hx_i < __hx_pp.length; __hx_i++) {"
+			+ "if (JSON.stringify(__hx_vp[__hx_i]) !== JSON.stringify(__hx_pp[__hx_i])) return false;"
+			+ "}"
+			+ "return true;"
+			+ "})("
+			+ subjectJs
+			+ ", "
+			+ patternJs
+			+ ")";
+	}
+
+	/**
+		Lower one already-selected enum constructor through its emitted carrier class.
+
+		A secondary type's semantic owner includes its Haxe module name, while the JS
+		class table uses the package-visible type path. Both paths are derived from
+		the exact typed owner; no constructor-name search or source-text recovery is
+		allowed here.
+	**/
+	static function emitExactEnumConstructor(exact:TypedExactEnumConstructorCall, scope:JsEmitScope):String {
+		if (scope == null)
+			throw "[js-native:exact_enum_constructor] missing emission scope for " + exact.declaration;
+		var ownerRef = scope.resolveClassRef(exact.owner);
+		if (ownerRef == null && exact.owner != exact.modulePath) {
+			final modulePrefix = exact.modulePath + ".";
+			if (!StringTools.startsWith(exact.owner, modulePrefix))
+				throw "[js-native:exact_enum_constructor] owner/module mismatch for " + exact.declaration;
+			final packageEnd = exact.modulePath.lastIndexOf(".");
+			final packagePath = packageEnd < 0 ? "" : exact.modulePath.substr(0, packageEnd);
+			final ownerEnd = exact.owner.lastIndexOf(".");
+			final typeName = ownerEnd < 0 ? exact.owner : exact.owner.substr(ownerEnd + 1);
+			final runtimeTypePath = packagePath.length == 0 ? typeName : packagePath + "." + typeName;
+			ownerRef = scope.resolveClassRef(runtimeTypePath);
+		}
+		if (ownerRef == null)
+			throw "[js-native:exact_enum_constructor] missing carrier for " + exact.declaration;
+		final arguments = exact.arguments.map(argument -> emitCallArg(argument, scope)).join(", ");
+		return ownerRef + JsNameMangler.propertySuffix(exact.constructor) + "(" + arguments + ")";
 	}
 
 	static function emitSysCommand(args:Array<HxExpr>, scope:JsEmitScope):String {

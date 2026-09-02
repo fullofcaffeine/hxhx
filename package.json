@@ -530,7 +530,7 @@
     "test:m14:stage3-abstract-static-function": "haxe test/m14_stage3_abstract_static_function_integration_test.hxml",
     "test:m14:typed-body-boundary": "haxe test/m14_typed_body_boundary_integration_test.hxml",
     "test:m14:typed-local-identity": "haxe test/m14_typed_local_identity_integration_test.hxml",
-    "test:m14:js-typed-local-projection": "haxe test/m14_js_typed_local_projection_integration_test.hxml",
+    "test:m14:js-typed-local-projection": "haxe test/m14_js_typed_local_projection_integration_test.hxml && haxe test/m14_js_typed_enum_constructor_projection_integration_test.hxml",
     "test:m14:neko-typed-local-projection": "haxe test/m14_neko_typed_local_projection_integration_test.hxml",
     "test:m14:lua-typed-local-projection": "haxe test/m14_lua_typed_local_projection_integration_test.hxml && haxe test/m14_lua_typed_field_projection_integration_test.hxml",
     "test:m14:lua-typed-field-projection": "haxe test/m14_lua_typed_field_projection_integration_test.hxml",

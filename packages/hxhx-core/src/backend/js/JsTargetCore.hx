@@ -411,6 +411,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var __hx_exports = (typeof exports !== \"undefined\") ? exports : ((typeof globalThis !== \"undefined\") ? globalThis : {});");
 		writer.writeln("var __hx_classes = Object.create(null);");
 		writer.writeln("var __hx_type_placeholders = Object.create(null);");
+		emitRuntimeStringHelper(writer);
 		writer.writeln("function __hx_export_path(path, value) {");
 		writer.pushIndent();
 		writer.writeln("var __hx_parts = String(path).split(\".\");");
@@ -531,6 +532,26 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("configurable: true");
 		writer.popIndent();
 		writer.writeln("});");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	/** Emit the shared Haxe-value formatter used by direct and class-backed `Std.string` calls. **/
+	static function emitRuntimeStringHelper(writer:JsWriter):Void {
+		writer.writeln("function __hx_string(value) {");
+		writer.pushIndent();
+		writer.writeln("if (value == null) return \"null\";");
+		writer.writeln("if (typeof value === \"string\") return value;");
+		writer.writeln("if (Array.isArray(value)) return \"[\" + value.map(__hx_string).join(\",\") + \"]\";");
+		writer.writeln("if (typeof value === \"function\") return \"<function>\";");
+		writer.writeln("if (typeof value === \"object\" && value.__hx_ctor != null) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_params = Array.isArray(value.__hx_params) ? value.__hx_params : [];");
+		writer.writeln("if (__hx_params.length === 0) return String(value.__hx_ctor);");
+		writer.writeln("return String(value.__hx_ctor) + \"(\" + __hx_params.map(__hx_string).join(\",\") + \")\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return String(value);");
 		writer.popIndent();
 		writer.writeln("}");
 	}
@@ -1295,16 +1316,7 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitStdStringBody(writer:JsWriter, value:String):Void {
-		writer.writeln("if (" + value + " == null) return \"null\";");
-		writer.writeln("if (typeof " + value + " === \"string\") return " + value + ";");
-		writer.writeln("if (Array.isArray(" + value + ")) {");
-		writer.pushIndent();
-		writer.writeln("return \"[\" + " + value + ".map(function(__hx_item) { return " + JsNameMangler.classVarName("Std")
-			+ ".string(__hx_item); }).join(\",\") + \"]\";");
-		writer.popIndent();
-		writer.writeln("}");
-		writer.writeln("if (typeof " + value + " === \"function\") return \"<function>\";");
-		writer.writeln("return String(" + value + ");");
+		writer.writeln("return __hx_string(" + value + ");");
 	}
 
 	static function emitReflectStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

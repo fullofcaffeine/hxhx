@@ -1596,8 +1596,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__string_rec = function", "js Boot string recursion shim should emit");
 			assertContains(js, "__hx_cls_Std.string = function", "Std.string shim should emit");
-			assertContains(js, "if (s == null) return \"null\";", "Std.string should be self-contained for null values");
-			assertContains(js, "return String(s);", "Std.string should fall back to native JS stringification");
+			assertContains(js, "function __hx_string(value)", "shared Haxe-value formatter should emit in the runtime prelude");
+			assertContains(js, "if (value == null) return \"null\";", "shared Haxe-value formatter should preserve null text");
+			assertContains(js, "value.__hx_ctor != null", "shared Haxe-value formatter should recognize enum carriers");
+			assertContains(js, "return __hx_string(s);", "Std.string should use the shared Haxe-value formatter");
 			assertContains(js, "__hx_cls_js_Boot.__instanceof = function", "js Boot instanceof shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format_get = function", "DateTools format token shim should emit");
