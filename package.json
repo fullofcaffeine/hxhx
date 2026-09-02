@@ -505,7 +505,7 @@
     "test:m14:hih-mixed-numeric-multiplication": "haxe test/m14_hxhx_stage3_mixed_numeric_multiplication_integration_test.hxml",
     "test:m14:hih-dynamic-operators": "haxe test/m14_hxhx_stage3_dynamic_operator_integration_test.hxml",
     "test:m14:hih-recursive-receiver-call": "haxe test/m14_hxhx_stage3_recursive_receiver_call_integration_test.hxml",
-    "test:m14:hih-array-contains": "haxe test/m14_hxhx_stage3_array_contains_integration_test.hxml",
+    "test:m14:hih-array-contains": "npm run test:m6:array",
     "test:m14:hih-chained-array-join": "haxe test/m14_hxhx_stage3_chained_array_join_integration_test.hxml",
     "test:m14:hih-instance-method-array-join": "haxe test/m14_hxhx_stage3_instance_method_array_join_integration_test.hxml",
     "test:m14:hih-printer-interpolation": "haxe test/m14_hxhx_stage3_printer_interpolation_integration_test.hxml",

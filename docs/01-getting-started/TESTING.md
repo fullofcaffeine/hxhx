@@ -74,6 +74,31 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Array membership
+
+Use this command when you change OCaml `Array.contains` lowering or runtime
+behavior:
+
+```bash
+npm run test:m6:array
+```
+
+Input: `test/ArrayMain.hx` calls `Array.contains` with matching, missing, and
+equal-looking object values. It also records receiver and argument evaluation
+order.
+
+Behavior: upstream Haxe 4.3.7 supplies the independent result. The OCaml target
+must emit `HxArray.contains`, build the generated program, and preserve the same
+observations.
+
+Output: the command exits successfully only when generated syntax and native
+runtime behavior both pass. Core CI owns this command in the
+`compiler-foundation` shard.
+
+The older `npm run test:m14:hih-array-contains` name delegates to this canonical
+test. There is no separate Stage3 fixture because Stage3 does not own the
+Reflaxe OCaml array call or runtime operation.
+
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
 
