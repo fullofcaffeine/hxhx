@@ -1,0 +1,5 @@
+-cp src
+-cp macro
+-main Main
+-dce full
+--macro ContractGenerator.install()
