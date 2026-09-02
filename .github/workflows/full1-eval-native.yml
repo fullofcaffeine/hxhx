@@ -37,7 +37,7 @@ jobs:
       full1_eval_native_marker: ${{ steps.emit.outputs.full1_eval_native_marker }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -96,13 +96,13 @@ jobs:
           exit "$phase_exit"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -300,7 +300,7 @@ jobs:
 
       - name: Upload Full1 eval native artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-eval-native-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/eval-native

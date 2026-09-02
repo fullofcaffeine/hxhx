@@ -85,7 +85,7 @@ function main() {
   requireIncludes(fullScopePath, fullScope, 'FULL1_MACRO_EVAL_PARITY:PASS')
   requireIncludes(evidenceDecisionPath, evidenceDecision, 'Each arrow means “open and validate the uploaded files.”')
   requireIncludes(evidenceDecisionPath, evidenceDecision, '## XHIGH Second-Pass Review Before Implementation')
-  requireIncludes(macroWorkflowPath, macroWorkflow, 'actions/download-artifact@v4')
+  requireIncludes(macroWorkflowPath, macroWorkflow, 'actions/download-artifact@v7')
   requireIncludes(macroWorkflowPath, macroWorkflow, 'full1-macro-parity-evidence.js')
   requireIncludes(focusedWorkflowPath, focusedWorkflow, 'name: Full1 / Macro Eval Evidence')
   requireIncludes(focusedWorkflowPath, focusedWorkflow, 'full1-macro-eval-evidence.js build')

@@ -40,18 +40,18 @@ jobs:
       full1_macro_eval_parity_marker: ${{ steps.emit.outputs.full1_macro_eval_parity_marker }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download verified macro summary
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: macro-runtime-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/macro-eval/inputs/macro
 
       - name: Download native eval proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-eval-native-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/macro-eval/inputs/eval
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload verified macro/eval summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-macro-eval-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/macro-eval/full1-macro-eval.summary.json

@@ -51,12 +51,12 @@ jobs:
     if: always()
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download artifact-verified macro/eval summary
         id: download_macro_eval
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-macro-eval-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/macro-eval
@@ -122,7 +122,7 @@ jobs:
 
       - name: Upload Full1 aggregate artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/full1.summary.json

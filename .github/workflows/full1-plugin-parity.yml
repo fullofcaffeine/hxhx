@@ -57,7 +57,7 @@ jobs:
             prepare_upstream_eval_host: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -107,13 +107,13 @@ jobs:
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -343,7 +343,7 @@ jobs:
 
       - name: Upload ${{ matrix.name }} artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ matrix.artifact_path }}
@@ -352,7 +352,7 @@ jobs:
 
       - name: Upload upstream host adapter source proof artifact
         if: always() && matrix.prepare_upstream_eval_host == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-plugin-upstream-host-adapter-rpmx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/rpmx/haxe-plugin
@@ -369,25 +369,25 @@ jobs:
       full1_plugin_parity_marker: ${{ steps.emit.outputs.full1_plugin_parity_marker }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download upstream Haxe to hxhx proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-plugin-upstream-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/plugin-parity/proofs/full1-plugin-upstream-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download hxhx to hxhx proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-plugin-hxhx-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/plugin-parity/proofs/full1-plugin-hxhx-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download upstream host-adapter proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-plugin-upstream-host-adapter-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/plugin-parity/proofs/full1-plugin-upstream-host-adapter-${{ github.run_id }}-${{ github.run_attempt }}
@@ -408,7 +408,7 @@ jobs:
 
       - name: Upload Full1 plugin aggregate artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-plugin-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/plugin-parity/full1-plugin-parity.summary.json

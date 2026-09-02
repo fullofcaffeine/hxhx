@@ -41,7 +41,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -112,14 +112,14 @@ jobs:
 
       - name: Setup Node.js
         if: steps.scope.outputs.should_run == '1'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
         if: steps.scope.outputs.should_run == '1'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload semantic-diff PR artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: semantic-diff-pr-artifacts
           path: .artifacts/semantic-diff/pr
@@ -189,7 +189,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -215,13 +215,13 @@ jobs:
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -262,7 +262,7 @@ jobs:
 
       - name: Upload semantic-diff nightly artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: semantic-diff-nightly-artifacts
           path: .artifacts/semantic-diff/nightly

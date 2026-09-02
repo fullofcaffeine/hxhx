@@ -61,7 +61,7 @@ for (const needle of [
 	'needs: package_artifact',
 	'fail-fast: false',
 	'os: [ubuntu-latest, macos-latest]',
-	'uses: actions/download-artifact@v4',
+	'uses: actions/download-artifact@v7',
 	'name: reflaxe-ocaml-source-package-${{ github.sha }}',
 	'RO_PACKAGE_INSTALL_MANIFEST=',
 	'RO_PACKAGE_INSTALL_ZIP=',

@@ -48,7 +48,7 @@ jobs:
       HXHX_PARITY_TIMINGS_JSONL: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}/${{ matrix.macro_runtime_mode }}.timings.jsonl
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -110,13 +110,13 @@ jobs:
           exit "$phase_exit"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -511,7 +511,7 @@ jobs:
 
       - name: Upload parity artifacts (mode-tagged)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macro-runtime-parity-${{ matrix.macro_runtime_mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}
@@ -529,7 +529,7 @@ jobs:
       HAXE_STD_PATH: ${{ github.workspace }}/vendor/haxe/std
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -548,7 +548,7 @@ jobs:
           ocamlc -version
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -576,7 +576,7 @@ jobs:
 
       - name: Upload project macro evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/project-macro-module
@@ -592,25 +592,25 @@ jobs:
       full1_macro_parity_marker: ${{ steps.emit.outputs.full1_macro_parity_marker }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download in-process macro proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: macro-runtime-parity-inproc-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/proofs/macro-runtime-parity-inproc-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download external-host macro proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: macro-runtime-parity-external-host-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/proofs/macro-runtime-parity-external-host-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download project macro proof
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/proofs/project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
@@ -632,7 +632,7 @@ jobs:
 
       - name: Upload parity summary artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macro-runtime-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/summary.json

@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -62,13 +62,13 @@ jobs:
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -247,7 +247,7 @@ jobs:
 
       - name: Upload raw Full1 perf artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-perf-raw-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/full1_perf/raw
@@ -256,7 +256,7 @@ jobs:
 
       - name: Upload evaluated Full1 perf artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-perf-evaluated-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/full1_perf/evaluated

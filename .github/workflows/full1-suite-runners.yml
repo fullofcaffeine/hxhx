@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -75,13 +75,13 @@ jobs:
             lua5.4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -199,7 +199,7 @@ jobs:
           fi
 
       - name: Upload shared hxhx artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -219,14 +219,15 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Install OCaml toolchain (macro host)
         run: |
@@ -334,7 +335,7 @@ jobs:
           fi
 
       - name: Upload shared macro host artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-suite-macro-host-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -357,7 +358,7 @@ jobs:
         suite: [misc, threads, display]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -400,13 +401,13 @@ jobs:
             lua5.4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -434,7 +435,7 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Download shared hxhx artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
@@ -489,7 +490,7 @@ jobs:
 
       - name: Upload Full1 suite artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -514,7 +515,7 @@ jobs:
         suite: [server, optimization]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -557,13 +558,13 @@ jobs:
             lua5.4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -591,13 +592,13 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Download shared hxhx artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
 
       - name: Download shared macro host artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: full1-suite-macro-host-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
@@ -653,7 +654,7 @@ jobs:
 
       - name: Upload Full1 suite artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

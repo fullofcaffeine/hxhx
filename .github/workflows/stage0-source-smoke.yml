@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -47,12 +47,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -204,7 +204,7 @@ jobs:
           grep -q "HXHX_FORBID_STAGE0=1 forbids --compat" "$delegation_log"
       - name: Upload stage0 smoke build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: stage0-source-smoke-build-log-${{ github.run_id }}
           path: ${{ runner.temp }}/stage0_source_build.log
@@ -212,7 +212,7 @@ jobs:
           retention-days: 14
       - name: Upload stage0 profile/hotspot artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: stage0-source-smoke-profile-${{ github.run_id }}
           path: |

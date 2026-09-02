@@ -32,14 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Run policy guards and write evidence
         run: |
@@ -53,7 +54,7 @@ jobs:
 
       - name: Upload policy evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-rc-policy-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/rc-policy/full1-rc-policy.summary.json
@@ -82,14 +83,15 @@ jobs:
     if: always()
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Download and validate exact child artifacts
         env:
@@ -127,7 +129,7 @@ jobs:
 
       - name: Upload candidate-bound RC decision
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: full1-rc-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

@@ -44,7 +44,7 @@ jobs:
       reason: ${{ steps.classify.outputs.reason }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Run cheap routing and documentation guards
@@ -108,7 +108,7 @@ jobs:
             echo "- Reason: ${{ steps.classify.outputs.reason }}"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload QA routing receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: qa-risk-route-${{ github.sha }}
           path: .artifacts/qa-routing
@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Install gitleaks
@@ -147,7 +147,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Install OCaml toolchain for connect-retry smoke
@@ -184,12 +184,12 @@ jobs:
           ocamlc -version
           ocamlfind ocamlc -version
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -220,7 +220,7 @@ jobs:
         run: npm run test:reflaxe-ocaml:package-install
       - name: Upload standalone reflaxe.ocaml package evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-package-install-${{ runner.os }}-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-install
@@ -244,7 +244,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -266,12 +266,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -306,7 +306,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -328,12 +328,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -395,7 +395,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -417,12 +417,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -519,7 +519,7 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -541,12 +541,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -579,7 +579,7 @@ jobs:
         run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
       - name: Upload shared macro-host evidence
         if: ${{ always() && matrix.shard == 'macro-host-integration' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: core-macro-host-reuse-evidence-${{ github.sha }}
           path: .artifacts/core-test/macro-host-integration
@@ -596,7 +596,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml 5.2.1)
@@ -618,12 +618,12 @@ jobs:
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -658,7 +658,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Verify every Core Tests prerequisite
         env:
           CORE_TEST_NEEDS_JSON: ${{ toJSON(needs) }}

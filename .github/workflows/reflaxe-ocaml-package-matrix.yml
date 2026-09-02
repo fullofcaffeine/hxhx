@@ -52,16 +52,16 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/haxe
           key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
@@ -83,7 +83,7 @@ jobs:
           set -euo pipefail
           node -e 'const m=require("./.artifacts/reflaxe-ocaml/package-artifact/artifact-manifest.json"); if(m.workingTreeDirty || m.implementationCommit !== process.env.GITHUB_SHA) throw new Error("package artifact is not tied to the clean workflow checkout"); console.log(`${m.marker} sha256=${m.package.sha256}`)'
       - name: Upload canonical package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-source-package-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-artifact
@@ -102,7 +102,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup OCaml toolchain (OCaml ${{ env.OCAML_VERSION }})
@@ -119,12 +119,12 @@ jobs:
           dune --version
           ocamlc -version
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/haxe
           key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
@@ -140,7 +140,7 @@ jobs:
           npx lix use haxe "${HAXE_VERSION}"
           echo "${PWD}/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Download canonical package artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: reflaxe-ocaml-source-package-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-input
@@ -174,7 +174,7 @@ jobs:
           node -e 'const s=require("./.artifacts/reflaxe-ocaml/perf-platform/summary.json"); if(s.schemaVersion !== 2 || s.marker !== "RO_TARGET_PERF_PLATFORM:PASS" || s.method?.id !== "installed-package-platform-v2" || s.iteration?.passed !== true || !s.provenance.installedPackageProof || s.provenance.implementationCommit !== process.env.GITHUB_SHA) throw new Error("host performance did not measure the shared installed package with the v2 iteration method"); console.log(`${s.marker} os=${s.environment.platform} package=${s.provenance.package.sha256}`)'
       - name: Upload platform package evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-package-install-${{ runner.os }}-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-install
@@ -183,7 +183,7 @@ jobs:
           retention-days: 30
       - name: Upload host performance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-perf-${{ runner.os }}-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/perf-platform
@@ -198,18 +198,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: Download canonical package artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: reflaxe-ocaml-source-package-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-input
       - name: Download platform package evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: reflaxe-ocaml-package-install-*-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-consumers
@@ -222,7 +223,7 @@ jobs:
             --evidence-root .artifacts/reflaxe-ocaml/package-consumers \
             --out .artifacts/reflaxe-ocaml/package-matrix/summary.json
       - name: Upload verified package matrix
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-package-matrix-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-matrix
@@ -237,18 +238,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: Download canonical package artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: reflaxe-ocaml-source-package-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-input
       - name: Download host performance evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: reflaxe-ocaml-perf-*-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/perf-consumers
@@ -261,7 +263,7 @@ jobs:
             --evidence-root .artifacts/reflaxe-ocaml/perf-consumers \
             --out .artifacts/reflaxe-ocaml/perf-matrix/summary.json
       - name: Upload verified package performance matrix
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reflaxe-ocaml-perf-matrix-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/perf-matrix

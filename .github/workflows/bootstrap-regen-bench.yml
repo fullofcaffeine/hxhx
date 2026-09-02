@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 180
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -81,13 +81,13 @@ jobs:
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/haxe
@@ -155,7 +155,7 @@ jobs:
 
       - name: Upload benchmark artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bootstrap-regen-bench-${{ github.run_id }}
           path: ${{ steps.bench.outputs.report_dir }}
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload generated bootstrap snapshot
         if: ${{ always() && github.event.inputs.upload_snapshot == '1' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bootstrap-regen-snapshot-${{ github.run_id }}
           path: packages/hxhx/bootstrap_out
