@@ -92,6 +92,8 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
+import reflaxe.ocaml.lowered.OcamlFunctionPreparationTelemetry;
+import reflaxe.ocaml.lowered.OcamlFunctionPreparationTelemetry.OcamlFunctionPreparationResult;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
@@ -150,6 +152,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public final staticStoragePlan:OcamlStaticStoragePlan = new OcamlStaticStoragePlan();
 
 	final ctx:CompilationContext = new CompilationContext();
+	var functionPreparationTelemetry:Null<OcamlFunctionPreparationTelemetry>;
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
 	var mainModuleId:Null<String> = null;
 	final staticMainCandidateModules:Array<String> = [];
@@ -385,6 +388,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (profileEnabled)
 			profileInit();
 		ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;
+		final detailClass = profileClassFilter;
+		if (profileVerbose && profileDetail && detailClass != null && detailClass.length > 0)
+			functionPreparationTelemetry = new OcamlFunctionPreparationTelemetry((msg:String) -> profileLogLine(msg), detailClass, profileFieldFilter);
 		#end
 	}
 
@@ -508,7 +514,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	/** Builds and validates every admitted plan for one final typed function body. */
 	public function sealFunctionPlans(data:ClassFuncData):Void {
-		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry, representationRegistry, staticStoragePlan).seal(data);
+		final telemetry = functionPreparationTelemetry == null ? null : functionPreparationTelemetry.beginOrdinary(data);
+		try {
+			new OcamlFunctionPlanSealer(ctx, functionPlanRegistry, representationRegistry, staticStoragePlan, telemetry).seal(data);
+			if (telemetry != null)
+				telemetry.finish(OcamlFunctionPreparationResult.Sealed);
+		} catch (error:Dynamic) {
+			// Reflaxe preprocessors can surface compiler diagnostics and legacy thrown
+			// values. Keep that dynamic boundary here, record failure best-effort, and
+			// immediately rethrow the original value without interpreting it.
+			if (telemetry != null)
+				telemetry.finish(OcamlFunctionPreparationResult.Failed);
+			throw error;
+		}
 	}
 
 	#if macro

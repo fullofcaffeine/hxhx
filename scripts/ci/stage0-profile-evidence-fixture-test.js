@@ -32,7 +32,7 @@ function validReport() {
 
 function validProgress() {
   return {
-    schema: 'stage0-progress-summary.v1',
+    schema: 'stage0-progress-summary.v2',
     missing_input: false,
     class_totals: requiredClasses.map((name, index) => ({
       name,

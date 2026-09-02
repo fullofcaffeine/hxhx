@@ -47,8 +47,8 @@ function validateEvidence(report, progress, requiredClasses) {
     fail('regeneration report is missing a positive phase_seconds.total')
   }
 
-  if (progress.schema !== 'stage0-progress-summary.v1') {
-    fail(`progress summary schema is ${JSON.stringify(progress.schema)} instead of "stage0-progress-summary.v1"`)
+  if (progress.schema !== 'stage0-progress-summary.v2') {
+    fail(`progress summary schema is ${JSON.stringify(progress.schema)} instead of "stage0-progress-summary.v2"`)
   }
   if (progress.missing_input === true) {
     fail('progress summary says its telemetry input was missing')

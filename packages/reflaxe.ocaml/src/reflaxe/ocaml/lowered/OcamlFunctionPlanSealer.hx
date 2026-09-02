@@ -42,6 +42,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlNestedFunctionIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
+import reflaxe.ocaml.lowered.OcamlFunctionPreparationTelemetry.OcamlFunctionPreparationTelemetrySession;
 import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlTypedFunctionResultBoundary;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -84,13 +85,20 @@ class OcamlFunctionPlanSealer {
 	final registry:OcamlFunctionPlanRegistry;
 	final representations:OcamlRepresentationRegistry;
 	final staticStorage:OcamlStaticStoragePlan;
+	final telemetry:Null<OcamlFunctionPreparationTelemetrySession>;
 
 	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry, representations:OcamlRepresentationRegistry,
-			staticStorage:OcamlStaticStoragePlan) {
+			staticStorage:OcamlStaticStoragePlan, ?telemetry:OcamlFunctionPreparationTelemetrySession) {
 		this.context = context;
 		this.registry = registry;
 		this.representations = representations;
 		this.staticStorage = staticStorage;
+		this.telemetry = telemetry;
+	}
+
+	inline function telemetryCheckpoint(name:String):Void {
+		if (telemetry != null)
+			telemetry.checkpoint(name);
 	}
 
 	/**
@@ -163,6 +171,7 @@ class OcamlFunctionPlanSealer {
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
+		telemetryCheckpoint("binding");
 		final functionResultType = switch (TypeTools.follow(data.field.type)) {
 			case TFun(_, result): result;
 			case _: null;
@@ -177,12 +186,14 @@ class OcamlFunctionPlanSealer {
 				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), imapInterfaces, new OcamlCallPlan([]), controls, callableBoundary,
 				functionResultBoundary, constructionBoundary, anonymousStructures, new OcamlStructuralFieldPlan([]), new OcamlArrayLiteralProducerPlan([]),
 				new OcamlReflectComparePlan([]));
+			telemetryCheckpoint("empty");
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
 			callPlanner.preliminaryPreservesNullableBoolArgument, callPlanner.preliminaryProducesNullableBool, callPlanner.preliminaryProducesExactString);
 		localRepresentations.requirePlanBinding(binding);
+		telemetryCheckpoint("locals");
 		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(data.expr, binding, containerElements);
@@ -213,6 +224,7 @@ class OcamlFunctionPlanSealer {
 		staticString.requirePlanBinding(binding);
 		for (decision in staticString.decisions())
 			context.recordStaticStringRuntimeRequirement(decision);
+		telemetryCheckpoint("containers");
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding, staticStorage, localIdentities).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -243,6 +255,7 @@ class OcamlFunctionPlanSealer {
 		final stringFields = new OcamlStringFieldPlanner(binding).plan(data.expr);
 		for (decision in stringFields.decisions())
 			context.recordStringFieldRuntimeRequirement(decision);
+		telemetryCheckpoint("calls_and_scalars");
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
@@ -256,7 +269,9 @@ class OcamlFunctionPlanSealer {
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
+		telemetryCheckpoint("structures_and_control");
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
+		telemetryCheckpoint("nested");
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -298,6 +313,7 @@ class OcamlFunctionPlanSealer {
 		}
 
 		visit(data.expr);
+		telemetryCheckpoint("places");
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		for (conversion in localRepresentations.conversions()) {
 			if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
@@ -343,6 +359,7 @@ class OcamlFunctionPlanSealer {
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
+		telemetryCheckpoint("validation");
 	}
 
 	/**

@@ -61,7 +61,7 @@ for (let i = 0; i < args.length; i += 1) {
 if (!inputPath) fail('Missing required --input <path>');
 
 const summary = {
-  schema: 'stage0-progress-summary.v1',
+  schema: 'stage0-progress-summary.v2',
   generated_at: new Date().toISOString(),
   input: inputPath,
   line_count: 0,
@@ -73,6 +73,11 @@ const summary = {
   top_class_prepares: [],
   class_pipeline_totals: [],
   top_class_pipelines: [],
+  function_prepare_total_samples: 0,
+  function_prepare_failed_samples: 0,
+  function_prepare_totals: [],
+  top_function_prepares: [],
+  incomplete_function_prepares: [],
   checkpoints: [],
   missing_input: false,
 };
@@ -118,8 +123,52 @@ function sortedTotals(rows) {
     });
 }
 
+function decodedToken(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch (_) {
+    return value;
+  }
+}
+
+function phaseTimings(suffix) {
+  const phases = {};
+  const pattern = / phase_([a-z_]+)_ms=(\d+)/g;
+  let match;
+  while ((match = pattern.exec(suffix)) !== null) phases[match[1]] = Number(match[2]);
+  return phases;
+}
+
+function addFunctionSample(rows, sample) {
+  const existing = rows.get(sample.function_id) || {
+    name: sample.function_id,
+    class_name: sample.class_name,
+    field_name: sample.field_name,
+    root: sample.root,
+    samples: 0,
+    failed_samples: 0,
+    total_dt_ms: 0,
+    max_dt_ms: 0,
+    min_dt_ms: Number.POSITIVE_INFINITY,
+    last_count: 0,
+    phase_totals_ms: {},
+  };
+  existing.samples += 1;
+  if (sample.result === 'failed') existing.failed_samples += 1;
+  existing.total_dt_ms += sample.dt_ms;
+  existing.max_dt_ms = Math.max(existing.max_dt_ms, sample.dt_ms);
+  existing.min_dt_ms = Math.min(existing.min_dt_ms, sample.dt_ms);
+  existing.last_count = Math.max(existing.last_count, sample.count);
+  for (const [name, dtMs] of Object.entries(sample.phases)) {
+    existing.phase_totals_ms[name] = (existing.phase_totals_ms[name] || 0) + dtMs;
+  }
+  rows.set(sample.function_id, existing);
+}
+
 const byClass = new Map();
 const byClassPrepare = new Map();
+const byFunctionPrepare = new Map();
+const activeFunctionPrepares = new Map();
 if (!summary.missing_input) {
   for (const line of lines) {
     let match = line.match(/class_end count=(\d+) name=([^ ]+) dt_ms=(\d+)/);
@@ -139,6 +188,40 @@ if (!summary.missing_input) {
       const dtMs = Number(match[3]);
       summary.class_prepare_total_samples += 1;
       addSample(byClassPrepare, name, count, dtMs);
+      continue;
+    }
+
+    match = line.match(/function_prepare_begin count=(\d+) class=([^ ]+) field=([^ ]+) root=([^ ]+) function_id=([^ ]+)/);
+    if (match) {
+      const begin = {
+        count: Number(match[1]),
+        class_name: decodedToken(match[2]),
+        field_name: decodedToken(match[3]),
+        root: match[4],
+        function_id: decodedToken(match[5]),
+      };
+      activeFunctionPrepares.set(begin.function_id, begin);
+      continue;
+    }
+
+    match = line.match(
+      /function_prepare_end count=(\d+) class=([^ ]+) field=([^ ]+) root=([^ ]+) function_id=([^ ]+) result=([^ ]+) dt_ms=(\d+)(.*)$/
+    );
+    if (match) {
+      const sample = {
+        count: Number(match[1]),
+        class_name: decodedToken(match[2]),
+        field_name: decodedToken(match[3]),
+        root: match[4],
+        function_id: decodedToken(match[5]),
+        result: match[6],
+        dt_ms: Number(match[7]),
+        phases: phaseTimings(match[8]),
+      };
+      summary.function_prepare_total_samples += 1;
+      if (sample.result === 'failed') summary.function_prepare_failed_samples += 1;
+      addFunctionSample(byFunctionPrepare, sample);
+      activeFunctionPrepares.delete(sample.function_id);
       continue;
     }
 
@@ -178,12 +261,25 @@ summary.class_pipeline_totals = Array.from(pipelineNames)
     return a.name.localeCompare(b.name);
   });
 summary.top_class_pipelines = summary.class_pipeline_totals.slice(0, topN);
+summary.function_prepare_totals = Array.from(byFunctionPrepare.values())
+  .map((row) => ({
+    ...row,
+    min_dt_ms: Number.isFinite(row.min_dt_ms) ? row.min_dt_ms : 0,
+  }))
+  .sort((a, b) => {
+    if (b.total_dt_ms !== a.total_dt_ms) return b.total_dt_ms - a.total_dt_ms;
+    return a.name.localeCompare(b.name);
+  });
+summary.top_function_prepares = summary.function_prepare_totals.slice(0, topN);
+summary.incomplete_function_prepares = Array.from(activeFunctionPrepares.values()).sort((a, b) => a.count - b.count);
 
 const outLines = [];
 if (summary.missing_input) {
   outLines.push('top_class_pipeline_total_dt_ms: no-progress-log');
   outLines.push('top_class_total_dt_ms: no-progress-log');
   outLines.push('top_class_prepare_total_dt_ms: no-progress-log');
+  outLines.push('top_function_prepare_total_dt_ms: no-progress-log');
+  outLines.push('incomplete_function_prepares: no-progress-log');
 } else {
   if (summary.top_class_pipelines.length === 0) {
     outLines.push('top_class_pipeline_total_dt_ms: none');
@@ -209,6 +305,29 @@ if (summary.missing_input) {
     outLines.push('top_class_prepare_total_dt_ms:');
     for (const row of summary.top_class_prepares) {
       outLines.push(`  ${row.total_dt_ms}\t${row.name}\t(samples=${row.samples} max=${row.max_dt_ms} min=${row.min_dt_ms})`);
+    }
+  }
+
+  if (summary.top_function_prepares.length === 0) {
+    outLines.push('top_function_prepare_total_dt_ms: none');
+  } else {
+    outLines.push('top_function_prepare_total_dt_ms:');
+    for (const row of summary.top_function_prepares) {
+      const phases = Object.entries(row.phase_totals_ms)
+        .map(([name, dtMs]) => `${name}=${dtMs}`)
+        .join(' ');
+      outLines.push(
+        `  ${row.total_dt_ms}\t${row.name}\t(class=${row.class_name} field=${row.field_name} root=${row.root} samples=${row.samples} failed=${row.failed_samples}${phases ? ` phases=${phases}` : ''})`
+      );
+    }
+  }
+
+  if (summary.incomplete_function_prepares.length === 0) {
+    outLines.push('incomplete_function_prepares: none');
+  } else {
+    outLines.push('incomplete_function_prepares:');
+    for (const row of summary.incomplete_function_prepares) {
+      outLines.push(`  ${row.count}\t${row.function_id}\t(class=${row.class_name} field=${row.field_name} root=${row.root})`);
     }
   }
 }
