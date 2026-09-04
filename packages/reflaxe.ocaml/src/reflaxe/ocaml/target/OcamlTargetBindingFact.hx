@@ -33,7 +33,7 @@ class OcamlTargetBindingFact {
 
 	public function new(ownerIdentity:String, declarationPath:String, role:OcamlTargetBindingRole, sourceName:String, semanticTypeDisplay:String) {
 		this.ownerIdentity = required(ownerIdentity, "owner identity");
-		this.declarationPath = required(declarationPath, "declaration path");
+		this.declarationPath = OcamlTargetExpressionPath.require(declarationPath);
 		if (role == null)
 			throw "OCaml target binding requires a declaration role";
 		this.role = role;

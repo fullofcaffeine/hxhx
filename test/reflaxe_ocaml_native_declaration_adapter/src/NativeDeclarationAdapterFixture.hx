@@ -1,7 +1,11 @@
 import backend.ocaml.HxhxOcamlTargetDeclarationAdapter;
 import backend.ocaml.HxhxOcamlTargetBindingAdapter;
 import backend.ocaml.HxhxOcamlTargetLiteralAdapter;
+import backend.ocaml.HxhxOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.target.OcamlTargetExpressionFact;
+import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
+import reflaxe.ocaml.target.OcamlTargetExpressionPath;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
 
@@ -39,7 +43,42 @@ class NativeDeclarationAdapterFixture {
 		if (localId.getCanonicalKey() != "unit.BindingFixture.run#local:0:variable:5:value")
 			throw "structured native binding access changed the existing local key";
 		assertCompilerTemporaryRejected();
+		assertRecursiveExpression(binding);
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	static function assertRecursiveExpression(binding:TyLocalBinding):Void {
+		final intType = TyType.fromHintText("Int");
+		final voidType = TyType.fromHintText("Void");
+		final initializer = TypedExpr.intLiteral(7, intType, HxPos.unknown());
+		final declaration = TypedExpr.variableDeclaration("value", "Int", initializer, false, false, intType, HxPos.unknown(), binding);
+		final declarations = TypedExpr.variableDeclarations([declaration], voidType, HxPos.unknown());
+		final read = TypedExpr.localRead("value", intType, HxPos.unknown(), binding);
+		final body = TypedExpr.block([declarations, read], intType, HxPos.unknown());
+		final fact = HxhxOcamlTargetExpressionAdapter.fromExpression(body);
+		if (fact == null || fact.getCanonicalIdentity() != BindingIdentityMacro.stockExpression())
+			throw "stock Haxe and native hxhx produced different recursive expression facts";
+		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(fact)) != "let value = 7 in value")
+			throw "native host could not execute the recursive standalone target lowerer";
+		assertDanglingReadRejected(fact);
+	}
+
+	static function assertDanglingReadRejected(valid:OcamlTargetExpressionFact):Void {
+		final children = valid.copyChildren();
+		final declaration = children[0];
+		final binding = declaration.binding;
+		if (binding == null)
+			throw "recursive expression fixture lost its declaration binding";
+		final read = OcamlTargetExpressionFact.localRead(OcamlTargetExpressionPath.indexed(OcamlTargetExpressionPath.ROOT, "block-item", 0), "Int", binding);
+		final dangling = OcamlTargetExpressionFact.block(OcamlTargetExpressionPath.ROOT, "Int", [read]);
+		var rejected = false;
+		try {
+			OcamlTargetExpressionLowerer.build(dangling);
+		} catch (_:String) {
+			rejected = true;
+		}
+		if (!rejected)
+			throw "recursive standalone target lowerer admitted a dangling local read";
 	}
 
 	static function assertCompilerTemporaryRejected():Void {
