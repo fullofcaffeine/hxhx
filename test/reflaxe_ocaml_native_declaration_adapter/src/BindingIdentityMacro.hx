@@ -23,6 +23,14 @@ class BindingIdentityMacro {
 		return macro $v{fact.getCanonicalIdentity()};
 	}
 
+	public static macro function stockUnsupportedExpression():Expr {
+		final fact = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("unit.BindingFixture.unsupported", Context.typeExpr(macro {
+			var value:Float = 7;
+			value;
+		}));
+		return macro $v{fact == null};
+	}
+
 	static function typedFixture():TypedExpr
 		return Context.typeExpr(macro {
 			var value:Int = 7;

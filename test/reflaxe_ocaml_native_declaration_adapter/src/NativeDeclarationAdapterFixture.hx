@@ -44,7 +44,23 @@ class NativeDeclarationAdapterFixture {
 			throw "structured native binding access changed the existing local key";
 		assertCompilerTemporaryRejected();
 		assertRecursiveExpression(binding);
+		assertUnsupportedExpressionFallsBack();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	static function assertUnsupportedExpressionFallsBack():Void {
+		if (!BindingIdentityMacro.stockUnsupportedExpression())
+			throw "stock Haxe adapter admitted an unsupported expression carrier";
+		final nullableInt = TyType.fromHintText("Null<Int>");
+		final bindingId = TyLocalId.forSourceDeclaration("unit.BindingFixture.unsupported", 0, Variable, "value");
+		final binding = new TyLocalBinding(bindingId, "value", nullableInt, Variable);
+		final initializer = TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown());
+		final declaration = TypedExpr.variableDeclaration("value", "Null<Int>", initializer, false, false, nullableInt, HxPos.unknown(), binding);
+		final declarations = TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), HxPos.unknown());
+		final read = TypedExpr.localRead("value", nullableInt, HxPos.unknown(), binding);
+		final body = TypedExpr.block([declarations, read], nullableInt, HxPos.unknown());
+		if (HxhxOcamlTargetExpressionAdapter.fromExpression(body) != null)
+			throw "native hxhx adapter admitted an unsupported local-initializer conversion";
 	}
 
 	static function assertRecursiveExpression(binding:TyLocalBinding):Void {

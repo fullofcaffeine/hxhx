@@ -36,9 +36,8 @@ class HaxeOcamlTargetExpressionAdapter {
 		return switch (expression.expr) {
 			case TConst(constant): final literal = HaxeOcamlTargetLiteralAdapter.fromConstant(constant,
 					expression.t); literal == null || !isDirectLiteral(literal) ? null : OcamlTargetExpressionFact.literalExpression(path, literal);
-			case TLocal(local):
-				final binding = bindingsByHostId.get(local.id);
-				binding == null ? null : OcamlTargetExpressionFact.localRead(path, TypeTools.toString(expression.t), binding);
+			case TLocal(local): final binding = bindingsByHostId.get(local.id); final readType = TypeTools.toString(expression.t); binding == null || binding.semanticTypeDisplay != readType ? null : OcamlTargetExpressionFact.localRead(path,
+					readType, binding);
 			case TVar(local, initializer):
 				if (initializer == null) {
 					null;
@@ -47,7 +46,9 @@ class HaxeOcamlTargetExpressionAdapter {
 						OcamlTargetExpressionPath.child(path, "binding"), OcamlTargetBindingRole.Variable, local);
 					bindingsByHostId.set(local.id, binding);
 					final copiedInitializer = copyExpression(initializer, OcamlTargetExpressionPath.child(path, "initializer"));
-					copiedInitializer == null ? null : OcamlTargetExpressionFact.variableDeclaration(path, binding, copiedInitializer);
+					copiedInitializer == null
+					|| copiedInitializer.semanticTypeDisplay != binding.semanticTypeDisplay ? null : OcamlTargetExpressionFact.variableDeclaration(path,
+						binding, copiedInitializer);
 				}
 			case TBlock(expressions):
 				copyBlock(expression, expressions, path);
@@ -64,12 +65,16 @@ class HaxeOcamlTargetExpressionAdapter {
 				return null;
 			children.push(child);
 		}
-		return OcamlTargetExpressionFact.block(path, TypeTools.toString(expression.t), children);
+		final blockType = TypeTools.toString(expression.t);
+		final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
+		return blockType == resultType ? OcamlTargetExpressionFact.block(path, blockType, children) : null;
 	}
 
 	static function isDirectLiteral(literal:OcamlTargetLiteralFact):Bool {
 		return switch (literal.kind) {
-			case IntValue | BoolValue | StringValue: true;
+			case IntValue: literal.semanticTypeDisplay == "Int";
+			case BoolValue: literal.semanticTypeDisplay == "Bool";
+			case StringValue: literal.semanticTypeDisplay == "String";
 			case NullValue | ThisValue | SuperValue: false;
 		};
 	}

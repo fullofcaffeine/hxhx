@@ -78,7 +78,9 @@ import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
+import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
+import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
@@ -1844,8 +1846,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 			sealStandaloneExpression(ownerId, expression));
 	}
 
-	/** Builds a field initializer with its assignment and Bytes decisions sealed. */
+	/**
+		Builds a field initializer from its original typed Haxe expression.
+
+		The shared target owns revision 1 expressions only when every carrier is an
+		exact direct match. Other initializers keep the existing assignment, storage,
+		and Bytes plans so this first hard cut cannot approximate a conversion.
+	**/
 	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
+		final sharedExpression = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("standalone:" + ownerId, expression);
+		if (sharedExpression != null && sharedExpression.semanticTypeDisplay == TypeTools.toString(fieldType))
+			return OcamlTargetExpressionLowerer.build(sharedExpression);
+		#if macro
+		if (Context.definedValue("reflaxe_ocaml_target_expression_test_require_shared") == ownerId)
+			Context.error("reflaxe.ocaml: required field initializer did not enter the shared target expression route", expression.pos);
+		#end
 		final localIdentities = LexicalLocalIdentityPlan.build("standalone:" + ownerId, expression);
 		return builder.buildStandaloneExprForAssignment(fieldType, expression, localIdentities,
 			OcamlLocalStoragePlanner.planExpression(expression, localIdentities), sealStandaloneExpression(ownerId, expression));

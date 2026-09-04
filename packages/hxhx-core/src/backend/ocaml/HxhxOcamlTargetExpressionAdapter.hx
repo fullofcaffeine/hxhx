@@ -32,7 +32,9 @@ class HxhxOcamlTargetExpressionAdapter {
 					null;
 				} else {
 					final binding = bindingsByNativeKey.get(nativeBindings[0].getIdentity().getCanonicalKey());
-					binding == null ? null : OcamlTargetExpressionFact.localRead(path, expression.getType().getCanonicalDisplay(), binding);
+					final readType = expression.getType().getCanonicalDisplay();
+					binding == null
+					|| binding.semanticTypeDisplay != readType ? null : OcamlTargetExpressionFact.localRead(path, readType, binding);
 				}
 			case VariableDeclaration:
 				copyVariable(expression, path);
@@ -66,7 +68,9 @@ class HxhxOcamlTargetExpressionAdapter {
 				return null;
 			children.push(child);
 		}
-		return OcamlTargetExpressionFact.block(path, expression.getType().getCanonicalDisplay(), children);
+		final blockType = expression.getType().getCanonicalDisplay();
+		final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
+		return blockType == resultType ? OcamlTargetExpressionFact.block(path, blockType, children) : null;
 	}
 
 	function copyVariable(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
@@ -80,12 +84,16 @@ class HxhxOcamlTargetExpressionAdapter {
 		final binding = HxhxOcamlTargetBindingAdapter.fromBinding(nativeBinding, OcamlTargetExpressionPath.child(path, "binding"));
 		bindingsByNativeKey.set(nativeBinding.getIdentity().getCanonicalKey(), binding);
 		final initializer = copyExpression(initializers[0], OcamlTargetExpressionPath.child(path, "initializer"));
-		return initializer == null ? null : OcamlTargetExpressionFact.variableDeclaration(path, binding, initializer);
+		return initializer == null
+			|| initializer.semanticTypeDisplay != binding.semanticTypeDisplay ? null : OcamlTargetExpressionFact.variableDeclaration(path, binding,
+				initializer);
 	}
 
 	static function isDirectLiteral(literal:reflaxe.ocaml.target.OcamlTargetLiteralFact):Bool {
 		return switch (literal.kind) {
-			case IntValue | BoolValue | StringValue: true;
+			case IntValue: literal.semanticTypeDisplay == "Int";
+			case BoolValue: literal.semanticTypeDisplay == "Bool";
+			case StringValue: literal.semanticTypeDisplay == "String";
 			case NullValue | ThisValue | SuperValue: false;
 		};
 	}

@@ -58,7 +58,7 @@ class OcamlTargetExpressionFact {
 	public static function variableDeclaration(path:String, binding:OcamlTargetBindingFact, initializer:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
 		if (binding == null || initializer == null)
 			throw "OCaml target variable declaration revision 1 requires a binding and initializer";
-		return new OcamlTargetExpressionFact(path, VariableDeclarationExpression, binding.semanticTypeDisplay, null, binding, [initializer]);
+		return new OcamlTargetExpressionFact(path, VariableDeclarationExpression, "Void", null, binding, [initializer]);
 	}
 
 	public static function block(path:String, semanticTypeDisplay:String, children:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact
@@ -82,9 +82,13 @@ class OcamlTargetExpressionFact {
 			case LiteralExpression:
 				if (literal == null || binding != null || children.length != 0)
 					invalidShape("literal");
+				if (!isDirectLiteral(literal))
+					throw "OCaml target expression revision 1 requires an exact direct literal type";
 			case LocalReadExpression:
 				if (literal != null || binding == null || children.length != 0)
 					invalidShape("local read");
+				if (binding.semanticTypeDisplay != semanticTypeDisplay)
+					throw "OCaml target expression revision 1 does not admit local-read conversions";
 			case VariableDeclarationExpression:
 				if (literal != null || binding == null || children.length != 1)
 					invalidShape("variable declaration");
@@ -92,13 +96,27 @@ class OcamlTargetExpressionFact {
 					throw "OCaml target variable binding path does not match its declaration";
 				if (children[0].path != OcamlTargetExpressionPath.child(path, "initializer"))
 					throw "OCaml target variable initializer path does not match its declaration";
+				if (children[0].semanticTypeDisplay != binding.semanticTypeDisplay)
+					throw "OCaml target expression revision 1 does not admit local-initializer conversions";
 			case BlockExpression:
 				if (literal != null || binding != null)
 					invalidShape("block");
 				for (index in 0...children.length)
 					if (children[index].path != OcamlTargetExpressionPath.indexed(path, "block-item", index))
 						throw "OCaml target block child path does not match its source order";
+				final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
+				if (semanticTypeDisplay != resultType)
+					throw "OCaml target expression block result does not match its final child";
 		}
+	}
+
+	static function isDirectLiteral(value:OcamlTargetLiteralFact):Bool {
+		return switch (value.kind) {
+			case IntValue: value.semanticTypeDisplay == "Int";
+			case BoolValue: value.semanticTypeDisplay == "Bool";
+			case StringValue: value.semanticTypeDisplay == "String";
+			case NullValue | ThisValue | SuperValue: false;
+		};
 	}
 
 	function identityParts():Array<Null<String>> {
