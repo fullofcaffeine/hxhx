@@ -20,6 +20,8 @@ import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.target.HaxeOcamlTargetLiteralAdapter;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
+import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
+import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -6070,8 +6072,6 @@ class OcamlBuilder {
 	/** Select OCaml carrier syntax from a host-neutral Haxe literal fact. **/
 	function buildTargetLiteral(fact:OcamlTargetLiteralFact, semanticType:Type, position:Position):OcamlExpr {
 		return switch (fact.kind) {
-			case ThisValue | SuperValue:
-				OcamlExpr.EIdent("self");
 			case NullValue:
 				if (nullablePrimitiveKind(semanticType) != null) {
 					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
@@ -6080,25 +6080,17 @@ class OcamlBuilder {
 				} else {
 					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 				}
-			case IntValue:
-				final value = OcamlExpr.EConst(OcamlConst.CInt(fact.intValue));
-				switch (nullablePrimitiveKind(semanticType)) {
-					case "int": OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
-					case "float": OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
-							[OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [value])]);
-					case _: value;
-				}
-			case BoolValue:
-				final value = OcamlExpr.EConst(OcamlConst.CBool(fact.boolValue));
-				if (nullablePrimitiveKind(semanticType) == "bool") {
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
-				} else if (isDynamicLike(semanticType) || isTypeParameterType(semanticType)) {
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [value]);
-				} else {
-					value;
-				}
-			case StringValue:
-				OcamlExpr.EConst(OcamlConst.CString(fact.stringValue));
+			case ThisValue | SuperValue | IntValue | BoolValue | StringValue:
+				OcamlTargetLiteralLowerer.buildNonNull(fact, targetLiteralCarrier(semanticType));
+		};
+	}
+
+	function targetLiteralCarrier(semanticType:Type):OcamlTargetLiteralCarrier {
+		return switch (nullablePrimitiveKind(semanticType)) {
+			case "int": NullableInt;
+			case "float": NullableFloat;
+			case "bool": NullableBool;
+			case _: isDynamicLike(semanticType) || isTypeParameterType(semanticType) ? DynamicOrTypeParameter : Direct;
 		};
 	}
 

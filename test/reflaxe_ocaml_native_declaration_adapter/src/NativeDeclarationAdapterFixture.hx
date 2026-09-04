@@ -1,5 +1,8 @@
 import backend.ocaml.HxhxOcamlTargetDeclarationAdapter;
 import backend.ocaml.HxhxOcamlTargetLiteralAdapter;
+import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
+import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
 
 /** Verifies that the native adapter compiles without a macro-host compatibility layer. **/
 class NativeDeclarationAdapterFixture {
@@ -16,6 +19,8 @@ class NativeDeclarationAdapterFixture {
 		final nativeInt = HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown()));
 		if (nativeInt == null || nativeInt.getCanonicalIdentity() != LiteralIdentityMacro.stockInt())
 			throw "stock Haxe and native hxhx produced different integer literal facts";
+		if (new OcamlASTPrinter().printExpr(OcamlTargetLiteralLowerer.buildNonNull(nativeInt, Direct)) != "7")
+			throw "native host could not execute the standalone target literal lowerer";
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
