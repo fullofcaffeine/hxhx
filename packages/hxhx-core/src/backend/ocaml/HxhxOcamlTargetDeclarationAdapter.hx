@@ -1,3 +1,5 @@
+package backend.ocaml;
+
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetArgumentInput;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetClassInput;

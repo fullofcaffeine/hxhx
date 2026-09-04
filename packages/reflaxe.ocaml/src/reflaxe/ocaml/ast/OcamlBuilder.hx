@@ -17,6 +17,9 @@ import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
+import reflaxe.ocaml.target.HaxeOcamlTargetLiteralAdapter;
+import reflaxe.ocaml.target.OcamlTargetLiteralFact;
+import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -3816,7 +3819,13 @@ class OcamlBuilder {
 			|| !stringMethodCandidate ? null : currentStringMethodPlan.requireFor(e);
 		final stringFieldCandidate = OcamlStringFieldPlanner.isDirectStringLengthRead(e);
 		final plannedStringField = currentStringFieldPlan == null || !stringFieldCandidate ? null : currentStringFieldPlan.requireFor(e);
+		final targetLiteral = switch (e.expr) {
+			case TConst(constant): HaxeOcamlTargetLiteralAdapter.fromConstant(constant, e.t);
+			case _: null;
+		};
 		final built:OcamlExpr = switch (e.expr) {
+			case TConst(_) if (targetLiteral != null):
+				buildTargetLiteral(targetLiteral, e.t, e.pos);
 			case TCall(_, _) if (plannedStringFromCharCode != null):
 				buildPlannedStringFromCharCode(e, plannedStringFromCharCode);
 			case _ if (plannedStringFromCharCode != null):
@@ -3949,63 +3958,11 @@ class OcamlBuilder {
 					case _:
 						OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 				}
-			case TConst(TThis):
-				OcamlExpr.EIdent("self");
-			case TConst(TSuper):
-				// `super` as a value is lowered as `self`. The callsite decides whether it needs
-				// base dispatch (e.g. `super.foo(...)`) or base ctor calls (`super(...)`).
-				OcamlExpr.EIdent("self");
-			case TConst(TNull):
-				// `null` is used across many portable Haxe APIs (e.g. Sys.getEnv).
-				//
-				// - For nullable primitives (Null<Int>/Null<Float>/Null<Bool>), represent
-				//   null as `HxRuntime.hx_null : Obj.t` directly (no cast).
-				// - Exact String uses the one runtime-owned String sentinel selected
-				//   by the sealed representation.
-				// - Unmigrated families retain the compatibility cast.
-				if (nullablePrimitiveKind(e.t) != null) {
-					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-				} else if (OcamlRepresentationRegistry.isExactString(e.t)) {
-					exactStringNullValue(OcamlRepresentationDomain.InternalValue, "null-literal", e.pos);
-				} else {
-					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
-				}
-			case TConst(c):
-				// For nullable primitives, represent non-null values as `Obj.repr <prim>`.
-				switch (nullablePrimitiveKind(e.t)) {
-					case "int":
-						switch (c) {
-							case TInt(_):
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(buildConst(c))]);
-							case _:
-								OcamlExpr.EConst(buildConst(c));
-						}
-					case "float":
-						switch (c) {
-							case TFloat(_):
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(buildConst(c))]);
-							case TInt(_):
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [
-									OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [OcamlExpr.EConst(buildConst(c))])
-								]);
-							case _:
-								OcamlExpr.EConst(buildConst(c));
-						}
-					case "bool":
-						switch (c) {
-							case TBool(_):
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(buildConst(c))]);
-							case _:
-								OcamlExpr.EConst(buildConst(c));
-						}
-					case _:
-						switch (c) {
-							case TBool(_) if (isDynamicLike(e.t) || isTypeParameterType(e.t)):
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [OcamlExpr.EConst(buildConst(c))]);
-							case _:
-								OcamlExpr.EConst(buildConst(c));
-						}
-				}
+			case TConst(constant = TFloat(_)):
+				final value = OcamlExpr.EConst(buildConst(constant));
+				nullablePrimitiveKind(e.t) == "float" ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]) : value;
+			case TConst(_):
+				callPlanInvariant("an admitted literal reached OCaml syntax without a host-neutral target fact", e.pos);
 			case TLocal(v):
 				// Haxe's core-type `Null<T>` can “collapse” in typed expressions depending on
 				// target semantics and implicit conversions (e.g. `Null<Int>` used as `Int`).
@@ -6108,6 +6065,41 @@ class OcamlBuilder {
 			case TThis, TSuper:
 				OcamlConst.CUnit;
 		}
+	}
+
+	/** Select OCaml carrier syntax from a host-neutral Haxe literal fact. **/
+	function buildTargetLiteral(fact:OcamlTargetLiteralFact, semanticType:Type, position:Position):OcamlExpr {
+		return switch (fact.kind) {
+			case ThisValue | SuperValue:
+				OcamlExpr.EIdent("self");
+			case NullValue:
+				if (nullablePrimitiveKind(semanticType) != null) {
+					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				} else if (OcamlRepresentationRegistry.isExactString(semanticType)) {
+					exactStringNullValue(OcamlRepresentationDomain.InternalValue, "null-literal", position);
+				} else {
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+				}
+			case IntValue:
+				final value = OcamlExpr.EConst(OcamlConst.CInt(fact.intValue));
+				switch (nullablePrimitiveKind(semanticType)) {
+					case "int": OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
+					case "float": OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+							[OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [value])]);
+					case _: value;
+				}
+			case BoolValue:
+				final value = OcamlExpr.EConst(OcamlConst.CBool(fact.boolValue));
+				if (nullablePrimitiveKind(semanticType) == "bool") {
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
+				} else if (isDynamicLike(semanticType) || isTypeParameterType(semanticType)) {
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [value]);
+				} else {
+					value;
+				}
+			case StringValue:
+				OcamlExpr.EConst(OcamlConst.CString(fact.stringValue));
+		};
 	}
 
 	function buildLocal(v:TVar, ?position:Position):OcamlExpr {
