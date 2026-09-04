@@ -1,4 +1,5 @@
 import backend.ocaml.HxhxOcamlTargetDeclarationAdapter;
+import backend.ocaml.HxhxOcamlTargetBindingAdapter;
 import backend.ocaml.HxhxOcamlTargetLiteralAdapter;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
@@ -23,6 +24,34 @@ class NativeDeclarationAdapterFixture {
 			throw "native host could not execute the standalone target literal lowerer";
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
+		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
+		final binding = new TyLocalBinding(localId, "value", TyType.fromHintText("Int"), Variable);
+		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding(binding, "root/block-item/0/binding");
+		if (nativeBinding.getCanonicalIdentity() != BindingIdentityMacro.stockVariable())
+			throw "stock Haxe and native hxhx produced different source-binding facts";
+		final renumberedId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 99, Variable, "value");
+		final renumberedBinding = new TyLocalBinding(renumberedId, "value", TyType.fromHintText("Int"), Variable);
+		final renumberedFact = HxhxOcamlTargetBindingAdapter.fromBinding(renumberedBinding, "root/block-item/0/binding");
+		if (renumberedFact.getCanonicalIdentity() != nativeBinding.getCanonicalIdentity())
+			throw "native traversal allocation leaked into the target-owned binding fact";
+		if (HxhxOcamlTargetBindingAdapter.fromBinding(binding, "root/block-item/1/binding").getCanonicalIdentity() == nativeBinding.getCanonicalIdentity())
+			throw "two structural declaration paths claimed one target-owned binding fact";
+		if (localId.getCanonicalKey() != "unit.BindingFixture.run#local:0:variable:5:value")
+			throw "structured native binding access changed the existing local key";
+		assertCompilerTemporaryRejected();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	static function assertCompilerTemporaryRejected():Void {
+		final temporaryId = TyLocalId.forCompilerTemporary("unit.BindingFixture.run", "binding-fixture-v1", 0, "temporary");
+		final temporary = new TyLocalBinding(temporaryId, "temporary", TyType.fromHintText("Int"), CompilerTemporary);
+		var rejected = false;
+		try {
+			HxhxOcamlTargetBindingAdapter.fromBinding(temporary, "root/block-item/0/binding");
+		} catch (_:String) {
+			rejected = true;
+		}
+		if (!rejected)
+			throw "native OCaml binding adapter admitted a compiler temporary";
 	}
 }

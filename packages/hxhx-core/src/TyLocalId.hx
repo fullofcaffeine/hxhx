@@ -11,11 +11,17 @@ import TyLocalDeclarationKind.TyLocalDeclarationKindTools;
 **/
 class TyLocalId {
 	final canonicalKey:String;
+	final ownerIdentity:String;
+	final declarationKind:TyLocalDeclarationKind;
+	final compilerTemporary:Bool;
 
-	function new(canonicalKey:String) {
+	function new(canonicalKey:String, ownerIdentity:String, declarationKind:TyLocalDeclarationKind, compilerTemporary:Bool) {
 		if (canonicalKey == null || canonicalKey.length == 0)
 			throw "local declaration identity requires a canonical key";
 		this.canonicalKey = canonicalKey;
+		this.ownerIdentity = ownerIdentity;
+		this.declarationKind = declarationKind;
+		this.compilerTemporary = compilerTemporary;
 	}
 
 	/** Identify one source declaration without depending on target or traversal allocation. **/
@@ -34,7 +40,8 @@ class TyLocalId {
 			+ ":"
 			+ name.length
 			+ ":"
-			+ name);
+			+ name,
+			owner, kind, false);
 	}
 
 	/**
@@ -53,11 +60,21 @@ class TyLocalId {
 			throw "compiler temporary identity requires a lowering pass";
 		if (declarationOrdinal < 0)
 			throw "compiler temporary identity requires a non-negative ordinal";
-		return new TyLocalId(owner + "#temporary:" + pass.length + ":" + pass + ":" + declarationOrdinal + ":" + name.length + ":" + name);
+		return new TyLocalId(owner + "#temporary:" + pass.length + ":" + pass + ":" + declarationOrdinal + ":" + name.length + ":" + name, owner,
+			CompilerTemporary, true);
 	}
 
 	public function getCanonicalKey():String
 		return canonicalKey;
+
+	public function getOwnerIdentity():String
+		return ownerIdentity;
+
+	public function getDeclarationKind():TyLocalDeclarationKind
+		return declarationKind;
+
+	public function isCompilerTemporary():Bool
+		return compilerTemporary;
 
 	public function equals(other:TyLocalId):Bool
 		return other != null && canonicalKey == other.getCanonicalKey();
