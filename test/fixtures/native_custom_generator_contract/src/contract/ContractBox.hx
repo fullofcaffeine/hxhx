@@ -1,15 +1,34 @@
 package contract;
 
 /** Public generic surface retained by the pre-DCE fixture snapshot. */
-class ContractBox<T> implements ContractReadable<T> {
-	final value:T;
+class ContractBox<T> extends ContractBase<T> implements ContractReadable<T> {
+	public final envelope:ContractEnvelope<T>;
 
 	public function new(value:T) {
-		this.value = value;
+		super(value);
+		this.envelope = {value: value};
 	}
 
 	public function read():T {
 		return value;
+	}
+
+	@:overload(function(value:Int):String {})
+	public function format(value:String):String {
+		return value;
+	}
+
+	public function unusedRuntimeMember():String {
+		return "unused";
+	}
+}
+
+/** Generic parent used to retain the authored superclass parameter. */
+class ContractBase<T> {
+	final value:T;
+
+	public function new(value:T) {
+		this.value = value;
 	}
 }
 
@@ -21,6 +40,7 @@ interface ContractReadable<T> {
 /** Authored alias used to verify that source-level typedef identity survives. */
 typedef ContractEnvelope<T> = {
 	final value:T;
+	final ?label:String;
 }
 
 /** Enum abstract used to verify source-level literal-union facts. */

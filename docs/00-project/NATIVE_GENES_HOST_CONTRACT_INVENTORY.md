@@ -289,8 +289,21 @@ records pre-DCE declaration kinds and calls the statement, value, type-accessor,
 and feature services used by Genes.
 
 The fixture is part of the root test command through
-`test:m22:custom-generator-contract`. It does not yet exercise candidate
-publication faults or a warm compiler server.
+`test:m22:custom-generator-contract`. It models candidate publication inside
+the final Haxe callback because stock Haxe gives the custom generator direct
+filesystem authority. A native host must own this step instead.
+
+The fixture runs a clean compile and seven requests through one Haxe 4.3.7
+server. It proves all of these results:
+
+- typed and raw errors before sealing preserve the previous public tree;
+- an error after the old tree moves restores that complete tree;
+- every error removes its private candidate and backup directories;
+- the next request succeeds after each error;
+- a complete replacement removes stale generator-owned files;
+- an adjacent user-owned file remains unchanged;
+- request-local target features do not leak through the server; and
+- the final warm output equals the clean-process output byte for byte.
 
 ### Fixture A: lifecycle and publication
 
@@ -313,13 +326,17 @@ public tree. A second request in the same server must match a clean process.
 
 ### Fixture B: immutable pre-DCE source facts
 
-A public generic interface, implementing class, overload, typedef, and enum
-abstract are captured before DCE. The final generation set intentionally drops
-one runtime member.
+A public generic interface, implementing class, generic parent, overload,
+typedef, optional field, and enum abstract are captured before DCE. The final
+generation set intentionally drops one runtime member.
 
-The custom generator must still receive the public signature, authored alias,
-overload, generic owner, enum-abstract identity, and exact source position. It
-must not receive a mutable `ClassType`, `ClassField`, or host-private object.
+The fixture records the public signature, authored alias, overload, generic
+owner, applied parent and interface types, optionality, enum literal values,
+field kind, access flags, and exact source spans. It also proves that the
+unused member exists before DCE and is absent from `JSGenApi.types` afterward.
+
+A native request must encode these facts as values. It must not contain a
+mutable `ClassType`, `ClassField`, or host-private object.
 
 ### Fixture C: JS service admission
 
@@ -387,16 +404,36 @@ TypeScript remained CPU-active after 39 minutes and had produced no files. It
 ran concurrently with other work, so it is bottleneck evidence only. It is not
 a valid performance sample and must not be used for a speedup percentage.
 
-The next baseline run must use a quiet host, background scheduling, pinned
-toolchains, a warmup, repeated samples, and one same-run control. Exact blocking
+On 2026-09-04, a smaller classic output-mode probe also ran under background
+scheduling while two unrelated Haxe processes used the shared host. Haxe
+reported 2.837 seconds for compiler phases, including 2.643 seconds in macros.
+The operating system reported 149.09 seconds of wall time and 139,051,008 bytes
+of maximum resident memory. The 52.6-times wall/compiler gap makes this a
+rejected sample, not a baseline.
+
+This rejected sample still confirms that Haxe 4.3.7 exposes useful named
+timers. The classic profile reported parsing, typing, filtering, analysis,
+macro JIT, module emission, class emission, import emission, declaration
+emission, and source-map emission. Current Genes timers do not isolate pre-DCE
+capture, semantic planning, or the final publication commit. A valid baseline
+must report those limits instead of assigning their time to a guessed phase.
+
+The next baseline run must use a quiet host, pinned toolchains, a warmup,
+repeated samples, and one same-run control. The measured processes must run at
+their intended priority. Reduced scheduling priority controls host
+responsiveness, so its results are not valid timing evidence. Exact blocking
 thresholds remain report-only until variance is known.
 
 ## Exit criteria for this inventory task
 
-This document completes the source classification and tracer definitions. The
-task remains open until the existing fixture covers the fault and warm-server
-cases, its pre-DCE assertions cover the complete admitted fact slice, and the
-evaluated classic and TypeScript baselines contain phase-separated samples.
+This document completes the source classification, tracer definitions,
+publication fixture, warm-server fixture, and admitted pre-DCE fact slice. The
+task remains open only for repeated evaluated classic and TypeScript baselines
+on a quiet host.
 
-Those additions may refine the experimental request fields. They may not widen
-the request to private mutable compiler objects or freeze a public ABI.
+The baseline must separate directly measured phases from combined or
+unavailable phases. It must not turn background-scheduled or contended wall
+time into native speedup evidence.
+
+Later work can refine the experimental request fields. It cannot widen the
+request to private mutable compiler objects or freeze a public ABI.
