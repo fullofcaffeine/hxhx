@@ -5,6 +5,9 @@ import haxe.macro.Type.TVar;
 import reflaxe.ocaml.target.HaxeOcamlTargetBindingAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.target.OcamlTargetBindingFact.OcamlTargetBindingRole;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
 
 /** Produces a preprocessor-free stock-Haxe binding fact for native comparison. **/
 class BindingIdentityMacro {
@@ -29,6 +32,29 @@ class BindingIdentityMacro {
 			value;
 		}));
 		return macro $v{fact == null};
+	}
+
+	public static macro function stockFunction():Expr {
+		final signature = functionSignature();
+		final body = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing(OcamlTargetFunctionFact.identityFor(signature), Context.typeExpr(macro {
+			var value:Int = 7;
+			value;
+			var ignored:Int = 8;
+		}));
+		if (body == null)
+			Context.error("stock Haxe adapter rejected the shared target function body", Context.currentPos());
+		return macro $v{new OcamlTargetFunctionFact(signature, body).getCanonicalIdentity()};
+	}
+
+	static function functionSignature():OcamlTargetFunctionSignature {
+		return {
+			moduleId: "unit.NativeSample",
+			sourceTypeName: "NativeSample",
+			sourceFunctionName: "main",
+			role: OcamlTargetFunctionRole.StaticFunction,
+			argumentTypeDisplays: [],
+			returnTypeDisplay: "Void"
+		};
 	}
 
 	static function typedFixture():TypedExpr

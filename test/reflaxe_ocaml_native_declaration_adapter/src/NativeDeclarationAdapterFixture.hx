@@ -6,6 +6,11 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.target.OcamlTargetExpressionFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.target.OcamlTargetExpressionPath;
+import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
+import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
 
@@ -44,8 +49,51 @@ class NativeDeclarationAdapterFixture {
 			throw "structured native binding access changed the existing local key";
 		assertCompilerTemporaryRejected();
 		assertRecursiveExpression(binding);
+		assertRecursiveFunction();
 		assertUnsupportedExpressionFallsBack();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	static function assertRecursiveFunction():Void {
+		final signature:OcamlTargetFunctionSignature = {
+			moduleId: "unit.NativeSample",
+			sourceTypeName: "NativeSample",
+			sourceFunctionName: "main",
+			role: OcamlTargetFunctionRole.StaticFunction,
+			argumentTypeDisplays: [],
+			returnTypeDisplay: "Void"
+		};
+		final targetIdentity = OcamlTargetFunctionFact.identityFor(signature);
+		final intType = TyType.fromHintText("Int");
+		final voidType = TyType.fromHintText("Void");
+		final localId = TyLocalId.forSourceDeclaration(targetIdentity, 0, Variable, "value");
+		final binding = new TyLocalBinding(localId, "value", intType, Variable);
+		final initializer = TypedExpr.intLiteral(7, intType, HxPos.unknown());
+		final declaration = TypedExpr.variableDeclaration("value", "Int", initializer, false, false, intType, HxPos.unknown(), binding);
+		final declarations = TypedExpr.variableDeclarations([declaration], voidType, HxPos.unknown());
+		final read = TypedExpr.localRead("value", intType, HxPos.unknown(), binding);
+		final ignoredId = TyLocalId.forSourceDeclaration(targetIdentity, 1, Variable, "ignored");
+		final ignoredBinding = new TyLocalBinding(ignoredId, "ignored", intType, Variable);
+		final ignoredInitializer = TypedExpr.intLiteral(8, intType, HxPos.unknown());
+		final ignoredDeclaration = TypedExpr.variableDeclaration("ignored", "Int", ignoredInitializer, false, false, intType, HxPos.unknown(), ignoredBinding);
+		final ignoredDeclarations = TypedExpr.variableDeclarations([ignoredDeclaration], voidType, HxPos.unknown());
+		final body = TypedExpr.block([declarations, read, ignoredDeclarations], voidType, HxPos.unknown());
+		final bodyFact = HxhxOcamlTargetExpressionAdapter.fromExpression(body);
+		if (bodyFact == null)
+			throw "native hxhx adapter rejected the shared target function body";
+		final fact = new OcamlTargetFunctionFact(signature, bodyFact);
+		if (fact.getCanonicalIdentity() != BindingIdentityMacro.stockFunction())
+			throw "stock Haxe and native hxhx produced different target function facts";
+		final rendered = new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact));
+		if (rendered.indexOf("fun () -> ignore (let value = 7 in") != 0)
+			throw 'native hxhx could not execute the target function lowerer: $rendered';
+		final catalog = new OcamlTargetFunctionCatalog();
+		catalog.register("native-host-main", fact);
+		if (catalog.find("native-host-main") != fact)
+			throw "target function catalog lost its registered fact";
+		catalog.beginRequest();
+		if (catalog.find("native-host-main") != null)
+			throw "target function catalog retained a host handle across requests";
 	}
 
 	static function assertUnsupportedExpressionFallsBack():Void {

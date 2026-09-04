@@ -79,8 +79,11 @@ import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
+import reflaxe.ocaml.target.HaxeOcamlTargetFunctionAdapter;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
 import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
+import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
+import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
@@ -154,6 +157,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public final functionPlanRegistry:OcamlFunctionPlanRegistry = new OcamlFunctionPlanRegistry();
 	public final representationRegistry:OcamlRepresentationRegistry = new OcamlRepresentationRegistry();
 	public final staticStoragePlan:OcamlStaticStoragePlan = new OcamlStaticStoragePlan();
+	public final targetFunctionCatalog:OcamlTargetFunctionCatalog = new OcamlTargetFunctionCatalog();
 
 	final ctx:CompilationContext = new CompilationContext();
 	var functionPreparationTelemetry:Null<OcamlFunctionPreparationTelemetry>;
@@ -582,6 +586,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			+ Std.string(strictPerformance.atomicSemanticsChecks)
 			+ " elapsed_ms="
 			+ Std.string(profileElapsedMilliseconds()));
+		final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
+		profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
 		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
@@ -2809,7 +2815,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case _: f.expr.t;
 			};
 			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
+			final sharedFunction = targetFunctionCatalog.find(f.id);
+			#if macro
+			final requiredSharedFunction = Context.definedValue("reflaxe_ocaml_target_function_test_require_shared");
+			final sharedFunctionSelector = classType.module + "|" + classType.name + "::" + f.field.name;
+			if (requiredSharedFunction == sharedFunctionSelector && sharedFunction == null)
+				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
+			#end
+			final compiled = if (sharedFunction == null) {
+				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
+			} else {
+				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
+					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
+				OcamlTargetFunctionLowerer.build(sharedFunction);
+			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {

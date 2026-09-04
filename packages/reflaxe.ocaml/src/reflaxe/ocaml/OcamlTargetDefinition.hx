@@ -4,6 +4,7 @@ package reflaxe.ocaml;
 import reflaxe.BaseCompiler.BaseCompilerOptions;
 import reflaxe.lifecycle.SemanticLifecycleOptions;
 import reflaxe.ocaml.lifecycle.OcamlPlaceLifecycleFamily;
+import reflaxe.ocaml.lifecycle.OcamlTargetFunctionLifecycleFamily;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.macros.StrictModeEnforcer;
 import reflaxe.ocaml.preprocessor.FinalizePlaceAssignmentsImpl;
@@ -72,8 +73,10 @@ class OcamlTargetDefinition {
 			ignoreBodilessFunctions: false,
 			ignoreExterns: true,
 			expressionPreprocessors: prepasses,
-			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.functionPlanRegistry)],
-				OcamlFunctionPlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
+			semanticLifecycle: new SemanticLifecycleOptions([
+				new OcamlPlaceLifecycleFamily(compiler.functionPlanRegistry),
+				new OcamlTargetFunctionLifecycleFamily(compiler.targetFunctionCatalog)
+			], OcamlFunctionPlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
 		};
 		return {compiler: compiler, options: options};
 	}

@@ -2,8 +2,10 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import reflaxe.BaseCompiler.BaseCompilerFileOutputType;
 import reflaxe.ocaml.OcamlTargetDefinition;
-import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
+import reflaxe.ocaml.lifecycle.OcamlPlaceLifecycleFamily;
+import reflaxe.ocaml.lifecycle.OcamlTargetFunctionLifecycleFamily;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
 
 /** Verifies that standalone activation receives one complete target definition. **/
@@ -26,6 +28,9 @@ class TargetDefinitionFixture {
 		final lifecycle = options.semanticLifecycle;
 		assertTrue(lifecycle != null, "standalone target lost semantic lifecycle validation");
 		assertTrue(lifecycle.pipelineRevision == OcamlFunctionPlanRegistry.PIPELINE_REVISION, "standalone target lifecycle revision drifted");
+		final lifecycleFamilyIds = lifecycle.families.map(family -> family.id);
+		assertTrue(lifecycleFamilyIds.contains(OcamlPlaceLifecycleFamily.ID), "standalone target lost place-plan lifecycle validation");
+		assertTrue(lifecycleFamilyIds.contains(OcamlTargetFunctionLifecycleFamily.ID), "standalone target lost shared-function lifecycle validation");
 		assertTrue(ExpressionPreprocessorHelper.lifecycleId(prepasses[prepasses.length - 1]) == "reflaxe.ocaml.finalize-place-assignments",
 			"place finalization must remain the last expression preprocessor");
 		final declarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes("stock-target-definition-fixture", []);

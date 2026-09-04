@@ -34,11 +34,17 @@ done
 	cd "$FIXTURE"
 	run_background "$HAXE_BIN" build.hxml \
 		-D "ocaml_output=$OUTPUT_DIR" \
-		-D 'reflaxe_ocaml_target_expression_test_require_shared=field-initializer:static:Main|Main::value'
+		-D 'reflaxe_ocaml_target_expression_test_require_shared=field-initializer:static:Main|Main::value' \
+		-D 'reflaxe_ocaml_target_function_test_require_shared=Main|Main::main'
 )
 
 if ! grep -Fxq 'let value = let inner = 7 in inner' "$OUTPUT_DIR/Main.ml"; then
 	echo "Shared-expression fixture produced an unexpected Main.value initializer." >&2
+	exit 1
+fi
+
+if ! grep -Fxq 'let main = fun () -> ignore ()' "$OUTPUT_DIR/Main.ml"; then
+	echo "Shared-expression fixture produced an unexpected Main.main function." >&2
 	exit 1
 fi
 
