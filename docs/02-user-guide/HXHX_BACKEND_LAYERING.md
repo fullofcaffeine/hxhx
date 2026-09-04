@@ -173,7 +173,13 @@ Pilot status:
 - `packages/hxhx-core/src/backend/TargetCoreBackend.hx` is the generic wrapper adapter (`TargetDescriptor` + `ITargetCore` -> `IBackend`).
 - `packages/hxhx-core/src/backend/reflaxe/ReflaxeTargetAdapter.hx` is the canonical reflaxe promotion helper
   (`TargetDescriptor` + target-core factory -> builtin/provider wrappers).
-- `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx` is the first concrete target-core pilot.
+- `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx` is a Stage3 compatibility
+  pilot. Its `hxhx.stage3.ocaml-emitter` identity makes clear that it is not the
+  standalone `reflaxe.ocaml` semantic target.
+- `packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlTargetDefinition.hx` owns the
+  real standalone compiler, preprocessing order, semantic lifecycle, output
+  policy, and naming policy. Native reuse is not complete until `hxhx` invokes
+  that definition through a public typed-fact adapter.
 - `packages/hxhx-core/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
 - `OcamlStage3Backend` and `JsBackend` now use `ReflaxeTargetAdapter` for wrapper construction,
   proving wrapper/core separation without behavior changes.

@@ -275,8 +275,10 @@ request after each failure.
 | `CG-STATE-01` | Close all static and persistent compiler state after success or failure | Warm requests must not depend on request order |
 | `CG-PROVENANCE-01` | Record source, target-core, schema, toolchain, loader, capability, and artifact identities | Builtin and plugin must prove one exact Genes semantic core |
 
-The current `reflaxe.ocaml.target-core` is not reusable proof for these gaps.
-It consumes `GenIrProgram` and delegates to Stage3 `EmitterStage`.
+The current `hxhx.stage3.ocaml-emitter` compatibility core is not reusable
+proof for these gaps. It consumes `GenIrProgram` and delegates to Stage3
+`EmitterStage`. The standalone semantic target now has one extracted
+`OcamlTargetDefinition`, but no native typed-fact adapter executes it yet.
 
 ## Reduced generic fixtures
 

@@ -9,23 +9,15 @@ import backend.ITargetCore;
 import backend.OcamlProfile;
 
 /**
-	Reusable OCaml target core.
+	Compatibility wrapper around the independent Stage3 OCaml emitter.
 
-	Why
-	- `reflaxe.ocaml` should be promotable across activation modes (plugin/builtin)
-	  without rewriting codegen logic.
-	- The Stage3 OCaml builtin backend is our first promotion pilot.
-
-	What
-	- Provides one `emit(...)` entrypoint that wraps the existing OCaml Stage3 emitter.
-	- Returns the same artifact shape currently expected by Stage3 callers.
-
-	How
-	- Keep behavior-preserving delegation to `EmitterStage.emitToDir`.
-	- Wrapper backends can call this core directly.
+	This class keeps the existing native bootstrap route available while the
+	standalone `reflaxe.ocaml` target is adapted to native `hxhx` facts. Its ID
+	intentionally names Stage3: delegation to `EmitterStage.emitToDir` is not
+	evidence that both compiler hosts execute the standalone semantic target.
 **/
 class OcamlTargetCore implements ITargetCore {
-	public static inline var CORE_ID = "reflaxe.ocaml.target-core";
+	public static inline var CORE_ID = "hxhx.stage3.ocaml-emitter";
 
 	public function new() {}
 

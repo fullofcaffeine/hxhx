@@ -9,7 +9,7 @@ class M14TargetCoreWiringIntegrationTest {
 
 	static function main():Void {
 		final core = new OcamlTargetCore();
-		assertTrue(core.coreId() == OcamlTargetCore.CORE_ID, "unexpected OCaml target core id");
+		assertTrue(core.coreId() == "hxhx.stage3.ocaml-emitter", "Stage3 compatibility core must not claim the standalone target identity");
 
 		final backend = new OcamlStage3Backend();
 		assertTrue(backend.id() == "ocaml-stage3", "unexpected backend id");

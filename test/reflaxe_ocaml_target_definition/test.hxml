@@ -1,0 +1,7 @@
+-cp packages/reflaxe.ocaml/src
+-cp test/reflaxe_ocaml_target_definition/src
+-lib reflaxe
+
+--macro nullSafety("reflaxe.ocaml")
+--macro TargetDefinitionFixture.run()
+--no-output

@@ -123,6 +123,7 @@
     "test:m14:promotion-plugin-builtin-equivalence": "compiler-focused",
     "test:m14:direct-flag-cli-contract": "compiler-focused",
     "test:m14:target-core-wiring": "compiler-focused",
+    "test:m22:custom-generator-contract": "compiler-focused",
     "test:m14:reflaxe-target-adapter": "compiler-focused",
     "test:m14:ocaml-profile-contract": "compiler-focused",
     "test:m14:stage1-std-root-inference": "compiler-focused",
