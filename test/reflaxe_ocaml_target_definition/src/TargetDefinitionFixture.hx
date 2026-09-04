@@ -2,6 +2,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import reflaxe.BaseCompiler.BaseCompilerFileOutputType;
 import reflaxe.ocaml.OcamlTargetDefinition;
+import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
 
@@ -27,6 +28,8 @@ class TargetDefinitionFixture {
 		assertTrue(lifecycle.pipelineRevision == OcamlFunctionPlanRegistry.PIPELINE_REVISION, "standalone target lifecycle revision drifted");
 		assertTrue(ExpressionPreprocessorHelper.lifecycleId(prepasses[prepasses.length - 1]) == "reflaxe.ocaml.finalize-place-assignments",
 			"place finalization must remain the last expression preprocessor");
+		final declarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes("stock-target-definition-fixture", []);
+		assertTrue(declarationRequest.copyClasses().length == 0, "empty standalone program produced declaration facts");
 		return macro null;
 	}
 

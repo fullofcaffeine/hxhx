@@ -77,6 +77,8 @@ import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
+import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
+import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
 import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
@@ -163,6 +165,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
+	var targetDeclarationRequest:Null<OcamlTargetDeclarationRequest>;
 	var targetReuseRuntimeSourceManifest:Null<RuntimeSourceManifestSnapshot>;
 	var stagedTargetReuseCandidate:Null<OcamlSourceBundleCandidate>;
 	var targetRevisionObservationMilliseconds:Int = 0;
@@ -543,6 +546,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			+ Std.string(profileElapsedMilliseconds()));
 		OcamlSourcePositionMapper.beginRequest();
 		pendingPublishedOutputBuild = null;
+		targetDeclarationRequest = null;
 		stagedTargetReuseCandidate = null;
 		targetReuseRuntimeSourceManifest = null;
 		semanticRuntimeAuthority = null;
@@ -609,6 +613,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		if (!probe.eligible)
 			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
+		targetDeclarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes(snapshot.programRevision.id, moduleTypes);
+		profileLogLine("reflaxe.ocaml: target_declaration_request revision=" + targetDeclarationRequest.getCanonicalIdentity());
 		targetMissPreparationRan = true;
 		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
