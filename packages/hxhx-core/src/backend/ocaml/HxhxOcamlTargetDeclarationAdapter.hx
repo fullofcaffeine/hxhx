@@ -40,15 +40,15 @@ class HxhxOcamlTargetDeclarationAdapter {
 			fields.push({
 				canonicalIdentity: OcamlTargetDeclarationRequest.fieldIdentity(owner, field.name, field.isStatic),
 				name: field.name,
-				typeIdentity: field.typeIdentity,
+				typeIdentity: field.typeDisplay,
 				typeDisplay: field.typeDisplay,
 				isStatic: field.isStatic,
 				isPublic: field.isPublic,
 				isFinal: field.isFinal,
 				isInline: field.isInline,
 				hasInitializer: field.hasInitializer,
-				propertyGet: field.propertyGet,
-				propertySet: field.propertySet,
+				propertyGet: field.propertyGet.length == 0 ? "normal" : field.propertyGet,
+				propertySet: field.propertySet.length == 0 ? (field.isFinal ? "never" : "normal") : field.propertySet,
 				noImportGlobal: field.noImportGlobal
 			});
 		final methods = new Array<OcamlTargetMethodInput>();
@@ -57,18 +57,18 @@ class HxhxOcamlTargetDeclarationAdapter {
 			for (argument in method.arguments)
 				arguments.push({
 					name: argument.name,
-					typeIdentity: argument.typeIdentity,
+					typeIdentity: argument.typeDisplay,
 					typeDisplay: argument.typeDisplay,
 					isOptional: argument.isOptional,
 					isRest: argument.isRest
 				});
 			methods.push({
 				canonicalIdentity: OcamlTargetDeclarationRequest.methodIdentity(owner, method.name, method.isStatic,
-					[for (argument in arguments) argumentIdentity(argument)], method.returnTypeIdentity),
+					[for (argument in arguments) argumentIdentity(argument)], method.returnTypeDisplay),
 				name: method.name,
 				typeParameters: [for (parameter in method.typeParameters) parameter.getName()],
 				arguments: arguments,
-				returnTypeIdentity: method.returnTypeIdentity,
+				returnTypeIdentity: method.returnTypeDisplay,
 				returnTypeDisplay: method.returnTypeDisplay,
 				isStatic: method.isStatic,
 				isPublic: method.isPublic,

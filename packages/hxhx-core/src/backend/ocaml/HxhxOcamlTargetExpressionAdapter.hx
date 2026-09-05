@@ -6,16 +6,18 @@ import reflaxe.ocaml.target.OcamlTargetExpressionPath;
 
 /** Copies the admitted native typed-expression family into target-owned facts. **/
 class HxhxOcamlTargetExpressionAdapter {
+	final ownerIdentity:String;
 	final bindingsByNativeKey:Map<String, OcamlTargetBindingFact>;
 
-	function new() {
+	function new(ownerIdentity:String) {
+		this.ownerIdentity = requiredOwner(ownerIdentity);
 		bindingsByNativeKey = new Map<String, OcamlTargetBindingFact>();
 	}
 
-	public static function fromExpression(expression:TypedExpr):Null<OcamlTargetExpressionFact> {
+	public static function fromExpression(ownerIdentity:String, expression:TypedExpr):Null<OcamlTargetExpressionFact> {
 		if (expression == null)
 			throw "native OCaml expression adapter requires a typed expression";
-		final fact = new HxhxOcamlTargetExpressionAdapter().copyExpression(expression, OcamlTargetExpressionPath.ROOT);
+		final fact = new HxhxOcamlTargetExpressionAdapter(ownerIdentity).copyExpression(expression, OcamlTargetExpressionPath.ROOT);
 		if (fact != null)
 			fact.validateClosedBindings();
 		return fact;
@@ -37,6 +39,11 @@ class HxhxOcamlTargetExpressionAdapter {
 					|| binding.semanticTypeDisplay != readType ? null : OcamlTargetExpressionFact.localRead(path, readType, binding);
 				}
 			case VariableDeclaration:
+				copyVariable(expression, path);
+			case Temporary:
+				// Conservative expression-block recovery still uses this structural tag
+				// for source locals. copyVariable delegates identity validation to the
+				// binding adapter, which rejects every real compiler temporary.
 				copyVariable(expression, path);
 			case VariableDeclarations:
 				copyBlock(expression, expression.getExpressions(), path);
@@ -81,7 +88,7 @@ class HxhxOcamlTargetExpressionAdapter {
 		if (nativeBindings.length != 1 || initializers.length != 1)
 			return null;
 		final nativeBinding = nativeBindings[0];
-		final binding = HxhxOcamlTargetBindingAdapter.fromBinding(nativeBinding, OcamlTargetExpressionPath.child(path, "binding"));
+		final binding = HxhxOcamlTargetBindingAdapter.fromBinding(ownerIdentity, nativeBinding, OcamlTargetExpressionPath.child(path, "binding"));
 		bindingsByNativeKey.set(nativeBinding.getIdentity().getCanonicalKey(), binding);
 		final initializer = copyExpression(initializers[0], OcamlTargetExpressionPath.child(path, "initializer"));
 		return initializer == null
@@ -96,5 +103,12 @@ class HxhxOcamlTargetExpressionAdapter {
 			case StringValue: literal.semanticTypeDisplay == "String";
 			case NullValue | ThisValue | SuperValue: false;
 		};
+	}
+
+	static function requiredOwner(value:String):String {
+		final normalized = value == null ? "" : StringTools.trim(value);
+		if (normalized.length == 0)
+			throw "native OCaml expression adapter requires a target owner identity";
+		return normalized;
 	}
 }

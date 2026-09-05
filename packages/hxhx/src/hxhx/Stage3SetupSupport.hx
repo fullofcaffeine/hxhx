@@ -296,7 +296,7 @@ class Stage3SetupSupport {
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}
-		if (backendId == "ocaml-stage3") {
+		if (backendId == "ocaml-stage3" || backendId == "ocaml-native") {
 			final profile = OcamlProfile.fromDefineValue(definesMap.get("ocaml_profile"));
 			definesMap.set("ocaml_profile", OcamlProfile.toDefineValue(profile));
 		}

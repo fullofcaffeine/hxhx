@@ -1,5 +1,7 @@
+import backend.ocaml.OcamlNativeBackend;
 import backend.ocaml.OcamlStage3Backend;
 import backend.ocaml.OcamlTargetCore;
+import reflaxe.ocaml.target.OcamlTargetProgramCore;
 
 class M14TargetCoreWiringIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -14,5 +16,9 @@ class M14TargetCoreWiringIntegrationTest {
 		final backend = new OcamlStage3Backend();
 		assertTrue(backend.id() == "ocaml-stage3", "unexpected backend id");
 		assertTrue(OcamlStage3Backend.targetCore().coreId() == core.coreId(), "stage3 backend is not wired to OCaml target core");
+
+		final nativeCore = OcamlNativeBackend.targetCore();
+		assertTrue(nativeCore.coreId() == OcamlTargetProgramCore.CORE_ID, "native OCaml backend is not wired to the standalone target core");
+		assertTrue(OcamlNativeBackend.descriptor().id == "ocaml-native", "unexpected authentic native OCaml backend ID");
 	}
 }

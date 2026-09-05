@@ -48,6 +48,25 @@ if ! grep -Fxq 'let main = fun () -> ignore ()' "$OUTPUT_DIR/Main.ml"; then
 	exit 1
 fi
 
+node - "$OUTPUT_DIR/ocaml_shared_target_report.json" <<'NODE'
+const fs = require('fs')
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+if (report.schemaVersion !== 1 || report.route !== 'stock-haxe') {
+	throw new Error('shared target report did not record the stock Haxe route')
+}
+if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v1') {
+	throw new Error('shared target report did not execute the standalone target core')
+}
+for (const key of ['normalizedInputIdentity', 'loweredPlanIdentity', 'runtimeReasonIdentity', 'outputManifestIdentity']) {
+	if (typeof report[key] !== 'string' || !/^[a-f0-9]{64}$/.test(report[key])) {
+		throw new Error(`shared target report has an invalid ${key}`)
+	}
+}
+if (!Array.isArray(report.runtimeReasons) || report.runtimeReasons.length !== 0) {
+	throw new Error('runtime-free shared target tracer recorded unexpected runtime requirements')
+}
+NODE
+
 (
 	cd "$OUTPUT_DIR"
 	run_background dune build ./out.exe

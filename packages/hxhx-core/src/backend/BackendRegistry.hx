@@ -5,6 +5,9 @@ import backend.js.JsBackend;
 #end
 import backend.cpp.CppNativeBackend;
 import backend.ocaml.OcamlStage3Backend;
+#if reflaxe_ocaml
+import backend.ocaml.OcamlNativeBackend;
+#end
 import backend.source.SourceNativeBackend;
 import backend.vm.VmNativeBackend;
 
@@ -35,6 +38,9 @@ class BackendRegistry {
 
 	static function buildBuiltinRegistrations():Array<BackendRegistrationSpec> {
 		final registrations = new Array<BackendRegistrationSpec>();
+		#if reflaxe_ocaml
+		registrations.push(OcamlNativeBackend.registration());
+		#end
 		registrations.push({
 			descriptor: OcamlStage3Backend.descriptor(),
 			create: function() return new OcamlStage3Backend()

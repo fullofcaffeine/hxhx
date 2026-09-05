@@ -6,6 +6,8 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.target.OcamlTargetExpressionFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.target.OcamlTargetExpressionPath;
+import reflaxe.ocaml.target.OcamlTargetFieldInitializerFact;
+import reflaxe.ocaml.target.OcamlTargetFieldInitializerFact.OcamlTargetFieldInitializerRole;
 import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
@@ -13,6 +15,8 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature
 import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetProgramCore;
+import reflaxe.ocaml.target.OcamlTargetProgramRequest;
 
 /** Verifies that the native adapter compiles without a macro-host compatibility layer. **/
 class NativeDeclarationAdapterFixture {
@@ -35,23 +39,93 @@ class NativeDeclarationAdapterFixture {
 			throw "native adapter admitted a float before the numeric review contract";
 		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
 		final binding = new TyLocalBinding(localId, "value", TyType.fromHintText("Int"), Variable);
-		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding(binding, "root/block-item/0/binding");
+		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", binding, "root/block-item/0/binding");
 		if (nativeBinding.getCanonicalIdentity() != BindingIdentityMacro.stockVariable())
 			throw "stock Haxe and native hxhx produced different source-binding facts";
 		final renumberedId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 99, Variable, "value");
 		final renumberedBinding = new TyLocalBinding(renumberedId, "value", TyType.fromHintText("Int"), Variable);
-		final renumberedFact = HxhxOcamlTargetBindingAdapter.fromBinding(renumberedBinding, "root/block-item/0/binding");
+		final renumberedFact = HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", renumberedBinding, "root/block-item/0/binding");
 		if (renumberedFact.getCanonicalIdentity() != nativeBinding.getCanonicalIdentity())
 			throw "native traversal allocation leaked into the target-owned binding fact";
-		if (HxhxOcamlTargetBindingAdapter.fromBinding(binding, "root/block-item/1/binding").getCanonicalIdentity() == nativeBinding.getCanonicalIdentity())
+		if (HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", binding, "root/block-item/1/binding")
+			.getCanonicalIdentity() == nativeBinding.getCanonicalIdentity())
 			throw "two structural declaration paths claimed one target-owned binding fact";
 		if (localId.getCanonicalKey() != "unit.BindingFixture.run#local:0:variable:5:value")
 			throw "structured native binding access changed the existing local key";
 		assertCompilerTemporaryRejected();
 		assertRecursiveExpression(binding);
 		assertRecursiveFunction();
+		assertProgramCore(nativeInt);
 		assertUnsupportedExpressionFallsBack();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	static function assertProgramCore(nativeInt:reflaxe.ocaml.target.OcamlTargetLiteralFact):Void {
+		final owner = "Main";
+		final declarations = new reflaxe.ocaml.target.OcamlTargetDeclarationRequest("native-host", [
+			{
+				canonicalIdentity: owner,
+				moduleIdentity: owner,
+				typeParameters: [],
+				fields: [
+					{
+						canonicalIdentity: reflaxe.ocaml.target.OcamlTargetDeclarationRequest.fieldIdentity(owner, "type", true),
+						name: "type",
+						typeIdentity: "Int",
+						typeDisplay: "Int",
+						isStatic: true,
+						isPublic: false,
+						isFinal: true,
+						isInline: false,
+						hasInitializer: true,
+						propertyGet: "normal",
+						propertySet: "never",
+						noImportGlobal: false
+					}
+				],
+				methods: [
+					{
+						canonicalIdentity: reflaxe.ocaml.target.OcamlTargetDeclarationRequest.methodIdentity(owner, "main", true, [], "Void"),
+						name: "main",
+						typeParameters: [],
+						arguments: [],
+						returnTypeIdentity: "Void",
+						returnTypeDisplay: "Void",
+						isStatic: true,
+						isPublic: false,
+						isInline: false,
+						isDynamic: false,
+						hasBody: true,
+						isEnumConstructor: false,
+						noImportGlobal: false
+					}
+				]
+			}
+		]);
+		final fieldSignature:reflaxe.ocaml.target.OcamlTargetFieldInitializerFact.OcamlTargetFieldInitializerSignature = {
+			moduleId: owner,
+			sourceTypeName: owner,
+			sourceFieldName: "type",
+			role: OcamlTargetFieldInitializerRole.StaticField,
+			semanticTypeDisplay: "Int"
+		};
+		final fieldExpression = OcamlTargetExpressionFact.literalExpression(OcamlTargetExpressionPath.ROOT, nativeInt);
+		final field = new OcamlTargetFieldInitializerFact(fieldSignature, fieldExpression);
+		final functionSignature:OcamlTargetFunctionSignature = {
+			moduleId: owner,
+			sourceTypeName: owner,
+			sourceFunctionName: "main",
+			role: OcamlTargetFunctionRole.StaticFunction,
+			argumentTypeDisplays: [],
+			returnTypeDisplay: "Void"
+		};
+		final fn = new OcamlTargetFunctionFact(functionSignature, OcamlTargetExpressionFact.block(OcamlTargetExpressionPath.ROOT, "Void", []));
+		final plan = OcamlTargetProgramCore.lower(new OcamlTargetProgramRequest("native-host", owner, declarations, [field], [fn]));
+		final mainSource = plan.copyFiles().filter(file -> file.path == "Main.ml");
+		if (mainSource.length != 1 || mainSource[0].contents != "let hx_type = 7\nand main = fun () -> ignore ()\n")
+			throw "shared target program core produced unexpected OCaml source";
+		if (plan.report("native-hxhx").targetCoreId != OcamlTargetProgramCore.CORE_ID)
+			throw "shared target program report lost the target core identity";
 	}
 
 	static function assertRecursiveFunction():Void {
@@ -78,7 +152,7 @@ class NativeDeclarationAdapterFixture {
 		final ignoredDeclaration = TypedExpr.variableDeclaration("ignored", "Int", ignoredInitializer, false, false, intType, HxPos.unknown(), ignoredBinding);
 		final ignoredDeclarations = TypedExpr.variableDeclarations([ignoredDeclaration], voidType, HxPos.unknown());
 		final body = TypedExpr.block([declarations, read, ignoredDeclarations], voidType, HxPos.unknown());
-		final bodyFact = HxhxOcamlTargetExpressionAdapter.fromExpression(body);
+		final bodyFact = HxhxOcamlTargetExpressionAdapter.fromExpression(targetIdentity, body);
 		if (bodyFact == null)
 			throw "native hxhx adapter rejected the shared target function body";
 		final fact = new OcamlTargetFunctionFact(signature, bodyFact);
@@ -107,7 +181,7 @@ class NativeDeclarationAdapterFixture {
 		final declarations = TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), HxPos.unknown());
 		final read = TypedExpr.localRead("value", nullableInt, HxPos.unknown(), binding);
 		final body = TypedExpr.block([declarations, read], nullableInt, HxPos.unknown());
-		if (HxhxOcamlTargetExpressionAdapter.fromExpression(body) != null)
+		if (HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.unsupported", body) != null)
 			throw "native hxhx adapter admitted an unsupported local-initializer conversion";
 	}
 
@@ -119,7 +193,7 @@ class NativeDeclarationAdapterFixture {
 		final declarations = TypedExpr.variableDeclarations([declaration], voidType, HxPos.unknown());
 		final read = TypedExpr.localRead("value", intType, HxPos.unknown(), binding);
 		final body = TypedExpr.block([declarations, read], intType, HxPos.unknown());
-		final fact = HxhxOcamlTargetExpressionAdapter.fromExpression(body);
+		final fact = HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", body);
 		if (fact == null || fact.getCanonicalIdentity() != BindingIdentityMacro.stockExpression())
 			throw "stock Haxe and native hxhx produced different recursive expression facts";
 		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(fact)) != "let value = 7 in value")
@@ -150,7 +224,7 @@ class NativeDeclarationAdapterFixture {
 		final temporary = new TyLocalBinding(temporaryId, "temporary", TyType.fromHintText("Int"), CompilerTemporary);
 		var rejected = false;
 		try {
-			HxhxOcamlTargetBindingAdapter.fromBinding(temporary, "root/block-item/0/binding");
+			HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", temporary, "root/block-item/0/binding");
 		} catch (_:String) {
 			rejected = true;
 		}

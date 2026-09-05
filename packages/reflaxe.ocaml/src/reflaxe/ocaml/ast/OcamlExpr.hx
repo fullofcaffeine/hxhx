@@ -44,17 +44,6 @@ enum OcamlUnop {
 	Deref; // !x
 }
 
-/**
-	One authored-text or typed-expression segment inside raw OCaml interpolation.
-
-	Text remains an explicit escape hatch. Expressions stay as target AST nodes so
-	runtime-use checks can still see and validate compiler-owned helper calls.
-**/
-enum OcamlRawPart {
-	RawText(value:String);
-	RawExpression(expression:OcamlExpr);
-}
-
 enum OcamlExpr {
 	EConst(c:OcamlConst);
 	EIdent(name:String);
@@ -63,7 +52,7 @@ enum OcamlExpr {
 	ERuntimeIdent(reference:OcamlRuntimeReference);
 
 	/** Checked raw OCaml whose typed expression children remain structurally visible. */
-	ERawInjection(injection:OcamlRawInjection);
+	ERawInjection(injection:OcamlRawInjection<OcamlExpr>);
 
 	/**
 		Source position wrapper (best-effort).

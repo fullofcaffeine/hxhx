@@ -98,7 +98,7 @@ class M14DirectFlagCliContractTest {
 
 		final nativeOcaml = plan(["--ocaml", "-cp", "src", "-main", "Main"]);
 		assertEquals(nativeOcaml.lane, "native-ocaml", "native ocaml lane");
-		assertEquals(nativeOcaml.backendId, "ocaml-stage3", "native ocaml backend");
+		assertEquals(nativeOcaml.backendId, "ocaml-native", "native ocaml backend");
 		assertTrue(hasArgPair(nativeOcaml.forwarded, "--hxhx-out", "out"), "native ocaml default out dir");
 		assertTrue(hasDefine(nativeOcaml.forwarded, "ocaml_output=out"), "native ocaml output define");
 		assertTrue(hasDefine(nativeOcaml.forwarded, "reflaxe-target=ocaml"), "native ocaml reflaxe target define");

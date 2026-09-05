@@ -55,6 +55,8 @@ class OcamlNameTools {
 		if (name == null || name.length == 0)
 			return false;
 		final first = name.charCodeAt(0);
+		if (first == null)
+			return false;
 		final isLower = first >= 97 && first <= 122;
 		final isUnderscore = first == "_".code;
 		return isLower || isUnderscore;
@@ -111,6 +113,8 @@ class OcamlNameTools {
 		final out = new StringBuf();
 		for (i in 0...name.length) {
 			final c = name.charCodeAt(i);
+			if (c == null)
+				throw "OCaml name normalization found an invalid source character";
 			final isAlphaNum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
 			out.add(isAlphaNum ? String.fromCharCode(c).toLowerCase() : "_");
 		}
@@ -118,6 +122,8 @@ class OcamlNameTools {
 		if (s.length == 0)
 			return s;
 		final first = s.charCodeAt(0);
+		if (first == null)
+			return s;
 		if (first >= 48 && first <= 57)
 			s = "_" + s;
 		return s;

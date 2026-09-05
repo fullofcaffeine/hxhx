@@ -5,7 +5,7 @@ import reflaxe.ocaml.target.OcamlTargetBindingFact.OcamlTargetBindingRole;
 
 /** Copies a native source binding without exposing its internal local key. **/
 class HxhxOcamlTargetBindingAdapter {
-	public static function fromBinding(binding:TyLocalBinding, declarationPath:String):OcamlTargetBindingFact {
+	public static function fromBinding(ownerIdentity:String, binding:TyLocalBinding, declarationPath:String):OcamlTargetBindingFact {
 		if (binding == null)
 			throw "native OCaml binding adapter requires a typed binding";
 		final identity = binding.getIdentity();
@@ -13,7 +13,7 @@ class HxhxOcamlTargetBindingAdapter {
 			throw "native OCaml binding adapter does not admit compiler temporaries in source-binding revision 1";
 		if (identity.getDeclarationKind() != binding.getKind())
 			throw "native OCaml binding adapter received conflicting declaration roles";
-		return new OcamlTargetBindingFact(identity.getOwnerIdentity(), declarationPath, role(identity.getDeclarationKind()), binding.getSourceName(),
+		return new OcamlTargetBindingFact(ownerIdentity, declarationPath, role(identity.getDeclarationKind()), binding.getSourceName(),
 			binding.getType().getCanonicalDisplay());
 	}
 

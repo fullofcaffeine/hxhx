@@ -1,7 +1,7 @@
 package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 
 using StringTools;
@@ -129,7 +129,10 @@ class OcamlASTPrinter {
 		final buffer = new StringBuf();
 		final work:Array<OcamlExpressionPrintWork> = [EmitExpression(e, ctxPrec, indentLevel)];
 		while (work.length > 0) {
-			switch (work.pop()) {
+			final next = work.pop();
+			if (next == null)
+				throw "OCaml AST printer lost a queued expression";
+			switch (next) {
 				case EmitText(value):
 					buffer.add(value);
 				case EmitExpression(expression, contextPrecedence, indentation):

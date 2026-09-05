@@ -124,7 +124,7 @@ class CliRouting {
 
 			return {
 				lane: LANE_NATIVE_OCAML,
-				backendId: "ocaml-stage3",
+				backendId: "ocaml-native",
 				forwarded: nativeOcaml,
 				stage0Required: false
 			};

@@ -37,7 +37,7 @@ import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
+import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
@@ -79,11 +79,16 @@ import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.target.HaxeOcamlTargetDeclarationAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
+import reflaxe.ocaml.target.HaxeOcamlTargetFieldInitializerAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetFunctionAdapter;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
 import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
+import reflaxe.ocaml.target.OcamlTargetFieldInitializerCatalog;
 import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
 import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
+import reflaxe.ocaml.target.OcamlTargetProgramCore;
+import reflaxe.ocaml.target.OcamlTargetProgramCore.OcamlTargetProgramPublisher;
+import reflaxe.ocaml.target.OcamlTargetProgramRequest;
 import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
@@ -157,6 +162,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public final functionPlanRegistry:OcamlFunctionPlanRegistry = new OcamlFunctionPlanRegistry();
 	public final representationRegistry:OcamlRepresentationRegistry = new OcamlRepresentationRegistry();
 	public final staticStoragePlan:OcamlStaticStoragePlan = new OcamlStaticStoragePlan();
+	public final targetFieldInitializerCatalog:OcamlTargetFieldInitializerCatalog = new OcamlTargetFieldInitializerCatalog();
 	public final targetFunctionCatalog:OcamlTargetFunctionCatalog = new OcamlTargetFunctionCatalog();
 
 	final ctx:CompilationContext = new CompilationContext();
@@ -171,7 +177,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
-	var targetDeclarationRequest:Null<OcamlTargetDeclarationRequest>;
+	var sharedTargetDeclarationRequest:Null<OcamlTargetDeclarationRequest>;
 	var targetReuseRuntimeSourceManifest:Null<RuntimeSourceManifestSnapshot>;
 	var stagedTargetReuseCandidate:Null<OcamlSourceBundleCandidate>;
 	var targetRevisionObservationMilliseconds:Int = 0;
@@ -552,7 +558,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			+ Std.string(profileElapsedMilliseconds()));
 		OcamlSourcePositionMapper.beginRequest();
 		pendingPublishedOutputBuild = null;
-		targetDeclarationRequest = null;
+		sharedTargetDeclarationRequest = null;
 		stagedTargetReuseCandidate = null;
 		targetReuseRuntimeSourceManifest = null;
 		semanticRuntimeAuthority = null;
@@ -586,8 +592,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 			+ Std.string(strictPerformance.atomicSemanticsChecks)
 			+ " elapsed_ms="
 			+ Std.string(profileElapsedMilliseconds()));
-		final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
-		profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
+		if (Context.defined("reflaxe_ocaml_shared_program_report")) {
+			sharedTargetDeclarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes("stock-haxe-filter-types", moduleTypes);
+			final sharedFieldCount = HaxeOcamlTargetFieldInitializerAdapter.captureModuleTypes(moduleTypes, targetFieldInitializerCatalog);
+			final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
+			profileLogLine("reflaxe.ocaml: shared_target_fields count=" + Std.string(sharedFieldCount));
+			profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
+		} else {
+			targetFieldInitializerCatalog.beginRequest();
+			targetFunctionCatalog.beginRequest();
+		}
 		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
@@ -621,8 +635,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		if (!probe.eligible)
 			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
-		targetDeclarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes(snapshot.programRevision.id, moduleTypes);
-		profileLogLine("reflaxe.ocaml: target_declaration_request revision=" + targetDeclarationRequest.getCanonicalIdentity());
 		targetMissPreparationRan = true;
 		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
@@ -1921,6 +1933,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 
 		final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
+		final isAbstractImplementation = switch (classType.kind) {
+			case KAbstractImpl(_): true;
+			case _: false;
+		};
 		ctx.currentTypeFullName = fullName;
 		ctx.classTagsByFullName.set(fullName, classTagsForClassType(classType));
 		#if macro
@@ -1938,7 +1954,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// and `Type.createInstance(C, [])` must still work. Treat missing constructor info
 		// as an implicit `new():Void` for non-extern, non-interface classes.
 		final isOcamlNativeSurface = classType.pack != null && classType.pack.length > 0 && classType.pack[0] == "ocaml";
-		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface);
+		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isAbstractImplementation);
 		ctx.ctorPresentByFullName.set(fullName, hasCtor);
 		final ctorArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = if (!hasCtor) {
 			null;
@@ -2663,21 +2679,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
-				OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
-			lets.push({name: createName, expr: OcamlExpr.EFun(createParams, createBody)});
+			if (!isAbstractImplementation) {
+				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
+					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
+				lets.push({name: createName, expr: OcamlExpr.EFun(createParams, createBody)});
 
-			// `Type.createEmptyInstance` support (M10): allocate an instance without running
-			// the constructor body. This uses the same record initializer as `create`, so the
-			// instance has a well-formed `__hx_type` marker and default field values.
-			//
-			// Note: upstream semantics for field initializers vs constructor execution varies
-			// per target; for now, this matches the "default-initialized record" behavior.
-			final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
-			lets.push({
-				name: emptyName,
-				expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record"))
-			});
+				// `Type.createEmptyInstance` support (M10): allocate an instance without running
+				// the constructor body. Abstract implementation carriers are excluded because
+				// Haxe exposes their static helpers but never permits constructing the carrier.
+				final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
+				lets.push({
+					name: emptyName,
+					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record"))
+				});
+			}
 
 			// Dispatch constructor function (used by `super()` lowering). This intentionally mirrors
 			// the constructor body used in `create`, but takes `self` explicitly.
@@ -3158,6 +3173,37 @@ class OcamlCompiler extends DirectToStringCompiler {
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
 		final artifacts = new OcamlArtifactManifestBuilder(outDir, revision.id, artifactConfigurationRevision, artifactProfile);
+		#if macro
+		if (Context.defined("reflaxe_ocaml_shared_program_report")) {
+			OcamlTargetProgramCore.requireProfile(artifactProfile);
+			final declarations = sharedTargetDeclarationRequest;
+			if (declarations == null)
+				throw "reflaxe.ocaml: shared target report requires preprocessor-free declaration facts";
+			final configuredMain = Context.definedValue("reflaxe_ocaml_shared_program_main");
+			final sharedMain = configuredMain == null
+				|| StringTools.trim(configuredMain).length == 0 ? resolveMainModuleIdForDune() : StringTools.trim(configuredMain);
+			if (sharedMain == null)
+				throw "reflaxe.ocaml: shared target report requires one main module";
+			final request = new OcamlTargetProgramRequest(revision.id, sharedMain, declarations, targetFieldInitializerCatalog.copyFacts(),
+				targetFunctionCatalog.copyFacts());
+			final plan = OcamlTargetProgramCore.lower(request);
+			File.saveContent(Path.join([outDir, OcamlTargetProgramCore.REPORT_FILE]), plan.reportJson("stock-haxe"));
+			final sharedOutput = Context.definedValue("reflaxe_ocaml_shared_program_output");
+			if (sharedOutput != null && StringTools.trim(sharedOutput).length > 0)
+				OcamlTargetProgramPublisher.publish(plan, StringTools.trim(sharedOutput), "stock-haxe", false);
+			artifacts.record({
+				path: OcamlTargetProgramCore.REPORT_FILE,
+				kind: OcamlArtifactKind.CompilerReport,
+				owner: OcamlArtifactOwner.CompilerCore,
+				sourceKind: OcamlArtifactSourceKind.Generated,
+				sourcePath: null,
+				license: "generated-output",
+				profileEligibility: [artifactProfile],
+				stability: OcamlArtifactStability.Stable,
+				includeInSourceBundle: true
+			});
+		}
+		#end
 
 		// A timing report is tied to one generated-file receipt. Clear the prior
 		// revision even when this build will not run Dune or request new timing.

@@ -1,6 +1,7 @@
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-D reflaxe_ocaml
 
 -main M14BackendRegistryIntegrationTest
 --interp
-

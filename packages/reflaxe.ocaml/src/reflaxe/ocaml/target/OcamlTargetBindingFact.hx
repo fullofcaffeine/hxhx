@@ -39,11 +39,11 @@ class OcamlTargetBindingFact {
 		this.role = role;
 		this.sourceName = required(sourceName, "source name");
 		this.semanticTypeDisplay = required(semanticTypeDisplay, "semantic type");
-		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationRequest.encode([
+		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([
 			SCHEMA_REVISION,
 			this.ownerIdentity,
 			this.declarationPath,
-			Std.string(role),
+			roleName(role),
 			this.sourceName,
 			this.semanticTypeDisplay
 		]));
@@ -51,6 +51,19 @@ class OcamlTargetBindingFact {
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
+
+	/** Returns the protocol spelling without target-specific enum stringification. **/
+	static function roleName(role:OcamlTargetBindingRole):String {
+		return switch (role) {
+			case Parameter: "Parameter";
+			case Variable: "Variable";
+			case LoopVariable: "LoopVariable";
+			case CatchVariable: "CatchVariable";
+			case PatternVariable: "PatternVariable";
+			case LambdaParameter: "LambdaParameter";
+			case ComprehensionVariable: "ComprehensionVariable";
+		};
+	}
 
 	static function required(value:String, label:String):String {
 		final normalized = value == null ? "" : StringTools.trim(value);

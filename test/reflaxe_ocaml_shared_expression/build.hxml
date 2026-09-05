@@ -5,3 +5,5 @@
 -D no-traces
 -D no_traces
 -D ocaml_no_build
+-D reflaxe_ocaml_shared_program_report
+-D reflaxe_ocaml_shared_program_main=Main

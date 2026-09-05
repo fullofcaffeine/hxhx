@@ -1,19 +1,19 @@
 package reflaxe.ocaml.ast;
 
-import reflaxe.ocaml.ast.OcamlExpr.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanPart;
-import reflaxe.ocaml.ast.OcamlRawInterpolationPlan.OcamlRawInterpolationPlanResult;
 
-/** The checked raw-template plan or the source-facing reason it was rejected. */
-enum OcamlRawInjectionPlanResult {
-	PlanReady(plan:OcamlRawInjectionPlan);
-	PlanInvalid(message:String);
-}
+using StringTools;
 
-/** The completed raw injection or a compiler-invariant failure. */
-enum OcamlRawInjectionMaterializationResult {
-	InjectionReady(injection:OcamlRawInjection);
-	InjectionInvalid(message:String);
+/**
+	One authored-text or typed-value segment inside raw OCaml interpolation.
+
+	The value type is generic so template validation does not depend on the target
+	AST module. This one-way dependency keeps the model compilable by native OCaml
+	while callers still choose the exact expression type carried by each segment.
+**/
+enum OcamlRawPart<T> {
+	RawText(value:String);
+	RawExpression(expression:T);
 }
 
 /**
@@ -35,7 +35,7 @@ class OcamlRawInjectionPlan {
 	}
 
 	/** Validates authored text and fixes every typed argument's exact position. */
-	public static function create(template:String, argumentCount:Int):OcamlRawInjectionPlanResult {
+	public static function validate(template:String, argumentCount:Int):OcamlRawInjectionPlanResult<OcamlRawInjectionPlan> {
 		if (template == null)
 			template = "";
 		final privateNames = OcamlCodeIdentifierScanner.scan(template).filter(OcamlCodeIdentifierScanner.isPrivateRuntimeIdentifier);
@@ -45,16 +45,64 @@ class OcamlRawInjectionPlan {
 				+ "; use a typed Haxe expression or supported extern instead");
 		}
 
-		return switch (OcamlRawInterpolationPlan.create(template, argumentCount)) {
-			case Planned(parts): PlanReady(new OcamlRawInjectionPlan(argumentCount, parts));
-			case Invalid(message): PlanInvalid(message);
-		};
+		if (argumentCount < 0)
+			return PlanInvalid("raw __ocaml__ interpolation received a negative typed-argument count");
+
+		final referencedArguments:Array<Int> = [];
+		final parts:Array<OcamlRawInterpolationPlanPart> = [];
+		var lastPosition = 0;
+		var invalidReason:Null<String> = null;
+		~/{(\d+)}/g.map(template, function(ereg) {
+			final matchPosition = ereg.matchedPos();
+			if (matchPosition.pos > lastPosition)
+				parts.push(AuthoredText(template.substring(lastPosition, matchPosition.pos)));
+
+			final beforeIsIdentifier = matchPosition.pos > 0
+				&& OcamlCodeIdentifierScanner.isIdentifierPartCode(template.fastCodeAt(matchPosition.pos - 1));
+			final afterPosition = matchPosition.pos + matchPosition.len;
+			final afterIsIdentifier = afterPosition < template.length
+				&& OcamlCodeIdentifierScanner.isIdentifierPartCode(template.fastCodeAt(afterPosition));
+			final argumentIndex = Std.parseInt(ereg.matched(1));
+			if (beforeIsIdentifier || afterIsIdentifier) {
+				if (invalidReason == null)
+					invalidReason = 'raw __ocaml__ interpolation placeholder ${ereg.matched(0)} must be separated from authored identifier text';
+			} else if (argumentIndex == null || argumentIndex < 0 || argumentIndex >= argumentCount) {
+				if (invalidReason == null)
+					invalidReason = 'raw __ocaml__ interpolation placeholder ${ereg.matched(0)} has no matching typed argument';
+			} else {
+				referencedArguments.push(argumentIndex);
+				parts.push(TypedArgument(argumentIndex));
+			}
+			lastPosition = matchPosition.pos + matchPosition.len;
+			return "";
+		});
+		if (lastPosition < template.length)
+			parts.push(AuthoredText(template.substring(lastPosition)));
+
+		if (invalidReason != null)
+			return PlanInvalid(invalidReason);
+		for (index in 0...argumentCount) {
+			var count = 0;
+			for (referencedArgument in referencedArguments) {
+				if (referencedArgument == index)
+					count++;
+			}
+			if (count != 1)
+				return PlanInvalid('raw __ocaml__ typed argument $index must appear exactly once; found $count placeholders');
+		}
+		return PlanReady(new OcamlRawInjectionPlan(argumentCount, parts));
 	}
 
 	/** Returns a defensive copy so a validated plan cannot be changed by its caller. */
 	public function parts():Array<OcamlRawInterpolationPlanPart> {
 		return plannedParts.copy();
 	}
+}
+
+/** The checked raw-template plan or the source-facing reason it was rejected. */
+enum OcamlRawInjectionPlanResult<T> {
+	PlanReady(plan:T);
+	PlanInvalid(message:String);
 }
 
 /**
@@ -66,16 +114,16 @@ class OcamlRawInjectionPlan {
 	exactly once. The target AST carries this value instead of exposing an
 	unchecked raw-expression constructor.
 **/
-class OcamlRawInjection {
-	final storedSegments:Array<OcamlRawPart>;
+class OcamlRawInjection<T> {
+	final storedSegments:Array<OcamlRawPart<T>>;
 
-	private function new(segments:Array<OcamlRawPart>) {
+	private function new(segments:Array<OcamlRawPart<T>>) {
 		storedSegments = segments.copy();
 	}
 
 	/** Validates a template without compiling any typed argument expression. */
-	public static function plan(template:String, argumentCount:Int):OcamlRawInjectionPlanResult {
-		return OcamlRawInjectionPlan.create(template, argumentCount);
+	public static function plan(template:String, argumentCount:Int):OcamlRawInjectionPlanResult<OcamlRawInjectionPlan> {
+		return OcamlRawInjectionPlan.validate(template, argumentCount);
 	}
 
 	/**
@@ -84,7 +132,7 @@ class OcamlRawInjection {
 		The cardinality checks are repeated here so a corrupted or stale plan cannot
 		drop, duplicate, or reorder a typed child before it reaches the target AST.
 	**/
-	public static function materialize(plan:OcamlRawInjectionPlan, typedArguments:Array<OcamlExpr>):OcamlRawInjectionMaterializationResult {
+	public static function materialize<T>(plan:OcamlRawInjectionPlan, typedArguments:Array<T>):OcamlRawInjectionMaterializationResult<OcamlRawInjection<T>> {
 		if (plan == null)
 			return InjectionInvalid("raw __ocaml__ injection has no validated template plan");
 		if (typedArguments == null)
@@ -94,7 +142,7 @@ class OcamlRawInjection {
 		}
 
 		final seen = [for (_ in 0...typedArguments.length) 0];
-		final segments:Array<OcamlRawPart> = [];
+		final segments:Array<OcamlRawPart<T>> = [];
 		for (part in plan.parts()) {
 			switch (part) {
 				case AuthoredText(value):
@@ -114,14 +162,14 @@ class OcamlRawInjection {
 	}
 
 	/** Returns a defensive copy for mechanical printing and read-only inspection. */
-	public function segments():Array<OcamlRawPart> {
+	public function segments():Array<OcamlRawPart<T>> {
 		return storedSegments.copy();
 	}
 
 	/** Rebuilds only typed children and preserves this wrapper when none changed. */
-	public function mapExpressions(mapExpression:OcamlExpr->OcamlExpr):OcamlRawInjection {
+	public function mapExpressions(mapExpression:T->T):OcamlRawInjection<T> {
 		var changed = false;
-		final mapped:Array<OcamlRawPart> = [];
+		final mapped:Array<OcamlRawPart<T>> = [];
 		for (segment in storedSegments) {
 			switch (segment) {
 				case RawText(_):
@@ -135,4 +183,10 @@ class OcamlRawInjection {
 		}
 		return changed ? new OcamlRawInjection(mapped) : this;
 	}
+}
+
+/** The completed raw injection or a compiler-invariant failure. */
+enum OcamlRawInjectionMaterializationResult<T> {
+	InjectionReady(injection:T);
+	InjectionInvalid(message:String);
 }

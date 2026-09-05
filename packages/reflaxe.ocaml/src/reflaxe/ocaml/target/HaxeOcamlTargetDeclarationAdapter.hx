@@ -64,7 +64,7 @@ class HaxeOcamlTargetDeclarationAdapter {
 				case _:
 					final display = typeText(field.type);
 					final access = switch (field.kind) {
-						case FVar(read, write): {get: Std.string(read), set: Std.string(write)};
+						case FVar(read, write): {get: accessName(read), set: accessName(write)};
 						case _: {get: "", set: ""};
 					};
 					fields.push({
@@ -132,6 +132,19 @@ class HaxeOcamlTargetDeclarationAdapter {
 
 	static function typeText(type:Type):String
 		return TypeTools.toString(type);
+
+	static function accessName(access:VarAccess):String {
+		return switch (access) {
+			case AccNormal: "normal";
+			case AccNo: "never";
+			case AccNever: "never";
+			case AccResolve: "resolve";
+			case AccCall: "call";
+			case AccInline: "inline";
+			case AccCtor: "constructor";
+			case AccRequire(requirement, _): "require:" + requirement;
+		};
+	}
 
 	static function argumentIdentity(argument:OcamlTargetArgumentInput):String
 		return argument.typeIdentity + ":optional=" + (argument.isOptional ? "1" : "0") + ":rest=" + (argument.isRest ? "1" : "0");

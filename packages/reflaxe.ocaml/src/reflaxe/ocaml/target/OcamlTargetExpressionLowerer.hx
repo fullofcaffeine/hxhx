@@ -30,8 +30,7 @@ class OcamlTargetExpressionLowerer {
 				OcamlExpr.EIdent(bindingName(requireBinding(expression)));
 			case VariableDeclarationExpression:
 				final binding = requireBinding(expression);
-				final children = expression.copyChildren();
-				OcamlExpr.ELet(bindingName(binding), buildNode(children[0]), OcamlExpr.EConst(OcamlConst.CUnit), false);
+				OcamlExpr.ELet(bindingName(binding), buildNode(onlyChild(expression)), OcamlExpr.EConst(OcamlConst.CUnit), false);
 			case BlockExpression:
 				buildBlock(expression.copyChildren());
 		};
@@ -40,14 +39,13 @@ class OcamlTargetExpressionLowerer {
 	static function buildBlock(children:Array<OcamlTargetExpressionFact>):OcamlExpr {
 		var result = OcamlExpr.EConst(OcamlConst.CUnit);
 		var hasResult = false;
-		var index = children.length;
-		while (index > 0) {
-			index--;
-			final child = children[index];
+		final reverseChildren = children.copy();
+		reverseChildren.reverse();
+		for (child in reverseChildren) {
 			switch (child.kind) {
 				case VariableDeclarationExpression:
 					final binding = requireBinding(child);
-					final initializer = child.copyChildren()[0];
+					final initializer = onlyChild(child);
 					result = OcamlExpr.ELet(bindingName(binding), buildNode(initializer), result, false);
 					hasResult = true;
 				case LiteralExpression | LocalReadExpression | BlockExpression:
@@ -61,6 +59,18 @@ class OcamlTargetExpressionLowerer {
 			}
 		}
 		return result;
+	}
+
+	static function onlyChild(expression:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
+		var selected:Null<OcamlTargetExpressionFact> = null;
+		for (child in expression.copyChildren()) {
+			if (selected != null)
+				throw "OCaml target variable declaration has more than one initializer";
+			selected = child;
+		}
+		if (selected == null)
+			throw "OCaml target variable declaration has no initializer";
+		return selected;
 	}
 
 	static function requireBinding(expression:OcamlTargetExpressionFact):OcamlTargetBindingFact {

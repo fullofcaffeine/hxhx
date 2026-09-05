@@ -4,6 +4,7 @@ package reflaxe.ocaml.runtimegen;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+#end
 
 /** The target-syntax position in which one private runtime name may appear. */
 enum abstract OcamlRuntimeUseDomain(String) from String to String {
@@ -14,6 +15,32 @@ enum abstract OcamlRuntimeUseDomain(String) from String to String {
 	final RawBoundary = "raw-boundary";
 }
 
+/**
+	A restricted identifier accepted by the OCaml target AST.
+
+	The target AST can be compiled into either compiler host, so this inert token
+	type must always be available. Only the guarded compiler-side authorities can
+	construct it after checking a sealed runtime-use plan.
+**/
+@:allow(reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority)
+@:allow(reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority)
+class OcamlRuntimeReference {
+	public final id:String;
+	public final planRevision:String;
+	public final ownerId:String;
+	public final domain:OcamlRuntimeUseDomain;
+	public final exactSymbol:String;
+
+	private function new(id:String, planRevision:String, ownerId:String, domain:OcamlRuntimeUseDomain, exactSymbol:String) {
+		this.id = id;
+		this.planRevision = planRevision;
+		this.ownerId = ownerId;
+		this.domain = domain;
+		this.exactSymbol = exactSymbol;
+	}
+}
+
+#if (macro || reflaxe_runtime || eval)
 /**
 	One planned appearance of a private compatibility-runtime name.
 
@@ -42,32 +69,6 @@ typedef OcamlRuntimeUseReceipt = {
 	final ownerId:String;
 	final domain:OcamlRuntimeUseDomain;
 	final exactSymbol:String;
-}
-
-/**
-	A restricted identifier accepted by the OCaml target AST.
-
-	Callers cannot construct this token directly. The request-local authority
-	first checks it against a sealed occurrence and its exact runtime requirement.
-	The token carries provenance only; it does not tell the printer how to lower
-	Haxe behavior or allow the printer to choose another symbol.
-**/
-@:allow(reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority)
-@:allow(reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority)
-class OcamlRuntimeReference {
-	public final id:String;
-	public final planRevision:String;
-	public final ownerId:String;
-	public final domain:OcamlRuntimeUseDomain;
-	public final exactSymbol:String;
-
-	private function new(id:String, planRevision:String, ownerId:String, domain:OcamlRuntimeUseDomain, exactSymbol:String) {
-		this.id = id;
-		this.planRevision = planRevision;
-		this.ownerId = ownerId;
-		this.domain = domain;
-		this.exactSymbol = exactSymbol;
-	}
 }
 
 /** Shared deterministic identity rules for runtime-use plans. */

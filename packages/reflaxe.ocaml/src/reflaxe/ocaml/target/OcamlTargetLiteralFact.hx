@@ -37,9 +37,9 @@ class OcamlTargetLiteralFact {
 		this.boolValue = boolValue;
 		this.intValue = intValue;
 		this.stringValue = stringValue == null ? "" : stringValue;
-		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationRequest.encode([
+		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([
 			SCHEMA_REVISION,
-			Std.string(kind),
+			kindName(kind),
 			this.semanticTypeDisplay,
 			boolValue ? "1" : "0",
 			Std.string(intValue),
@@ -67,6 +67,18 @@ class OcamlTargetLiteralFact {
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
+
+	/** Returns the protocol spelling without target-specific enum stringification. **/
+	static function kindName(kind:OcamlTargetLiteralKind):String {
+		return switch (kind) {
+			case NullValue: "NullValue";
+			case ThisValue: "ThisValue";
+			case SuperValue: "SuperValue";
+			case BoolValue: "BoolValue";
+			case IntValue: "IntValue";
+			case StringValue: "StringValue";
+		};
+	}
 
 	static function required(value:String):String {
 		final normalized = value == null ? "" : StringTools.trim(value);

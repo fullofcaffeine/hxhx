@@ -108,6 +108,8 @@
     "test:reflaxe-ocaml:transactional-dune": "bash scripts/ci/reflaxe-ocaml-transactional-dune-test.sh",
     "test:reflaxe-ocaml:target-definition": "haxe test/reflaxe_ocaml_target_definition/test.hxml && haxe test/reflaxe_ocaml_target_declarations/test.hxml && haxe test/reflaxe_ocaml_native_declaration_adapter/test.hxml",
     "test:reflaxe-ocaml:shared-expression": "bash scripts/ci/reflaxe-ocaml-shared-expression-test.sh",
+    "test:reflaxe-ocaml:native-target-core": "bash scripts/ci/reflaxe-ocaml-native-target-core-test.sh",
+    "test:reflaxe-ocaml:native-program-host": "bash scripts/ci/reflaxe-ocaml-native-program-host-test.sh",
     "test:reflaxe-ocaml:artifact-manifest": "npm run test:reflaxe-ocaml:target-definition && haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_artifact_manifest/src -D reflaxe_runtime --macro 'nullSafety(\"reflaxe.ocaml\")' --run ArtifactManifestFixture",
     "test:reflaxe-ocaml:target-reuse-contract": "bash scripts/ci/reflaxe-ocaml-target-reuse-contract-test.sh",
     "test:reflaxe-ocaml:target-reuse-memory": "bash scripts/ci/reflaxe-ocaml-target-reuse-exact-hit-test.sh memory",

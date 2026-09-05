@@ -54,9 +54,9 @@ class OcamlTargetFunctionFact {
 		if (body == null)
 			throw "OCaml target function requires a normalized body";
 		this.body = body;
-		validateRevisionOne();
+		validateRevisionOne(role, argumentTypeDisplays, returnTypeDisplay, this.body);
 		targetIdentity = identityFor(signature);
-		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationRequest.encode([SCHEMA_REVISION, targetIdentity, body.getCanonicalIdentity()]));
+		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([SCHEMA_REVISION, targetIdentity, body.getCanonicalIdentity()]));
 	}
 
 	public static function identityFor(signature:OcamlTargetFunctionSignature):String {
@@ -68,13 +68,13 @@ class OcamlTargetFunctionFact {
 			required(signature.moduleId, "module ID"),
 			required(signature.sourceTypeName, "source type name"),
 			required(signature.sourceFunctionName, "source function name"),
-			Std.string(signature.role),
+			roleName(signature.role),
 			Std.string(arguments.length),
 			required(signature.returnTypeDisplay, "return type")
 		];
 		for (argument in arguments)
 			parts.push(required(argument, "argument type"));
-		return "function:" + Sha256.encode(OcamlTargetDeclarationRequest.encode(parts));
+		return "function:" + Sha256.encode(OcamlTargetDeclarationCodec.encode(parts));
 	}
 
 	public function copyArgumentTypeDisplays():Array<String>
@@ -86,7 +86,15 @@ class OcamlTargetFunctionFact {
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
 
-	function validateRevisionOne():Void {
+	/** Returns the protocol spelling without target-specific enum stringification. **/
+	static function roleName(role:OcamlTargetFunctionRole):String {
+		return switch (role) {
+			case StaticFunction: "StaticFunction";
+		};
+	}
+
+	static function validateRevisionOne(role:OcamlTargetFunctionRole, argumentTypeDisplays:Array<String>, returnTypeDisplay:String,
+			body:OcamlTargetExpressionFact):Void {
 		if (role != StaticFunction || argumentTypeDisplays.length != 0 || returnTypeDisplay != "Void" || body.semanticTypeDisplay != "Void")
 			throw "OCaml target function revision 1 requires a static zero-argument Void function and body";
 	}

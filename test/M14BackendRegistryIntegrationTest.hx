@@ -56,6 +56,7 @@ class M14BackendRegistryIntegrationTest {
 		BackendRegistry.clearDynamicRegistrations();
 
 		final ids = BackendRegistry.supportedTargetIds();
+		assertTrue(has(ids, "ocaml-native"), "backend registry missing ocaml-native target id");
 		assertTrue(has(ids, "ocaml-stage3"), "backend registry missing ocaml-stage3 target id");
 		assertTrue(has(ids, "js-native"), "backend registry missing js-native target id");
 		assertTrue(has(ids, "neko-native"), "backend registry missing neko-native target id");
@@ -66,6 +67,9 @@ class M14BackendRegistryIntegrationTest {
 		assertTrue(ocaml != null, "descriptorForTarget(ocaml-stage3) returned null");
 		assertTrue(ocaml.implId == "builtin/ocaml-stage3", "unexpected ocaml-stage3 implId");
 		assertTrue(ocaml.requires.genIrVersion == BackendAbi.GEN_IR_VERSION, "unexpected ocaml-stage3 GenIR version");
+		final nativeOcaml = BackendRegistry.descriptorForTarget("ocaml-native");
+		assertTrue(nativeOcaml != null, "descriptorForTarget(ocaml-native) returned null");
+		assertTrue(nativeOcaml.implId == "builtin/reflaxe-ocaml", "unexpected ocaml-native implId");
 
 		final js = BackendRegistry.descriptorForTarget("js-native");
 		assertTrue(js != null, "descriptorForTarget(js-native) returned null");
