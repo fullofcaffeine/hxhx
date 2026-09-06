@@ -13,6 +13,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 enum abstract OcamlThrowRuntimeUseRole(String) to String {
 	final Signal = "raise-typed-haxe-exception";
 	final BoxExactBoolPayload = "box-exact-bool-throw-payload";
+	final UseCanonicalNullPayload = "use-canonical-null-throw-payload";
 	final TestNullableBoolPayload = "test-nullable-bool-throw-payload";
 	final BoxNullableBoolPayload = "box-nullable-bool-throw-payload";
 	final RecoverNullableBoolPayload = "recover-nullable-bool-throw-payload";
@@ -70,6 +71,9 @@ class OcamlThrowRuntimeUseContract {
 			case OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue:
 				occurrences.push(occurrence(decision, planRevision, selectedRequirementId, OcamlThrowRuntimeUseRole.BoxExactBoolPayload, "HxRuntime.box_bool",
 					1));
+			case OcamlControlPayloadConversion.PreserveNullLiteralThrowCarrier:
+				occurrences.push(occurrence(decision, planRevision, selectedRequirementId, OcamlThrowRuntimeUseRole.UseCanonicalNullPayload,
+					"HxRuntime.hx_null", 1));
 			case OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier:
 				occurrences.push(occurrence(decision, planRevision, selectedRequirementId, OcamlThrowRuntimeUseRole.TestNullableBoolPayload,
 					"HxRuntime.is_null", 1));

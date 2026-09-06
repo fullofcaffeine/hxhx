@@ -1205,7 +1205,10 @@ class OcamlBuilder {
 				final normalized = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.BoxNullableBoolPayload, [recovered], position);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
 			case PreserveNullLiteralThrowCarrier:
-				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				// One tuple item prints as grouping parentheses. This keeps the generated source stable while the checked runtime identity stays visible.
+				OcamlExpr.ETuple([
+					buildAuthorizedThrowPayloadValue(decision, OcamlThrowRuntimeUseRole.UseCanonicalNullPayload, position)
+				]);
 			case PreserveAnonymousThrowCarrier:
 				built;
 			case BoxRepresentedArrayThrowCarrier:
@@ -1287,6 +1290,23 @@ class OcamlBuilder {
 			];
 			authority.reconcileExpression(OcamlExpr.EApp(helper, proofArguments));
 			expression;
+		} catch (error:Dynamic) {
+			controlPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Builds one private runtime value selected by the sealed throw conversion. */
+	function buildAuthorizedThrowPayloadValue(decision:OcamlControlDecision, role:OcamlThrowRuntimeUseRole, position:Position):OcamlExpr {
+		return try {
+			final runtimeUsePlan = OcamlThrowRuntimeUseContract.forDecision(decision);
+			OcamlThrowRuntimeUseContract.requireForDecision(decision, runtimeUsePlan);
+			final occurrence = OcamlThrowRuntimeUseContract.payloadOccurrence(runtimeUsePlan, role);
+			final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+			final authority = new OcamlRuntimeUseAuthority(runtimeUsePlan.planRevision, activeProfile,
+				ctx.runtimeRequirementsByIds(runtimeUsePlan.runtimeRequirementIds), [occurrence], ctx.finalRuntimeUses);
+			final value = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
+			authority.reconcileExpression(value);
+			value;
 		} catch (error:Dynamic) {
 			controlPlanInvariant(Std.string(error), position);
 		}

@@ -57,6 +57,9 @@ class ThrowRuntimeUseFixture {
 		final boolDecision = throwDecision("control:throw:bool", "Bool", "bool", "representation:Bool:internal-value",
 			OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue, OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID, false);
 		proveSymbols(boolDecision, ["HxType.hx_throw_typed_rtti", "HxRuntime.box_bool"], ["HxRuntime", "HxType"]);
+		final nullDecision = throwDecision("control:throw:null", "Dynamic", "Obj.t", OcamlControlPlan.NULL_LITERAL_THROW_CONTROL_REPRESENTATION_ID,
+			OcamlControlPayloadConversion.PreserveNullLiteralThrowCarrier, OcamlControlPlan.NULL_LITERAL_THROW_PROOF_ID, false);
+		proveSymbols(nullDecision, ["HxType.hx_throw_typed_rtti", "HxRuntime.hx_null"], ["HxRuntime", "HxType"]);
 		final nullableBoolDecision = throwDecision("control:throw:nullable-bool", "Null<Bool>", "Obj.t", "representation:Null<Bool>:internal-value",
 			OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier, OcamlControlPlan.NULLABLE_BOOL_THROW_PROOF_ID, false);
 		proveSymbols(nullableBoolDecision, [
@@ -84,7 +87,13 @@ class ThrowRuntimeUseFixture {
 				nullablePlan.runtimeUseOccurrences[2],
 				nullablePlan.runtimeUseOccurrences[3]
 			])));
+		final nullPlan = OcamlThrowRuntimeUseContract.forDecision(nullDecision);
+		expectFailure("wrong canonical null value", "conflicting", () -> OcamlThrowRuntimeUseContract.requireForDecision(nullDecision, withUses(nullPlan, [
+			nullPlan.runtimeUseOccurrences[0],
+			copyUse(nullPlan.runtimeUseOccurrences[1], null, "HxRuntime.hx_missing")
+		])));
 		provePayloadFinalOutput(boolDecision);
+		provePayloadValueFinalOutput(nullDecision);
 	}
 
 	static function proveSymbols(decision:OcamlControlDecision, expected:Array<String>, expectedRoots:Array<String>):Void {
@@ -118,6 +127,23 @@ class ThrowRuntimeUseFixture {
 		]);
 		authority.reconcileExpression(expression);
 		finalOutput.observeExpression(expression, "Main::main::bool-throw");
+		finalOutput.finishProgram();
+	}
+
+	static function provePayloadValueFinalOutput(decision:OcamlControlDecision):Void {
+		final plan = OcamlThrowRuntimeUseContract.forDecision(decision);
+		final requirements = OcamlRuntimeRequirementLedger.requirementsForThrowDecision(decision);
+		final finalOutput = new OcamlFinalRuntimeUseAuthority();
+		finalOutput.beginProgram(decision.programRevision, PROFILE);
+		final authority = new OcamlRuntimeUseAuthority(plan.planRevision, PROFILE, requirements, plan.runtimeUseOccurrences, finalOutput);
+		final signalOccurrence = plan.runtimeUseOccurrences[0];
+		final valueOccurrence = plan.runtimeUseOccurrences[1];
+		final signal = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(signalOccurrence.id, signalOccurrence.planRevision,
+			signalOccurrence.exactSymbol));
+		final value = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(valueOccurrence.id, valueOccurrence.planRevision, valueOccurrence.exactSymbol));
+		final expression = OcamlExpr.EApp(signal, [value, OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("Dynamic"))])]);
+		authority.reconcileExpression(expression);
+		finalOutput.observeExpression(expression, "Main::main::null-throw");
 		finalOutput.finishProgram();
 	}
 

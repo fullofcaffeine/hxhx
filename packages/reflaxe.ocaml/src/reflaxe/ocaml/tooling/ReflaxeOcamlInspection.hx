@@ -4341,7 +4341,8 @@ class ReflaxeOcamlInspection {
 			// The report records the sealed payload conversion, not generated OCaml.
 			// This closed mapping checks the runtime modules selected by that conversion.
 			final expectedThrowRoots = switch (enumPayload.conversion) {
-				case "box-bool-and-recover-exact-value", "normalize-nullable-bool-throw-carrier": "HxRuntime,HxType";
+				case "box-bool-and-recover-exact-value", "preserve-null-literal-throw-carrier", "normalize-nullable-bool-throw-carrier":
+					"HxRuntime,HxType";
 				case "box-enum-throw-carrier": "HxEnum,HxType";
 				case _: "HxType";
 			};
