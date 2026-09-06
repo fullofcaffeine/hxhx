@@ -26,16 +26,16 @@ Files:
 
 ## Current baseline
 
-The current reviewed baseline contains 225 legacy entries:
+The current reviewed baseline contains 208 legacy entries:
 
 | Domain | Entries | What it means |
 | --- | ---: | --- |
-| Structured expressions | 225 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
+| Structured expressions | 208 | Direct `EIdent` or `EField(EIdent)` construction of a private runtime symbol. |
 | Structured patterns | 0 | Private runtime pattern constructors now use checked occurrence authority. |
 | Generated text | 0 | Generated files now use checked placeholders instead of private names hidden in ordinary text. |
 | Raw boundary | 0 | `__ocaml__` now reaches the target AST only through a validated injection value; the guard still detects any new unchecked `ERaw...` variant. |
 
-All 225 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
+All 208 entries are in `OcamlBuilder.hx`. That is an ownership warning, not a
 reason to place each migration there. Each semantic family should move through
 a focused lowering or syntax module. New runtime-reference infrastructure must
 remain small and independent of that large builder.
@@ -81,9 +81,18 @@ not `Obj.t`. The portable fixture also found and fixed right-to-left target
 evaluation. It now proves Haxe's left-to-right operand order against upstream
 Haxe 4.3.7.
 
-The String changes and direct anonymous-object `Reflect` operations reduce the
-earlier 252-entry baseline by 27 entries. They do not change the readiness bar
-while 225 unchecked sites remain.
+The String changes and direct anonymous-object `Reflect` operations reduced the
+earlier 252-entry baseline to 225 entries.
+
+Later source decisions removed 17 more entries. They now own null throws,
+dynamic Boolean literals, nullable standard-string conversions, and
+`Type.typeof` classification. For `Type.typeof`, the plan selects the input
+carrier and all private classifier helpers before target syntax runs. The
+generated classifier still evaluates its source argument once and preserves
+the earlier OCaml behavior, including `Null<haxe.Int32>` values.
+
+These migrations reduce the current baseline to 208 entries. They do not
+change the readiness bar while unchecked sites remain.
 
 ## What the guard does not prove
 

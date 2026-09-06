@@ -72,6 +72,8 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUsePl
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypePlanner;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan.OcamlTypeOfPlanner;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryPlanner;
@@ -123,6 +125,7 @@ typedef OcamlSealedFunctionPlan = {
 	final reflectCompare:OcamlReflectComparePlan;
 	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final stdIsOfType:OcamlStdIsOfTypePlan;
+	final typeOf:OcamlTypeOfPlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
@@ -173,6 +176,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final ?staticString:OcamlStaticStringPlan;
 	final ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final ?stdIsOfType:OcamlStdIsOfTypePlan;
+	final ?typeOf:OcamlTypeOfPlan;
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
@@ -215,6 +219,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final ?staticString:OcamlStaticStringPlan;
 	final ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final ?stdIsOfType:OcamlStdIsOfTypePlan;
+	final ?typeOf:OcamlTypeOfPlan;
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
@@ -248,6 +253,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final reflectCompare:OcamlReflectComparePlan;
 	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final stdIsOfType:OcamlStdIsOfTypePlan;
+	final typeOf:OcamlTypeOfPlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
@@ -288,6 +294,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final staticString:OcamlStaticStringPlan;
 	final reflectRuntimeUses:OcamlReflectRuntimeUsePlan;
 	final stdIsOfType:OcamlStdIsOfTypePlan;
+	final typeOf:OcamlTypeOfPlan;
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
@@ -319,9 +326,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v112";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v32";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v113";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -432,7 +439,7 @@ class OcamlFunctionPlanRegistry {
 	public function deferNestedFunction(expression:TypedExpr, identity:OcamlNestedFunctionIdentity, localIdentities:LexicalLocalIdentityPlan,
 			imapInterfaces:OcamlIMapInterfacePlan, arrayReads:OcamlArrayReadPlan, arrayIterators:OcamlArrayIteratorPlan,
 			dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
-			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan,
+			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
 			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
 		if (reason.length == 0)
@@ -451,6 +458,8 @@ class OcamlFunctionPlanRegistry {
 		sealedReflectRuntimeUses.requirePlanBinding(identity.binding);
 		final sealedStdIsOfType = stdIsOfType ?? new OcamlStdIsOfTypePlan([]);
 		sealedStdIsOfType.requirePlanBinding(identity.binding);
+		final sealedTypeOf = typeOf ?? new OcamlTypeOfPlan([]);
+		sealedTypeOf.requirePlanBinding(identity.binding);
 		final sealedIntUnary = intUnary ?? new OcamlIntUnaryPlan([]);
 		sealedIntUnary.requirePlanBinding(identity.binding);
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
@@ -474,6 +483,7 @@ class OcamlFunctionPlanRegistry {
 			staticString: sealedStaticString,
 			reflectRuntimeUses: sealedReflectRuntimeUses,
 			stdIsOfType: sealedStdIsOfType,
+			typeOf: sealedTypeOf,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
@@ -528,6 +538,8 @@ class OcamlFunctionPlanRegistry {
 		sealedReflectRuntimeUses.requirePlanBinding(plan.binding);
 		final sealedStdIsOfType = plan.stdIsOfType ?? new OcamlStdIsOfTypePlan([]);
 		sealedStdIsOfType.requirePlanBinding(plan.binding);
+		final sealedTypeOf = plan.typeOf ?? new OcamlTypeOfPlan([]);
+		sealedTypeOf.requirePlanBinding(plan.binding);
 		final sealedIntUnary = plan.intUnary ?? new OcamlIntUnaryPlan([]);
 		sealedIntUnary.requirePlanBinding(plan.binding);
 		final sealedStringFromCharCode = plan.stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
@@ -573,6 +585,7 @@ class OcamlFunctionPlanRegistry {
 			staticString: sealedStaticString,
 			reflectRuntimeUses: sealedReflectRuntimeUses,
 			stdIsOfType: sealedStdIsOfType,
+			typeOf: sealedTypeOf,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
@@ -593,6 +606,7 @@ class OcamlFunctionPlanRegistry {
 			staticString: sealedStaticString,
 			reflectRuntimeUses: sealedReflectRuntimeUses,
 			stdIsOfType: sealedStdIsOfType,
+			typeOf: sealedTypeOf,
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
@@ -707,6 +721,7 @@ class OcamlFunctionPlanRegistry {
 			staticString: record.staticString,
 			reflectRuntimeUses: record.reflectRuntimeUses,
 			stdIsOfType: record.stdIsOfType,
+			typeOf: record.typeOf,
 			intUnary: record.intUnary,
 			stringFromCharCode: record.stringFromCharCode,
 			stringEquality: record.stringEquality,
@@ -817,6 +832,7 @@ class OcamlFunctionPlanRegistry {
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(expression);
 		final reflectRuntimeUses = new OcamlReflectRuntimeUsePlanner(binding).plan(expression);
 		final stdIsOfType = new OcamlStdIsOfTypePlanner(binding).plan(expression);
+		final typeOf = new OcamlTypeOfPlanner(binding).plan(expression);
 		final intUnary = new OcamlIntUnaryPlanner(binding).plan(expression);
 		final stringFromCharCode = new OcamlStringFromCharCodePlanner(binding).plan(expression);
 		final stringEquality = new OcamlStringEqualityPlanner(binding).plan(expression);
@@ -844,6 +860,7 @@ class OcamlFunctionPlanRegistry {
 		reflectCompare.requirePlanBinding(binding);
 		reflectRuntimeUses.requirePlanBinding(binding);
 		stdIsOfType.requirePlanBinding(binding);
+		typeOf.requirePlanBinding(binding);
 		intUnary.requirePlanBinding(binding);
 		stringFromCharCode.requirePlanBinding(binding);
 		stringEquality.requirePlanBinding(binding);
@@ -876,6 +893,7 @@ class OcamlFunctionPlanRegistry {
 			reflectCompare: reflectCompare,
 			reflectRuntimeUses: reflectRuntimeUses,
 			stdIsOfType: stdIsOfType,
+			typeOf: typeOf,
 			intUnary: intUnary,
 			stringFromCharCode: stringFromCharCode,
 			stringEquality: stringEquality,
@@ -1013,6 +1031,7 @@ class OcamlFunctionPlanRegistry {
 		plan.reflectCompare.requirePlanBinding(expected);
 		plan.reflectRuntimeUses.requirePlanBinding(expected);
 		plan.stdIsOfType.requirePlanBinding(expected);
+		plan.typeOf.requirePlanBinding(expected);
 		plan.intUnary.requirePlanBinding(expected);
 		plan.stringFromCharCode.requirePlanBinding(expected);
 		plan.stringEquality.requirePlanBinding(expected);
@@ -1172,7 +1191,7 @@ class OcamlFunctionPlanRegistry {
 			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan,
 			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan, ?reflectCompare:OcamlReflectComparePlan, ?arrayReads:OcamlArrayReadPlan,
 			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan,
-			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan,
+			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
 			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
@@ -1197,6 +1216,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedStaticString = staticString ?? new OcamlStaticStringPlan([]);
 		final sealedReflectRuntimeUses = reflectRuntimeUses ?? new OcamlReflectRuntimeUsePlan([]);
 		final sealedStdIsOfType = stdIsOfType ?? new OcamlStdIsOfTypePlan([]);
+		final sealedTypeOf = typeOf ?? new OcamlTypeOfPlan([]);
 		final sealedIntUnary = intUnary ?? new OcamlIntUnaryPlan([]);
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
@@ -1219,6 +1239,7 @@ class OcamlFunctionPlanRegistry {
 		sealedStaticString.requirePlanBinding(binding);
 		sealedReflectRuntimeUses.requirePlanBinding(binding);
 		sealedStdIsOfType.requirePlanBinding(binding);
+		sealedTypeOf.requirePlanBinding(binding);
 		sealedIntUnary.requirePlanBinding(binding);
 		sealedStringFromCharCode.requirePlanBinding(binding);
 		sealedStringEquality.requirePlanBinding(binding);
@@ -1269,6 +1290,7 @@ class OcamlFunctionPlanRegistry {
 				reflectCompare: sealedReflectCompare,
 				reflectRuntimeUses: sealedReflectRuntimeUses,
 				stdIsOfType: sealedStdIsOfType,
+				typeOf: sealedTypeOf,
 				intUnary: sealedIntUnary,
 				stringFromCharCode: sealedStringFromCharCode,
 				stringEquality: sealedStringEquality,

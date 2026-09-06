@@ -1,0 +1,12 @@
+dynamic-int=int
+nullable-int-null=null
+nullable-int-value=int
+nullable-int32-value=int
+bool=bool effects=1
+float=float
+enum=enum
+nullable-enum-null=null
+nullable-enum-value=enum
+class=class
+string=class
+function=function

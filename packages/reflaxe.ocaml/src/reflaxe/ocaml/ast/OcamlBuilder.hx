@@ -145,6 +145,8 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseKi
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeStrategy;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeValueCarrier;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan.OcamlTypeOfInputStrategy;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperation;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryOperandCarrier;
@@ -225,6 +227,7 @@ class OcamlBuilder {
 	var currentReflectComparePlan:Null<OcamlReflectComparePlan> = null;
 	var currentReflectRuntimeUsePlan:Null<OcamlReflectRuntimeUsePlan> = null;
 	var currentStdIsOfTypePlan:Null<OcamlStdIsOfTypePlan> = null;
+	var currentTypeOfPlan:Null<OcamlTypeOfPlan> = null;
 	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
@@ -2202,6 +2205,111 @@ class OcamlBuilder {
 				return callPlanInvariant('static Std.isOfType decision "${decision.id}" unexpectedly owns runtime helpers', call.pos);
 		}
 		return OcamlExpr.ELet(temporary, carriedValue, result, false);
+	}
+
+	/**
+		Builds one `Type.typeof` classifier from its sealed source decision.
+
+		The plan fixes the input carrier and every private helper. This method keeps
+		the existing argument-once `let` shape and uses ordinary OCaml `Obj`
+		operations only after request-local runtime authority checks the private names.
+	**/
+	function buildPlannedTypeOf(call:TypedExpr, value:TypedExpr):OcamlExpr {
+		final plan = currentTypeOfPlan;
+		if (plan == null)
+			return callPlanInvariant("a resolved Type.typeof call has no active sealed classifier plan", call.pos);
+		final decision = try {
+			plan.requireFor(call);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+		if (decision.inputSemanticTypeId != TypeTools.toString(value.t) || decision.resultSemanticTypeId != TypeTools.toString(call.t))
+			return callPlanInvariant('Type.typeof decision "${decision.id}" belongs to a different typed call', call.pos);
+
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final runtimeIdentifiers:Array<OcamlExpr> = [];
+		for (occurrence in decision.runtimeUseOccurrences)
+			runtimeIdentifiers.push(OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol)));
+		try {
+			authority.reconcileExpression(OcamlExpr.ESeq(runtimeIdentifiers));
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), call.pos);
+		}
+
+		final inputHelperCount = switch (decision.inputStrategy) {
+			case DirectObject, Repr: 0;
+			case BoxBool, BoxEnum: 1;
+		};
+		inline function classifierHelper(index:Int):OcamlExpr
+			return runtimeIdentifiers[inputHelperCount + index];
+		final valueNullHelper = classifierHelper(0);
+		final boxedBoolHelper = classifierHelper(1);
+		final stringClassHelper = classifierHelper(2);
+		final enumNameHelper = classifierHelper(3);
+		final enumMetaHelper = classifierHelper(4);
+		final classHelper = classifierHelper(5);
+		final classNullHelper = classifierHelper(6);
+
+		final valueExpr = buildExpr(value);
+		final carriedValue = switch (decision.inputStrategy) {
+			case DirectObject:
+				valueExpr;
+			case Repr:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+			case BoxBool:
+				OcamlExpr.EApp(runtimeIdentifiers[0], [valueExpr]);
+			case BoxEnum:
+				final enumRuntimeName = decision.enumRuntimeName;
+				if (enumRuntimeName == null)
+					return callPlanInvariant('Type.typeof decision "${decision.id}" lost its enum runtime name', call.pos);
+				OcamlExpr.EApp(runtimeIdentifiers[0], [
+					OcamlExpr.EConst(OcamlConst.CString(enumRuntimeName)),
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr])
+				]);
+		};
+
+		final temporary = freshTmp("typeof_v");
+		final storedValue = OcamlExpr.EIdent(temporary);
+		final isNull = OcamlExpr.EApp(valueNullHelper, [storedValue]);
+		final isBoxedBool = OcamlExpr.EApp(boxedBoolHelper, [storedValue]);
+		final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [storedValue]);
+		final tag = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [storedValue]);
+		final isDouble = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag"));
+		final isString = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "string_tag"));
+		final isClosure = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "closure_tag"));
+
+		inline function valueType(name:String):OcamlExpr
+			return OcamlExpr.EField(OcamlExpr.EIdent("Type"), name);
+		inline function valueTypeWithArgument(name:String, argument:OcamlExpr):OcamlExpr
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Type"), name), [argument]);
+
+		final enumNameTemporary = freshTmp("enum_name");
+		final classTemporary = freshTmp("cls");
+		final enumCase = OcamlExpr.EMatch(OcamlExpr.EApp(enumNameHelper, [storedValue]), [
+			{
+				pat: OcamlPat.PConstructor("Some", [OcamlPat.PVar(enumNameTemporary)]),
+				guard: null,
+				expr: valueTypeWithArgument("TEnum", OcamlExpr.EApp(enumMetaHelper, [OcamlExpr.EIdent(enumNameTemporary)]))
+			},
+			{
+				pat: OcamlPat.PAny,
+				guard: null,
+				expr: OcamlExpr.ELet(classTemporary, OcamlExpr.EApp(classHelper, [storedValue]),
+					OcamlExpr.EIf(OcamlExpr.EApp(classNullHelper, [OcamlExpr.EIdent(classTemporary)]), valueType("TObject"),
+						valueTypeWithArgument("TClass", OcamlExpr.EIdent(classTemporary))),
+					false)
+			}
+		]);
+		final classify = OcamlExpr.EIf(isNull, valueType("TNull"),
+			OcamlExpr.EIf(isBoxedBool, valueType("TBool"),
+				OcamlExpr.EIf(isInt, valueType("TInt"),
+					OcamlExpr.EIf(isDouble, valueType("TFloat"),
+						OcamlExpr.EIf(isString,
+							valueTypeWithArgument("TClass", OcamlExpr.EApp(stringClassHelper, [OcamlExpr.EConst(OcamlConst.CString("String"))])),
+							OcamlExpr.EIf(isClosure, valueType("TFunction"), enumCase))))));
+		return OcamlExpr.ELet(temporary, carriedValue, classify, false);
 	}
 
 	/**
@@ -4391,103 +4499,7 @@ class OcamlBuilder {
 													};
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"), [asObj]);
 												case "typeof" if (args.length == 1):
-													{
-														// `Type.typeof` is defined as `typeof(v:Dynamic):ValueType`, but it is used heavily by
-														// assertion/test harnesses (utest) to decide comparison strategies and to build
-														// human-friendly error messages.
-														//
-														// Important: implement this *in generated OCaml code* rather than in the runtime
-														// library, because the runtime library must not depend on the compiled `Type`
-														// module (dune builds the runtime as a separate library).
-														final a0 = args[0];
-														final a0Expr = buildExpr(a0);
-														final a0Unwrap = unwrapNullType(a0.t);
-
-														inline function toDynamicObj(e:TypedExpr, built:OcamlExpr):OcamlExpr {
-															if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null)
-																return built;
-															final enumName = fullNameOfTypeEnum(e.t);
-															final nullableEnumName = isNullableEnumType(e.t);
-
-															var obj:OcamlExpr;
-															if (isBoolType(e.t)) {
-																obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [built]);
-															} else {
-																obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-															}
-
-															if (enumName != null) {
-																obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-																	[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]);
-															} else if (nullableEnumName != null) {
-																obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-																	[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]);
-															}
-															return obj;
-														}
-
-														final tmp = freshTmp("typeof_v");
-														final v = toDynamicObj(a0, a0Expr);
-
-														inline function vt0(name:String):OcamlExpr {
-															return OcamlExpr.EField(OcamlExpr.EIdent("Type"), name);
-														}
-														inline function vt1(name:String, arg:OcamlExpr):OcamlExpr {
-															return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Type"), name), [arg]);
-														}
-
-														final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"),
-															[OcamlExpr.EIdent(tmp)]);
-														final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_boxed_bool"),
-															[OcamlExpr.EIdent(tmp)]);
-														final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"),
-															[OcamlExpr.EIdent(tmp)]);
-														final tag = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [OcamlExpr.EIdent(tmp)]);
-														final isDouble = OcamlExpr.EBinop(OcamlBinop.Eq, tag,
-															OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag"));
-														final isString = OcamlExpr.EBinop(OcamlBinop.Eq, tag,
-															OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "string_tag"));
-														final isClosure = OcamlExpr.EBinop(OcamlBinop.Eq, tag,
-															OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "closure_tag"));
-
-														final enumNameTmp = freshTmp("enum_name");
-														final classTmp = freshTmp("cls");
-
-														final enumCase = OcamlExpr.EMatch(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"),
-															"name_opt"), [OcamlExpr.EIdent(tmp)]),
-															[
-																{
-																	pat: OcamlPat.PConstructor("Some", [OcamlPat.PVar(enumNameTmp)]),
-																	guard: null,
-																	expr: vt1("TEnum",
-																		OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"),
-																			[OcamlExpr.EIdent(enumNameTmp)]))
-																},
-																{
-																	pat: OcamlPat.PAny,
-																	guard: null,
-																	expr: OcamlExpr.ELet(classTmp,
-																		OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"),
-																			[OcamlExpr.EIdent(tmp)]),
-																		OcamlExpr.EIf(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"),
-																			[OcamlExpr.EIdent(classTmp)]),
-																			vt0("TObject"), vt1("TClass", OcamlExpr.EIdent(classTmp))),
-																		false)
-																}
-															]);
-
-														final classify = OcamlExpr.EIf(isNull, vt0("TNull"),
-															OcamlExpr.EIf(isBoxedBool, vt0("TBool"),
-																OcamlExpr.EIf(isInt, vt0("TInt"),
-																	OcamlExpr.EIf(isDouble, vt0("TFloat"),
-																		OcamlExpr.EIf(isString,
-																			vt1("TClass",
-																				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
-																					[OcamlExpr.EConst(OcamlConst.CString("String"))])),
-																			OcamlExpr.EIf(isClosure, vt0("TFunction"), enumCase))))));
-
-														OcamlExpr.ELet(tmp, v, classify, false);
-													}
+													buildPlannedTypeOf(e, args[0]);
 												case "getClassName" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassName"), [buildExpr(args[0])]);
 												case "getEnumName" if (args.length == 1):
@@ -8817,6 +8829,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousTypeOfPlan = currentTypeOfPlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
@@ -8844,6 +8857,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
+		currentTypeOfPlan = validatedPlan.typeOf;
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
@@ -8869,6 +8883,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentTypeOfPlan = previousTypeOfPlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
@@ -8905,6 +8920,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousTypeOfPlan = currentTypeOfPlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
@@ -8932,6 +8948,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = validatedPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = validatedPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = validatedPlan.stdIsOfType;
+		currentTypeOfPlan = validatedPlan.typeOf;
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
@@ -8957,6 +8974,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentTypeOfPlan = previousTypeOfPlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
@@ -9127,6 +9145,7 @@ class OcamlBuilder {
 		final previousReflectComparePlan = currentReflectComparePlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousTypeOfPlan = currentTypeOfPlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
@@ -9162,6 +9181,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = functionPlan.reflectCompare;
 		currentReflectRuntimeUsePlan = functionPlan.reflectRuntimeUses;
 		currentStdIsOfTypePlan = functionPlan.stdIsOfType;
+		currentTypeOfPlan = functionPlan.typeOf;
 		currentIntUnaryPlan = functionPlan.intUnary;
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentStringEqualityPlan = functionPlan.stringEquality;
@@ -9352,6 +9372,7 @@ class OcamlBuilder {
 		currentReflectComparePlan = previousReflectComparePlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentTypeOfPlan = previousTypeOfPlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
@@ -9433,6 +9454,7 @@ class OcamlBuilder {
 		final previousStaticStringPlan = currentStaticStringPlan;
 		final previousReflectRuntimeUsePlan = currentReflectRuntimeUsePlan;
 		final previousStdIsOfTypePlan = currentStdIsOfTypePlan;
+		final previousTypeOfPlan = currentTypeOfPlan;
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
@@ -9453,6 +9475,7 @@ class OcamlBuilder {
 		currentStaticStringPlan = nestedDisposition == null ? null : nestedDisposition.staticString;
 		currentReflectRuntimeUsePlan = nestedDisposition == null ? null : nestedDisposition.reflectRuntimeUses;
 		currentStdIsOfTypePlan = nestedDisposition == null ? null : nestedDisposition.stdIsOfType;
+		currentTypeOfPlan = nestedDisposition == null ? null : nestedDisposition.typeOf;
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
@@ -9567,6 +9590,7 @@ class OcamlBuilder {
 		currentStaticStringPlan = previousStaticStringPlan;
 		currentReflectRuntimeUsePlan = previousReflectRuntimeUsePlan;
 		currentStdIsOfTypePlan = previousStdIsOfTypePlan;
+		currentTypeOfPlan = previousTypeOfPlan;
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;

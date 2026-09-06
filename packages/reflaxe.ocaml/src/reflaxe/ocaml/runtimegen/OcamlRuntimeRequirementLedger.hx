@@ -22,6 +22,8 @@ import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlReflectRuntimeUsePlan.OcamlReflectRuntimeUseDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan.OcamlStdIsOfTypeDecision;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan;
+import reflaxe.ocaml.lowered.OcamlTypeOfPlan.OcamlTypeOfDecision;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
@@ -121,6 +123,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_REFLECT_COMPARE_FAILURE = "haxe-reflect-compare-failure";
 	public static inline final HAXE_REFLECT_RUNTIME_CALL = "haxe-reflect-runtime-call";
 	public static inline final HAXE_STD_IS_OF_TYPE = "haxe-std-is-of-type";
+	public static inline final HAXE_TYPE_OF = "haxe-typeof-runtime-classification";
 	public static inline final HAXE_INT32_UNARY = "haxe-int32-unary";
 	public static inline final HAXE_DYNAMIC_BOOL_LITERAL = OcamlTargetLiteralRuntimeUseContract.CAPABILITY;
 
@@ -617,6 +620,37 @@ class OcamlRuntimeRequirementLedger {
 	/** Records the private helpers selected by one sealed `Std.isOfType()` call. */
 	public function recordStdIsOfType(decision:OcamlStdIsOfTypeDecision):Void {
 		for (requirement in requirementsForStdIsOfType(decision))
+			record(requirement);
+	}
+
+	/** Returns the runtime roots selected by one sealed `Type.typeof()` call. */
+	public static function requirementsForTypeOf(decision:OcamlTypeOfDecision):Array<OcamlRuntimeRequirement> {
+		OcamlTypeOfPlan.requireDecision(decision);
+		return [
+			normalize({
+				id: decision.runtimeRequirementIds[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: HAXE_TYPE_OF,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "Type.typeof("
+					+ decision.inputSemanticTypeId
+					+ ") -> "
+					+ decision.resultSemanticTypeId},
+				implementationFeature: "haxe-typeof-runtime-classification-v1",
+				rootModules: OcamlTypeOfPlan.rootModules(decision),
+				profileEligibility: decision.profileEligibility,
+				explanation: "The final typed Type.typeof call selected its input carrier and complete private classifier helper list before target syntax."
+			})
+		];
+	}
+
+	/** Records the private classifier helpers selected by one `Type.typeof()` call. */
+	public function recordTypeOf(decision:OcamlTypeOfDecision):Void {
+		for (requirement in requirementsForTypeOf(decision))
 			record(requirement);
 	}
 

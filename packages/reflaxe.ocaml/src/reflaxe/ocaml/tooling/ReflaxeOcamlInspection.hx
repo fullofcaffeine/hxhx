@@ -102,9 +102,10 @@ class ReflaxeOcamlInspection {
 	static inline final STD_IS_OF_TYPE_PROOF_ID = "std-is-of-type-runtime-use-v1";
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v112";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v32";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v15";
+	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v113";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -4855,7 +4856,7 @@ class ReflaxeOcamlInspection {
 			referenced.set(requirementId, true);
 		}
 		for (requirement in requirementValues) {
-			if (requiredString(requirement, "semanticCapability") != OcamlRuntimeRequirementLedger.HAXE_DYNAMIC_BOOL_LITERAL)
+			if (requiredString(requirement, "semanticCapability") != DYNAMIC_BOOL_LITERAL_CAPABILITY)
 				continue;
 			validateTargetLiteralRuntimeRequirement(requirement);
 			referenced.set(requiredString(requirement, "id"), true);
@@ -4872,7 +4873,7 @@ class ReflaxeOcamlInspection {
 		final decisionId = requiredString(requirement, "decisionId");
 		final subject = requiredObject(requirement, "subject");
 		final subjectId = requiredString(subject, "id");
-		if (id != decisionId + ":runtime:" + OcamlRuntimeRequirementLedger.HAXE_DYNAMIC_BOOL_LITERAL
+		if (id != decisionId + ":runtime:" + DYNAMIC_BOOL_LITERAL_CAPABILITY
 			|| !~/^target-literal:[0-9a-f]{64}$/.match(decisionId)
 			|| requiredString(requirement, "sourceKind") != "haxe-expression"
 			|| requiredString(requirement, "cause") != "lowering-decision"
