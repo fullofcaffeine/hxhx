@@ -498,7 +498,8 @@ class OcamlLoweringReportWriter {
 							requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId,
 								payload.outputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
 						case Throw:
-							if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload))
+							if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)
+								&& !OcamlControlPlan.isAdmittedNullLiteralThrowPayload(payload))
 								throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
 						case _:
 							throw 'Control decision "${control.id}" has a Dynamic payload on unsupported transfer ${control.kind}.';

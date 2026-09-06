@@ -347,6 +347,14 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     primitive or admitted class tag, while null remains `Dynamic`-only. This
     control-only record does not claim that Dynamic storage, calls, operators,
     reflection, public ABI, or the metal profile are generally admitted.
+    A direct `throw null` has a separate
+    `preserve-null-literal-throw-carrier` record. It maps only that exact typed
+    occurrence to the canonical `HxRuntime.hx_null` carrier. The value reaches
+    `Dynamic` and does not make other unresolved throw values valid.
+    An anonymous-object throw records `preserve-anonymous-throw-carrier` only
+    after the structural planner seals its exact shape and representation
+    revision. The exception channel preserves that existing `Obj.t` object. It
+    does not infer fields or admit an unsealed anonymous value.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and

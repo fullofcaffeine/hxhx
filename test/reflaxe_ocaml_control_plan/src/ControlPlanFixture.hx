@@ -1324,6 +1324,47 @@ class ControlPlanFixture {
 			throw "The typed occurrence index collapsed distinct same-span throw nodes";
 		}
 
+		final typedAnonymousThrowRoot = Context.typeExpr(macro {
+			final value:{p:String, s:Bool} = {p: "token", s: true};
+			throw value;
+		});
+		final anonymousThrowBinding = binding("body:anonymous-throw");
+		final anonymousThrowRepresentations = new OcamlRepresentationRegistry();
+		anonymousThrowRepresentations.beginProgram(anonymousThrowBinding.programRevision);
+		final anonymousThrowIdentities = LexicalLocalIdentityPlan.build(anonymousThrowBinding.functionId, typedAnonymousThrowRoot);
+		final anonymousThrowPlan = new OcamlControlPlanner(anonymousThrowRepresentations, new OcamlLocalRepresentationPlan([]), anonymousThrowBinding,
+			anonymousThrowIdentities).plan(typedAnonymousThrowRoot, null);
+		final anonymousThrowDecision = Lambda.find(anonymousThrowPlan.decisions(), decision -> decision.kind == OcamlControlTransferKind.Throw);
+		if (!anonymousThrowPlan.throwFamilyAdmitted
+			|| anonymousThrowDecision == null
+			|| anonymousThrowDecision.payload == null
+			|| anonymousThrowDecision.payload.inputSemanticTypeId != "anonymous{p:String,s:Bool}"
+			|| anonymousThrowDecision.payload.conversion != OcamlControlPayloadConversion.PreserveAnonymousThrowCarrier
+			|| anonymousThrowDecision.payload.proofId != OcamlControlPlan.ANONYMOUS_CARRIER_THROW_PROOF_ID
+			|| !OcamlControlPlan.isAdmittedAnonymousThrowPayload(anonymousThrowDecision.payload)) {
+			throw "The typed anonymous-object throw lost its sealed Obj.t exception crossing";
+		}
+
+		final typedNullThrowRoot = Context.typeExpr(macro throw null);
+		final nullThrowBinding = binding("body:null-literal-throw");
+		final nullThrowRepresentations = new OcamlRepresentationRegistry();
+		nullThrowRepresentations.beginProgram(nullThrowBinding.programRevision);
+		final nullThrowIdentities = LexicalLocalIdentityPlan.build(nullThrowBinding.functionId, typedNullThrowRoot);
+		final nullThrowPlan = new OcamlControlPlanner(nullThrowRepresentations, new OcamlLocalRepresentationPlan([]), nullThrowBinding,
+			nullThrowIdentities).plan(typedNullThrowRoot, null);
+		final nullThrowDecision = Lambda.find(nullThrowPlan.decisions(), decision -> decision.kind == OcamlControlTransferKind.Throw);
+		if (!nullThrowPlan.throwFamilyAdmitted
+			|| nullThrowDecision == null
+			|| nullThrowDecision.payload == null
+			|| nullThrowDecision.payload.inputSemanticTypeId != "Dynamic"
+			|| nullThrowDecision.payload.inputRepresentationId != OcamlControlPlan.NULL_LITERAL_THROW_CONTROL_REPRESENTATION_ID
+			|| nullThrowDecision.payload.conversion != OcamlControlPayloadConversion.PreserveNullLiteralThrowCarrier
+			|| nullThrowDecision.payload.proofId != OcamlControlPlan.NULL_LITERAL_THROW_PROOF_ID
+			|| !OcamlControlPlan.isAdmittedNullLiteralThrowPayload(nullThrowDecision.payload)
+			|| OcamlControlPlan.isAdmittedDynamicThrowPayload(nullThrowDecision.payload)) {
+			throw "The direct null literal lost its distinct sealed Dynamic-only exception crossing";
+		}
+
 		final typedEnumThrowRoot = Context.typeExpr(macro throw haxe.io.Error.Blocked);
 		final typedEnumThrows:Array<TypedExpr> = [];
 		function collectEnumThrowNodes(expression:TypedExpr):Void {

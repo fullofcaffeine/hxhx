@@ -1204,6 +1204,10 @@ class OcamlBuilder {
 				final recovered = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.RecoverNullableBoolPayload, [carrier], position);
 				final normalized = buildAuthorizedThrowPayloadHelper(decision, OcamlThrowRuntimeUseRole.BoxNullableBoolPayload, [recovered], position);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
+			case PreserveNullLiteralThrowCarrier:
+				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+			case PreserveAnonymousThrowCarrier:
+				built;
 			case BoxRepresentedArrayThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case BoxNominalThrowCarrier:
@@ -5797,57 +5801,18 @@ class OcamlBuilder {
 					OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 				}
 			case TThrow(expr):
-				if (currentControlPlan != null && currentControlPlan.throwFamilyAdmitted) {
-					final decision = try {
-						currentControlPlan.decisionFor(e);
-					} catch (error:Dynamic) {
-						return controlPlanInvariant(Std.string(error), e.pos);
-					}
-					if (decision == null)
-						return controlPlanInvariant("an admitted throw reached syntax without its sealed exception-channel decision", e.pos);
-					return buildPlannedThrow(decision, expr, e.pos);
+				if (currentControlPlan == null)
+					return controlPlanInvariant("a throw reached syntax without a sealed control plan", e.pos);
+				if (!currentControlPlan.throwFamilyAdmitted)
+					return controlPlanInvariant("a throw reached syntax after its exception-control family was rejected", e.pos);
+				final decision = try {
+					currentControlPlan.decisionFor(e);
+				} catch (error:Dynamic) {
+					return controlPlanInvariant(Std.string(error), e.pos);
 				}
-				final built = buildExpr(expr);
-				final kind = nullablePrimitiveKind(expr.t);
-				final enumName = fullNameOfTypeEnum(expr.t);
-				final nullableEnumName = isNullableEnumType(expr.t);
-
-				// Produce the thrown payload as `Obj.t`.
-				var payload:OcamlExpr;
-				if (kind != null) {
-					// Nullable primitives already use the `Obj.t` representation.
-					payload = built;
-				} else if (nullableEnumName != null) {
-					// `Null<Enum>` is represented as `Obj.t`.
-					payload = built;
-				} else {
-					switch (followNoAbstracts(unwrapNullType(expr.t))) {
-						case TAnonymous(_) if (shouldAnonUseHxAnon(expr.t)):
-							// Anonymous structures represented via `HxAnon` already use `Obj.t`.
-							payload = built;
-						case TAbstract(_, _) if (isStdAnyAbstract(expr.t)):
-							// `Std.Any` (and friends) already use `Obj.t`.
-							payload = built;
-						case _ if (isBoolType(expr.t)):
-							// Booleans stored as `Obj.t` must be boxed to avoid int/bool ambiguity.
-							payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [built]);
-						case _:
-							payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-					}
-				}
-
-				// Enums carried as `Obj.t` must be boxed so typed catches can recover the enum identity
-				// even for constant constructors (which compile to immediates).
-				if (enumName != null) {
-					payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-						[OcamlExpr.EConst(OcamlConst.CString(enumName)), payload]);
-				} else if (nullableEnumName != null) {
-					payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-						[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), payload]);
-				}
-				final tags = throwTagsForType(expr.t);
-				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tagExpr]);
+				if (decision == null)
+					return controlPlanInvariant("an admitted throw reached syntax without its sealed exception-channel decision", e.pos);
+				buildPlannedThrow(decision, expr, e.pos);
 			case TTry(tryExpr, catches):
 				if (catches.length == 0) {
 					buildExpr(tryExpr);

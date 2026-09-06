@@ -28,10 +28,10 @@ if [[ "$HAXE_VERSION" != "4.3.7" ]]; then
 fi
 
 mkdir -p "$OUT_DIR"
-"$HAXE_BIN" -cp "$SRC_DIR" -main Main --interp >"$OUT_DIR/interp.stdout"
-"$HAXE_BIN" -cp "$SRC_DIR" -main Main -js "$OUT_DIR/out.js"
+"$HAXE_BIN" -cp "$SRC_DIR" -main Main -D unplanned_throw_negative --interp >"$OUT_DIR/interp.stdout"
+"$HAXE_BIN" -cp "$SRC_DIR" -main Main -D unplanned_throw_negative -js "$OUT_DIR/out.js"
 node "$OUT_DIR/out.js" >"$OUT_DIR/js.stdout"
-"$HAXE_BIN" -cp "$SRC_DIR" -main Main -neko "$OUT_DIR/out.n"
+"$HAXE_BIN" -cp "$SRC_DIR" -main Main -D unplanned_throw_negative -neko "$OUT_DIR/out.n"
 neko "$OUT_DIR/out.n" >"$OUT_DIR/neko.stdout"
 
 for route in interp js neko; do
@@ -41,4 +41,4 @@ for route in interp js neko; do
 	fi
 done
 
-echo "REFLAXE_OCAML_EXACT_THROW_ORACLE:PASS routes=3 cases=19"
+echo "REFLAXE_OCAML_EXACT_THROW_ORACLE:PASS routes=3 cases=21"

@@ -7,10 +7,12 @@ import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetFieldInput;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetMethodInput;
 
 /**
-	Copies sealed native `hxhx` class facts into the standalone OCaml target input.
+	Copies sealed native `hxhx` class facts into a target-owned declaration request.
 
-	This adapter selects no OCaml behavior. It only removes native compiler objects
-	from the boundary and fails when typing did not provide exact semantic facts.
+	This is the only production OCaml boundary allowed to read the observation-only
+	class catalog. It copies every admitted value into `OcamlTargetDeclarationRequest`,
+	so downstream target code cannot retain native compiler objects. The adapter
+	selects no OCaml behavior and fails when typing did not provide exact facts.
 **/
 class HxhxOcamlTargetDeclarationAdapter {
 	public static function fromModules(hostProgramRevision:String, modules:Array<TypedBackendModuleProjection>):OcamlTargetDeclarationRequest {

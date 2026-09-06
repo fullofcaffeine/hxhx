@@ -250,6 +250,18 @@ define `haxe.Exception` or `haxe.ValueException` wrapping, class-hierarchy
 matching, enum/abstract payloads, Float payloads, or nested-function plan
 ownership.
 
+A direct `throw null` uses a separate control-only record. Its identity is
+`control-representation:null-literal:runtime-obj-v1`, and its conversion is
+`preserve-null-literal-throw-carrier`. This record emits the canonical
+`HxRuntime.hx_null` carrier with only the `Dynamic` tag. It applies only to the
+exact null-literal occurrence and does not admit other unresolved value types.
+
+An anonymous-object throw uses `preserve-anonymous-throw-carrier` only when the
+structural planner has already sealed that exact object shape. The plan records
+the shape's representation revision and preserves its existing `Obj.t` carrier.
+It does not infer fields, create another object layout, or admit an unsealed
+anonymous value.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
 `haxe_ocaml-w32h3.12`, not closure of the parent control-effects requirement.
 Additional value-return payloads, other primitive-to-nullable and nullable

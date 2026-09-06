@@ -6860,7 +6860,7 @@
   ],
   "runtimeRequirementCount": 107,
   "schemaVersion": 86,
-  "controlAdmissionCount": 162,
+  "controlAdmissionCount": 159,
   "structuralFieldModel": "typed-structural-field-overlap-v4",
   "unsafeOperationCount": 22,
   "unsafeOperationRevision": "sha256:486730bfc68e1b2f64ef7794b14b1efb537de322a37dabd6fe8d75a193da8a77",
@@ -15244,7 +15244,7 @@
       "effect": "raise-haxe-value"
     }
   ],
-  "controlAdmissionRevision": "sha256:14c50df4a4fa92ef09289e8a0d4eaaa57e6d79888066d01bb4194af5546c541e",
+  "controlAdmissionRevision": "sha256:6e365999c9f1cb24e02f9364b5f292fb0ab79c626ee0cd8db962379c596100d4",
   "controlCount": 55,
   "unsafeOperationCompleteness": "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
   "controlAdmissionModel": "typed-ocaml-control-admission-v1",
@@ -20099,38 +20099,6 @@
     },
     {
       "catches": [],
-      "bodyRevision": "0:eb1fd67d231e4f0870005973a38c3131122348a9dffafb95187efa20b7c72c17",
-      "id": "control-admission:074938725ddafb47a0652f71",
-      "families": [
-        {
-          "occurrenceCount": 0,
-          "family": "loop",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "return",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "throw",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        }
-      ],
-      "functionId": "standalone:field-initializer:static:ExternalHolder|ExternalHolder::value",
-      "pipelineRevision": "ocaml-standalone-expression-plans-v15",
-      "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
-      "revision": "sha256:ca97cb40c90da6452a8bde131e7f3a790549c42ccd08219e259d51c1cc0a7672"
-    },
-    {
-      "catches": [],
       "bodyRevision": "12:d2ff9fede11a312349a1170a8664954bf8b6d04cd9cb63a770c6bd96dbec82ed",
       "id": "control-admission:0ab11650ea673469adce8e81",
       "families": [
@@ -21376,38 +21344,6 @@
       "pipelineRevision": "ocaml-function-plans-v112",
       "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
       "revision": "sha256:00e2964be8d26d6bb7a30b3d7391df4b5acdf8ec4df97c8f5fc1192079b8b32c"
-    },
-    {
-      "catches": [],
-      "bodyRevision": "0:6bb9abb8890081fdd42fcea9116eb8f74811825dfb3671e436c57dfad072ecbd",
-      "id": "control-admission:4b152abd4233b39bd366581e",
-      "families": [
-        {
-          "occurrenceCount": 0,
-          "family": "loop",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "return",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "throw",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        }
-      ],
-      "functionId": "standalone:field-initializer:static:Main|Main::sameModuleValue",
-      "pipelineRevision": "ocaml-standalone-expression-plans-v15",
-      "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
-      "revision": "sha256:59befe716995041842c731d0cbdd58f0a82580ee2c69266e82aaf9afaa286db3"
     },
     {
       "catches": [],
@@ -22904,38 +22840,6 @@
       "pipelineRevision": "ocaml-function-plans-v112",
       "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
       "revision": "sha256:631145c1ff9069840a83385b50411266d8225d35e71a3b407ec73b387e657b0f"
-    },
-    {
-      "catches": [],
-      "bodyRevision": "0:eb1fd67d231e4f0870005973a38c3131122348a9dffafb95187efa20b7c72c17",
-      "id": "control-admission:8af34783f959a7584690732f",
-      "families": [
-        {
-          "occurrenceCount": 0,
-          "family": "loop",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "return",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        },
-        {
-          "occurrenceCount": 0,
-          "family": "throw",
-          "status": "not-needed",
-          "decisionCount": 0,
-          "blockers": []
-        }
-      ],
-      "functionId": "standalone:field-initializer:static:Main|Main::localValue",
-      "pipelineRevision": "ocaml-standalone-expression-plans-v15",
-      "programRevision": "f945901f6b7151fa17f23d0a465c4e276393593c3735272cb2f28f7d25780633",
-      "revision": "sha256:a9f06991e7e4cb44a438191d657cf9a0dd4385f902630601f239f00b8f3883a0"
     },
     {
       "catches": [],

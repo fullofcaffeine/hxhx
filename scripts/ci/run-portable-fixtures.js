@@ -14,6 +14,10 @@ const repoRoot = path.resolve(__dirname, '../..')
 const fixtureRoot = path.join(repoRoot, 'test/portable/fixtures')
 const fixtureRunner = path.join(repoRoot, 'scripts/test-portable.sh')
 const defaultFixtureTimeoutSeconds = 30 * 60
+// Hosted CI pins a much smaller deadline. The larger explicit-local ceiling
+// accommodates adversarial fixtures with dozens of independent inspector runs
+// when several repositories share one reduced-priority build host.
+const maximumFixtureTimeoutSeconds = 4 * 60 * 60
 const terminationGraceMs = 500
 
 function fail(message) {
@@ -78,8 +82,8 @@ async function runPool(tasks, jobs, runner, { isFailure = () => false, onFailure
 /** Converts the fixture deadline setting into a safe number of seconds. */
 function parseTimeoutSeconds(value) {
 	const raw = value == null || value === '' ? String(defaultFixtureTimeoutSeconds) : String(value)
-	if (!/^[1-9][0-9]*$/.test(raw) || Number(raw) > 3600) {
-		fail(`PORTABLE_FIXTURE_TIMEOUT_SECONDS must be an integer from 1 through 3600, got: ${raw}`)
+	if (!/^[1-9][0-9]*$/.test(raw) || Number(raw) > maximumFixtureTimeoutSeconds) {
+		fail(`PORTABLE_FIXTURE_TIMEOUT_SECONDS must be an integer from 1 through ${maximumFixtureTimeoutSeconds}, got: ${raw}`)
 	}
 	return Number(raw)
 }

@@ -39,7 +39,9 @@ async function main() {
 	assert.strictEqual(parseJobs(['--jobs', '3']), 3)
 	assert.throws(() => parseJobs(['--jobs', '0']), /positive integer/)
 	assert.strictEqual(parseTimeoutSeconds('9'), 9)
-	assert.throws(() => parseTimeoutSeconds('0'), /integer from 1 through 3600/)
+	assert.strictEqual(parseTimeoutSeconds('14400'), 14400)
+	assert.throws(() => parseTimeoutSeconds('0'), /integer from 1 through 14400/)
+	assert.throws(() => parseTimeoutSeconds('14401'), /integer from 1 through 14400/)
 	assert.deepStrictEqual(parseShard(null, null), { index: 0, count: 1 })
 	assert.deepStrictEqual(parseShard('2', '3'), { index: 2, count: 3 })
 	assert.throws(() => parseShard('2', '2'), /zero-based shard/)
@@ -118,7 +120,9 @@ async function main() {
 			args: ['-e', parentScript, grandchildPidPath],
 			cwd: process.cwd(),
 			env: process.env,
-			timeoutMs: 150,
+			// Repository gates run at reduced scheduling priority on shared hosts.
+			// Give the child enough time to start before testing tree cleanup.
+			timeoutMs: 2000,
 			activeChildren
 		})
 		assert.strictEqual(timedOut.timedOut, true)

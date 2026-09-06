@@ -9,11 +9,13 @@ MANIFEST_FILE="out/ocaml_artifact_manifest.json"
 MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
+UNPLANNED_THROW_LOG="$(mktemp)"
+UNPLANNED_THROW_OUTPUT="out-unplanned-throw-$$"
 repeat_build_args=(-D ocaml_build=native)
 if [ "${PORTABLE_NATIVE_SURFACE_STRICT:-0}" = "1" ]; then
 	repeat_build_args+=(-D ocaml_portable_native_surface=error)
 fi
-trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
+trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION" "$UNPLANNED_THROW_LOG"; rm -rf "$UNPLANNED_THROW_OUTPUT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
 	echo "Missing generated exact-throw source or lowering report" >&2
@@ -41,16 +43,18 @@ if (report.schemaVersion !== 86
 
 const throws = report.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (throws.length !== 13) {
-	fail(`expected 13 represented throw decisions, got ${throws.length}`)
+if (throws.length !== 15) {
+	fail(`expected 15 represented throw decisions, got ${throws.length}`)
 }
 const expectedByFunction = new Map([
 	['throwInt', 1],
 	['throwBool', 1],
 	['throwString', 1],
+	['throwNull', 1],
 	['throwNullString', 1],
 	['throwNullableInt', 1],
 	['throwNullableBool', 1],
+	['throwAnonymous', 1],
 	['rethrowInt', 2],
 	['rethrowNullableInt', 1],
 	['catchExplicitValueException', 1],
@@ -73,8 +77,10 @@ const expectedCarrier = new Map([
 	['Int', 'int'],
 	['Bool', 'bool'],
 	['String', 'string'],
+	['Dynamic', 'Obj.t'],
 	['Null<Int>', 'Obj.t'],
 	['Null<Bool>', 'Obj.t'],
+	['anonymous{p:String,s:Bool}', 'Obj.t'],
 	['OracleCustomException', 'haxe-class-runtime-tagged-carrier-v1:OracleCustomException'],
 	['haxe.Exception', 'Haxe_Exception.t'],
 	['haxe.ValueException', 'Haxe_ValueException.t']
@@ -83,8 +89,10 @@ const expectedConversion = new Map([
 	['Int', 'repr-and-recover-exact-value'],
 	['Bool', 'box-bool-and-recover-exact-value'],
 	['String', 'repr-and-recover-exact-value'],
+	['Dynamic', 'preserve-null-literal-throw-carrier'],
 	['Null<Int>', 'preserve-nullable-int-throw-carrier'],
 	['Null<Bool>', 'normalize-nullable-bool-throw-carrier'],
+	['anonymous{p:String,s:Bool}', 'preserve-anonymous-throw-carrier'],
 	['OracleCustomException', 'box-runtime-class-throw-carrier'],
 	['haxe.Exception', 'box-haxe-exception-wrapper-throw-carrier'],
 	['haxe.ValueException', 'box-haxe-exception-wrapper-throw-carrier']
@@ -93,13 +101,16 @@ const expectedProof = new Map([
 	['Int', 'exact-value-throw-control-v1'],
 	['Bool', 'exact-value-throw-control-v1'],
 	['String', 'exact-value-throw-control-v1'],
+	['Dynamic', 'null-literal-throw-control-v1'],
 	['Null<Int>', 'nullable-int-throw-control-v1'],
 	['Null<Bool>', 'nullable-bool-throw-control-v1'],
+	['anonymous{p:String,s:Bool}', 'exact-anonymous-carrier-throw-control-v1'],
 	['OracleCustomException', 'runtime-tagged-class-throw-control-v1'],
 	['haxe.Exception', 'exact-haxe-exception-wrapper-throw-control-v1'],
 	['haxe.ValueException', 'exact-haxe-exception-wrapper-throw-control-v1']
 ])
 const expectedRepresentation = new Map([
+	['Dynamic', 'control-representation:null-literal:runtime-obj-v1'],
 	['OracleCustomException', 'control-representation:runtime-class-throw-v1:OracleCustomException'],
 	['haxe.Exception', 'control-representation:haxe.Exception:runtime-wrapper-v1'],
 	['haxe.ValueException', 'control-representation:haxe.ValueException:runtime-wrapper-v1']
@@ -136,6 +147,7 @@ for (const control of throws) {
 		|| payload.outputRepresentationId !== payload.inputRepresentationId
 		|| payload.conversion !== expectedConversion.get(payload.inputSemanticTypeId)
 		|| payload.proofId !== expectedProof.get(payload.inputSemanticTypeId)
+		|| (payload.inputSemanticTypeId === 'anonymous{p:String,s:Bool}' && !sha256.test(payload.representationRevision))
 		|| !payload.proofClaim) {
 		fail(`throw decision ${control.id} has an incomplete exact-value exception crossing`)
 	}
@@ -203,10 +215,16 @@ if (!boolBody.includes('hx_throw_typed_rtti (HxRuntime.box_bool true) ["Dynamic"
 	|| boolBody.includes('["Dynamic"; "Bool"]')) {
 	fail('exact Bool throw syntax did not consume its sealed boxing and tag policy')
 }
-const stringBody = functionBody('throwString', 'throwNullString')
+const stringBody = functionBody('throwString', 'throwNull')
 if (!stringBody.includes('hx_throw_typed_rtti (Obj.repr "boom") ["Dynamic"]')
 	|| stringBody.includes('["Dynamic"; "String"]')) {
 	fail('exact String throw syntax did not defer the String tag to the runtime value')
+}
+const nullBody = functionBody('throwNull', 'throwNullString')
+if (!nullBody.includes('hx_throw_typed_rtti (HxRuntime.hx_null) ["Dynamic"]')
+	|| nullBody.includes('Obj.repr')
+	|| nullBody.includes('Obj.magic')) {
+	fail('direct null throw did not consume its sealed canonical sentinel carrier')
 }
 const nullStringBody = functionBody('throwNullString', 'throwNullableInt')
 if (!nullStringBody.includes('HxString.hx_null_string')
@@ -220,7 +238,7 @@ if (!nullableIntBody.includes('hx_throw_typed_rtti value ["Dynamic"]')
 	|| nullableIntBody.includes('Obj.magic')) {
 	fail('exact Null<Int> throw did not preserve its existing carrier')
 }
-const nullableBoolBody = functionBody('throwNullableBool', 'rethrowInt')
+const nullableBoolBody = functionBody('throwNullableBool', 'throwAnonymous')
 if ((nullableBoolBody.match(/HxRuntime\.is_null __throw_nullable_bool_/g) || []).length !== 1
 	|| (nullableBoolBody.match(/HxRuntime\.box_bool \(HxRuntime\.unbox_bool_or_obj __throw_nullable_bool_/g) || []).length !== 1
 	|| nullableBoolBody.includes('Obj.magic')
@@ -228,21 +246,22 @@ if ((nullableBoolBody.match(/HxRuntime\.is_null __throw_nullable_bool_/g) || [])
 	|| nullableBoolBody.includes('["Dynamic"; "Int"]')) {
 	fail('exact Null<Bool> throw did not normalize its non-null exception payload once')
 }
+const anonymousBody = functionBody('throwAnonymous', 'rethrowInt')
+if (!anonymousBody.includes('hx_throw_typed_rtti value ["Dynamic"]')
+	|| anonymousBody.includes('Obj.repr value')
+	|| anonymousBody.includes('Obj.magic')) {
+	fail('anonymous-object throw did not preserve its sealed Obj.t carrier')
+}
 const rethrowBody = functionBody('rethrowInt', 'rethrowNullableInt')
 if ((rethrowBody.match(/hx_throw_typed_rtti/g) || []).length < 2
 	|| rethrowBody.includes('["Dynamic"; "Int"]')) {
 	fail('exact Int rethrow did not use its sealed exception-channel decisions')
 }
-const nullableRethrowBody = functionBody('rethrowNullableInt', 'mixedThrow')
+const nullableRethrowBody = functionBody('rethrowNullableInt', 'catchInt')
 if (!nullableRethrowBody.includes('hx_throw_typed_rtti nullable ["Dynamic"]')
 	|| nullableRethrowBody.includes('hx_throw_typed_rtti (Obj.repr nullable)')
 	|| nullableRethrowBody.includes('Obj.magic')) {
 	fail('nullable Int rethrow did not preserve the sealed nullable carrier')
-}
-const mixedBody = functionBody('mixedThrow', 'catchInt')
-if (!mixedBody.includes('["Dynamic"; "Int"]')
-	|| !mixedBody.includes('["Dynamic"; "Float"]')) {
-	fail('the mixed supported/unsupported function did not remain wholly on the legacy throw path')
 }
 const valueExceptionBody = functionBody('catchValueExceptionInt', 'catchExceptionString')
 if (!valueExceptionBody.includes('"haxe.ValueException" || not (HxRuntime.tags_has')
@@ -279,6 +298,20 @@ if (!customBody.includes('"haxe.ValueException" || not (HxRuntime.tags_has')
 }
 NODE
 
+if haxe build.hxml -D unplanned_throw_negative -D ocaml_output="$UNPLANNED_THROW_OUTPUT" >"$UNPLANNED_THROW_LOG" 2>&1; then
+	echo "The OCaml target accepted a function whose throw family has no sealed plan" >&2
+	exit 1
+fi
+if ! grep -Fq "a throw reached syntax after its exception-control family was rejected" "$UNPLANNED_THROW_LOG"; then
+	echo "The OCaml target rejected an unplanned throw without the hard-cut diagnostic" >&2
+	cat "$UNPLANNED_THROW_LOG" >&2
+	exit 1
+fi
+if [ -d "$UNPLANNED_THROW_OUTPUT" ] && grep -R -Fq --include='*.ml' 'mixedThrow' "$UNPLANNED_THROW_OUTPUT"; then
+	echo "The rejected mixed-throw function still reached generated OCaml syntax" >&2
+	exit 1
+fi
+
 cp "$REPORT_FILE" "$REPORT_COPY"
 cp "$MANIFEST_FILE" "$MANIFEST_COPY"
 haxe build.hxml "${repeat_build_args[@]}"
@@ -304,7 +337,7 @@ const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
 if (report.schemaVersion !== 47
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| throws.length !== 13
+	|| throws.length !== 15
 	|| wrapperClauses.length !== 7
 	|| wrapperClauses.some(clause =>
 		clause.runtimeTag !== null
@@ -313,7 +346,7 @@ if (report.schemaVersion !== 47
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 13 validated represented throw decisions')
+	throw new Error('public inspection did not expose the 15 validated represented throw decisions')
 }
 NODE
 
@@ -339,6 +372,62 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 fi
 if ! grep -q "invalid represented Haxe exception crossing" "$TAMPER_INSPECTION"; then
 	echo "Public inspection rejected the corrupt throw without the expected actionable reason" >&2
+	cat "$TAMPER_INSPECTION" >&2
+	exit 1
+fi
+cp "$REPORT_COPY" "$REPORT_FILE"
+cp "$MANIFEST_COPY" "$MANIFEST_FILE"
+
+node - "$REPORT_FILE" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const transfer = report.controls.find(control =>
+	control.kind === 'throw' && control.functionId.includes('|function|throwNull|'))
+if (!transfer)
+	throw new Error('missing direct null throw to corrupt')
+transfer.payload.inputRepresentationId = 'control-representation:Dynamic:runtime-obj-v1'
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output out --require-lowering --json >"$TAMPER_INSPECTION" 2>&1; then
+	echo "Public inspection accepted a direct null throw with a corrupt carrier identity" >&2
+	exit 1
+fi
+if ! grep -q "invalid null-literal exception carrier" "$TAMPER_INSPECTION"; then
+	echo "Public inspection rejected the corrupt null throw without the expected actionable reason" >&2
+	cat "$TAMPER_INSPECTION" >&2
+	exit 1
+fi
+cp "$REPORT_COPY" "$REPORT_FILE"
+cp "$MANIFEST_COPY" "$MANIFEST_FILE"
+
+node - "$REPORT_FILE" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const transfer = report.controls.find(control =>
+	control.kind === 'throw' && control.functionId.includes('|function|throwAnonymous|'))
+if (!transfer)
+	throw new Error('missing anonymous-object throw to corrupt')
+transfer.payload.representationRevision = 'sha256:' + '0'.repeat(64)
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output out --require-lowering --json >"$TAMPER_INSPECTION" 2>&1; then
+	echo "Public inspection accepted an anonymous-object throw with a stale representation revision" >&2
+	exit 1
+fi
+if ! grep -q "missing or stale program-representation revision" "$TAMPER_INSPECTION"; then
+	echo "Public inspection rejected the corrupt anonymous-object throw without the expected actionable reason" >&2
 	cat "$TAMPER_INSPECTION" >&2
 	exit 1
 fi
@@ -402,4 +491,4 @@ fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
-echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=13 wrapper_catches=7"
+echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=15 wrapper_catches=7"

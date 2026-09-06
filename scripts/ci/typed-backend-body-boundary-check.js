@@ -22,6 +22,10 @@ function haxeFiles(entry) {
 
 const files = roots.flatMap(haxeFiles);
 const failures = [];
+const typedClassFactPlanCuts = new Set([
+  "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
+  "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+]);
 
 function requireFragment(relative, fragment, claim) {
   const source = fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -58,7 +62,7 @@ for (const file of files) {
   }
 
   if (
-    relative !== "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx" &&
+    !typedClassFactPlanCuts.has(relative) &&
     source.includes(".requireSemanticFacts(")
   ) {
     failures.push(`${relative}: observation-only typed class facts reached a production backend before a target-owned plan cut`);
@@ -147,6 +151,21 @@ requireFragment(
   "packages/hxhx-core/src/TypedBackendClassProjection.hx",
   "public function requireSemanticFacts():TypedBackendClassSemanticFacts",
   "strict backend class semantic-fact accessor",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+  "classes.push(copyClass(classProjection.requireSemanticFacts()));",
+  "single native OCaml semantic-fact plan cut",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+  "return new OcamlTargetDeclarationRequest(hostProgramRevision, classes);",
+  "copied target-owned OCaml declaration request",
+);
+rejectFragment(
+  "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetProgramAdapter.hx",
+  ".requireSemanticFacts(",
+  "native OCaml program adapter bypassed the declaration-request plan cut",
 );
 requireFragment(
   "packages/hxhx-core/src/MacroExpandedProgram.hx",

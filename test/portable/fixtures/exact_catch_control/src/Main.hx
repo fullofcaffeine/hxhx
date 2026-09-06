@@ -104,9 +104,10 @@ class Main {
 	/**
 	 * Proves each neighboring `try` receives its own sealed catch decision.
 	 *
-	 * Bool and Float use different target carriers, so both clauses must retain
-	 * their own runtime tag, payload conversion, and source owner even though
-	 * they appear in the same Haxe function.
+	 * Bool and Float catches use different target carriers, so both clauses must
+	 * retain their own runtime tag, payload conversion, and source owner even
+	 * though they appear in the same Haxe function. The Float enters through the
+	 * sealed Dynamic throw carrier because direct Float throws are not admitted.
 	 */
 	static function independentAdmission():String {
 		var result = "";
@@ -116,7 +117,8 @@ class Main {
 			result = "exact:" + value;
 		}
 		try {
-			throw 1.5;
+			final value:Dynamic = 1.5;
+			throw value;
 		} catch (value:Float) {
 			result += "|float:" + value;
 		}

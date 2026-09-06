@@ -4,6 +4,11 @@ class OracleCustomException extends haxe.Exception {
 	}
 }
 
+private typedef AnonymousThrowValue = {
+	var p:String;
+	var s:Bool;
+}
+
 class Main {
 	static function printLine(value:String):Void {
 		#if js
@@ -25,6 +30,10 @@ class Main {
 		throw "boom";
 	}
 
+	static function throwNull():Void {
+		throw null;
+	}
+
 	static function throwNullString():Void {
 		final value:String = null;
 		throw value;
@@ -35,6 +44,10 @@ class Main {
 	}
 
 	static function throwNullableBool(value:Null<Bool>):Void {
+		throw value;
+	}
+
+	static function throwAnonymous(value:AnonymousThrowValue):Void {
 		throw value;
 	}
 
@@ -55,11 +68,13 @@ class Main {
 		}
 	}
 
+	#if unplanned_throw_negative
 	static function mixedThrow(useInt:Bool):Void {
 		if (useInt)
 			throw 7;
 		throw 1.5;
 	}
+	#end
 
 	static function catchInt():String {
 		try {
@@ -88,6 +103,17 @@ class Main {
 			return "string=" + value;
 		}
 		return "string=miss";
+	}
+
+	static function catchNull():String {
+		try {
+			throwNull();
+		} catch (_:String) {
+			return "null=wrong-string";
+		} catch (_:Dynamic) {
+			return "null=dynamic";
+		}
+		return "null=miss";
 	}
 
 	static function catchNullString():String {
@@ -134,6 +160,16 @@ class Main {
 			return "nullableBool=dynamic";
 		}
 		return "nullableBool=miss";
+	}
+
+	static function catchAnonymous():String {
+		final original:AnonymousThrowValue = {p: "token", s: true};
+		try {
+			throwAnonymous(original);
+		} catch (_:Dynamic) {
+			return "anonymous=true";
+		}
+		return "anonymous=miss";
 	}
 
 	static function catchNullableRethrow(value:Null<Int>):String {
@@ -217,6 +253,7 @@ class Main {
 		return "rethrow=miss";
 	}
 
+	#if unplanned_throw_negative
 	static function catchMixed():String {
 		try {
 			mixedThrow(true);
@@ -225,18 +262,21 @@ class Main {
 		}
 		return "mixed=miss";
 	}
+	#end
 
 	static function main() {
 		printLine([
 			catchInt(),
 			catchBool(),
 			catchString(),
+			catchNull(),
 			catchNullString(),
 			catchDynamicInt(),
 			catchNullableInt(7),
 			catchNullableInt(null),
 			catchNullableBool(true),
 			catchNullableBool(null),
+			catchAnonymous(),
 			catchNullableRethrow(9),
 			catchNullableRethrow(null),
 			catchValueExceptionInt(),
@@ -245,8 +285,10 @@ class Main {
 			catchExplicitException(),
 			catchCustomException(),
 			catchExceptionBeforeInt(),
-			catchRethrow(),
-			catchMixed()
+			catchRethrow()
+			#if unplanned_throw_negative
+			, catchMixed()
+			#end
 		].join(","));
 	}
 }

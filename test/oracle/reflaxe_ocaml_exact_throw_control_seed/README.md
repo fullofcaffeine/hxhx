@@ -17,13 +17,28 @@ catch and reaches `Dynamic`. The Bool case deliberately checks an earlier Int
 catch so targets cannot rely on OCaml's ambiguous immediate representation.
 The distinction also survives a function call and nullable-Int rethrow.
 
+The anonymous-object case throws an admitted `{p:String, s:Bool}` value and
+catches it through `Dynamic`. This freezes the source behavior needed by
+`haxe.Template`: the target must carry the existing object through the
+exception channel without inventing a second shape or rejecting the other
+throws in the same function.
+
+The direct-null case freezes a second `haxe.Template` requirement. A bare
+`throw null` reaches `Dynamic`, but it does not match `String`. The OCaml target
+must use its canonical null sentinel for that exact typed occurrence. It must
+not treat every unresolved value as a supported Dynamic throw.
+
 The null-String case is intentional. Haxe's `String` type is nullable in this
 compatibility mode, but upstream Haxe 4.3.7 routes a null String to the
 `Dynamic` catch rather than the `String` catch. The target therefore cannot
 derive all catch tags from the static source type.
 
 Run `npm run test:reflaxe-ocaml:exact-throw-oracle` to compare interpreter,
-JavaScript, and Neko behavior with `expected.stdout`. The portable OCaml
-fixture consumes this same Haxe source. The oracle establishes behavior only;
-the reflaxe.ocaml implementation remains independently Haxe-authored and does
-not copy upstream compiler code.
+JavaScript, and Neko behavior with `expected.stdout`. That command enables the
+`unplanned_throw_negative` case so upstream Haxe also records a function that
+mixes represented `Int` and currently unrepresented `Float` throws. The
+portable OCaml fixture compiles the represented cases normally and compiles
+that mixed function separately as a negative test: it must stop before target
+syntax because the complete throw family has no sealed plan. The oracle
+establishes behavior only; the reflaxe.ocaml implementation remains
+independently Haxe-authored and does not copy upstream compiler code.

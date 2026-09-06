@@ -595,7 +595,7 @@ class OcamlFunctionPlanSealer {
 			if (payload.inputSemanticTypeId == "Dynamic") {
 				final validDynamic = switch (control.kind) {
 					case Return: OcamlControlPlan.isAdmittedDynamicReturnPayload(payload);
-					case Throw: OcamlControlPlan.isAdmittedDynamicThrowPayload(payload);
+					case Throw: OcamlControlPlan.isAdmittedDynamicThrowPayload(payload) || OcamlControlPlan.isAdmittedNullLiteralThrowPayload(payload);
 					case _: false;
 				}
 				if (!validDynamic) {

@@ -1198,6 +1198,39 @@ class ReflaxeOcamlInspection {
 						throw 'Control decision "${control.id}" has an invalid runtime-tagged class exception carrier.';
 					}
 					final representedArrayPayload = payload.arrayDescriptorId != null;
+					final anonymousPayload = payload.inputSemanticTypeId.startsWith("anonymous{")
+						&& payload.inputSemanticTypeId.endsWith("}")
+						&& payload.inputCarrierTypeId == "Obj.t"
+						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+						&& payload.outputCarrierTypeId == "Obj.t"
+						&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
+						&& payload.outputRepresentationId == payload.inputRepresentationId
+						&& payload.representationRevision != null
+						&& payload.arrayDescriptorId == null
+						&& payload.arrayDescriptorRevision == null
+						&& payload.arrayLiteralProducerId == null
+						&& payload.arrayLiteralProducerPlanRevision == null
+						&& payload.nominalRepresentation == null;
+					final claimsNullLiteralPayload = payload.conversion == "preserve-null-literal-throw-carrier"
+						|| payload.proofId == "null-literal-throw-control-v1"
+						|| control.proofId == "null-literal-throw-control-v1"
+						|| payload.inputRepresentationId == "control-representation:null-literal:runtime-obj-v1"
+						|| payload.outputRepresentationId == "control-representation:null-literal:runtime-obj-v1";
+					final nullLiteralPayload = payload.inputSemanticTypeId == "Dynamic"
+						&& payload.inputCarrierTypeId == "Obj.t"
+						&& payload.outputSemanticTypeId == "Dynamic"
+						&& payload.outputCarrierTypeId == "Obj.t"
+						&& payload.inputRepresentationId == "control-representation:null-literal:runtime-obj-v1"
+						&& payload.outputRepresentationId == payload.inputRepresentationId
+						&& payload.representationRevision == null
+						&& payload.arrayDescriptorId == null
+						&& payload.arrayDescriptorRevision == null
+						&& payload.arrayLiteralProducerId == null
+						&& payload.arrayLiteralProducerPlanRevision == null
+						&& payload.nominalRepresentation == null;
+					if (claimsNullLiteralPayload && !nullLiteralPayload) {
+						throw 'Control decision "${control.id}" has an invalid null-literal exception carrier.';
+					}
 					if (payload.representationRevision != null) {
 						final programRepresentation = representationById.get(payload.inputRepresentationId);
 						if (programRepresentation == null
@@ -1242,11 +1275,23 @@ class ReflaxeOcamlInspection {
 						}
 					}
 					if (payload.inputSemanticTypeId == "Dynamic") {
+						final dynamicPayload = payload.inputCarrierTypeId == "Obj.t"
+							&& payload.outputSemanticTypeId == "Dynamic"
+							&& payload.outputCarrierTypeId == "Obj.t"
+							&& payload.inputRepresentationId == "control-representation:Dynamic:runtime-obj-v1"
+							&& payload.outputRepresentationId == "control-representation:Dynamic:runtime-obj-v1"
+							&& payload.nominalRepresentation == null;
+						if (!dynamicPayload && !nullLiteralPayload) {
+							/*
+								A bare null literal has a Dynamic-only runtime tag but a distinct
+								control representation, so inspection cannot confuse it with an
+								arbitrary Dynamic expression.
+							 */
+							throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+						}
 						if (payload.inputCarrierTypeId != "Obj.t"
 							|| payload.outputSemanticTypeId != "Dynamic"
 							|| payload.outputCarrierTypeId != "Obj.t"
-							|| payload.inputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
-							|| payload.outputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
 							|| payload.nominalRepresentation != null) {
 							throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
 						}
@@ -1266,7 +1311,7 @@ class ReflaxeOcamlInspection {
 						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
 							'Control decision "${control.id}" output', control.programRevision);
 					}
-					final expectedConversion = representedArrayPayload ? "box-represented-array-throw-carrier" : runtimeClassPayload ? "box-runtime-class-throw-carrier" : switch (payload.inputSemanticTypeId) {
+					final expectedConversion = representedArrayPayload ? "box-represented-array-throw-carrier" : runtimeClassPayload ? "box-runtime-class-throw-carrier" : nullLiteralPayload ? "preserve-null-literal-throw-carrier" : anonymousPayload ? "preserve-anonymous-throw-carrier" : switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
@@ -1275,11 +1320,12 @@ class ReflaxeOcamlInspection {
 						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
 						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
 					};
-					final expectedTags = representedArrayPayload ? ["Dynamic", "Array"] : runtimeClassPayload ? ["Dynamic"] : switch (payload.inputSemanticTypeId) {
-						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
-						case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
-					};
-					final expectedProofId = representedArrayPayload ? "represented-array-throw-control-v1" : runtimeClassPayload ? "runtime-tagged-class-throw-control-v1" : switch (payload.inputSemanticTypeId) {
+					final expectedTags = representedArrayPayload ? ["Dynamic", "Array"] : runtimeClassPayload
+						|| anonymousPayload ? ["Dynamic"] : switch (payload.inputSemanticTypeId) {
+							case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
+							case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
+						};
+					final expectedProofId = representedArrayPayload ? "represented-array-throw-control-v1" : runtimeClassPayload ? "runtime-tagged-class-throw-control-v1" : nullLiteralPayload ? "null-literal-throw-control-v1" : anonymousPayload ? "exact-anonymous-carrier-throw-control-v1" : switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
