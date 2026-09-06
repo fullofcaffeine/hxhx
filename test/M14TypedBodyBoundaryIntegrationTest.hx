@@ -78,6 +78,18 @@ class M14TypedBodyBoundaryIntegrationTest {
 		return false;
 	}
 
+	static function containsFieldCallNamed(expression:TypedExpr, name:String):Bool {
+		if (expression.getTag() == TypedExprTag.Call) {
+			final children = expression.getExpressions();
+			if (children.length > 0 && children[0].getTag() == TypedExprTag.FieldRead && children[0].getTexts()[0] == name)
+				return true;
+		}
+		for (child in expression.getExpressions())
+			if (containsFieldCallNamed(child, name))
+				return true;
+		return false;
+	}
+
 	static function containsTag(expression:TypedExpr, tag:TypedExprTag):Bool {
 		if (expression.getTag() == tag)
 			return true;
@@ -530,6 +542,30 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(ocaml.indexOf("__hxhx_try") < 0, "OCaml backend leaked the shared structural sentinel into generated source");
 	}
 
+	/** Keep a call and comparison visible inside the Neko startup try expression. **/
+	static function assertNekoStartupTryCatchExpression():Void {
+		final parsed = ParserStage.parse([
+			"class NativeLoader {",
+			"  public static function load(library:String, primitive:String, arity:Int):Dynamic return null;",
+			"}",
+			"class Main {",
+			"  static function startup(library:String):Bool {",
+			"    var available = try NativeLoader.load(library, \"probe\", 0) != null catch (error:Dynamic) false;",
+			"    return available;",
+			"  }",
+			"}",
+		].join("\n"), "NekoStartupTry.hx");
+		final startup = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "startup");
+		final available = variableInitializer(startup.getBody(), "available");
+		assertTrue(containsCallNamed(available, "__hxhx_try"), "Neko startup try/catch did not become a structural shared call");
+		assertTrue(containsFieldCallNamed(available, "load"), "Neko startup try/catch hid its loader call");
+		assertTrue(containsTag(available, TypedExprTag.Binary), "Neko startup try/catch hid its null comparison");
+		assertTrue(!containsTag(available, TypedExprTag.Opaque), "Neko startup try/catch retained an opaque source payload");
+		assertTrue(available.getType().getSemanticKey() == "primitive:Bool", "Neko startup try/catch lost its Boolean result type");
+		assertTrue(available.getPosition() != null && available.getPosition().getLine() == 6, "Neko startup try/catch lost its source line");
+		TypedBodyInvariant.assertFunction(startup);
+	}
+
 	static function assertStructuralTerminalReturnBlock():Void {
 		final position = new HxPos(0, 1, 1);
 		final raw = [
@@ -840,6 +876,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertNullSafeCallStructure();
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
+		assertNekoStartupTryCatchExpression();
 		assertStructuralTerminalReturnBlock();
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();
