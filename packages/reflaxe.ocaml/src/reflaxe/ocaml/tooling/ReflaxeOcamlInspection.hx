@@ -4854,10 +4854,38 @@ class ReflaxeOcamlInspection {
 				throw 'Integer unary decision "${decision.id}" runtime requirement "$requirementId" disagrees with its sealed operation.';
 			referenced.set(requirementId, true);
 		}
+		for (requirement in requirementValues) {
+			if (requiredString(requirement, "semanticCapability") != OcamlRuntimeRequirementLedger.HAXE_DYNAMIC_BOOL_LITERAL)
+				continue;
+			validateTargetLiteralRuntimeRequirement(requirement);
+			referenced.set(requiredString(requirement, "id"), true);
+		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))
 				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
 		return expectedCount;
+	}
+
+	/** Checks the source-owned runtime row for one Dynamic Boolean literal. **/
+	static function validateTargetLiteralRuntimeRequirement(requirement:Dynamic):Void {
+		final id = requiredString(requirement, "id");
+		final decisionId = requiredString(requirement, "decisionId");
+		final subject = requiredObject(requirement, "subject");
+		final subjectId = requiredString(subject, "id");
+		if (id != decisionId + ":runtime:" + OcamlRuntimeRequirementLedger.HAXE_DYNAMIC_BOOL_LITERAL
+			|| !~/^target-literal:[0-9a-f]{64}$/.match(decisionId)
+			|| requiredString(requirement, "sourceKind") != "haxe-expression"
+			|| requiredString(requirement, "cause") != "lowering-decision"
+			|| requiredString(subject, "kind") != "haxe-type"
+			|| !StringTools.startsWith(subjectId, "Bool -> ")
+			|| StringTools.trim(subjectId.substr("Bool -> ".length)).length == 0
+			|| requiredString(requirement, "implementationFeature") != "haxe-dynamic-bool-literal-v1"
+			|| requiredStringArray(requirement, "rootModules").join(",") != "HxRuntime"
+			|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable"
+			|| requiredString(requirement,
+				"explanation") != "The sealed Haxe Boolean literal enters a Dynamic or type-parameter carrier, so HxRuntime.box_bool preserves its identity separately from integer values.") {
+			throw 'Dynamic Boolean literal runtime requirement "$id" does not match its sealed target-literal contract.';
+		}
 	}
 
 	/**

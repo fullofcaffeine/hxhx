@@ -824,6 +824,12 @@ class OcamlLoweringReportWriter {
 				}
 			}
 		}
+		for (requirement in requirements) {
+			if (requirement.semanticCapability != OcamlRuntimeRequirementLedger.HAXE_DYNAMIC_BOOL_LITERAL)
+				continue;
+			OcamlRuntimeRequirementLedger.requireTargetLiteralRequirement(requirement);
+			includedRequirementIds.set(requirement.id, true);
+		}
 		final includedRequirements = [
 			for (requirement in requirements)
 				if (includedRequirementIds.exists(requirement.id)) requirement

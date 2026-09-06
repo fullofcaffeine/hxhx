@@ -3,6 +3,8 @@ import backend.ocaml.HxhxOcamlTargetBindingAdapter;
 import backend.ocaml.HxhxOcamlTargetLiteralAdapter;
 import backend.ocaml.HxhxOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.target.OcamlTargetExpressionFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.target.OcamlTargetExpressionPath;
@@ -15,6 +17,8 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature
 import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeRequirementContract;
 import reflaxe.ocaml.target.OcamlTargetProgramCore;
 import reflaxe.ocaml.target.OcamlTargetProgramRequest;
 
@@ -35,6 +39,7 @@ class NativeDeclarationAdapterFixture {
 			throw "stock Haxe and native hxhx produced different integer literal facts";
 		if (new OcamlASTPrinter().printExpr(OcamlTargetLiteralLowerer.buildNonNull(nativeInt, Direct)) != "7")
 			throw "native host could not execute the standalone target literal lowerer";
+		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
 		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
@@ -58,6 +63,25 @@ class NativeDeclarationAdapterFixture {
 		assertProgramCore(nativeInt);
 		assertUnsupportedExpressionFallsBack();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	/** Proves that native facts consume the same checked runtime-use contract as stock Haxe. **/
+	static function assertDynamicBoolLiteral():Void {
+		final fact = HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.boolLiteral(true, TyType.fromHintText("Dynamic"), HxPos.unknown()));
+		if (fact == null || fact.getCanonicalIdentity() != LiteralIdentityMacro.stockDynamicBool())
+			throw "stock Haxe and native hxhx produced different Dynamic Boolean literal facts";
+		final source:OcamlLoweredSourceSpan = {file: "src/NativeMain.hx", min: 10, max: 14};
+		final sourceId = "unit.NativeSample.main:target-literal:0";
+		final decision = OcamlTargetLiteralRuntimeUseContract.forLiteral(fact, DynamicOrTypeParameter, sourceId, source);
+		if (decision == null)
+			throw "native Dynamic Boolean literal did not select runtime authority";
+		final requirements = OcamlTargetLiteralRuntimeRequirementContract.requirementsFor(decision);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, "portable", requirements, decision.runtimeUseOccurrences);
+		final authorization = OcamlTargetLiteralRuntimeUseContract.authorize(decision, fact, DynamicOrTypeParameter, sourceId, source, authority);
+		final expression = OcamlTargetLiteralLowerer.buildNonNull(fact, DynamicOrTypeParameter, authorization);
+		authority.reconcileExpression(expression);
+		if (new OcamlASTPrinter().printExpr(expression) != "HxRuntime.box_bool true")
+			throw "native host could not execute the checked Dynamic Boolean literal lowerer";
 	}
 
 	static function assertProgramCore(nativeInt:reflaxe.ocaml.target.OcamlTargetLiteralFact):Void {

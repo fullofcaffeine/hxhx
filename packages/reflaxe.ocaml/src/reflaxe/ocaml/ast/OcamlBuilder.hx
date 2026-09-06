@@ -22,6 +22,7 @@ import reflaxe.ocaml.target.OcamlTargetLiteralFact;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -323,6 +324,7 @@ class OcamlBuilder {
 	final objRefLocals:Map<Int, Bool> = [];
 
 	var tmpId:Int = 0;
+	final targetLiteralRuntimeUseCountBySource:Map<String, Int> = [];
 
 	// Tracks the exact lexical loop targets active while syntax builds one sealed
 	// expression owner. A break or continue must name the final target in this list.
@@ -6066,8 +6068,50 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 				}
 			case ThisValue | SuperValue | IntValue | BoolValue | StringValue:
-				OcamlTargetLiteralLowerer.buildNonNull(fact, targetLiteralCarrier(semanticType));
+				buildNonNullTargetLiteral(fact, targetLiteralCarrier(semanticType), position);
 		};
+	}
+
+	/** Gives the shared lowerer one checked helper only for a Dynamic Boolean literal. **/
+	function buildNonNullTargetLiteral(fact:OcamlTargetLiteralFact, carrier:OcamlTargetLiteralCarrier, position:Position):OcamlExpr {
+		if (!OcamlTargetLiteralRuntimeUseContract.needsRuntimeBox(fact, carrier))
+			return OcamlTargetLiteralLowerer.buildNonNull(fact, carrier);
+		final source = OcamlLoweredOrigin.sourceSpan(position);
+		final sourceId = targetLiteralRuntimeSourceId(fact, source);
+		final decision = OcamlTargetLiteralRuntimeUseContract.forLiteral(fact, carrier, sourceId, source);
+		if (decision == null)
+			throw 'reflaxe.ocaml [ocaml-target-literal:missing-runtime-use]: Dynamic Boolean literal "$sourceId" has no sealed runtime-use decision';
+		ctx.recordTargetLiteralRuntimeRequirement(decision);
+		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
+		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
+			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		final authorization = OcamlTargetLiteralRuntimeUseContract.authorize(decision, fact, carrier, sourceId, source, authority);
+		final expression = OcamlTargetLiteralLowerer.buildNonNull(fact, carrier, authorization);
+		authority.reconcileExpression(expression);
+		return expression;
+	}
+
+	/** Returns a stable owner for repeated identical literal facts at one source span. **/
+	function targetLiteralRuntimeSourceId(fact:OcamlTargetLiteralFact, source:reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan):String {
+		final binding = currentFunctionPlanBinding;
+		final scope = if (binding == null) {
+			final moduleId = ctx.currentModuleId == null ? "unknown-module" : ctx.currentModuleId;
+			final typeName = ctx.currentTypeName == null ? "unknown-type" : ctx.currentTypeName;
+			'module:$moduleId:$typeName';
+		} else {
+			binding.functionId + "@" + OcamlRuntimeUseModel.planRevision(binding);
+		}
+		final key = [
+			scope,
+			source.file,
+			Std.string(source.min),
+			Std.string(source.max),
+			fact.getCanonicalIdentity()
+		].join("|");
+		final previous = targetLiteralRuntimeUseCountBySource.get(key);
+		final ordinal = previous == null ? 0 : previous;
+		targetLiteralRuntimeUseCountBySource.set(key, ordinal + 1);
+		return '$scope:target-literal:${source.file}:${source.min}:${source.max}:$ordinal';
 	}
 
 	function targetLiteralCarrier(semanticType:Type):OcamlTargetLiteralCarrier {

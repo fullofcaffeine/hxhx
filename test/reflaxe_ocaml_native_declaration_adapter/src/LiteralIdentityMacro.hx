@@ -11,4 +11,12 @@ class LiteralIdentityMacro {
 			Context.error("stock Haxe adapter rejected an integer literal", Context.currentPos());
 		return macro $v{fact.getCanonicalIdentity()};
 	}
+
+	/** Returns the stock-host identity for a Boolean fact with a Dynamic type. **/
+	public static macro function stockDynamicBool():Expr {
+		final fact = HaxeOcamlTargetLiteralAdapter.fromConstant(TBool(true), Context.typeof(macro(null : Dynamic)));
+		if (fact == null)
+			Context.error("stock Haxe adapter rejected a Dynamic Boolean literal", Context.currentPos());
+		return macro $v{fact.getCanonicalIdentity()};
+	}
 }

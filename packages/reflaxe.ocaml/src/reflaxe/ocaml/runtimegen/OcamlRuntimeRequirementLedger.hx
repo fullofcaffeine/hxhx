@@ -69,6 +69,9 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseDecision;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeRequirementContract;
 
 using StringTools;
 
@@ -119,6 +122,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_REFLECT_RUNTIME_CALL = "haxe-reflect-runtime-call";
 	public static inline final HAXE_STD_IS_OF_TYPE = "haxe-std-is-of-type";
 	public static inline final HAXE_INT32_UNARY = "haxe-int32-unary";
+	public static inline final HAXE_DYNAMIC_BOOL_LITERAL = OcamlTargetLiteralRuntimeUseContract.CAPABILITY;
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -154,6 +158,28 @@ class OcamlRuntimeRequirementLedger {
 			requirementIds:Array<String>):Void {
 		for (requirementId in requirementIds)
 			record(requirementForPlaceCapability(decisionId, originId, originId, source, semanticTypeId, requirementId));
+	}
+
+	/** Returns the exact HxRuntime need selected by one Dynamic Boolean literal. **/
+	public static function requirementsForTargetLiteral(decision:OcamlTargetLiteralRuntimeUseDecision):Array<OcamlRuntimeRequirement> {
+		return OcamlTargetLiteralRuntimeRequirementContract.requirementsFor(decision).map(normalize);
+	}
+
+	/** Records the source-owned runtime need selected by one Dynamic Boolean literal. **/
+	public function recordTargetLiteral(decision:OcamlTargetLiteralRuntimeUseDecision):Void {
+		for (requirement in requirementsForTargetLiteral(decision))
+			record(requirement);
+	}
+
+	/**
+		Checks the self-contained report row for a Dynamic Boolean literal.
+
+		The transient occurrence plan is reconciled against the target AST during
+		generation. This check keeps its published semantic requirement exact without
+		adding a second, duplicate report representation of the same source decision.
+	**/
+	public static function requireTargetLiteralRequirement(requirement:OcamlRuntimeRequirement):Void {
+		OcamlTargetLiteralRuntimeRequirementContract.requireRequirement(requirement);
 	}
 
 	/** Returns the direct HxMap dependency selected by one standard Map carrier. */

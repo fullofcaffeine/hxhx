@@ -61,6 +61,7 @@ import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseDecision;
 #end
 
 /**
@@ -552,6 +553,11 @@ class CompilationContext {
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
 		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
+	}
+
+	/** Records why one exact Boolean literal needs a Dynamic runtime carrier. **/
+	public function recordTargetLiteralRuntimeRequirement(decision:OcamlTargetLiteralRuntimeUseDecision):Void {
+		runtimeRequirements.recordTargetLiteral(decision);
 	}
 
 	/**

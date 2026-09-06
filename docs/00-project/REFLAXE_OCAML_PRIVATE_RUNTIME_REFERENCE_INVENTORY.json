@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-0uwin.50",
+  "reviewBead": "haxe_ocaml-0uwin.51",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.50",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-0uwin.51",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,9 +15,9 @@
     }
   ],
   "counts": {
-    "total": 222,
+    "total": 221,
     "byDomain": {
-      "expression": 222
+      "expression": 221
     },
     "byMigrationFamily": {
       "builder-anon": 12,
@@ -26,11 +26,10 @@
       "builder-enum": 24,
       "builder-int": 58,
       "builder-nullable-carriers": 59,
-      "builder-type": 23,
-      "target-literal-lowerer": 1
+      "builder-type": 23
     }
   },
-  "inventoryRevision": "c10d42b1ce4535b49d188d875916ec78ebb022096de5653f120495a9befc977c",
+  "inventoryRevision": "bad872fb9ee8e4903724e719edaaff86ffb79a4411ed54a2203a61be4cf412c4",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -2241,16 +2240,6 @@
       "rootModule": "HxRuntime",
       "ordinal": 8,
       "migrationFamily": "builder-boolean-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/target/OcamlTargetLiteralLowerer.hx::expression::EField(EIdent)::HxRuntime.box_bool::1",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/target/OcamlTargetLiteralLowerer.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.box_bool",
-      "rootModule": "HxRuntime",
-      "ordinal": 1,
-      "migrationFamily": "target-literal-lowerer"
     }
   ]
 }
