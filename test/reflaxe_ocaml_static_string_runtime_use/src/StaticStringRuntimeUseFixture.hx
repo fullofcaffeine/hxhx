@@ -16,9 +16,9 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 using StringTools;
 
 /**
-	Defines the static String conversions that require `HxString.toStdString`.
+	Defines the statically selected conversions that require one null-aware helper.
 
-	The expected conversion kinds and helper name come from the authored Haxe
+	The expected conversion kinds and helper mapping come from the authored Haxe
 	cases. This fixture does not inspect the target builder or generated OCaml.
 **/
 @:access(reflaxe.ocaml.ast.OcamlBuilder)
@@ -36,11 +36,19 @@ class StaticStringRuntimeUseFixture {
 			final text:String = "text";
 			final textAlias:StaticStringTextAlias = "alias";
 			final nullableTextAlias:StaticStringNullableTextAlias = null;
+			final nullableInt:Null<Int> = null;
+			final nullableFloat:Null<Float> = null;
+			final nullableBool:Null<Bool> = null;
+			final directInt:Int = 1;
 			final value:Dynamic = text;
 			final inferredNullable = if (value == null) text else null;
 			Std.string(nullable);
 			Std.string(textAlias);
 			Std.string(nullableTextAlias);
+			Std.string(nullableInt);
+			Std.string(nullableFloat);
+			Std.string(nullableBool);
+			Std.string(directInt);
 			text + nullable;
 			text + inferredNullable;
 			var assigned:Null<String> = nullable;
@@ -53,13 +61,16 @@ class StaticStringRuntimeUseFixture {
 
 		final plan = new OcamlStaticStringPlanner(binding).plan(typed);
 		final decisions = plan.decisions();
-		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 3);
+		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 6);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 4);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundLeft, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundRight, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.ReflectFieldName, 1);
-		if (decisions.length != 10)
-			throw 'Expected ten outer static String decisions, received ${decisions.length}.';
+		assertSemanticTypeCount(decisions, "Null<Int>", 1);
+		assertSemanticTypeCount(decisions, "Null<Float>", 1);
+		assertSemanticTypeCount(decisions, "Null<Bool>", 1);
+		if (decisions.length != 13)
+			throw 'Expected thirteen outer static string decisions, received ${decisions.length}.';
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);
@@ -95,6 +106,16 @@ class StaticStringRuntimeUseFixture {
 			() -> OcamlStaticStringPlan.requireDecision(copyDecision(decisions[0], OcamlStaticStringSourceKind.StringConcat)));
 		expectFailure("non-canonical alias spelling", "incomplete or incompatible facts",
 			() -> OcamlStaticStringPlan.requireDecision(copyDecision(decisions[0], decisions[0].sourceKind, null, "StaticStringTextAlias")));
+		final nullableIntDecision = Lambda.find(decisions, decision -> decision.semanticTypeId == "Null<Int>");
+		if (nullableIntDecision == null)
+			throw "The fixture has no nullable Int conversion decision.";
+		expectFailure("wrong nullable carrier", "incomplete or incompatible facts",
+			() -> OcamlStaticStringPlan.requireDecision(copyDecision(nullableIntDecision, nullableIntDecision.sourceKind, null, null, "string")));
+		final nullableIntUse = nullableIntDecision.runtimeUseOccurrences[0];
+		expectFailure("wrong nullable helper mapping", "stale or conflicting runtime facts",
+			() -> OcamlStaticStringPlan.requireDecision(copyDecision(nullableIntDecision, nullableIntDecision.sourceKind, [
+				copyOccurrence(nullableIntUse, nullableIntUse.ownerId, null, "HxRuntime.nullable_bool_toStdString")
+			])));
 
 		Sys.println("REFLAXE_OCAML_STATIC_STRING_RUNTIME_USE:PASS");
 		return macro null;
@@ -102,17 +123,19 @@ class StaticStringRuntimeUseFixture {
 
 	static function proveRuntimeUse(decision:OcamlStaticStringDecision):Void {
 		OcamlStaticStringPlan.requireDecision(decision);
-		if (decision.semanticTypeId != "String" && decision.semanticTypeId != "Null<String>")
-			throw 'Decision "${decision.id}" accepts an unexpected type ${decision.semanticTypeId}.';
+		final target = OcamlStaticStringPlan.requireTargetFor(decision.semanticTypeId);
+		if (decision.inputCarrierTypeId != target.inputCarrierTypeId)
+			throw 'Decision "${decision.id}" accepts an unsupported type/carrier pair ${decision.semanticTypeId}/${decision.inputCarrierTypeId}.';
 		final requirements = OcamlRuntimeRequirementLedger.requirementsForStaticString(decision);
 		if (requirements.length != 1
 			|| requirements[0].semanticCapability != "haxe-static-string-conversion"
-			|| requirements[0].rootModules.join(",") != "HxString")
+			|| requirements[0].subject.id != decision.semanticTypeId + " -> String"
+			|| requirements[0].rootModules.join(",") != target.rootModule)
 			throw 'Decision "${decision.id}" has the wrong runtime requirement.';
 
 		final occurrence = decision.runtimeUseOccurrences[0];
-		if (occurrence.exactSymbol != "HxString.toStdString")
-			throw 'Decision "${decision.id}" must own one HxString.toStdString use.';
+		if (occurrence.exactSymbol != target.exactSymbol)
+			throw 'Decision "${decision.id}" must own exactly ${target.exactSymbol}.';
 		final authority = new OcamlRuntimeUseAuthority(decision.revision, "portable", requirements, decision.runtimeUseOccurrences);
 		final checked = OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 		authority.reconcileExpression(OcamlExpr.EApp(checked, [OcamlExpr.EIdent("value")]));
@@ -128,7 +151,7 @@ class StaticStringRuntimeUseFixture {
 				decision.runtimeUseOccurrences).expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol));
 		expectFailure("plain private helper", "plain private runtime reference",
 			() -> new OcamlRuntimeUseAuthority(decision.revision, "portable", requirements,
-				decision.runtimeUseOccurrences).reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString")));
+				decision.runtimeUseOccurrences).reconcileExpression(plainRuntimeReference(target.exactSymbol)));
 		expectFailure("duplicate helper", "incomplete or incompatible facts",
 			() -> OcamlStaticStringPlan.requireDecision(copyDecision(decision, decision.sourceKind, decision.runtimeUseOccurrences.concat([occurrence]))));
 		expectFailure("wrong owner", "stale or conflicting runtime facts",
@@ -141,7 +164,7 @@ class StaticStringRuntimeUseFixture {
 	}
 
 	static function copyDecision(source:OcamlStaticStringDecision, sourceKind:OcamlStaticStringSourceKind,
-			?runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>, ?semanticTypeId:String):OcamlStaticStringDecision {
+			?runtimeUseOccurrences:Array<OcamlRuntimeUseOccurrence>, ?semanticTypeId:String, ?inputCarrierTypeId:String):OcamlStaticStringDecision {
 		return {
 			id: source.id,
 			revision: source.revision,
@@ -149,7 +172,7 @@ class StaticStringRuntimeUseFixture {
 			ownerSource: {file: source.ownerSource.file, min: source.ownerSource.min, max: source.ownerSource.max},
 			sourceKind: sourceKind,
 			semanticTypeId: semanticTypeId ?? source.semanticTypeId,
-			inputCarrierTypeId: source.inputCarrierTypeId,
+			inputCarrierTypeId: inputCarrierTypeId ?? source.inputCarrierTypeId,
 			order: source.order,
 			profileEligibility: source.profileEligibility.copy(),
 			runtimeRequirementIds: source.runtimeRequirementIds.copy(),
@@ -163,14 +186,15 @@ class StaticStringRuntimeUseFixture {
 		};
 	}
 
-	static function copyOccurrence(source:OcamlRuntimeUseOccurrence, ownerId:String, ?domain:OcamlRuntimeUseDomain):OcamlRuntimeUseOccurrence {
+	static function copyOccurrence(source:OcamlRuntimeUseOccurrence, ownerId:String, ?domain:OcamlRuntimeUseDomain,
+			?exactSymbol:String):OcamlRuntimeUseOccurrence {
 		return {
 			id: source.id,
 			planRevision: source.planRevision,
 			ownerId: ownerId,
 			requirementId: source.requirementId,
 			domain: domain ?? source.domain,
-			exactSymbol: source.exactSymbol,
+			exactSymbol: exactSymbol ?? source.exactSymbol,
 			role: source.role,
 			order: source.order,
 			source: {
@@ -183,10 +207,23 @@ class StaticStringRuntimeUseFixture {
 		};
 	}
 
+	static function plainRuntimeReference(exactSymbol:String):OcamlExpr {
+		final parts = exactSymbol.split(".");
+		if (parts.length != 2)
+			throw 'Fixture cannot split private runtime symbol "$exactSymbol".';
+		return OcamlExpr.EField(OcamlExpr.EIdent(parts[0]), parts[1]);
+	}
+
 	static function assertKindCount(decisions:Array<OcamlStaticStringDecision>, kind:OcamlStaticStringSourceKind, expected:Int):Void {
 		final actual = decisions.filter(decision -> decision.sourceKind == kind).length;
 		if (actual != expected)
 			throw 'Expected $expected ${(kind : String)} decision(s), received $actual.';
+	}
+
+	static function assertSemanticTypeCount(decisions:Array<OcamlStaticStringDecision>, semanticTypeId:String, expected:Int):Void {
+		final actual = decisions.filter(decision -> decision.semanticTypeId == semanticTypeId).length;
+		if (actual != expected)
+			throw 'Expected $expected $semanticTypeId decision(s), received $actual.';
 	}
 
 	static function expectFailure(label:String, marker:String, operation:Void->Void):Void {

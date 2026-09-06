@@ -23,7 +23,14 @@ enum abstract OcamlStaticStringSourceKind(String) from String to String {
 	final ReflectFieldName = "reflect-field-name";
 }
 
-/** One immutable decision for one generated `HxString.toStdString` call. */
+/** The carrier, private helper, and runtime root selected by one semantic type. **/
+typedef OcamlStaticStringRuntimeTarget = {
+	final inputCarrierTypeId:String;
+	final exactSymbol:String;
+	final rootModule:String;
+}
+
+/** One immutable decision for one statically selected standard-string call. */
 typedef OcamlStaticStringDecision = {
 	final id:String;
 	final revision:String;
@@ -45,19 +52,18 @@ typedef OcamlStaticStringDecision = {
 }
 
 /**
-	Validates the static String conversions selected from one final typed root.
+	Validates the standard-string conversions selected from one final typed root.
 
-	Static String values use the OCaml `string` carrier. This plan keeps those
-	uses separate from Dynamic string conversion, which uses an `Obj.t` carrier
-	and `HxDynamic.toStdString`.
+	String values use the OCaml `string` carrier. Nullable primitives use `Obj.t`
+	and select one type-specific null-aware helper. This plan keeps both statically
+	known paths separate from Dynamic string conversion.
 **/
 class OcamlStaticStringPlan {
-	public static inline final MODEL_REVISION = "ocaml-static-string-runtime-use-v1";
-	public static inline final PROOF_ID = "static-string-runtime-use-v1";
-	public static inline final PROOF_CLAIM = "One final typed String or Null<String> occurrence authorizes exactly one HxString.toStdString identifier. String literals, null literals, completed concatenations, and Dynamic values do not receive this authority.";
+	public static inline final MODEL_REVISION = "ocaml-static-string-runtime-use-v2";
+	public static inline final PROOF_ID = "static-string-runtime-use-v2";
+	public static inline final PROOF_CLAIM = "One final statically typed String, Null<String>, or nullable primitive occurrence authorizes exactly one helper selected by its semantic type. Literal strings, literal nulls, completed concatenations, non-null primitives, and Dynamic values do not receive this authority.";
 	public static inline final RUNTIME_CAPABILITY = "haxe-static-string-conversion";
-	public static inline final EXACT_SYMBOL = "HxString.toStdString";
-	public static inline final INPUT_CARRIER_TYPE = "string";
+	public static inline final IMPLEMENTATION_FEATURE = "haxe-static-string-conversion-v2";
 
 	final ordered:Array<OcamlStaticStringDecision>;
 	final byId:Map<String, OcamlStaticStringDecision> = [];
@@ -103,16 +109,17 @@ class OcamlStaticStringPlan {
 
 	/** Rejects changed source, type, requirement, or occurrence facts. */
 	public static function requireDecision(decision:OcamlStaticStringDecision):Void {
-		if (decision == null
-			|| decision.id.length == 0
+		if (decision == null)
+			throw "reflaxe.ocaml [ocaml-static-string:invalid-plan]: static String decision is missing";
+		final target = requireTargetFor(decision.semanticTypeId);
+		if (decision.id.length == 0
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
 			|| decision.ownerSource.file.length == 0
 			|| decision.ownerSource.min < 0
 			|| decision.ownerSource.max < decision.ownerSource.min
-			|| (decision.semanticTypeId != "String" && decision.semanticTypeId != "Null<String>")
-			|| decision.inputCarrierTypeId != INPUT_CARRIER_TYPE
+			|| decision.inputCarrierTypeId != target.inputCarrierTypeId
 			|| decision.order < 0
 			|| decision.profileEligibility.join(",") != "metal,portable"
 			|| decision.runtimeRequirementIds.length != 1
@@ -137,7 +144,7 @@ class OcamlStaticStringPlan {
 			|| occurrence.ownerId != decision.id
 			|| occurrence.requirementId != requirementId
 			|| occurrence.domain != OcamlRuntimeUseDomain.ExpressionIdentifier
-			|| occurrence.exactSymbol != EXACT_SYMBOL
+			|| occurrence.exactSymbol != target.exactSymbol
 			|| occurrence.role != role
 			|| occurrence.order != 0
 			|| occurrence.source.file != decision.source.file
@@ -146,6 +153,34 @@ class OcamlStaticStringPlan {
 			|| occurrence.profileEligibility.join(",") != "metal,portable"
 			|| occurrence.cardinality != 1)
 			throw 'reflaxe.ocaml [ocaml-static-string:invalid-runtime-use]: decision "${decision.id}" has stale or conflicting runtime facts';
+	}
+
+	/** Returns the complete runtime target fixed by one admitted semantic input type. **/
+	public static function requireTargetFor(semanticTypeId:String):OcamlStaticStringRuntimeTarget {
+		return switch (semanticTypeId) {
+			case "String" | "Null<String>": {
+					inputCarrierTypeId: "string",
+					exactSymbol: "HxString.toStdString",
+					rootModule: "HxString"
+				};
+			case "Null<Int>": {
+					inputCarrierTypeId: "Obj.t",
+					exactSymbol: "HxRuntime.nullable_int_toStdString",
+					rootModule: "HxRuntime"
+				};
+			case "Null<Float>": {
+					inputCarrierTypeId: "Obj.t",
+					exactSymbol: "HxRuntime.nullable_float_toStdString",
+					rootModule: "HxRuntime"
+				};
+			case "Null<Bool>": {
+					inputCarrierTypeId: "Obj.t",
+					exactSymbol: "HxRuntime.nullable_bool_toStdString",
+					rootModule: "HxRuntime"
+				};
+			case _:
+				throw "reflaxe.ocaml [ocaml-static-string:invalid-plan]: static String decision has incomplete or incompatible facts";
+		};
 	}
 
 	public static function roleFor(sourceKind:OcamlStaticStringSourceKind):String {
@@ -166,6 +201,7 @@ class OcamlStaticStringPlan {
 
 	public static function sealRevision(id:String, source:OcamlLoweredSourceSpan, ownerSource:OcamlLoweredSourceSpan, sourceKind:OcamlStaticStringSourceKind,
 			semanticTypeId:String, inputCarrierTypeId:String, order:Int, binding:OcamlFunctionPlanBinding, requirementId:String, role:String):String {
+		final exactSymbol = requireTargetFor(semanticTypeId).exactSymbol;
 		return "sha256:" + Sha256.encode([
 			MODEL_REVISION,
 			id,
@@ -185,7 +221,7 @@ class OcamlStaticStringPlan {
 			binding.pipelineRevision,
 			requirementId,
 			role,
-			EXACT_SYMBOL
+			exactSymbol
 		].map(value -> value.length + ":" + value).join("|"));
 	}
 
@@ -295,8 +331,9 @@ class OcamlStaticStringPlanner {
 			].join("\u001f")).substr(0, 24);
 			final requirementId = OcamlStaticStringPlan.runtimeRequirementId(id);
 			final role = OcamlStaticStringPlan.roleFor(sourceKind);
-			final revision = OcamlStaticStringPlan.sealRevision(id, source, ownerSource, sourceKind, semanticTypeId, OcamlStaticStringPlan.INPUT_CARRIER_TYPE,
-				order, binding, requirementId, role);
+			final target = OcamlStaticStringPlan.requireTargetFor(semanticTypeId);
+			final revision = OcamlStaticStringPlan.sealRevision(id, source, ownerSource, sourceKind, semanticTypeId, target.inputCarrierTypeId, order,
+				binding, requirementId, role);
 			final decision:OcamlStaticStringDecision = {
 				id: id,
 				revision: revision,
@@ -304,7 +341,7 @@ class OcamlStaticStringPlanner {
 				ownerSource: copySource(ownerSource),
 				sourceKind: sourceKind,
 				semanticTypeId: semanticTypeId,
-				inputCarrierTypeId: OcamlStaticStringPlan.INPUT_CARRIER_TYPE,
+				inputCarrierTypeId: target.inputCarrierTypeId,
 				order: order,
 				profileEligibility: ["metal", "portable"],
 				runtimeRequirementIds: [requirementId],
@@ -315,7 +352,7 @@ class OcamlStaticStringPlanner {
 						ownerId: id,
 						requirementId: requirementId,
 						domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
-						exactSymbol: OcamlStaticStringPlan.EXACT_SYMBOL,
+						exactSymbol: target.exactSymbol,
 						role: role,
 						order: 0,
 						source: copySource(source),
@@ -393,7 +430,7 @@ class OcamlStaticStringPlanner {
 
 	static function selectsStaticStringConversion(expression:TypedExpr):Bool {
 		final unwrapped = unwrap(expression);
-		if (!isStringType(unwrapped.t))
+		if (semanticTypeId(unwrapped.t) == null)
 			return false;
 		return switch (unwrapped.expr) {
 			case TConst(TNull) | TConst(TString(_)): false;
@@ -402,18 +439,21 @@ class OcamlStaticStringPlanner {
 		};
 	}
 
-	static function isStringType(type:Type):Bool
-		return semanticTypeId(type) != null;
+	static function isStringType(type:Type):Bool {
+		return switch (semanticTypeId(type)) {
+			case "String" | "Null<String>": true;
+			case _: false;
+		};
+	}
 
 	/**
-		Returns the canonical Haxe String type used by a sealed conversion.
+		Returns the canonical Haxe input type used by a sealed conversion.
 
 		A typedef changes how source code names a type, but it does not create a
 		new runtime carrier. Haxe can also infer nested nullable wrappers from an
-		expression that already permits null. Those wrappers all use the same
-		`Null<String>` runtime carrier. This helper follows typedefs and collapses
-		only that repeated nullable shape. It returns null for every type that the
-		static String plan does not own.
+		expression that already permits null. This helper follows typedefs and
+		collapses only repeated nullable String, Int, Float, or Bool shapes. It
+		returns null for non-null primitives and every other unowned type.
 	**/
 	public static function semanticTypeId(type:Type):Null<String> {
 		return switch (followNoAbstracts(type)) {
@@ -422,12 +462,28 @@ class OcamlStaticStringPlanner {
 				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
 					null;
 				} else {
-					switch (semanticTypeId(inner)) {
-						case "String" | "Null<String>": "Null<String>";
+					nullableSemanticTypeId(inner);
+				}
+			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "String" : null;
+			case _:
+				null;
+		};
+	}
+
+	static function nullableSemanticTypeId(type:Type):Null<String> {
+		return switch (followNoAbstracts(type)) {
+			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? nullableSemanticTypeId(inner) : null;
+			case TAbstract(abstractRef, _):
+				final abstractType = abstractRef.get();
+				if (abstractType.pack.length != 0) {
+					null;
+				} else {
+					switch (abstractType.name) {
+						case "Int" | "Float" | "Bool": 'Null<${abstractType.name}>';
 						case _: null;
 					}
 				}
-			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "String" : null;
+			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "Null<String>" : null;
 			case _:
 				null;
 		};

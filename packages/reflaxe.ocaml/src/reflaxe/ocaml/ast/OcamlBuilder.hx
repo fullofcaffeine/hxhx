@@ -3186,7 +3186,7 @@ class OcamlBuilder {
 	}
 
 	/**
-		Builds the one null-aware String conversion authorized for this typed value.
+		Builds the one standard-string conversion authorized for this typed value.
 
 		The caller supplies the already-built OCaml value. This keeps receiver and
 		index evaluation in their original order while the typed Haxe occurrence,
@@ -3205,9 +3205,12 @@ class OcamlBuilder {
 			return staticStringInvariant('decision "${decision.id}" has source kind ${decision.sourceKind}, not $expectedKind', source.pos);
 		final semanticTypeId = OcamlStaticStringPlanner.semanticTypeId(source.t);
 		if (semanticTypeId == null)
-			return staticStringInvariant('decision "${decision.id}" reached syntax with a non-String input type', source.pos);
+			return staticStringInvariant('decision "${decision.id}" reached syntax with an unowned input type', source.pos);
 		if (decision.semanticTypeId != semanticTypeId)
 			return staticStringInvariant('decision "${decision.id}" expects ${decision.semanticTypeId}, not $semanticTypeId', source.pos);
+		final target = OcamlStaticStringPlan.requireTargetFor(semanticTypeId);
+		if (decision.inputCarrierTypeId != target.inputCarrierTypeId)
+			return staticStringInvariant('decision "${decision.id}" has no matching carrier for $semanticTypeId', source.pos);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
 		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
 			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
@@ -5998,12 +6001,8 @@ class OcamlBuilder {
 							final innerType = params[0];
 							if (isStringType(innerType)) {
 								buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
-							} else if (isIntType(innerType)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_toStdString"), [buildExpr(inner)]);
-							} else if (isFloatType(innerType)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_toStdString"), [buildExpr(inner)]);
-							} else if (isBoolType(innerType)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_toStdString"), [buildExpr(inner)]);
+							} else if (isIntType(innerType) || isFloatType(innerType) || isBoolType(innerType)) {
+								staticStringInvariant("nullable primitive string conversion bypassed its sealed source decision", inner.pos);
 							} else {
 								OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 							}

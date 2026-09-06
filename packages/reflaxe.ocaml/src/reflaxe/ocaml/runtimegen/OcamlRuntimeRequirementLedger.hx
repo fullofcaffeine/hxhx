@@ -778,9 +778,10 @@ class OcamlRuntimeRequirementLedger {
 			record(requirement);
 	}
 
-	/** Returns the direct runtime reason for one static String conversion. */
+	/** Returns the direct runtime reason for one statically selected string conversion. */
 	public static function requirementsForStaticString(decision:OcamlStaticStringDecision):Array<OcamlRuntimeRequirement> {
 		OcamlStaticStringPlan.requireDecision(decision);
+		final rootModule = OcamlStaticStringPlan.requireTargetFor(decision.semanticTypeId).rootModule;
 		return [
 			normalize({
 				id: decision.runtimeRequirementIds[0],
@@ -792,12 +793,12 @@ class OcamlRuntimeRequirementLedger {
 				decisionId: decision.id,
 				subject: {
 					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
-					id: decision.semanticTypeId
+					id: decision.semanticTypeId + " -> String"
 				},
-				implementationFeature: "haxe-static-string-conversion-v1",
-				rootModules: ["HxString"],
+				implementationFeature: OcamlStaticStringPlan.IMPLEMENTATION_FEATURE,
+				rootModules: [rootModule],
 				profileEligibility: decision.profileEligibility,
-				explanation: "The final typed String operation converts one String carrier through Haxe null-aware string behavior before target syntax."
+				explanation: "The final typed string operation selects one null-aware helper from its exact Haxe input type before target syntax."
 			})
 		];
 	}

@@ -16,14 +16,47 @@ const dynamicRequirements = report.requirements.filter(entry =>
 		&& (entry.source.file === 'src/Main.hx' || entry.source.file === '(unknown)')
 )
 
-if (requirements.length !== 15) {
-	throw new Error(`Expected exactly fifteen fixture-owned static String decisions, received ${requirements.length}`)
+if (requirements.length !== 29) {
+	throw new Error(`Expected exactly twenty-nine fixture-owned static string decisions, received ${requirements.length}`)
 }
-if (requirements.some(entry => entry.rootModules.join(',') !== 'HxString')) {
-	throw new Error(`Static String decisions must name only HxString: ${JSON.stringify(requirements)}`)
+const nullablePrimitiveRequirements = requirements.filter(entry =>
+	['Null<Int> -> String', 'Null<Float> -> String', 'Null<Bool> -> String'].includes(entry.subject.id)
+)
+if (nullablePrimitiveRequirements.length !== 9) {
+	throw new Error(`Expected nine nullable primitive decisions, received ${nullablePrimitiveRequirements.length}`)
+}
+for (const semanticType of ['Null<Int>', 'Null<Float>', 'Null<Bool>']) {
+	const selected = nullablePrimitiveRequirements.filter(entry => entry.subject.id === `${semanticType} -> String`)
+	if (selected.length !== 3 || selected.some(entry => entry.rootModules.join(',') !== 'HxRuntime')) {
+		throw new Error(`${semanticType} decisions must select HxRuntime exactly three times: ${JSON.stringify(selected)}`)
+	}
+}
+const stringRequirements = requirements.filter(entry =>
+	entry.subject.id === 'String -> String' || entry.subject.id === 'Null<String> -> String'
+)
+if (stringRequirements.length !== 20 || stringRequirements.some(entry => entry.rootModules.join(',') !== 'HxString')) {
+	throw new Error(`String-carrier decisions must keep their HxString owner: ${JSON.stringify(stringRequirements)}`)
+}
+if (requirements.some(entry => entry.implementationFeature !== 'haxe-static-string-conversion-v2')) {
+	throw new Error(`Static string decisions must use the v2 type-to-helper contract: ${JSON.stringify(requirements)}`)
 }
 if (dynamicRequirements.length !== 3 || dynamicRequirements.some(entry => entry.rootModules.join(',') !== 'HxDynamic')) {
 	throw new Error(`Dynamic conversion must keep its separate HxDynamic authority: ${JSON.stringify(dynamicRequirements)}`)
+}
+NODE
+
+node - out/Main.ml <<'NODE'
+const fs = require('fs')
+const source = fs.readFileSync(process.argv[2], 'utf8')
+for (const helper of [
+	'HxRuntime.nullable_int_toStdString',
+	'HxRuntime.nullable_float_toStdString',
+	'HxRuntime.nullable_bool_toStdString'
+]) {
+	const count = source.split(helper).length - 1
+	if (count !== 3) {
+		throw new Error(`Expected ${helper} exactly three times in generated Main.ml, received ${count}`)
+	}
 }
 NODE
 

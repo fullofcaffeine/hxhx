@@ -21,7 +21,7 @@ const decisions = report.requirements.filter(decision =>
 		&& decision.source.file === 'src/Main.hx'
 )
 const types = decisions.map(decision => decision.subject.id).sort()
-if (types.join(',') !== 'Null<String>,Null<String>,String') {
+if (types.join(',') !== 'Null<String> -> String,Null<String> -> String,String -> String') {
 	throw new Error(`Expected canonical String decisions, received ${types.join(',')}`)
 }
 NODE
