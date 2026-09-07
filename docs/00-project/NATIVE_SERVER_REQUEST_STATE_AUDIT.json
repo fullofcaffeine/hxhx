@@ -70,6 +70,7 @@
         "var:currentFunctionName",
         "var:currentFunctionLocalTypeHints",
         "var:currentFunctionShadowingValueNames",
+        "var:currentFunctionLocalOcamlNames",
         "var:currentStmtTyEntries",
         "var:currentLocalCallSigCache",
         "var:currentImportInt64",

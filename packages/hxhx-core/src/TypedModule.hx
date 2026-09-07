@@ -18,6 +18,7 @@ class TypedModule {
 	final generatedDeclarations:CompilerGeneratedDeclarationObservation;
 	final backendDeclarationCatalog:TypedBackendDeclarationCatalog;
 	final backendDeclaration:HxModuleDecl;
+	var backendProjection:Null<TypedBackendModuleProjection>;
 
 	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin,
 			?conditionalCompilation:CompilerConditionalCompilationObservation, ?generatedDeclarations:CompilerGeneratedDeclarationObservation) {
@@ -31,6 +32,7 @@ class TypedModule {
 		TypedBodyInvariant.assertClasses(this.typedClasses);
 		this.backendDeclarationCatalog = TypedBodySource.moduleDeclarationCatalog(parsed, this.typedClasses);
 		this.backendDeclaration = backendDeclarationCatalog.getDeclaration();
+		this.backendProjection = null;
 	}
 
 	public function getParsed():ParsedModule {
@@ -85,12 +87,16 @@ class TypedModule {
 		typed-local and bare field-read catalogs used to project every function
 		body.
 
-		Build this stricter view only when a migrated backend requests it. Legacy
+		Build this stricter view once per immutable module revision, when a migrated
+		backend first requests it. A replacement module starts with a fresh cache. Legacy
 		backends keep the declaration-only compatibility path and cannot be
 		rejected by projection rules they do not yet consume.
 	**/
-	public function getBackendProjection():TypedBackendModuleProjection
-		return TypedBodySource.moduleProjection(parsed, typedClasses);
+	public function getBackendProjection():TypedBackendModuleProjection {
+		if (backendProjection == null)
+			backendProjection = TypedBodySource.moduleProjection(parsed, typedClasses);
+		return backendProjection;
+	}
 
 	/**
 		Pair one declaration selected through the legacy backend view with the

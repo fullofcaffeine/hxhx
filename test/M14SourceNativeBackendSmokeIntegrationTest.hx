@@ -252,7 +252,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainIdentity = typedMainFunction.getStableIdentity();
 		final localBinding = new TyLocalBinding(TyLocalId.forSourceDeclaration(mainIdentity, 0, Variable, "service"), "service", resolvedService, Variable);
 		final localProjection = new TypedBackendFunctionProjection(mainIdentity, CompilerTypedTreeRevision.functionBody(typedMainFunction), mainFunction,
-			new TypedBackendLocalCatalog([localBinding]));
+			new TypedBackendLocalCatalog([localBinding]), TyType.unknown());
 		final localFacts = new backend.source.PhpFunctionLocalFacts(localProjection, value -> value);
 		final firstTypeHints = localFacts.copyTypeHints();
 		assertTrue(firstTypeHints.get("service") == "model.Api<String>", "PHP local facts should expose the canonical type selected by shared typing");

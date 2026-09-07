@@ -655,8 +655,15 @@ class TypedBodySource {
 			for (parameter in environment.getParams())
 				parameter.getIdentity().getCanonicalKey()
 		];
+		final returnType = if (environment != null) {
+			environment.getReturnType();
+		} else {
+			final declaration = typedFunction.getDeclaration();
+			declaration == null ? TyType.fromHintText(HxFunctionDecl.getReturnTypeHint(typedFunction.getSourceDeclaration())) : declaration.getSignature()
+				.getReturnType();
+		};
 		return new TypedBackendFunctionProjection(typedFunction.getStableIdentity(), CompilerTypedTreeRevision.functionBody(typedFunction),
-			functionDeclaration(typedFunction, locals), locals, fields, parameterBindingIdentities);
+			functionDeclaration(typedFunction, locals), locals, returnType, fields, parameterBindingIdentities);
 	}
 
 	/** Project one field from its resolved type and typed initializer when available. **/

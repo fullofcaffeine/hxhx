@@ -99,6 +99,18 @@ The older `npm run test:m14:hih-array-contains` name delegates to this canonical
 test. There is no separate Stage3 fixture because Stage3 does not own the
 Reflaxe OCaml array call or runtime operation.
 
+To check how the native OCaml emitter selects local variables, run:
+
+```bash
+npm run test:m14:stage3-typed-local-projection
+```
+
+The fixture combines nested shadowing, OCaml keyword collisions, unknown local
+types, instance members, and a static lambda. It builds and runs generated OCaml
+and compares the output with upstream Haxe 4.3.7. It also rejects stale types,
+foreign function bindings, and reordered parameters. This focused check does
+not replace current-source compiler builds or the upstream compatibility suites.
+
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
 

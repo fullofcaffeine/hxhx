@@ -27,4 +27,12 @@ class TypedBackendModuleProjection {
 
 	public function getClasses():Array<TypedBackendClassProjection>
 		return classes.copy();
+
+	/** Select the strict class projection paired with an exact projected declaration. **/
+	public function findClass(declaration:HxClassDecl):Null<TypedBackendClassProjection> {
+		for (projection in classes)
+			if (projection.getDeclaration() == declaration)
+				return projection;
+		return null;
+	}
 }

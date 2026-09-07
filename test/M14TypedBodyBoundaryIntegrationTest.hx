@@ -532,12 +532,18 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"  }",
 			"}",
 		].join("\n"), "TypedTry.hx");
-		final result = variableInitializer(findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "main").getBody(), "result");
+		final typedFunction = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "main");
+		final result = variableInitializer(typedFunction.getBody(), "result");
 		assertTrue(containsCallNamed(result, "__hxhx_try"), "expression-level try/catch did not become a structural shared call");
 		assertTrue(containsTag(result, TypedExprTag.CompoundAssign), "try body hid its mutation from typed traversal");
 		assertTrue(containsTag(result, TypedExprTag.Binary), "catch body hid its string concatenation from typed traversal");
 		assertTrue(!containsTag(result, TypedExprTag.Opaque), "expression-level try/catch retained an opaque source payload");
-		final ocaml = @:privateAccess EmitterStage.exprToOcaml(TypedBodySource.expression(result));
+		final projection = TypedBodySource.functionProjection(typedFunction);
+		// This isolated printer check supplies the same typed catalog as full emission.
+		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false,
+			name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
+		final ocaml = @:privateAccess EmitterStage.exprToOcaml(TypedBodySource.expression(result, projection.getLocalCatalog()));
+		EmitterStage.resetRequestState();
 		assertTrue(ocaml.indexOf("HxRuntime.hx_try") >= 0, "OCaml backend did not consume the structural try/catch call");
 		assertTrue(ocaml.indexOf("__hxhx_try") < 0, "OCaml backend leaked the shared structural sentinel into generated source");
 	}

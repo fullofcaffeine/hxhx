@@ -90,13 +90,14 @@ class M14JsTypedLocalProjectionIntegrationTest {
 
 	static function assertCompilerTemporaryProjection():Void {
 		final position = HxPos.unknown();
-		final allocator = new TyCompilerTemporaryAllocator("Main.temporary#0", "projection-fixture-v1", "__fixture_");
+		final sourceFunction = new HxFunctionDecl("temporary", Public, true, [], "Int", [], "", [], position);
+		final allocator = new TyCompilerTemporaryAllocator(TypedFunction.stableIdentityFor("Main", 0, sourceFunction, null), "projection-fixture-v1",
+			"__fixture_");
 		final binding = allocator.allocate("value", TyType.fromHintText("Int"));
 		final temporary = TypedExpr.temporary(binding.getSourceName(), "Int", TypedExpr.intLiteral(7, TyType.fromHintText("Int"), position),
 			TyType.fromHintText("Int"), position, binding);
 		final read = TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 		final block = TypedExpr.block([temporary, read], binding.getType(), position);
-		final sourceFunction = new HxFunctionDecl("temporary", Public, true, [], "Int", [], "", [], position);
 		final typedFunction = new TypedFunction("Main", 0, sourceFunction, null, null,
 			new TypedFunctionBody([TypedStmt.expressionStmt(block, position)], TypedBodyFingerprint.forStatements([])));
 		final projection = TypedBodySource.functionProjection(typedFunction);

@@ -16,8 +16,9 @@ class TypedBackendFunctionProjection {
 	final localCatalog:TypedBackendLocalCatalog;
 	final fieldReadCatalog:TypedBackendFieldReadCatalog;
 	final parameterBindingIdentities:Array<String>;
+	final returnType:TyType;
 
-	public function new(stableIdentity:String, bodyRevision:String, declaration:HxFunctionDecl, localCatalog:TypedBackendLocalCatalog,
+	public function new(stableIdentity:String, bodyRevision:String, declaration:HxFunctionDecl, localCatalog:TypedBackendLocalCatalog, returnType:TyType,
 			?fieldReadCatalog:TypedBackendFieldReadCatalog, ?parameterBindingIdentities:Array<String>) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend function projection requires a stable identity";
@@ -27,12 +28,18 @@ class TypedBackendFunctionProjection {
 			throw "typed backend function projection requires a declaration";
 		if (localCatalog == null)
 			throw "typed backend function projection requires a local catalog";
+		if (returnType == null)
+			throw "typed backend function projection requires an exact return type";
 		this.stableIdentity = stableIdentity;
 		this.bodyRevision = bodyRevision;
 		this.declaration = declaration;
 		this.localCatalog = localCatalog;
 		this.fieldReadCatalog = fieldReadCatalog == null ? new TypedBackendFieldReadCatalog([]) : fieldReadCatalog;
 		this.parameterBindingIdentities = parameterBindingIdentities == null ? [] : parameterBindingIdentities.copy();
+		this.returnType = returnType;
+		for (local in localCatalog.getEntries())
+			if (local.getBinding().getIdentity().getOwnerIdentity() != stableIdentity)
+				throw "typed backend function projection contains a local from another function " + stableIdentity;
 		final seenParameters = new haxe.ds.StringMap<Bool>();
 		for (identity in this.parameterBindingIdentities) {
 			if (identity == null || identity.length == 0)
@@ -73,7 +80,35 @@ class TypedBackendFunctionProjection {
 	public function getFieldReadCatalog():TypedBackendFieldReadCatalog
 		return fieldReadCatalog;
 
+	/** Return the semantic result type sealed with this function body. **/
+	public function getReturnType():TyType
+		return returnType;
+
 	/** Return exact parameter bindings in source signature order. **/
 	public function getParameterBindingIdentities():Array<String>
 		return parameterBindingIdentities.copy();
+
+	/**
+		Return exact parameter projections in source signature order.
+
+		A target must use this boundary when parameter order, names, or types affect
+		emission. Missing or stale catalog entries are rejected here instead of being
+		recovered from source spellings.
+	**/
+	public function getParameters():Array<TypedBackendLocalProjection> {
+		final arguments = HxFunctionDecl.getArgs(declaration);
+		if (arguments.length != parameterBindingIdentities.length)
+			throw "typed backend function projection parameter count mismatch for " + stableIdentity;
+		final parameters = new Array<TypedBackendLocalProjection>();
+		for (index in 0...parameterBindingIdentities.length) {
+			final identity = parameterBindingIdentities[index];
+			final parameter = localCatalog.findByIdentity(identity);
+			if (parameter == null)
+				throw "typed backend function projection lost exact parameter binding " + identity;
+			if (parameter.getProjectedName() != HxFunctionArg.getName(arguments[index]))
+				throw "typed backend function projection parameter name mismatch for " + identity;
+			parameters.push(parameter);
+		}
+		return parameters;
+	}
 }
