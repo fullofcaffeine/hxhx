@@ -302,10 +302,10 @@ class ControlPlanFixture {
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
 		};
 		final representedArray = semanticTypeId == "Array<Int>" || semanticTypeId == "Array<String>";
-		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, representedArray);
+		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, false, representedArray);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
-		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum, representedArray);
+		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum, false, representedArray);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
 		final representationId = switch (semanticTypeId) {
@@ -348,7 +348,7 @@ class ControlPlanFixture {
 				proofClaim: proof,
 				nominalRepresentation: null
 			},
-			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, representedArray),
+			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, false, representedArray),
 			runtimeTagPolicy: runtimeTagPolicy ?? OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 			mechanism: mechanism ?? OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -389,6 +389,7 @@ class ControlPlanFixture {
 			},
 			order: order,
 			variableName: variableName,
+			localId: LexicalLocalIdentityPlan.ID_PREFIX + Sha256.encode(id),
 			semanticTypeId: semanticTypeId,
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: carrier,
@@ -489,6 +490,7 @@ class ControlPlanFixture {
 			},
 			order: order,
 			variableName: variableName,
+			localId: LexicalLocalIdentityPlan.ID_PREFIX + Sha256.encode(id),
 			semanticTypeId: semanticTypeId,
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: valueException ? "Haxe_ValueException.t" : "Haxe_Exception.t",
@@ -1323,6 +1325,56 @@ class ControlPlanFixture {
 			|| indexedThrows.decisionFor(typedThrows[1])?.id != sameSourceThrowB.id) {
 			throw "The typed occurrence index collapsed distinct same-span throw nodes";
 		}
+
+		// The Haxe type remains nullable while the target uses its sentinel-aware
+		// String carrier. Source lookup must accept that exact type and reject an
+		// unrelated operand even when the source location and decision are reused.
+		final nullableThrowRoot = Context.typeExpr(macro {
+			final value:Null<String> = "message";
+			throw value;
+		});
+		final nullableThrowBinding = binding("body:nullable-string-throw");
+		final nullableThrowRepresentations = new OcamlRepresentationRegistry();
+		nullableThrowRepresentations.beginProgram(nullableThrowBinding.programRevision);
+		final nullableThrowIdentities = LexicalLocalIdentityPlan.build(nullableThrowBinding.functionId, nullableThrowRoot);
+		final nullableThrowPlan = new OcamlControlPlanner(nullableThrowRepresentations, new OcamlLocalRepresentationPlan([]), nullableThrowBinding,
+			nullableThrowIdentities).plan(nullableThrowRoot, null);
+		final nullableThrow = switch (nullableThrowRoot.expr) {
+			case TBlock(expressions): expressions[expressions.length - 1];
+			case _: throw "Expected a nullable-string throw block";
+		};
+		final nullableDecision = nullableThrowPlan.decisionFor(nullableThrow);
+		if (!nullableThrowPlan.throwFamilyAdmitted
+			|| nullableDecision == null
+			|| nullableDecision.payload == null
+			|| nullableDecision.payload.inputSemanticTypeId != "String"
+			|| nullableDecision.payload.inputCarrierTypeId != "string"
+			|| nullableDecision.payload.conversion != OcamlControlPayloadConversion.ReprAndRecoverExactValue
+			|| nullableDecision.runtimeTags.join(",") != "Dynamic") {
+			throw "Nullable-string throws did not select the existing value-sensitive String crossing";
+		}
+		final nullableOperand = switch (nullableThrow.expr) {
+			case TThrow(value): value;
+			case _: throw "Expected a nullable-string throw";
+		};
+		if (!OcamlRepresentationRegistry.isExactNullString(nullableOperand.t))
+			throw "The nullable-string throw fixture lost its Haxe type";
+		final wrongOperand:TypedExpr = {expr: nullableOperand.expr, t: Context.getType("Int"), pos: nullableOperand.pos};
+		final wrongThrow:TypedExpr = {expr: TThrow(wrongOperand), t: nullableThrow.t, pos: nullableThrow.pos};
+		final wrongSourcePlan = new OcamlControlPlan(false, true, true, nullableThrowBinding, [], [nullableDecision], [],
+			[{expression: wrongThrow, decisionId: nullableDecision.id}]);
+		if (wrongSourcePlan.decisionFor(wrongThrow) != null)
+			throw "A String throw decision accepted an Int operand at the same location";
+		final missingThrowPlan = new OcamlControlPlan(false, true, true, nullableThrowBinding, [], [], [], []);
+		if (missingThrowPlan.decisionFor(nullableThrow) != null)
+			throw "A nullable-string throw fabricated a missing decision";
+		expectThrows("binding", () -> new OcamlControlPlan(false, true, true, binding("body:stale-nullable-string"), [], [nullableDecision]));
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, true, true, binding(), [], [
+			throwDecision("control:throw:nullable-wrong-tags", 260, "String", null, ["Dynamic", "String"])
+		]));
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, true, true, binding(), [], [
+			throwDecision("control:throw:nullable-wrong-carrier", 260, "String", null, null, null, null, null, "Dynamic")
+		]));
 
 		final typedAnonymousThrowRoot = Context.typeExpr(macro {
 			final value:{p:String, s:Bool} = {p: "token", s: true};
