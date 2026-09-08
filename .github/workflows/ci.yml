@@ -229,6 +229,8 @@ jobs:
           retention-days: 14
       - name: Validate build-hxhx connect retry smoke
         run: npm run test:hxhx:build-connect-retry-smoke
+      - name: Validate source-build timeout cleanup
+        run: npm run test:hxhx:build-timeout-cleanup
       - name: Validate build-hxhx server worker smoke
         run: npm run test:hxhx:build-connect-worker-smoke
       - name: Validate supported Reflaxe warm-server routing

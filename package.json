@@ -485,6 +485,7 @@
     "test:ci:shard": "node scripts/hxhx/with-heavy-run-lease.js --wait-seconds 1800 --label core-test-shard --repository hxhx -- node scripts/ci/core-test-shard.js",
     "test:hxhx:builtin-target-smoke": "bash scripts/hxhx/run-builtin-target-smoke.sh",
     "test:hxhx:build-connect-retry-smoke": "bash scripts/hxhx/test-build-hxhx-connect-retry.sh",
+    "test:hxhx:build-timeout-cleanup": "bash scripts/hxhx/test-build-hxhx-timeout-cleanup.sh",
     "test:hxhx:build-connect-worker-smoke": "bash scripts/hxhx/test-build-hxhx-connect-worker.sh",
     "test:hxhx:reflaxe-server-routing": "bash scripts/hxhx/test-reflaxe-server-routing.sh",
     "test:hxhx:build-bootstrap-ocaml-eval-hxml-smoke": "bash scripts/hxhx/test-build-hxhx-bootstrap-ocaml-eval-hxml-smoke.sh",
