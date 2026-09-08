@@ -234,6 +234,7 @@ class OcamlBuilder {
 	var currentStringMethodPlan:Null<OcamlStringMethodPlan> = null;
 	var currentStringFieldPlan:Null<OcamlStringFieldPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
+	final currentEnumCatchCarriers:Map<String, String> = [];
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
 	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
@@ -1230,6 +1231,12 @@ class OcamlBuilder {
 					OcamlExpr.EConst(OcamlConst.CString(selectedPayload.inputSemanticTypeId)),
 					represented
 				], position);
+			case PreserveEnumCatchThrowCarrier:
+				final origin = selectedPayload.enumCatchOrigin;
+				final carrierName = origin == null ? null : currentEnumCatchCarriers.get(origin.localId);
+				if (carrierName == null)
+					return controlPlanInvariant('enum catch rethrow decision "${decision.id}" has no active original exception carrier', position);
+				OcamlExpr.EIdent(carrierName);
 			case BoxRuntimeClassThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
@@ -1358,17 +1365,31 @@ class OcamlBuilder {
 		final originalTagFunctions:Map<String, OcamlExpr> = [];
 		final tagProofsByClause:Array<Array<OcamlExpr>> = [for (_ in chain.clauses) []];
 
-		final syntax:Array<{variableName:String, variableType:OcamlTypeExpr, body:OcamlExpr}> = [];
+		final syntax:Array<{
+			variableName:String,
+			variableType:OcamlTypeExpr,
+			enumCarrierName:Null<String>,
+			body:OcamlExpr
+		}> = [];
 		for (index in 0...catches.length) {
 			final entry = catches[index];
 			final clause = chain.clauses[index];
 			if (clause.order != index || clause.variableName != entry.v.name)
 				return controlPlanInvariant('catch chain "${chain.id}" clause $index no longer matches typed variable "${entry.v.name}"', position);
 			final variableName = renameVar(entry.v.name);
+			final enumCarrierName = clause.conversion == RecoverEnumValue
+				&& currentControlPlan != null
+				&& currentControlPlan.preservesEnumCatchCarrier(clause.id, clause.localId) ? freshTmp("enum_catch_carrier") : null;
+			if (enumCarrierName != null)
+				currentEnumCatchCarriers.set(clause.localId, enumCarrierName);
+			final branchBody = applyCatchBranchResultPolicy(clause.bodyResultPolicy, buildExpr(entry.expr), clause.id, position);
+			if (enumCarrierName != null)
+				currentEnumCatchCarriers.remove(clause.localId);
 			syntax.push({
 				variableName: variableName,
 				variableType: typeExprFromHaxeType(entry.v.t),
-				body: applyCatchBranchResultPolicy(clause.bodyResultPolicy, buildExpr(entry.expr), clause.id, position)
+				enumCarrierName: enumCarrierName,
+				body: branchBody
 			});
 		}
 
@@ -1414,50 +1435,52 @@ class OcamlBuilder {
 							copyForNativeChannel);
 						OcamlExpr.EBinop(OcamlBinop.Or, isValueException, OcamlExpr.EUnop(OcamlUnop.Not, isAnyException));
 				};
+				final inputValue = entry.enumCarrierName == null ? valueExpression : OcamlExpr.EIdent(entry.enumCarrierName);
 				final boundValue = switch (clause.conversion) {
 					case RecoverExactValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case RecoverCheckedBool:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [inputValue]);
 					case RecoverNominalValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case RecoverEnumValue:
 						final runtimeTag = clause.runtimeTag;
 						if (runtimeTag == null)
 							return controlPlanInvariant('enum catch clause "${clause.id}" has no sealed runtime tag', position);
 						final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
-							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), valueExpression]);
+							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), inputValue]);
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
 					case RecoverRuntimeClassValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case PreserveDynamicCarrier:
-						valueExpression;
+						inputValue;
 					case PreserveOrWrapHaxeException:
 						final isAnyException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertAnyException, tagsExpression,
 							"haxe.Exception", copyForNativeChannel);
-						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-								[valueExpression, nullPrevious, valueExpression])
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"), [inputValue, nullPrevious, inputValue])
 						]);
 						OcamlExpr.EIf(isAnyException, asException, wrapped);
 					case PreserveOrWrapHaxeValueException:
 						final isValueException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertValueException, tagsExpression,
 							"haxe.ValueException", copyForNativeChannel);
-						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-							[valueExpression, nullPrevious, valueExpression]);
+							[inputValue, nullPrevious, inputValue]);
 						OcamlExpr.EIf(isValueException, asValueException, wrapped);
 				};
 				final annotated = OcamlExpr.EAnnot(boundValue, entry.variableType);
-				final body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([
+				var body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([
 					OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(entry.variableName)]),
 					entry.body
 				]), false);
+				if (entry.enumCarrierName != null)
+					body = OcamlExpr.ELet(entry.enumCarrierName, valueExpression, body, false);
 				current = OcamlExpr.EIf(condition, body, current);
 			}
 			return current;

@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 86
+if (report.schemaVersion !== 87
 	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== 0
 	|| report.iMapInterfaceCallCount !== 0
@@ -28,7 +28,7 @@ for (const [kind, facts] of expected) {
 		|| alias.nullPolicy !== 'check-null-and-unbox'
 		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
 		|| alias.runtimeRequirementIds?.join(',') !== `${alias.id}:runtime:haxe-runtime-core`
-		|| alias.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| alias.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| alias.runtimeUseOccurrences?.length !== 2
 		|| alias.runtimeUseOccurrences[0].exactSymbol !== 'HxRuntime.is_null'
 		|| alias.runtimeUseOccurrences[0].role !== 'check-null'
@@ -82,7 +82,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| !report.summary?.valid
 	|| report.summary.iMapStorageAliasCount !== 4) {
 	throw new Error('inspection did not preserve the nullable standard Map decisions')

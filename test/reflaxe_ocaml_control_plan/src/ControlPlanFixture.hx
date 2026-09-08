@@ -302,10 +302,10 @@ class ControlPlanFixture {
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
 		};
 		final representedArray = semanticTypeId == "Array<Int>" || semanticTypeId == "Array<String>";
-		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, representedArray);
+		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, false, representedArray);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
-		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum, representedArray);
+		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum, false, representedArray);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
 		final representationId = switch (semanticTypeId) {
@@ -348,7 +348,7 @@ class ControlPlanFixture {
 				proofClaim: proof,
 				nominalRepresentation: null
 			},
-			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, representedArray),
+			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, false, representedArray),
 			runtimeTagPolicy: runtimeTagPolicy ?? OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 			mechanism: mechanism ?? OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -389,6 +389,7 @@ class ControlPlanFixture {
 			},
 			order: order,
 			variableName: variableName,
+			localId: LexicalLocalIdentityPlan.ID_PREFIX + Sha256.encode(id),
 			semanticTypeId: semanticTypeId,
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: carrier,
@@ -489,6 +490,7 @@ class ControlPlanFixture {
 			},
 			order: order,
 			variableName: variableName,
+			localId: LexicalLocalIdentityPlan.ID_PREFIX + Sha256.encode(id),
 			semanticTypeId: semanticTypeId,
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: valueException ? "Haxe_ValueException.t" : "Haxe_Exception.t",
