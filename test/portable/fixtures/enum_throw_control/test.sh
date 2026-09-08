@@ -219,8 +219,8 @@ NODE
 }
 
 expect_invalid carrier "invalid direct enum-constructor exception carrier"
-expect_invalid tags "invalid direct enum-constructor exception carrier"
-expect_invalid proof "invalid direct enum-constructor exception carrier"
+expect_invalid tags "invalid enum exception carrier"
+expect_invalid proof "invalid enum exception carrier"
 expect_invalid source "Control report revision does not match its targets, decisions, and catch chains"
 expect_invalid function "Control report revision does not match its targets, decisions, and catch chains"
 expect_invalid enum "Control report revision does not match its targets, decisions, and catch chains"
