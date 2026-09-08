@@ -2213,11 +2213,12 @@ class OcamlControlPlan {
 				if (OcamlRepresentationRegistry.isExactString(expression.t)) {
 					true;
 				} else {
-					// Only return control can reuse the sentinel-aware String carrier for
-					// a Haxe `Null<String>` expression. Throw planning does not admit this
-					// conversion, so a corrupted throw occurrence must still fail lookup.
-					payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverExactValue && OcamlRepresentationRegistry.isExactNullString(expression.t)
-					;
+					// Nullable text uses the same String carrier for returns and throws.
+					// Repr preserves its null sentinel; throw validation permits only the
+					// Dynamic static tag, so the runtime adds String only for real text.
+					(payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverExactValue
+						|| payload.conversion == OcamlControlPayloadConversion.ReprAndRecoverExactValue) && OcamlRepresentationRegistry.isExactNullString(expression.t)
+						;
 				}
 			case "Dynamic":
 				switch (haxe.macro.TypeTools.follow(expression.t)) {
@@ -3519,7 +3520,10 @@ class OcamlControlPlanner {
 				runtimeClassIdentity: null
 				};
 		}
-		final exact = exactValueRepresentation(expression);
+		// A nullable String already carries the canonical null sentinel. Select
+		// the same representation as an ordinary String throw; its sealed tag
+		// policy derives String membership from the value rather than its type.
+		final exact = OcamlRepresentationRegistry.isExactNullString(expression.t) ? representations.selectExactString(OcamlRepresentationDomain.InternalValue) : exactValueRepresentation(expression);
 		if (exact != null) {
 			return {
 				semanticTypeId: exact.semanticTypeId,
