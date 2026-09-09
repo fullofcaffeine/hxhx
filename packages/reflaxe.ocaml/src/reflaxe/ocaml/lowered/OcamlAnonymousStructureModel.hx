@@ -356,7 +356,9 @@ class OcamlAnonymousStructureContract {
 				case Create:
 			}
 		}
-		if (operation.id != operationId(copyOperation(operation, "")))
+		// The fingerprint excludes the operation ID and derived runtime records.
+		// Validate those records below without rebuilding them for this hash.
+		if (operation.id != operationId(operation))
 			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: anonymous operation "${operation.id}" does not match its canonical facts';
 		final expectedRuntimeRequirements = runtimeRequirementIdsFor(operation);
 		if (operation.runtimeRequirementIds.join("\n") != expectedRuntimeRequirements.join("\n")) {
