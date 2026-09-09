@@ -10,6 +10,8 @@ import sys.io.File;
 	unknown typed parameter, same-spelled instance members, and the synthetic
 	instance receiver. The generated executable is the final observer for the
 	bindings that participate in runtime behavior.
+	Expression-local inference also preserves written annotations, argument order,
+	and shadowed reads when the parser represents a binding as a lambda call.
 **/
 class M14Stage3TypedLocalProjectionIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -61,6 +63,16 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 		throw "fixture projection is missing Main." + name;
 	}
 
+	/** Check the semantic binding, since equal runtime values can hide an unintended Dynamic conversion. */
+	static function assertLocalType(functionProjection:TypedBackendFunctionProjection, sourceName:String, expected:String):Void {
+		for (local in functionProjection.getLocalCatalog().getEntries())
+			if (local.getBinding().getSourceName() == sourceName) {
+				assertTrue(local.getBinding().getType().getDisplay() == expected, sourceName + " lost its selected " + expected + " type");
+				return;
+			}
+		throw "missing local binding " + sourceName;
+	}
+
 	static function main():Void {
 		final root = Path.normalize(".tmp/m14_stage3_typed_local_projection_" + Std.string(Date.now().getTime()));
 		final sourcePath = Path.join([root, "Main.hx"]);
@@ -84,6 +96,12 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			"  static function addTen(n:Int):Int return n + 10;",
 			"  static function eleven():Int return 11;",
 			"  static function sum(a:Int, b:Int):Int return a + b;",
+			"  static function branch(key:String):Int return switch(key) { case \"a\": var inferred = sum(7, 8) % 12; inferred == 0 ? 12 : inferred; default: 0; };",
+			"  static function annotated(key:String):Dynamic return switch(key) { case \"a\": var explicit:Dynamic = 15; explicit; default: 0; };",
+			"  static function written(key:String):Int return switch(key) { case \"a\": var precise:Int = 16; precise; default: 0; };",
+			"  static function observe(value:Int):Int { Sys.println(value); return value; }",
+			"  static function ordered():Int return (left -> (right -> left * 10 + right)(observe(2)))(observe(1));",
+			"  static function shadowed():Int return (value -> (value -> value)(value + 1))(4);",
 			"  static function cycleA(cycleB:Int):Int return cycleB;",
 			"  static function cycleB():Int return cycleA(3);",
 			"  static function collide(match:Int, match_:Int, method:Int, method_:Int):Int return match + match_ + method + method_;",
@@ -102,6 +120,11 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			"    Sys.println(instance.invoke(addTen));",
 			"    Sys.println(instance.invokeZero(eleven));",
 			"    Sys.println(instance.invokeTwo(sum));",
+			"    Sys.println(branch(\"a\"));",
+			"    Sys.println(annotated(\"a\"));",
+			"    Sys.println(written(\"a\"));",
+			"    Sys.println(ordered());",
+			"    Sys.println(shadowed());",
 			"  }",
 			"}",
 		].join("\n");
@@ -122,6 +145,9 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 				"strict module projection selected a same-named but unrelated class declaration");
 
 			final unknown = findFunction(mainProjection, "unknownValue");
+			assertLocalType(findFunction(mainProjection, "branch"), "inferred", "Int");
+			assertLocalType(findFunction(mainProjection, "annotated"), "explicit", "Dynamic");
+			assertLocalType(findFunction(mainProjection, "written"), "precise", "Int");
 			final unknownParameters = unknown.getParameters();
 			assertTrue(unknownParameters.length == 1 && unknownParameters[0].getBinding().getType().isUnknown(),
 				"unannotated parameter did not retain its exact Unknown typed fact");
@@ -194,7 +220,8 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 
 			final result = run(executable, []);
 			assertTrue(result.exitCode == 0, "native exact-local fixture failed: " + result.stderr);
-			assertTrue(result.stdout == "2\n1\n10\n7\n8\n9\n15\n11\n9\n", "native exact-local fixture observed the wrong bindings: " + result.stdout);
+			assertTrue(result.stdout == "2\n1\n10\n7\n8\n9\n15\n11\n9\n3\n15\n16\n1\n2\n12\n5\n",
+				"native exact-local fixture observed the wrong bindings: " + result.stdout);
 			final upstream = run("haxe", ["-cp", root, "--run", "Main"]);
 			assertTrue(upstream.exitCode == 0, "upstream binding fixture failed: " + upstream.stderr);
 			assertTrue(upstream.stdout == result.stdout, "native binding behavior differs from upstream Haxe");

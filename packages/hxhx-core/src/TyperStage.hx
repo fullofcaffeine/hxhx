@@ -1222,6 +1222,12 @@ class TyperStage {
 
 	/** Infer a call through a local function value without inventing a declaration identity. **/
 	static function inferFunctionValueCall(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		switch (callee) {
+			case ELambda(names, body) if (names.length == args.length):
+				final argumentTypes = [for (argument in args) inferExprType(argument, scope, ctx, pos)];
+				return inferLambdaType(names, body, argumentTypes, scope, ctx, pos).getFunctionReturn();
+			case _:
+		}
 		final calleeType = inferExprType(callee, scope, ctx, pos);
 		for (argument in args)
 			inferExprType(argument, scope, ctx, pos);
@@ -1229,6 +1235,16 @@ class TyperStage {
 			return TyType.unknown();
 		final result = calleeType.getFunctionReturn();
 		return result == null ? TyType.unknown() : result;
+	}
+
+	/** Type a lambda with the parameter contract supplied by its call or written signature. */
+	static function inferLambdaType(names:Array<String>, body:HxExpr, argumentTypes:Array<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		scope.enterLexicalScope();
+		for (index in 0...names.length)
+			scope.declareLocal(names[index], argumentTypes[index], LambdaParameter);
+		final result = inferExprType(body, scope, ctx, pos);
+		scope.exitLexicalScope();
+		return TyType.functionType(argumentTypes, result);
 	}
 
 	/**
@@ -1710,12 +1726,7 @@ class TyperStage {
 			case ELambda(argNames, body):
 				// Lambda parameters shadow outer names while unresolved reads still
 				// select the captured declaration from the enclosing scope.
-				scope.enterLexicalScope();
-				for (n in argNames)
-					scope.declareLocal(n, TyType.fromHintText("Dynamic"), LambdaParameter);
-				final result = inferExprType(body, scope, ctx, pos);
-				scope.exitLexicalScope();
-				TyType.functionType([for (_ in argNames) TyType.fromHintText("Dynamic")], result);
+				inferLambdaType(argNames, body, [for (_ in argNames) TyType.fromHintText("Dynamic")], scope, ctx, pos);
 			case EMacroExpr(inner, _wrappers):
 				inferExprType(inner, scope, ctx, pos);
 				TyType.fromHintText("haxe.macro.Expr");
@@ -1983,8 +1994,12 @@ class TyperStage {
 				// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
 				TyType.fromHintText("Dynamic");
 			case ECast(expr, typeHint):
-				final inner = inferExprType(expr, scope, ctx, pos);
 				final hinted = typeFromHintInContext(typeHint, ctx);
+				final inner = switch (expr) {
+					case ELambda(names, body) if (hinted.isFunction() && hinted.getFunctionArguments().length == names.length):
+						inferLambdaType(names, body, hinted.getFunctionArguments(), scope, ctx, pos);
+					case _: inferExprType(expr, scope, ctx, pos);
+				};
 				hinted.isUnknown() ? inner : hinted;
 			case EUntyped(expr):
 				inferExprType(expr, scope, ctx, pos);
