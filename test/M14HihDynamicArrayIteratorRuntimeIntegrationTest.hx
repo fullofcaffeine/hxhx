@@ -1,6 +1,11 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/**
+	Checks that an array iterator in a static initializer survives OCaml emission.
+	The program index supplies typed local identities for the initializer's closure,
+	as it does in the native compiler's resolved-module typing path.
+**/
 class M14HihDynamicArrayIteratorRuntimeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -45,7 +50,8 @@ class M14HihDynamicArrayIteratorRuntimeIntegrationTest {
 		var thrown:Dynamic = null;
 		try {
 			final parsed = ParserStage.parse(src, mainHx);
-			final typed = TyperStage.typeModule(parsed);
+			final resolved = new ResolvedModule("Main", mainHx, parsed);
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final expanded = MacroStage.expandProgram([typed], []);
 			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
