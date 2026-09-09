@@ -1,6 +1,12 @@
 /** A nested mutable value whose identity must survive exception transport. */
 private typedef Detail = {var code:Int;}
 
+/** A recursive type and a self-reference must not trigger recursive transport. */
+private typedef Cycle = {
+	var code:Int;
+	var next:Null<Cycle>;
+}
+
 /** Dynamic elements deliberately model arbitrary values at the exception boundary. */
 private typedef Payload = {
 	final message:String;
@@ -10,6 +16,28 @@ private typedef Payload = {
 
 /** Exercises opaque transport, rather than selecting field operations from a throw. */
 class Main {
+	static function sendCycle(value:Cycle):Void {
+		throw value;
+	}
+
+	/** Mutation through the original reference must reach the caught cyclic value. */
+	static function observeCycle():Void {
+		final value:Cycle = {code: 7, next: null};
+		value.next = value;
+		try {
+			try {
+				sendCycle(value);
+			} catch (error:Dynamic) {
+				throw error;
+			}
+		} catch (error:Dynamic) {
+			Sys.println("cycle:same=" + (error == value));
+			Sys.println("cycle:self=" + (error.next == error));
+			value.code = 11;
+			Sys.println("cycle:mutation=" + error.next.code);
+		}
+	}
+
 	static function sendPayload(value:Payload):Void {
 		throw value;
 	}
@@ -53,5 +81,6 @@ class Main {
 		} catch (error:Dynamic) {
 			Sys.println("null-payload=" + (error == null));
 		}
+		observeCycle();
 	}
 }

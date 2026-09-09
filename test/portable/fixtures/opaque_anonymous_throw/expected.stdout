@@ -16,3 +16,6 @@ array:zero=true
 array:null=true
 array:length=4
 null-payload=true
+cycle:same=true
+cycle:self=true
+cycle:mutation=11

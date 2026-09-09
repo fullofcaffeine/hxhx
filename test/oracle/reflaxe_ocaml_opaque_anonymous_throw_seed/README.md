@@ -4,6 +4,9 @@ This fixture throws a typed record that contains a nested object and an optional
 The catch must receive the same object, including through a rethrow.
 Missing fields must remain absent. Explicit null fields must remain present.
 Nested mutations and array mutations must remain visible through aliases.
+A recursive record also points to itself. Throw and rethrow must preserve that cycle and expose later mutation.
+Public inspection accepts the generated evidence and rejects five independently corrupted exception proofs.
+Each corruption receives fresh integrity hashes, so the check must reject the semantic contradiction.
 
 Run the upstream Haxe observer from the repository root:
 
