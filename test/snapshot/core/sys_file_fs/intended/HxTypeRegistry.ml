@@ -80,9 +80,6 @@ let init () : unit =
     let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
     Obj.repr (Haxe_ValueException.create a0 a1 a2)
   );
-  HxType.register_class_ctor "haxe._CallStack.CallStack_Impl_" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (Haxe_CallStack.create ())
-  );
   HxType.register_class_ctor "haxe.io.BytesBuffer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_BytesBuffer.create ())
   );
@@ -127,7 +124,6 @@ let init () : unit =
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
   HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
-  HxType.register_class_empty_ctor "haxe._CallStack.CallStack_Impl_" (fun () -> Obj.repr (Haxe_CallStack.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
