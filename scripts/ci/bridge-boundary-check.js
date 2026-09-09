@@ -47,6 +47,7 @@ const expectedAllowedFiles = {
     'packages/hxhx/src/hxhx/Stage3EmitSupport.hx',
     'packages/hxhx-core/src/backend/js/JsTargetCore.hx',
     'packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx',
+    'packages/hxhx-core/src/backend/ocaml/OcamlNativeTargetCore.hx',
   ],
   'compiler-driver-ocaml-hint': [compilerDriverPath],
   'compiler-server-socket-helper': [
@@ -96,6 +97,7 @@ const occurrenceRules = [
     expected: {
       'packages/hxhx-core/src/backend/js/JsTargetCore.hx': 1,
       'packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx': 1,
+      'packages/hxhx-core/src/backend/ocaml/OcamlNativeTargetCore.hx': 1,
     },
   },
   {

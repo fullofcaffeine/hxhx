@@ -35,7 +35,8 @@
         "packages/hxhx-core/src/backend/GenIrBoundary.hx",
         "packages/hxhx/src/hxhx/Stage3EmitSupport.hx",
         "packages/hxhx-core/src/backend/js/JsTargetCore.hx",
-        "packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx"
+        "packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx",
+        "packages/hxhx-core/src/backend/ocaml/OcamlNativeTargetCore.hx"
       ],
       "focusedRegressions": [
         "npm run test:m14:backend-dispatch-boundary",
