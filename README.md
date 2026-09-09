@@ -54,8 +54,8 @@ additive).
 
 Readiness review, 2026-09-09: focused exception-transport and runtime-report
 checks pass. Native-surface validation now completes for the macro host.
-[Hosted checks for PR #26](https://github.com/fullofcaffeine/hxhx/actions/runs/34395520249)
-passed guardrails, package installation, plugin checks, and macro-host integration.
+[Hosted checks for PR #28](https://github.com/fullofcaffeine/hxhx/actions/runs/34409458946)
+passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
 The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
 Complete source generation, bootstrap refresh, and release checks remain open, so overall and integration percentages remain unchanged.
