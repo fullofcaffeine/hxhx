@@ -10,6 +10,7 @@ import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.macros.StrictModeSourceAnnotation.hasExplicitDynamicLocal;
+import reflaxe.ocaml.macros.OcamlNativeSurfaceQuery.NativeSurfaceCapture;
 
 private typedef StrictModeSnapshot = {
 	final mode:String;
@@ -139,7 +140,14 @@ class StrictModeEnforcer {
 		performancePortableNativeSurfaceChecks = 0;
 		performanceAtomicSemanticsChecks = 0;
 
-		final capturedDeclarations = OcamlNativeSurfaceQuery.captureDeclarations(types);
+		var capturedDeclarations:Null<NativeSurfaceCapture> = null;
+		// Inventory reads belong to the first native query, after its strict checks.
+		// An inactive policy or earlier strict error must not trigger this prepass.
+		function getCapturedDeclarations():NativeSurfaceCapture {
+			if (capturedDeclarations == null)
+				capturedDeclarations = OcamlNativeSurfaceQuery.captureDeclarations(types);
+			return capturedDeclarations;
+		}
 		final reported:Map<String, Bool> = [];
 		final violationIds:Map<String, Bool> = [];
 		for (moduleType in types) {
@@ -157,8 +165,10 @@ class StrictModeEnforcer {
 						final expr = field.expr();
 						if (expr == null)
 							continue;
+						// The decoded body owns this cache; the next field read gets a fresh scan.
+						final nativeScan = new OcamlNativeSurfaceScan(getCapturedDeclarations, !strictForModule);
 						scanExpr(expr, strictForModule, strictHardError, buildContext.portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled,
-							reported, violationIds, capturedDeclarations);
+							reported, violationIds, nativeScan);
 					}
 				case _:
 			}
@@ -182,7 +192,7 @@ class StrictModeEnforcer {
 	}
 
 	static function scanExpr(expr:TypedExpr, strictForModule:Bool, strictHardError:Bool, portableNativeSurfacePolicy:OcamlPortableNativeSurfacePolicy,
-			atomicEmulationDiagnosticsEnabled:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>, capturedDeclarations:Map<String, Bool>):Void {
+			atomicEmulationDiagnosticsEnabled:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>, nativeScan:OcamlNativeSurfaceScan):Void {
 		if (performanceLogLine != null) {
 			performanceExpressionVisits++;
 			if (strictForModule)
@@ -192,9 +202,12 @@ class StrictModeEnforcer {
 			if (atomicEmulationDiagnosticsEnabled)
 				performanceAtomicSemanticsChecks++;
 			if (performanceExpressionVisits % PERFORMANCE_PROGRESS_INTERVAL == 0) {
+				// Logging is caller-supplied code, so no class result may survive its callback.
+				nativeScan.invalidate();
 				performanceLogLine("reflaxe.ocaml: strict_mode_progress visits=" + Std.string(performanceExpressionVisits) + " strict_checks="
 					+ Std.string(performanceStrictChecks) + " portable_native_surface_checks=" + Std.string(performancePortableNativeSurfaceChecks)
-					+ " atomic_semantics_checks=" + Std.string(performanceAtomicSemanticsChecks));
+					+ " atomic_semantics_checks=" + Std.string(performanceAtomicSemanticsChecks) + " body_class_hits=" + Std.string(nativeScan.classHits)
+					+ " body_class_queries=" + Std.string(nativeScan.classQueries));
 			}
 		}
 		if (strictForModule)
@@ -204,14 +217,14 @@ class StrictModeEnforcer {
 			requestedNativeSurfaces |= NATIVE_SURFACE_OCAML;
 		if (atomicEmulationDiagnosticsEnabled)
 			requestedNativeSurfaces |= NATIVE_SURFACE_HAXE_ATOMIC;
-		final nativeSurfaces = requestedNativeSurfaces == 0 ? 0 : expressionNativeSurfaceMask(expr, requestedNativeSurfaces, capturedDeclarations);
+		final nativeSurfaces = requestedNativeSurfaces == 0 ? 0 : nativeScan.find(expr, requestedNativeSurfaces);
 		if ((nativeSurfaces & NATIVE_SURFACE_OCAML) != 0)
 			scanExprPortableNativeSurface(expr, portableNativeSurfacePolicy, reported, violationIds);
 		if ((nativeSurfaces & NATIVE_SURFACE_HAXE_ATOMIC) != 0)
 			scanExprAtomicSemantics(expr, reported, violationIds);
 		TypedExprTools.iter(expr,
 			e -> scanExpr(e, strictForModule, strictHardError, portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled, reported, violationIds,
-				capturedDeclarations));
+				nativeScan));
 	}
 
 	static function scanExprStrict(expr:TypedExpr, strictHardError:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
@@ -266,37 +279,6 @@ class StrictModeEnforcer {
 		emitAtomicSemanticsDiagnostic("portable_atomic_emulated",
 			"portable profile uses emulated `haxe.atomic.*` semantics (single-thread API parity only; not hardware/thread-level atomicity).", expr.pos,
 			reported, violationIds);
-	}
-
-	/**
-		Finds the requested target-native type families for one expression.
-
-		The returned bit mask lets portable-surface and atomic policy share one recursive type walk.
-		Additional expression-owned types are checked only for families that the expression result type
-		did not already prove.
-	**/
-	static function expressionNativeSurfaceMask(expr:TypedExpr, requestedMask:Int, capturedDeclarations:Map<String, Bool>):Int {
-		var found = new OcamlNativeSurfaceQuery(capturedDeclarations).find(expr.t, 16, requestedMask);
-		var remaining = requestedMask & ~found;
-		if (remaining == 0)
-			return found;
-		found |= switch (expr.expr) {
-			case TTypeExpr(moduleType):
-				OcamlNativeSurfaceQuery.moduleMask(moduleType) & remaining;
-			case TVar(variable, _):
-				new OcamlNativeSurfaceQuery(capturedDeclarations).find(variable.t, 16, remaining);
-			case TFunction(fn):
-				var argumentSurfaces = 0;
-				for (arg in fn.args) {
-					argumentSurfaces |= new OcamlNativeSurfaceQuery(capturedDeclarations).find(arg.v.t, 16, remaining & ~argumentSurfaces);
-					if (argumentSurfaces == remaining)
-						break;
-				}
-				argumentSurfaces;
-			case _:
-				0;
-		}
-		return found;
 	}
 
 	static function isOcamlInjectionCall(callTarget:TypedExpr):Bool {

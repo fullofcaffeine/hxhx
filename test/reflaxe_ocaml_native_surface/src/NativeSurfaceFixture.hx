@@ -2,6 +2,7 @@
 import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.ocaml.macros.OcamlNativeSurfaceQuery;
+import reflaxe.ocaml.macros.OcamlNativeSurfaceQuery.NativeSurfaceCapture;
 
 private typedef EffectCase = {final root:Type; final trace:Array<String>;};
 
@@ -44,6 +45,29 @@ class NativeSurfaceFixture {
 			check(query.find(genericNative, 2, 1) == 1, "actual generic parameter");
 			check(query.find(positive, 3, 1) == 1, "native field after recursion");
 			check(query.find(positive, 2, 1) == 0, "recursive alias depth charge");
+
+			// Syntax conversion can stringify a custom reference while rejecting it.
+			// Even a captured declaration name must not authorize that extra observation.
+			for (useReference in [true, false]) {
+				var enumReads = 0;
+				var enumStrings = 0;
+				final forwarded = switch enumeration {
+					case TEnum(reference, parameters):
+						TEnum({
+							get: () -> {
+								enumReads++;
+								return reference.get();
+							},
+							toString: () -> {
+								enumStrings++;
+								return "ParameterEnum";
+							}
+						}, parameters);
+					case _: throw new haxe.Exception("Expected enum fixture");
+				};
+				final mask = useReference ? NativeSurfaceReference.find(forwarded, 4, 3) : query.find(forwarded, 4, 3);
+				check(mask == 1 && enumReads == 1 && enumStrings == 0, "enum conversion must not add reference observations");
+			}
 
 			final examples = [
 				recursive,
@@ -132,7 +156,7 @@ class NativeSurfaceFixture {
 			check(query.find(mutable.root, 8, 1) == 0, "first root");
 			mutable.definition.type = native;
 			check(query.find(mutable.root, 8, 1) == 1, "no result survives root query");
-			final uncaptured = new OcamlNativeSurfaceQuery([]);
+			final uncaptured = new OcamlNativeSurfaceQuery({declarations: [], parameters: []});
 			check(uncaptured.find(recursive, 8, 3) == NativeSurfaceReference.find(recursive, 8, 3), "uncaptured declaration result");
 			check(uncaptured.memoHits == 0, "uncaptured declarations disable reuse");
 
@@ -162,7 +186,7 @@ class NativeSurfaceFixture {
 		};
 	}
 
-	static function compareEffects(captured:Map<String, Bool>, create:Void->EffectCase, label:String):Void {
+	static function compareEffects(captured:NativeSurfaceCapture, create:Void->EffectCase, label:String):Void {
 		final before = create();
 		final expected = NativeSurfaceReference.find(before.root, 12, 1);
 		final after = create();

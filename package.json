@@ -205,7 +205,7 @@
     "test:m6:json-printer": "haxe test/m6_json_printer_integration_test.hxml",
     "test:m6:http-nullable-bytes": "haxe test/m6_http_nullable_bytes_integration_test.hxml",
     "test:m6:balanced-tree-dispatch": "haxe test/m6_balanced_tree_dispatch_integration_test.hxml",
-    "test:reflaxe-ocaml:native-surface-query": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_native_surface/src -D reflaxe_lifecycle_test --macro 'NativeSurfaceFixture.run()' --no-output",
+    "test:reflaxe-ocaml:native-surface-query": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_native_surface/src -D reflaxe_lifecycle_test --macro 'NativeSurfaceFixture.run()' --no-output && bash scripts/test-native-surface-order.sh",
     "test:m6:metal-strict": "npm run test:reflaxe-ocaml:native-surface-query && haxe test/m6_metal_strict_mode_enforcer_integration_test.hxml",
     "test:m8:aliases": "haxe test/m8_module_aliases_integration_test.hxml",
     "test:m8:collisions": "haxe test/m8_module_collision_integration_test.hxml",
