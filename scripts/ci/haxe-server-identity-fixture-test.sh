@@ -10,8 +10,13 @@ TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hxhx-haxe-server-identity.XXXXXX")"
 STATE_DIR="$TMP_DIR/state"
 PORT=31873
 CHILD_PID_CAPTURE="$TMP_DIR/wrapper-child.pid"
+UNRELATED_PID=""
 
 cleanup() {
+	if [ -n "$UNRELATED_PID" ]; then
+		kill "$UNRELATED_PID" >/dev/null 2>&1 || true
+		wait "$UNRELATED_PID" >/dev/null 2>&1 || true
+	fi
 	HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$TMP_DIR/fake-haxe-b" \
 		bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
 	if [ -s "$CHILD_PID_CAPTURE" ]; then
@@ -50,6 +55,9 @@ FAKE_HAXE
 
 fail() {
 	echo "[haxe-server-identity-fixture-test] ERROR: $*" >&2
+	if [ -f "$TMP_DIR/interrupted-start.log" ]; then
+		cat "$TMP_DIR/interrupted-start.log" >&2
+	fi
 	exit 1
 }
 
@@ -171,36 +179,74 @@ if kill -0 "$wrapper_child_pid" >/dev/null 2>&1; then
 	fail "stop left the wrapper's real Haxe server child alive"
 fi
 
-# Interrupt the helper while it is waiting for readiness. Its EXIT path must
-# stop both the launcher and its native child instead of leaving a server from
-# a canceled development command.
-rm -f "$CHILD_PID_CAPTURE"
-FAKE_HAXE_CHILD="$TMP_DIR/fake-haxe-child" \
-FAKE_HAXE_CHILD_PID_CAPTURE="$CHILD_PID_CAPTURE" \
-FAKE_HAXE_CHILD_PORT="$((PORT + 1000))" \
-FAKE_HAXE_CONNECT_FAIL=1 \
-HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$TMP_DIR/fake-haxe-b" \
-	bash "$SERVER_HELPER" start >"$TMP_DIR/interrupted-start.log" 2>&1 &
-helper_pid="$!"
-for _attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-	if [ -s "$CHILD_PID_CAPTURE" ]; then
-		break
+# Interrupt both before PID publication and during readiness. Bash's DEBUG
+# hook pauses at the former boundary without adding a production test switch.
+# The hook must fire, or the test cannot claim to cover the registration race.
+cat >"$TMP_DIR/interrupt-registration.bash" <<'REGISTRATION_HOOK'
+# Only the start helper loads this hook; its fake compiler children must not.
+unset BASH_ENV
+registration_hook_fired=0
+interrupt_registration() {
+	local interrupted_command="$1"
+	if [[ "$registration_hook_fired" == 0 && "$interrupted_command" == printf* && "$interrupted_command" == *'"$PID_FILE"'* ]]; then
+		registration_hook_fired=1
+		for ((attempt = 0; attempt < 100; attempt++)); do
+			[ -s "$FAKE_HAXE_CHILD_PID_CAPTURE" ] && break
+			sleep 0.01
+		done
+		[ -s "$FAKE_HAXE_CHILD_PID_CAPTURE" ] || exit 1
+		printf '%s\n' registration >"$FAKE_HAXE_INTERRUPT_MARKER"
+		kill -TERM "$$"
 	fi
-	sleep 0.05
+}
+set -T
+trap 'interrupt_registration "$BASH_COMMAND"' DEBUG
+REGISTRATION_HOOK
+
+# An unrecorded server with the same public port must survive owned cleanup.
+"$TMP_DIR/fake-haxe-a" --wait "$PORT" &
+UNRELATED_PID="$!"
+for interrupt_phase in registration readiness; do
+	rm -f "$CHILD_PID_CAPTURE" "$TMP_DIR/interrupt.marker"
+	interrupt_env=/dev/null
+	if [ "$interrupt_phase" = registration ]; then
+		interrupt_env="$TMP_DIR/interrupt-registration.bash"
+	fi
+	BASH_ENV="$interrupt_env" \
+	FAKE_HAXE_INTERRUPT_MARKER="$TMP_DIR/interrupt.marker" \
+	FAKE_HAXE_CHILD="$TMP_DIR/fake-haxe-child" \
+	FAKE_HAXE_CHILD_PID_CAPTURE="$CHILD_PID_CAPTURE" \
+	FAKE_HAXE_CHILD_PORT="$((PORT + 1000))" \
+	FAKE_HAXE_CONNECT_FAIL=1 \
+	HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$TMP_DIR/fake-haxe-b" \
+		bash -T "$SERVER_HELPER" start >"$TMP_DIR/interrupted-start.log" 2>&1 &
+	helper_pid="$!"
+	for _attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+		if [ -s "$CHILD_PID_CAPTURE" ]; then
+			break
+		fi
+		sleep 0.05
+	done
+	[ -s "$CHILD_PID_CAPTURE" ] || fail "$interrupt_phase interruption never spawned its server child"
+	interrupted_child_pid="$(cat "$CHILD_PID_CAPTURE")"
+	if [ "$interrupt_phase" = readiness ]; then
+		kill -TERM "$helper_pid"
+	fi
+	set +e
+	wait "$helper_pid"
+	helper_code="$?"
+	set -e
+	[ "$helper_code" = "143" ] || fail "$interrupt_phase interruption exited $helper_code instead of 143"
+	if [ "$interrupt_phase" = registration ]; then
+		[ -s "$TMP_DIR/interrupt.marker" ] || fail "registration interruption hook did not run"
+	fi
+	if kill -0 "$interrupted_child_pid" >/dev/null 2>&1; then
+		fail "$interrupt_phase interruption left the wrapper's real Haxe server child alive"
+	fi
+	[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "$interrupt_phase interruption left server PID state behind"
+	[ ! -e "$STATE_DIR/haxe-server.pids" ] || fail "$interrupt_phase interruption left process-tree state behind"
+	[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "$interrupt_phase interruption left server identity state behind"
+	kill -0 "$UNRELATED_PID" >/dev/null 2>&1 || fail "$interrupt_phase interruption stopped an unrelated server"
 done
-[ -s "$CHILD_PID_CAPTURE" ] || fail "interrupted-start fixture never spawned its server child"
-interrupted_child_pid="$(cat "$CHILD_PID_CAPTURE")"
-kill -TERM "$helper_pid"
-set +e
-wait "$helper_pid"
-helper_code="$?"
-set -e
-[ "$helper_code" = "143" ] || fail "interrupted start exited $helper_code instead of 143"
-if kill -0 "$interrupted_child_pid" >/dev/null 2>&1; then
-	fail "interrupted start left the wrapper's real Haxe server child alive"
-fi
-[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "interrupted start left server PID state behind"
-[ ! -e "$STATE_DIR/haxe-server.pids" ] || fail "interrupted start left process-tree state behind"
-[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "interrupted start left server identity state behind"
 
 echo "HAXE_SERVER_IDENTITY_FIXTURE:PASS"
