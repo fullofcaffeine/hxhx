@@ -2144,14 +2144,19 @@ class HxParser {
 				case SExpr(expr, _):
 					final temp = nextSeqTemp();
 					ECall(ELambda([temp], continuation), [expr]);
-				case SVar(name, _, init, _):
+				case SVar(name, typeHint, init, _):
 					final initExpr:HxExpr = switch (init) {
 						case null:
 							ENull;
 						case value:
 							value;
 					};
-					ECall(ELambda([name], continuation), [initExpr]);
+					// The lambda transports a source local. Keep its written type so
+					// immediate-call inference cannot narrow an explicit Dynamic binding.
+					final binder:HxExpr = ELambda([name], continuation);
+					final annotated:HxExpr = typeHint == null
+						|| StringTools.trim(typeHint).length == 0 ? binder : ECast(binder, "(" + typeHint + ")->Dynamic");
+					ECall(annotated, [initExpr]);
 				case SBlock(inner, _):
 					var acc = continuation;
 					var index = inner.length - 1;
