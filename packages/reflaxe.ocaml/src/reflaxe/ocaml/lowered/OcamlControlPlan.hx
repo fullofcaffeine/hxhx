@@ -89,6 +89,10 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
 	final PreserveNullLiteralThrowCarrier = "preserve-null-literal-throw-carrier";
 	final PreserveAnonymousThrowCarrier = "preserve-anonymous-throw-carrier";
+
+	/** Preserve an existing structural container without authorizing field operations. */
+	final PreserveOpaqueAnonymousThrowCarrier = "preserve-opaque-anonymous-throw-carrier";
+
 	final BoxRepresentedArrayThrowCarrier = "box-represented-array-throw-carrier";
 	final BoxNominalThrowCarrier = "box-nominal-throw-carrier";
 	final PreserveDynamicThrowCarrier = "preserve-dynamic-throw-carrier";
@@ -1257,6 +1261,10 @@ class OcamlControlPlan {
 				if (!isAdmittedAnonymousThrowPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid anonymous-object carrier crossing';
 				}
+			case PreserveOpaqueAnonymousThrowCarrier:
+				if (!isAdmittedOpaqueAnonymousThrowPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid opaque anonymous carrier';
+				}
 			case BoxRepresentedArrayThrowCarrier:
 				if (!isAdmittedRepresentedArrayThrowPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid represented-array exception crossing';
@@ -1780,6 +1788,8 @@ class OcamlControlPlan {
 
 	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
 			hasEnumCatchRethrow:Bool = false, hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false):Array<String> {
+		if (OcamlAnonymousThrowCarrier.isSemanticTypeId(semanticTypeId))
+			return ["Dynamic"];
 		if (hasRepresentedArray)
 			return ["Dynamic", "Array"];
 		if (hasRuntimeClassRepresentation)
@@ -1795,6 +1805,8 @@ class OcamlControlPlan {
 	public static function expectedThrowConversion(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
 			hasEnumCatchRethrow:Bool = false, hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false,
 			hasNullLiteralRepresentation:Bool = false):Null<OcamlControlPayloadConversion> {
+		if (OcamlAnonymousThrowCarrier.isSemanticTypeId(semanticTypeId))
+			return OcamlControlPayloadConversion.PreserveOpaqueAnonymousThrowCarrier;
 		if (hasRepresentedArray)
 			return OcamlControlPayloadConversion.BoxRepresentedArrayThrowCarrier;
 		if (hasRuntimeClassRepresentation)
@@ -1820,6 +1832,8 @@ class OcamlControlPlan {
 	public static function expectedThrowProofId(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false,
 			hasEnumCatchRethrow:Bool = false, hasRepresentedArray:Bool = false, hasRuntimeClassRepresentation:Bool = false,
 			hasNullLiteralRepresentation:Bool = false):Null<String> {
+		if (OcamlAnonymousThrowCarrier.isSemanticTypeId(semanticTypeId))
+			return OcamlAnonymousThrowCarrier.PROOF_ID;
 		if (hasEnumCatchRethrow)
 			return EXACT_ENUM_CATCH_RETHROW_PROOF_ID;
 		if (hasRepresentedArray)
@@ -1996,6 +2010,24 @@ class OcamlControlPlan {
 			&& samePayloadSides(payload);
 	}
 
+	/** Validates exception-only transport without claiming a field-layout representation. */
+	public static function isAdmittedOpaqueAnonymousThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		return OcamlAnonymousThrowCarrier.isSemanticTypeId(payload.inputSemanticTypeId)
+			&& payload.inputCarrierTypeId == "Obj.t"
+			&& payload.inputRepresentationId == OcamlAnonymousThrowCarrier.representationId(payload.inputSemanticTypeId)
+			&& samePayloadSides(payload)
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& payload.conversion == OcamlControlPayloadConversion.PreserveOpaqueAnonymousThrowCarrier
+			&& payload.proofId == OcamlAnonymousThrowCarrier.PROOF_ID
+			&& payload.representationRevision == null
+			&& payload.nominalRepresentation == null
+			&& payload.enumCatchOrigin == null
+			&& payload.arrayDescriptorId == null
+			&& payload.arrayDescriptorRevision == null
+			&& payload.arrayLiteralProducerId == null
+			&& payload.arrayLiteralProducerPlanRevision == null;
+	}
+
 	/** Reports whether one sealed anonymous object crosses the exception channel unchanged. */
 	public static function isAdmittedAnonymousThrowPayload(payload:OcamlControlPayloadPlan):Bool {
 		return isAdmittedAnonymousSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
@@ -2124,6 +2156,10 @@ class OcamlControlPlan {
 	}
 
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
+		if (payload.conversion == OcamlControlPayloadConversion.PreserveOpaqueAnonymousThrowCarrier) {
+			return OcamlAnonymousThrowCarrier.semanticTypeId(expression.t) == payload.inputSemanticTypeId
+				&& isAdmittedOpaqueAnonymousThrowPayload(payload);
+		}
 		if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverTypedFunctionResult
 			|| payload.conversion == OcamlControlPayloadConversion.BoxBoolAndRecoverDynamicTypedFunctionResult) {
 			return haxe.macro.TypeTools.toString(expression.t) == payload.inputSemanticTypeId;
@@ -2825,6 +2861,8 @@ class OcamlControlPlanner {
 							'The final typed Haxe body sends one exact ${representation.semanticTypeId}/${representation.carrierTypeId} generated wrapper through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the original wrapper object is preserved, and its existing runtime class marker derives the applicable haxe.Exception and haxe.ValueException tags without syntax-time hierarchy reconstruction.';
 						case _ if (anonymousRepresentation):
 							'The final typed Haxe body sends one admitted ${representation.semanticTypeId} anonymous object through the compiler-owned Haxe exception channel. The object already uses the structural planner\'s Obj.t runtime-container carrier, so the throw preserves its null sentinel, reference identity, aliases, and field state without another box or syntax-time shape decision.';
+						case _ if (OcamlAnonymousThrowCarrier.isSemanticTypeId(representation.semanticTypeId)):
+							"The shared carrier classifier selects an existing anonymous Obj.t container for this exact typed source occurrence. Exception transport preserves its reference and null sentinel without visiting fields, copying nested values, or authorizing new field operations.";
 						case _ if (enumCatchRethrow):
 							'The final typed Haxe body rethrows unchanged catch binding ${representation.enumCatchOrigin.localId} as its native ${representation.semanticTypeId} variant. The source catch chain and clause preserve the original Obj.t exception carrier beside that typed binding, so the new private exception signal keeps the same Haxe enum identity and payload.';
 						case _ if (enumRepresentation):
@@ -3465,6 +3503,9 @@ class OcamlControlPlanner {
 		An anonymous object whose fields are already admitted by the structural
 		planner also uses `Obj.t`, so its exception plan preserves the same mutable
 		container and null sentinel without reconstructing its shape in syntax.
+		Other anonymous shapes may cross only through the separate opaque-container
+		proof shared with the emitter's carrier classifier. Their field operations
+		remain outside the direct structural planner's admission contract.
 		An exact immutable `Array<Int>` local may also cross opaquely once its
 		program representation is already sealed; this preserves the existing
 		mutable array object without introducing an array-valued call boundary.
@@ -3548,6 +3589,23 @@ class OcamlControlPlanner {
 				carrierTypeId: anonymousRepresentation.carrierTypeId,
 				representationId: anonymousRepresentation.id,
 				representationRevision: anonymousRepresentation.revision,
+				arrayDescriptorId: null,
+				arrayDescriptorRevision: null,
+				arrayLiteralProducerId: null,
+				arrayLiteralProducerPlanRevision: null,
+				nominalRepresentation: null,
+				enumIdentity: null,
+				enumCatchOrigin: null,
+				runtimeClassIdentity: null
+			};
+		}
+		final opaqueAnonymousTypeId = OcamlAnonymousThrowCarrier.semanticTypeId(expression.t);
+		if (opaqueAnonymousTypeId != null) {
+			return {
+				semanticTypeId: opaqueAnonymousTypeId,
+				carrierTypeId: "Obj.t",
+				representationId: OcamlAnonymousThrowCarrier.representationId(opaqueAnonymousTypeId),
+				representationRevision: null,
 				arrayDescriptorId: null,
 				arrayDescriptorRevision: null,
 				arrayLiteralProducerId: null,

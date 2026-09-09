@@ -6,8 +6,8 @@ import haxe.ds.ObjectMap;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
-#if macro
 import haxe.macro.TypeTools;
+#if macro
 import haxe.macro.TypedExprTools;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -49,7 +49,6 @@ typedef OcamlDynamicEqualityDecision = {
 	that container. Planning and code generation share this model. Thus, both
 	phases make the same choice for `Dynamic`, `Any`, and `HxAnon` values.
 **/
-#if macro
 class OcamlDynamicCarrierModel {
 	/** Returns whether this exact type uses the general-purpose Dynamic container. */
 	public static function usesDynamicCarrier(type:Type):Bool {
@@ -175,7 +174,6 @@ class OcamlDynamicCarrierModel {
 		return current;
 	}
 }
-#end
 
 /** Validates and stores the exact helper uses for one typed root. */
 class OcamlDynamicEqualityPlan {

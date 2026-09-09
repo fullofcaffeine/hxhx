@@ -506,7 +506,8 @@ class OcamlLoweringReportWriter {
 					}
 				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)
 					&& !OcamlControlPlan.isAdmittedEnumThrowFamily(payload)
-					&& !OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload)) {
+					&& !OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload)
+					&& !(control.kind == Throw && OcamlControlPlan.isAdmittedOpaqueAnonymousThrowPayload(payload))) {
 					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
 					requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
@@ -722,12 +723,12 @@ class OcamlLoweringReportWriter {
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (conversion in sortedContainerElementConversions) {
-			final expected = OcamlEnumRuntimeRequirementRecorder.containerElementRequirement(conversion);
+			final expected = reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.requirement(conversion);
 			final recorded = requirementById.get(expected.id);
 			if (recorded == null)
-				throw 'Enum container-element conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
+				throw 'Container-element conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
 			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
-				throw 'Enum container-element conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
+				throw 'Container-element conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (control in sortedControls) {

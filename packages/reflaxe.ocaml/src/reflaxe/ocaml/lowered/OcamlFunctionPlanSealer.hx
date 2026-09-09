@@ -324,7 +324,7 @@ class OcamlFunctionPlanSealer {
 				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
 		}
 		for (conversion in containerElements.decisions())
-			context.recordEnumDynamicContainerRuntimeRequirement(conversion);
+			context.recordContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
 			final runtimeUsePlan = calls.runtimeUsePlanFor(call.id);
@@ -616,6 +616,8 @@ class OcamlFunctionPlanSealer {
 			if (OcamlControlPlan.isAdmittedEnumThrowFamily(payload))
 				continue;
 			if (OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload))
+				continue;
+			if (control.kind == Throw && OcamlControlPlan.isAdmittedOpaqueAnonymousThrowPayload(payload))
 				continue;
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);

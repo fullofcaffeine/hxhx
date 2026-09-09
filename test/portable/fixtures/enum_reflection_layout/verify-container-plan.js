@@ -88,38 +88,17 @@ const generatedStaticBoxes = staticArraySyntax.match(/HxEnum\.box_if_needed "Mix
 assert.equal(generatedStaticBoxes.length, standaloneConversions.length,
 	'static initializer syntax should apply exactly its two sealed array-element conversions')
 
-/**
- * Runs the public inspection command against one output directory.
- *
- * The inspector is the independent consumer used by release tooling. A valid
- * result proves that the compiler did not merely write self-consistent fields
- * which only this fixture understands.
- */
-function inspect(outputDirectory) {
-	return childProcess.spawnSync('haxe', [
-		'-cp', 'packages/reflaxe.ocaml/src',
+/** Compiles the public inspector once and evaluates each independent evidence copy. */
+function inspect(outputDirectories) {
+	return childProcess.spawnSync(process.env.HAXE_BIN || 'haxe', [
+		'-cp', 'packages/reflaxe.ocaml/src', '-cp', fixtureRoot,
 		'--macro', 'nullSafety("reflaxe.ocaml")',
-		'--run', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun',
-		'inspect',
-		'--project', fixtureRoot,
-		'--output', outputDirectory,
-		'--require-lowering',
-		'--json'
-	], {
-		cwd: repoRoot,
-		encoding: 'utf8'
-	})
+		'--run', 'InspectReports', fixtureRoot, ...outputDirectories
+	], { cwd: repoRoot, encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 })
 }
 
-const inspection = inspect(path.join(fixtureRoot, 'out'))
-assert.equal(inspection.status, 0, `public inspection rejected the valid container plan: ${inspection.stdout}${inspection.stderr}`)
-const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 48)
-assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
-assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
-
+const cases = []
 const tamperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-enum-container-tamper-'))
-const tamperOut = path.join(tamperRoot, 'out')
 try {
 	/**
 	 * Restores the valid output before one independent corruption case.
@@ -127,22 +106,23 @@ try {
 	 * Each case changes one owner only, so rejection proves that the named
 	 * relationship is checked instead of inheriting damage from an earlier case.
 	 */
-	function resetTamperOutput() {
-		fs.rmSync(tamperOut, { recursive: true, force: true })
+	function prepareTamperOutput() {
+		const tamperOut = path.join(tamperRoot, String(cases.length))
 		fs.cpSync(path.join(fixtureRoot, 'out'), tamperOut, {
 			recursive: true,
 			filter: source => path.basename(source) !== '_build'
 		})
+		return tamperOut
 	}
 
 	/** Mutates one copied lowering report and requires the public inspector to reject it. */
 	function expectLoweringRejection(label, pattern, mutate) {
-		resetTamperOutput()
+		const tamperOut = prepareTamperOutput()
 		const reportPath = path.join(tamperOut, 'ocaml_lowering_report.json')
 		const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 		mutate(report)
 		fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
-		const recompute = childProcess.spawnSync('haxe', [
+		const recompute = childProcess.spawnSync(process.env.HAXE_BIN || 'haxe', [
 			'-cp', path.join(repoRoot, 'scripts/ci'),
 			'--run', 'RecomputeLoweringContainerRevisions',
 			reportPath
@@ -152,9 +132,7 @@ try {
 		})
 		assert.equal(recompute.status, 0,
 			`could not refresh lowering section revisions for ${label}: ${recompute.stdout}${recompute.stderr}`)
-		const result = inspect(tamperOut)
-		assert.notEqual(result.status, 0, `public inspection accepted ${label}`)
-		assert.match(result.stdout + result.stderr, pattern)
+		cases.push({ label, pattern, output: tamperOut })
 	}
 
 	expectLoweringRejection('a completely omitted required container conversion', /required container-element conversion inventory.*does not match/i, report => {
@@ -180,17 +158,17 @@ try {
 		report.containerElementConversions[0].containerOrdinal += 1
 	})
 	expectLoweringRejection('a standalone conversion using the function pipeline revision',
-		/invalid exact enum-to-Dynamic array contract/, report => {
+		/invalid type-preserving Dynamic array contract/, report => {
 			const standalone = report.containerElementConversions.find(entry => entry.functionId.startsWith('standalone:'))
 			standalone.pipelineRevision = 'ocaml-function-plans-v66'
 		})
-	expectLoweringRejection('a corrupt container carrier', /invalid exact enum-to-Dynamic array contract/, report => {
+	expectLoweringRejection('a corrupt container carrier', /invalid type-preserving Dynamic array contract/, report => {
 		report.containerElementConversions[0].inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'
 	})
-	expectLoweringRejection('an empty container conversion reason', /invalid exact enum-to-Dynamic array contract/, report => {
+	expectLoweringRejection('an empty container conversion reason', /invalid type-preserving Dynamic array contract/, report => {
 		report.containerElementConversions[0].reason = ''
 	})
-	expectLoweringRejection('an empty container conversion proof claim', /invalid exact enum-to-Dynamic array contract/, report => {
+	expectLoweringRejection('an empty container conversion proof claim', /invalid type-preserving Dynamic array contract/, report => {
 		report.containerElementConversions[0].proofClaim = ''
 	})
 	expectLoweringRejection('a container conversion without its HxEnum requirement', /refers to missing runtime requirement/, report => {
@@ -199,6 +177,21 @@ try {
 		report.runtimeRequirements = report.runtimeRequirements.filter(entry => entry.id !== requirementId)
 		report.runtimeRequirementCount = report.runtimeRequirements.length
 	})
+	const inspection = inspect([path.join(fixtureRoot, 'out'), ...cases.map(entry => entry.output)])
+	if (inspection.error) throw inspection.error
+	assert.equal(inspection.status, 0, inspection.stdout + inspection.stderr)
+	const reports = JSON.parse(inspection.stdout)
+	assert.equal(reports.length, cases.length + 1, 'every evidence copy must receive an inspection result')
+	const inspectionReport = reports[0]
+	assert.equal(inspectionReport.summary.valid, true, JSON.stringify(inspectionReport))
+	assert.equal(inspectionReport.schemaVersion, 48)
+	assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
+	assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
+	for (const [index, entry] of cases.entries()) {
+		const report = reports[index + 1]
+		assert.equal(report.summary.valid, false, `public inspection accepted ${entry.label}`)
+		assert.match(JSON.stringify(report), entry.pattern)
+	}
 } finally {
 	fs.rmSync(tamperRoot, { recursive: true, force: true })
 }
