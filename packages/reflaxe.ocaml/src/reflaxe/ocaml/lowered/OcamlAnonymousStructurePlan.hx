@@ -76,7 +76,9 @@ class OcamlAnonymousStructurePlan {
 			final structure = structuresById.get(operation.structureId);
 			if (structure == null)
 				throw 'reflaxe.ocaml [ocaml-anonymous:missing-structure]: operation "${operation.id}" refers to missing structure "${operation.structureId}"';
-			OcamlAnonymousStructureContract.requireOperation(operation, structure);
+			// The structure inventory above validates private deep copies. This
+			// constructor neither exposes nor mutates them before operation checks.
+			OcamlAnonymousStructureContract.requireOperationForValidatedStructure(operation, structure);
 			if (operationsById.exists(operation.id))
 				throw 'reflaxe.ocaml [ocaml-anonymous:duplicate-operation]: anonymous operation "${operation.id}" appears more than once';
 			operationsById.set(operation.id, OcamlAnonymousStructureContract.copyOperation(operation, operation.id));
