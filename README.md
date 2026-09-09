@@ -52,6 +52,11 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
+Readiness review, 2026-09-09: focused exception-transport and runtime-report
+checks pass. Native-surface validation now completes for the macro host, but
+complete source generation and release checks remain open. Overall and
+integration percentages therefore remain unchanged.
+
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
 | `reflaxe.ocaml` with upstream `haxe` | `[#######---]` about 65–70% | **Advanced preview.** This remains the most usable route. The declared example/runtime matrix, deterministic source package, and isolated macOS/Ubuntu native application proofs exist. | Use upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`. Package `build` and `watch` use a fresh Haxe process by default; explicit local `--connect <port>` is an experimental frontend-reuse lane. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`. | Representation/storage/capture (`9bome`) and calls/conversions (`taef5`) are now closed. Product owner `haxe_ocaml-s7jry` still needs control effects (`w32h3`), fail-closed runtime ownership (`0uwin`), complete artifact/native-dependency authority, and fresh release evidence. Runtime ownership now checks typed String equality, direct standard String methods and fields, String null checks in typed `Reflect.compare`, typed String conversion, and seven standard `Reflect` field operations with Haxe's left-to-right evaluation order. Calls to the exact generic identity shape now preserve concrete `String`, `Int`, and `Bool` values without `Obj.t`. However, 225 legacy helper sites remain, so the readiness range is unchanged. Opt-in exact unchanged-request replay has passed compiler-scale qualification, but it is not yet a documented, supported, or default server feature; reuse after edits remains open. |
