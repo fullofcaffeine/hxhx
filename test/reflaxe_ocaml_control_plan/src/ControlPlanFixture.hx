@@ -1398,6 +1398,54 @@ class ControlPlanFixture {
 		}
 
 		final typedNullThrowRoot = Context.typeExpr(macro throw null);
+		final nestedThrowRoot = Context.typeExpr(macro throw {message: "failure", detail: {code: 7}});
+		final nestedThrowBinding = binding("body:opaque-anonymous-throw");
+		final nestedThrowRepresentations = new OcamlRepresentationRegistry();
+		nestedThrowRepresentations.beginProgram(nestedThrowBinding.programRevision);
+		final nestedThrowIdentities = LexicalLocalIdentityPlan.build(nestedThrowBinding.functionId, nestedThrowRoot);
+		final nestedThrowPlan = new OcamlControlPlanner(nestedThrowRepresentations, new OcamlLocalRepresentationPlan([]), nestedThrowBinding,
+			nestedThrowIdentities).plan(nestedThrowRoot, null);
+		final nestedThrowDecision = nestedThrowPlan.decisionFor(nestedThrowRoot);
+		if (!nestedThrowPlan.throwFamilyAdmitted
+			|| nestedThrowDecision == null
+			|| nestedThrowDecision.payload == null
+			|| !OcamlControlPlan.isAdmittedOpaqueAnonymousThrowPayload(nestedThrowDecision.payload))
+			throw "Nested objects require their own opaque exception proof";
+		expectThrows("binding", () -> new OcamlControlPlan(false, true, true, binding("body:stale-opaque"), [], [nestedThrowDecision]));
+		// Changing the final typed input must invalidate its occurrence-bound proof.
+		switch (nestedThrowRoot.expr) {
+			case TThrow(value):
+				final originalType = value.t;
+				value.t = Context.typeof(macro {other: {code: 8}});
+				if (nestedThrowPlan.decisionFor(nestedThrowRoot) != null)
+					throw "An opaque throw proof survived a changed source type";
+				value.t = originalType;
+				if (nestedThrowPlan.decisionFor(nestedThrowRoot) == null)
+					throw "The restored throw input lost its original proof";
+			case _:
+				throw "Expected a typed throw fixture";
+		}
+		// Deliberately corrupt immutable evidence at the adversarial test boundary.
+		Reflect.setField(nestedThrowDecision.payload, "inputCarrierTypeId", "int");
+		expectThrows("invalid-plan", () -> OcamlControlPlan.requireDecision(nestedThrowDecision));
+		Reflect.setField(nestedThrowDecision.payload, "inputCarrierTypeId", "Obj.t");
+		Reflect.setField(nestedThrowDecision.payload, "conversion", OcamlControlPayloadConversion.PreserveDynamicThrowCarrier);
+		expectThrows("invalid-plan", () -> OcamlControlPlan.requireDecision(nestedThrowDecision));
+		Reflect.setField(nestedThrowDecision.payload, "conversion", OcamlControlPayloadConversion.PreserveOpaqueAnonymousThrowCarrier);
+		Reflect.setField(nestedThrowDecision.payload, "proofId", OcamlControlPlan.DYNAMIC_THROW_PROOF_ID);
+		expectThrows("invalid proof", () -> OcamlControlPlan.requireDecision(nestedThrowDecision));
+		for (excluded in [
+			Context.typeof(macro 7),
+			Context.getType("sys.FileStat"),
+			Context.typeof(macro {key: "a", value: 7}),
+			Context.typeof(macro {
+				hasNext: function() return true,
+				next: function() return 7
+			})
+		]) {
+			if (reflaxe.ocaml.lowered.OcamlAnonymousThrowCarrier.semanticTypeId(excluded) != null)
+				throw "Opaque exception transport admitted a non-container representation";
+		}
 		final nullThrowBinding = binding("body:null-literal-throw");
 		final nullThrowRepresentations = new OcamlRepresentationRegistry();
 		nullThrowRepresentations.beginProgram(nullThrowBinding.programRevision);

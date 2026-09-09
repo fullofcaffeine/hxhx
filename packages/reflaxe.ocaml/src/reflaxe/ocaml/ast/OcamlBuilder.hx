@@ -1215,7 +1215,7 @@ class OcamlBuilder {
 				OcamlExpr.ETuple([
 					buildAuthorizedThrowPayloadValue(decision, OcamlThrowRuntimeUseRole.UseCanonicalNullPayload, position)
 				]);
-			case PreserveAnonymousThrowCarrier:
+			case PreserveAnonymousThrowCarrier, PreserveOpaqueAnonymousThrowCarrier:
 				built;
 			case BoxRepresentedArrayThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
@@ -2544,6 +2544,8 @@ class OcamlBuilder {
 			case Required(_, conversion):
 				conversion;
 		};
+		if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic)
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(item)]);
 		OcamlEnumDynamicCarrier.requireIdentity(conversion.inputSemanticTypeId, conversion.inputCarrierTypeId);
 		final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(item)]);
 		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
