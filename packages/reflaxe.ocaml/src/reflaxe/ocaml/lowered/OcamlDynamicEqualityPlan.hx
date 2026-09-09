@@ -42,6 +42,7 @@ typedef OcamlDynamicEqualityDecision = {
 	final pipelineRevision:String;
 }
 
+#if macro
 /**
 	Classifies Haxe values stored in the target's general-purpose OCaml container.
 
@@ -174,6 +175,7 @@ class OcamlDynamicCarrierModel {
 		return current;
 	}
 }
+#end
 
 /** Validates and stores the exact helper uses for one typed root. */
 class OcamlDynamicEqualityPlan {
