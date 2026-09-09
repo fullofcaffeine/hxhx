@@ -141,7 +141,7 @@ jobs:
 
   guards:
     name: Guardrails
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [route]
     if: ${{ needs.route.outputs.run_q1 == 'true' }}
     timeout-minutes: 90
@@ -170,16 +170,23 @@ jobs:
             done
           }
 
-          retry_apt sudo apt-get update
+          # These packages come from Ubuntu. Unrelated preinstalled repositories
+          # must not block compiler checks when their package indexes are broken.
+          test -s /etc/apt/sources.list.d/ubuntu.sources
+          apt_sources=(
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources
+            -o Dir::Etc::sourceparts=/dev/null
+          )
+          retry_apt sudo apt-get "${apt_sources[@]}" update
 
-          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          dune_candidate="$(apt-cache "${apt_sources[@]}" policy dune | awk '/Candidate:/ { print $2; exit }')"
           if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
             dune_pkg="dune"
           else
             dune_pkg="ocaml-dune"
           fi
 
-          retry_apt sudo apt-get install -y ocaml ocaml-findlib "${dune_pkg}"
+          retry_apt sudo apt-get "${apt_sources[@]}" install -y ocaml ocaml-findlib "${dune_pkg}"
           dune --version
           ocamlc -version
           ocamlfind ocamlc -version
