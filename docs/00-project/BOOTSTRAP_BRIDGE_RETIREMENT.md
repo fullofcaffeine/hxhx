@@ -63,6 +63,11 @@ receive. Today it is still the compiler's macro-expanded typed program. It is
 The boundary helpers recover that known type when native interface dispatch
 temporarily presents it as an opaque value.
 
+The target-core `requireProgram` calls also reject stale typed-body revisions
+before generation. The shared native OCaml adapter keeps this check before it
+converts the program for the standalone target. Its existing call is inventoried
+alongside the comparison OCaml core and JS core.
+
 - Long-lived owners: Full1 compiler closure `haxe.ocaml-f1cl` and promotion
   product `haxe_ocaml-bomhr`.
 - Allowed Haxe files:
@@ -70,6 +75,7 @@ temporarily presents it as an opaque value.
   - `packages/hxhx/src/hxhx/Stage3EmitSupport.hx`
   - `packages/hxhx-core/src/backend/js/JsTargetCore.hx`
   - `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx`
+  - `packages/hxhx-core/src/backend/ocaml/OcamlNativeTargetCore.hx`
 - Focused proof today:
   - `npm run test:m14:backend-dispatch-boundary`
   - `npm run test:m14:target-core-wiring`
