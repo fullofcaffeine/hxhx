@@ -1501,14 +1501,17 @@ class CallPlanFixture {
 			PreliminaryCallFactsFixture.identity("first");
 			PreliminaryCallFactsFixture.identity("second");
 			PreliminaryCallFactsFixture.identity("third");
+			final nested = function() {
+				return PreliminaryCallFactsFixture.identity("nested");
+			};
 		});
 		final expressions = switch (typed.expr) {
 			case TBlock(children): children;
 			case _: Context.error("The preliminary-call fixture did not type as a block.", typed.pos);
 		}
 		final complete = new OcamlCallPlanner(representations, caller).plan(typed);
-		if (complete.decisions().length != 3)
-			Context.error("The complete call planner did not observe all three fixture calls.", typed.pos);
+		if (complete.decisions().length != 4)
+			Context.error("The complete call planner must observe three direct calls and the call inside a nested function.", typed.pos);
 
 		final preliminary = new OcamlCallPlanner(representations, caller);
 		if (!preliminary.preliminaryProducesExactString(expressions[0])
