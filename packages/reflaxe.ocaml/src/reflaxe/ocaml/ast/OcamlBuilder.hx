@@ -21,7 +21,7 @@ import reflaxe.ocaml.target.HaxeOcamlTargetLiteralAdapter;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;

@@ -2,7 +2,7 @@ package reflaxe.ocaml.target;
 
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;

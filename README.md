@@ -52,13 +52,15 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
-Readiness review, 2026-09-09: focused exception-transport and runtime-report
+Readiness review, 2026-09-11: focused exception-transport and runtime-report
 checks pass. Native-surface validation now completes for the macro host.
-[Hosted checks for PR #28](https://github.com/fullofcaffeine/hxhx/actions/runs/34409458946)
+[Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098)
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
 The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
-Complete source generation, bootstrap refresh, and release checks remain open, so overall and integration percentages remain unchanged.
+[Fresh source generation](https://github.com/fullofcaffeine/hxhx/actions/runs/34566180432) completed in 2,773 seconds.
+The generated bootstrap then failed native verification because two literal-support modules depend on each other (`haxe_ocaml-xmf73.3`).
+Bootstrap buildability, runtime acceptance, and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
