@@ -58,8 +58,8 @@ checks pass. Native-surface validation now completes for the macro host.
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
 The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
-[Fresh source generation](https://github.com/fullofcaffeine/hxhx/actions/runs/34566180432) completed in 2,773 seconds.
-The generated bootstrap then failed native verification because two literal-support modules depend on each other (`haxe_ocaml-xmf73.3`).
+[Fresh source generation](https://github.com/fullofcaffeine/hxhx/actions/runs/34570478838) completed in 2,804 seconds.
+The literal-support module cycle is fixed. Native verification now stops on six unused callback result bindings (`haxe_ocaml-xmf73.4`).
 Bootstrap buildability, runtime acceptance, and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |

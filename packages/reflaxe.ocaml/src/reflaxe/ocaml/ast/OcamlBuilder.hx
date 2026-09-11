@@ -9672,6 +9672,13 @@ class OcamlBuilder {
 			final e = exprs[i];
 			if (exprReadsLocalId(e, id))
 				return true;
+			// Block emission stops at a direct return. Its value can read this
+			// local, but later expressions cannot keep an earlier binding alive.
+			switch (e.expr) {
+				case TReturn(_):
+					return false;
+				case _:
+			}
 			if (exprWritesLocalId(e, id))
 				return false;
 		}
