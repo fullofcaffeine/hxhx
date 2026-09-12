@@ -22,6 +22,12 @@ class OcamlModuleChunks {
 		chunks.set(key(moduleId, typeName), items.copy());
 	}
 
+	/** Reads completed declarations without transferring ownership of the item list. */
+	public function itemsFor(moduleId:String, typeName:String):Null<Array<OcamlModuleItem>> {
+		final items = chunks.get(key(moduleId, typeName));
+		return items == null ? null : items.copy();
+	}
+
 	/**
 		Appends retained declarations to the original source-type header.
 		Types supplied as text by a framework hook have no retained chunk; their

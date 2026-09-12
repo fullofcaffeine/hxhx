@@ -1,5 +1,6 @@
 package reflaxe.ocaml.ast;
 
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
@@ -9136,13 +9137,20 @@ class OcamlBuilder {
 		return out;
 	}
 
+	/**
+			Builds one planned function and preserves its represented static signature.
+			Parameter and result types come from the active checked callable boundary.
+			Other callable families return no signature; callers must not infer one from
+			the expression or treat that absence as permission to export a recursive module.
+		**/
 	public function buildFunctionFromArgsAndExpr(args:Array<{
 		id:Int,
 		name:String,
 		t:Type,
 		value:Null<TypedExpr>
 	}>,
-			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>):OcamlExpr {
+			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan,
+			?expectedReturnType:Null<Type>):OcamlBuiltFunction {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -9376,6 +9384,17 @@ class OcamlBuilder {
 		body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, repeatedRuntimeUseOutputRoles(functionPlan.binding.functionId, false),
 			ctx.activateStagedTypeRuntimeUse);
 
+		// Preserve the same represented types used above while their owning plan is active.
+		final signature = if (callableBoundary == null || callableBoundary.kind != OcamlCallKind.DirectStaticHaxeMethod) {
+			null;
+		} else if (completionResultKind == OcamlCallResultKind.EffectOnlyVoid) {
+			signatureFromParameters(params, OcamlTypeExpr.TIdent("unit"));
+		} else if (completionResult != null) {
+			signatureFromParameters(params, callableOutputType(completionResult, bodyExpr.pos));
+		} else {
+			null;
+		};
+
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -9416,7 +9435,7 @@ class OcamlBuilder {
 		if (profMatch)
 			log("reflaxe.ocaml: builder_fn_total dt_ms=" + Std.string(Std.int((t6 - t0) * 1000)));
 		#end
-		return OcamlExpr.EFun(params, body);
+		return {expression: OcamlExpr.EFun(params, body), signature: signature};
 	}
 
 	/**
