@@ -20,7 +20,11 @@ class OcamlASTPrinterTest {
 		final items = [
 			OcamlModuleItem.ILet([{name: "value", expr: OcamlExpr.EConst(OcamlConst.CInt(3))}], false)
 		];
-		chunks.record("left.Main", "Helper", items);
+		chunks.record("left.Main", "Helper", items, "header\n");
+		if (chunks.itemsForOutput("left.Main", "Helper", "header\n") == null)
+			throw "original header lost its structured declarations";
+		if (chunks.itemsForOutput("left.Main", "Helper", "let injected = Other.run ()\n") != null)
+			throw "changed framework text borrowed structured safety facts";
 		items.resize(0);
 		assertEq("header\nlet value = 3", chunks.render("left.Main", "Helper", "header\n", printer), "retained array ownership");
 		assertEq("header\nlet value = 3", chunks.render("left.Main", "Helper", "header\n", printer), "repeat rendering");
@@ -137,6 +141,7 @@ class OcamlASTPrinterTest {
 		OcamlModuleReferencesTest.run();
 		OcamlModuleGroupsTest.run();
 		OcamlFunctionModuleCheckTest.run();
+		OcamlModuleAssemblyTest.run();
 		final signaturePrinter = new OcamlASTPrinter();
 		final signature = signatureFromParameters([
 			OcamlPat.PAnnot(OcamlPat.PVar("value"), OcamlTypeExpr.TIdent("int")),
