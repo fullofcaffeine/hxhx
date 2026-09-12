@@ -60,8 +60,8 @@ Native end-to-end testing failed at an imported call that skips optional argumen
 The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
 [Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
 The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
-The retained runtime workload fails because Stage3 omits standard-library function bodies but emits references to their local variables.
-A focused source fix now preserves bodies under `std/` directories; fresh compiler validation remains pending (`haxe_ocaml-xmf73.5`).
+Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
+The authored compiler now reaches a standard-library module dependency cycle. Fresh native runtime validation remains pending.
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
