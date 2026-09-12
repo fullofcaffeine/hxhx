@@ -2927,16 +2927,18 @@ class EmitterStage {
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
-			if (exactCall.receiver.match(EThis) && ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
+			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
 				for (partIndex in 1...ownerParts.length)
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
-				return exprToOcaml(ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments)), arityByIdentRaw,
-					tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				// Keep the typed owner and explicit receiver together through call
+				// planning. Rebuilding receiver.method would rediscover it by name.
+				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+			} else {
+				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			}
-			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
-				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		}
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
@@ -3688,10 +3690,10 @@ class EmitterStage {
 					}
 
 					var fullArgs = args.copy();
-					final sourceAlreadyCarriesThis = fullArgs.length > 0 && switch (fullArgs[0]) {
+					final sourceAlreadyCarriesThis = exactCall != null || (fullArgs.length > 0 && switch (fullArgs[0]) {
 						case EThis: true;
 						case _: false;
-					};
+					});
 					final needsRecoveredQualifiedReceiver = sig != null && sig.needsReceiver && !receiverPreApplied && !sourceAlreadyCarriesThis
 						&& fullArgs.length < sig.required && switch (callee) {
 							case EField(obj, _) if (isTypePathExpr(obj)):
