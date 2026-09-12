@@ -2,6 +2,7 @@ import haxe.macro.Context;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlModuleReferences;
+import reflaxe.ocaml.ast.OcamlModuleGroups.plan as planModules;
 
 /** Checks metadata from actual function lowering, before relying on module signatures. */
 @:access(reflaxe.ocaml.OcamlCompiler)
@@ -11,6 +12,20 @@ class CheckSignatures {
 			check("CycleLeft", "value", "int -> int");
 			check("CycleRight", "value", "int -> int");
 			check("Main", "main", "unit -> unit");
+			final nodes = [
+				for (name in ["Main", "CycleLeft", "CycleRight"]) {
+					final items = OcamlCompiler.instance.moduleChunks.itemsFor(name, name);
+					if (items == null) throw "missing module syntax: " + name;
+					final references = OcamlModuleReferences.collect(items);
+					{
+						name: name,
+						dependencies: references.functionModules.concat(references.initializationModules).concat(references.typeModules)
+					};
+				}
+			];
+			final groups = planModules(nodes).groups;
+			if (groups.map(group -> group.members.join(",")).join(";") != "CycleRight;CycleLeft;Main")
+				throw "retained declarations lost module dependency order";
 		});
 	}
 
