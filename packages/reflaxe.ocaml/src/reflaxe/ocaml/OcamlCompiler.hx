@@ -2546,7 +2546,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				};
 				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
 				constructionBoundary = syntaxInput.constructionBoundary;
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)) {
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)
+					.expression) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -2740,7 +2741,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case _: f.expr.t;
 					};
 					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)) {
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)
+						.expression) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2842,12 +2844,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (requiredSharedFunction == sharedFunctionSelector && sharedFunction == null)
 				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
 			#end
-			final compiled = if (sharedFunction == null) {
+			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
 				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
-				OcamlTargetFunctionLowerer.build(sharedFunction);
+				{expression: OcamlTargetFunctionLowerer.build(sharedFunction), signature: null};
 			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
@@ -2858,6 +2860,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 			#end
+
+			final compiled = builtFunction.expression;
 
 			// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
 			// (including statics, see upstream Issue5556). Model them like mutable statics:
@@ -2878,7 +2882,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			};
 			final bindingName = storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
-			lets.push({name: bindingName, expr: expr});
+			final binding:OcamlLetBinding = if (!isDynamicMethod && builtFunction.signature != null) {
+				{name: bindingName, expr: expr, signature: builtFunction.signature};
+			} else {
+				{name: bindingName, expr: expr};
+			};
+			lets.push(binding);
 		}
 
 		// Static vars (M6+)

@@ -3,6 +3,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlModuleChunks;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRawInjection;
 import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionMaterializationResult;
@@ -133,6 +134,16 @@ class OcamlASTPrinterTest {
 	}
 
 	static function main() {
+		final signaturePrinter = new OcamlASTPrinter();
+		final signature = signatureFromParameters([
+			OcamlPat.PAnnot(OcamlPat.PVar("value"), OcamlTypeExpr.TIdent("int")),
+			OcamlPat.PAnnot(OcamlPat.PVar("flag"), OcamlTypeExpr.TIdent("bool"))
+		], OcamlTypeExpr.TIdent("string"));
+		if (signature == null)
+			throw "explicit function signature was lost";
+		assertEq("int -> bool -> string", signaturePrinter.printType(signature), "parameter order");
+		if (signatureFromParameters([OcamlPat.PVar("unknown")], OcamlTypeExpr.TIdent("int")) != null)
+			throw "unrepresented parameter acquired an inferred signature";
 		verifyModuleChunks();
 		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
