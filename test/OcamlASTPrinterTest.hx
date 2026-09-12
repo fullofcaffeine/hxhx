@@ -2,6 +2,7 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRawInjection;
 import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawInjectionMaterializationResult;
@@ -11,6 +12,23 @@ import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
 class OcamlASTPrinterTest {
+	/** Deferred chunks remain separate across types and disappear between requests. */
+	static function verifyModuleChunks():Void {
+		final chunks = new OcamlModuleChunks();
+		final printer = new OcamlASTPrinter();
+		final items = [
+			OcamlModuleItem.ILet([{name: "value", expr: OcamlExpr.EConst(OcamlConst.CInt(3))}], false)
+		];
+		chunks.record("left.Main", "Helper", items);
+		items.resize(0);
+		assertEq("header\nlet value = 3", chunks.render("left.Main", "Helper", "header\n", printer), "retained array ownership");
+		assertEq("header\nlet value = 3", chunks.render("left.Main", "Helper", "header\n", printer), "repeat rendering");
+		assertEq("hook output", chunks.render("right.Main", "Helper", "hook output", printer), "distinct source module");
+		assertEq("hook output", chunks.render("left.Main", "Main", "hook output", printer), "distinct source type");
+		chunks.clear();
+		assertEq("fresh request", chunks.render("left.Main", "Helper", "fresh request", printer), "request reset");
+	}
+
 	static function assertEq(expected:String, actual:String, label:String):Void {
 		if (expected != actual) {
 			throw label + "\n--- expected ---\n" + expected + "\n--- actual ---\n" + actual;
@@ -115,6 +133,7 @@ class OcamlASTPrinterTest {
 	}
 
 	static function main() {
+		verifyModuleChunks();
 		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
 		verifyDeepExpressionPrintingIsStackSafe(p);
