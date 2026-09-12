@@ -1,6 +1,7 @@
 import haxe.macro.Context;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.ast.OcamlModuleReferences;
 
 /** Checks metadata from actual function lowering, before relying on module signatures. */
 @:access(reflaxe.ocaml.OcamlCompiler)
@@ -18,6 +19,11 @@ class CheckSignatures {
 		final items = OcamlCompiler.instance.moduleChunks.itemsFor(moduleId, moduleId);
 		if (items == null)
 			throw "missing module syntax: " + moduleId;
+		final references = OcamlModuleReferences.collect(items);
+		if (moduleId == "CycleLeft" && references.functionModules.indexOf("CycleRight") < 0)
+			throw "lowered static call lost its module dependency";
+		if (moduleId == "CycleLeft" && references.initializationModules.indexOf("CycleRight") >= 0)
+			throw "delayed static call became an initializer dependency";
 		for (item in items)
 			switch (item) {
 				case ILet(bindings, _):
