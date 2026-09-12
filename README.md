@@ -57,7 +57,7 @@ checks pass. Native-surface validation now completes for the macro host.
 [Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098)
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
-The authored-source probe passes. The fresh PR #33 native compiler cannot yet run the same fixture: dependency sorting fails, and its generated main omits the imported call.
+The authored-source probe passes. The fresh PR #39 native compiler cannot yet run the same fixture: dependency sorting fails, and its generated main omits the imported call.
 [Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
 The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
 Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
@@ -68,6 +68,8 @@ The authored compiler reaches the same cycle. Standalone `reflaxe.ocaml` now pas
 Eager initialization in recursive groups is rejected before module publication. The broader standard-library cycle remains open (`haxe_ocaml-xmf73.7`).
 The focused Dynamic operator test passes with explicit diagnostic and full-body return modes, including its native runtime comparisons.
 A focused source fix preserves Boolean variables when selecting strings; native regression output matches upstream Haxe for both Boolean values and a mutable local.
+[PR #39 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34705519363) passed: generation took 2,782 seconds, and local native linking took 245 seconds.
+[PR #41 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34706538700) passed guardrails and focused compiler regressions. End-to-end and portable checks still require closure.
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |

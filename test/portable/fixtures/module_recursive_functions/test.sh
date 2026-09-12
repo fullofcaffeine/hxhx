@@ -6,11 +6,11 @@ if "${HAXE_BIN:-haxe}" -cp negative -main Main --no-output -lib reflaxe.ocaml -D
   echo "recursive initializer unexpectedly compiled" >&2
   exit 1
 fi
-if ! rg -q 'ocaml-module-cycle:unsupported-initialization' "$check_dir/compiler.log"; then
+if ! grep -Fq 'ocaml-module-cycle:unsupported-initialization' "$check_dir/compiler.log"; then
   cat "$check_dir/compiler.log" >&2
   exit 1
 fi
-if [ -d "$check_dir/out" ] && [ -n "$(rg --files "$check_dir/out" -g '*.ml')" ]; then
+if [ -d "$check_dir/out" ] && [ -n "$(find "$check_dir/out" -type f -name '*.ml' -print)" ]; then
   echo "rejected recursive initialization published OCaml modules" >&2
   exit 1
 fi
