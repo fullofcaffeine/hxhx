@@ -135,6 +135,7 @@ class OcamlASTPrinterTest {
 
 	static function main() {
 		OcamlModuleReferencesTest.run();
+		OcamlModuleGroupsTest.run();
 		final signaturePrinter = new OcamlASTPrinter();
 		final signature = signatureFromParameters([
 			OcamlPat.PAnnot(OcamlPat.PVar("value"), OcamlTypeExpr.TIdent("int")),

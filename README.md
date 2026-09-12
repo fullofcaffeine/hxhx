@@ -63,7 +63,8 @@ The literal-support module cycle and unused callback result bindings are fixed. 
 Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
 [PR #32 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699106971) also passed after the full-body fix; source generation took 2,387 seconds.
 [PR #33 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699909729) passed with the exact-call fix; source generation took 2,877 seconds.
-The authored compiler now reaches a standard-library module dependency cycle. A reduced recursive-class example also fails in standalone `reflaxe.ocaml` (`haxe_ocaml-xmf73.7`). Fresh native runtime validation remains pending.
+The fresh PR #33 compiler linked natively in 257 seconds. With stage0 forbidden, the retained workload now reaches a standard-library module dependency cycle.
+The authored compiler reaches the same cycle. A reduced recursive-class example also fails in standalone `reflaxe.ocaml` (`haxe_ocaml-xmf73.7`).
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
