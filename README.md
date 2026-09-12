@@ -66,6 +66,7 @@ Focused source fixes now preserve bodies under `std/` directories and exact inst
 The fresh PR #33 compiler linked natively in 257 seconds. With stage0 forbidden, the retained workload now reaches a standard-library module dependency cycle.
 The authored compiler reaches the same cycle. Standalone `reflaxe.ocaml` now passes a focused function-only recursion test using two classes.
 Eager initialization in recursive groups is rejected before module publication. The broader standard-library cycle remains open (`haxe_ocaml-xmf73.7`).
+The focused Dynamic operator test passes with explicit diagnostic and full-body return modes, including its native runtime comparisons.
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
