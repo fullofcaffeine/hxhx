@@ -57,7 +57,7 @@ checks pass. Native-surface validation now completes for the macro host.
 [Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098)
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
-The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
+The authored-source probe passes. The fresh PR #33 native compiler cannot yet run the same fixture: dependency sorting fails, and its generated main omits the imported call.
 [Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
 The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
 Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
