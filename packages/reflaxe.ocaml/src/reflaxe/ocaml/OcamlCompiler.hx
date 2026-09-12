@@ -42,6 +42,7 @@ import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlLetBinding;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -2069,7 +2070,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		items.push(OcamlModuleItem.ILet([
 			{
 				name: "__reflaxe_ocaml__",
-				expr: OcamlExpr.EConst(OcamlConst.CUnit)
+				expr: OcamlExpr.EConst(OcamlConst.CUnit),
+				visibility: CompilerInternal
 			}
 		], false));
 
@@ -2688,7 +2690,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (!isAbstractImplementation) {
 				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
 					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
-				lets.push({name: createName, expr: OcamlExpr.EFun(createParams, createBody)});
+				// The selected record type and emitted parameter annotations define this
+				// allocator's exact OCaml signature; no Haxe type inference is repeated.
+				final createExpr = OcamlExpr.EFun(createParams, createBody);
+				final createSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
+				lets.push(createSignature == null ? {name: createName, expr: createExpr} : {
+					name: createName,
+					expr: createExpr,
+					signature: createSignature
+				});
 
 				// `Type.createEmptyInstance` support (M10): allocate an instance without running
 				// the constructor body. Abstract implementation carriers are excluded because
@@ -2696,7 +2706,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
 				lets.push({
 					name: emptyName,
-					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record"))
+					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record")),
+					signature: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TIdent(instanceTypeName))
 				});
 			}
 
