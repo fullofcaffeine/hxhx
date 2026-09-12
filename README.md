@@ -52,15 +52,16 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
-Readiness review, 2026-09-11: focused exception-transport and runtime-report
+Readiness review, 2026-09-12: focused exception-transport and runtime-report
 checks pass. Native-surface validation now completes for the macro host.
 [Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098)
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
 Native end-to-end testing failed at an imported call that skips optional arguments.
 The authored-source probe passes, but the committed bootstrap lacks the argument-alignment policy.
-[Fresh source generation](https://github.com/fullofcaffeine/hxhx/actions/runs/34570478838) completed in 2,804 seconds.
-The literal-support module cycle is fixed. Native verification now stops on six unused callback result bindings (`haxe_ocaml-xmf73.4`).
-Bootstrap buildability, runtime acceptance, and release checks remain open, so overall and integration percentages remain unchanged.
+[Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
+The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
+The retained runtime workload fails because Stage3 omits standard-library function bodies but emits references to their local variables.
+Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
