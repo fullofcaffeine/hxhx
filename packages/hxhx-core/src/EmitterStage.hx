@@ -7294,25 +7294,9 @@ class EmitterStage {
 		}
 
 		function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
-			// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
-			// upstream-style harness code (RunCi, macro host, etc).
-			//
-			// However, the Haxe standard library contains many constructs we do not model yet
-			// (regex literals, abstracts, complex typing), and attempting to emit full bodies
-			// for `std/` quickly explodes the surface area.
-			//
-			// Pragmatic rule:
-			// - When `emitFullBodies=true`, still skip full-body emission for modules under `std/`.
-			function allowFullBodiesForFile(filePath:String, isRoot:Bool):Bool {
-				if (isRoot)
-					return true;
-				if (filePath == null || filePath.length == 0)
-					return false;
-				final p = filePath;
-				final isStd = p.indexOf("/std/") != -1 || p.indexOf("\\std\\") != -1;
-				return !isStd;
-			}
-			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
+			// The caller selects full-body emission for the whole program. Directory
+			// names must not discard declarations and effects needed by its returns.
+			final moduleEmitBodies = emitFullBodies;
 
 			final moduleProjection = tm.getBackendProjection();
 			final decl = moduleProjection.getDeclaration();
