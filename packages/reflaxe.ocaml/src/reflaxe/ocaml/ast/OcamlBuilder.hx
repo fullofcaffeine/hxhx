@@ -9245,21 +9245,25 @@ class OcamlBuilder {
 		final completionResult:Null<OcamlCallValuePlan> = functionResultBoundary != null ? functionResultBoundary.result : (callableBoundary == null ? null : callableBoundary.result);
 		final previousCallableBoundary = currentCallableBoundary;
 		currentCallableBoundary = callableBoundary;
-		final params = if (callableBoundary == null) {
+		// Constructors have a separate checked allocator boundary. Its arguments
+		// describe these same parameters, while its instance result must not become
+		// the result of the effect-only Haxe constructor body.
+		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
+		final params = if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
-			if (args.length != callableBoundary.arguments.length) {
+			if (args.length != parameterBoundary.arguments.length) {
 				return
-					callPlanInvariant('callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} planned parameters but ${args.length} typed parameters',
+					callPlanInvariant('parameter boundary "${parameterBoundary.id}" has ${parameterBoundary.arguments.length} planned parameters but ${args.length} typed parameters',
 					bodyExpr.pos);
 			}
 			for (index in 0...args.length)
-				requireCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index', bodyExpr.pos);
-			if (callableBoundary.result != null)
+				requireCallValue(parameterBoundary.arguments[index], index, 'parameter boundary "${parameterBoundary.id}" argument $index', bodyExpr.pos);
+			if (callableBoundary != null && callableBoundary.result != null)
 				requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...args.length)
-					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), callableOutputType(callableBoundary.arguments[index], bodyExpr.pos))
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), callableOutputType(parameterBoundary.arguments[index], bodyExpr.pos))
 			];
 		}
 
