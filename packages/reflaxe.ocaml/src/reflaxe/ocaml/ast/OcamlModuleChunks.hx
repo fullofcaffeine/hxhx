@@ -1,5 +1,10 @@
 package reflaxe.ocaml.ast;
 
+private typedef RecordedModuleChunk = {
+	final header:String;
+	final items:Array<OcamlModuleItem>;
+}
+
 /**
 	Keeps target declarations available until the compiler assembles output files.
 
@@ -9,7 +14,7 @@ package reflaxe.ocaml.ast;
 	Clear this request-owned catalog before compiling another program.
 **/
 class OcamlModuleChunks {
-	final chunks:Map<String, Array<OcamlModuleItem>> = [];
+	final chunks:Map<String, RecordedModuleChunk> = [];
 
 	public function new() {}
 
@@ -18,14 +23,20 @@ class OcamlModuleChunks {
 	}
 
 	/** Retains completed syntax without rendering or observing runtime uses again. */
-	public function record(moduleId:String, typeName:String, items:Array<OcamlModuleItem>):Void {
-		chunks.set(key(moduleId, typeName), items.copy());
+	public function record(moduleId:String, typeName:String, items:Array<OcamlModuleItem>, header:String):Void {
+		chunks.set(key(moduleId, typeName), {items: items.copy(), header: header});
 	}
 
 	/** Reads completed declarations without transferring ownership of the item list. */
 	public function itemsFor(moduleId:String, typeName:String):Null<Array<OcamlModuleItem>> {
-		final items = chunks.get(key(moduleId, typeName));
-		return items == null ? null : items.copy();
+		final chunk = chunks.get(key(moduleId, typeName));
+		return chunk == null ? null : chunk.items.copy();
+	}
+
+	/** A changed framework prefix cannot borrow the original declarations' safety facts. */
+	public function itemsForOutput(moduleId:String, typeName:String, header:String):Null<Array<OcamlModuleItem>> {
+		final chunk = chunks.get(key(moduleId, typeName));
+		return chunk == null || chunk.header != header ? null : chunk.items.copy();
 	}
 
 	/**
@@ -35,8 +46,8 @@ class OcamlModuleChunks {
 		so repeated output iteration has the same result.
 	**/
 	public function render(moduleId:String, typeName:String, prefix:String, printer:OcamlASTPrinter):String {
-		final items = chunks.get(key(moduleId, typeName));
-		return items == null ? prefix : prefix + printer.printModule(items);
+		final chunk = chunks.get(key(moduleId, typeName));
+		return chunk == null ? prefix : prefix + printer.printModule(chunk.items);
 	}
 
 	static inline function key(moduleId:String, typeName:String):String {

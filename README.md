@@ -64,7 +64,8 @@ Focused source fixes now preserve bodies under `std/` directories and exact inst
 [PR #32 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699106971) also passed after the full-body fix; source generation took 2,387 seconds.
 [PR #33 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699909729) passed with the exact-call fix; source generation took 2,877 seconds.
 The fresh PR #33 compiler linked natively in 257 seconds. With stage0 forbidden, the retained workload now reaches a standard-library module dependency cycle.
-The authored compiler reaches the same cycle. A reduced recursive-class example also fails in standalone `reflaxe.ocaml` (`haxe_ocaml-xmf73.7`).
+The authored compiler reaches the same cycle. Standalone `reflaxe.ocaml` now passes a focused function-only recursion test using two classes.
+Eager initialization in recursive groups is rejected before module publication. The broader standard-library cycle remains open (`haxe_ocaml-xmf73.7`).
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |

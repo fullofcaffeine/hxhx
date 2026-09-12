@@ -54,7 +54,8 @@ class RuntimeUsageCollector {
 			markModule(moduleName);
 	}
 
-	static function collectTypeExpr(typ:OcamlTypeExpr, markModule:String->Void):Void {
+	/** Reports runtime-name candidates in a type; callers must still resolve module ownership. */
+	public static function collectTypeExpr(typ:OcamlTypeExpr, markModule:String->Void):Void {
 		OcamlASTTraversal.walkTypePre(typ, current -> switch (current) {
 			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
 			case TRuntimeIdent(reference), TRuntimeApp(reference, _): markQualifiedName(reference.exactSymbol, markModule);
