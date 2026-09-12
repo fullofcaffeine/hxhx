@@ -873,19 +873,16 @@ class EmitterStage {
 	}
 
 	/**
-		Read a value from a map-like object (`Map` or lowered `Obj.t`) at emission boundaries.
+		Read an emission-context map through its typed API, preserving missing keys as null.
 
-		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
+		Native OCaml maps are hash tables, so reflecting on a `get` object field loses
+		valid import and local-type bindings. The map type must survive this helper boundary.
+		Inlining keeps each caller's concrete value type in generated OCaml.
 	**/
-	static function mapGetRaw<TMap, TValue>(mapLike:Null<TMap>, key:String):Null<TValue> {
+	static inline function mapGetRaw<TValue>(mapLike:Null<Map<String, TValue>>, key:String):Null<TValue> {
 		if (mapLike == null || key == null)
 			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final getFn = Reflect.field(mapLikeObj, "get");
-		if (getFn == null)
-			return null;
-		final value = Reflect.callMethod(mapLikeObj, getFn, [key]);
-		return value == null ? null : cast value;
+		return mapLike.get(key);
 	}
 
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
@@ -5047,12 +5044,12 @@ class EmitterStage {
 			if (hinted != null)
 				return hinted;
 			var key = name;
-			if (mapGetRaw(cast tyByIdent, key) == null) {
+			if (mapGetRaw(tyByIdent, key) == null) {
 				final lowered = ocamlValueIdent(name);
-				if (lowered != name && mapGetRaw(cast tyByIdent, lowered) != null)
+				if (lowered != name && mapGetRaw(tyByIdent, lowered) != null)
 					key = lowered;
 			}
-			final resolved = mapGetRaw(cast tyByIdent, key);
+			final resolved = mapGetRaw(tyByIdent, key);
 			if (resolved == null)
 				return TyType.unknown();
 			final typed:TyType = cast resolved;
@@ -5338,7 +5335,7 @@ class EmitterStage {
 		}
 
 		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
-			final resolved = mapGetRaw(cast value, name);
+			final resolved = mapGetRaw(value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
