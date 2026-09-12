@@ -1001,6 +1001,10 @@ class EmitterStage {
 			return switch (cond) {
 				case EBool(v):
 					v ? "true" : "false";
+				case EIdent(name) if (tyForIdent(name) == "Bool"):
+					// A checked Boolean local must select the string branch at runtime.
+					// Use ordinary reads so mutable locals retain their reference access.
+					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					final checked = stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + s + ")" : s;
