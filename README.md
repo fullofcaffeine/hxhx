@@ -79,6 +79,9 @@ The fresh PR #43 compiler rejects the reduced cycle example before output: `OCam
 The native adapter currently accepts only empty static functions with no arguments and a `Void` result.
 The dependency-sort failures above occur in the explicit Stage3 diagnostic route. They do not prove recursive-module support through the shared target.
 Control-effects owner `haxe_ocaml-w32h3` closed on September 6. Runtime-requirement owner `haxe_ocaml-0uwin` remains open.
+The complete inspector fixture passed locally in 38 minutes 32 seconds; 29 CLI invocations consumed about 91% of that time.
+A disposable compiled CLI failed valid-report digest checks because JSON field order differs between Eval and Neko.
+The experiment was reverted. Portable report digests (`haxe_ocaml-1hd2w.1`) block that optimization (`haxe_ocaml-t1io4`); no speedup or readiness increase is claimed.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
