@@ -62,7 +62,7 @@ class HaxeOcamlTargetFunctionAdapter {
 			returnTypeDisplay: returnType
 		};
 		final targetIdentity = OcamlTargetFunctionFact.identityFor(signature);
-		final targetBody = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing(targetIdentity, body);
+		final targetBody = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing(targetIdentity, body, data.classType);
 		if (targetBody == null || targetBody.semanticTypeDisplay != returnType)
 			return null;
 		return new OcamlTargetFunctionFact(signature, targetBody);

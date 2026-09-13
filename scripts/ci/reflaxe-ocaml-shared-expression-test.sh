@@ -43,7 +43,7 @@ if ! grep -Fxq 'let value = let inner = 7 in inner' "$OUTPUT_DIR/Main.ml"; then
 	exit 1
 fi
 
-if ! grep -Fxq 'let main = fun () -> ignore ()' "$OUTPUT_DIR/Main.ml"; then
+if ! grep -Fxq 'let main = fun () -> Stdlib.ignore ()' "$OUTPUT_DIR/Main.ml"; then
 	echo "Shared-expression fixture produced an unexpected Main.main function." >&2
 	exit 1
 fi

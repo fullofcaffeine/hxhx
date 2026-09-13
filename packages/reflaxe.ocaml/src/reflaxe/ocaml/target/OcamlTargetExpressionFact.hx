@@ -8,29 +8,31 @@ enum OcamlTargetExpressionKind {
 	LocalReadExpression;
 	VariableDeclarationExpression;
 	BlockExpression;
+	StaticCallExpression;
 }
 
 /**
 	One immutable expression tree copied independently by either compiler host.
 
-	Revision 1 is deliberately small. It admits direct non-null literals,
-	initialized source locals, reads of those locals, and lexical blocks. It does
-	not approximate unsupported expressions or admit compiler temporaries.
+	Revision 2 adds resolved static zero-argument Void calls to direct non-null
+	literals, initialized locals, local reads, and lexical blocks. Unsupported
+	expressions and compiler temporaries remain outside this contract.
 **/
 class OcamlTargetExpressionFact {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v1";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v2";
 
 	public final path:String;
 	public final kind:OcamlTargetExpressionKind;
 	public final semanticTypeDisplay:String;
 	public final literal:Null<OcamlTargetLiteralFact>;
 	public final binding:Null<OcamlTargetBindingFact>;
+	public final staticCall:Null<OcamlTargetStaticCallFact>;
 
 	final children:Array<OcamlTargetExpressionFact>;
 	final canonicalIdentity:String;
 
 	function new(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
-			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>) {
+			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>, ?staticCall:OcamlTargetStaticCallFact) {
 		this.path = OcamlTargetExpressionPath.require(path);
 		if (kind == null)
 			throw "OCaml target expression requires a kind";
@@ -38,10 +40,13 @@ class OcamlTargetExpressionFact {
 		this.semanticTypeDisplay = required(semanticTypeDisplay, "semantic type");
 		this.literal = literal;
 		this.binding = binding;
+		this.staticCall = staticCall;
 		this.children = children == null ? [] : children.copy();
+		if ((kind == StaticCallExpression) != (staticCall != null))
+			throw "OCaml target expression has inconsistent static call facts";
 		validateShape(this.path, this.kind, this.semanticTypeDisplay, this.literal, this.binding, this.children);
 		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode(identityParts(this.path, this.kind, this.semanticTypeDisplay, this.literal,
-			this.binding, this.children)));
+			this.binding, this.children, this.staticCall)));
 	}
 
 	public static function literalExpression(path:String, literal:OcamlTargetLiteralFact):OcamlTargetExpressionFact {
@@ -65,6 +70,20 @@ class OcamlTargetExpressionFact {
 	public static function block(path:String, semanticTypeDisplay:String, children:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact
 		return new OcamlTargetExpressionFact(path, BlockExpression, semanticTypeDisplay, null, null, children);
 
+	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact):OcamlTargetExpressionFact
+		return new OcamlTargetExpressionFact(path, StaticCallExpression, "Void", null, null, [], call);
+
+	/** Preserve source occurrence order when checking the enclosing program's call references. **/
+	public function copyStaticCalls():Array<OcamlTargetStaticCallFact> {
+		final result = new Array<OcamlTargetStaticCallFact>();
+		if (staticCall != null)
+			result.push(staticCall);
+		for (child in children)
+			for (call in child.copyStaticCalls())
+				result.push(call);
+		return result;
+	}
+
 	public function copyChildren():Array<OcamlTargetExpressionFact>
 		return children.copy();
 
@@ -81,6 +100,9 @@ class OcamlTargetExpressionFact {
 	static function validateShape(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
 			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Void {
 		switch (kind) {
+			case StaticCallExpression:
+				if (literal != null || binding != null || children.length != 0 || semanticTypeDisplay != "Void")
+					invalidShape("static call");
 			case LiteralExpression:
 				if (literal == null) {
 					invalidShape("literal");
@@ -139,7 +161,7 @@ class OcamlTargetExpressionFact {
 	}
 
 	static function identityParts(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
-			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Array<Null<String>> {
+			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>, staticCall:Null<OcamlTargetStaticCallFact>):Array<Null<String>> {
 		final parts = new Array<Null<String>>();
 		parts.push(SCHEMA_REVISION);
 		parts.push(path);
@@ -147,6 +169,7 @@ class OcamlTargetExpressionFact {
 		parts.push(semanticTypeDisplay);
 		parts.push(literal == null ? null : literal.getCanonicalIdentity());
 		parts.push(binding == null ? null : binding.getCanonicalIdentity());
+		parts.push(staticCall == null ? null : staticCall.getCanonicalIdentity());
 		parts.push(Std.string(children.length));
 		for (child in children)
 			parts.push(child.getCanonicalIdentity());
@@ -160,12 +183,13 @@ class OcamlTargetExpressionFact {
 			case LocalReadExpression: "LocalReadExpression";
 			case VariableDeclarationExpression: "VariableDeclarationExpression";
 			case BlockExpression: "BlockExpression";
+			case StaticCallExpression: "StaticCallExpression";
 		};
 	}
 
 	static function validateNode(node:OcamlTargetExpressionFact, scopes:Array<Map<String, Bool>>, identities:Map<String, Bool>):Void {
 		switch (node.kind) {
-			case LiteralExpression:
+			case LiteralExpression | StaticCallExpression:
 			case LocalReadExpression:
 				final local = node.binding;
 				if (local == null || !isVisible(local.getCanonicalIdentity(), scopes))

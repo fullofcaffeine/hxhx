@@ -206,7 +206,7 @@ if ! grep -Fxq 'and value = let inner = 7 in inner' "$NATIVE_SHARED_OUTPUT/Main.
 	echo "Native hxhx produced an unexpected Main.value initializer." >&2
 	exit 1
 fi
-if ! grep -Fxq 'let main = fun () -> ignore ()' "$NATIVE_SHARED_OUTPUT/Main.ml"; then
+if ! grep -Fxq 'let main = fun () -> Stdlib.ignore ()' "$NATIVE_SHARED_OUTPUT/Main.ml"; then
 	echo "Native hxhx produced an unexpected Main.main function." >&2
 	exit 1
 fi

@@ -27,7 +27,7 @@ class NativeFunctionBodyFixture {
 		assertUnsupportedSource("var value:Int = 7; value = 8;");
 		assertUnsupportedSource("return;");
 		assertUnsupportedSource("if (true) { var value:Int = 7; }");
-		assertUnsupportedSource("main();");
+		assertUnsupportedSource("main(7);");
 		final repeated = HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram([typed], false), "Main");
 		if (repeated.getCanonicalIdentity() != request.getCanonicalIdentity())
 			throw "a rejected body changed a later request's function facts";

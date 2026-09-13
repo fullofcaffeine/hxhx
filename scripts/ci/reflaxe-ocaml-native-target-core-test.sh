@@ -123,7 +123,7 @@ if ! grep -Fxq 'and value = let inner = 7 in inner' "$APP_OUTPUT/Main.ml"; then
 	exit 1
 fi
 
-if ! grep -Fxq 'let main = fun () -> ignore ()' "$APP_OUTPUT/Main.ml"; then
+if ! grep -Fxq 'let main = fun () -> Stdlib.ignore ()' "$APP_OUTPUT/Main.ml"; then
 	echo "Native target-core fixture produced an unexpected Main.main function." >&2
 	exit 1
 fi

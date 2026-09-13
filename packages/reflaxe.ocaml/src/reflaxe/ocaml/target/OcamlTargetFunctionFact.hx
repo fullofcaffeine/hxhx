@@ -55,6 +55,9 @@ class OcamlTargetFunctionFact {
 			throw "OCaml target function requires a normalized body";
 		this.body = body;
 		validateRevisionOne(role, argumentTypeDisplays, returnTypeDisplay, this.body);
+		for (call in body.copyStaticCalls())
+			if (!call.belongsTo(moduleId, sourceTypeName))
+				throw "OCaml target function does not admit cross-owner static calls";
 		targetIdentity = identityFor(signature);
 		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([SCHEMA_REVISION, targetIdentity, body.getCanonicalIdentity()]));
 	}

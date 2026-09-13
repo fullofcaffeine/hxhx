@@ -1,0 +1,7 @@
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx-core/src
+-cp test/reflaxe_ocaml_shared_static_calls/src
+-cp test/reflaxe_ocaml_shared_static_calls/source
+-lib reflaxe
+--main SharedStaticCallsFixture
+--interp

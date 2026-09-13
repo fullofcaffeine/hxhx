@@ -13,6 +13,6 @@ class OcamlTargetFunctionLowerer {
 		if (fact.role != StaticFunction || fact.copyArgumentTypeDisplays().length != 0 || fact.returnTypeDisplay != "Void")
 			throw "OCaml target function lowerer received an unsupported function contract";
 		final body = OcamlTargetExpressionLowerer.build(fact.body);
-		return OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [body]));
+		return OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], OcamlExpr.EApp(OcamlExpr.EIdent("Stdlib.ignore"), [body]));
 	}
 }

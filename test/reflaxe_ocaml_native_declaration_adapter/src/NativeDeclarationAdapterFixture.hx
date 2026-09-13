@@ -146,7 +146,7 @@ class NativeDeclarationAdapterFixture {
 		final fn = new OcamlTargetFunctionFact(functionSignature, OcamlTargetExpressionFact.block(OcamlTargetExpressionPath.ROOT, "Void", []));
 		final plan = OcamlTargetProgramCore.lower(new OcamlTargetProgramRequest("native-host", owner, declarations, [field], [fn]));
 		final mainSource = plan.copyFiles().filter(file -> file.path == "Main.ml");
-		if (mainSource.length != 1 || mainSource[0].contents != "let hx_type = 7\nand main = fun () -> ignore ()\n")
+		if (mainSource.length != 1 || mainSource[0].contents != "let hx_type = 7\n\nlet main = fun () -> Stdlib.ignore ()\n")
 			throw "shared target program core produced unexpected OCaml source";
 		if (plan.report("native-hxhx").targetCoreId != OcamlTargetProgramCore.CORE_ID)
 			throw "shared target program report lost the target core identity";
@@ -183,7 +183,7 @@ class NativeDeclarationAdapterFixture {
 		if (fact.getCanonicalIdentity() != BindingIdentityMacro.stockFunction())
 			throw "stock Haxe and native hxhx produced different target function facts";
 		final rendered = new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact));
-		if (rendered.indexOf("fun () -> ignore (let value = 7 in") != 0)
+		if (rendered.indexOf("fun () -> Stdlib.ignore (let value = 7 in") != 0)
 			throw 'native hxhx could not execute the target function lowerer: $rendered';
 		final catalog = new OcamlTargetFunctionCatalog();
 		catalog.register("native-host-main", fact);

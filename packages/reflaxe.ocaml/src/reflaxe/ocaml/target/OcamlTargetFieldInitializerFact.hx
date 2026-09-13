@@ -48,6 +48,8 @@ class OcamlTargetFieldInitializerFact {
 		semanticTypeDisplay = required(signature.semanticTypeDisplay, "semantic type");
 		if (initializer == null)
 			throw "OCaml target field initializer requires a normalized expression";
+		if (initializer.copyStaticCalls().length != 0)
+			throw "OCaml target field initializer does not admit function calls";
 		this.initializer = initializer;
 		validateRevisionOne(role, semanticTypeDisplay, this.initializer);
 		targetIdentity = identityFor(signature);
