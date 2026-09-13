@@ -124,6 +124,7 @@ try {
 		fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
 		const recompute = childProcess.spawnSync(process.env.HAXE_BIN || 'haxe', [
 			'-cp', path.join(repoRoot, 'scripts/ci'),
+			'-cp', path.join(repoRoot, 'packages/reflaxe.ocaml/src'),
 			'--run', 'RecomputeLoweringContainerRevisions',
 			reportPath
 		], {
