@@ -1,5 +1,7 @@
 import haxe.Json;
-import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
+import reflaxe.ocaml.reports.OcamlReportJson.render as renderReportJson;
 import haxe.io.Path;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
@@ -45,17 +47,17 @@ class RecomputeLoweringControlRevision {
 
 		final report:Dynamic = Json.parse(File.getContent(reportPath));
 		if (!preserveControlRevision) {
-			final canonicalControls = Json.stringify({
+			final canonicalControls = reportJson({
 				targets: Reflect.field(report, "controlTargets"),
 				decisions: Reflect.field(report, "controls"),
 				catchChains: Reflect.field(report, "controlCatches")
 			});
-			Reflect.setField(report, "controlRevision", "sha256:" + Sha256.encode(canonicalControls));
+			Reflect.setField(report, "controlRevision", "sha256:" + hashUtf8(canonicalControls));
 		}
 		recomputeSectionRevision(report, "controlCatchRevision", "controlCatches");
 		recomputeSectionRevision(report, "controlTargetRevision", "controlTargets");
 		recomputeSectionRevision(report, "runtimeRequirementRevision", "runtimeRequirements");
-		File.saveContent(reportPath, Json.stringify(report, null, "  ") + "\n");
+		File.saveContent(reportPath, renderReportJson(report) + "\n");
 
 		final manifest:Dynamic = Json.parse(File.getContent(manifestPath));
 		final entries:Array<Dynamic> = cast Reflect.field(manifest, "entries");
@@ -98,6 +100,6 @@ class RecomputeLoweringControlRevision {
 	/** Recomputes one report section hash with the writer's JSON encoding. */
 	static function recomputeSectionRevision(report:Dynamic, revisionField:String, inventoryField:String):Void {
 		final inventory = Reflect.field(report, inventoryField);
-		Reflect.setField(report, revisionField, "sha256:" + Sha256.encode(Json.stringify(inventory)));
+		Reflect.setField(report, revisionField, "sha256:" + hashUtf8(reportJson(inventory)));
 	}
 }

@@ -31,7 +31,7 @@ assert.doesNotMatch(arrayElementBuilder[0], /fromDirectValue/,
 	'array syntax must consume the sealed enum identity instead of classifying the typed constructor again')
 
 const conversions = lowering.containerElementConversions
-assert.equal(lowering.schemaVersion, 87)
+assert.equal(lowering.schemaVersion, 88)
 assert.equal(conversions.length, 4,
 	'the method-local and static-initializer enum values should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 0, 1, 1])
@@ -124,6 +124,7 @@ try {
 		fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
 		const recompute = childProcess.spawnSync(process.env.HAXE_BIN || 'haxe', [
 			'-cp', path.join(repoRoot, 'scripts/ci'),
+			'-cp', path.join(repoRoot, 'packages/reflaxe.ocaml/src'),
 			'--run', 'RecomputeLoweringContainerRevisions',
 			reportPath
 		], {

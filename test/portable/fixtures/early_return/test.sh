@@ -34,7 +34,7 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 87
+if (report.schemaVersion !== 88
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
@@ -1130,6 +1130,7 @@ for mutation in duplicate missing stale-program carrier representation conversio
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -1179,7 +1180,7 @@ switch (mutation) {
 		throw new Error(`unsupported corruption ${mutation}`)
 }
 report.functionResultBoundaryCount = report.functionResultBoundaries.length
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
@@ -1202,6 +1203,7 @@ for mutation in duplicate missing-family edited-count stale-revision; do
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -1229,7 +1231,7 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported corruption ${mutation}`)
 }
-report.controlAdmissionRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.controlAdmissions)).digest('hex')}`
+report.controlAdmissionRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.controlAdmissions)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_ADMISSION_ROOT/$mutation.log"

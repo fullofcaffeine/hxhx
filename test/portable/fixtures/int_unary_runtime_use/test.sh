@@ -10,7 +10,7 @@ trap 'rm -f "$inspection"' EXIT
 node - "$report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 87
+if (report.schemaVersion !== 88
 	|| report.intUnaryModel !== 'typed-ocaml-int-unary-v1'
 	|| report.intUnaryCount !== 10
 	|| report.intUnary?.length !== 10) {
