@@ -63,6 +63,13 @@ receive. Today it is still the compiler's macro-expanded typed program. It is
 The boundary helpers recover that known type when native interface dispatch
 temporarily presents it as an opaque value.
 
+The target wrappers call `GenIrBoundary.requireProgram` to check that typed
+function bodies still match their source revisions. This helper accepts and
+returns the concrete program type; it does not perform dynamic recovery.
+The shared native OCaml wrapper has exactly one such check before it copies
+facts into the standalone target. Its inventory entry permits that existing
+check only, not calls to `fromDynamic` or `asBackendProgram`.
+
 - Long-lived owners: Full1 compiler closure `haxe.ocaml-f1cl` and promotion
   product `haxe_ocaml-bomhr`.
 - Allowed Haxe files:
@@ -70,6 +77,7 @@ temporarily presents it as an opaque value.
   - `packages/hxhx/src/hxhx/Stage3EmitSupport.hx`
   - `packages/hxhx-core/src/backend/js/JsTargetCore.hx`
   - `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx`
+  - `packages/hxhx-core/src/backend/ocaml/OcamlNativeTargetCore.hx`
 - Focused proof today:
   - `npm run test:m14:backend-dispatch-boundary`
   - `npm run test:m14:target-core-wiring`
