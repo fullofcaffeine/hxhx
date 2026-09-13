@@ -86,6 +86,9 @@ All six lowering snapshots regenerated deterministically and passed native fixtu
 The complete inspector fixture also passed through a compiled Neko CLI, including old-schema rejection.
 Eight corrected map corruption cases reached semantic diagnostics. Haxe formatting passed with a 600-second task limit; the default 240-second run timed out.
 The digest change (`haxe_ocaml-1hd2w.1`) awaits review. The startup optimization (`haxe_ocaml-t1io4`) has no accepted speedup yet; readiness percentages remain unchanged.
+[PR #46 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34755436379) passed all three portable shards, compiler foundations, focused regressions, packaging, examples, macro-host integration, plugins, and smoke checks.
+The early-return fixture now compiles its inspector once and retains all 40 inspections in fresh processes. It passed on CI in 901.5 seconds within the unchanged 2,100-second limit (`haxe_ocaml-ogsdv`).
+The committed-bootstrap end-to-end check still fails at the imported-call runtime marker. Overall workflow acceptance, review, and release checks remain open; these results do not increase the readiness percentages.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
