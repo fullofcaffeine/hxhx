@@ -56,9 +56,9 @@ Readiness review, 2026-09-12: focused exception-transport and runtime-report
 checks pass. Native-surface validation now completes for the macro host.
 [Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098)
 passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
-Native end-to-end testing failed at an imported call that skips optional arguments.
-The authored-source probe passes. The fresh PR #39 native compiler cannot yet run the same fixture: dependency sorting fails, and its generated main omits the imported call.
-A two-module reduction traced the omitted call to reflection on a native map. The helper now uses typed map access; focused source tests and a native helper probe pass. A fresh native compiler must still verify the original call. A focused console-output regression now isolates imported-call execution from the separate standard-library cycle.
+The fresh PR #43 native compiler now passes the focused imported-call runtime regression with stage0 delegation forbidden.
+Typed map access preserves the wildcard-imported call and its optional-argument positions. The normal type-import control also runs through its generated module alias.
+The full-standard-library fixture and retained local-identity workload still fail dependency sorting, so their runtime acceptance remains open.
 [Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
 The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
 Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
@@ -70,7 +70,9 @@ Eager initialization in recursive groups is rejected before module publication. 
 The focused Dynamic operator test passes with explicit diagnostic and full-body return modes, including its native runtime comparisons.
 A focused source fix preserves Boolean variables when selecting strings; native regression output matches upstream Haxe for both Boolean values and a mutable local.
 [PR #39 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34705519363) passed: generation took 2,782 seconds, and local native linking took 245 seconds.
-[PR #41 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34706538700) passed guardrails and focused compiler regressions. End-to-end and portable checks still require closure.
+[PR #43 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34719122793) passed: source generation took 2,827 seconds, followed by bytecode verification. Local native linking took 275 seconds.
+[PR #44 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34719215118) passed guardrails, focused regressions, all portable fixtures, packaging, and macro-host integration.
+The end-to-end job still fails with the committed bootstrap, which predates the imported-call fix. The fresh compiler has separate focused native evidence above.
 Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
