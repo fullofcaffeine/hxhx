@@ -2,6 +2,8 @@ package reflaxe.ocaml.tooling;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -470,8 +472,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 87) {
-						throw 'Unsupported lowering report schema $version; expected 87.';
+					if (version != 88) {
+						throw 'Unsupported lowering report schema $version; expected 88.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -758,7 +760,7 @@ class ReflaxeOcamlInspection {
 		final rawAdmissions = requiredArray(value, "controlAdmissions");
 		if (rawAdmissions.length != requiredInt(value, "controlAdmissionCount"))
 			throw "Control-admission count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawAdmissions));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(rawAdmissions));
 		if (requiredSha256Revision(value, "controlAdmissionRevision") != expectedRevision)
 			throw "Control-admission report revision does not match its function inventory.";
 		final admissions = [for (entry in rawAdmissions) controlAdmissionSnapshot(entry)];
@@ -892,12 +894,12 @@ class ReflaxeOcamlInspection {
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
 			throw "Control count does not match its inventory.";
-		final canonicalControls = Json.stringify({
+		final canonicalControls = reportJson({
 			targets: requiredArray(value, "controlTargets"),
 			decisions: rawControls,
 			catchChains: requiredArray(value, "controlCatches")
 		});
-		final expectedControlRevision = "sha256:" + Sha256.encode(canonicalControls);
+		final expectedControlRevision = "sha256:" + hashUtf8(canonicalControls);
 		final reportedControlRevision = requiredSha256Revision(value, "controlRevision");
 		if (reportedControlRevision != expectedControlRevision)
 			throw "Control report revision does not match its targets, decisions, and catch chains.";
@@ -1763,7 +1765,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "reflectCompare");
 		if (raw.length != requiredInt(value, "reflectCompareCount"))
 			throw "Reflect.compare count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "reflectCompareRevision") != expectedRevision)
 			throw "Reflect.compare revision does not match its ordered decision inventory.";
 		final decisions = [for (entry in raw) reflectCompareDecision(entry)];
@@ -1868,7 +1870,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "stdIsOfType");
 		if (raw.length != requiredInt(value, "stdIsOfTypeCount"))
 			throw "Std.isOfType count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "stdIsOfTypeRevision") != expectedRevision)
 			throw "Std.isOfType revision does not match its ordered decision inventory.";
 
@@ -1996,7 +1998,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "intUnary");
 		if (raw.length != requiredInt(value, "intUnaryCount"))
 			throw "Integer unary count does not match its inventory.";
-		if (requiredSha256Revision(value, "intUnaryRevision") != "sha256:" + Sha256.encode(Json.stringify(raw)))
+		if (requiredSha256Revision(value, "intUnaryRevision") != "sha256:" + hashUtf8(reportJson(raw)))
 			throw "Integer unary revision does not match its ordered decision inventory.";
 		final decisions = [for (entry in raw) intUnaryDecision(entry)];
 		final ids:Map<String, Bool> = [];
@@ -2410,7 +2412,7 @@ class ReflaxeOcamlInspection {
 		final rawBoundaries = requiredArray(value, "functionResultBoundaries");
 		if (rawBoundaries.length != requiredInt(value, "functionResultBoundaryCount"))
 			throw "Function-result boundary count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawBoundaries));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(rawBoundaries));
 		if (requiredSha256Revision(value, "functionResultBoundaryRevision") != expectedRevision)
 			throw "Function-result boundary revision does not match its ordered inventory.";
 
@@ -3549,7 +3551,7 @@ class ReflaxeOcamlInspection {
 		final expectedCount = requiredInt(value, "representationCount");
 		if (rawDecisions.length != expectedCount)
 			throw 'Representation report representationCount is $expectedCount but representations contains ${rawDecisions.length} entries.';
-		if (requiredSha256Revision(value, "representationRevision") != "sha256:" + Sha256.encode(Json.stringify(rawDecisions)))
+		if (requiredSha256Revision(value, "representationRevision") != "sha256:" + hashUtf8(reportJson(rawDecisions)))
 			throw "Representation report revision does not match its sorted decisions.";
 		final decisions = [for (decision in rawDecisions) representationDecision(decision)];
 		decisions.sort((left, right) -> compareStrings(left.id, right.id));
@@ -3570,7 +3572,7 @@ class ReflaxeOcamlInspection {
 		if (rawRepresentedArrays.length != requiredInt(value, "representedArrayCount"))
 			throw "Represented-array count does not match its inventory.";
 		final representedArrayRevision = requiredSha256Revision(value, "representedArrayRevision");
-		if (representedArrayRevision != "sha256:" + Sha256.encode(Json.stringify(rawRepresentedArrays)))
+		if (representedArrayRevision != "sha256:" + hashUtf8(reportJson(rawRepresentedArrays)))
 			throw "Represented-array report revision does not match its sorted descriptors.";
 		final representedArrays = [for (descriptor in rawRepresentedArrays) representedArrayDescriptor(descriptor)];
 		representedArrays.sort((left, right) -> compareStrings(left.id, right.id));
@@ -3766,7 +3768,7 @@ class ReflaxeOcamlInspection {
 			seen.set(id, true);
 			previous = id;
 		}
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(ids));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(ids));
 		if (requiredSha256Revision(value, "containerElementRequiredConversionRevision") != expectedRevision)
 			throw "Required container-element conversion revision does not match its inventory.";
 		return ids;
@@ -3778,7 +3780,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "containerElementConversions");
 		if (raw.length != requiredInt(value, "containerElementConversionCount"))
 			throw "Container-element conversion count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "containerElementConversionRevision") != expectedRevision)
 			throw "Container-element conversion revision does not match its inventory.";
 		final seen:Map<String, Bool> = [];

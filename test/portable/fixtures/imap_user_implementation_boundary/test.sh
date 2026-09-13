@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 87
+if (report.schemaVersion !== 88
 	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
@@ -162,6 +162,7 @@ mutate_report() {
 	node - "$1" <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const mutation = process.argv[2]
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -219,7 +220,7 @@ switch (mutation) {
 	default:
 		throw new Error(`unknown mutation ${mutation}`)
 }
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases

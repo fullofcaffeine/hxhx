@@ -2,6 +2,8 @@ package reflaxe.ocaml.tooling;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldContract;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlKeyValueTupleProjectionTarget;
@@ -47,7 +49,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 				throw 'The structural-field inventory is not in strict identity order at "${current.id}".';
 		}
 		final revision = requiredSha256Revision(value, "structuralFieldRevision");
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(decisions));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(decisions));
 		if (revision != expectedRevision)
 			throw 'Structural-field report revision is $revision but its validated inventory produces $expectedRevision.';
 		return {
@@ -226,7 +228,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 
 	static function requiredArray(value:Dynamic, field:String):Array<Dynamic> {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, Array))
+		if (result == null || !Std.isOfType(result, Array))
 			throw 'Expected structural-field array "$field".';
 		return cast result;
 	}
@@ -241,7 +243,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 
 	static function requiredString(value:Dynamic, field:String):String {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, String) || (cast result : String).length == 0)
+		if (result == null || !Std.isOfType(result, String) || (cast result : String).length == 0)
 			throw 'Expected non-empty structural-field string "$field".';
 		return cast result;
 	}
@@ -254,7 +256,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 
 	static function requiredInt(value:Dynamic, field:String):Int {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, Int))
+		if (result == null || !Std.isOfType(result, Int))
 			throw 'Expected structural-field integer "$field".';
 		return cast result;
 	}

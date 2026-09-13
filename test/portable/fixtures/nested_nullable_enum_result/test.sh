@@ -62,6 +62,7 @@ for mutation in enum-name source-kind callable-id carrier missing-proof reordere
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -91,7 +92,7 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_ROOT/$mutation.log"

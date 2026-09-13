@@ -18,7 +18,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 87
+if (report.schemaVersion !== 88
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
 	fail('unexpected lowering-report schema, control model, or representation scope')
@@ -333,6 +333,7 @@ NODE
 cp -R out "$invalid_output"
 node - "$invalid_output/ocaml_lowering_report.json" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -343,7 +344,7 @@ if (decision == null) {
 }
 decision.nominalTargetTypeName = 'wrong_counter_t'
 report.representationRevision = 'sha256:' + crypto.createHash('sha256')
-	.update(JSON.stringify(report.representations)).digest('hex')
+	.update(reportJson(report.representations)).digest('hex')
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
@@ -396,6 +397,7 @@ fi
 cp -R out "$invalid_captured_storage_output"
 node - "$invalid_captured_storage_output/ocaml_lowering_report.json" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -406,7 +408,7 @@ if (decision == null) {
 }
 decision.storageMutationPolicy = 'immutable-binding'
 report.representationRevision = 'sha256:' + crypto.createHash('sha256')
-	.update(JSON.stringify(report.representations)).digest('hex')
+	.update(reportJson(report.representations)).digest('hex')
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (

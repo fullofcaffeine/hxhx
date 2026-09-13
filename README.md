@@ -81,7 +81,11 @@ The dependency-sort failures above occur in the explicit Stage3 diagnostic route
 Control-effects owner `haxe_ocaml-w32h3` closed on September 6. Runtime-requirement owner `haxe_ocaml-0uwin` remains open.
 The complete inspector fixture passed locally in 38 minutes 32 seconds; 29 CLI invocations consumed about 91% of that time.
 A disposable compiled CLI failed valid-report digest checks because JSON field order differs between Eval and Neko.
-The experiment was reverted. Portable report digests (`haxe_ocaml-1hd2w.1`) block that optimization (`haxe_ocaml-t1io4`); no speedup or readiness increase is claimed.
+The schema 88 [portable report digest contract](docs/02-architecture/OCAML_REPORT_JSON.md) now passes independent Eval/Neko byte checks, fresh compiled inspection, and six corrupt-report checks locally.
+All six lowering snapshots regenerated deterministically and passed native fixture checks; their semantic collections are unchanged.
+The complete inspector fixture also passed through a compiled Neko CLI, including old-schema rejection.
+Eight corrected map corruption cases reached semantic diagnostics. Haxe formatting passed with a 600-second task limit; the default 240-second run timed out.
+The digest change (`haxe_ocaml-1hd2w.1`) awaits review. The startup optimization (`haxe_ocaml-t1io4`) has no accepted speedup yet; readiness percentages remain unchanged.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
