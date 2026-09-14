@@ -591,6 +591,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
     - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_no_native_decode_extract`, `stage0_no_parser_scan_extract`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb`, `stage0_observability.heartbeat_peak_tree_rss_mb`, and `stage0_observability.heartbeat_trace_file` (plus heartbeat samples/interval)
+    - `stage0_observability.heartbeat_peak_tree_cpu_pct` sums unique observed client/server PIDs at each sample, then reports the largest sample.
+    - The heartbeat trace and its summary distinguish the attached client from the observed server worker. See [resource field meanings](../00-project/STAGE0_POLICY.md#read-client-and-server-resource-reports).
     - watchdog configuration and outcome: `stall_timeout_seconds`, `hard_timeout_seconds`,
       `progress_poll_seconds`, `timeout_kind`, `timeout_elapsed_seconds`,
       `last_progress_elapsed_seconds`, `last_progress_reason`, and `timeout_cleanup`
@@ -602,7 +604,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - Set `stage0_failfast_secs` when the complete source graph needs more than the default 3,600-second emit limit.
     - The benchmark report remains the timing and provenance record.
     - `warm` reuses generated output, not compiler-server state: every measured sample gets a fresh server matched to the selected upstream-Haxe wrapper/direct-binary policy.
-    - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The current peak-RSS column excludes the server process.
+    - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The peak-RSS column now describes the observed focus process, including an owned server worker. It is not total job memory.
     - Bootstrap regeneration asks Reflaxe to keep its generated-file metadata ID at zero. That ID is normally only a compile counter; fixing it at zero prevents two otherwise identical snapshot refreshes from looking different.
     - The benchmark report lists every changed path under `packages/hxhx/bootstrap_out`, including untracked generated files, with before/after SHA-256 digests. This makes it clear whether the committed snapshot is behind the Haxe source or the generator itself is changing unpredictably.
     - include compile knobs in benchmark runs:

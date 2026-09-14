@@ -417,6 +417,7 @@ assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
+source "$ROOT/scripts/hxhx/stage0-process-resources.sh"
 if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
 	case "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" in
 		/*) ;;
@@ -443,6 +444,7 @@ skipped_emit=0
 stage0_heartbeat_samples=0
 stage0_heartbeat_peak_rss_mb=0
 stage0_heartbeat_peak_tree_rss_mb=0
+stage0_heartbeat_peak_tree_cpu_pct=0
 stage0_timeout_kind="none"
 stage0_timeout_elapsed_sec=0
 stage0_last_progress_elapsed_sec=0
@@ -885,6 +887,7 @@ write_report_json() {
     "heartbeat_samples": $stage0_heartbeat_samples,
     "heartbeat_peak_rss_mb": $stage0_heartbeat_peak_rss_mb,
     "heartbeat_peak_tree_rss_mb": $stage0_heartbeat_peak_tree_rss_mb,
+    "heartbeat_peak_tree_cpu_pct": $stage0_heartbeat_peak_tree_cpu_pct,
     "heartbeat_trace_file": "$(json_escape "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")",
     "stall_timeout_seconds": $HXHX_STAGE0_STALL_TIMEOUT_SECS,
     "hard_timeout_seconds": $HXHX_STAGE0_FAILFAST_SECS,
@@ -941,7 +944,7 @@ run_stage0_emit() {
 	local emit_code
 	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
 	metrics_file="$(create_stage0_log_file hxhx-stage0-metrics)"
-	printf '0\t0\t0\tnone\t0\t0\tprocess-start\tnot-needed\t0\n' >"$metrics_file"
+	printf '0\t0\t0\t0\tnone\t0\t0\tprocess-start\tnot-needed\t0\n' >"$metrics_file"
 	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
 	echo "== Stage0 emit log: $log_file"
 	if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
@@ -957,12 +960,21 @@ run_stage0_emit() {
 		local heartbeat_samples_local=0
 		local heartbeat_peak_rss_mb_local=0
 		local heartbeat_peak_tree_rss_mb_local=0
+		local heartbeat_peak_tree_cpu_pct_local=0
 		local timeout_kind_local="none"
 		local timeout_elapsed_local=0
 		local last_progress_elapsed_local=0
 		local last_progress_reason_local="process-start"
 		local timeout_cleanup_local="not-needed"
 		local connected_server_observed_local=0
+		# Keep normal, failed, and timed-out reports on the same observation schema.
+		write_stage0_observation_metrics() {
+			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+				"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
+				"$heartbeat_peak_tree_cpu_pct_local" "$timeout_kind_local" "$timeout_elapsed_local" \
+				"$last_progress_elapsed_local" "$last_progress_reason_local" "$timeout_cleanup_local" \
+				"$connected_server_observed_local" >"$metrics_file"
+		}
 		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		else
@@ -1023,10 +1035,7 @@ run_stage0_emit() {
 				echo "Stage0 emit watchdog cleanup=$timeout_cleanup_local pid=$pid process_tree=\"$STAGE0_WATCHDOG_TERMINATED_TREE_PIDS\"." >&2
 				echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 				tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
-					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-					"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
+				write_stage0_observation_metrics
 				exit 124
 			fi
 			if [ "$interval" = "0" ]; then
@@ -1045,31 +1054,23 @@ run_stage0_emit() {
 			local rss_kb=""
 			local tree_rss_kb=0
 			local tree_rss_mb=0
-			local tree_pid
-			local pid_rss_kb
-			for tree_pid in $tree_pids; do
-				pid_rss_kb="$(ps -o rss= -p "$tree_pid" 2>/dev/null | tr -d ' ' || true)"
-				if [ -z "$pid_rss_kb" ]; then
-					continue
-				fi
-				tree_rss_kb="$((tree_rss_kb + pid_rss_kb))"
-				if [ -z "$rss_kb" ] || [ "$pid_rss_kb" -gt "$rss_kb" ]; then
-					rss_kb="$pid_rss_kb"
-					rss_probe_pid="$tree_pid"
-				fi
-			done
+			local cpu_pct=""
+			local tree_cpu_pct=""
+			local proc_state=""
+			local focus_role=""
+			IFS='|' read -r rss_probe_pid rss_kb cpu_pct proc_state tree_rss_kb tree_cpu_pct focus_role \
+				<<<"$(stage0_sample_process_resources "$pid" "$tree_pids" "$repo_server_pids_local")"
 			if [ "$tree_rss_kb" -gt 0 ]; then
 				tree_rss_mb="$((tree_rss_kb / 1024))"
 			fi
-			local cpu_pct
-			cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
-			local proc_state
-			proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
 			local log_bytes
 			log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
 			local heartbeat_suffix=""
 			if [ -n "$cpu_pct" ]; then
 				heartbeat_suffix="$heartbeat_suffix cpu=${cpu_pct}%"
+			fi
+			if [ -n "$tree_cpu_pct" ]; then
+				heartbeat_suffix="$heartbeat_suffix tree_cpu=${tree_cpu_pct}% focus_role=$focus_role"
 			fi
 			if [ -n "$proc_state" ]; then
 				heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
@@ -1094,15 +1095,13 @@ run_stage0_emit() {
 				if [ "$tree_rss_mb" -gt "$heartbeat_peak_tree_rss_mb_local" ]; then
 					heartbeat_peak_tree_rss_mb_local="$tree_rss_mb"
 				fi
-				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
-					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-					"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
+				heartbeat_peak_tree_cpu_pct_local="$(LC_ALL=C awk -v previous="$heartbeat_peak_tree_cpu_pct_local" -v current="$tree_cpu_pct" 'BEGIN { print (current > previous ? current : previous) }')"
+				write_stage0_observation_metrics
 				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
-					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"child_pid":"%s","owned_server_pids":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
+					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"focus_role":"%s","child_pid":"%s","owned_server_pids":"%s","cpu_pct":"%s","tree_cpu_pct":%s,"state":"%s","log_bytes":%s}\n' \
 						"$elapsed_hb" "$rss_mb" "$tree_rss_mb" "$pid" "$rss_probe_pid" \
-						"$(json_escape "$child_pid")" "$(json_escape "$repo_server_pids_local")" \
-						"$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
+						"$focus_role" "$(json_escape "$child_pid")" "$(json_escape "$repo_server_pids_local")" \
+						"$(json_escape "$cpu_pct")" "${tree_cpu_pct:-null}" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
 						>>"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
 				fi
 				if [ -n "$child_pid" ]; then
@@ -1140,16 +1139,10 @@ run_stage0_emit() {
 		if [ "$code" != "0" ]; then
 			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-				"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
-				"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-				"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
+			write_stage0_observation_metrics
 			exit "$code"
 		fi
-		printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-			"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
-			"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
-			"$last_progress_reason_local" "$timeout_cleanup_local" "$connected_server_observed_local" >"$metrics_file"
+		write_stage0_observation_metrics
 	)
 	emit_code="$?"
 	set -e
@@ -1158,13 +1151,14 @@ run_stage0_emit() {
 		local observed_samples=""
 		local observed_peak=""
 		local observed_tree_peak=""
+		local observed_tree_cpu_peak=""
 		local observed_timeout_kind=""
 		local observed_timeout_elapsed=""
 		local observed_last_progress_elapsed=""
 		local observed_last_progress_reason=""
 		local observed_timeout_cleanup=""
 		local observed_connected_server=""
-		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak \
+		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak observed_tree_cpu_peak \
 			observed_timeout_kind observed_timeout_elapsed observed_last_progress_elapsed \
 			observed_last_progress_reason observed_timeout_cleanup observed_connected_server <"$metrics_file" || true
 		if [ -n "$observed_samples" ] && [ "$observed_samples" -gt "$stage0_heartbeat_samples" ]; then
@@ -1176,6 +1170,7 @@ run_stage0_emit() {
 		if [ -n "$observed_tree_peak" ] && [ "$observed_tree_peak" -gt "$stage0_heartbeat_peak_tree_rss_mb" ]; then
 			stage0_heartbeat_peak_tree_rss_mb="$observed_tree_peak"
 		fi
+		stage0_heartbeat_peak_tree_cpu_pct="$(LC_ALL=C awk -v previous="$stage0_heartbeat_peak_tree_cpu_pct" -v current="${observed_tree_cpu_peak:-0}" 'BEGIN { print (current > previous ? current : previous) }')"
 		stage0_timeout_kind="${observed_timeout_kind:-none}"
 		stage0_timeout_elapsed_sec="${observed_timeout_elapsed:-0}"
 		stage0_last_progress_elapsed_sec="${observed_last_progress_elapsed:-0}"

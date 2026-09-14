@@ -106,7 +106,61 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_observability.heartbeat_samples`
 - `stage0_observability.heartbeat_peak_rss_mb`
 - `stage0_observability.heartbeat_peak_tree_rss_mb`
+- `stage0_observability.heartbeat_peak_tree_cpu_pct`
 - `stage0_observability.heartbeat_trace_file`
+
+### Read client and server resource reports
+
+With the repository compiler server, the attached command waits while a separate
+server process compiles Haxe. A sleeping client can therefore accompany a busy
+compiler. The heartbeat observes both through the server helper's verified PID
+list. It does not select other Haxe processes by name or claim manual connection
+endpoints as owned servers.
+
+| Trace field | Meaning |
+| --- | --- |
+| `pid` | The attached compile command. In server mode, this is the waiting client. |
+| `owned_server_pids` | Verified server processes, including launchers and workers. The trace uses a space-separated string; the summary uses a numeric array. |
+| `focus_pid`, `focus_role` | The observed server process with the highest CPU reading, with RSS as the tie-breaker. Without server observations, the focus remains the highest-RSS client-tree process. |
+| `rss_mb`, `cpu_pct`, `state` | Resource readings and process state for that focus process. |
+| `tree_rss_mb` | Sum of resident memory across the client tree and verified server processes. Each PID contributes once. |
+| `tree_cpu_pct` | Sum of those processes' `ps` CPU percentages. It can exceed 100 when multiple cores are active. |
+
+For example, `pid=101 focus=301 focus_role=server-worker` identifies client 101
+and server worker 301. The client's low CPU reading does not describe the
+compiler's work. The summary preserves both identities beside resource peaks.
+
+The report's `heartbeat_peak_rss_mb`, `heartbeat_peak_tree_rss_mb`, and
+`heartbeat_peak_tree_cpu_pct` are maxima of the observed samples. They can occur
+at different times. The `_mb` memory fields contain whole MiB, rounded down
+from `ps` KiB readings. RSS is resident memory, not allocated bytes; a sum can
+count shared memory pages in multiple processes. CPU readings are operating-system
+averages, not precise instantaneous utilization. Missed short peaks remain possible.
+With no heartbeat samples, zero-valued peaks are initial values, not measured inactivity.
+
+Sampling does not decide whether compilation succeeded. The attached command's
+exit status and existing watchdog still control completion and timeout. The
+server helper retains cleanup ownership, including the existing keep-alive rules.
+These reports are maintenance diagnostics, not Full1 compiler performance evidence.
+
+On 2026-09-14, a local M2 Pro measurement compared 20 resource samples over five
+live owned PIDs, using Bash 3.2.57 and normal scheduling priority. The previous
+queries took 0.31 and 0.32 seconds; the new sampler took 0.18 and 0.17 seconds.
+These paired fresh-process samples isolate resource reading. They exclude server
+identity validation, watchdog work, and compiler work. The shared host remained
+active, so this does not establish cross-host performance. Use 100 milliseconds
+per five-PID resource sample as a report-only investigation budget; task
+`haxe_ocaml-x6a5t` records the measurements.
+
+For focused attribution diagnostics, run:
+
+```bash
+bash scripts/ci/bootstrap-regen-server-lifecycle-fixture-test.sh busy
+```
+
+The default fixture command still runs every lifecycle case. The focused case
+waits for two real observations and keeps its allocated pages active. This
+proves CPU and resident-memory attribution without assuming a fixed observer speed.
 
 Repro command pair (wrapper baseline vs native-preferred):
 
