@@ -243,7 +243,7 @@ class NekoTargetCore {
 			throw "Neko native backend could not resolve main class: " + main.fullName;
 
 		final reachable = collectReachable(emitContext, mainInfo);
-		if (emitContext.abstractHelpers.length > 0)
+		if (emitContext.abstractHelpers.length > 0 || reachable.staticFunctions.length > 0)
 			out.push("var " + emitContext.typedProgram.exactHelperTableName() + " = $new(null);");
 		for (helper in emitContext.abstractHelpers)
 			renderExactAbstractHelper(out, emitContext, helper);
@@ -252,7 +252,7 @@ class NekoTargetCore {
 		for (ref in reachable.staticFunctions)
 			renderFunction(out, emitContext, ref.info, ref.fn);
 
-		final entry = mangleFunction(mainInfo.fullName, "main");
+		final entry = renderFunctionRef(emitContext, mainInfo.fullName, "main");
 		out.push(entry + "();");
 		out.push("");
 		return out.join("\n");
@@ -556,6 +556,13 @@ class NekoTargetCore {
 
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		final staticCall = NekoExactStaticCallPlan.fromExpression(context.typedProgram, expr);
+		if (staticCall != null) {
+			addStatic(exactHelperClass(context, staticCall.selected), staticCall.selected.body.getDeclaration());
+			for (argument in staticCall.call.arguments)
+				collectExprRefs(context, argument, addConstructor, addStatic);
+			return;
+		}
 		final exactCall = NekoExactCallPlan.fromExpression(context.typedProgram, expr);
 		if (exactCall != null) {
 			if (exactCall.usesAbstractReceiver()) {
@@ -670,17 +677,9 @@ class NekoTargetCore {
 				} else {
 					collectExprRefs(context, callee, addConstructor, addStatic);
 				}
-			case EField(EIdent(className), method) if (isUpperStart(className)):
-				final info = lookupClass(context, className);
-				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null)
-					addStatic(info, fn);
-			case EIdent(method):
-				final info = context.currentClass;
-				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null)
-					addStatic(info, fn);
 			case _:
+				// Selected static calls carry exact records. An ordinary call can be
+				// a local function, so its spelling must not retain a class method.
 				collectExprRefs(context, callee, addConstructor, addStatic);
 		}
 		for (arg in args)
@@ -1249,6 +1248,9 @@ class NekoTargetCore {
 	}
 
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
+		final staticCall = NekoExactStaticCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
+		if (staticCall != null)
+			return renderCall(context, staticCall.call.callee, staticCall.call.arguments, staticCall.selected);
 		final exactCall = NekoExactCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
 		if (exactCall != null) {
 			if (exactCall.usesAbstractReceiver()) {
@@ -2424,7 +2426,7 @@ class NekoTargetCore {
 		}
 	}
 
-	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>):String {
+	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
 			case EIdent("__hxhx_try"):
 				return renderStructuralTryCatchExpr(context, args);
@@ -2491,6 +2493,13 @@ class NekoTargetCore {
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(EIdent("MainLoop"), "add") | EField(EField(EIdent("haxe"), "MainLoop"), "add") if (args.length >= 1):
 				return "__hxhx_main_loop_add(" + renderedArgs[0] + ")";
+			case _ if (selectedStatic != null):
+				final owner = exactHelperClass(context, selectedStatic);
+				final fn = selectedStatic.body.getDeclaration();
+				final method = HxFunctionDecl.getName(fn);
+				final reference = isDynamicStaticFunction(fn) ? "__hxhx_field(" + renderStaticObjectRef(owner.fullName) + ", " + quote(method) +
+					")" : renderFunctionRef(context, owner.fullName, method);
+				return reference + "(" + renderedArgs.join(", ") + ")";
 			case EField(receiver, "indexOf") if (args.length >= 1):
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
@@ -2499,7 +2508,7 @@ class NekoTargetCore {
 				return "__hxhx_string_ends_with(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(ESuper, _):
 				return "null";
-			case EField(EIdent(className), method) if (isUpperStart(className)):
+			case EField(EIdent(className), method) if (isUpperStart(className) && !context.locals.exists(className)):
 				final info = lookupClass(context, className);
 				final fn = info == null ? null : findFunction(info.cls, method, true);
 				if (info != null && fn != null && !isDynamicStaticFunction(fn))
@@ -2806,7 +2815,8 @@ class NekoTargetCore {
 
 	static function renderFunctionDefinitionPrefix(context:NekoEmitContext, fullClassName:String, method:String):String {
 		final name = mangleFunction(fullClassName, method);
-		return context.symbolTable == null ? "var " + name + " = " : context.symbolTable + "." + name + " = ";
+		final table = context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable;
+		return table + "." + name + " = ";
 	}
 
 	static function renderConstructorRef(context:NekoEmitContext, fullClassName:String):String {
@@ -2816,7 +2826,10 @@ class NekoTargetCore {
 
 	static function renderFunctionRef(context:NekoEmitContext, fullClassName:String, method:String):String {
 		final name = mangleFunction(fullClassName, method);
-		return context != null && context.symbolTable != null ? context.symbolTable + "." + name : name;
+		if (context == null)
+			return name;
+		final table = context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable;
+		return table + "." + name;
 	}
 
 	static function isUpperStart(name:String):Bool {

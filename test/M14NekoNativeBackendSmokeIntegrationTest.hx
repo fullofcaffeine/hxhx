@@ -161,7 +161,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(result.entryPath == sourcePath, "source-only mode should report the generated Neko source as entry path");
 		assertTrue(FileSystem.exists(sourcePath), "expected generated Neko source file");
 		final source = File.getContent(sourcePath);
-		assertContains(source, "var Main_main = function()", "expected generated static main function");
+		assertContains(source, "__hxhx_exact_helpers.Main_main = function()", "expected generated static main in the shared function table");
 		assertContains(source, "$print(\"hello neko\", \"\\n\")", "expected Sys.println lowering");
 		assertContains(source, "Main_main();", "expected entrypoint invocation");
 
@@ -475,7 +475,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceSource, "var __hxhx_coalesce = value;", "expected Neko null-coalescing lowering to capture the left value once");
-		assertContains(nullCoalesceSource, "return Main_fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
+		assertContains(nullCoalesceSource, "return __hxhx_exact_helpers.Main_fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
 		assertNotContains(nullCoalesceSource, "??", "null-coalescing syntax should not leak into Neko source");
 
 		deleteRecursive(outDir);
@@ -486,7 +486,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceAssignSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceAssignSource, "if (value == null)", "expected Neko null-coalescing assignment to check the target");
-		assertContains(nullCoalesceAssignSource, "value = Main_fallback();", "expected Neko null-coalescing assignment to update the target lazily");
+		assertContains(nullCoalesceAssignSource, "value = __hxhx_exact_helpers.Main_fallback();",
+			"expected Neko null-coalescing assignment to update the target lazily");
 		assertContains(nullCoalesceAssignSource, "return value;", "expected Neko null-coalescing assignment expression to return the resulting target");
 		assertNotContains(nullCoalesceAssignSource, "??=", "null-coalescing assignment syntax should not leak into Neko source");
 

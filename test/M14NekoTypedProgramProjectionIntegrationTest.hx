@@ -80,6 +80,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertConstantDependencies();
 		assertConstantReadBoundary();
 		assertConstantRuntime();
+		assertStaticCallBoundary();
 		expectFailure("requires 3 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub"), ["value"]));
 		expectFailure("requires 1 argument", () -> backend.vm.NekoStringIntrinsics.renderConstructor([]));
 		if (backend.vm.NekoStringIntrinsics.renderCall(EField(EIdent("user"), "__dollar__ssub"), ["a", "b", "c"]) != null
@@ -88,7 +89,32 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertRuntimeFixture("test/neko_native_string_slice", true);
 		assertRuntimeFixture("test/neko_typed_field_reads", true);
 		assertRuntimeFixture("test/neko_array_join", true);
+		assertRuntimeFixture("test/neko_qualified_static_calls", true, ["Main", "providers.Api", "other.Api"]);
 		Sys.println("OK m14 Neko typed program projection");
+	}
+
+	/** Static calls must bind their exact owner and reject malformed transport records. */
+	static function assertStaticCallBoundary():Void {
+		final module = project("class Api { public static function value():Int return 7; } class Main { static function main():Void {} }");
+		final program = new NekoTypedProgramProjection([module]);
+		final declaration = "Main.Api#static:value()->primitive:Int#0";
+		final sourceCall:HxExpr = EField(EIdent("Api"), "value");
+		final encoded = TypedExactStaticCallSource.encode("Main.Api", declaration, "value", "Int", sourceCall, []);
+		final plan = backend.vm.NekoExactStaticCallPlan.fromExpression(program, encoded);
+		if (plan == null || plan.selected.body.getStableIdentity() != declaration)
+			throw "static call lost its selected declaration";
+		if (!TypedExactStaticCallSource.ordinaryCall(plan.call).match(ECall(EField(EIdent("Api"), "value"), [])))
+			throw "static call changed its ordinary source callee";
+		expectFailure("malformed typed payload", () -> TypedExactStaticCallSource.decode(ECall(EIdent(TypedExactStaticCallSource.INTRINSIC), [])));
+		expectFailure("empty typed identities",
+			() -> TypedExactStaticCallSource.decode(TypedExactStaticCallSource.encode("", declaration, "value", "Int", sourceCall, [])));
+		expectFailure("requires its typed program", () -> backend.vm.NekoExactStaticCallPlan.fromExpression(null, encoded));
+		expectFailure("conflicts with declaration",
+			() -> backend.vm.NekoExactStaticCallPlan.fromExpression(program,
+				TypedExactStaticCallSource.encode("Main.Api", declaration, "different", "Int", sourceCall, [])));
+		expectFailure("does not belong to Main",
+			() -> backend.vm.NekoExactStaticCallPlan.fromExpression(program,
+				TypedExactStaticCallSource.encode("Main", declaration, "value", "Int", sourceCall, [])));
 	}
 
 	/** Embedding must reject mutable-field evidence and preserve receiver effects. */
@@ -125,7 +151,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 	}
 
 	/** Compare authored Haxe with both generated layouts; target primitives require the upstream Neko target. */
-	static function assertRuntimeFixture(fixture:String, upstreamNeko:Bool):Void {
+	static function assertRuntimeFixture(fixture:String, upstreamNeko:Bool, ?modulePaths:Array<String>):Void {
 		final expected = File.getContent(fixture + "/expected.stdout");
 		final directory = Path.normalize(Sys.getCwd() + "/.tmp/m14_neko_enum_values_" + Std.string(Date.now().getTime()));
 		FileSystem.createDirectory(directory);
@@ -137,7 +163,17 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		};
 		if (upstream != expected)
 			throw "upstream runtime fixture differs from its expected output: " + fixture + "; artifacts: " + directory;
-		final program = new MacroExpandedProgram([typeSource(File.getContent(fixture + "/Main.hx"))], false);
+		final modules = modulePaths == null ? ["Main"] : modulePaths;
+		final resolved = [
+			for (module in modules) {
+				final file = fixture + "/" + StringTools.replace(module, ".", "/") + ".hx";
+				new ResolvedModule(module, file, ParserStage.parse(File.getContent(file), file));
+			}
+		];
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([fixture], new haxe.ds.StringMap<String>(), index, _ -> false);
+		loader.markResolvedAlready(resolved);
+		final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index, loader)], false);
 		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
 		File.saveContent(directory + "/main.neko", split.entrySource);
@@ -248,17 +284,23 @@ public static var ordinary:Int = 9; public function label():String { final local
 			throw "bodyless method lost its declared String result";
 	}
 
-	/** Null in an optional slot must not erase a generic result established by another argument. */
+	/** Optional or explicitly nullable null arguments must not erase another argument's generic type evidence. */
 	static function assertOptionalNullInference():Void {
-		final module = project('class Main { static function choose<T>(value:T, ?fallback:T):T return value; static function answer() { return choose("kept", null); } }');
-		for (body in module.getClasses()[0].getFunctions()) {
-			if (HxFunctionDecl.getName(body.getDeclaration()) == "answer") {
-				if (body.getReturnType().getSemanticKey() != "primitive:String")
-					throw "optional null erased the String binding from the required argument";
-				return;
+		for (parameter in ["?fallback:T", "fallback:Null<T>"]) {
+			final module = project('class Main { static function choose<T>(value:T, '
+				+ parameter
+				+ '):T return value; static function answer() { return choose("kept", null); } }');
+			var found = false;
+			for (body in module.getClasses()[0].getFunctions()) {
+				if (HxFunctionDecl.getName(body.getDeclaration()) == "answer") {
+					if (body.getReturnType().getSemanticKey() != "primitive:String")
+						throw "null erased the String binding from the required argument: " + parameter;
+					found = true;
+				}
 			}
+			if (!found)
+				throw "generic null observer was not projected: " + parameter;
 		}
-		throw "generic optional-null observer was not projected";
 	}
 
 	/** Unannotated functions must retain the same inferred result in declaration and body facts. */

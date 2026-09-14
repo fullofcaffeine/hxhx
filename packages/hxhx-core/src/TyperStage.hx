@@ -940,6 +940,10 @@ class TyperStage {
 			return actual.isUnknown() || actual.isDynamic() ? 0 : 1;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
+		// A null literal satisfies an explicitly nullable parameter without
+		// supplying evidence about the parameter's underlying type.
+		if (expected.isNullable() && actual.isNullLiteral())
+			return 0;
 		if (expected.isNullable() || actual.isNullable())
 			return overloadArgScore(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, semanticIndex);
 		if (expected.isFunction() || actual.isFunction()) {
@@ -1195,7 +1199,8 @@ class TyperStage {
 			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
-						final staticOwner = isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
+						final staticOwner = scope.resolveSymbol(typeOrValue) == null
+							&& isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
 						if (staticOwner != null) return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
 					case EThis:
 						final owner = ctx.currentClass();
@@ -1205,7 +1210,7 @@ class TyperStage {
 						if (dotted.length > 0) {
 							final parts = dotted.split(".");
 							final last = parts.length == 0 ? "" : parts[parts.length - 1];
-							if (isUpperStartName(last)) {
+							if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 								final staticOwner = ctx.resolveType(dotted);
 								if (staticOwner != null)
 									return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
@@ -1345,7 +1350,9 @@ class TyperStage {
 				final dotted = dottedFieldPath(object);
 				final dottedParts = dotted.split(".");
 				final dottedLast = dottedParts.length == 0 ? "" : dottedParts[dottedParts.length - 1];
-				final staticOwner = dotted.length == 0 || !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
+				final staticOwner = dotted.length == 0
+					|| scope.resolveSymbol(dottedParts[0]) != null
+					|| !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
 				if (staticOwner != null) {
 					final selected = staticOwner.fieldInfo(field);
 					selected != null
@@ -1450,7 +1457,7 @@ class TyperStage {
 				if (dotted.length > 0) {
 					final parts = dotted.split(".");
 					final last = parts.length == 0 ? "" : parts[parts.length - 1];
-					if (isUpperStartName(last)) {
+					if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 						final c = ctx.resolveType(dotted);
 						if (c != null) {
 							final memberType = declaredMemberReadType(c, _field, true);
@@ -1622,7 +1629,8 @@ class TyperStage {
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
 							case EIdent(typeName):
-								final c = isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
+								final c = scope.resolveSymbol(typeName) == null
+									&& isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
 									resolveMethodCall(c, field, true, args, scope, ctx, pos).type;
 								} else {
@@ -1666,7 +1674,7 @@ class TyperStage {
 								if (dotted.length > 0) {
 									final parts = dotted.split(".");
 									final last = parts.length == 0 ? "" : parts[parts.length - 1];
-									if (isUpperStartName(last)) {
+									if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 										final c = ctx.resolveType(dotted);
 										if (c != null) {
 											return resolveMethodCall(c, field, true, args, scope, ctx, pos).type;

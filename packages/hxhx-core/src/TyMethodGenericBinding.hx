@@ -71,6 +71,9 @@ class TyMethodGenericBinding {
 			bindings.set(parameterKey, unified);
 			return true;
 		}
+		// Null does not determine T when the parameter accepts Null<T>.
+		if (expected.isNullable() && actual.isNullLiteral())
+			return true;
 		if (expected.isNullable() || actual.isNullable())
 			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings);
 		if (expected.isFunction() || actual.isFunction()) {

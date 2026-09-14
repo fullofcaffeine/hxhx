@@ -2924,6 +2924,10 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+		final staticCall = TypedExactStaticCallSource.decode(e);
+		if (staticCall != null)
+			return exprToOcaml(TypedExactStaticCallSource.ordinaryCall(staticCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+				moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
@@ -4435,6 +4439,9 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final staticCall = TypedExactStaticCallSource.decode(e);
+			if (staticCall != null)
+				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
 				if (hasBringupPoison(exactCall.receiver))

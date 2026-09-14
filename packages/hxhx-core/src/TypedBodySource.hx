@@ -473,7 +473,9 @@ class TypedBodySource {
 						throw "typed extension call is missing its exact static declaration";
 					switch (callee) {
 						case EField(receiver, _):
-							ECall(EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
+							TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+								declaration.getSignature().getName(), typedExpression.getType().getDisplay(),
+								EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
 						case _:
 							throw "typed extension call does not retain its receiver field shape";
 					}
@@ -487,13 +489,15 @@ class TypedBodySource {
 						declaration.getIdentity().getCanonicalKey(), declaration.getSignature().getName(), callee, arguments);
 				} else if (declaration == null || declaration.getIsStatic()) {
 					if (declaration != null) {
-						switch (callee) {
+						final ordinary:HxExpr = switch (callee) {
 							case EIdent(_) if (typedExpression.getRequiresOwnerQualification()):
-								ECall(EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName()), arguments);
+								EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName());
 							case EField(EIdent(name), method):
-								ECall(EField(resolvedTypeExpression(name, declaration.getOwner()), method), arguments);
-							case _: ECall(callee, arguments);
-						}
+								EField(resolvedTypeExpression(name, declaration.getOwner()), method);
+							case _: callee;
+						};
+						TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+							declaration.getSignature().getName(), typedExpression.getType().getDisplay(), ordinary, arguments);
 					} else {
 						ECall(callee, arguments);
 					}
