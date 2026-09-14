@@ -153,6 +153,12 @@ class OcamlTargetProgramRequest {
 		final functionsByName:Map<String, OcamlTargetFunctionFact> = [];
 		for (fn in functions)
 			functionsByName.set(fn.sourceFunctionName, fn);
+		for (fn in functions)
+			for (call in fn.body.copyStaticCalls()) {
+				final callee = functionsByName.get(call.sourceFunctionName);
+				if (callee == null || !call.belongsTo(callee.moduleId, callee.sourceTypeName))
+					throw 'OCaml target program has no admitted callee for "${call.sourceFunctionName}"';
+			}
 		for (declaration in mainClass.copyMethods()) {
 			final fn = functionsByName.get(declaration.name);
 			if (!declaration.isStatic

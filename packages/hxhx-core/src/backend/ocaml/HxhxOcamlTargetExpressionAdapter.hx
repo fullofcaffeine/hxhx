@@ -8,11 +8,13 @@ import reflaxe.ocaml.target.OcamlTargetExpressionPath;
 class HxhxOcamlTargetExpressionAdapter {
 	final ownerIdentity:String;
 	final nativeFunctionIdentity:Null<String>;
+	final sourceOwner:Null<TyNominalInfo>;
 	final bindingsByNativeKey:Map<String, OcamlTargetBindingFact>;
 
-	function new(ownerIdentity:String, ?nativeFunctionIdentity:String) {
+	function new(ownerIdentity:String, ?nativeFunctionIdentity:String, ?sourceOwner:TyNominalInfo) {
 		this.ownerIdentity = requiredOwner(ownerIdentity);
 		this.nativeFunctionIdentity = nativeFunctionIdentity;
+		this.sourceOwner = sourceOwner;
 		bindingsByNativeKey = new Map<String, OcamlTargetBindingFact>();
 	}
 
@@ -32,10 +34,11 @@ class HxhxOcamlTargetExpressionAdapter {
 		identity across nested blocks. The shared target validates lexical visibility
 		and owns lowering. Unsupported statements reject the complete body.
 	**/
-	public static function fromFunctionBody(ownerIdentity:String, nativeFunctionIdentity:String, body:TypedFunctionBody):Null<OcamlTargetExpressionFact> {
+	public static function fromFunctionBody(ownerIdentity:String, nativeFunctionIdentity:String, body:TypedFunctionBody,
+			sourceOwner:TyNominalInfo):Null<OcamlTargetExpressionFact> {
 		if (body == null)
 			throw "native OCaml expression adapter requires a typed function body";
-		final adapter = new HxhxOcamlTargetExpressionAdapter(ownerIdentity, requiredOwner(nativeFunctionIdentity));
+		final adapter = new HxhxOcamlTargetExpressionAdapter(ownerIdentity, requiredOwner(nativeFunctionIdentity), sourceOwner);
 		final fact = adapter.copyStatements(body.getStatements(), OcamlTargetExpressionPath.ROOT);
 		if (fact != null)
 			fact.validateClosedBindings();
@@ -72,6 +75,8 @@ class HxhxOcamlTargetExpressionAdapter {
 		if (literal != null)
 			return isDirectLiteral(literal) ? OcamlTargetExpressionFact.literalExpression(path, literal) : null;
 		return switch (expression.getTag()) {
+			case Call:
+				copyCall(expression, path);
 			case LocalRead:
 				final nativeBindings = expression.getLocalBindings();
 				if (nativeBindings.length != 1) {
@@ -109,6 +114,37 @@ class HxhxOcamlTargetExpressionAdapter {
 			}
 		}
 		return copyBlock(expression, flattened, path);
+	}
+
+	/** Copy only a resolved bare static call; computed receivers must retain their effects. **/
+	function copyCall(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+		final declaration = expression.getDeclaration();
+		final children = expression.getExpressions();
+		if (sourceOwner == null
+			|| declaration == null
+			|| children.length != 1
+			|| children[0].getTag() != NameRead
+			|| children[0].getExpressions().length != 0
+			|| expression.getExtensionProvider() != null
+			|| expression.getType().getCanonicalDisplay() != "Void"
+			|| !declaration.getOwner().equals(sourceOwner.getIdentity())
+			|| declaration.getModulePath() != sourceOwner.getModulePath()
+			|| !declaration.getIsStatic()
+			|| declaration.getIsInline()
+			|| declaration.getIsDynamic()
+			|| declaration.getIsEnumConstructor()
+			|| !declaration.getHasBody()
+			|| declaration.getTypeParameterIds().length != 0
+			|| declaration.getMetadata().length != 0)
+			return null;
+		final signature = declaration.getSignature();
+		if (!signature.getIsStatic() || signature.getArgs().length != 0 || signature.getReturnType().getCanonicalDisplay() != "Void")
+			return null;
+		return OcamlTargetExpressionFact.directStaticCall(path, new reflaxe.ocaml.target.OcamlTargetStaticCallFact({
+			moduleId: sourceOwner.getModulePath(),
+			sourceTypeName: sourceOwner.getShortName(),
+			sourceFunctionName: signature.getName()
+		}));
 	}
 
 	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String):Null<OcamlTargetExpressionFact> {

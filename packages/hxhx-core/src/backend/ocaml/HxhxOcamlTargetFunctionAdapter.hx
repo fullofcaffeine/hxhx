@@ -33,7 +33,7 @@ class HxhxOcamlTargetFunctionAdapter {
 			returnTypeDisplay: "Void"
 		};
 		final body = HxhxOcamlTargetExpressionAdapter.fromFunctionBody(OcamlTargetFunctionFact.identityFor(targetSignature), fn.getStableIdentity(),
-			fn.getBody());
+			fn.getBody(), owner);
 		if (body == null || body.semanticTypeDisplay != "Void")
 			return null;
 		return new OcamlTargetFunctionFact(targetSignature, body);

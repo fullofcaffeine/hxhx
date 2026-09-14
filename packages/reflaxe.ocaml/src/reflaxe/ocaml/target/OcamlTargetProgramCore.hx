@@ -94,8 +94,8 @@ class OcamlTargetProgramPlan {
 			runtimeReasonIdentity: runtimeReasonIdentity,
 			outputManifestIdentity: outputManifestIdentity,
 			mainModuleId: mainModuleId,
-			// Revision 1 admits only primitive literals and source-local reads.
-			// No selected expression can depend on another source module.
+			// Admitted calls remain inside the selected class, so no selected
+			// expression can depend on another source module.
 			dependencyModuleIds: [],
 			runtimeReasons: [],
 			files: [
@@ -143,15 +143,27 @@ class OcamlTargetProgramCore {
 				name: targetValueName(field.moduleId, field.sourceTypeName, field.sourceFieldName),
 				expr: OcamlTargetExpressionLowerer.build(field.initializer)
 			});
+		final functionBindings = new Array<OcamlLetBinding>();
 		for (fn in request.copyFunctions())
-			bindings.push({
+			functionBindings.push({
 				name: targetValueName(fn.moduleId, fn.sourceTypeName, fn.sourceFunctionName),
 				expr: OcamlTargetFunctionLowerer.build(fn)
 			});
 		bindings.sort((left, right) -> compareText(left.name, right.name));
+		functionBindings.sort((left, right) -> compareText(left.name, right.name));
 
 		final modulePath = moduleFile(request.mainModuleId);
-		final moduleContents = printer.printModule([OcamlModuleItem.ILet(bindings, false)]) + "\n";
+		final items = new Array<OcamlModuleItem>();
+		if (bindings.length != 0)
+			items.push(OcamlModuleItem.ILet(bindings, false));
+		// Every admitted function is an OCaml lambda. A function-only recursive
+		// group permits forward references without moving field initialization.
+		var hasCalls = false;
+		for (fn in request.copyFunctions())
+			if (fn.body.copyStaticCalls().length != 0)
+				hasCalls = true;
+		items.push(OcamlModuleItem.ILet(functionBindings, hasCalls));
+		final moduleContents = printer.printModule(items) + "\n";
 		final entryContents = "let () = ignore (" + moduleName(request.mainModuleId) + ".main ())\n";
 		final duneProject = [
 			"(lang dune 2.9)",
