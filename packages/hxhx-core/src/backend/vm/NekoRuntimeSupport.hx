@@ -279,7 +279,9 @@ class NekoRuntimeSupport {
 		out.push("    if (field == \"join\") return function(separator) { return __hxhx_array_join(o, separator); };");
 		out.push("    return null;");
 		out.push("  }");
-		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else null;");
+		// The Neko stdlib reads String.__s before calling native primitives.
+		// Our strings already use that native representation; ordinary objects still use field lookup below.
+		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else if (field == \"__s\") o else null;");
 		out.push("  if ($typeof(o) != $tobject) return null;");
 		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
 		out.push("  if ($typeof(getter) == $tfunction) return getter();");

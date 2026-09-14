@@ -82,6 +82,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertConstantRuntime();
 		assertStaticCallBoundary();
 		expectFailure("requires 3 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub"), ["value"]));
+		expectFailure("requires 2 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__sget"), ["value"]));
 		expectFailure("requires 1 argument", () -> backend.vm.NekoStringIntrinsics.renderConstructor([]));
 		if (backend.vm.NekoStringIntrinsics.renderCall(EField(EIdent("user"), "__dollar__ssub"), ["a", "b", "c"]) != null
 			|| backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub_extra"), []) != null)
