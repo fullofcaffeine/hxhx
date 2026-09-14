@@ -87,6 +87,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			throw "an ordinary function name was treated as a Neko primitive";
 		assertRuntimeFixture("test/neko_native_string_slice", true);
 		assertRuntimeFixture("test/neko_typed_field_reads", true);
+		assertRuntimeFixture("test/neko_array_join", true);
 		Sys.println("OK m14 Neko typed program projection");
 	}
 

@@ -1025,7 +1025,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var pl = ["a", "b"]; var result = try { pl.join(","); } catch(e:Dynamic) { "???"; }; Sys.println(result); } }'),
 			context);
 		final methodCallCatchSource = File.getContent(sourcePath);
-		assertContains(methodCallCatchSource, "try { return pl.join(\",\"); } catch e { return \"???\"; }", "expected method-call catch-string raw lowering");
+		assertContains(methodCallCatchSource, "try { return __hxhx_field(pl, \"join\")(\",\"); } catch e { return \"???\"; }",
+			"expected structural array method lookup inside try/catch");
 
 		deleteRecursive(outDir);
 
@@ -1034,8 +1035,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var uname = { stdout: { readLine: function() return "Linux" } }; var result = try { uname.stdout.readLine(); } catch(e:haxe.io.Eof) { ""; }; Sys.println(result); } }'),
 			context);
 		final nestedMethodCallCatchSource = File.getContent(sourcePath);
-		assertContains(nestedMethodCallCatchSource, "try { return uname.stdout.readLine(); } catch e { return \"\"; }",
-			"expected nested method-call catch-string raw lowering");
+		assertContains(nestedMethodCallCatchSource, "try { return __hxhx_field(__hxhx_field(uname, \"stdout\"), \"readLine\")(); } catch e { return \"\"; }",
+			"expected nested structural method lookup inside try/catch");
 
 		deleteRecursive(outDir);
 
