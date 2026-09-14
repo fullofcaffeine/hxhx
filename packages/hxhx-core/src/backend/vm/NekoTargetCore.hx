@@ -1627,6 +1627,8 @@ class NekoTargetCore {
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+		if (typePath == "String")
+			return NekoStringIntrinsics.renderConstructor([for (arg in args) renderExpr(context, arg)]);
 		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
 			return "$array()";
 		if (isListTypePath(typePath) && args.length == 0)
@@ -2430,6 +2432,9 @@ class NekoTargetCore {
 			case _:
 		}
 		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
+		final stringIntrinsic = NekoStringIntrinsics.renderCall(callee, renderedArgs);
+		if (stringIntrinsic != null)
+			return stringIntrinsic;
 		switch (callee) {
 			case EIdent("trace"):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
@@ -2509,6 +2514,10 @@ class NekoTargetCore {
 						+ ")";
 				final fullClassName = info == null ? className : info.fullName;
 				return renderFunctionRef(context, fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
+			case ELambda(_, _):
+				// Neko needs parentheses to call the function value rather than
+				// attach the following expression to the function syntax.
+				return "(" + renderExpr(context, callee) + ")(" + renderedArgs.join(", ") + ")";
 			case _:
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}

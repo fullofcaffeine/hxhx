@@ -982,22 +982,22 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Bytes { public var length:Int; public var data:Dynamic; public function new(length:Int, data:Dynamic) { this.length = length; this.data = data; } } class Main { static function main() { var len = 1; var b = "abc"; var pos = 0; var value = try { new Bytes(len, untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw Error.OutsideBounds; }; Sys.println(value.length); } }'),
+			program('class Bytes { public var length:Int; public var data:Dynamic; public function new(length:Int, data:Dynamic) { this.length = length; this.data = data; } } class Main { static function main() { var len = 1; var b = untyped __dollar__string(123); var pos = 0; var value = try { new Bytes(len, untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw "OutsideBounds"; }; Sys.println(value.length); } }'),
 			context);
 		final bytesSubTryExprSource = File.getContent(sourcePath);
 		assertContains(bytesSubTryExprSource, "var __hxhx_new_Bytes = function(length, data)", "expected Bytes constructor factory");
-		assertContains(bytesSubTryExprSource, "try { return __hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { $throw(\"OutsideBounds\"); return null; }",
-			"expected Bytes.sub raw try/catch lowering");
+		assertContains(bytesSubTryExprSource, "try { return __hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
+			"expected structural try/catch around the native slice and local Bytes constructor");
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { var len = 1; var b = "abc"; var pos = 0; var value = try { new String(untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw Error.OutsideBounds; }; Sys.println(value); } }'),
+			program('class Main { static function main() { var len = 1; var b = untyped __dollar__string(123); var pos = 0; var value = try { new String(untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw "OutsideBounds"; }; Sys.println(value); } }'),
 			context);
 		final stringSubTryExprSource = File.getContent(sourcePath);
-		assertContains(stringSubTryExprSource, "try { return $ssub(b, pos, len); } catch e { $throw(\"OutsideBounds\"); return null; }",
-			"expected String raw sub try/catch lowering");
+		assertContains(stringSubTryExprSource, "try { return $string($ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
+			"expected structural try/catch around native slicing and String construction");
 
 		deleteRecursive(outDir);
 

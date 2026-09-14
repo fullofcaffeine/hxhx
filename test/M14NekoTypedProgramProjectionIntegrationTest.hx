@@ -80,6 +80,12 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertConstantDependencies();
 		assertConstantReadBoundary();
 		assertConstantRuntime();
+		expectFailure("requires 3 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub"), ["value"]));
+		expectFailure("requires 1 argument", () -> backend.vm.NekoStringIntrinsics.renderConstructor([]));
+		if (backend.vm.NekoStringIntrinsics.renderCall(EField(EIdent("user"), "__dollar__ssub"), ["a", "b", "c"]) != null
+			|| backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub_extra"), []) != null)
+			throw "an ordinary function name was treated as a Neko primitive";
+		assertRuntimeFixture("test/neko_native_string_slice", true);
 		Sys.println("OK m14 Neko typed program projection");
 	}
 
@@ -113,12 +119,22 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 
 	/** The authored source must match upstream and execute in both generated Neko layouts. */
 	static function assertConstantRuntime():Void {
-		final fixture = "test/neko_enum_abstract_values";
+		assertRuntimeFixture("test/neko_enum_abstract_values", false);
+	}
+
+	/** Compare authored Haxe with both generated layouts; target primitives require the upstream Neko target. */
+	static function assertRuntimeFixture(fixture:String, upstreamNeko:Bool):Void {
 		final expected = File.getContent(fixture + "/expected.stdout");
-		if (run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]) != expected)
-			throw "upstream enum-abstract fixture differs from its expected output";
 		final directory = Path.normalize(Sys.getCwd() + "/.tmp/m14_neko_enum_values_" + Std.string(Date.now().getTime()));
 		FileSystem.createDirectory(directory);
+		final upstream = if (upstreamNeko) {
+			run("haxe", ["-cp", fixture, "-main", "Main", "-neko", directory + "/upstream.n"]);
+			run("neko", [directory + "/upstream.n"]);
+		} else {
+			run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
+		};
+		if (upstream != expected)
+			throw "upstream runtime fixture differs from its expected output: " + fixture + "; artifacts: " + directory;
 		final program = new MacroExpandedProgram([typeSource(File.getContent(fixture + "/Main.hx"))], false);
 		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
@@ -136,7 +152,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		}
 		for (layout in ["single", "main"])
 			if (run("neko", [directory + "/" + layout + ".n"]) != expected)
-				throw "enum-abstract runtime differs in " + layout + "; artifacts: " + directory;
+				throw fixture + " runtime differs in " + layout + "; artifacts: " + directory;
 		for (file in FileSystem.readDirectory(directory))
 			FileSystem.deleteFile(directory + "/" + file);
 		FileSystem.deleteDirectory(directory);
