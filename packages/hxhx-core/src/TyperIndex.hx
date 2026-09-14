@@ -142,7 +142,7 @@ class TyperIndex {
 	static function classFullNameInModule(pkg:String, moduleName:Null<String>, className:String):String {
 		final packagePath = pkg == null ? "" : StringTools.trim(pkg);
 		final rawModule = moduleName == null ? "" : StringTools.trim(moduleName);
-		final modulePath = rawModule.length == 0 || rawModule == "Unknown" ? "" : rawModule;
+		final modulePath = rawModule;
 		final shortName = className == null ? "" : StringTools.trim(className);
 		var prefix = packagePath;
 		if (modulePath.length > 0 && shortName.length > 0 && shortName != modulePath)
@@ -220,7 +220,7 @@ class TyperIndex {
 		final modulePath = canonicalModulePath(packagePath, moduleName);
 		for (classDeclaration in HxModuleDecl.getClasses(declaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
-			if (shortName == null || shortName.length == 0 || shortName == "Unknown")
+			if (shortName == null || shortName.length == 0)
 				continue;
 			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName), shortName);
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
@@ -631,7 +631,7 @@ class TyperIndex {
 
 		for (classDeclaration in HxModuleDecl.getClasses(moduleDeclaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
-			if (shortName == null || shortName.length == 0 || shortName == "Unknown")
+			if (shortName == null || shortName.length == 0)
 				continue;
 			final fullName = classFullNameInModule(packagePath, moduleName, shortName);
 			final identity = identityByFullName.get(fullName);

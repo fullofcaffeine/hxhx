@@ -767,7 +767,8 @@ class TypedBodySource {
 			throw "typed module projection class count mismatch";
 		final source = parsed.getDecl();
 		final sourceMain = HxModuleDecl.getMainClass(source);
-		var mainClass:Null<HxClassDecl> = null;
+		// Empty class catalogs retain header metadata without inventing a typed class.
+		var mainClass:Null<HxClassDecl> = classes.length == 0 && HxModuleDecl.getClasses(source).length == 0 ? sourceMain : null;
 		for (index in 0...typedClasses.length)
 			if (typedClasses[index].getSourceDeclaration() == sourceMain) {
 				mainClass = classes[index];

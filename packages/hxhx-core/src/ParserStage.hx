@@ -207,13 +207,7 @@ class ParserStage {
 		}
 
 		final parsedMain = HxModuleDecl.getMainClass(parsed);
-		final parsedMainIsPlaceholder = parsedMain != null
-			&& HxClassDecl.getName(parsedMain) == "Unknown"
-			&& expectedMainClass != null
-			&& expectedMainClass.length > 0
-			&& expectedMainClass != "Unknown"
-			&& HxClassDecl.getFunctions(parsedMain).length == 0
-			&& HxClassDecl.getFields(parsedMain).length == 0;
+		final parsedMainIsPlaceholder = HxModuleDecl.getClasses(parsed).indexOf(parsedMain) < 0;
 		var main = parsedMain;
 		main = overlayScannedDecl(main);
 		var mainName = main == null ? "" : HxClassDecl.getName(main);
@@ -252,13 +246,10 @@ class ParserStage {
 				seen.set(nm, true);
 		}
 
-		pushUnique(main);
+		if (!parsedMainIsPlaceholder || main != parsedMain)
+			pushUnique(main);
 		for (c in HxModuleDecl.getClasses(parsed))
-			// The pure parser has to provide a main-class object even for an enum-only
-			// module. Once scanning finds the expected real declaration, that exact
-			// empty placeholder must not survive as another target-visible class.
-			if (!(parsedMainIsPlaceholder && c == parsedMain && main != parsedMain))
-				pushUnique(c);
+			pushUnique(c);
 		for (c in enumDecls) {
 			final nm = HxClassDecl.getName(c);
 			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
@@ -281,6 +272,10 @@ class ParserStage {
 			}
 		}
 
+		// Declaration enrichment can discover a typedef or enum without finding
+		// an ordinary class. Use that real declaration instead of a fallback header.
+		if (parsedMainIsPlaceholder && main == parsedMain && classes.length > 0)
+			main = classes[0];
 		return changed ? new HxModuleDecl(HxModuleDecl.getPackagePath(parsed), HxModuleDecl.getDirectives(parsed), main, classes,
 			HxModuleDecl.getHeaderOnly(parsed), HxModuleDecl.getHasToplevelMain(parsed)) : parsed;
 	}
