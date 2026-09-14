@@ -12,6 +12,8 @@
 	  into the immutable parsed declaration.
 	- Each scanner must remain deterministic and must eventually shrink as the main
 	  parser learns the corresponding declarations directly.
+	- Method declarations retain their captured bodies. Target support must not
+	  determine which source statements survive this parsing boundary.
 **/
 class ParserStageScanHelpers {
 	/**
@@ -489,6 +491,11 @@ class ParserStageScanHelpers {
 				i = scanned.nextPos;
 				for (field in scanned.fields)
 					fields.push(field);
+				// Enum values have implicit public/static semantics supplied above.
+				// Methods use the same declaration scanner as ordinary abstracts so
+				// their signatures, operator metadata, and source bodies reach typing.
+				for (fn in scanClassBodyForStatics(source, headerTok.nextPos).functions)
+					functions.push(fn);
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
 				i = scanned.nextPos;
@@ -1529,6 +1536,12 @@ class ParserStageScanHelpers {
 		return {nextPos: i, fields: fields};
 	}
 
+	/**
+		Read fields and methods after a type's opening brace, stopping at its close.
+		Despite the historical name, this retains instance and static methods for
+		classes and abstracts. Bodies and source ranges belong to the declaration;
+		later compiler phases decide whether their behavior is supported.
+	**/
 	public static function scanClassBodyForStatics(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
 		final fields = new Array<HxFieldDecl>();
 		final functions = new Array<HxFunctionDecl>();
@@ -2061,9 +2074,11 @@ class ParserStageScanHelpers {
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
-					final keepBody = fnName == "new" || !wantStaticFn || sawDynamic || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
-					final body = keepBody ? bodyCapture.body : [];
-					final bodyText = (keepBody || fnName == "__init__") ? bodyCapture.bodyText : "";
+					// Parsing owns the authored body, including branches and unsupported
+					// syntax nodes. Typing and target checks must see those nodes rather
+					// than an empty method that silently loses its behavior.
+					final body = bodyCapture.body;
+					final bodyText = bodyCapture.bodyText;
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -2479,49 +2494,6 @@ class ParserStageScanHelpers {
 			if (hasUnsupportedStmt(stmt))
 				return true;
 		return false;
-	}
-
-	static function scannedStaticBodyIsSafe(fnName:String, stmts:Array<HxStmt>):Bool {
-		if (stmts == null || stmts.length == 0)
-			return false;
-		if (StringTools.startsWith(fnName, "get_") && stmts.length == 1) {
-			return switch (stmts[0]) {
-				case SReturn(expr, _):
-					!hasUnsupportedExpr(expr);
-				case _:
-					false;
-			};
-		}
-		if (StringTools.startsWith(fnName, "set_") && stmts.length == 2) {
-			return switch [stmts[0], stmts[1]] {
-				case [SExpr(EBinop("=", EIdent(_), rhs), _), SReturn(ret, _)]: !hasUnsupportedExpr(rhs) && !hasUnsupportedExpr(ret);
-				case _:
-					false;
-			};
-		}
-		// Keep scanned static helper bodies only when they are linear and every
-		// statement is understood by the current source-native lowering path.
-		for (stmt in stmts) {
-			switch (stmt) {
-				case SVar(_, _, init, _):
-					if (hasUnsupportedExpr(init))
-						return false;
-				case SExpr(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case SReturn(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case _:
-					return false;
-			}
-		}
-		return switch (stmts[stmts.length - 1]) {
-			case SReturn(_, _):
-				true;
-			case _:
-				false;
-		};
 	}
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
