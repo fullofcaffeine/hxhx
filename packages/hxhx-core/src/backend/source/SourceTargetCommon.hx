@@ -1171,6 +1171,9 @@ class SourceTargetCommon {
 	}
 
 	static function renderExprWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):String {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)

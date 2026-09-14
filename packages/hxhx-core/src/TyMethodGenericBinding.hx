@@ -71,6 +71,9 @@ class TyMethodGenericBinding {
 			bindings.set(parameterKey, unified);
 			return true;
 		}
+		// Null does not determine T when the parameter accepts Null<T>.
+		if (expected.isNullable() && actual.isNullLiteral())
+			return true;
 		if (expected.isNullable() || actual.isNullable())
 			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings);
 		if (expected.isFunction() || actual.isFunction()) {
@@ -101,8 +104,13 @@ class TyMethodGenericBinding {
 			methodTypeParameters:Array<TyTypeParameterId>):Null<haxe.ds.StringMap<TyType>> {
 		final result = new haxe.ds.StringMap<TyType>();
 		final expected = sig.getArgs();
+		final optional = sig.getArgOptional();
 		for (index in 0...suppliedArity) {
 			if (index >= expected.length || index >= argTypes.length)
+				continue;
+			// An optional null argument requests the default; it must not bind a
+			// method type parameter to the null-literal type.
+			if (index < optional.length && optional[index] && argTypes[index].isNullLiteral())
 				continue;
 			if (!collect(expected[index], argTypes[index], methodTypeParameters, result))
 				return null;

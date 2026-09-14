@@ -37,12 +37,7 @@ typedef NekoRuntimeClassMeta = {
 **/
 class NekoRuntimeSupport {
 	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
-		out.push("var __hxhx_string = function(value) {");
-		out.push("  if (value == null) return \"null\";");
-		out.push("  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
-		out.push("  return \"\" + value;");
-		out.push("}");
-		out.push("");
+		NekoStringRuntimeSource.render(out);
 		out.push("var __hxhx_array_indexOf = function(a, value) {");
 		out.push("  var i = 0;");
 		out.push("  var len = $asize(a);");
@@ -204,10 +199,6 @@ class NekoRuntimeSupport {
 		out.push("  return $int($ssub(text, start, pos - start));");
 		out.push("}");
 		out.push("");
-		out.push("var __hxhx_neko_ndll_suffix = function(arch) {");
-		out.push("  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
-		out.push("}");
-		out.push("");
 		out.push("var __hxhx_main_loop_add = function(callback) {");
 		out.push("  var event = $new(null);");
 		out.push("  event.__hx_ctor = \"haxe.MainEvent\";");
@@ -281,9 +272,16 @@ class NekoRuntimeSupport {
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_field = function(o, field) {");
-		out.push("  if (o == null) return null;");
-		out.push("  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");
-		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else null;");
+		// Ordinary field access must throw; Reflect.field has a separate null-tolerant path.
+		out.push("  if (o == null) $throw(\"Invalid field access on null\");");
+		out.push("  if ($typeof(o) == $tarray) {");
+		out.push("    if (field == \"length\") return $asize(o);");
+		out.push("    if (field == \"join\") return function(separator) { return __hxhx_array_join(o, separator); };");
+		out.push("    return null;");
+		out.push("  }");
+		// The Neko stdlib reads String.__s before calling native primitives.
+		// Our strings already use that native representation; ordinary objects still use field lookup below.
+		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else if (field == \"__s\") o else null;");
 		out.push("  if ($typeof(o) != $tobject) return null;");
 		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
 		out.push("  if ($typeof(getter) == $tfunction) return getter();");

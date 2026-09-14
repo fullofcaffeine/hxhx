@@ -494,7 +494,7 @@ class ParserStageScanHelpers {
 				// Enum values have implicit public/static semantics supplied above.
 				// Methods use the same declaration scanner as ordinary abstracts so
 				// their signatures, operator metadata, and source bodies reach typing.
-				for (fn in scanClassBodyForStatics(source, headerTok.nextPos).functions)
+				for (fn in scanned.functions)
 					functions.push(fn);
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
@@ -529,7 +529,7 @@ class ParserStageScanHelpers {
 			}
 
 			final classMetadata = if (isEnumAbstract) {
-				final metadata = enumMetadata.concat(["__hxhx_abstract"]).concat(typeParamsMetadata(abstractTypeParams.params));
+				final metadata = enumMetadata.concat(["__hxhx_abstract", "__hxhx_enum_abstract"]).concat(typeParamsMetadata(abstractTypeParams.params));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
 				for (fromType in abstractConversions.fromTypes)
@@ -1432,108 +1432,23 @@ class ParserStageScanHelpers {
 		return {nextPos: i, ctors: ctors};
 	}
 
-	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+	/** Keep enum values and methods from one declaration scan; typing assigns omitted values. */
+	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
+		final scanned = scanClassBodyForStatics(source, start);
 		final fields = new Array<HxFieldDecl>();
-
-		var depth = 1; // we start just after `{`
-		var i = start;
-
-		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0)
-				return false;
-			final c = name.charCodeAt(0);
-			return c >= "A".code && c <= "Z".code;
-		}
-
-		while (true) {
-			final t = scanNextToken(source, i);
-			i = t.nextPos;
-			if (t.text.length == 0)
-				break;
-
-			if (!t.isIdent) {
-				switch (t.text) {
-					case "{":
-						depth += 1;
-					case "}":
-						depth -= 1;
-						if (depth <= 0)
-							break;
-					case _:
-				}
+		for (field in scanned.fields) {
+			if (HxFieldDecl.getIsStatic(field)) {
+				fields.push(field);
 				continue;
 			}
-
-			if (depth != 1)
-				continue;
-			if (t.text != "var")
-				continue;
-
-			// var <Name> ...
-			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent)
-				nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0)
-				continue;
-			final name = nameTok.text;
-			i = nameTok.nextPos;
-			if (!isUpperStart(name))
-				continue;
-
-			var init:Null<HxExpr> = null;
-			var scanPos = i;
-			var initStart = -1;
-			var parenDepth = 0;
-			var bracketDepth = 0;
-			var braceDepthInInit = 0;
-			while (true) {
-				final valueTok = scanNextToken(source, scanPos);
-				if (valueTok.text.length == 0) {
-					i = scanPos;
-					break;
-				}
-				scanPos = valueTok.nextPos;
-				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && valueTok.text == "=" && initStart < 0) {
-					initStart = valueTok.nextPos;
-					continue;
-				}
-				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && (valueTok.text == ";" || valueTok.text == ",")) {
-					if (initStart >= 0)
-						init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
-					i = valueTok.nextPos;
-					break;
-				}
-				switch (valueTok.text) {
-					case "(":
-						parenDepth += 1;
-					case ")":
-						parenDepth = parenDepth > 0 ? parenDepth - 1 : 0;
-					case "[":
-						bracketDepth += 1;
-					case "]":
-						bracketDepth = bracketDepth > 0 ? bracketDepth - 1 : 0;
-					case "{":
-						braceDepthInInit += 1;
-					case "}":
-						if (braceDepthInInit > 0) {
-							braceDepthInInit -= 1;
-						} else {
-							if (initStart >= 0)
-								init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
-							i = valueTok.nextPos;
-							depth -= 1;
-							break;
-						}
-					case _:
-				}
-			}
-			var fieldInit:HxExpr = EInt(0);
-			if (init != null)
-				fieldInit = init;
-			fields.push(new HxFieldDecl(name, HxVisibility.Public, true, "Dynamic", fieldInit));
+			// Preserve omitted initializers for shared typing: String and Int
+			// abstracts assign different implicit values. An explicit static field
+			// is an ordinary field, not an enum value.
+			fields.push(new HxFieldDecl(HxFieldDecl.getName(field), HxVisibility.Public, true, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field),
+				HxFieldDecl.getMetadata(field).concat(["__hxhx_enum_abstract_value", "inline"]), HxFieldDecl.getPos(field), HxFieldDecl.getEndPos(field),
+				false, "inline", "never", HxFieldDecl.getInitText(field)));
 		}
-
-		return {nextPos: i, fields: fields};
+		return {nextPos: scanned.nextPos, fields: fields, functions: scanned.functions};
 	}
 
 	/**

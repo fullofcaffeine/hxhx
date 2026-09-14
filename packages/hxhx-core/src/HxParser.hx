@@ -3724,8 +3724,9 @@ class HxParser {
 				case TIdent(name):
 					name;
 				case TKeyword(k):
-					final text = keywordText(k);
-					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
+					// Re-parsing must see a keyword token, even between identifiers.
+					// Without separators, `untyped probe()` becomes `untypedprobe()`.
+					" " + keywordText(k) + " ";
 				case TString(s, _):
 					"\"" + s + "\"";
 				case TInt(v):

@@ -9,6 +9,9 @@ package backend.ocaml;
 **/
 class OcamlLocalCallDependency {
 	public static function calleeName(expression:HxExpr):Null<String> {
+		final staticCall = TypedExactStaticCallSource.decode(expression);
+		if (staticCall != null)
+			return staticCall.method;
 		final exactInstanceCall = TypedExactCallSource.decodeInstance(expression);
 		if (exactInstanceCall != null)
 			return exactInstanceCall.method;

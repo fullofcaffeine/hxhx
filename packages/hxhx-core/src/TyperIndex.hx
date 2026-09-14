@@ -142,7 +142,7 @@ class TyperIndex {
 	static function classFullNameInModule(pkg:String, moduleName:Null<String>, className:String):String {
 		final packagePath = pkg == null ? "" : StringTools.trim(pkg);
 		final rawModule = moduleName == null ? "" : StringTools.trim(moduleName);
-		final modulePath = rawModule.length == 0 || rawModule == "Unknown" ? "" : rawModule;
+		final modulePath = rawModule;
 		final shortName = className == null ? "" : StringTools.trim(className);
 		var prefix = packagePath;
 		if (modulePath.length > 0 && shortName.length > 0 && shortName != modulePath)
@@ -220,7 +220,7 @@ class TyperIndex {
 		final modulePath = canonicalModulePath(packagePath, moduleName);
 		for (classDeclaration in HxModuleDecl.getClasses(declaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
-			if (shortName == null || shortName.length == 0 || shortName == "Unknown")
+			if (shortName == null || shortName.length == 0)
 				continue;
 			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName), shortName);
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
@@ -631,7 +631,7 @@ class TyperIndex {
 
 		for (classDeclaration in HxModuleDecl.getClasses(moduleDeclaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
-			if (shortName == null || shortName.length == 0 || shortName == "Unknown")
+			if (shortName == null || shortName.length == 0)
 				continue;
 			final fullName = classFullNameInModule(packagePath, moduleName, shortName);
 			final identity = identityByFullName.get(fullName);
@@ -650,15 +650,27 @@ class TyperIndex {
 
 			final fields = new StringMap<TyFieldInfo>();
 			final properties = new StringMap<TyPropertyInfo>();
+			final enumConstants = hasMetadata(classMetadata,
+				"__hxhx_enum_abstract") ? new TyEnumAbstractConstants(identity,
+					semanticType(metadataValue(classMetadata, "__hxhx_abstract_underlying"), packagePath, moduleName, directives, parameterIds),
+					HxClassDecl.getFields(classDeclaration)) : null;
 			for (field in HxClassDecl.getFields(classDeclaration)) {
-				final fieldType = semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, directives, parameterIds);
+				// Enum values have the abstract's identity even when their initializer
+				// is a backing literal. This lets member/operator resolution select the
+				// abstract declaration before a target erases the value representation.
+				final isEnumValue = hasMetadata(classMetadata, "__hxhx_enum_abstract")
+					&& hasMetadata(HxFieldDecl.getMetadata(field), "__hxhx_enum_abstract_value");
+				final fieldType = isEnumValue ? TyType.nominal(identity,
+					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName,
+						directives, parameterIds);
 				final fieldName = HxFieldDecl.getName(field);
 				fields.set(fieldName,
 					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
 						HxFieldDecl.getVisibility(field) == HxVisibility.Public, HxFieldDecl.getIsFinal(field),
 						hasMetadata(HxFieldDecl.getMetadata(field), "inline"), HxFieldDecl.getInit(field) != null || StringTools.trim(HxFieldDecl.getInitText(field))
 						.length > 0,
-						hasMetadata(HxFieldDecl.getMetadata(field), "noImportGlobal"), HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field)));
+						hasMetadata(HxFieldDecl.getMetadata(field), "noImportGlobal"), HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field),
+						isEnumValue ? enumConstants.resolve(fieldName) : null));
 				final getter = HxFieldDecl.getPropertyGet(field);
 				final setter = HxFieldDecl.getPropertySet(field);
 				if (getter.length > 0 || setter.length > 0)

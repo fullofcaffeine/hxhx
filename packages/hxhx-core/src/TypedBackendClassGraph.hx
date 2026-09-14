@@ -320,6 +320,7 @@ class TypedBackendClassGraph {
 		final semanticType = TyTypeSubstitution.apply(field.semanticType, bindings);
 		return {
 			canonicalIdentity: field.canonicalIdentity,
+			constantIdentity: field.constantIdentity,
 			name: field.name,
 			semanticType: semanticType,
 			typeIdentity: semanticType.getSemanticKey(),
@@ -389,6 +390,7 @@ class TypedBackendClassGraph {
 	static function copySpecializedField(field:TypedBackendClassFieldFact):TypedBackendClassFieldFact
 		return {
 			canonicalIdentity: field.canonicalIdentity,
+			constantIdentity: field.constantIdentity,
 			name: field.name,
 			semanticType: field.semanticType,
 			typeIdentity: field.typeIdentity,

@@ -33,6 +33,9 @@ class JsExprEmitter {
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return emit(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
