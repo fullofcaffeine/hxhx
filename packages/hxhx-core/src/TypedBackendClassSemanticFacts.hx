@@ -7,6 +7,7 @@ enum TypedBackendNominalKind {
 
 typedef TypedBackendClassFieldFact = {
 	final canonicalIdentity:String;
+	final constantIdentity:String;
 	final name:String;
 	final semanticType:TyType;
 	final typeIdentity:String;
@@ -57,6 +58,10 @@ typedef TypedBackendClassMethodFact = {
 	This record contains only members declared by the class. A target that needs
 	inherited members must traverse an exact program-owned superclass graph; it
 	must not search classes by short name.
+
+	Typed functions contribute finalized body results for unannotated methods.
+	Declaration-only consumers pass an empty function list and retain indexed
+	signatures. Neither path changes the declaration identities used by calls.
 **/
 class TypedBackendClassSemanticFacts {
 	final classIdentity:String;
@@ -73,7 +78,7 @@ class TypedBackendClassSemanticFacts {
 	final methodIndex:haxe.ds.StringMap<TypedBackendClassMethodFact>;
 	final canonicalIdentity:String;
 
-	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>) {
+	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>) {
 		if (info == null)
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
@@ -139,6 +144,7 @@ class TypedBackendClassSemanticFacts {
 				throw "typed backend class semantic facts contain foreign field " + field.getCanonicalKey() + " in " + classIdentity;
 			final fact:TypedBackendClassFieldFact = {
 				canonicalIdentity: normalize(field.getCanonicalKey()),
+				constantIdentity: field.getConstant().getCanonicalIdentity(),
 				name: normalize(field.getName()),
 				semanticType: field.getType(),
 				typeIdentity: field.getType().getSemanticKey(),
@@ -156,6 +162,27 @@ class TypedBackendClassSemanticFacts {
 				throw "typed backend class semantic facts contain an incomplete field type " + fact.canonicalIdentity;
 			requireDeclaredTypeParameters(fact.semanticType, typeParameters, "field " + fact.canonicalIdentity);
 			addField(fact);
+		}
+
+		final bodyResults = new haxe.ds.StringMap<TyType>();
+		final seenFunctions = new haxe.ds.StringMap<Bool>();
+		for (typedFunction in typedFunctions) {
+			final declaration = typedFunction.getDeclaration();
+			final environment = typedFunction.getEnvironment();
+			if (declaration == null
+				|| environment == null
+				|| info.declarationForSource(typedFunction.getSourceDeclaration()) != declaration
+				|| environment.getOwnerIdentity() != typedFunction.getStableIdentity())
+				throw "typed backend class semantic facts contain foreign function result in " + classIdentity;
+			final key = declaration.getIdentity().getCanonicalKey();
+			if (seenFunctions.exists(key))
+				throw "typed backend class semantic facts contain duplicate function result " + key;
+			seenFunctions.set(key, true);
+			typedFunction.assertParsedBodyCurrent();
+			// Bodyless declarations have no inferred completion. Their written
+			// signature remains authoritative even if bring-up typing made an environment.
+			if (declaration.getHasBody())
+				bodyResults.set(key, environment.getReturnType());
 		}
 
 		methodIndex = new haxe.ds.StringMap<TypedBackendClassMethodFact>();
@@ -190,7 +217,7 @@ class TypedBackendClassSemanticFacts {
 					throw "typed backend class semantic facts contain an incomplete method argument " + declaration.getIdentity().getCanonicalKey();
 				arguments.push(argument);
 			}
-			final returnType = signature.getReturnType();
+			final returnType = resolvedMethodResult(declaration, bodyResults.get(declaration.getIdentity().getCanonicalKey()));
 			final methodTypeParameters = declaration.getTypeParameterIds();
 			final seenMethodTypeParameters = new haxe.ds.StringMap<Bool>();
 			for (parameter in methodTypeParameters) {
@@ -256,6 +283,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(Std.string(fields.length));
 		for (field in fields) {
 			identityFacts.push(field.canonicalIdentity);
+			identityFacts.push(field.constantIdentity);
 			identityFacts.push(field.name);
 			identityFacts.push(field.typeIdentity);
 			identityFacts.push(field.typeDisplay);
@@ -338,7 +366,27 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v6";
+		return "typed-backend-class-semantic-facts-v7";
+
+	/**
+		Publish an inferred result without replacing the declaration key selected
+		before body typing. Written results remain contracts. Constructors describe
+		the allocated value in their signature and complete with Void in their body.
+	**/
+	static function resolvedMethodResult(declaration:TyDeclarationInfo, bodyResult:Null<TyType>):TyType {
+		final signature = declaration.getSignature();
+		final declaredResult = signature.getReturnType();
+		if (bodyResult == null)
+			return declaredResult;
+		if (signature.getName() == "new" && !signature.getIsStatic()) {
+			if (bodyResult.getSemanticKey() != TyType.fromHintText("Void").getSemanticKey())
+				throw "typed backend constructor body must complete with Void: " + declaration.getIdentity().getCanonicalKey();
+			return declaredResult;
+		}
+		if (!declaredResult.isUnknown() && declaredResult.getSemanticKey() != bodyResult.getSemanticKey())
+			throw "typed backend class semantic facts contain conflicting function result " + declaration.getIdentity().getCanonicalKey();
+		return bodyResult;
+	}
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
@@ -384,6 +432,7 @@ class TypedBackendClassSemanticFacts {
 			&& left.name == right.name
 			&& left.semanticType.getSemanticKey() == right.semanticType.getSemanticKey()
 			&& left.typeIdentity == right.typeIdentity
+			&& left.constantIdentity == right.constantIdentity
 			&& left.typeDisplay == right.typeDisplay
 			&& left.isStatic == right.isStatic
 			&& left.isPublic == right.isPublic
@@ -427,6 +476,7 @@ class TypedBackendClassSemanticFacts {
 	static function copyField(fact:TypedBackendClassFieldFact):TypedBackendClassFieldFact
 		return {
 			canonicalIdentity: fact.canonicalIdentity,
+			constantIdentity: fact.constantIdentity,
 			name: fact.name,
 			semanticType: fact.semanticType,
 			typeIdentity: fact.typeIdentity,

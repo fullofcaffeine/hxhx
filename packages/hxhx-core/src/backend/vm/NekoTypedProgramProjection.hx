@@ -1,11 +1,14 @@
 package backend.vm;
 
 import haxe.ds.StringMap;
+import TypedBackendClassSemanticFacts.TypedBackendNominalKind;
 
 /** The exact class and typed body selected for one declared function. */
 typedef NekoProjectedFunction = {
 	final owner:TypedBackendClassProjection;
 	final body:TypedBackendFunctionProjection;
+	final nominalKind:TypedBackendNominalKind;
+	final symbol:String;
 };
 
 /**
@@ -19,6 +22,7 @@ typedef NekoProjectedFunction = {
 class NekoTypedProgramProjection {
 	final classes = new StringMap<TypedBackendClassProjection>();
 	final functions = new StringMap<NekoProjectedFunction>();
+	final symbols = new StringMap<String>();
 
 	public function new(modules:Array<TypedBackendModuleProjection>) {
 		for (module in modules) {
@@ -33,16 +37,37 @@ class NekoTypedProgramProjection {
 					final method = facts.findMethod(declaration);
 					if (method == null)
 						throw "Neko typed program cannot find declaration " + declaration + " in " + identity;
+					final constructorCompletion = method.name == "new"
+						&& !method.isStatic
+						&& method.returnSemanticType.getNominalIdentity() != null
+						&& method.returnSemanticType.getNominalIdentity().getCanonicalName() == identity
+						&& body.getReturnType().getSemanticKey() == TyType.fromHintText("Void").getSemanticKey();
 					if (method.name != HxFunctionDecl.getName(body.getDeclaration())
 						|| method.isStatic != HxFunctionDecl.getIsStatic(body.getDeclaration())
-						|| method.returnTypeIdentity != body.getReturnType().getSemanticKey())
+						|| (!constructorCompletion && method.returnTypeIdentity != body.getReturnType().getSemanticKey()))
 						throw "Neko typed program has conflicting function facts for " + declaration;
 					if (functions.exists(declaration))
 						throw "Neko typed program contains duplicate function " + declaration;
-					functions.set(declaration, {owner: owner, body: body});
+					final symbol = "__hxhx_exact_" + haxe.crypto.Sha256.encode(declaration);
+					if (symbols.exists(symbol) && symbols.get(symbol) != declaration)
+						throw "Neko exact declaration symbol collision for " + declaration;
+					symbols.set(symbol, declaration);
+					functions.set(declaration, {
+						owner: owner,
+						body: body,
+						nominalKind: facts.getNominalKind(),
+						symbol: symbol
+					});
 				}
 			}
 		}
+	}
+
+	/** Existing generated declarations must not shadow an exact helper symbol. */
+	public function reserveGeneratedSymbols(reserved:Array<String>):Void {
+		for (symbol in reserved)
+			if (symbols.exists(symbol))
+				throw "Neko exact declaration symbol conflicts with generated symbol " + symbol;
 	}
 
 	/** Selects a canonical class without package-name or short-name fallback. */
@@ -61,6 +86,11 @@ class NekoTypedProgramProjection {
 			throw "Neko typed program cannot find function " + declarationIdentity;
 		if (selected.owner != owner)
 			throw "Neko typed program function " + declarationIdentity + " does not belong to " + ownerIdentity;
-		return {owner: selected.owner, body: selected.body};
+		return {
+			owner: selected.owner,
+			body: selected.body,
+			nominalKind: selected.nominalKind,
+			symbol: selected.symbol
+		};
 	}
 }

@@ -204,10 +204,6 @@ class NekoRuntimeSupport {
 		out.push("  return $int($ssub(text, start, pos - start));");
 		out.push("}");
 		out.push("");
-		out.push("var __hxhx_neko_ndll_suffix = function(arch) {");
-		out.push("  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
-		out.push("}");
-		out.push("");
 		out.push("var __hxhx_main_loop_add = function(callback) {");
 		out.push("  var event = $new(null);");
 		out.push("  event.__hx_ctor = \"haxe.MainEvent\";");

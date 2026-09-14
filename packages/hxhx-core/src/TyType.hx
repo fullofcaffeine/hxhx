@@ -184,6 +184,10 @@ class TyType {
 	public function isNullable():Bool
 		return kind == KIND_NULLABLE;
 
+	/** The null literal is distinct from a value whose declared type permits null. */
+	public function isNullLiteral():Bool
+		return kind == KIND_NULL;
+
 	public function isUnresolved():Bool
 		return kind == KIND_UNRESOLVED;
 

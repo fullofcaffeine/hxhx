@@ -415,6 +415,17 @@ class TypedBodySource {
 		return continuation;
 	}
 
+	/** Constant embedding must not discard evaluation of a value receiver. */
+	static function constantTypeReceiver(receiver:TypedExpr):Bool {
+		if (receiver.getFieldInfo() != null || receiver.getLocalBindings().length != 0)
+			return false;
+		return switch (receiver.getTag()) {
+			case NameRead: true;
+			case FieldRead: constantTypeReceiver(receiver.getExpressions()[0]);
+			case _: false;
+		};
+	}
+
 	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog):HxExpr {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
@@ -431,7 +442,8 @@ class TypedBodySource {
 			case NameRead:
 				final nameField = typedExpression.getFieldInfo();
 				if (nameField != null) {
-					typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
+					final constant = nameField.getConstant().project();
+					constant != null ? constant : typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
 						nameField.getName()) : EIdent(texts[0]);
 				} else {
 					final identity = typedExpression.getType().getNominalIdentity();
@@ -446,7 +458,10 @@ class TypedBodySource {
 						case _:
 					}
 				}
-				EField(receiver, texts[0]);
+				final constant = field == null ? null : field.getConstant().project();
+				if (constant != null && !constantTypeReceiver(expressions[0]))
+					throw "enum constant read cannot discard a value receiver: " + field.getCanonicalKey();
+				constant == null ? EField(receiver, texts[0]) : constant;
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog), texts[0]);
 			case Call:
 				final callee = expression(expressions[0], catalog);
@@ -738,7 +753,7 @@ class TypedBodySource {
 		// including class-parameter binder identities. The older projected
 		// `resolvedExtends` spelling may still contain unresolved type arguments
 		// and must not become a competing backend semantic input.
-		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null);
+		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions());
 		return new TypedBackendClassProjection(declaration, functions, fieldInitializers, semanticFacts);
 	}
 

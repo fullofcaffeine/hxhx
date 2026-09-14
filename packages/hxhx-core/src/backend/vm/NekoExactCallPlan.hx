@@ -5,10 +5,9 @@ import backend.vm.NekoTypedProgramProjection.NekoProjectedFunction;
 /**
 	Pairs an encoded exact instance call with its program-owned typed body.
 
-	Both reachability and rendering must use this selection instead of resolving
-	the method spelling again. Selection proves declaration ownership and method
-	kind; it does not authorize replacing object dispatch with an abstract helper.
-	That choice also needs the owner's structural receiver representation.
+	Reachability and rendering use the same selected declaration. Abstract methods
+	receive their backing value explicitly; ordinary object methods keep runtime
+	dispatch so an override can still run. The shared nominal kind owns this choice.
 **/
 class NekoExactCallPlan {
 	public final selected:NekoProjectedFunction;
@@ -26,8 +25,16 @@ class NekoExactCallPlan {
 	public function getArguments():Array<HxExpr>
 		return arguments.copy();
 
+	/** Only a semantic abstract declaration uses an explicit backing-value receiver. */
+	public function usesAbstractReceiver():Bool {
+		return switch (selected.nominalKind) {
+			case AbstractValue(_): true;
+			case ClassInstance, EnumValue: false;
+		};
+	}
+
 	/** Ordinary calls return null; malformed reserved exact-call payloads fail. */
-	public static function fromExpression(program:NekoTypedProgramProjection, expression:HxExpr):Null<NekoExactCallPlan> {
+	public static function fromExpression(program:Null<NekoTypedProgramProjection>, expression:HxExpr):Null<NekoExactCallPlan> {
 		final call = TypedExactCallSource.decodeInstance(expression);
 		if (call == null) {
 			switch (expression) {
@@ -39,6 +46,8 @@ class NekoExactCallPlan {
 		}
 		if (call.owner.length == 0 || call.declaration.length == 0 || call.method.length == 0 || call.resultType.length == 0)
 			throw "Neko exact instance call contains empty typed identities";
+		if (program == null)
+			throw "Neko exact instance call requires its typed program";
 		final selected = program.requireFunction(call.owner, call.declaration);
 		final declaration = selected.body.getDeclaration();
 		if (HxFunctionDecl.getIsStatic(declaration) || HxFunctionDecl.getName(declaration) != call.method)

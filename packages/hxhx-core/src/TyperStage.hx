@@ -983,8 +983,13 @@ class TyperStage {
 		if (!sig.acceptsArity(suppliedArity))
 			return -1;
 		final expected = sig.getArgs();
+		final optional = sig.getArgOptional();
 		var score = 0;
 		for (i in 0...suppliedArity) {
+			// Explicit null selects an optional argument's default just like an
+			// omitted value. It supplies no type evidence for overload ranking.
+			if (i < optional.length && optional[i] && i < argTypes.length && argTypes[i].isNullLiteral())
+				continue;
 			final argScore = overloadArgScore(i < expected.length ? expected[i] : TyType.fromHintText("Dynamic"),
 				i < argTypes.length ? argTypes[i] : TyType.unknown(), methodTypeParameters, semanticIndex);
 			if (argScore < 0)
