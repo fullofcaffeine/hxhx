@@ -663,20 +663,6 @@ hash_from_stdin() {
 	exit 1
 }
 
-hash_file() {
-	local path="$1"
-	if command -v sha256sum >/dev/null 2>&1; then
-		sha256sum "$path" | awk '{print $1}'
-		return
-	fi
-	if command -v shasum >/dev/null 2>&1; then
-		shasum -a 256 "$path" | awk '{print $1}'
-		return
-	fi
-	echo "Missing sha256 hash tool (need sha256sum or shasum)." >&2
-	exit 1
-}
-
 collect_fingerprint_files() {
 	local file="$1"
 	if [ -f "$file" ]; then
@@ -819,11 +805,7 @@ compute_fingerprint() {
 		echo "stage0_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD"
 		echo "bootstrap_profile=$HXHX_BOOTSTRAP_PROFILE"
 
-		while IFS= read -r file; do
-			local rel
-			rel="${file#$ROOT/}"
-			echo "file=$rel:$(hash_file "$file")"
-		done < <(
+		{
 			collect_fingerprint_files "$ROOT/packages/hxhx/build.hxml"
 			collect_fingerprint_files "$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
 			collect_fingerprint_files "$ROOT/scripts/hxhx/shard-bootstrap-ml.sh"
@@ -832,7 +814,7 @@ compute_fingerprint() {
 			collect_fingerprint_tree "$ROOT/packages/reflaxe.ocaml/src"
 			collect_fingerprint_tree "$ROOT/packages/reflaxe.ocaml/std"
 			collect_fingerprint_tree "$ROOT/haxe_libraries"
-		)
+		} | bash "$ROOT/scripts/hxhx/hash-bootstrap-inputs.sh" "$ROOT"
 	} | hash_from_stdin
 }
 

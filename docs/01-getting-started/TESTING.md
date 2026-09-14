@@ -656,6 +656,11 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `docs/01-getting-started/COMPILATION_SERVER.md`.
   - Optional skip-if-unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
+    - Regeneration reads every selected input again before it compares the saved fingerprint.
+      Checksum batches contain at most 128 paths and about 16 KiB of path arguments.
+      Batching preserves the input order and digest format. A failed checksum stops regeneration.
+    - `npm run test:hxhx:bootstrap-fingerprint` verifies the complete manifest, all 24 configuration fields,
+      file changes, both installed checksum tools, and the real skip/force branches with a fake compiler.
   - Faster local iteration (reuse previous emit output + skip verify):
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast`
     - Equivalent env knobs:
