@@ -589,7 +589,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional OCaml GC tuning for stage0 process: `HXHX_STAGE0_OCAMLRUNPARAM=s=4M`
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
-    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_no_native_decode_extract`, `stage0_no_parser_scan_extract`, `stage0_ocamlrunparam`
+    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb`, `stage0_observability.heartbeat_peak_tree_rss_mb`, and `stage0_observability.heartbeat_trace_file` (plus heartbeat samples/interval)
     - watchdog configuration and outcome: `stall_timeout_seconds`, `hard_timeout_seconds`,
       `progress_poll_seconds`, `timeout_kind`, `timeout_elapsed_seconds`,
@@ -622,11 +622,9 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional Stage3 display synthesis path trimming (profiling-only lane): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-display`
     - optional stage0 compile-graph minimization (OCaml-only backend graph): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocaml-only`
     - optional generated-output metadata trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-line-directives`
-    - optional parser helper-scan inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-parser-scan-extract`
     - repeated baseline-vs-mitigation memory A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses"`
-    - repeated parser helper-scan extraction A/B runner:
-      `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-parser-scan-extract" --mitigation-args "" --parity-mode status-exit`
+    - The parser extraction comparisons are retired. The profiler rejects `--no-parser-scan-extract` and `--no-native-decode-extract`. Both duplicate implementations are gone. See [the stage0 policy](../00-project/STAGE0_POLICY.md) for the current parser ownership and historical measurement limits.
     - optional parity gate for equivalent baseline/mitigation outcomes (exit code `4` on mismatch):
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --parity-mode status-exit --require-status-parity`
     - enforce a reduction threshold in CI/local scripts (exit code 3 on miss):
