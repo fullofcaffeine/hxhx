@@ -50,6 +50,10 @@ class Main {
 		return value;
 	}
 
+	static function keep(value:String):String {
+		return value;
+	}
+
 	static function main():Void {
 		Sys.println(Word.First);
 		Sys.println(Word.Second);
@@ -72,5 +76,11 @@ class Main {
 			error;
 		};
 		Sys.println(recovered);
+		var kept = try {
+			untyped keep("kept");
+		} catch (error:String) {
+			"unexpected";
+		};
+		Sys.println(kept);
 	}
 }

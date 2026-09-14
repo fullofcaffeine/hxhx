@@ -24,6 +24,16 @@ class M14HihExprTextParserIntegrationTest {
 	}
 
 	static function main() {
+		final rawUntypedTry = switch (HxParser.parseExprText('try { untyped probe(); } catch (error:String) { error; }')) {
+			case ETryCatchRaw(raw): raw;
+			case _: throw "try expression did not retain its bootstrap text";
+		};
+		switch (TypedBodyBuilder.recoveredStructuralExpression(rawUntypedTry)) {
+			case ECall(EIdent("__hxhx_try"), [ELambda([], EUntyped(ECall(EIdent("probe"), []))), _, _]):
+			case _:
+				throw "try expression merged the untyped keyword into the called identifier";
+		}
+
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 

@@ -5,6 +5,8 @@ The observer also checks receiver and argument evaluation order, omitted and
 explicit-null defaults, and a typed try/catch expression that returns the thrown
 string. The try/catch check protects the indexed test harness used by the broader
 Neko smoke test; it does not prove exception-stack support.
+An untyped call inside a try block must also keep the same function name when
+the parser stores and later reconstructs that expression.
 
 `M14NekoTypedProgramProjectionIntegrationTest` compiles and runs the same source
 through upstream Haxe and both Neko output layouts, then compares
