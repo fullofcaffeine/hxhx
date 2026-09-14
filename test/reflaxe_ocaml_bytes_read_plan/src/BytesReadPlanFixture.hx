@@ -244,6 +244,7 @@ class BytesReadPlanFixture {
 			intUnary: firstStandalone.intUnary,
 			stringFromCharCode: firstStandalone.stringFromCharCode,
 			stringEquality: firstStandalone.stringEquality,
+			enumIdentity: firstStandalone.enumIdentity,
 			stringMethods: firstStandalone.stringMethods,
 			stringFields: firstStandalone.stringFields,
 			staticString: firstStandalone.staticString
