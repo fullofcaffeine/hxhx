@@ -1,3 +1,4 @@
+/** Checks native enum declarations, payload construction, and switch patterns. */
 class M4EnumIntegrationTest {
 	static function assertContains(haystack:String, needle:String, label:String):Void {
 		if (haystack.indexOf(needle) < 0) {
@@ -42,7 +43,8 @@ class M4EnumIntegrationTest {
 		if (!sys.FileSystem.exists(mainPath))
 			throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
-		assertContains(mainMl, "MyEnum.C (1,", "multi-arg ctor call uses tuple");
+		assertContains(mainMl, "MyEnum.C (Stdlib.Sys.opaque_identity ", "multi-arg ctor preserves fresh payload identity");
+		assertContains(mainMl, ", __enum_arg_", "multi-arg ctor keeps its second payload in the tuple");
 		assertContains(mainMl, "\"x\"", "multi-arg ctor preserves literal");
 		assertContains(mainMl, "match", "switch->match");
 		assertContains(mainMl, "| MyEnum.A ->", "ctor pattern A");
