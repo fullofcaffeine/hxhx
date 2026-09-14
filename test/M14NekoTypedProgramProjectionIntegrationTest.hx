@@ -91,6 +91,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertRuntimeFixture("test/neko_typed_field_reads", true);
 		assertRuntimeFixture("test/neko_array_join", true);
 		assertRuntimeFixture("test/neko_qualified_static_calls", true, ["Main", "providers.Api", "other.Api"]);
+		assertRuntimeFixture("test/neko_statement_separation", true);
 		Sys.println("OK m14 Neko typed program projection");
 	}
 

@@ -1087,7 +1087,10 @@ class NekoTargetCore {
 			case SExpr(EBinop("=", left, right), _) if (shouldSplitStatementAssignmentRhs(context, right)):
 				renderSplitAssignmentStmt(out, context, left, right, indent);
 			case SExpr(expr, _):
-				out.push(indent + renderExpr(context, expr) + ";");
+				final rendered = renderExpr(context, expr);
+				// Neko can attach a leading parenthesis to the preceding statement,
+				// even across a semicolon. A block gives this expression its own start.
+				out.push(indent + (StringTools.startsWith(rendered, "(") ? "{ " + rendered + "; }" : rendered) + ";");
 			case SBreak(_):
 				if (context.breakFlag != null)
 					out.push(indent + context.breakFlag + " = false;");
@@ -2428,6 +2431,10 @@ class NekoTargetCore {
 
 	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
+			case ECast(inner, _) | EUntyped(inner):
+				// These wrappers emit no runtime operation. Expose a wrapped lambda
+				// so the ordinary callable renderer preserves its grouping.
+				return renderCall(context, inner, args, selectedStatic);
 			case EIdent("__hxhx_try"):
 				return renderStructuralTryCatchExpr(context, args);
 			case EIdent("__hxhx_throw"):
