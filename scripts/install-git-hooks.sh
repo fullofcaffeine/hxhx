@@ -25,10 +25,6 @@ DEST_USER_POST_CHECKOUT="$HOOKS_DIR/post-checkout.user"
 SRC_POST_COMMIT="$ROOT_DIR/scripts/hooks/post-commit"
 DEST_POST_COMMIT="$HOOKS_DIR/post-commit"
 DEST_USER_POST_COMMIT="$HOOKS_DIR/post-commit.user"
-CHECKOUT_STATE="$(git -C "$ROOT_DIR" rev-parse --git-path hxhx-post-checkout-state)"
-if [[ "$CHECKOUT_STATE" != /* ]]; then
-	CHECKOUT_STATE="$ROOT_DIR/$CHECKOUT_STATE"
-fi
 
 is_bd_chained_pre_commit() {
 	local hook_path="$1"
@@ -47,7 +43,7 @@ is_repo_post_checkout() {
 		return 1
 	fi
 
-	grep -q "HXHX_BD_POST_CHECKOUT_FAST_PATH_V1" "$hook_path"
+	grep -Eq "^# (HXHX_BD_POST_CHECKOUT_FAST_PATH_V1|HXHX_POST_CHECKOUT_USER_ONLY_V1)$" "$hook_path"
 }
 
 is_bd_post_checkout() {
@@ -67,7 +63,7 @@ is_repo_post_commit() {
 		return 1
 	fi
 
-	grep -q "HXHX_BD_POST_COMMIT_STATE_V1" "$hook_path"
+	grep -Eq "^# (HXHX_BD_POST_COMMIT_STATE_V1|HXHX_POST_COMMIT_USER_ONLY_V1)$" "$hook_path"
 }
 
 preserve_user_post_checkout() {
@@ -98,22 +94,19 @@ preserve_user_post_commit() {
 	echo "[hooks:install] Preserved user post-commit hook -> $DEST_USER_POST_COMMIT"
 }
 
-record_checkout_identity() {
-	local current
-	local branch
-	local head
-
-	if ! head="$(git -C "$ROOT_DIR" rev-parse --verify HEAD 2>/dev/null)"; then
-		return 0
+# Keep the exact obsolete shim as an inert archive, never as an active delegate.
+retire_bd_post_checkout() {
+	local hook_path="$1"
+	local retired="$HOOKS_DIR/post-checkout.bd.retired"
+	if [ -f "$retired" ] && ! cmp -s "$hook_path" "$retired"; then
+		echo "[hooks:install] ERROR: refusing to replace a different retired Beads hook" >&2
+		exit 1
 	fi
-	if branch="$(git -C "$ROOT_DIR" symbolic-ref --quiet HEAD 2>/dev/null)"; then
-		current="branch:$branch@$head"
-	else
-		current="detached:$head"
+	if [ ! -f "$retired" ]; then
+		cp "$hook_path" "$retired"
 	fi
-
-	mkdir -p "$(dirname "$CHECKOUT_STATE")"
-	printf '%s\n' "$current" >"$CHECKOUT_STATE"
+	rm "$hook_path"
+	echo "[hooks:install] Retired automatic Beads checkout import -> $retired"
 }
 
 mkdir -p "$HOOKS_DIR"
@@ -131,18 +124,19 @@ fi
 
 if [ -f "$DEST_POST_CHECKOUT" ] && ! is_repo_post_checkout "$DEST_POST_CHECKOUT"; then
 	if is_bd_post_checkout "$DEST_POST_CHECKOUT"; then
-		cp "$DEST_POST_CHECKOUT" "$DEST_BD_POST_CHECKOUT"
-		chmod +x "$DEST_BD_POST_CHECKOUT"
-		echo "[hooks:install] Preserved Beads post-checkout delegate -> $DEST_BD_POST_CHECKOUT"
+		retire_bd_post_checkout "$DEST_POST_CHECKOUT"
 	else
 		preserve_user_post_checkout "$DEST_POST_CHECKOUT"
 	fi
 fi
 
+if is_bd_post_checkout "$DEST_BD_POST_CHECKOUT"; then
+	retire_bd_post_checkout "$DEST_BD_POST_CHECKOUT"
+fi
+
 cp "$SRC_POST_CHECKOUT" "$DEST_POST_CHECKOUT"
 chmod +x "$DEST_POST_CHECKOUT"
-record_checkout_identity
-echo "[hooks:install] Installed fast Beads post-checkout guard -> $DEST_POST_CHECKOUT"
+echo "[hooks:install] Installed user-only post-checkout hook -> $DEST_POST_CHECKOUT"
 
 if [ -f "$DEST_POST_COMMIT" ] && ! is_repo_post_commit "$DEST_POST_COMMIT"; then
 	preserve_user_post_commit "$DEST_POST_COMMIT"
@@ -150,4 +144,4 @@ fi
 
 cp "$SRC_POST_COMMIT" "$DEST_POST_COMMIT"
 chmod +x "$DEST_POST_COMMIT"
-echo "[hooks:install] Installed checkout-state post-commit hook -> $DEST_POST_COMMIT"
+echo "[hooks:install] Installed user-only post-commit hook -> $DEST_POST_COMMIT"

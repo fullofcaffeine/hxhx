@@ -161,39 +161,50 @@ Run this once after cloning, and again after upgrading or reinstalling `bd`:
 npm run hooks:install
 ```
 
-The installer keeps the repository pre-commit checks and adds a narrow speed
-guard in front of the Beads post-checkout hook. Git sometimes reports the same
-branch and commit before and after a no-op rebase. No tracked checkout content
-changed, so the guard skips only that redundant Beads import. A different
-branch at the same commit, a changed commit, a file checkout, malformed hook
-arguments, and manual `bd` commands still use the normal Beads path. A
-pre-existing custom post-checkout hook is preserved and runs before the guard.
-The companion post-commit hook records a successful local commit, so the next
-no-op pull stays fast; any existing custom post-commit hook is also preserved.
+The installer keeps the repository pre-commit checks. Checkout and post-commit
+hooks run only preserved custom user hooks. They never invoke Beads, import a
+JSONL export, or require a Dolt remote. This includes new branches at the same
+commit, changed commits, file checkouts, and linked-worktree creation.
 
-This does not disable automatic issue synchronization. Continue to export
-tracked issue data before commits as usual:
+The live Dolt database owns task state. A checked-out `.beads/issues.jsonl` can
+be older than that database. Importing it during checkout could overwrite newer
+work or collide with an ephemeral task ID. The installer archives the obsolete
+Beads checkout delegate as `post-checkout.bd.retired`; no installed repository
+hook executes that file. The former branch-state cache is no longer used.
+
+Use the reviewed Beads client for explicit task synchronization or recovery.
+Ordinary checkouts do not trigger either operation. Continue to export tracked
+issue data before commits:
 
 ```bash
+bd-toolchain check
+bd --readonly info --json
 bd export -o .beads/issues.jsonl
 ```
 
-To verify the installer and argument boundary with disposable fake hooks:
+To verify the installer and user-hook behavior in temporary repositories:
 
 ```bash
 npm run test:hooks:post-checkout
 ```
 
-Maintainers with `bd` installed can also prove a real changed checkout imports
-new branch issue data in a temporary repository:
+Maintainers can also test a real temporary Dolt database. This requires the
+reviewed wrapper and toolchain paths. The test copies the repository pin and
+checks compatibility before creating the fixture database:
 
 ```bash
+HXHX_REVIEWED_BD_BIN="$(command -v bd)" \
+HXHX_REVIEWED_BD_TOOLCHAIN="$(command -v bd-toolchain)" \
 npm run test:hooks:post-checkout:real
 ```
 
-If another hook installer replaces the guard, rerun `npm run hooks:install`.
-The command is idempotent and preserves the installed Beads delegate. It fails
-instead of overwriting two conflicting custom post-checkout hooks.
+The real test keeps newer live tasks beside an older tracked export, including
+an ID already stored as an ephemeral task. Branch creation and checkout must
+preserve the live export and ephemeral task. The fixture needs no Dolt remote.
+
+If another installer replaces these hooks, rerun `npm run hooks:install`.
+Reinstallation preserves custom hooks and the retired delegate. Conflicting
+custom hooks or archive contents cause an error rather than an overwrite.
 
 ## Diagnose slow Beads commands
 
