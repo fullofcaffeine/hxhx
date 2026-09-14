@@ -98,9 +98,6 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_no_inline` (`0` / `1`)
 - `stage0_no_internal_tools` (`0` / `1`)
 - `stage0_no_display` (`0` / `1`)
-- `stage0_no_source_normalize_extract` (`0` / `1`)
-- `stage0_no_native_decode_extract` (`0` / `1`)
-- `stage0_no_parser_scan_extract` (`0` / `1`)
 - `stage0_ocamlrunparam` (string; empty when unset)
 - `stage0_observability.heartbeat_seconds`
 - `stage0_observability.heartbeat_samples`
@@ -384,20 +381,17 @@ npm run hxhx:profile:stage0-regen-ab -- \
 
 This knob is profiling-only today; do not treat it as lane-equivalent for release snapshots until display workflow parity is explicitly reviewed.
 
-Additional parser helper-scan graph candidate (inline baseline vs extracted helper):
+The old parser extraction comparisons are retired. `HxParser` now owns language
+parsing, and `ParserStageScanHelpers` owns the additional module-local declaration
+scans. `ParserStage` no longer contains duplicate scanner or native decoder bodies.
+The profiler rejects `--no-parser-scan-extract` and `--no-native-decode-extract` as
+unknown arguments. Current reports omit their corresponding fields.
 
-```bash
-npm run hxhx:profile:stage0-regen-ab -- \
-  --reps 3 \
-  --failfast 120 \
-  --baseline-args "--no-parser-scan-extract" \
-  --mitigation-args "" \
-  --parity-mode status-exit
-```
-
-`--no-parser-scan-extract` maps to `HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1` and adds
-`-D hxhx_stage0_no_parser_scan_extract`, which keeps module-local helper scanners inline in `ParserStage`
-for A/B profiling. The default path delegates scanner helpers to `ParserStageScanHelpers`.
+The [March memory measurements](../benchmarks/STAGE0_MEMORY_KNOB_MATRIX_2026_03_05.md)
+describe the earlier compiler. They do not measure the current parser or establish
+a speed improvement from its replacement. The default
+`npm run hxhx:profile:stage0-regen` command profiles the current compiler without
+restoring the retired implementations.
 
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 

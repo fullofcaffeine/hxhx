@@ -89,6 +89,9 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
   - Recommendation: `profiling-only`
 - `--no-native-decode-extract` baseline vs extracted helper default (parity-aware)
+  - Historical only: the native decoder and its duplicate profiling implementation
+    are retired. The profiler rejects this flag. These measurements describe the
+    earlier compiler and do not establish current memory use or performance.
   - Baseline median: `6502MB`
   - Mitigation median: `6402MB`
   - Median reduction: `1.54%`
@@ -96,6 +99,9 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
   - Recommendation: `profiling-only`
 - `--no-parser-scan-extract` baseline vs extracted helper default (parity-aware)
+  - Historical only: the duplicate scanner in `ParserStage` is retired. The current
+    compiler uses `ParserStageScanHelpers`, and the profiler rejects this flag.
+    These measurements do not establish current memory use or performance.
   - Baseline median: `6514MB`
   - Mitigation median: `6209MB`
   - Median reduction: `4.68%`
