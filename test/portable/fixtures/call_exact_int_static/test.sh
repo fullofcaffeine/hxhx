@@ -197,7 +197,7 @@ if [ "$(printf '%s\n' "$checked_result_source" | grep -c 'HxRuntime.nullable_int
 	echo "The checked Null<Int> result must unwrap exactly once on normal fall-through" >&2
 	exit 1
 fi
-if ! printf '%s\n' "$checked_result_source" | grep -Fq 'raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
+if ! printf '%s\n' "$checked_result_source" | grep -Fq 'Stdlib.raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
 	echo "The exact Int early return must keep its sealed private return-control path" >&2
 	exit 1
 fi
@@ -223,7 +223,7 @@ if printf '%s\n' "$dynamic_result_source" | grep -Fq 'Obj.magic'; then
 	exit 1
 fi
 all_path_source="$(sed -n '/^let allPathNullable =/,/^let main =/p' "$main_source")"
-if [ "$(printf '%s\n' "$all_path_source" | grep -c 'raise (HxRuntime.Hx_return')" -ne 3 ]; then
+if [ "$(printf '%s\n' "$all_path_source" | grep -c 'Stdlib.raise (HxRuntime.Hx_return')" -ne 3 ]; then
 	echo "Every all-path nullable branch must use its sealed private return signal" >&2
 	exit 1
 fi

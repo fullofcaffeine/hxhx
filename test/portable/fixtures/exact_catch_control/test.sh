@@ -204,8 +204,8 @@ if (orderedStart < 0
 	fail('generated ordered catch syntax did not mechanically preserve Int, Bool, Dynamic order and Bool binding')
 }
 if (!source.includes('HxRuntime.Hx_return')
-	|| !source.includes('HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)')
-	|| !source.includes('HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)')
+	|| !source.includes('HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)')
+	|| !source.includes('HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)')
 	|| !source.includes('HxRuntime.Hx_exception')
 	|| !source.includes('| __exn_')) {
 	fail('generated catch syntax does not preserve both exception channels and private controls')

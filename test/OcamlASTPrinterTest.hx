@@ -119,6 +119,10 @@ class OcamlASTPrinterTest {
 		final p = new OcamlASTPrinter();
 		verifyDeepExpressionPrintingIsStackSafe(p);
 		verifyRawInterpolationPlan();
+		assertEq("Stdlib.raise (problem)", p.printExpr(OcamlExpr.ERaise(OcamlExpr.EIdent("problem"))),
+			"exception primitives cannot resolve to a user function named raise");
+		assertEq("raise \"ordinary\"", p.printExpr(OcamlExpr.EApp(OcamlExpr.EIdent("raise"), [OcamlExpr.EConst(OcamlConst.CString("ordinary"))])),
+			"ordinary user calls retain their resolved identifier");
 
 		// const + escaping
 		assertEq("\"a\\n\\t\\\\\\\"b\"", p.printExpr(OcamlExpr.EConst(OcamlConst.CString("a\n\t\\\"b"))), "string escape");
