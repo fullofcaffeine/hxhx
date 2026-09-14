@@ -1,3 +1,10 @@
+/** Semantic declaration kind, before any target erases an abstract to its backing type. */
+enum TypedBackendNominalKind {
+	ClassInstance;
+	EnumValue;
+	AbstractValue(underlyingType:TyType);
+}
+
 typedef TypedBackendClassFieldFact = {
 	final canonicalIdentity:String;
 	final name:String;
@@ -53,6 +60,7 @@ typedef TypedBackendClassMethodFact = {
 **/
 class TypedBackendClassSemanticFacts {
 	final classIdentity:String;
+	final nominalKind:TypedBackendNominalKind;
 	final moduleIdentity:String;
 	final typeParameters:Array<TyTypeParameterId>;
 	final superType:Null<TyType>;
@@ -70,6 +78,18 @@ class TypedBackendClassSemanticFacts {
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
 		moduleIdentity = normalize(info.getModulePath());
+		// This checked semantic-class boundary preserves the typed abstract carrier;
+		// targets must not recover abstract identity from its erased display name.
+		nominalKind = if (Std.isOfType(info, TyAbstractInfo)) {
+			final underlying = (cast info : TyAbstractInfo).getUnderlyingType();
+			if (underlying == null)
+				throw "typed backend abstract facts require an underlying type for " + classIdentity;
+			AbstractValue(underlying);
+		} else if (info.getIsEnum()) {
+			EnumValue;
+		} else {
+			ClassInstance;
+		};
 		typeParameters = if (Std.isOfType(info, TyClassInfo)) {
 			(cast info : TyClassInfo).getTypeParameterIds();
 		} else if (Std.isOfType(info, TyAbstractInfo)) {
@@ -85,6 +105,11 @@ class TypedBackendClassSemanticFacts {
 			if (parameterName.length == 0 || seenTypeParameters.exists(parameterName))
 				throw "typed backend class semantic facts contain invalid type parameters for " + classIdentity;
 			seenTypeParameters.set(parameterName, true);
+		}
+		switch (nominalKind) {
+			case AbstractValue(underlying):
+				requireDeclaredTypeParameters(underlying, typeParameters, "abstract " + classIdentity);
+			case ClassInstance, EnumValue:
 		}
 
 		final indexedSuperType = Std.isOfType(info, TyClassInfo) ? (cast info : TyClassInfo).getSuperType() : null;
@@ -210,6 +235,15 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(getSchemaRevision());
 		identityFacts.push(classIdentity);
 		identityFacts.push(moduleIdentity);
+		switch (nominalKind) {
+			case ClassInstance:
+				identityFacts.push("class-instance");
+			case EnumValue:
+				identityFacts.push("enum-value");
+			case AbstractValue(underlying):
+				identityFacts.push("abstract-value");
+				identityFacts.push(underlying.getSemanticKey());
+		}
 		identityFacts.push(Std.string(typeParameters.length));
 		for (parameter in typeParameters) {
 			identityFacts.push(parameter.getCanonicalKey());
@@ -268,6 +302,10 @@ class TypedBackendClassSemanticFacts {
 	public function getClassIdentity():String
 		return classIdentity;
 
+	/** Returns the semantic receiver kind and, for an abstract, its exact backing type. */
+	public function getNominalKind():TypedBackendNominalKind
+		return nominalKind;
+
 	public function getModuleIdentity():String
 		return moduleIdentity;
 
@@ -300,7 +338,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v5";
+		return "typed-backend-class-semantic-facts-v6";
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;

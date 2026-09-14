@@ -25,6 +25,8 @@ const failures = [];
 const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+  // Neko joins exact calls to their indexed class and function before rendering.
+  "packages/hxhx-core/src/backend/vm/NekoTypedProgramProjection.hx",
 ]);
 
 function requireFragment(relative, fragment, claim) {
@@ -104,7 +106,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v5"',
+  'return "typed-backend-class-semantic-facts-v6"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(

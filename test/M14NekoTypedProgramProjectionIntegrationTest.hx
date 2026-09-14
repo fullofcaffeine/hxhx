@@ -3,6 +3,16 @@ import backend.vm.NekoExactCallPlan;
 
 /** Checks exact secondary-type ownership through the normal indexed typer. */
 class M14NekoTypedProgramProjectionIntegrationTest {
+	/** Uses the same resolved module and semantic index as normal compilation. */
+	static function project(source:String):TypedBackendModuleProjection {
+		final parsed = ParserStage.parse(source, "Main.hx");
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		return TyperStage.typeResolvedModule(resolved, index, loader).getBackendProjection();
+	}
+
 	static function expectFailure(fragment:String, action:Void->Void):Void {
 		try {
 			action();
@@ -17,15 +27,18 @@ class M14NekoTypedProgramProjectionIntegrationTest {
 	static function main():Void {
 		final source = 'enum abstract Flavor(String) { var Bold = "strong"; public function label():String return this; }
 class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }';
-		final parsed = ParserStage.parse(source, "Main.hx");
-		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
-		final module = typed.getBackendProjection();
+		final module = project(source);
 		final projection = new NekoTypedProgramProjection([module]);
 		final owner = projection.requireClass("Main.Flavor");
+		switch (owner.requireSemanticFacts().getNominalKind()) {
+			case AbstractValue(underlying):
+				if (underlying.getSemanticKey() != "primitive:String")
+					throw "the abstract lost its exact String backing type";
+			case _:
+				throw "the abstract was projected as an ordinary object";
+		}
+		if (!projection.requireClass("Main").requireSemanticFacts().getNominalKind().match(ClassInstance))
+			throw "the ordinary class gained an abstract receiver";
 		final declaration = "Main.Flavor#instance:label()->primitive:String#0";
 		final selected = projection.requireFunction("Main.Flavor", declaration);
 		if (selected.owner != owner || selected.body.getStableIdentity() != declaration)
@@ -47,6 +60,41 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		expectFailure("conflicts with declaration",
 			() -> NekoExactCallPlan.fromExpression(projection,
 				TypedExactCallSource.encodeInstance("Main.Flavor", declaration, "different", "String", EString("strong"), [])));
+		assertNominalKinds();
 		Sys.println("OK m14 Neko typed program projection");
+	}
+
+	/** A declaration kind or abstract backing-type change must invalidate the shared facts. */
+	static function assertNominalKinds():Void {
+		final variants = [
+			'class Value {} class Main {}',
+			'enum Value { Item; } class Main {}',
+			'abstract Value(String) {} class Main {}',
+			'abstract Value(Int) {} class Main {}'
+		];
+		final facts = [
+			for (source in variants)
+				new NekoTypedProgramProjection([project(source)]).requireClass("Main.Value").requireSemanticFacts()
+		];
+		if (!facts[0].getNominalKind().match(ClassInstance) || !facts[1].getNominalKind().match(EnumValue))
+			throw "ordinary class and enum declarations lost their distinct receiver kinds";
+		for (i in 0...facts.length)
+			for (j in i + 1...facts.length)
+				if (facts[i].getCanonicalIdentity() == facts[j].getCanonicalIdentity())
+					throw "a declaration kind or abstract backing-type change reused the same class facts";
+		final generic = new NekoTypedProgramProjection([project('class Backing<T> {} abstract Value<T>(Backing<T>) {} class Main {}')])
+			.requireClass("Main.Value")
+			.requireSemanticFacts();
+		switch (generic.getNominalKind()) {
+			case AbstractValue(underlying):
+				final expected = TyType.nominal(new TyNominalTypeId("Main.Backing"), [TyType.typeParameter(generic.getTypeParameterIds()[0])]);
+				if (underlying.getSemanticKey() != expected.getSemanticKey())
+					throw "the abstract backing type lost its exact generic binder: "
+						+ underlying.getSemanticKey()
+						+ " versus "
+						+ expected.getSemanticKey();
+			case _:
+				throw "the generic abstract lost its backing type";
+		}
 	}
 }

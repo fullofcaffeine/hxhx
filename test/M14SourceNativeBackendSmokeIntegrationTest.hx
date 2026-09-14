@@ -351,7 +351,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
 		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v5",
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v6",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
