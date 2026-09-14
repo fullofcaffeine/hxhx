@@ -649,6 +649,12 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Repo-owned server process-lifecycle diagnostics:
     - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|owned-pids|stop`
     - The helper records the launcher and descendants with stable process-start identities. `stop`, failed startup, launcher exit, and interrupted startup terminate the complete recorded tree, including a native Haxe child whose Node/Lix wrapper used a different internal port.
+    - `owned-pids` also saves identities for newly observed descendants before returning them.
+      This keeps those children stoppable after their launcher exits.
+    - `start`, `stop`, and `owned-pids` serialize changes with `flock` on Linux or `lockf` on macOS.
+      Lock acquisition waits at most 15 seconds. The kernel releases the lock when the helper exits.
+      The server does not inherit it. The retained `haxe-server.lock` file does not indicate a running server.
+    - `npm run test:hxhx:haxe-server-identity` includes a deterministic late-child regression and a concurrent observation/stop check.
     - Warm Reflaxe generation through `--use-repo-server` is temporarily blocked
       because a measured cached request lost complete target-wide state. See
       `docs/01-getting-started/COMPILATION_SERVER.md`.
