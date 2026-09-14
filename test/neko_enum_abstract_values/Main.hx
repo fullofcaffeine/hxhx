@@ -36,6 +36,25 @@ enum abstract Flavor(String) {
 	public function combine(first:String, ?second:String = "default"):String {
 		return this + ":" + first + ":" + second;
 	}
+
+	/** A mutually recursive helper pair must retain both declarations in either output layout. */
+	public function repeat(count:Int):String {
+		if (count <= 0)
+			return this;
+		var __hxhx_exact_helpers = count;
+		var __hxhx_exact_helpers_1 = __hxhx_exact_helpers - 1;
+		return next(__hxhx_exact_helpers_1);
+	}
+
+	function next(count:Int):String {
+		return repeat(count);
+	}
+
+	/** A local function keeps precedence over the abstract method with the same name. */
+	public function shadow():String {
+		var next = function(count:Int):String return "local:" + count;
+		return next(2);
+	}
 }
 
 /** Shared upstream and Neko observer for values and an exact abstract helper. */
@@ -82,5 +101,7 @@ class Main {
 			"unexpected";
 		};
 		Sys.println(kept);
+		Sys.println(Flavor.Bold.repeat(3));
+		Sys.println(Flavor.Bold.shadow());
 	}
 }

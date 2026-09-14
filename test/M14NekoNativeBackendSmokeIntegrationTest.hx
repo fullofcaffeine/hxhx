@@ -1046,9 +1046,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final sysPutEnvTrySource = File.getContent(sourcePath);
 		assertContains(sysPutEnvTrySource, "var __hxhx_sys_put_env = function(name, value) {", "expected Sys.putEnv Neko runtime helper");
-		assertContains(sysPutEnvTrySource,
-			'try { __hxhx_sys_put_env("NON_EXISTENT", null); return true; } catch e { ' + "$" + 'print(e, "\\n"); return false; }',
-			"expected Sys.putEnv bool try/catch raw lowering");
+		assertContains(sysPutEnvTrySource, 'return true; })(__hxhx_sys_put_env("NON_EXISTENT", null)); } catch e { return (function(',
+			"expected structural sequencing of Sys.putEnv before the successful Boolean result");
+		assertContains(sysPutEnvTrySource, 'return false; })($$print(e, "\\n")); }', "expected structural sequencing of catch logging before the false result");
 
 		deleteRecursive(outDir);
 

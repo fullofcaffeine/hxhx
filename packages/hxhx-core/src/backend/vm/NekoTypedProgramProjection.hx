@@ -23,6 +23,7 @@ class NekoTypedProgramProjection {
 	final classes = new StringMap<TypedBackendClassProjection>();
 	final functions = new StringMap<NekoProjectedFunction>();
 	final symbols = new StringMap<String>();
+	final occupiedNames = new StringMap<Bool>();
 
 	public function new(modules:Array<TypedBackendModuleProjection>) {
 		for (module in modules) {
@@ -33,6 +34,8 @@ class NekoTypedProgramProjection {
 					throw "Neko typed program contains duplicate class " + identity;
 				classes.set(identity, owner);
 				for (body in owner.getFunctions()) {
+					for (local in body.getLocalCatalog().getEntries())
+						occupiedNames.set(local.getProjectedName(), true);
 					final declaration = body.getStableIdentity();
 					final method = facts.findMethod(declaration);
 					if (method == null)
@@ -65,9 +68,21 @@ class NekoTypedProgramProjection {
 
 	/** Existing generated declarations must not shadow an exact helper symbol. */
 	public function reserveGeneratedSymbols(reserved:Array<String>):Void {
-		for (symbol in reserved)
+		for (symbol in reserved) {
+			occupiedNames.set(symbol, true);
 			if (symbols.exists(symbol))
 				throw "Neko exact declaration symbol conflicts with generated symbol " + symbol;
+		}
+	}
+
+	/** Choose a shared helper table name that no projected local or generated function can shadow. */
+	public function exactHelperTableName():String {
+		final base = "__hxhx_exact_helpers";
+		var name = base;
+		var suffix = 0;
+		while (occupiedNames.exists(name))
+			name = base + "_" + ++suffix;
+		return name;
 	}
 
 	/** Selects a canonical class without package-name or short-name fallback. */

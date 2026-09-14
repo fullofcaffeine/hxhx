@@ -243,8 +243,8 @@ class NekoTargetCore {
 			throw "Neko native backend could not resolve main class: " + main.fullName;
 
 		final reachable = collectReachable(emitContext, mainInfo);
-		for (helper in emitContext.abstractHelpers)
-			out.push("var " + helper.symbol + " = null;");
+		if (emitContext.abstractHelpers.length > 0)
+			out.push("var " + emitContext.typedProgram.exactHelperTableName() + " = $new(null);");
 		for (helper in emitContext.abstractHelpers)
 			renderExactAbstractHelper(out, emitContext, helper);
 		for (info in reachable.constructors)
@@ -726,8 +726,9 @@ class NekoTargetCore {
 		throw "Neko exact helper lost its projected class: " + helper.body.getStableIdentity();
 	}
 
+	/** A shared table lets mutually recursive closures see helpers installed after their creation. */
 	static function exactHelperRef(context:NekoEmitContext, helper:NekoProjectedFunction):String
-		return context.symbolTable == null ? helper.symbol : context.symbolTable + "." + helper.symbol;
+		return (context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable) + "." + helper.symbol;
 
 	/**
 		Emits an abstract method with its backing value before the source arguments.

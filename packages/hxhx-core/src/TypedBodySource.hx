@@ -502,7 +502,9 @@ class TypedBodySource {
 						case EField(receiver, method):
 							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
 								method, typedExpression.getType().getDisplay(), receiver, arguments);
-						case EIdent(method) if (typedExpression.getRequiresOwnerQualification()):
+						case EIdent(method):
+							// A selected instance declaration supplies an implicit this
+							// receiver even when no owner-name qualification is needed.
 							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
 								method, typedExpression.getType().getDisplay(), EThis, arguments);
 						case _:

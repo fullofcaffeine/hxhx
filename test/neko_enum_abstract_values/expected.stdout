@@ -18,3 +18,5 @@ bold:only:default
 bold:null:default
 caught
 kept
+bold
+local:2
