@@ -277,7 +277,8 @@ class NekoRuntimeSupport {
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_field = function(o, field) {");
-		out.push("  if (o == null) return null;");
+		// Ordinary field access must throw; Reflect.field has a separate null-tolerant path.
+		out.push("  if (o == null) $throw(\"Invalid field access on null\");");
 		out.push("  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");
 		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else null;");
 		out.push("  if ($typeof(o) != $tobject) return null;");

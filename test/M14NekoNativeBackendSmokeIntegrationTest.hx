@@ -1015,7 +1015,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var nf1:{s:String} = null; var result = try { nf1.s; } catch(e:Any) { "NPE"; }; Sys.println(result); } }'),
 			context);
 		final fieldReadCatchSource = File.getContent(sourcePath);
-		assertContains(fieldReadCatchSource, "try { return nf1.s; } catch e { return \"NPE\"; }", "expected field-read catch-string raw lowering");
+		assertContains(fieldReadCatchSource, "try { return __hxhx_field(nf1, \"s\"); } catch e { return \"NPE\"; }",
+			"expected structural field access to preserve the catch result on a null receiver");
 
 		deleteRecursive(outDir);
 

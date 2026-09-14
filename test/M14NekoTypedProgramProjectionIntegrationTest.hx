@@ -86,6 +86,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			|| backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub_extra"), []) != null)
 			throw "an ordinary function name was treated as a Neko primitive";
 		assertRuntimeFixture("test/neko_native_string_slice", true);
+		assertRuntimeFixture("test/neko_typed_field_reads", true);
 		Sys.println("OK m14 Neko typed program projection");
 	}
 
