@@ -62,6 +62,7 @@ import reflaxe.ocaml.lowered.OcamlTypeOfPlan.OcamlTypeOfPlanner;
 import reflaxe.ocaml.lowered.OcamlIntUnaryPlan.OcamlIntUnaryPlanner;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
+import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan.OcamlEnumIdentityPlanner;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan.OcamlStringFieldPlanner;
 
@@ -251,6 +252,8 @@ class OcamlFunctionPlanSealer {
 		for (decision in stringFromCharCode.decisions())
 			context.recordStringFromCharCodeRuntimeRequirement(decision);
 		final stringEquality = new OcamlStringEqualityPlanner(binding).plan(data.expr);
+		final enumIdentity = new OcamlEnumIdentityPlanner(binding).plan(data.expr);
+		enumIdentity.recordRequirements(context.runtimeRequirements);
 		for (decision in stringEquality.decisions())
 			context.recordStringEqualityRuntimeRequirement(decision);
 		final stringMethods = new OcamlStringMethodPlanner(binding).plan(data.expr);
@@ -359,7 +362,7 @@ class OcamlFunctionPlanSealer {
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
 			bytesReads, imapInterfaces, calls, controls, callableBoundary, functionResultBoundary, constructionBoundary, anonymousStructures,
 			structuralFields, arrayLiteralProducers, reflectCompare, arrayReads, arrayIterators, dynamicEquality, dynamicString, staticString,
-			reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields);
+			reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields, enumIdentity);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -470,6 +473,8 @@ class OcamlFunctionPlanSealer {
 					for (decision in stringFromCharCode.decisions())
 						context.recordStringFromCharCodeRuntimeRequirement(decision);
 					final stringEquality = new OcamlStringEqualityPlanner(nestedBinding).plan(tfunc.expr);
+					final enumIdentity = new OcamlEnumIdentityPlanner(nestedBinding).plan(tfunc.expr);
+					enumIdentity.recordRequirements(context.runtimeRequirements);
 					stringEquality.requirePlanBinding(nestedBinding);
 					for (decision in stringEquality.decisions())
 						context.recordStringEqualityRuntimeRequirement(decision);
@@ -510,7 +515,7 @@ class OcamlFunctionPlanSealer {
 					if (boundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, localIdentities, imapInterfaces, arrayReads, arrayIterators, dynamicEquality,
 							controls, "The typed function literal is outside the existing represented-result callable boundary.", dynamicString, staticString,
-							reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields);
+							reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields, enumIdentity);
 					} else {
 						// A nested function can read a local declared by its enclosing function.
 						// Reuse the enclosing function's sealed representation choices so an exact
@@ -528,7 +533,7 @@ class OcamlFunctionPlanSealer {
 								dynamicEquality, controls,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
 								dynamicString, staticString, reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality,
-								stringMethods, stringFields);
+								stringMethods, stringFields, enumIdentity);
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
 							final plan:OcamlSealedNestedFunctionPlan = {
@@ -550,6 +555,7 @@ class OcamlFunctionPlanSealer {
 								intUnary: intUnary,
 								stringFromCharCode: stringFromCharCode,
 								stringEquality: stringEquality,
+								enumIdentity: enumIdentity,
 								stringMethods: stringMethods,
 								stringFields: stringFields,
 								imapInterfaces: imapInterfaces

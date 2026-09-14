@@ -70,8 +70,8 @@ for (const functionName of expectedFunctions) {
 const plannedBoxes = source.match(/HxEnum\.box_if_needed "Signal" \(Obj\.repr /g) ?? []
 if (plannedBoxes.length !== 3
 	|| !source.includes('Obj.repr Idle')
-	|| !source.includes('Obj.repr (Payload ')
-	|| !source.includes('Obj.repr (Pair ')
+	|| !/Obj\.repr \(let (__enum_arg_\d+) = [^\n]+ in Payload \(Stdlib\.Sys\.opaque_identity \1\)\)/.test(source)
+	|| !/Obj\.repr \(let (__enum_arg_\d+) = \(label : string\) in let (__enum_arg_\d+) = [^\n]+ in Pair \(Stdlib\.Sys\.opaque_identity \1, \2\)\)/.test(source)
 	|| !source.includes('["Dynamic"; "Signal"]')
 	|| !source.includes('HxEnum.unbox_or_obj "Signal"')) {
 	fail('generated OCaml did not mechanically apply the three sealed enum throw decisions')

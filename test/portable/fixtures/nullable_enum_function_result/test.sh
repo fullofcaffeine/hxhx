@@ -41,7 +41,7 @@ const body = source.slice(start, end)
 if (start < 0
 	|| end < 0
 	|| !body.includes('try Obj.repr ((')
-	|| !body.includes('HxRuntime.Hx_return (Obj.repr (Payload 7))')
+	|| !/HxRuntime\.Hx_return \(Obj\.repr \(let (__enum_arg_\d+) = 7 in Payload \(Stdlib\.Sys\.opaque_identity \1\)\)\)/.test(body)
 	|| !body.includes('Plain')
 	|| !body.includes(': Obj.t)')) {
 	throw new Error('generated choose did not box the completed early and normal result once')
