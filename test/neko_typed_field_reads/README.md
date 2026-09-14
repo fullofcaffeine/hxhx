@@ -1,4 +1,5 @@
-This fixture reads an object field, catches a field read on null, then reads the
+This fixture initializes an object through a constructor with an explicit
+`:Void` result. It reads a field, catches a field read on null, then reads the
 valid object again. The expected output is `present`, `NPE`, and `present`.
 
 Run the owning integration test to compare upstream Haxe's Neko target with

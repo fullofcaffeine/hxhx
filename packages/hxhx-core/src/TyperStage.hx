@@ -500,6 +500,11 @@ class TyperStage {
 			ResolvedModule.getGeneratedDeclarations(m));
 	}
 
+	/**
+		Builds the scope and completion type of a function body.
+		A constructor's written Void result describes body completion. Its indexed
+		call signature describes the allocated instance and cannot supply that hint.
+	**/
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext, functionIdentity:String, ?semanticDeclaration:TyDeclarationInfo):TyFunctionEnv {
 		// Stage 3 local scope:
 		// - parameters (type hints, if any)
@@ -522,7 +527,9 @@ class TyperStage {
 		final returnExprTy = inferReturnType(semanticBody, scope, ctx);
 		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
 		final retTy = if (retHintText != null && retHintText.length > 0) {
-			final hinted = semanticDeclaration == null ? typeFromHintInContext(retHintText, ctx) : semanticDeclaration.getSignature().getReturnType();
+			final constructorBody = HxFunctionDecl.getName(fn) == "new" && !HxFunctionDecl.getIsStatic(fn);
+			final hinted = semanticDeclaration == null
+				|| constructorBody ? typeFromHintInContext(retHintText, ctx) : semanticDeclaration.getSignature().getReturnType();
 			// If we couldn't infer a concrete return type (e.g. because the parser produced an
 			// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
 			if (!returnExprTy.isUnknown()) {

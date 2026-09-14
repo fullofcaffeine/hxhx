@@ -229,6 +229,8 @@ public static var ordinary:Int = 9; public function label():String { final local
 	static function assertResultBoundaries():Void {
 		final constructorModule = project('class Main { public function new() {} static function main():Void {} }');
 		new NekoTypedProgramProjection([constructorModule]);
+		final explicitConstructor = project('class Main { public var value:Int; public function new(value:Int):Void { this.value = value; } static function main():Void {} }');
+		new NekoTypedProgramProjection([explicitConstructor]);
 		final typed = typeSource('class Main { static function answer():String { return "ok"; } }').getTypedClasses()[0];
 		final fn = typed.getFunctions()[0];
 		final wrongEnvironment = fn.getEnvironment().withReturnTypes(TyType.fromHintText("Int"), TyType.fromHintText("Int"));
