@@ -27,9 +27,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v6'
+if (report.schemaVersion !== 87
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v7'
 	|| report.controlCatchCount !== report.controlCatches.length) {
 	fail('unexpected nominal throw/catch report schema, model, or inventory')
 }
@@ -67,7 +67,7 @@ for (const functionName of throwFunctions) {
 	const payload = control?.payload
 	const nominal = payload?.nominalRepresentation
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| control.proofId !== 'exact-monomorphic-class-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -88,8 +88,8 @@ for (const functionName of throwFunctions) {
 
 let nominalClauseCount = 0
 for (const chain of mainCatchChains) {
-	if (chain.proofId !== 'represented-value-catch-control-v6'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v113') {
+	if (chain.proofId !== 'represented-value-catch-control-v7'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v114') {
 		fail(`catch chain ${chain.id} does not use the represented-value proof`)
 	}
 	for (const clause of chain.clauses) {
@@ -145,7 +145,7 @@ const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.cla
 	.filter(clause => clause.semanticTypeId === 'Box')
 const mainCatchChains = report.lowering.controlCatches.filter(chain =>
 	chain.functionId.startsWith('Main|Main|'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| mainCatchChains.length !== 4

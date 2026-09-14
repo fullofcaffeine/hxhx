@@ -803,6 +803,20 @@ typedef InspectionControlNominalRepresentationProof = {
 	final representationProofId:String;
 }
 
+/** Exact catch producer for one admitted enum catch-binding rethrow. **/
+typedef InspectionControlEnumCatchOrigin = {
+	final chainId:String;
+	final clauseId:String;
+	final localId:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** The exact value crossing carried by one private compiler-control signal. **/
 typedef InspectionControlPayload = {
 	final inputSemanticTypeId:String;
@@ -817,6 +831,7 @@ typedef InspectionControlPayload = {
 	final arrayDescriptorRevision:Null<String>;
 	final arrayLiteralProducerId:Null<String>;
 	final arrayLiteralProducerPlanRevision:Null<String>;
+	final enumCatchOrigin:Null<InspectionControlEnumCatchOrigin>;
 	final conversion:String;
 	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;
@@ -871,6 +886,7 @@ typedef InspectionControlCatchClause = {
 	final sourceMax:Int;
 	final order:Int;
 	final variableName:String;
+	final localId:String;
 	final semanticTypeId:String;
 	final signalCarrierTypeId:String;
 	final outputCarrierTypeId:String;

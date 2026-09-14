@@ -240,6 +240,7 @@ class BytesReadPlanFixture {
 			reflectCompare: firstStandalone.reflectCompare,
 			reflectRuntimeUses: firstStandalone.reflectRuntimeUses,
 			stdIsOfType: firstStandalone.stdIsOfType,
+			typeOf: firstStandalone.typeOf,
 			intUnary: firstStandalone.intUnary,
 			stringFromCharCode: firstStandalone.stringFromCharCode,
 			stringEquality: firstStandalone.stringEquality,

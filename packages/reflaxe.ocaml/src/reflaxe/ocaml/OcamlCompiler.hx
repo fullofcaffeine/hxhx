@@ -1852,7 +1852,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case OcamlControlTransferKind.Throw:
 					ctx.recordThrowRuntimeRequirement(decision);
 					final payload = decision.payload;
-					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+					if (payload != null && OcamlControlPlan.requiresEnumThrowRuntime(payload))
 						ctx.recordEnumThrowRuntimeRequirement(decision);
 				case Break, Continue:
 			}
