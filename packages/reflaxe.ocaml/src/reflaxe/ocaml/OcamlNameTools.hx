@@ -21,6 +21,14 @@ package reflaxe.ocaml;
  * modules safe and deterministic.
  */
 class OcamlNameTools {
+	/** Names a declared OCaml variant type, including reserved Haxe enum names. */
+	public static function enumTypeName(haxeName:String):String {
+		final normalized = sanitizeLowerIdent(haxeName);
+		if (normalized.length == 0)
+			return "t";
+		return isOcamlReservedValueName(normalized) ? "hx_" + normalized : normalized;
+	}
+
 	/**
 		True if `name` is an OCaml reserved keyword (value identifier).
 

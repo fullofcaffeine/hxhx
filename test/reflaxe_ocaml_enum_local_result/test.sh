@@ -7,6 +7,8 @@ haxe_bin="${HAXE_BIN:-$root/node_modules/.bin/haxe}"
 output=.tmp/reflaxe-ocaml-enum-local-result
 fixture=test/reflaxe_ocaml_enum_local_result
 mkdir -p "$output"
+"$haxe_bin" -cp packages/reflaxe.ocaml/src -cp "$fixture" -lib reflaxe \
+  --macro 'nullSafety("reflaxe.ocaml")' --macro 'EnumRepresentationFixture.run()' --no-output
 "$haxe_bin" -cp "$fixture" --run EnumReturnProbe > "$output/upstream.stdout"
 diff -u "$fixture/expected.stdout" "$output/upstream.stdout"
 node scripts/dev/run-with-timeout-heartbeat.js \

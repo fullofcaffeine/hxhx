@@ -14,6 +14,11 @@ The command requires the pinned Haxe/Reflaxe environment, OCaml, and Dune.
 Native generation has a five-minute deadline. Expression preprocessing is
 disabled to retain the same local shape as the full compiler source build.
 
+The first check verifies the enum's native type identity, module naming,
+registry copies, and program reset. It rejects nullable and generic types and
+edited identity records. These checks describe the target type; they do not
+prove that a particular call or local already contains that native value.
+
 Runtime output alone does not prove type preservation. The command also checks
 the inferred OCaml result type and rejects the known unsafe local conversion.
 Review the generated `Reader.ml` when changing the representation implementation.
