@@ -241,7 +241,7 @@ const writeStringEnd = stdioSource.indexOf('\nlet ', writeStringStart + 1)
 const writeStringBody = stdioSource.slice(writeStringStart, writeStringEnd)
 if (writeStringStart < 0
 	|| writeStringEnd < 0
-	|| !writeStringBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !writeStringBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !writeStringBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| writeStringBody.includes('Hx_return (Obj.repr ())')) {
 	fail('ocamlstdiooutput_writeString__impl still packages its payloadless return as a value')
@@ -726,13 +726,13 @@ for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry', 'boolBranch',
 const tryStart = source.indexOf('let throughTry =')
 const tryEnd = source.indexOf('\nlet nestedClosure =', tryStart)
 const tryBody = source.slice(tryStart, tryEnd)
-if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(tryBody)) {
+if (!/HxRuntime\.Hx_return __ret_\d+ -> Stdlib\.raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(tryBody)) {
 	fail('a source catch can intercept the private function-return signal')
 }
 const stringTryStart = source.indexOf('let stringThroughTry =')
 const stringTryEnd = source.indexOf('\nlet nestedClosure =', stringTryStart)
 const stringTryBody = source.slice(stringTryStart, stringTryEnd)
-if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(stringTryBody)
+if (!/HxRuntime\.Hx_return __ret_\d+ -> Stdlib\.raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(stringTryBody)
 	|| !/Obj\.obj __ret_\d+ : string/.test(stringTryBody)) {
 	fail('the exact-String try boundary does not rethrow private control before recovering its sealed string carrier')
 }
@@ -915,7 +915,7 @@ for (const functionName of ['nestedCatchClosure', 'nestedThrowCatchClosure']) {
 		|| next < 0
 		|| !body.includes('HxRuntime.Hx_return')
 		|| !body.includes('HxRuntime.Hx_exception')
-		|| !body.includes('raise (HxRuntime.Hx_return')
+		|| !body.includes('Stdlib.raise (HxRuntime.Hx_return')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')) {
 		fail(`${functionName} did not consume its nested return and catch plan without legacy result recovery`)
@@ -932,9 +932,9 @@ if (!throwCatchBody.includes('HxType.hx_throw_typed_rtti (Obj.repr 21) ["Dynamic
 const loopClosureStart = source.indexOf('let nestedLoopClosure =')
 const loopClosureEnd = source.indexOf('\nlet main =', loopClosureStart)
 const loopClosureBody = source.slice(loopClosureStart, loopClosureEnd)
-if (!loopClosureBody.includes('raise (HxRuntime.Hx_break)')
+if (!loopClosureBody.includes('Stdlib.raise (HxRuntime.Hx_break)')
 	|| !loopClosureBody.includes('| HxRuntime.Hx_break -> ()')
-	|| !loopClosureBody.includes('raise (HxRuntime.Hx_continue)')
+	|| !loopClosureBody.includes('Stdlib.raise (HxRuntime.Hx_continue)')
 	|| !loopClosureBody.includes('| HxRuntime.Hx_continue -> ()')
 	|| !loopClosureBody.includes('HxRuntime.Hx_return')
 	|| loopClosureBody.includes('__fallback_result')
