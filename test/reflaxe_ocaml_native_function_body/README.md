@@ -16,7 +16,7 @@ empty stdout; the identity and syntax comparisons detect a dropped body.
 
 The negative checks reject missing declarations, duplicate identities, escaped
 block locals, foreign function locals, stale bodies, uninitialized locals,
-mutation, returns, calls, and conditional statements. A repeated valid request
+mutation, returns, calls with arguments, and conditional statements. A repeated valid request
 checks that rejection does not change later results.
 
 Unused Haxe locals remain valid. The generated Dune stanza leaves OCaml warning
@@ -25,5 +25,7 @@ normal Dune policy.
 
 This test runs the compiler modules under the Haxe interpreter and executes the
 generated application natively. It does not rebuild the complete native `hxhx`
-binary or prove the recursive standard-library workload. Calls, arguments,
+binary or prove the recursive standard-library workload. The adjacent
+[static-call fixture](../reflaxe_ocaml_shared_static_calls/README.md) covers
+same-class static calls with no arguments and `Void` results. Arguments,
 return values, control flow, and runtime requirements remain separate work.
