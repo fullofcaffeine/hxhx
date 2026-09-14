@@ -255,6 +255,11 @@ eval "$(opam env)"
 opam install -y dune ocamlfind
 ```
 
+Repository contributors should run `npm run hooks:install` after updating the
+hook scripts. Checkout hooks preserve custom user hooks and never import task
+exports into the live Beads database. See the
+[hook setup guide](docs/01-getting-started/TESTING.md#install-the-repository-git-hooks).
+
 ## Additional docs
 
 - `docs/00-project/BOUNDARIES.md`

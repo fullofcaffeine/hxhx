@@ -355,6 +355,9 @@ Current cache evidence from July 18, 2026:
 
 Git/Beads workflow evidence from the same day:
 
+These timings describe the former checkout-import guard. The current hooks
+never import Beads exports during checkout; see [hook installation](TESTING.md#install-the-repository-git-hooks).
+
 | Check | Scope | Time |
 | --- | --- | ---: |
 | canonical Beads post-checkout | identical 40-character old/new commit IDs, branch flag `1`, 1,907 exported issues (`7,481,949` bytes) | 122.95s |
@@ -366,16 +369,16 @@ Git/Beads workflow evidence from the same day:
 | `git status --short` before / after maintenance | clean synchronized checkout | 0.05s / 0.07s |
 | no-op `git pull --rebase` before / after maintenance | post-checkout fast path used | 0.76s / 0.61s |
 
-The slow command spent its time in `bd import --quiet .beads/issues.jsonl`, used
-about 2.0 GB maximum resident memory, and re-imported an older staged snapshot
-over a newer local bead claim. The argument-level guard avoids both costs only
-when Git proves the checked-out branch and commit did not change. Disposable
-fixtures still delegate equal-commit branch switches, changed commits, file
-checkouts, malformed calls, and custom hooks; an opt-in real-`bd` fixture proves
-a changed branch imports its new issue data. See the hook setup in
-[`TESTING.md`](TESTING.md). A companion post-commit hook advances the state after
-local commits, while Git's rebase `head-name` keeps the original branch identity
-visible during the temporary detached-HEAD step of a no-op pull.
+The historical slow command spent its time in `bd import --quiet
+.beads/issues.jsonl`. It used about 2.0 GB maximum resident memory and imported
+an older staged snapshot over a newer local task claim. The original guard
+avoided that import only for an unchanged branch and commit. A new branch at
+the same commit could still invoke it.
+
+The current checkout hook never invokes Beads. Its temporary-repository tests
+cover branch creation, changed commits, linked worktrees, and preserved user
+hooks. The real-database test checks that newer live tasks and an ephemeral ID
+survive an older tracked export. See [hook setup](TESTING.md#install-the-repository-git-hooks).
 
 The direct-command slowdown was independent of the hook. Embedded Dolt was
 opening a second local database named `beads` on every command even though that
