@@ -128,10 +128,16 @@ class OcamlArrayReadContract {
 		return result;
 	}
 
-	/** Rejects incomplete, stale-looking, or internally conflicting read facts. */
+	/**
+		Rejects incomplete, stale-looking, or internally conflicting read facts.
+
+		Reject null before checking fields so Haxe 4.3.7 null-safety does not carry
+		the nullable decision through every alternative in the validation chain.
+	**/
 	public static function requireDecision(decision:OcamlArrayReadDecision):Void {
-		if (decision == null
-			|| decision.id.length == 0
+		if (decision == null)
+			throw 'reflaxe.ocaml [ocaml-array-read:invalid-decision]: Array read "<null>" has incomplete type, order, runtime, proof, or binding facts';
+		if (decision.id.length == 0
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
@@ -154,7 +160,7 @@ class OcamlArrayReadContract {
 			|| decision.programRevision.length == 0
 			|| decision.bodyRevision.length == 0
 			|| decision.pipelineRevision.length == 0) {
-			throw 'reflaxe.ocaml [ocaml-array-read:invalid-decision]: Array read "${decision == null ? "<null>" : decision.id}" has incomplete type, order, runtime, proof, or binding facts';
+			throw 'reflaxe.ocaml [ocaml-array-read:invalid-decision]: Array read "${decision.id}" has incomplete type, order, runtime, proof, or binding facts';
 		}
 		final expectedId = idFor({
 			functionId: decision.functionId,
