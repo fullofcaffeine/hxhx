@@ -97,6 +97,15 @@ class M14StandardTypesLoadingIntegrationTest {
 			final index = TyperIndex.build(modules);
 			final loader = new ModuleLoader(paths, defines, index, null, false);
 			loader.markResolvedAlready(modules);
+			final seenModules = new haxe.ds.StringMap<Bool>();
+			for (module in modules)
+				seenModules.set(ResolvedModule.getModulePath(module), true);
+			// Signature preparation may discover new providers, but must never load a root twice.
+			for (module in loader.drainNewModules()) {
+				final name = ResolvedModule.getModulePath(module);
+				check(!seenModules.exists(name), "signature preparation duplicated an existing module: " + name);
+				seenModules.set(name, true);
+			}
 			for (scenario in cases) {
 				final module = [
 					for (module in modules)
