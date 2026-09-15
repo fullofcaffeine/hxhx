@@ -1255,7 +1255,7 @@ class NekoTargetCore {
 		final runtimeType = NekoRuntimeTypePlan.fromExpression(context, expr);
 		if (runtimeType != null) {
 			final identity = NekoRuntimeTypeRegistry.requireTarget(context.typedProgram, runtimeType.getTarget());
-			final target = context.typedProgram.runtimeHelperName("__hxhx_runtime_type") + "(" + quote(identity) + ")";
+			final target = identity == null ? "null" : context.typedProgram.runtimeHelperName("__hxhx_runtime_type") + "(" + quote(identity) + ")";
 			return runtimeType.getValue() == null ? target : context.typedProgram.runtimeHelperName("__hxhx_is_of_type")
 				+ "("
 				+ renderExpr(context, runtimeType.getValue())

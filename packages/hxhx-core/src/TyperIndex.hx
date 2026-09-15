@@ -752,13 +752,14 @@ class TyperIndex {
 				final isInterface = HxClassDecl.getIsInterface(classDeclaration);
 				final interfacePaths = isInterface ? HxClassDecl.getInterfaceExtendsPaths(classDeclaration) : HxClassDecl.getImplementsPaths(classDeclaration);
 				final interfaceTypes = [
-					for (path in interfacePaths) semanticType(path, packagePath, moduleName, directives, parameterIds)
+					for (path in interfacePaths)
+						semanticType(path, packagePath, moduleName, directives, parameterIds)
 				];
 				final info = new TyClassInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
 					declarations, HxClassDecl.getVisibility(classDeclaration), isEnum, superType, parameterIds, {
 						isInterface: isInterface,
 						types: interfaceTypes
-					});
+					}, HxClassDecl.getIsExtern(classDeclaration));
 				addNominal(info);
 				bySourceClass.set(classDeclaration, info);
 			}

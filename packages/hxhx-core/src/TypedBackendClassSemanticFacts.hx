@@ -73,6 +73,7 @@ class TypedBackendClassSemanticFacts {
 	final superTypeIdentity:Null<String>;
 	final superTypeDisplay:Null<String>;
 	final isInterface:Bool;
+	final isExtern:Bool;
 	final interfaceTypes:Array<TyType>;
 	final fields:Array<TypedBackendClassFieldFact>;
 	final methods:Array<TypedBackendClassMethodFact>;
@@ -89,6 +90,7 @@ class TypedBackendClassSemanticFacts {
 		// keeps enum and abstract facts out of the class/interface membership graph.
 		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
 		isInterface = classInfo != null && classInfo.getIsInterface();
+		isExtern = classInfo != null && classInfo.getIsExtern();
 		final indexedInterfaces = classInfo == null ? [] : classInfo.getInterfaceTypes();
 		interfaceTypes = resolvedInterfaces == null ? indexedInterfaces : resolvedInterfaces.copy();
 		if (indexedInterfaces.length != interfaceTypes.length)
@@ -296,6 +298,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(superTypeIdentity);
 		identityFacts.push(superTypeDisplay);
 		identityFacts.push(isInterface ? "interface" : "non-interface");
+		identityFacts.push(isExtern ? "extern" : "generated");
 		identityFacts.push(Std.string(interfaceTypes.length));
 		for (interfaceType in interfaceTypes) {
 			identityFacts.push(interfaceType.getSemanticKey());
@@ -381,6 +384,10 @@ class TypedBackendClassSemanticFacts {
 	public function getSuperType():Null<TyType>
 		return superType;
 
+	/** Extern status belongs to the selected declaration and affects target generation. */
+	public function getIsExtern():Bool
+		return isExtern;
+
 	public function getIsInterface():Bool
 		return isInterface;
 
@@ -405,7 +412,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v8";
+		return "typed-backend-class-semantic-facts-v9";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected

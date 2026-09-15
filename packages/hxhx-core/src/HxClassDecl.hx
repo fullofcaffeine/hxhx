@@ -14,12 +14,14 @@ class HxClassDecl {
 	public final extendsPath:String;
 	public final metadata:Array<String>;
 	public final isInterface:Bool;
+	public final isExtern:Bool;
 	public final implementsPaths:Array<String>;
 	public final interfaceExtendsPaths:Array<String>;
 	public final visibility:HxVisibility;
 
 	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
-			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>, ?visibility:HxVisibility, ?interfaceExtendsPaths:Array<String>) {
+			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>, ?visibility:HxVisibility, ?interfaceExtendsPaths:Array<String>,
+			isExtern:Bool = false) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
@@ -27,6 +29,7 @@ class HxClassDecl {
 		this.extendsPath = extendsPath == null ? "" : extendsPath;
 		this.metadata = metadata == null ? [] : metadata;
 		this.isInterface = isInterface == null ? false : isInterface;
+		this.isExtern = isExtern;
 		this.implementsPaths = implementsPaths == null ? [] : implementsPaths;
 		this.interfaceExtendsPaths = interfaceExtendsPaths == null ? [] : interfaceExtendsPaths.copy();
 		if (this.isInterface && this.extendsPath.length > 0)
@@ -82,6 +85,10 @@ class HxClassDecl {
 	public static function getMetadata(c:HxClassDecl):Array<String> {
 		return c.metadata;
 	}
+
+	/** Extern declarations describe target-owned values rather than generated definitions. */
+	public static function getIsExtern(c:HxClassDecl):Bool
+		return c.isExtern;
 
 	public static function getIsInterface(c:HxClassDecl):Bool {
 		return c.isInterface;

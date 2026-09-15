@@ -128,8 +128,12 @@ class TypedBackendClassGraph {
 		contribute all extended interfaces. Missing targets fail instead of silently
 		turning a positive type test into false. Constructor consumers continue to
 		use requireLineage, which traverses only superclass edges.
+
+		A target can supply runtime admission for its declaration representations.
+		An absent runtime node stops that path, including its parents. Omitting the
+		predicate retains the complete nominal relation used by shared consumers.
 	**/
-	public function requireAssignableTypes(classIdentity:String):Array<TypedBackendClassGraphNode> {
+	public function requireAssignableTypes(classIdentity:String, ?admitRuntimeType:TypedBackendClassSemanticFacts->Bool):Array<TypedBackendClassGraphNode> {
 		final start = normalize(classIdentity);
 		final pending = [start];
 		final seen = new haxe.ds.StringMap<Bool>();
@@ -142,6 +146,8 @@ class TypedBackendClassGraph {
 			if (node == null)
 				throw "typed backend class graph is missing assignable type " + identity + " while tracing " + start;
 			seen.set(identity, true);
+			if (admitRuntimeType != null && !admitRuntimeType(factsByClass.get(identity)))
+				continue;
 			result.push(copyNode(node));
 			if (node.superTypeIdentity != null) {
 				if (node.superClassIdentity == null)

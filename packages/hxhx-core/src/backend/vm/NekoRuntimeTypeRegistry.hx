@@ -15,8 +15,8 @@ private typedef RegistryEntry = {
 	final assignable:Array<String>;
 }
 
-/** Validate the exact nominal declaration before a runtime operand references the registry. */
-function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTypeTarget):String {
+/** Null denotes an extern interface with no Neko runtime type object; other targets require an exact registry entry. */
+function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTypeTarget):Null<String> {
 	switch (target.getKind()) {
 		case ArrayCore:
 			return "core:Array";
@@ -28,10 +28,17 @@ function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTy
 	if (identity == "Array" || identity == "String")
 		throw "Neko core runtime target cannot use a nominal representation: " + identity;
 	final owner = program.requireClass(identity);
+	if (owner.requireSemanticFacts().getIsExtern() && owner.requireSemanticFacts().getIsInterface())
+		return null;
 	if (!owner.requireSemanticFacts().getNominalKind().match(ClassInstance))
 		throw "Neko runtime type target is not an admitted class or interface: " + identity;
-	program.classGraph.requireAssignableTypes(identity);
+	program.classGraph.requireAssignableTypes(identity, hasRuntimeMembership);
 	return "nominal:" + identity;
+}
+
+/** Extern interfaces constrain typing but have no generated Neko membership object. */
+function hasRuntimeMembership(facts:TypedBackendClassSemanticFacts):Bool {
+	return !(facts.getIsExtern() && facts.getIsInterface());
 }
 
 /**
@@ -63,6 +70,8 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 			final facts = owner.requireSemanticFacts();
 			if (!facts.getNominalKind().match(ClassInstance))
 				continue;
+			if (facts.getIsExtern() && facts.getIsInterface())
+				continue;
 			// Core providers share the explicitly admitted native objects above.
 			if (facts.getClassIdentity() == "Array" || facts.getClassIdentity() == "String")
 				continue;
@@ -72,7 +81,7 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 				name: pack == null || pack.length == 0 ? name : pack + "." + name,
 				kind: facts.getIsInterface() ? NominalInterface : NominalClass,
 				assignable: [
-					for (node in program.classGraph.requireAssignableTypes(facts.getClassIdentity()))
+					for (node in program.classGraph.requireAssignableTypes(facts.getClassIdentity(), hasRuntimeMembership))
 						"nominal:" + node.classIdentity
 				]
 			});

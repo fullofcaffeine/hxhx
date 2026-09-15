@@ -61,6 +61,7 @@ class ParserStageScanHelpers {
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
 		var pendingTypeVisibility = HxVisibility.Public;
+		var pendingTypeExtern = false;
 		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
 			final colon = scanNextToken(source, j);
@@ -132,14 +133,21 @@ class ParserStageScanHelpers {
 					pendingTypeVisibility = HxVisibility.Public;
 					continue;
 				}
-				if (t.text == "extern" || t.text == "final")
+				if (t.text == "extern") {
+					pendingTypeExtern = true;
+					continue;
+				}
+				if (t.text == "final")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeExtern = false;
 				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final classMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final classExtern = pendingTypeExtern;
+			pendingTypeExtern = false;
 			final classVisibility = pendingTypeVisibility;
 			pendingTypeVisibility = HxVisibility.Public;
 
@@ -170,7 +178,7 @@ class ParserStageScanHelpers {
 			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
 				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
-					header.implementsPaths, classVisibility, header.interfaceExtendsPaths));
+					header.implementsPaths, classVisibility, header.interfaceExtendsPaths, classExtern));
 		}
 
 		return out;
