@@ -153,7 +153,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(result.entryPath == sourcePath, "source-only mode should report the generated Neko source as entry path");
 		assertTrue(FileSystem.exists(sourcePath), "expected generated Neko source file");
 		final source = File.getContent(sourcePath);
-		assertContains(source, "var Main_main = function()", "expected generated static main function");
+		assertContains(source, "__hxhx_symbols.Main_main = function()", "expected generated static main function");
 		assertContains(source, "$print(\"hello neko\", \"\\n\")", "expected Sys.println lowering");
 		assertContains(source, "Main_main();", "expected entrypoint invocation");
 
@@ -844,7 +844,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Runner { public function new() {} public function addCase(value) { Sys.println(value); } } class Main { static function main() { var runner = new Runner(); runner.addCase("case"); } }'),
 			context);
 		final instanceSource = File.getContent(sourcePath);
-		assertContains(instanceSource, "var __hxhx_new_Runner = function()", "expected known constructor factory");
+		assertContains(instanceSource, "__hxhx_symbols.__hxhx_new_Runner = function()", "expected known constructor factory");
 		assertContains(instanceSource, "__hxhx_self.addCase = function(value)", "expected instance method closure on object");
 		assertContains(instanceSource, "$print(value, \"\\n\")", "expected method body lowering");
 		assertContains(instanceSource, "var runner = __hxhx_new_Runner();", "expected known constructor call lowering");
@@ -912,7 +912,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Base { public function new() {} } class Child extends Base { public function new() { super(); } } class Main { static function main() { var child = new Child(); } }'),
 			context);
 		final superCtorSource = File.getContent(sourcePath);
-		assertContains(superCtorSource, "var __hxhx_new_Child = function()", "expected child constructor factory");
+		assertContains(superCtorSource, "__hxhx_symbols.__hxhx_new_Child = function()", "expected child constructor factory");
 		assertContains(superCtorSource, "null;", "expected bare super constructor call to lower to no-op placeholder");
 
 		deleteRecursive(outDir);
@@ -1003,7 +1003,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Bytes { public var length:Int; public var data:Dynamic; public function new(length:Int, data:Dynamic) { this.length = length; this.data = data; } } class Main { static function main() { var len = 1; var b = "abc"; var pos = 0; var value = try { new Bytes(len, untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw Error.OutsideBounds; }; Sys.println(value.length); } }'),
 			context);
 		final bytesSubTryExprSource = File.getContent(sourcePath);
-		assertContains(bytesSubTryExprSource, "var __hxhx_new_Bytes = function(length, data)", "expected Bytes constructor factory");
+		assertContains(bytesSubTryExprSource, "__hxhx_symbols.__hxhx_new_Bytes = function(length, data)", "expected Bytes constructor factory");
 		assertContains(bytesSubTryExprSource, "try { return __hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { $throw(\"OutsideBounds\"); return null; }",
 			"expected Bytes.sub raw try/catch lowering");
 

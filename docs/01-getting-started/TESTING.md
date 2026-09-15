@@ -767,6 +767,8 @@ Notes:
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
 - `npm run test:m14:neko-startup-try` compiles and runs successful and caught-failure try expressions, including local and static-field assignments.
   `npm run test:m14:typed-body-boundary` checks that assignment operands retain their calls, result types, and source lines without opaque executable syntax.
+  The startup command also compares stack primitives with upstream Haxe in both Neko output layouts. It preserves ordinary class-member calls and rejects invalid primitive argument counts.
+  The same runtime fixture checks calls to later functions, mutual recursion, and constructor references across generated definitions.
 - Module declaration coverage is in `npm run test:m14:hih-module-type-declaration-skip`.
   It checks final class modifiers, class metadata, and module-level final fields, plus complete typedef, enum, and abstract declaration boundaries.
 - `npm run test:m14:hih-expr-text-parser` also checks dollar-prefixed expressions through the complete module parser.
