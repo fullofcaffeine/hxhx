@@ -65,6 +65,12 @@ class TypedRuntimeTypeResolver {
 				return new TypedRuntimeTypeTarget(ArrayCore, name);
 			case "String":
 				return new TypedRuntimeTypeTarget(StringCore, name);
+			case "Int":
+				return new TypedRuntimeTypeTarget(IntCore, name);
+			case "Float":
+				return new TypedRuntimeTypeTarget(FloatCore, name);
+			case "Bool":
+				return new TypedRuntimeTypeTarget(BoolCore, name);
 			case _:
 		}
 		if (selected == null)

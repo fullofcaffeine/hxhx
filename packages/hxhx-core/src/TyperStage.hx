@@ -284,10 +284,12 @@ class TyperStage {
 		if (receiver == null)
 			return null;
 		final runtimeTarget = TypedRuntimeTypeResolver.resolve(receiver, scope, ctx, ValueExpression);
-		final owner = runtimeTarget != null ? ctx.getIndex().getByFullName(runtimeTarget.getIdentity().getCanonicalName()) : switch (receiver) {
-			case EThis: ctx.currentClass();
-			case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
-		};
+		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
+		final owner = runtimeTarget != null ? (runtimeOwner == null ? null : ctx.getIndex()
+			.getByFullName(runtimeOwner.getCanonicalName())) : switch (receiver) {
+				case EThis: ctx.currentClass();
+				case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
+			};
 		final property = owner == null ? null : owner.propertyInfo(field);
 		return property != null && property.usesExplicitAccessors() ? property : null;
 	}

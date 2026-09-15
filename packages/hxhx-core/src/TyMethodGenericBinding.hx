@@ -45,6 +45,8 @@ class TyMethodGenericBinding {
 	public static function sameTypeConstructor(left:TyType, right:TyType):Bool {
 		if (left == null || right == null)
 			return false;
+		if (left.isAbstractMeta() || right.isAbstractMeta())
+			return left.isAbstractMeta() && right.isAbstractMeta();
 		final leftIdentity = left.getNominalIdentity();
 		final rightIdentity = right.getNominalIdentity();
 		if (leftIdentity != null || rightIdentity != null)
@@ -174,6 +176,8 @@ class TyMethodGenericBinding {
 		if (arguments.length == 0)
 			return type;
 		final substituted = [for (argument in arguments) substitute(argument, methodTypeParameters, inferred)];
+		if (type.isAbstractMeta())
+			return TyType.abstractMeta(substituted[0]);
 		final identity = type.getNominalIdentity();
 		if (identity != null)
 			return TyType.nominal(identity, substituted, substitutedGenericDisplay(type, substituted));

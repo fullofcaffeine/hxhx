@@ -10,6 +10,36 @@ class M14RuntimeTypeExpressionFactsTest {
 	}
 
 	static function main():Void {
+		for (kind in [
+			TypedRuntimeTypeKind.IntCore,
+			TypedRuntimeTypeKind.FloatCore,
+			TypedRuntimeTypeKind.BoolCore
+		]) {
+			final target = new TypedRuntimeTypeTarget(kind);
+			final type = target.getValueType();
+			if (!type.isAbstractMeta()
+				|| type.getNominalIdentity() != null
+				|| target.getDeclarationIdentity() != null
+				|| type.getCanonicalDisplay() != "Abstract<" + target.getInstanceType().getCanonicalDisplay() + ">")
+				throw "primitive runtime type acquired a class identity";
+			if (TyType.unify(type, TyType.nominal(new TyNominalTypeId("Class"), [target.getInstanceType()])) != null)
+				throw "Abstract<T> was accepted as Class<T>";
+			reject(() -> target.requireDeclarationIdentity());
+			final literal = TypedExpr.runtimeTypeValue(target, null);
+			@:privateAccess TypedBodyInvariant.assertExpr(literal, "owner");
+			reject(() -> @:privateAccess TypedBodyInvariant.assertExpr(literal.withType(target.getInstanceType()), "owner"));
+			final dependencies = new haxe.ds.StringMap<CompilerDependencyEdge>();
+			@:privateAccess CompilerDependencyCollector.collectExpression(dependencies, "Main", null, null, literal);
+			if (dependencies.iterator().hasNext())
+				throw "primitive runtime type invented a provider dependency";
+		}
+		final parameter = new TyTypeParameterId("meta-test", 0, "T");
+		final openMeta = TyType.abstractMeta(TyType.typeParameter(parameter));
+		final bindings = TyTypeSubstitution.bind([parameter], [TyType.fromHintText("Int")], "meta-test");
+		if (TyTypeSubstitution.parameterIdentities(openMeta).length != 1
+			|| TyTypeSubstitution.apply(openMeta, bindings).getSemanticKey() != "abstract-meta<primitive:Int>"
+			|| TyMethodGenericBinding.sameTypeConstructor(openMeta, TyType.nominal(new TyNominalTypeId("Class"), [TyType.typeParameter(parameter)])))
+			throw "abstract meta-type lost its structural argument or constructor";
 		final parent = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("sample.Parent")));
 		final other = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("other.Parent")));
 		final value = TypedExpr.nullValue(TyType.fromHintText("Dynamic"), null);

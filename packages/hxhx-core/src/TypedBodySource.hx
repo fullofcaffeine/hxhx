@@ -464,8 +464,9 @@ class TypedBodySource {
 				// ordinary field record. A class object stored in a local remains a value
 				// receiver and follows the usual expression path.
 				final typeQualifier = expressions[0].getTag() == RuntimeTypeValue ? expressions[0].getRuntimeTypeTarget() : null;
-				var receiver = typeQualifier == null ? expression(expressions[0], catalog,
-					runtimeTypes) : resolvedTypeExpression(typeQualifier.getSourceSpelling(), field != null && field.getIsStatic() ? field.getOwner() : typeQualifier.getIdentity());
+				final qualifierOwner = typeQualifier == null ? null : typeQualifier.getDeclarationIdentity();
+				var receiver = qualifierOwner == null ? expression(expressions[0], catalog,
+					runtimeTypes) : resolvedTypeExpression(typeQualifier.getSourceSpelling(), field != null && field.getIsStatic() ? field.getOwner() : qualifierOwner);
 				if (field != null && field.getIsStatic()) {
 					switch (receiver) {
 						case EIdent(name): receiver = resolvedTypeExpression(name, field.getOwner());

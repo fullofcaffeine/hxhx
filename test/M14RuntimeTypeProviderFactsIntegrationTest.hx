@@ -16,7 +16,7 @@ class M14RuntimeTypeProviderFactsIntegrationTest {
 				final target = operand.getRuntimeTypeTarget();
 				if (!operand.getTag().match(RuntimeTypeValue)
 					|| target == null
-					|| target.getIdentity().getCanonicalName() != "haxe.Exception"
+					|| target.requireDeclarationIdentity().getCanonicalName() != "haxe.Exception"
 					|| operand.getType().getSemanticKey() != "nominal:Class<nominal:haxe.Exception>")
 					throw "exception provider class operand lost its exact meta-type";
 				count++;

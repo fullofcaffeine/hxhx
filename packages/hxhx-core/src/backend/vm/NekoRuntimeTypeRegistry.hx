@@ -36,9 +36,11 @@ function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTy
 			return "core:Array";
 		case StringCore:
 			return "core:String";
+		case IntCore | FloatCore | BoolCore:
+			throw "Neko primitive runtime predicate is not implemented: " + target.getSemanticKey();
 		case Nominal(_):
 	}
-	final identity = target.getIdentity().getCanonicalName();
+	final identity = target.requireDeclarationIdentity().getCanonicalName();
 	if (identity == "Array" || identity == "String")
 		throw "Neko core runtime target cannot use a nominal representation: " + identity;
 	final owner = program.requireClass(identity);

@@ -69,7 +69,7 @@ class TypedAbstractUnaryLowering {
 			return null;
 		final receiver = children[0];
 		final runtimeTarget = receiver.getRuntimeTypeTarget();
-		final receiverIdentity = runtimeTarget == null ? receiver.getType().getNominalIdentity() : runtimeTarget.getIdentity();
+		final receiverIdentity = runtimeTarget == null ? receiver.getType().getNominalIdentity() : runtimeTarget.getDeclarationIdentity();
 		final owner = receiverIdentity == null ? null : index.getByFullName(receiverIdentity.getCanonicalName());
 		final property = owner == null ? null : owner.propertyInfo(texts[0]);
 		if (property == null || !property.usesExplicitAccessors())

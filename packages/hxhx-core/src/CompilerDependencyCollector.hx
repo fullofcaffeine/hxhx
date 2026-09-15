@@ -98,8 +98,9 @@ class CompilerDependencyCollector {
 			return;
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
 		final runtimeTarget = expression.getRuntimeTypeTarget();
-		if (runtimeTarget != null)
-			collectType(edgeByKey, consumerModule, index, TyType.nominal(runtimeTarget.getIdentity(), []), "runtime-type-target", staticInitializer);
+		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
+		if (runtimeOwner != null)
+			collectType(edgeByKey, consumerModule, index, TyType.nominal(runtimeOwner, []), "runtime-type-target", staticInitializer);
 		collectConstantRead(edgeByKey, consumerModule, index, currentOwner, expression);
 		final field = resolvedFieldRead(index, currentOwner, expression);
 		if (field != null)

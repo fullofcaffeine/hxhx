@@ -71,11 +71,13 @@ class Main {
 		final check = functions.get("check");
 		final firstMarker = returned(first);
 		final firstOccurrence = first.requireRuntimeType(firstMarker);
-		if (firstOccurrence.getTarget().getIdentity().getCanonicalName() != "Main.Parent" || firstOccurrence.getValue() != null)
+		if (firstOccurrence.getTarget().requireDeclarationIdentity().getCanonicalName() != "Main.Parent"
+			|| firstOccurrence.getValue() != null)
 			throw "class value projection lost its exact target";
 		final testMarker = returned(check);
 		final testOccurrence = check.requireRuntimeType(testMarker);
-		if (testOccurrence.getValue() == null || testOccurrence.getTarget().getIdentity().getCanonicalName() != "Main.Parent")
+		if (testOccurrence.getValue() == null
+			|| testOccurrence.getTarget().requireDeclarationIdentity().getCanonicalName() != "Main.Parent")
 			throw "type-test projection lost its value or exact target";
 		switch (testMarker) {
 			case ECall(EIdent(TypedRuntimeTypeSource.TEST), arguments):
@@ -101,7 +103,7 @@ class Main {
 			throw "missing field initializer projections";
 		final fieldMarker = initializers[0].getExpression();
 		final fieldOccurrence = initializers[0].requireRuntimeType(fieldMarker);
-		if (fieldOccurrence.getTarget().getIdentity().getCanonicalName() != "Main.Parent")
+		if (fieldOccurrence.getTarget().requireDeclarationIdentity().getCanonicalName() != "Main.Parent")
 			throw "field initializer lost target identity";
 		reject(() -> initializers[1].requireRuntimeType(fieldMarker), "another initializer");
 		reject(() -> initializers[0].requireRuntimeType(firstMarker), "function marker in initializer");

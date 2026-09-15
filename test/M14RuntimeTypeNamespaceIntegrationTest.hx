@@ -12,11 +12,27 @@ class M14RuntimeTypeNamespaceIntegrationTest {
 
 	static function target(expression:TypedExpr, identity:String):Void {
 		final selected = expression.getRuntimeTypeTarget();
-		if (selected == null || selected.getIdentity().getCanonicalName() != identity)
+		if (selected == null || selected.requireDeclarationIdentity().getCanonicalName() != identity)
 			throw "runtime type expression lost selected identity: " + identity;
 	}
 
 	static function main():Void {
+		final primitiveParsed = ParserStage.parse("class Main { static function intValue() return Int; static function floatValue() return Float; static function boolValue() return Bool; static function shadow(Int:Dynamic) return Int; }",
+			"Main.hx");
+		final primitiveIndex = TyperIndex.build([new ResolvedModule("Main", "Main.hx", primitiveParsed)]);
+		final primitives = @:privateAccess TyperStage.buildTypedClasses(primitiveParsed, primitiveIndex, null, "Main");
+		for (entry in [
+			{method: "intValue", type: "Int"},
+			{method: "floatValue", type: "Float"},
+			{method: "boolValue", type: "Bool"}
+		]) {
+			final expression = returned(primitives.classes, "Main", entry.method);
+			if (!expression.getTag().match(RuntimeTypeValue)
+				|| expression.getType().getSemanticKey() != "abstract-meta<primitive:" + entry.type + ">")
+				throw "primitive runtime value lost Abstract<T> identity: " + entry.type;
+		}
+		if (!returned(primitives.classes, "Main", "shadow").getTag().match(LocalRead))
+			throw "a local must shadow a primitive runtime value";
 		final root = "test/runtime_type_operands";
 		final modules = [
 			for (name in ["Main", "left.Parent", "right.Parent", "EnumValues"]) {
