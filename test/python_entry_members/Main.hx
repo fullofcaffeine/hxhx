@@ -40,7 +40,6 @@ class Helper {
 		print();
 	}
 
-	static function print():Void {
+	static function print():Void
 		Sys.println(message);
-	}
 }

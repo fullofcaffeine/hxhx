@@ -1588,6 +1588,7 @@ class ParserStageScanHelpers {
 			var bracketDepth = 0;
 			var braceDepth = 0;
 			var angleDepth = 0;
+			var previousCanEndType = false;
 			while (true) {
 				final tok = scanNextToken(source, j);
 				if (tok.text.length == 0)
@@ -1602,6 +1603,11 @@ class ParserStageScanHelpers {
 				// belongs to the body modifier, not to the return type.
 				if (atTop && stopAtUntypedBodyModifier && tok.isIdent && tok.text == "untyped")
 					return {hint: parts.join(""), nextPos: tok.nextPos};
+				// A completed return type needs punctuation before another type name.
+				// A bare identifier here starts an expression body, such as `Void log()`.
+				// Nested types and the result after `->` remain inside the type hint.
+				if (stopAtUntypedBodyModifier && atTop && tok.isIdent && previousCanEndType)
+					return {hint: parts.join(""), nextPos: j};
 				final startsStructuralType = atTop && tok.text == "{" && parts.length == 0;
 				if (atTop
 					&& (tok.text == ")"
@@ -1610,6 +1616,10 @@ class ParserStageScanHelpers {
 						|| tok.text == ";"
 						|| (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
+				previousCanEndType = tok.isIdent
+					|| tok.text == ")"
+					|| tok.text == "}"
+					|| (tok.text == ">" && (parts.length == 0 || parts[parts.length - 1] != "-"));
 				parts.push(tok.text);
 				j = tok.nextPos;
 				switch (tok.text) {
@@ -2061,9 +2071,10 @@ class ParserStageScanHelpers {
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
-					final keepBody = fnName == "new" || !wantStaticFn || sawDynamic || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
-					final body = keepBody ? bodyCapture.body : [];
-					final bodyText = (keepBody || fnName == "__init__") ? bodyCapture.bodyText : "";
+					// Parsing records the source body. Return-path validity belongs to typing,
+					// and a Void function can finish without an explicit return statement.
+					final body = bodyCapture.body;
+					final bodyText = bodyCapture.bodyText;
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -2479,49 +2490,6 @@ class ParserStageScanHelpers {
 			if (hasUnsupportedStmt(stmt))
 				return true;
 		return false;
-	}
-
-	static function scannedStaticBodyIsSafe(fnName:String, stmts:Array<HxStmt>):Bool {
-		if (stmts == null || stmts.length == 0)
-			return false;
-		if (StringTools.startsWith(fnName, "get_") && stmts.length == 1) {
-			return switch (stmts[0]) {
-				case SReturn(expr, _):
-					!hasUnsupportedExpr(expr);
-				case _:
-					false;
-			};
-		}
-		if (StringTools.startsWith(fnName, "set_") && stmts.length == 2) {
-			return switch [stmts[0], stmts[1]] {
-				case [SExpr(EBinop("=", EIdent(_), rhs), _), SReturn(ret, _)]: !hasUnsupportedExpr(rhs) && !hasUnsupportedExpr(ret);
-				case _:
-					false;
-			};
-		}
-		// Keep scanned static helper bodies only when they are linear and every
-		// statement is understood by the current source-native lowering path.
-		for (stmt in stmts) {
-			switch (stmt) {
-				case SVar(_, _, init, _):
-					if (hasUnsupportedExpr(init))
-						return false;
-				case SExpr(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case SReturn(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case _:
-					return false;
-			}
-		}
-		return switch (stmts[stmts.length - 1]) {
-			case SReturn(_, _):
-				true;
-			case _:
-				false;
-		};
 	}
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
