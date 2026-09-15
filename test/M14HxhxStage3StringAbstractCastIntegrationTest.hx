@@ -120,7 +120,10 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final argumentSource = argumentCast.getExpressions()[0].getType().getNominalIdentity();
 		assertTrue(argumentSource != null && argumentSource.getCanonicalName() == "StringAbstractCast.TextPosition",
 			"typed abstract argument lost its source abstract type");
-		switch (TypedBodySource.expression(argumentCall)) {
+		final exactCall = TypedExactStaticCallSource.decode(TypedBodySource.expression(argumentCall));
+		assertTrue(exactCall != null && exactCall.declaration == argumentCall.getDeclaration().getIdentity().getCanonicalKey(),
+			"projected String conversion lost its selected static declaration");
+		switch (TypedExactStaticCallSource.ordinaryCall(exactCall)) {
 			case ECall(EIdent("accept"), [ECast(EIdent("value"), "String")]):
 			case _:
 				throw "typed source projection lost the call-required String cast";

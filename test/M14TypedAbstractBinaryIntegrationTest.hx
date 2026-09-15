@@ -312,8 +312,11 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& nativeTextResult.getType().getSemanticKey() == "nominal:Main.NativeText"
 			&& containsTag(nativeTextResult, TypedExprTag.Binary),
 			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
-		assertTrue(initializer(main, "typeTestControl").getTag() == TypedExprTag.Binary,
-			"ordinary type-test syntax was mistaken for a surviving abstract operator");
+		final typeTest = initializer(main, "typeTestControl");
+		assertTrue(typeTest.getTag() == TypedExprTag.RuntimeTypeTest
+			&& typeTest.getRuntimeTypeTarget().getSemanticKey() == "runtime-core:String"
+			&& typeTest.getType().getSemanticKey() == "primitive:Bool",
+			"ordinary type-test syntax lost its exact String target or became an abstract operator");
 		assertTrue(initializer(main, "invalidNativeProbe").getTag() == TypedExprTag.BoolValue
 			&& initializer(main, "invalidNativeProbe").getBoolValue(),
 			"typeError did not capture an incompatible bodyless binary result carrier");

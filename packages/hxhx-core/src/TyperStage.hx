@@ -101,7 +101,8 @@ class TyperStage {
 		if (!type.isUnresolved())
 			return type;
 		final arguments = [
-			for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx, typeParameters)
+			for (argument in type.getTypeArguments())
+				resolveTypeInContext(argument, ctx, typeParameters)
 		];
 		if (typeParameters != null && arguments.length == 0)
 			for (parameter in typeParameters)
@@ -1002,7 +1003,7 @@ class TyperStage {
 			return score;
 		}
 		final implicitConversion = TyImplicitConversionPlan.select(semanticIndex, expected, actual);
-		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractTo(semanticIndex))
+		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractConversion(semanticIndex))
 			return implicitConversion.getScore();
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
@@ -1041,10 +1042,10 @@ class TyperStage {
 	/**
 		Select representation-safe conversions for explicit call arguments.
 
-		A declared `to` conversion proves that the call is legal. This helper emits a
-		plain typed cast only when the abstract's storage type is also the exact
-		parameter type. Custom conversion methods need a separate typed call model and
-		must not be mistaken for storage projection here.
+		A declared input or output conversion proves that the call is legal. This
+		helper emits a typed cast only when the selected conversion preserves the
+		stored value. Custom conversion methods need a separate typed call model
+		and must not be mistaken for storage casts here.
 	**/
 	static function callArgumentConversions(declaration:Null<TyDeclarationInfo>, extensionProvider:Null<TyNominalTypeId>, arguments:Array<HxExpr>,
 			scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Array<Null<TyImplicitConversionPlan>> {
@@ -1065,7 +1066,7 @@ class TyperStage {
 			final actualType = inferExprType(arguments[argumentIndex], scope, ctx, pos);
 			final expectedType = expectedTypes[parameterIndex];
 			final conversion = TyImplicitConversionPlan.select(ctx.getIndex(), expectedType, actualType);
-			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractTo(ctx.getIndex());
+			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractConversion(ctx.getIndex());
 			conversions.push(representationSafe ? conversion : null);
 			if (representationSafe)
 				found = true;

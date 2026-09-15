@@ -506,7 +506,7 @@
     "test:plugins:strict-matrix": "bash scripts/hxhx/run-plugin-matrix.sh",
     "status:self-hosting": "bash scripts/hxhx/self-hosting-status.sh",
     "test:m14:hih-emitter-receiver-call": "haxe test/m14_hxhx_stage3_receiver_call_integration_test.hxml && npm run test:m14:hih-dynamic-operators",
-    "test:m14:hih-string-abstract-cast": "haxe test/m14_hxhx_stage3_string_abstract_cast_integration_test.hxml",
+    "test:m14:hih-string-abstract-cast": "haxe test/m14_hxhx_stage3_string_abstract_cast_integration_test.hxml && haxe test/m14_abstract_input_conversion_integration_test.hxml",
     "test:m14:hih-dynamic-catch-result": "haxe test/m14_hxhx_stage3_dynamic_catch_result_integration_test.hxml",
     "test:m14:hih-dynamic-float-boundary": "haxe test/m14_hxhx_stage3_dynamic_float_boundary_integration_test.hxml",
     "test:m14:hih-dynamic-string-concat": "haxe test/m14_hxhx_stage3_dynamic_string_concat_integration_test.hxml",
