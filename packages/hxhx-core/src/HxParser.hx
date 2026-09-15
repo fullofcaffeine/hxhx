@@ -3754,14 +3754,16 @@ class HxParser {
 			return EUnsupported("try");
 
 		final raw = new StringBuf();
+		var previousKeyword = false;
 
 		inline function tokText():String {
-			return switch (cur.kind) {
+			final text = switch (cur.kind) {
 				case TIdent(name):
 					name;
 				case TKeyword(k):
-					final text = keywordText(k);
-					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
+					// This text is parsed again. Separate keywords on both sides so
+					// nested expressions such as `try 2 catch` cannot become `try2catch`.
+					(previousKeyword ? "" : " ") + keywordText(k) + " ";
 				case TString(s, _):
 					"\"" + s + "\"";
 				case TInt(v):
@@ -3791,6 +3793,8 @@ class HxParser {
 				case TEof:
 					"";
 			};
+			previousKeyword = cur.kind.match(TKeyword(_));
+			return text;
 		}
 
 		function consumeBalancedBraces():Void {

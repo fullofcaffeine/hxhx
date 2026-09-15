@@ -628,7 +628,7 @@ class TyperStage {
 					for (c in catches) {
 						scope.enterLexicalScope();
 						final writtenCatchType = StringTools.trim(c.typeHint == null ? "" : c.typeHint);
-						final catchType = writtenCatchType.length == 0 ? TyType.fromHintText("Dynamic") : typeFromHintInContext(writtenCatchType, ctx);
+						final catchType = typeFromHintInContext(writtenCatchType.length == 0 ? "haxe.Exception" : writtenCatchType, ctx);
 						scope.declareLocal(c.name, catchType, CatchVariable);
 						typeStmt(c.body);
 						scope.exitLexicalScope();
@@ -1250,12 +1250,12 @@ class TyperStage {
 		if (structure == null)
 			return null;
 
-		final handlers = new Array<HxExpr>();
+		final handlers = new Array<{name:String, typeHint:String, body:HxExpr}>();
 		for (entry in structure.catches)
 			switch (entry) {
-				case EArrayDecl([EString(_), EString(_), ELambda(handlerArguments, handlerBody)]) if (handlerArguments.length == 1):
-					final handler:HxExpr = ELambda(handlerArguments, handlerBody);
-					handlers.push(handler);
+				case EArrayDecl([EString(name), EString(typeHint), ELambda(handlerArguments, handlerBody)])
+					if (handlerArguments.length == 1 && handlerArguments[0] == name):
+					handlers.push({name: name, typeHint: typeHint, body: handlerBody});
 				case _:
 					return null;
 			}
@@ -1265,10 +1265,13 @@ class TyperStage {
 		if (result == null)
 			result = TyType.unknown();
 		for (handler in handlers) {
-			final handlerType = inferExprType(handler, scope, ctx, pos);
-			final catchResult = handlerType.getFunctionReturn();
-			if (catchResult == null)
-				continue;
+			// The parser uses a lambda to carry the handler body, but its parameter
+			// is a catch declaration with a source-owned type, not an untyped lambda argument.
+			scope.enterLexicalScope();
+			final hint = StringTools.trim(handler.typeHint);
+			scope.declareLocal(handler.name, typeFromHintInContext(hint.length == 0 ? "haxe.Exception" : hint, ctx), CatchVariable);
+			final catchResult = inferExprType(handler.body, scope, ctx, pos);
+			scope.exitLexicalScope();
 			if (!result.isUnknown() && !result.isDynamic() && catchResult.isDynamic())
 				continue;
 			final unified = TyType.unify(result, catchResult);
