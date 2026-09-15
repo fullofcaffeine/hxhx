@@ -111,6 +111,18 @@ and compares the output with upstream Haxe 4.3.7. It also rejects stale types,
 foreign function bindings, and reordered parameters. This focused check does
 not replace current-source compiler builds or the upstream compatibility suites.
 
+To check shared variable identities and catch types, run:
+
+```bash
+npm run test:m14:typed-local-identity
+```
+
+Catch variables must keep their declared types in statement and expression
+forms. An omitted type selects `haxe.Exception`. The fixtures also check nested
+catches, captured variables, and ordinary lambda parameters. These checks prove
+the facts supplied to targets; target runtime checks must also prove exception
+wrapping, handler selection, and rethrow behavior.
+
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
 

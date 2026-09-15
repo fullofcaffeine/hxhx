@@ -547,6 +547,54 @@ class TypedBodyBuilder {
 	}
 
 	/**
+		Replay expression catches as catch declarations, preserving the typer's exact
+		type and identity. The parser stores handlers as lambdas only to carry their
+		bodies; ordinary lambda inference must not replace the catch parameter type.
+		Validate the full shape before consuming any declarations from the replay.
+	**/
+	static function buildStructuralTryArguments(arguments:Array<HxExpr>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<Array<TypedExpr>> {
+		final entries = switch (arguments) {
+			case [ELambda([], _), EArrayDecl(entries), _]: entries;
+			case _: return null;
+		};
+		for (entry in entries)
+			switch (entry) {
+				case EArrayDecl([EString(name), EString(_), ELambda([argument], _)]) if (argument == name):
+				case _:
+					return null;
+			}
+		final tryBody = buildExpr(arguments[0], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		final typedEntries = new Array<TypedExpr>();
+		for (entry in entries)
+			switch (entry) {
+				case EArrayDecl([nameExpression, EString(hint), ELambda([name], body)]):
+					final typedName = buildExpr(nameExpression, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedHint = buildExpr(EString(hint), null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final bindings = new Array<TyLocalBinding>();
+					var argumentType = TyType.fromHintText(StringTools.trim(hint).length == 0 ? "haxe.Exception" : hint);
+					if (environment != null) {
+						environment.enterLexicalScope();
+						final binding = environment.declareLocal(name, argumentType, CatchVariable).toBinding();
+						bindings.push(binding);
+						argumentType = binding.getType();
+					}
+					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					if (environment != null)
+						environment.exitLexicalScope();
+					final handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					typedEntries.push(TypedExpr.arrayDecl([typedName, typedHint, handler],
+						expressionType(entry, diagnosticPosition, environment, typeResolver), null));
+				case _:
+					throw "validated structural catch changed during typed-body construction";
+			}
+		final typedCatches = TypedExpr.arrayDecl(typedEntries, expressionType(arguments[1], diagnosticPosition, environment, typeResolver), null);
+		final continuation = buildExpr(arguments[2], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		return [tryBody, typedCatches, continuation];
+	}
+
+	/**
 		Build one typed expression while replaying the local declarations recorded by
 		the typer.
 
@@ -603,9 +651,11 @@ class TypedBodyBuilder {
 					final resolution = callResolver == null
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-					var typedArguments = applyCallArgumentConversions(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver,
-						fieldResolver),
-						resolution.getArgumentConversions());
+					var typedArguments = callee.match(EIdent("__hxhx_try")) ? buildStructuralTryArguments(arguments, diagnosticPosition, environment,
+						typeResolver, callResolver, fieldResolver) : null;
+					if (typedArguments == null)
+						typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					typedArguments = applyCallArgumentConversions(typedArguments, resolution.getArgumentConversions());
 					if (callee.match(EIdent("__hxhx_try")))
 						typedArguments = alignStructuralTryCatchResults(typedArguments, nodeType);
 					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
