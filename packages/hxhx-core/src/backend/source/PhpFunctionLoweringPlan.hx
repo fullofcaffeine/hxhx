@@ -998,6 +998,7 @@ class PhpFunctionLoweringPlan {
 	static function copyField(field:TypedBackendClassFieldFact):TypedBackendClassFieldFact
 		return {
 			canonicalIdentity: field.canonicalIdentity,
+			constantIdentity: field.constantIdentity,
 			name: field.name,
 			semanticType: field.semanticType,
 			typeIdentity: field.typeIdentity,

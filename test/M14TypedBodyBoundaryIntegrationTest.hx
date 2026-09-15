@@ -262,7 +262,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.LocalRead && loop.getExpressions()[0].getTexts()[0] == "a",
 			"typed while macro condition was not resolved as the function parameter");
 		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
-		switch (TypedBodySource.statements(body)[0]) {
+		switch (ordinaryStatements(body)[0]) {
 			case SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position)]), _):
 				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
 			case _:
@@ -315,7 +315,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(continueInitializer.getType().getSemanticKey() == "primitive:String"
 			&& breakInitializer.getType().getSemanticKey() == "primitive:String",
 			"loop control changed the value type of the non-null branch");
-		switch (TypedBodySource.statements(body)[0]) {
+		switch (ordinaryStatements(body)[0]) {
 			case SForIn(_, _, SBlock([
 				SVar("value", "String", EBinop("??", _, EContinue(continuePosition)), _, _),
 				SVar("other", "String", EBinop("??", _, EBreak(breakPosition)), _, _)
@@ -657,7 +657,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "untyped statement block hid its indexed read");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Untyped), "untyped statement block lost its explicit typing escape hatch");
 		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "untyped statement block retained an opaque source payload");
-		final projected = TypedBodySource.statements(body);
+		final projected = ordinaryStatements(body);
 		final projectedStatements = switch (projected[0]) {
 			case SBlock(statements, _): statements;
 			case _: [];
@@ -861,6 +861,14 @@ class M14TypedBodyBoundaryIntegrationTest {
 		}
 	}
 
+	/** Syntax checks unwrap transport metadata while separate assertions verify its exact declaration facts. */
+	static function ordinaryStatements(body:TypedFunctionBody):Array<HxStmt> {
+		return backend.source.SourceFunctionBodyRewriter.body(TypedBodySource.statements(body), expression -> {
+			final call = TypedExactStaticCallSource.decode(expression);
+			return call == null ? expression : TypedExactStaticCallSource.ordinaryCall(call);
+		});
+	}
+
 	static function main():Void {
 		final filePath = "checks/TypedBodyMain.hx";
 		final source = [
@@ -909,8 +917,17 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& operand.getTexts()[0] == "value", "postfix operand was not a typed local read");
 		expectCompoundAssignment(mainFunction.getBody());
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
-		assertTrue(TypedBodyFingerprint.forStatements(TypedBodySource.statements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
-			"typed-body source projection changed ordinary syntax before backend cutover");
+		assertTrue(TypedBodyFingerprint.forStatements(ordinaryStatements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
+			"unwrapping static-call metadata changed the function's ordinary source syntax");
+		final projectedCall = TypedExactStaticCallSource.decode(TypedBodySource.expression(call));
+		assertTrue(projectedCall != null
+			&& projectedCall.owner == "demo.TypedBodyMain.Helper"
+			&& projectedCall.declaration == declaration.getIdentity().getCanonicalKey()
+			&& projectedCall.resultType == "Int",
+			"static-call projection lost its selected owner, declaration, or result");
+		assertTrue(TypedExactStaticCallSource.ordinaryCall(projectedCall)
+			.match(ECall(EField(EIdent("Helper"), "bump"), [EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("value"))])),
+			"unwrapping the static-call record changed its ordinary callee or postfix argument");
 		assertLoweringNodeSet();
 		assertNullableSourceProjection();
 		assertInferredConstructorSourceProjection();

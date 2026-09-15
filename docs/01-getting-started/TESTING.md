@@ -74,6 +74,19 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Abstract method declarations
+
+Run `npm run test:m14:typer-abstract-catalog` when you change abstract declaration
+parsing or operator indexing. The command checks ordinary abstracts and enum
+abstracts, both as primary types and as additional types in a module.
+
+The original `test/enum_abstract_catalog` fixture runs with upstream Haxe 4.3.7.
+The catalog test checks method signatures, generic constraints, modifiers,
+operator metadata, bodies, source ranges, enum values, and loading order.
+The native test generates OCaml and executes branching static methods against
+the upstream result. These checks do not establish full target compatibility
+or prove a freshly rebuilt native compiler.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime

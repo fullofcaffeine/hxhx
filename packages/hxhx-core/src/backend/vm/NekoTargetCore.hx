@@ -5,6 +5,7 @@ import backend.EmitArtifact;
 import backend.EmitResult;
 import backend.GenIrProgram;
 import backend.vm.NekoRuntimeSupport.NekoRuntimeClassMeta;
+import backend.vm.NekoTypedProgramProjection.NekoProjectedFunction;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -18,6 +19,10 @@ private typedef NekoClassInfo = {
 
 private typedef NekoEmitContext = {
 	var classes:StringMap<NekoClassInfo>;
+	var typedProgram:NekoTypedProgramProjection;
+	var abstractHelpers:Array<NekoProjectedFunction>;
+	var abstractHelperIds:StringMap<Bool>;
+	var directAbstractReceiver:Bool;
 	var selfName:Null<String>;
 	var currentClass:Null<NekoClassInfo>;
 	var symbolTable:Null<String>;
@@ -223,6 +228,10 @@ class NekoTargetCore {
 			throw "Neko native backend requires a static main entrypoint";
 		final emitContext:NekoEmitContext = {
 			classes: classMap,
+			typedProgram: new NekoTypedProgramProjection(modules),
+			abstractHelpers: [],
+			abstractHelperIds: new StringMap(),
+			directAbstractReceiver: false,
 			selfName: null,
 			currentClass: null,
 			symbolTable: SYMBOL_TABLE,
@@ -239,6 +248,8 @@ class NekoTargetCore {
 		// Neko closures capture bindings by value. A shared object lets earlier
 		// bodies resolve later functions and constructors when the call occurs.
 		out.push("var " + SYMBOL_TABLE + " = $new(null);");
+		for (helper in emitContext.abstractHelpers)
+			renderExactAbstractHelper(out, emitContext, helper);
 		for (info in reachable.constructors)
 			renderConstructorFactory(out, emitContext, info);
 		for (ref in reachable.staticFunctions)
@@ -261,6 +272,10 @@ class NekoTargetCore {
 
 		final emitContext:NekoEmitContext = {
 			classes: buildClassMap(modules),
+			typedProgram: new NekoTypedProgramProjection(modules),
+			abstractHelpers: [],
+			abstractHelperIds: new StringMap(),
+			directAbstractReceiver: false,
 			selfName: null,
 			currentClass: null,
 			symbolTable: SYMBOL_TABLE,
@@ -287,6 +302,17 @@ class NekoTargetCore {
 		});
 
 		var chunkIndex = 0;
+		var helperIndex = 0;
+		while (helperIndex < emitContext.abstractHelpers.length) {
+			final end = minInt(helperIndex + SPLIT_CHUNK_DECL_LIMIT, emitContext.abstractHelpers.length);
+			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
+			final out = splitChunkHeader(symbolsLoadName, classMeta);
+			for (i in helperIndex...end)
+				renderExactAbstractHelper(out, emitContext, emitContext.abstractHelpers[i]);
+			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
+			helperIndex = end;
+			chunkIndex++;
+		}
 		var constructorIndex = 0;
 		while (constructorIndex < reachable.constructors.length) {
 			final end = minInt(constructorIndex + SPLIT_CHUNK_DECL_LIMIT, reachable.constructors.length);
@@ -443,6 +469,13 @@ class NekoTargetCore {
 	}
 
 	static function collectReachable(context:NekoEmitContext, mainInfo:NekoClassInfo):NekoReachable {
+		final reserved = new Array<String>();
+		for (info in context.classes) {
+			reserved.push(mangleConstructor(info.fullName));
+			for (fn in HxClassDecl.getFunctions(info.cls))
+				reserved.push(mangleFunction(info.fullName, HxFunctionDecl.getName(fn)));
+		}
+		context.typedProgram.reserveGeneratedSymbols(reserved);
 		final constructors = new Array<NekoClassInfo>();
 		final constructorSeen = new StringMap<Bool>();
 		final staticFunctions = new Array<NekoStaticFunctionRef>();
@@ -527,9 +560,32 @@ class NekoTargetCore {
 
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
-		final exactCall = TypedExactCallSource.decodeInstance(expr);
+		final staticCall = NekoExactStaticCallPlan.fromExpression(context.typedProgram, expr);
+		if (staticCall != null) {
+			addStatic(exactHelperClass(context, staticCall.selected), staticCall.selected.body.getDeclaration());
+			for (argument in staticCall.call.arguments)
+				collectExprRefs(context, argument, addConstructor, addStatic);
+			return;
+		}
+		final exactCall = NekoExactCallPlan.fromExpression(context.typedProgram, expr);
 		if (exactCall != null) {
-			collectCallRefs(context, EField(exactCall.receiver, exactCall.method), exactCall.arguments, addConstructor, addStatic);
+			if (exactCall.usesAbstractReceiver()) {
+				final helper = exactCall.selected;
+				final identity = helper.body.getStableIdentity();
+				if (!context.abstractHelperIds.exists(identity)) {
+					context.abstractHelperIds.set(identity, true);
+					context.abstractHelpers.push(helper);
+					final helperContext = withCurrentClass(context, exactHelperClass(context, helper));
+					for (statement in helper.body.getBody())
+						collectStmtRefs(helperContext, statement, addConstructor, addStatic);
+				}
+				collectExprRefs(context, exactCall.receiver, addConstructor, addStatic);
+				for (argument in exactCall.getArguments())
+					collectExprRefs(context, argument, addConstructor, addStatic);
+			} else {
+				collectCallRefs(context, EField(exactCall.receiver, HxFunctionDecl.getName(exactCall.selected.body.getDeclaration())),
+					exactCall.getArguments(), addConstructor, addStatic);
+			}
 			return;
 		}
 		switch (expr) {
@@ -625,26 +681,9 @@ class NekoTargetCore {
 				} else {
 					collectExprRefs(context, callee, addConstructor, addStatic);
 				}
-			case EField(EIdent(className), method) if (isUpperStart(className)):
-				final info = lookupClass(context, className);
-				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null)
-					addStatic(info, fn);
-			case EIdent(method):
-				final info = context.currentClass;
-				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null)
-					addStatic(info, fn);
-			case EField(receiver, method):
-				final info = context.currentClass;
-				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null && isAbstractValueHelperFunction(fn)) {
-					addStatic(info, fn);
-					collectExprRefs(context, receiver, addConstructor, addStatic);
-				} else {
-					collectExprRefs(context, callee, addConstructor, addStatic);
-				}
 			case _:
+				// Selected static calls carry exact records. An ordinary call can be
+				// a local function, so its spelling must not retain a class method.
 				collectExprRefs(context, callee, addConstructor, addStatic);
 		}
 		for (arg in args)
@@ -682,10 +721,55 @@ class NekoTargetCore {
 		return out;
 	}
 
+	/** Joins an indexed function to the exact projected class used by this emission. */
+	static function exactHelperClass(context:NekoEmitContext, helper:NekoProjectedFunction):NekoClassInfo {
+		for (info in context.classes)
+			if (info.cls == helper.owner.getDeclaration())
+				return info;
+		throw "Neko exact helper lost its projected class: " + helper.body.getStableIdentity();
+	}
+
+	/** A shared table lets mutually recursive closures see helpers installed after their creation. */
+	static function exactHelperRef(context:NekoEmitContext, helper:NekoProjectedFunction):String
+		return (context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable) + "." + helper.symbol;
+
+	/**
+		Emits an abstract method with its backing value before the source arguments.
+
+		Both layouts use the same argument-array convention. Generated parameter
+		names avoid every projected local. Receiver rebinding is rejected by the
+		assignment renderer until shared lowering can preserve caller-visible writes.
+	**/
+	static function renderExactAbstractHelper(out:Array<String>, context:NekoEmitContext, helper:NekoProjectedFunction):Void {
+		final occupied = new StringMap<Bool>();
+		for (local in helper.body.getLocalCatalog().getEntries())
+			occupied.set(safeIdent(local.getProjectedName()), true);
+		function freshName(base:String):String {
+			var name = base;
+			var suffix = 0;
+			while (occupied.exists(name))
+				name = base + "_" + ++suffix;
+			occupied.set(name, true);
+			return name;
+		}
+		final receiverName = freshName("__hxhx_abstract_receiver");
+		final argumentsName = freshName("__hxhx_abstract_arguments");
+		final fn = helper.body.getDeclaration();
+		final helperContext = withFunctionArgs(withSelf(context, receiverName, exactHelperClass(context, helper)), fn);
+		helperContext.directAbstractReceiver = true;
+		registerLocal(helperContext, receiverName);
+		registerLocal(helperContext, argumentsName);
+		out.push(exactHelperRef(context, helper) + " = $varargs(function(" + argumentsName + ") {");
+		out.push("  var " + receiverName + " = " + argumentsName + "[0];");
+		renderVarArgBindings(out, helperContext, HxFunctionDecl.getArgs(fn), "  ", argumentsName, 1);
+		for (statement in helper.body.getBody())
+			renderStmt(out, helperContext, statement, "  ");
+		out.push("});");
+		out.push("");
+	}
+
 	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
 		if (renderSpecialFunction(out, context, info, fn))
-			return;
-		if (renderAbstractValueHelperFunction(out, context, info, fn))
 			return;
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
@@ -819,22 +903,6 @@ class NekoTargetCore {
 		out.push("");
 	}
 
-	static function renderAbstractValueHelperFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
-		if (!isAbstractValueHelperFunction(fn))
-			return false;
-		final args = ["abstract"];
-		final useVarArgs = shouldUseVarArgs(context, args);
-		final functionContext = withLocals(withCurrentClass(context, info), args);
-		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
-		if (useVarArgs)
-			out.push("  var abstract = __hxhx_args[0];");
-		for (stmt in HxFunctionDecl.getBody(fn))
-			renderStmt(out, functionContext, stmt, "  ");
-		out.push(renderFunctionEnd(useVarArgs));
-		out.push("");
-		return true;
-	}
-
 	static function renderConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
 		if (isListTypePath(info.fullName)) {
 			out.push(renderConstructorDefinitionPrefix(context, info.fullName) + "function() {");
@@ -936,11 +1004,12 @@ class NekoTargetCore {
 		return useVarArgs ? "})" : "}";
 	}
 
-	static function renderVarArgBindings(out:Array<String>, context:NekoEmitContext, args:Array<HxFunctionArg>, indent:String):Void {
+	static function renderVarArgBindings(out:Array<String>, context:NekoEmitContext, args:Array<HxFunctionArg>, indent:String,
+			argumentsName:String = "__hxhx_args", offset:Int = 0):Void {
 		for (i in 0...args.length) {
 			final arg = args[i];
 			final name = safeIdent(HxFunctionArg.getName(arg));
-			out.push(indent + "var " + name + " = __hxhx_args[" + i + "];");
+			out.push(indent + "var " + name + " = " + argumentsName + "[" + (i + offset) + "];");
 			switch (HxFunctionArg.getDefaultValue(arg)) {
 				case NoDefault:
 					if (HxFunctionArg.getIsRest(arg))
@@ -976,6 +1045,19 @@ class NekoTargetCore {
 	}
 
 	static function renderStmt(out:Array<String>, context:NekoEmitContext, stmt:HxStmt, indent:String):Void {
+		// Ordinary exact calls still use object dispatch. Restore that call form
+		// before statement-level lowering, rather than waiting for renderExpr.
+		switch (stmt) {
+			case SExpr(expression, position):
+				final exact = NekoExactCallPlan.fromExpression(context.typedProgram, expression);
+				if (exact != null && !exact.usesAbstractReceiver()) {
+					renderStmt(out, context,
+						SExpr(ECall(EField(exact.receiver, HxFunctionDecl.getName(exact.selected.body.getDeclaration())), exact.getArguments()), position),
+						indent);
+					return;
+				}
+			case _:
+		}
 		switch (stmt) {
 			case SBlock(stmts, _):
 				final blockContext = childContext(context);
@@ -1009,7 +1091,10 @@ class NekoTargetCore {
 			case SExpr(EBinop("=", left, right), _) if (shouldSplitStatementAssignmentRhs(context, right)):
 				renderSplitAssignmentStmt(out, context, left, right, indent);
 			case SExpr(expr, _):
-				out.push(indent + renderExpr(context, expr) + ";");
+				final rendered = renderExpr(context, expr);
+				// Neko can attach a leading parenthesis to the preceding statement,
+				// even across a semicolon. A block gives this expression its own start.
+				out.push(indent + (StringTools.startsWith(rendered, "(") ? "{ " + rendered + "; }" : rendered) + ";");
 			case SBreak(_):
 				if (context.breakFlag != null)
 					out.push(indent + context.breakFlag + " = false;");
@@ -1170,9 +1255,20 @@ class NekoTargetCore {
 	}
 
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
-		final exactCall = TypedExactCallSource.decodeInstance(expr);
-		if (exactCall != null)
-			return renderExpr(context, TypedExactCallSource.ordinaryInstanceCall(exactCall));
+		final staticCall = NekoExactStaticCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
+		if (staticCall != null)
+			return renderCall(context, staticCall.call.callee, staticCall.call.arguments, staticCall.selected);
+		final exactCall = NekoExactCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
+		if (exactCall != null) {
+			if (exactCall.usesAbstractReceiver()) {
+				final arguments = [renderExpr(context, exactCall.receiver)];
+				for (argument in exactCall.getArguments())
+					arguments.push(renderExpr(context, argument));
+				return exactHelperRef(context, exactCall.selected) + "(" + arguments.join(", ") + ")";
+			}
+			return renderExpr(context,
+				ECall(EField(exactCall.receiver, HxFunctionDecl.getName(exactCall.selected.body.getDeclaration())), exactCall.getArguments()));
+		}
 		return switch (expr) {
 			case ENull:
 				"null";
@@ -1396,6 +1492,8 @@ class NekoTargetCore {
 	}
 
 	static function renderThisValueSlotExpr(context:NekoEmitContext, detail:String):String {
+		if (context.directAbstractReceiver)
+			unsupportedExpr("abstract helper receiver rebinding requires shared writeback lowering");
 		if (context.selfName == null)
 			unsupportedExpr(detail + " target this");
 		return context.selfName + ".__hx_value";
@@ -1404,6 +1502,8 @@ class NekoTargetCore {
 	static function renderThisExpr(context:NekoEmitContext):String {
 		if (context.selfName == null)
 			unsupportedExpr("this");
+		if (context.directAbstractReceiver)
+			return context.selfName;
 		return isAbstractInfo(context.currentClass) ? context.selfName + ".__hx_value" : context.selfName;
 	}
 
@@ -1537,6 +1637,8 @@ class NekoTargetCore {
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+		if (typePath == "String")
+			return NekoStringIntrinsics.renderConstructor([for (arg in args) renderExpr(context, arg)]);
 		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
 			return "$array()";
 		if (isListTypePath(typePath) && args.length == 0)
@@ -2331,8 +2433,12 @@ class NekoTargetCore {
 		}
 	}
 
-	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>):String {
+	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
+			case ECast(inner, _) | EUntyped(inner):
+				// These wrappers emit no runtime operation. Expose a wrapped lambda
+				// so the ordinary callable renderer preserves its grouping.
+				return renderCall(context, inner, args, selectedStatic);
 			case EIdent("__hxhx_try"):
 				return renderStructuralTryCatchExpr(context, args);
 			case EIdent("__hxhx_throw"):
@@ -2350,6 +2456,9 @@ class NekoTargetCore {
 		final stackPrimitive = declaredMember ? null : NekoStackPrimitives.renderCall(callee, renderedArgs);
 		if (stackPrimitive != null)
 			return stackPrimitive;
+		final stringIntrinsic = NekoStringIntrinsics.renderCall(callee, renderedArgs);
+		if (stringIntrinsic != null)
+			return stringIntrinsic;
 		switch (callee) {
 			case EIdent("trace"):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
@@ -2393,10 +2502,6 @@ class NekoTargetCore {
 				return "__hxhx_string_ends_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EEnumValue(name):
 				return renderEnumCtorCall(name, renderedArgs);
-			case EField(receiver, method) if (lookupCurrentAbstractValueHelper(context, method) != null):
-				return renderFunctionRef(context, context.currentClass.fullName, method) + "(" + renderExpr(context, receiver) + ")";
-			case EField(receiver, "getNdllSuffix") if (hasNativeDecodedNekoArchAbstract(context)):
-				return "__hxhx_neko_ndll_suffix(" + renderExpr(context, receiver) + ")";
 			case EField(EIdent("Sys"), "systemName"):
 				return "__hxhx_sys_system_name()";
 			case EField(EIdent("Sys"), "getEnv") if (args.length >= 1):
@@ -2409,6 +2514,13 @@ class NekoTargetCore {
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(EIdent("MainLoop"), "add") | EField(EField(EIdent("haxe"), "MainLoop"), "add") if (args.length >= 1):
 				return "__hxhx_main_loop_add(" + renderedArgs[0] + ")";
+			case _ if (selectedStatic != null):
+				final owner = exactHelperClass(context, selectedStatic);
+				final fn = selectedStatic.body.getDeclaration();
+				final method = HxFunctionDecl.getName(fn);
+				final reference = isDynamicStaticFunction(fn) ? "__hxhx_field(" + renderStaticObjectRef(owner.fullName) + ", " + quote(method) +
+					")" : renderFunctionRef(context, owner.fullName, method);
+				return reference + "(" + renderedArgs.join(", ") + ")";
 			case EField(receiver, "indexOf") if (args.length >= 1):
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
@@ -2417,7 +2529,7 @@ class NekoTargetCore {
 				return "__hxhx_string_ends_with(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(ESuper, _):
 				return "null";
-			case EField(EIdent(className), method) if (isUpperStart(className)):
+			case EField(EIdent(className), method) if (isUpperStart(className) && !context.locals.exists(className)):
 				final info = lookupClass(context, className);
 				final fn = info == null ? null : findFunction(info.cls, method, true);
 				if (info != null && fn != null && !isDynamicStaticFunction(fn))
@@ -2433,6 +2545,10 @@ class NekoTargetCore {
 						+ ")";
 				final fullClassName = info == null ? className : info.fullName;
 				return renderFunctionRef(context, fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
+			case ELambda(_, _):
+				// Neko needs parentheses to call the function value rather than
+				// attach the following expression to the function syntax.
+				return "(" + renderExpr(context, callee) + ")(" + renderedArgs.join(", ") + ")";
 			case _:
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}
@@ -2520,13 +2636,6 @@ class NekoTargetCore {
 		return null;
 	}
 
-	static function lookupCurrentAbstractValueHelper(context:NekoEmitContext, method:String):Null<HxFunctionDecl> {
-		if (context == null || context.currentClass == null)
-			return null;
-		final fn = findFunction(context.currentClass.cls, method, true);
-		return fn != null && isAbstractValueHelperFunction(fn) ? fn : null;
-	}
-
 	static function isSysIoProcessTypePath(typePath:String):Bool {
 		return typePath == "sys.io.Process";
 	}
@@ -2564,8 +2673,6 @@ class NekoTargetCore {
 			return safeIdent(name);
 		if (isLocalName(context, name))
 			return safeIdent(name);
-		if (isEnumAbstractConstantName(context, name))
-			return quote(name);
 		if (context.selfName != null && isCurrentInstanceMethod(context, name))
 			return context.selfName + "." + safeIdent(name);
 		if (context.selfName != null && isCurrentInstanceField(context, name))
@@ -2584,46 +2691,6 @@ class NekoTargetCore {
 
 	static function isDynamicStaticFunction(fn:HxFunctionDecl):Bool {
 		return HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getMetadata(fn).indexOf("dynamic") >= 0;
-	}
-
-	static function isEnumAbstractConstantName(context:NekoEmitContext, name:String):Bool {
-		if (context.currentClass == null || name == null || name.length == 0 || !isUpperStart(name))
-			return false;
-		if (!hasNativeDecodedNekoArchAbstract(context))
-			return false;
-		for (field in HxClassDecl.getFields(context.currentClass.cls)) {
-			if (HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name && HxFieldDecl.getInit(field) == null && isNekoArchConstantName(name))
-				return true;
-		}
-		return isNekoArchConstantName(name) && lookupClass(context, name) == null;
-	}
-
-	static function hasNativeDecodedNekoArchAbstract(context:NekoEmitContext):Bool {
-		if (context == null || context.classes == null)
-			return false;
-		for (info in context.classes) {
-			if (isAbstractInfo(info) && info.fullName == "Arch")
-				return true;
-		}
-		return false;
-	}
-
-	static function isNekoArchConstantName(name:String):Bool {
-		return name == "Arm64" || name == "Arm" || name == "X86_64" || name == "X86";
-	}
-
-	static function isAbstractValueHelperFunction(fn:HxFunctionDecl):Bool {
-		if (fn == null || !HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getArgs(fn).length != 0)
-			return false;
-		final body = HxFunctionDecl.getBody(fn);
-		if (body.length != 1)
-			return false;
-		return switch (body[0]) {
-			case SReturn(ESwitch(EIdent("abstract"), _, _), _):
-				true;
-			case _:
-				false;
-		}
 	}
 
 	static function isAbstractInfo(info:Null<NekoClassInfo>):Bool {
@@ -2660,6 +2727,10 @@ class NekoTargetCore {
 	static function childContext(context:NekoEmitContext):NekoEmitContext {
 		return {
 			classes: context.classes,
+			typedProgram: context.typedProgram,
+			abstractHelpers: context.abstractHelpers,
+			abstractHelperIds: context.abstractHelperIds,
+			directAbstractReceiver: context.directAbstractReceiver,
 			selfName: context.selfName,
 			currentClass: context.currentClass,
 			symbolTable: context.symbolTable,
@@ -2718,6 +2789,10 @@ class NekoTargetCore {
 	static function withSelf(context:NekoEmitContext, selfName:String, info:NekoClassInfo):NekoEmitContext {
 		return {
 			classes: context.classes,
+			typedProgram: context.typedProgram,
+			abstractHelpers: context.abstractHelpers,
+			abstractHelperIds: context.abstractHelperIds,
+			directAbstractReceiver: false,
 			selfName: selfName,
 			currentClass: info,
 			symbolTable: context.symbolTable,
@@ -2731,6 +2806,10 @@ class NekoTargetCore {
 	static function withCurrentClass(context:NekoEmitContext, info:NekoClassInfo):NekoEmitContext {
 		return {
 			classes: context.classes,
+			typedProgram: context.typedProgram,
+			abstractHelpers: context.abstractHelpers,
+			abstractHelperIds: context.abstractHelperIds,
+			directAbstractReceiver: context.directAbstractReceiver,
 			selfName: context.selfName,
 			currentClass: info,
 			symbolTable: context.symbolTable,
@@ -2760,7 +2839,8 @@ class NekoTargetCore {
 
 	static function renderFunctionDefinitionPrefix(context:NekoEmitContext, fullClassName:String, method:String):String {
 		final name = mangleFunction(fullClassName, method);
-		return context.symbolTable == null ? "var " + name + " = " : context.symbolTable + "." + name + " = ";
+		final table = context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable;
+		return table + "." + name + " = ";
 	}
 
 	static function renderConstructorRef(context:NekoEmitContext, fullClassName:String):String {
@@ -2770,7 +2850,10 @@ class NekoTargetCore {
 
 	static function renderFunctionRef(context:NekoEmitContext, fullClassName:String, method:String):String {
 		final name = mangleFunction(fullClassName, method);
-		return context != null && context.symbolTable != null ? context.symbolTable + "." + name : name;
+		if (context == null)
+			return name;
+		final table = context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable;
+		return table + "." + name;
 	}
 
 	static function isUpperStart(name:String):Bool {

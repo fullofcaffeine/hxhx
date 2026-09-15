@@ -2924,6 +2924,10 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+		final staticCall = TypedExactStaticCallSource.decode(e);
+		if (staticCall != null)
+			return exprToOcaml(TypedExactStaticCallSource.ordinaryCall(staticCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+				moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
@@ -4435,6 +4439,9 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final staticCall = TypedExactStaticCallSource.decode(e);
+			if (staticCall != null)
+				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
 				if (hasBringupPoison(exactCall.receiver))
@@ -7542,7 +7549,13 @@ class EmitterStage {
 				}
 			}
 
-			function emitMainClass():Null<String> {
+			/**
+				Emit one class from its own typed projection, including module-local helpers.
+				The projection keeps bodies paired with their exact parameters and locals.
+				Only the selected root class may add the program's main invocation.
+			**/
+			function emitClass(classProjection:TypedBackendClassProjection, outputModuleName:String, isEntryPoint:Bool):Null<String> {
+				final emittedClass = classProjection.getDeclaration();
 				final prevOcamlModule = currentOcamlModuleName;
 				final prevModuleFilePath = currentModuleFilePath;
 				final prevLocalCallSigCache = currentLocalCallSigCache;
@@ -7550,13 +7563,13 @@ class EmitterStage {
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
 				final moduleFilePath = tm.getParsed().getFilePath();
-				final mainClassName = HxClassDecl.getName(mainClass);
-				currentOcamlModuleName = mainModuleName;
+				final emittedClassName = HxClassDecl.getName(emittedClass);
+				currentOcamlModuleName = outputModuleName;
 				currentModuleFilePath = moduleFilePath;
 				currentLocalCallSigCache = null;
 				currentImportInt64 = importInt64;
 				try {
-					final typedFns = mainClassProjection.getFunctions();
+					final typedFns = classProjection.getFunctions();
 					final parsedFns = [for (projection in typedFns) projection.getDeclaration()];
 					final projectionByName = new Map<String, TypedBackendFunctionProjection>();
 					for (projection in typedFns) {
@@ -7620,7 +7633,7 @@ class EmitterStage {
 							continue;
 						final fnArgs = HxFunctionDecl.getArgs(fn);
 						final sig = callSigFromFunction(fn);
-						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
+						EmitterStageDebug.traceCallSig(outputModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
 							sig.needsReceiver);
 						callSigByCallee.set(ocamlValueIdent(fnNameRaw), sig);
 					}
@@ -7642,7 +7655,7 @@ class EmitterStage {
 						final localName = HxClassDecl.getName(localCls);
 						if (localName == null || localName.length == 0 || localName == "Unknown")
 							continue;
-						if (localName == className)
+						if (localName == emittedClassName)
 							continue;
 						staticImportByIdent.set(localName, moduleNameForDecl(decl, moduleTypeName, localName));
 					}
@@ -7689,8 +7702,8 @@ class EmitterStage {
 					out.push("[@@@warning \"-21-26\"]");
 					out.push("");
 
-					final parsedFields = HxClassDecl.getFields(mainClass);
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(mainModuleName);
+					final parsedFields = HxClassDecl.getFields(emittedClass);
+					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)
@@ -7942,7 +7955,7 @@ class EmitterStage {
 					//
 					// Note: This must apply in both "stub body" and "full body" emission modes. The failure mode
 					// (monomorphic `load` inside the recursive group) appears in both configurations.
-					final shouldHoistLoad = StringTools.startsWith(mainModuleName, "Haxe_macro_");
+					final shouldHoistLoad = StringTools.startsWith(outputModuleName, "Haxe_macro_");
 					if (shouldHoistLoad) {
 						for (tf in typedFns) {
 							final parsedFn = tf.getDeclaration();
@@ -7969,7 +7982,7 @@ class EmitterStage {
 								+ ")")
 								.join(" ");
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -8009,15 +8022,15 @@ class EmitterStage {
 							final parsedFn = tf.getDeclaration();
 							final nameRaw = HxFunctionDecl.getName(parsedFn);
 							final name = ocamlValueIdent(nameRaw);
-							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + outputModuleName + ":" + nameRaw);
 							final previousFunctionName = currentFunctionName;
 							currentFunctionName = nameRaw;
 							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
 							final previousFunctionShadowingValueNames = currentFunctionShadowingValueNames;
 							final previousFunctionLocalOcamlNames = currentFunctionLocalOcamlNames;
 							final previousRegionKey = currentPortableMetalizationRegionKey;
-							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
-								nameRaw);
+							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath,
+								emittedClassName, nameRaw);
 							if (name == "main")
 								sawMain = true;
 
@@ -8036,7 +8049,7 @@ class EmitterStage {
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -8083,15 +8096,15 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							final useStage3ModuleTypeNameBody = mainModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
-							final useStage3HxhxMainJsRouteBody = mainModuleName == "Hxhx_Main"
+							final useStage3ModuleTypeNameBody = outputModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
+							final useStage3HxhxMainJsRouteBody = outputModuleName == "Hxhx_Main"
 								&& nameRaw == "shouldRouteStandardJsToNative";
-							final useStage3WriteWaitStdioReplyBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3WriteWaitStdioReplyBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "writeWaitStdioReply";
-							final useStage3ReadConnectDisplayStdinBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3ReadConnectDisplayStdinBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "readConnectDisplayStdin";
-							final useStage3RunWaitStdioBody = mainModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
-							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(mainModuleName, nameRaw, args[0].getProjectedName()) : null;
+							final useStage3RunWaitStdioBody = outputModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
+							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(outputModuleName, nameRaw, args[0].getProjectedName()) : null;
 							var body = if (useStage3ModuleTypeNameBody) {
 								moduleTypeNameForStage3OcamlBody();
 							} else if (useStage3HxhxMainJsRouteBody) {
@@ -8123,12 +8136,12 @@ class EmitterStage {
 								+ retTy
 								+ ")";
 							};
-							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + outputModuleName + ":" + nameRaw);
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
-							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentFunctionShadowingValueNames = previousFunctionShadowingValueNames;
@@ -8161,7 +8174,7 @@ class EmitterStage {
 						if (inferredType != null && staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
-						installFieldLocalNames(mainClassProjection, f);
+						installFieldLocalNames(classProjection, f);
 						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
@@ -8596,12 +8609,12 @@ class EmitterStage {
 						out.insert(2, exceptions.join("\n") + "\n");
 					}
 
-					if (isRoot && sawMain) {
+					if (isEntryPoint && sawMain) {
 						out.push("let () = ignore (main ())");
 						out.push("");
 					}
 
-					final mlPath = haxe.io.Path.join([outAbs, mainModuleName + ".ml"]);
+					final mlPath = haxe.io.Path.join([outAbs, outputModuleName + ".ml"]);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8609,7 +8622,7 @@ class EmitterStage {
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
-					return mainModuleName + ".ml";
+					return outputModuleName + ".ml";
 				} catch (e:TyperError) {
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8634,7 +8647,7 @@ class EmitterStage {
 			EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
 			// Emit the main class first (typed, optional full bodies).
-			final mainPath = isRuntimeProvided ? null : emitMainClass();
+			final mainPath = isRuntimeProvided ? null : emitClass(mainClassProjection, mainModuleName, isRoot);
 			EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
 			if (mainPath != null) {
 				files.push(mainPath);
@@ -8646,16 +8659,20 @@ class EmitterStage {
 			//
 			// Why
 			// - Upstream Haxe modules can declare helper types in the same file (often `private class Foo`).
-			// - Stage3 typing currently models only the chosen `mainClass`, but codegen still needs
-			//   providers for referenced static members like `Foo.bar`.
+			// - Each helper now has its own typed projection. Full-body output must use it
+			//   so calls such as `Foo.bar` reach the authored method instead of a placeholder.
 			for (c in HxModuleDecl.getClasses(decl)) {
 				final nm = HxClassDecl.getName(c);
 				if (nm == null || nm.length == 0 || nm == "Unknown")
 					continue;
 				if (nm == className)
 					continue;
-				EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
-				final p = emitStubClass(c);
+				final helperModuleName = moduleNameForDecl(decl, moduleTypeName, nm);
+				final helperProjection = moduleProjection.findClass(c);
+				if (helperProjection == null)
+					throw "Stage3 emitter cannot find the exact helper-class projection";
+				EmitterStageDebug.traceStage3Module(moduleEmitBodies ? "helper" : "stub", helperModuleName, tm.getParsed().getFilePath());
+				final p = moduleEmitBodies ? emitClass(helperProjection, helperModuleName, false) : emitStubClass(c);
 				if (p != null)
 					files.push(p);
 			}

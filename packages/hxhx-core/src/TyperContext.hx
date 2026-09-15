@@ -81,17 +81,17 @@ class TyperContext {
 	}
 
 	/**
-		Return the class that declares the first indexed instance-method group.
+		Return the type that declares the first indexed instance-method group.
 
-		Bare calls in an instance method search the current class and then each exact
-		superclass before imports. Returning the declaring class keeps overload and
-		call projection tied to the declaration that actually owns the method.
+		Bare calls search the current type, including abstracts, before imports.
+		Classes also search each exact superclass. Returning the declaring type keeps
+		overload selection and call projection tied to the method's actual owner.
 	**/
 	public function instanceMethodOwner(name:String):Null<TyNominalInfo> {
 		if (name == null || name.length == 0)
 			return null;
 		final seen = new haxe.ds.StringMap<Bool>();
-		var current = asClass(currentClass());
+		var current = currentClass();
 		while (current != null) {
 			final fullName = current.getFullName();
 			if (seen.exists(fullName))

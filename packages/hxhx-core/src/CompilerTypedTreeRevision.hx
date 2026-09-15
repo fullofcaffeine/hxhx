@@ -22,7 +22,7 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v2");
+		facts.push("typed-function-body-v3");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
@@ -41,7 +41,7 @@ class CompilerTypedTreeRevision {
 		if (ownerIdentity == null || ownerIdentity.length == 0)
 			throw "typed expression revision requires an owner identity";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-expression-v2");
+		facts.push("typed-expression-v3");
 		facts.push(ownerIdentity);
 		addExpression(facts, expression);
 		return CompilerCacheIdentity.encode(facts);
@@ -87,6 +87,7 @@ class CompilerTypedTreeRevision {
 		out.push(declaration == null ? null : declaration.getIdentity().getCanonicalKey());
 		final fieldInfo = expression.getFieldInfo();
 		out.push(fieldInfo == null ? null : fieldInfo.getCanonicalKey());
+		out.push(fieldInfo == null ? null : fieldInfo.getConstant().getCanonicalIdentity());
 		addLocalBindings(out, expression.getLocalBindings());
 		final extensionProvider = expression.getExtensionProvider();
 		out.push(extensionProvider == null ? null : extensionProvider.getCanonicalName());

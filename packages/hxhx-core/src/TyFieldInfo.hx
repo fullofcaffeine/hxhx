@@ -20,9 +20,10 @@ class TyFieldInfo {
 	final propertySet:String;
 	final noImportGlobal:Bool;
 	final canonicalKey:String;
+	final constant:TyFieldConstant;
 
 	public function new(owner:TyNominalTypeId, modulePath:String, name:String, type:TyType, isStatic:Bool, isPublic:Bool, isFinal:Bool, isInline:Bool,
-			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "") {
+			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "", ?constant:TyFieldConstant) {
 		this.owner = owner;
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.name = name == null ? "" : StringTools.trim(name);
@@ -35,10 +36,18 @@ class TyFieldInfo {
 		this.propertyGet = propertyGet == null ? "" : StringTools.trim(propertyGet);
 		this.propertySet = propertySet == null ? "" : StringTools.trim(propertySet);
 		this.noImportGlobal = noImportGlobal;
+		this.constant = constant == null ? new TyFieldConstant(Ordinary) : constant;
 		final ownerName = owner == null ? "" : owner.getCanonicalName();
 		canonicalKey = ownerName + "#" + (isStatic ? "static" : "instance") + "#" + this.name;
 		if (ownerName.length == 0 || this.modulePath.length == 0 || this.name.length == 0)
 			throw "typed field information requires owner, module, and field identities";
+		if (this.constant.isEnumValue()
+			&& (!isStatic
+				|| !isInline
+				|| this.propertySet != "never"
+				|| this.type.getNominalIdentity() == null
+				|| this.type.getNominalIdentity().getCanonicalName() != ownerName))
+			throw "enum constant requires an inline read-only field of its owning abstract: " + canonicalKey;
 	}
 
 	public function getOwner():TyNominalTypeId
@@ -83,7 +92,11 @@ class TyFieldInfo {
 	public function getCanonicalKey():String
 		return canonicalKey;
 
+	/** Resolved constant evidence remains attached to this field's dependency identity. */
+	public function getConstant():TyFieldConstant
+		return constant;
+
 	/** Whether another module may compile the initializer value into a reader. **/
 	public function canEmbedCrossModuleValue():Bool
-		return isPublic && isStatic && hasInitializer && (isFinal || isInline);
+		return isPublic && isStatic && (hasInitializer || constant.isEnumValue()) && (isFinal || isInline);
 }

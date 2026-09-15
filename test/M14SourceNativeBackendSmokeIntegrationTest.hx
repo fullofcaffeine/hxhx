@@ -349,9 +349,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				new StringMap(), declarations, Public, false, TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
 		}
 
-		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v5",
+		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v7",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
@@ -396,7 +398,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new StringMap(), new StringMap(), new StringMap(), conflictDeclarations, Public, false);
 		var conflictingClassFactsMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(conflictingInfo, null);
+			new TypedBackendClassSemanticFacts(conflictingInfo, null, []);
 		} catch (error) {
 			conflictingClassFactsMessage = Std.string(error);
 		}
@@ -410,7 +412,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false);
 		var foreignFieldMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(foreignInfo, null);
+			new TypedBackendClassSemanticFacts(foreignInfo, null, []);
 		} catch (error) {
 			foreignFieldMessage = Std.string(error);
 		}
@@ -421,7 +423,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final shortName = classIdentity.indexOf(".") < 0 ? classIdentity : classIdentity.substr(classIdentity.lastIndexOf(".") + 1);
 			final info = new TyClassInfo(new TyNominalTypeId(classIdentity), shortName, moduleIdentity, new StringMap(), new StringMap(), new StringMap(),
 				new StringMap(), new StringMap(), new StringMap(), [], Public, false, superType);
-			return new TypedBackendClassSemanticFacts(info, superType);
+			return new TypedBackendClassSemanticFacts(info, superType, []);
 		}
 
 		final leftBaseType = TyType.nominal(new TyNominalTypeId("unit.Left.Base"), [TyType.fromHintText("String")]);
@@ -490,7 +492,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			HxPos.unknown(), false, true, "unit.GenericBase", false, [shadowParameter]));
 		final genericBaseInfo = new TyClassInfo(genericBaseIdentity, "GenericBase", "unit.GenericBase", genericBaseFields, new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), genericBaseDeclarations, Public, false, null, [genericBaseParameter]);
-		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null);
+		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null, []);
 
 		final genericMiddleIdentity = new TyNominalTypeId("unit.GenericMiddle");
 		final genericMiddleParameter = TyTypeParameterId.nominal(genericMiddleIdentity, 0, "U");
@@ -499,19 +501,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		]);
 		final genericMiddleInfo = new TyClassInfo(genericMiddleIdentity, "GenericMiddle", "unit.GenericMiddle", new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericMiddleSuper, [genericMiddleParameter]);
-		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper);
+		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper, []);
 
 		final genericChildIdentity = new TyNominalTypeId("unit.GenericChild");
 		final genericChildSuper = TyType.nominal(genericMiddleIdentity, [TyType.fromHintText("String")]);
 		final genericChildInfo = new TyClassInfo(genericChildIdentity, "GenericChild", "unit.GenericChild", new StringMap(), new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericChildSuper);
-		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper);
+		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper, []);
 		final unrelatedBaseIdentity = new TyNominalTypeId("other.GenericBase");
 		final unrelatedBaseParameter = TyTypeParameterId.nominal(unrelatedBaseIdentity, 0, "T");
 		final unrelatedBaseFacts = new TypedBackendClassSemanticFacts(new TyClassInfo(unrelatedBaseIdentity, "GenericBase", "other.GenericBase",
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, null,
 			[unrelatedBaseParameter]),
-			null);
+			null, []);
 
 		final specializedGraph = new TypedBackendClassGraph("generic-program-revision",
 			[unrelatedBaseFacts, genericBaseFacts, genericMiddleFacts, genericChildFacts]);
@@ -555,7 +557,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			new TypedBackendClassGraph("generic-program-revision", [
 				genericBaseFacts,
-				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType())
+				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType(), [])
 			]).requireSpecializedLineage("unit.RawChild");
 		} catch (error) {
 			genericArityMessage = Std.string(error);

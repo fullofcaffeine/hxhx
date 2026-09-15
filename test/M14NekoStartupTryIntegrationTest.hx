@@ -60,7 +60,11 @@ class M14NekoStartupTryIntegrationTest {
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(source, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		final program = MacroStage.expandProgram([typed], []);
 
 		final outputDirectory = Path.join([".tmp", "m14_neko_startup_try"]);

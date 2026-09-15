@@ -415,6 +415,17 @@ class TypedBodySource {
 		return continuation;
 	}
 
+	/** Constant embedding must not discard evaluation of a value receiver. */
+	static function constantTypeReceiver(receiver:TypedExpr):Bool {
+		if (receiver.getFieldInfo() != null || receiver.getLocalBindings().length != 0)
+			return false;
+		return switch (receiver.getTag()) {
+			case NameRead: true;
+			case FieldRead: constantTypeReceiver(receiver.getExpressions()[0]);
+			case _: false;
+		};
+	}
+
 	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog):HxExpr {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
@@ -431,7 +442,8 @@ class TypedBodySource {
 			case NameRead:
 				final nameField = typedExpression.getFieldInfo();
 				if (nameField != null) {
-					typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
+					final constant = nameField.getConstant().project();
+					constant != null ? constant : typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
 						nameField.getName()) : EIdent(texts[0]);
 				} else {
 					final identity = typedExpression.getType().getNominalIdentity();
@@ -446,7 +458,10 @@ class TypedBodySource {
 						case _:
 					}
 				}
-				EField(receiver, texts[0]);
+				final constant = field == null ? null : field.getConstant().project();
+				if (constant != null && !constantTypeReceiver(expressions[0]))
+					throw "enum constant read cannot discard a value receiver: " + field.getCanonicalKey();
+				constant == null ? EField(receiver, texts[0]) : constant;
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog), texts[0]);
 			case Call:
 				final callee = expression(expressions[0], catalog);
@@ -458,7 +473,9 @@ class TypedBodySource {
 						throw "typed extension call is missing its exact static declaration";
 					switch (callee) {
 						case EField(receiver, _):
-							ECall(EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
+							TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+								declaration.getSignature().getName(), typedExpression.getType().getDisplay(),
+								EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
 						case _:
 							throw "typed extension call does not retain its receiver field shape";
 					}
@@ -472,13 +489,15 @@ class TypedBodySource {
 						declaration.getIdentity().getCanonicalKey(), declaration.getSignature().getName(), callee, arguments);
 				} else if (declaration == null || declaration.getIsStatic()) {
 					if (declaration != null) {
-						switch (callee) {
+						final ordinary:HxExpr = switch (callee) {
 							case EIdent(_) if (typedExpression.getRequiresOwnerQualification()):
-								ECall(EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName()), arguments);
+								EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName());
 							case EField(EIdent(name), method):
-								ECall(EField(resolvedTypeExpression(name, declaration.getOwner()), method), arguments);
-							case _: ECall(callee, arguments);
-						}
+								EField(resolvedTypeExpression(name, declaration.getOwner()), method);
+							case _: callee;
+						};
+						TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+							declaration.getSignature().getName(), typedExpression.getType().getDisplay(), ordinary, arguments);
 					} else {
 						ECall(callee, arguments);
 					}
@@ -487,7 +506,9 @@ class TypedBodySource {
 						case EField(receiver, method):
 							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
 								method, typedExpression.getType().getDisplay(), receiver, arguments);
-						case EIdent(method) if (typedExpression.getRequiresOwnerQualification()):
+						case EIdent(method):
+							// A selected instance declaration supplies an implicit this
+							// receiver even when no owner-name qualification is needed.
 							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
 								method, typedExpression.getType().getDisplay(), EThis, arguments);
 						case _:
@@ -738,7 +759,7 @@ class TypedBodySource {
 		// including class-parameter binder identities. The older projected
 		// `resolvedExtends` spelling may still contain unresolved type arguments
 		// and must not become a competing backend semantic input.
-		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null);
+		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions());
 		return new TypedBackendClassProjection(declaration, functions, fieldInitializers, semanticFacts);
 	}
 
@@ -750,7 +771,8 @@ class TypedBodySource {
 			throw "typed module projection class count mismatch";
 		final source = parsed.getDecl();
 		final sourceMain = HxModuleDecl.getMainClass(source);
-		var mainClass:Null<HxClassDecl> = null;
+		// Empty class catalogs retain header metadata without inventing a typed class.
+		var mainClass:Null<HxClassDecl> = classes.length == 0 && HxModuleDecl.getClasses(source).length == 0 ? sourceMain : null;
 		for (index in 0...typedClasses.length)
 			if (typedClasses[index].getSourceDeclaration() == sourceMain) {
 				mainClass = classes[index];

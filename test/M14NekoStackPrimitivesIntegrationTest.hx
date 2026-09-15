@@ -73,7 +73,8 @@ class M14NekoStackPrimitivesIntegrationTest {
 		run("haxe", ["-cp", directory, "-main", "Main", "-neko", directory + "/upstream.n"]);
 		if (run("neko", [directory + "/upstream.n"]) != expected)
 			throw "upstream stack contract differs";
-		final program = MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(source, "Main.hx"))], []);
+		final resolved = new ResolvedModule("Main", directory + "/Main.hx", ParserStage.parse(source, directory + "/Main.hx"));
+		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
 		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
 		File.saveContent(split.entryPath, split.entrySource);
