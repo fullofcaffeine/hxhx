@@ -254,14 +254,18 @@ class ResolverStage {
 		Include the installed standard declarations before callers build type signatures.
 
 		Haxe implicitly exposes public types from `StdTypes`, such as `ArrayAccess`.
+		The `Class` declaration gives class values their parameterized `Class<T>` type.
 		Resolve that source through the request's normal provider so class-path selection
 		and source observations apply equally to implicit and explicit modules. Small
 		isolated projects with no standard-library path retain their supplied roots.
 	**/
-	static function withStandardTypesRoot(classPaths:Array<String>, roots:Array<String>, sources:CompilerSourceProvider):Array<String> {
+	static function withStandardTypesRoots(classPaths:Array<String>, roots:Array<String>, sources:CompilerSourceProvider):Array<String> {
 		final selected = roots == null ? [] : roots.copy();
-		if (selected.length > 0 && selected.indexOf("StdTypes") < 0 && sources.resolveModule(classPaths, "StdTypes").filePath != null)
-			selected.push("StdTypes");
+		if (selected.length == 0)
+			return selected;
+		for (modulePath in ["StdTypes", "Class"])
+			if (selected.indexOf(modulePath) < 0 && sources.resolveModule(classPaths, modulePath).filePath != null)
+				selected.push(modulePath);
 		return selected;
 	}
 
@@ -303,7 +307,7 @@ class ResolverStage {
 			return out;
 		}
 
-		for (root in withStandardTypesRoot(classPaths, roots, sources)) {
+		for (root in withStandardTypesRoots(classPaths, roots, sources)) {
 			if (root == null)
 				continue;
 			final modulePath = StringTools.trim(root);
@@ -385,7 +389,7 @@ class ResolverStage {
 		}
 
 		final stack = new Array<String>();
-		for (r in withStandardTypesRoot(classPaths, roots, sources)) {
+		for (r in withStandardTypesRoots(classPaths, roots, sources)) {
 			if (r == null)
 				continue;
 			final m = StringTools.trim(r);

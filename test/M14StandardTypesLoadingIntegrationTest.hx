@@ -26,6 +26,7 @@ class M14StandardTypesLoadingIntegrationTest {
 		FileSystem.createDirectory(root + "/model");
 		FileSystem.createDirectory(root + "/pkg");
 		File.saveContent(root + "/model/ArrayAccess.hx", "package model; class ArrayAccess<T> {}");
+		File.saveContent(root + "/model/Class.hx", "package model; class Class<T> {}");
 		final cases = [
 			{
 				name: "Plain",
@@ -46,6 +47,12 @@ class M14StandardTypesLoadingIntegrationTest {
 				identity: "model.ArrayAccess"
 			},
 			{
+				name: "ClassImported",
+				prefix: "import model.Class;",
+				expected: "null",
+				identity: "StdTypes.ArrayAccess"
+			},
+			{
 				name: "pkg.Local",
 				prefix: "package pkg; class ArrayAccess<T> {}",
 				expected: "pkg.ArrayAccess",
@@ -61,7 +68,8 @@ class M14StandardTypesLoadingIntegrationTest {
 				scenario.prefix
 				+ " class "
 				+ shortName
-				+ " { static var target:ArrayAccess<Int>; static function main() { Sys.println(Type.getClassName(ArrayAccess)); } }");
+				+
+				" { static var target:ArrayAccess<Int>; static var classTarget:Class<ArrayAccess<Int>>; static function main() { Sys.println(Type.getClassName(ArrayAccess)); } }");
 			final binary = root + "/" + shortName + ".n";
 			run("haxe", ["-cp", root, "-main", scenario.name, "-neko", binary]);
 			check(run("neko", [binary]) == scenario.expected + "\n", "upstream namespace contract changed: " + scenario.name);
@@ -78,7 +86,7 @@ class M14StandardTypesLoadingIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		// Index the unrelated namesake too: a global short-name guess cannot prove visibility.
-		final roots = [for (scenario in cases) scenario.name].concat(["model.ArrayAccess"]);
+		final roots = [for (scenario in cases) scenario.name].concat(["model.ArrayAccess", "model.Class"]);
 		for (shallow in [true, false]) {
 			final modules = shallow ? ResolverStage.parseProjectRootsShallow(paths, roots, defines) : ResolverStage.parseProjectRoots(paths, roots, defines);
 			final standardModules = [
@@ -108,6 +116,16 @@ class M14StandardTypesLoadingIntegrationTest {
 				final fields = [for (field in owner.getFieldInfos()) if (field.getName() == "target") field];
 				check(fields.length == 1 && fields[0].getType().getSemanticKey() == "nominal:" + scenario.identity + "<primitive:Int>",
 					"initial signature lost the selected standard type: " + scenario.name);
+				final classFields = [for (field in owner.getFieldInfos()) if (field.getName() == "classTarget") field];
+				final classIdentity = scenario.name == "ClassImported" ? "model.Class" : "Class";
+				check(classFields.length == 1
+					&& classFields[0].getType().getSemanticKey() == "nominal:"
+						+ classIdentity
+						+ "<nominal:"
+						+ scenario.identity
+						+ "<primitive:Int>>",
+					"initial Class signature lost default/import precedence: "
+					+ scenario.name);
 				if (scenario.name == "Aliased") {
 					final alias = index.resolveTypePath("Custom", "", directives, null, scenario.name);
 					check(alias != null && alias.getFullName() == "model.ArrayAccess", "alias lost its ordinary provider");

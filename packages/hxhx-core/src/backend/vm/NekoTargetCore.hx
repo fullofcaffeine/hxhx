@@ -599,7 +599,8 @@ class NekoTargetCore {
 		}
 		final staticCall = NekoExactStaticCallPlan.fromExpression(context.typedProgram, expr);
 		if (staticCall != null) {
-			addStatic(exactHelperClass(context, staticCall.selected), staticCall.selected.body.getDeclaration());
+			if (!NekoRuntimeTypeRegistry.ownsPredicate(staticCall.selected))
+				addStatic(exactHelperClass(context, staticCall.selected), staticCall.selected.body.getDeclaration());
 			for (argument in staticCall.call.arguments)
 				collectExprRefs(context, argument, addConstructor, addStatic);
 			return;
@@ -2454,6 +2455,11 @@ class NekoTargetCore {
 			case _:
 		}
 		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
+		if (NekoRuntimeTypeRegistry.ownsPredicate(selectedStatic)) {
+			if (renderedArgs.length != 2)
+				throw "Neko standard type predicate requires exactly two arguments";
+			return context.typedProgram.runtimeHelperName("__hxhx_is_of_type") + "(" + renderedArgs.join(", ") + ")";
+		}
 		final declaredMember = switch (callee) {
 			case EIdent(name) if (context.currentClass != null && !isLocalName(context, name)): isCurrentStaticFunction(context,
 					name) || lookupMutableStaticMemberOwner(context, context.currentClass.fullName,

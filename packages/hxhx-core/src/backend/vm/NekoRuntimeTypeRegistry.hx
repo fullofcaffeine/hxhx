@@ -1,5 +1,19 @@
 package backend.vm;
 
+import backend.vm.NekoTypedProgramProjection.NekoProjectedFunction;
+
+/**
+	Select the standard predicate by its complete typed declaration identity.
+
+	Aliases retain this identity; same-spelled user methods do not. Both call
+	emission and executable reachability use this decision, because the native
+	predicate replaces the selected provider body while preserving its arguments.
+**/
+function ownsPredicate(selected:Null<NekoProjectedFunction>):Bool {
+	return selected != null
+		&& selected.body.getStableIdentity() == "Std#static:isOfType(required:dynamic,required:dynamic)->primitive:Bool#0";
+}
+
 /** Runtime representations supported by this target's class-object registry. */
 private enum abstract RegistryKind(String) {
 	var NominalClass = "class";

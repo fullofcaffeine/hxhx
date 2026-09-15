@@ -325,7 +325,7 @@ class TyperIndex {
 		if (raw.length == 0)
 			return null;
 		final currentModulePath = canonicalModulePath(packagePath, moduleName);
-		if (identityByFullName.exists(raw)) {
+		if (raw.indexOf(".") >= 0 && identityByFullName.exists(raw)) {
 			final direct = identityByFullName.get(raw);
 			if (identityVisibleFromModule(direct, currentModulePath))
 				return direct;
@@ -380,6 +380,11 @@ class TyperIndex {
 			final packageIdentity = identityByFullName.get(inPackage);
 			if (identityVisibleFromModule(packageIdentity, currentModulePath))
 				return packageIdentity;
+		}
+		if (identityByFullName.exists(raw)) {
+			final rootIdentity = identityByFullName.get(raw);
+			if (identityVisibleFromModule(rootIdentity, currentModulePath))
+				return rootIdentity;
 		}
 		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
 		if (standardIdentity != null)
@@ -892,6 +897,11 @@ class TyperIndex {
 				current = current.substr(0, dot);
 			}
 		}
+		// Root-package declarations have their own scope. An alias for a different
+		// package's namesake must not hide them through the global fallback guard.
+		final rootType = getByFullName(raw);
+		if (typeVisibleFromModule(rootType, currentModulePath))
+			return rootType;
 		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
 		if (standardIdentity != null)
 			return getByFullName(standardIdentity.getCanonicalName());
