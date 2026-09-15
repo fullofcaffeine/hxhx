@@ -74,6 +74,17 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Runtime-use process cleanup
+
+Run `node scripts/ci/reflaxe-ocaml-runtime-use-authority-runner-fixture-test.js`
+to check timeout and process-tree cleanup without compiling Haxe fixtures.
+The test observes parent and grandchild readiness before advancing its test
+clock. It covers delayed startup and startup failure with real child processes.
+A separate real-clock case checks the production timeout path without readiness.
+
+This fixture belongs to `npm run test:reflaxe-ocaml:runtime-use-authority`.
+The production runner still measures its phase deadline from process creation.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime
