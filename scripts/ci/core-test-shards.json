@@ -140,6 +140,7 @@
     "test:m14:neko-typed-local-projection": "compiler-focused",
     "test:m14:lua-typed-local-projection": "compiler-focused",
     "test:m14:cs-typed-dynamic-local-projection": "compiler-focused",
+    "test:m14:python-static-fields": "compiler-focused",
     "test:m14:typed-abstract-unary": "compiler-focused",
     "test:m14:typed-abstract-binary": "compiler-focused",
     "test:m14:abstract-unary-cross-backend": "compiler-focused",
