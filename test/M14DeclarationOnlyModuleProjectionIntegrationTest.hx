@@ -17,23 +17,23 @@ class M14DeclarationOnlyModuleProjectionIntegrationTest {
 			throw "the typedef lost its semantic declaration";
 		if (record.module.getClasses().length != 1 || HxClassDecl.getName(record.module.getClasses()[0].getDeclaration()) != "Record")
 			throw "the typedef catalog contains an invented class";
-		new NekoTypedProgramProjection([record.module]).requireClass("Record");
+		new NekoTypedProgramProjection("neko-projection-test", [record.module]).requireClass("Record");
 		if (record.module.getClasses()[0].requireSemanticFacts().findField("Record#instance#count") == null)
 			throw "the typedef lost its structural field facts";
 		for (result in [project("", "Empty"), project("import haxe.Json;", "Imports")]) {
 			if (result.module.getClasses().length != 0)
 				throw "a declaration-only module gained an invented runtime class";
-			new NekoTypedProgramProjection([result.module]);
+			new NekoTypedProgramProjection("neko-projection-test", [result.module]);
 		}
 		final actual = project("class Unknown { public function new() {} } class Helper {}", "Unknown");
 		if (actual.module.getClasses().length != 2)
 			throw "a real class named Unknown was removed";
-		new NekoTypedProgramProjection([actual.module]).requireClass("Unknown");
-		new NekoTypedProgramProjection([actual.module]).requireClass("Unknown.Helper");
+		new NekoTypedProgramProjection("neko-projection-test", [actual.module]).requireClass("Unknown");
+		new NekoTypedProgramProjection("neko-projection-test", [actual.module]).requireClass("Unknown.Helper");
 		final entry = project("function main():Void { Sys.println(42); }", "Entry");
 		if (entry.module.getClasses().length != 1 || entry.module.getClasses()[0].getFunctions().length != 1)
 			throw "the module-level entrypoint lost its callable declaration";
-		new NekoTypedProgramProjection([entry.module]);
+		new NekoTypedProgramProjection("neko-projection-test", [entry.module]);
 		Sys.println("DECLARATION_ONLY_MODULE_PROJECTION:PASS");
 	}
 }

@@ -37,7 +37,7 @@ class M14NekoTypedProgramProjectionIntegrationTest {
 		final source = 'enum abstract Flavor(String) { var Bold = "strong"; public function label():String return this; }
 class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }';
 		final module = project(source);
-		final projection = new NekoTypedProgramProjection([module]);
+		final projection = new NekoTypedProgramProjection("neko-projection-test", [module]);
 		final owner = projection.requireClass("Main.Flavor");
 		final bold = owner.requireSemanticFacts().findField("Main.Flavor#static#Bold");
 		if (bold == null || bold.typeIdentity != TyType.nominal(new TyNominalTypeId("Main.Flavor"), []).getSemanticKey())
@@ -60,7 +60,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		expectFailure("cannot find class Flavor", () -> projection.requireClass("Flavor"));
 		expectFailure("does not belong to Main", () -> projection.requireFunction("Main", declaration));
 		expectFailure("cannot find function missing", () -> projection.requireFunction("Main.Flavor", "missing"));
-		expectFailure("duplicate class", () -> new NekoTypedProgramProjection([module, module]));
+		expectFailure("duplicate class", () -> new NekoTypedProgramProjection("neko-projection-test", [module, module]));
 		final exact = TypedExactCallSource.encodeInstance("Main.Flavor", declaration, "label", "String", EString("strong"), []);
 		final call = NekoExactCallPlan.fromExpression(projection, exact);
 		if (call == null || call.selected.body != selected.body || call.getArguments().length != 0)
@@ -98,7 +98,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 	/** Static calls must bind their exact owner and reject malformed transport records. */
 	static function assertStaticCallBoundary():Void {
 		final module = project("class Api { public static function value():Int return 7; } class Main { static function main():Void {} }");
-		final program = new NekoTypedProgramProjection([module]);
+		final program = new NekoTypedProgramProjection("neko-projection-test", [module]);
 		final declaration = "Main.Api#static:value()->primitive:Int#0";
 		final sourceCall:HxExpr = EField(EIdent("Api"), "value");
 		final encoded = TypedExactStaticCallSource.encode("Main.Api", declaration, "value", "Int", sourceCall, []);
@@ -267,9 +267,9 @@ public static var ordinary:Int = 9; public function label():String { final local
 	/** Constructors, explicit contracts, and foreign bodies must not be mistaken for inferred method results. */
 	static function assertResultBoundaries():Void {
 		final constructorModule = project('class Main { public function new() {} static function main():Void {} }');
-		new NekoTypedProgramProjection([constructorModule]);
+		new NekoTypedProgramProjection("neko-projection-test", [constructorModule]);
 		final explicitConstructor = project('class Main { public var value:Int; public function new(value:Int):Void { this.value = value; } static function main():Void {} }');
-		new NekoTypedProgramProjection([explicitConstructor]);
+		new NekoTypedProgramProjection("neko-projection-test", [explicitConstructor]);
 		final typed = typeSource('class Main { static function answer():String { return "ok"; } }').getTypedClasses()[0];
 		final fn = typed.getFunctions()[0];
 		final wrongEnvironment = fn.getEnvironment().withReturnTypes(TyType.fromHintText("Int"), TyType.fromHintText("Int"));
@@ -280,7 +280,7 @@ public static var ordinary:Int = 9; public function label():String { final local
 		final foreign = typeSource('class Main { static function answer():String { return "foreign"; } }').getTypedClasses()[0].getFunctions()[0];
 		expectFailure("foreign function result", () -> new TypedBackendClassSemanticFacts(typed.getSemanticInfo(), null, [foreign]));
 		final externModule = project('extern class Service { static function label():String; } class Main {}');
-		final externFacts = new NekoTypedProgramProjection([externModule]).requireClass("Main.Service").requireSemanticFacts();
+		final externFacts = new NekoTypedProgramProjection("neko-projection-test", [externModule]).requireClass("Main.Service").requireSemanticFacts();
 		final method = externFacts.findMethod("Main.Service#static:label()->primitive:String#0");
 		if (method == null || method.hasBody || method.returnTypeIdentity != "primitive:String")
 			throw "bodyless method lost its declared String result";
@@ -308,7 +308,7 @@ public static var ordinary:Int = 9; public function label():String { final local
 	/** Unannotated functions must retain the same inferred result in declaration and body facts. */
 	static function assertInferredResults():Void {
 		final module = project('class Main { static function main() {} static function answer() { return 42; } }');
-		final projection = new NekoTypedProgramProjection([module]);
+		final projection = new NekoTypedProgramProjection("neko-projection-test", [module]);
 		final owner = projection.requireClass("Main");
 		for (body in owner.getFunctions()) {
 			final name = HxFunctionDecl.getName(body.getDeclaration());
@@ -329,7 +329,7 @@ public static var ordinary:Int = 9; public function label():String { final local
 		];
 		final facts = [
 			for (source in variants)
-				new NekoTypedProgramProjection([project(source)]).requireClass("Main.Value").requireSemanticFacts()
+				new NekoTypedProgramProjection("neko-projection-test", [project(source)]).requireClass("Main.Value").requireSemanticFacts()
 		];
 		if (!facts[0].getNominalKind().match(ClassInstance) || !facts[1].getNominalKind().match(EnumValue))
 			throw "ordinary class and enum declarations lost their distinct receiver kinds";
@@ -337,9 +337,8 @@ public static var ordinary:Int = 9; public function label():String { final local
 			for (j in i + 1...facts.length)
 				if (facts[i].getCanonicalIdentity() == facts[j].getCanonicalIdentity())
 					throw "a declaration kind or abstract backing-type change reused the same class facts";
-		final generic = new NekoTypedProgramProjection([project('class Backing<T> {} abstract Value<T>(Backing<T>) {} class Main {}')])
-			.requireClass("Main.Value")
-			.requireSemanticFacts();
+		final generic = new NekoTypedProgramProjection("neko-projection-test",
+			[project('class Backing<T> {} abstract Value<T>(Backing<T>) {} class Main {}')]).requireClass("Main.Value").requireSemanticFacts();
 		switch (generic.getNominalKind()) {
 			case AbstractValue(underlying):
 				final expected = TyType.nominal(new TyNominalTypeId("Main.Backing"), [TyType.typeParameter(generic.getTypeParameterIds()[0])]);

@@ -252,6 +252,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 				cls: abstractClass
 			},
 			symbolTable: null,
+			packFunctionArguments: false,
 			locals: new haxe.ds.StringMap<Bool>(),
 			insideTry: false,
 			breakFlag: null
@@ -262,7 +263,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"abstract property getters must not treat the wrapper object as this");
 
 		final enumAbstractProgram = program('enum abstract Arch(String) { final Arm64; final Arm; final X86; final X86_64; public function getNdllSuffix():String { return switch this { case "Arm64": "Arm64"; case "Arm": "Arm"; case "X86_64": "64"; default: ""; }; } } class Main { static function main() { var arch = Arch.X86_64; var suffix = arch.getNdllSuffix(); Sys.println(suffix); } }');
-		final enumProjection = new backend.vm.NekoTypedProgramProjection([
+		final enumProjection = new backend.vm.NekoTypedProgramProjection("neko-projection-test", [
 			for (module in enumAbstractProgram.getTypedModules())
 				module.getBackendProjection()
 		]);
@@ -434,6 +435,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			currentClass: null,
 			selfName: "__hxhx_self",
 			symbolTable: null,
+			packFunctionArguments: false,
 			locals: new haxe.ds.StringMap<Bool>(),
 			insideTry: false,
 			breakFlag: null
@@ -475,7 +477,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceSource, "var __hxhx_coalesce = value;", "expected Neko null-coalescing lowering to capture the left value once");
-		assertContains(nullCoalesceSource, "return __hxhx_exact_helpers.Main_fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
+		assertContains(nullCoalesceSource, "return __hxhx_symbols.Main_fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
 		assertNotContains(nullCoalesceSource, "??", "null-coalescing syntax should not leak into Neko source");
 
 		deleteRecursive(outDir);
@@ -486,7 +488,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceAssignSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceAssignSource, "if (value == null)", "expected Neko null-coalescing assignment to check the target");
-		assertContains(nullCoalesceAssignSource, "value = __hxhx_exact_helpers.Main_fallback();",
+		assertContains(nullCoalesceAssignSource, "value = __hxhx_symbols.Main_fallback();",
 			"expected Neko null-coalescing assignment to update the target lazily");
 		assertContains(nullCoalesceAssignSource, "return value;", "expected Neko null-coalescing assignment expression to return the resulting target");
 		assertNotContains(nullCoalesceAssignSource, "??=", "null-coalescing assignment syntax should not leak into Neko source");
@@ -843,7 +845,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(instanceSource, "__hxhx_symbols.__hxhx_new_Runner = function()", "expected known constructor factory");
 		assertContains(instanceSource, "__hxhx_self.addCase = function(value)", "expected instance method closure on object");
 		assertContains(instanceSource, "$print(value, \"\\n\")", "expected method body lowering");
-		assertContains(instanceSource, "var runner = __hxhx_new_Runner();", "expected known constructor call lowering");
+		assertContains(instanceSource, "var runner = __hxhx_symbols.__hxhx_new_Runner();", "expected known constructor call lowering");
 		assertContains(instanceSource, "__hxhx_field(runner, \"addCase\")(\"case\");", "expected instance method call to use property-aware field reads");
 
 		deleteRecursive(outDir);
@@ -853,15 +855,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Dispatcher { public function new() {} public function add(handler) {} } class Runner { public var onProgress:Dispatcher; public function new() { onProgress = new Dispatcher(); } } class Main { static function main() { var runner = new Runner(); runner.onProgress.add(function(_) return null); } }'),
 			context);
 		final instanceFieldSource = File.getContent(sourcePath);
-		assertContains(instanceFieldSource, "var __hxhx_assign_tmp = __hxhx_new_Dispatcher();",
+		assertContains(instanceFieldSource, "var __hxhx_assign_tmp = __hxhx_symbols.__hxhx_new_Dispatcher();",
 			"expected constructor-call assignment RHS to split through a temp");
 		assertContains(instanceFieldSource, "__hxhx_self.onProgress = __hxhx_assign_tmp;",
 			"expected split constructor assignment to target the instance field");
 		assertContains(instanceFieldSource, "__hxhx_field(__hxhx_field(runner, \"onProgress\"), \"add\")(function(_) { return null; });",
 			"expected initialized instance field method call to stay property-aware and qualified");
-		assertNotContains(instanceFieldSource, "(onProgress = __hxhx_new_Dispatcher())",
+		assertNotContains(instanceFieldSource, "(onProgress = __hxhx_symbols.__hxhx_new_Dispatcher())",
 			"constructor field assignment must not become an unqualified local assignment");
-		assertNotContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_new_Dispatcher())",
+		assertNotContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_symbols.__hxhx_new_Dispatcher())",
 			"constructor-call assignment must avoid the direct assignment-call shape that Neko rejects");
 
 		deleteRecursive(outDir);
@@ -909,7 +911,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final superCtorSource = File.getContent(sourcePath);
 		assertContains(superCtorSource, "__hxhx_symbols.__hxhx_new_Child = function()", "expected child constructor factory");
-		assertContains(superCtorSource, "null;", "expected bare super constructor call to lower to no-op placeholder");
+		assertContains(superCtorSource, "__hxhx_symbols.__hxhx_init_" + haxe.crypto.Sha256.encode("Main.Base") + "(__hxhx_self);",
+			"expected the canonical base initializer to receive the existing object");
 
 		deleteRecursive(outDir);
 
@@ -987,7 +990,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final bytesSubTryExprSource = File.getContent(sourcePath);
 		assertContains(bytesSubTryExprSource, "__hxhx_symbols.__hxhx_new_Bytes = function(length, data)", "expected Bytes constructor factory");
-		assertContains(bytesSubTryExprSource, "try { return __hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
+		assertContains(bytesSubTryExprSource,
+			"try { return __hxhx_symbols.__hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
 			"expected structural try/catch around the native slice and local Bytes constructor");
 
 		deleteRecursive(outDir);
