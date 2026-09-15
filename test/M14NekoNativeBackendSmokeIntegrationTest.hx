@@ -242,6 +242,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final abstractThisContext = {
 			classes: null,
 			typedProgram: null,
+			currentFunction: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap<Bool>(),
 			directAbstractReceiver: false,
@@ -429,6 +430,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final postfixThisSource = @:privateAccess NekoTargetCore.renderExpr({
 			classes: null,
 			typedProgram: null,
+			currentFunction: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap<Bool>(),
 			directAbstractReceiver: false,

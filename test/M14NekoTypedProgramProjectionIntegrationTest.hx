@@ -57,6 +57,11 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			throw "the selected helper lost its canonical owner or declaration";
 		if (selected.body.getReturnType().getCanonicalDisplay() != "String" || selected.body.getBody().length == 0)
 			throw "the selected helper lost its typed result or body";
+		if (projection.requireDeclaredFunction(selected.body.getDeclaration()).body != selected.body)
+			throw "function rendering lost its exact projected body";
+		final repeated = new NekoTypedProgramProjection("neko-projection-test", [project(source)]);
+		final foreignDeclaration = repeated.requireFunction("Main.Flavor", declaration).body.getDeclaration();
+		expectFailure("cannot identify projected function", () -> projection.requireDeclaredFunction(foreignDeclaration));
 		expectFailure("cannot find class Flavor", () -> projection.requireClass("Flavor"));
 		expectFailure("does not belong to Main", () -> projection.requireFunction("Main", declaration));
 		expectFailure("cannot find function missing", () -> projection.requireFunction("Main.Flavor", "missing"));

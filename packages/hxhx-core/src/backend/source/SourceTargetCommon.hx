@@ -343,6 +343,7 @@ class SourceTargetCommon {
 	}
 
 	public static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		if (target == Php)
 			return emitPhpTarget(program, context);
 		final maybeMain = findMainModule(program, context);
@@ -389,6 +390,7 @@ class SourceTargetCommon {
 		renderer used by this request.
 	**/
 	public static function emitPhpTarget(program:GenIrProgram, context:BackendContext):EmitResult {
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "PHP backend");
 		final main = mainModule(program, context);
 		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(main.cls));
 		final strictProjection = strictTypedMainProjection(program, main);

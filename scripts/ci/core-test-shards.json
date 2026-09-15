@@ -134,6 +134,7 @@
     "test:m14:parser-stage-scan-expression-body": "compiler-focused",
     "test:m14:typer-abstract-catalog": "compiler-focused",
     "test:m14:typed-body-boundary": "compiler-focused",
+    "test:m14:runtime-type-operands": "compiler-focused",
     "test:m14:typed-local-identity": "compiler-focused",
     "test:m14:js-typed-local-projection": "compiler-focused",
     "test:m14:neko-typed-local-projection": "compiler-focused",

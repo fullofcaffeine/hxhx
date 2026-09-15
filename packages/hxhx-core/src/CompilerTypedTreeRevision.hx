@@ -22,7 +22,7 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v3");
+		facts.push("typed-function-body-v4");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
@@ -41,7 +41,7 @@ class CompilerTypedTreeRevision {
 		if (ownerIdentity == null || ownerIdentity.length == 0)
 			throw "typed expression revision requires an owner identity";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-expression-v3");
+		facts.push("typed-expression-v4");
 		facts.push(ownerIdentity);
 		addExpression(facts, expression);
 		return CompilerCacheIdentity.encode(facts);
@@ -79,6 +79,9 @@ class CompilerTypedTreeRevision {
 		}
 		out.push("expression:" + expressionTagName(expression.getTag()));
 		out.push(expression.getType().getSemanticKey());
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		out.push(runtimeTarget == null ? null : runtimeTarget.getSemanticKey());
+		out.push(runtimeTarget == null ? null : runtimeTarget.getSourceSpelling());
 		addStrings(out, expression.getTexts());
 		out.push(expression.getBoolValue() ? "true" : "false");
 		out.push(Std.string(expression.getIntValue()));
@@ -222,6 +225,8 @@ class CompilerTypedTreeRevision {
 			case IntValue: "int";
 			case FloatValue: "float";
 			case EnumValue: "enum";
+			case RuntimeTypeValue: "runtime-type-value";
+			case RuntimeTypeTest: "runtime-type-test";
 			case ThisValue: "this";
 			case SuperValue: "super";
 			case LocalRead: "local-read";

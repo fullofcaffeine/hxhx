@@ -14,6 +14,10 @@ typedef NekoClassInfo = {
 typedef NekoEmitContext = {
 	var classes:StringMap<NekoClassInfo>;
 	var typedProgram:NekoTypedProgramProjection;
+
+	/** Exact enclosing function; null only for code outside a projected function body. */
+	var currentFunction:Null<NekoProjectedFunction>;
+
 	var abstractHelpers:Array<NekoProjectedFunction>;
 	var abstractHelperIds:StringMap<Bool>;
 	var directAbstractReceiver:Bool;

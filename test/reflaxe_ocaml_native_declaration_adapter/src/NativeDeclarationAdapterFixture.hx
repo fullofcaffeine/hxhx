@@ -42,6 +42,12 @@ class NativeDeclarationAdapterFixture {
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
+		final runtimeTarget = new TypedRuntimeTypeTarget(owner);
+		final typeValue = TypedExpr.runtimeTypeValue(runtimeTarget, HxPos.unknown());
+		final typeTest = TypedExpr.runtimeTypeTest(TypedExpr.nullValue(TyType.fromHintText("Dynamic"), HxPos.unknown()), runtimeTarget, HxPos.unknown());
+		if (HxhxOcamlTargetLiteralAdapter.fromExpression(typeValue) != null
+			|| HxhxOcamlTargetLiteralAdapter.fromExpression(typeTest) != null)
+			throw "native literal adapter must not reinterpret runtime type operations as literals";
 		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
 		final binding = new TyLocalBinding(localId, "value", TyType.fromHintText("Int"), Variable);
 		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", binding, "root/block-item/0/binding");

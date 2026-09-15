@@ -25,6 +25,7 @@ class NekoTypedProgramProjection {
 	final classes = new StringMap<TypedBackendClassProjection>();
 	final classIdentities = new haxe.ds.ObjectMap<HxClassDecl, String>();
 	final functions = new StringMap<NekoProjectedFunction>();
+	final functionDeclarations = new haxe.ds.ObjectMap<HxFunctionDecl, String>();
 	final symbols = new StringMap<String>();
 	final occupiedNames = new StringMap<Bool>();
 
@@ -61,6 +62,7 @@ class NekoTypedProgramProjection {
 					if (symbols.exists(symbol) && symbols.get(symbol) != declaration)
 						throw "Neko exact declaration symbol collision for " + declaration;
 					symbols.set(symbol, declaration);
+					functionDeclarations.set(body.getDeclaration(), declaration);
 					functions.set(declaration, {
 						owner: owner,
 						body: body,
@@ -116,6 +118,24 @@ class NekoTypedProgramProjection {
 		if (owner == null)
 			throw "Neko typed program cannot find class " + identity;
 		return owner;
+	}
+
+	/**
+		Selects the typed body for the exact declaration object being rendered.
+
+		A matching name or signature from another projection cannot supply local
+		bindings or a body revision for this program's catch and function plans.
+	**/
+	public function requireDeclaredFunction(declaration:HxFunctionDecl):NekoProjectedFunction {
+		if (declaration == null)
+			throw "Neko typed program cannot identify projected function <null>";
+		final identity = functionDeclarations.get(declaration);
+		if (identity == null)
+			throw "Neko typed program cannot identify projected function " + HxFunctionDecl.getName(declaration);
+		final selected = functions.get(identity);
+		if (selected == null || selected.body.getDeclaration() != declaration)
+			throw "Neko typed program lost projected function " + identity;
+		return requireFunction(selected.owner.requireSemanticFacts().getClassIdentity(), identity);
 	}
 
 	/** Requires the selected declaration to belong to the selected exact owner. */

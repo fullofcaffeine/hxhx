@@ -314,8 +314,13 @@ class TyperStage {
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
-			final typeResolver:TypedExprTypeResolver = function(expression, position, lexicalEnvironment) {
-				return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+			final typeResolver:TypedExprTypeResolver = {
+				expressionType: function(expression, position, lexicalEnvironment) {
+					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+				},
+				runtimeTypeTarget: function(expression, lexicalEnvironment, namespace) {
+					return TypedRuntimeTypeResolver.resolve(expression, lexicalEnvironment, context, namespace);
+				}
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
 				final inferenceEnvironment = lexicalEnvironment.copyForInference();
@@ -355,7 +360,7 @@ class TyperStage {
 				if (field == null)
 					return null;
 				final importedBareField = switch (expression) {
-					case EIdent(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
+					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.fieldInfo(name) == null) && context.importedStaticField(name) == field;
 					case _: false;
 				};
@@ -1326,7 +1331,7 @@ class TyperStage {
 		return candidates.length == 1 ? functionReferenceType(candidates[0]) : null;
 	}
 
-	/** Resolve a bare field in the current class before treating an uppercase name as a type. **/
+	/** Return the current class field selected by ordinary value lookup. **/
 	static function currentFieldReferenceType(name:String, ctx:TyperContext):Null<TyType> {
 		final current = ctx.currentClass();
 		return current == null ? null : current.fieldType(name);
@@ -1341,7 +1346,7 @@ class TyperStage {
 	**/
 	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyFieldInfo> {
 		return switch (expression) {
-			case EIdent(name):
+			case EIdent(name) | EEnumValue(name):
 				if (scope.resolveSymbol(name) != null) {
 					null;
 				} else {
@@ -1375,6 +1380,9 @@ class TyperStage {
 	}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		final runtimeTarget = TypedRuntimeTypeResolver.resolve(expr, scope, ctx, ValueExpression);
+		if (runtimeTarget != null)
+			return runtimeTarget.getValueType();
 		return switch (expr) {
 			case ENull:
 				TyType.fromHintText("Null");
@@ -1386,16 +1394,12 @@ class TyperStage {
 				TyType.fromHintText("Int");
 			case EFloat(_):
 				TyType.fromHintText("Float");
-			case EEnumValue(_):
-				// Bring-up: model enum-like tags as strings so switch dispatch can work
-				// without a real enum/abstract runtime.
-				TyType.fromHintText("String");
 			case EThis:
 				currentThisType(ctx);
 			case ESuper:
 				// Stage 3: `super` typing requires class hierarchy (future stage).
 				TyType.unknown();
-			case EIdent(name):
+			case EIdent(name) | EEnumValue(name):
 				final sym = scope.resolveSymbol(name);
 				if (sym != null) {
 					sym.getType();
@@ -1403,9 +1407,6 @@ class TyperStage {
 					final fieldType = currentFieldReferenceType(name, ctx);
 					final importedField = fieldType == null ? ctx.importedStaticField(name) : null;
 					final currentMethod = fieldType == null && importedField == null ? currentStaticMethodReferenceType(name, ctx) : null;
-					// Only upper-start simple identifiers can be unqualified Haxe type names in this
-					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
-					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
 					final methodRef = currentMethod == null
 						&& fieldType == null
 						&& importedField == null ? importedStaticMethodReferenceType(name, ctx) : currentMethod;
@@ -1416,8 +1417,12 @@ class TyperStage {
 					} else if (methodRef != null) {
 						methodRef;
 					} else {
-						final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
-						t != null ? TyType.nominal(t.getIdentity(), [], t.getFullName()) : TyType.unknown();
+						// Runtime class values were resolved above. Preserve the existing enum
+						// constructor path until its separate typed-enum owner replaces it.
+						switch (expr) {
+							case EEnumValue(_): TyType.fromHintText("String");
+							case _: TyType.unknown();
+						}
 					}
 				}
 			case EField(obj, _field):
@@ -1852,6 +1857,11 @@ class TyperStage {
 				}
 			case EBinop(op, a, b):
 				switch (op) {
+					case "is":
+						inferExprType(a, scope, ctx, pos);
+						if (TypedRuntimeTypeResolver.resolve(b, scope, ctx, TypeOperand) == null)
+							throw new TyperError(ctx.getFilePath(), pos, "runtime type test requires a resolved target");
+						TyType.fromHintText("Bool");
 					case "??":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);

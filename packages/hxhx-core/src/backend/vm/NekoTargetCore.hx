@@ -211,6 +211,7 @@ class NekoTargetCore {
 		final emitContext:NekoEmitContext = {
 			classes: classMap,
 			typedProgram: typedProgram,
+			currentFunction: null,
 			abstractHelpers: [],
 			abstractHelperIds: new StringMap(),
 			directAbstractReceiver: false,
@@ -256,6 +257,7 @@ class NekoTargetCore {
 		final emitContext:NekoEmitContext = {
 			classes: buildClassMap(modules),
 			typedProgram: typedProgram,
+			currentFunction: null,
 			abstractHelpers: [],
 			abstractHelperIds: new StringMap(),
 			directAbstractReceiver: false,
@@ -372,7 +374,13 @@ class NekoTargetCore {
 		lookup and render step sees the same local-binding projection.
 	**/
 	static function strictModuleProjections(program:GenIrProgram):Array<TypedBackendModuleProjection>
-		return [for (typed in program.getTypedModules()) typed.getBackendProjection()];
+		return [
+			for (typed in program.getTypedModules()) {
+				final projection = typed.getBackendProjection();
+				projection.assertRuntimeTypeOperandsAbsent("Neko backend");
+				projection;
+			}
+		];
 
 	static function findMain(modules:Array<TypedBackendModuleProjection>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> = null;
@@ -2681,6 +2689,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
+			currentFunction: context.currentFunction,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: context.directAbstractReceiver,
@@ -2716,7 +2725,9 @@ class NekoTargetCore {
 		final names = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			names.push(arg.name);
-		return withLocals(context, names);
+		final next = withLocals(context, names);
+		next.currentFunction = context.typedProgram.requireDeclaredFunction(fn);
+		return next;
 	}
 
 	static function withInsideTry(context:NekoEmitContext):NekoEmitContext {
@@ -2743,6 +2754,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
+			currentFunction: context.currentFunction,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: false,
@@ -2760,6 +2772,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
+			currentFunction: context.currentFunction,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: context.directAbstractReceiver,

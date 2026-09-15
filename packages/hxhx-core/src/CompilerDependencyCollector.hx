@@ -95,6 +95,9 @@ class CompilerDependencyCollector {
 		if (expression == null)
 			return;
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		if (runtimeTarget != null)
+			collectType(edgeByKey, consumerModule, index, runtimeTarget.getInstanceType(), "runtime-type-target", staticInitializer);
 		collectConstantRead(edgeByKey, consumerModule, index, currentOwner, expression);
 		final field = resolvedFieldRead(index, currentOwner, expression);
 		if (field != null)
@@ -151,6 +154,8 @@ class CompilerDependencyCollector {
 			case FloatValue:
 				null;
 			case EnumValue:
+				null;
+			case RuntimeTypeValue | RuntimeTypeTest:
 				null;
 			case ThisValue:
 				null;
