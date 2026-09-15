@@ -15,7 +15,7 @@ private function expression(value:TypedExpr):TypedExpr {
 	final rebuilt = value.withExpressions(children);
 	final field = rebuilt.getFieldInfo();
 	if (rebuilt.getTag() == NameRead && field != null && field.getIsStatic())
-		return TypedExpr.nameRead(rebuilt.getTexts()[0], rebuilt.getType(), rebuilt.getPosition(), field, true);
+		return TypedExpr.fieldRead(ownerReference(field.getOwner(), rebuilt.getPosition()), field.getName(), rebuilt.getType(), rebuilt.getPosition(), field);
 	final declaration = rebuilt.getDeclaration();
 	if (rebuilt.getTag() == Call
 		&& declaration != null
@@ -24,8 +24,17 @@ private function expression(value:TypedExpr):TypedExpr {
 		&& rebuilt.getExtensionProvider() == null
 		&& children.length > 0
 		&& children[0].getTag() == NameRead)
-		return TypedExpr.call(children[0], children.slice(1), declaration, rebuilt.getType(), rebuilt.getPosition(), true);
+		return TypedExpr.call(TypedExpr.fieldRead(ownerReference(declaration.getOwner(), rebuilt.getPosition()), declaration.getSignature().getName(),
+			children[0].getType(), children[0].getPosition()),
+			children.slice(1), declaration, rebuilt.getType(), rebuilt.getPosition());
 	return rebuilt;
+}
+
+/** Python emits each class at module scope, including secondary Haxe types such as Main.Helper. */
+private function ownerReference(owner:TyNominalTypeId, position:Null<HxPos>):TypedExpr {
+	final canonical = owner.getCanonicalName();
+	final name = canonical.substr(canonical.lastIndexOf(".") + 1);
+	return TypedExpr.nameRead(name, TyType.nominal(owner, []), position);
 }
 
 private function statement(value:TypedStmt):TypedStmt {

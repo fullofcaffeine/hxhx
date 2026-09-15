@@ -34,7 +34,13 @@ class Main {
 
 /** A method named main on another class is an ordinary static member. */
 class Helper {
+	static var message:String = "helper";
+
 	public static function main():Void {
-		Sys.println("helper");
+		print();
+	}
+
+	static function print():Void {
+		Sys.println(message);
 	}
 }
