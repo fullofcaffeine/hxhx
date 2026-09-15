@@ -267,6 +267,11 @@ class TyperStage {
 		return method == null ? null : TyType.unknown();
 	}
 
+	/**
+		Select the property declaration before choosing an abstract update operator.
+		A class value has type Class<T>; its resolved runtime target owns static
+		properties, while an instance type owns instance properties.
+	**/
 	static function accessorPropertyForAccess(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Null<TyPropertyInfo> {
 		var receiver:Null<HxExpr> = null;
 		var field = "";
@@ -278,7 +283,8 @@ class TyperStage {
 		}
 		if (receiver == null)
 			return null;
-		final owner = switch (receiver) {
+		final runtimeTarget = TypedRuntimeTypeResolver.resolve(receiver, scope, ctx, ValueExpression);
+		final owner = runtimeTarget != null ? ctx.getIndex().getByFullName(runtimeTarget.getIdentity().getCanonicalName()) : switch (receiver) {
 			case EThis: ctx.currentClass();
 			case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
 		};
