@@ -572,6 +572,43 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertFunction(startup);
 	}
 
+	/** Assignment operands must expose their try body and catch fallback to typed traversal. */
+	static function assertAssignmentTryExpressions():Void {
+		final parsed = ParserStage.parse([
+			"class Main {",
+			"  static var saved:Bool = false;",
+			"  static function load():Bool return true;",
+			"  static function assigned():Bool {",
+			"    var result = false;",
+			"    result = try load() catch (error:Dynamic) false;",
+			"    Main.saved = try load() catch (error:Dynamic) false;",
+			"    return result;",
+			"  }",
+			"}",
+		].join("\n"), "AssignmentTry.hx");
+		final method = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "assigned");
+		var assignments = 0;
+		for (statement in method.getBody().getStatements()) {
+			if (statement.getTag() != TypedStmtTag.Expression)
+				continue;
+			final expression = statement.getExpressions()[0];
+			if (expression.getTag() != TypedExprTag.Assign)
+				continue;
+			final value = expression.getExpressions()[1];
+			assertTrue(containsCallNamed(value, "__hxhx_try"), "assignment lost its structural try expression");
+			assertTrue(containsCallNamed(value, "load"), "assignment lost the call inside its try expression");
+			assertTrue(!containsTag(value, TypedExprTag.Opaque), "assignment retains opaque executable syntax");
+			assertTrue(value.getType().getSemanticKey() == "primitive:Bool", "assignment try result lost its Boolean type");
+			assertTrue(statement.getPosition() != null && statement.getPosition().getLine() == 6 + assignments,
+				"assignment try expression lost its source line");
+			assignments++;
+		}
+		assertTrue(assignments == 2, "local or field assignment disappeared");
+		final statements = method.getBody().getStatements();
+		assertTrue(statements[statements.length - 1].getTag() == TypedStmtTag.Return, "try parsing consumed the following return");
+		TypedBodyInvariant.assertFunction(method);
+	}
+
 	static function assertStructuralTerminalReturnBlock():Void {
 		final position = new HxPos(0, 1, 1);
 		final raw = [
@@ -883,6 +920,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
 		assertNekoStartupTryCatchExpression();
+		assertAssignmentTryExpressions();
 		assertStructuralTerminalReturnBlock();
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();

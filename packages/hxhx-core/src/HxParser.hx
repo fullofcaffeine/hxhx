@@ -2922,6 +2922,10 @@ class HxParser {
 				parseIfExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
 				parseSwitchExpr(stop);
+			case TKeyword(k) if (k == KTry):
+				// Assignment and binary operands enter here without passing through parseExpr.
+				// Reuse the same try body, catch boundaries, and structural recovery.
+				parseTryCatchExpr(stop);
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
 				//

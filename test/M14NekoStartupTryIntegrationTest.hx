@@ -38,13 +38,24 @@ class M14NekoStartupTryIntegrationTest {
 	static function main():Void {
 		final source = [
 			"class Main {",
+			"  static var saved:Bool = false;",
 			"  static function available(fail:Bool):Bool {",
 			'    function load():Dynamic { if (fail) throw "missing"; return "loaded"; }',
 			"    return try load() != null catch (error:Dynamic) false;",
 			"  }",
+			"  static function assigned(fail:Bool):Void {",
+			'    function load():Bool { if (fail) throw "missing"; return true; }',
+			"    var result = false;",
+			"    result = try load() catch (error:Dynamic) false;",
+			"    Main.saved = try load() catch (error:Dynamic) false;",
+			"    Sys.println(result);",
+			"    Sys.println(Main.saved);",
+			"  }",
 			"  static function main() {",
 			"    Sys.println(available(false));",
 			"    Sys.println(available(true));",
+			"    assigned(false);",
+			"    assigned(true);",
 			"  }",
 			"}",
 		].join("\n");
@@ -71,7 +82,7 @@ class M14NekoStartupTryIntegrationTest {
 		final neko = Sys.getEnv("NEKO_BIN") == null ? "neko" : Sys.getEnv("NEKO_BIN");
 		final executed = run(neko, [outputPath]);
 		assertTrue(executed.exitCode == 0, "neko rejected the compiled startup probe: " + executed.stderr);
-		assertTrue(executed.stdout == "true\nfalse\n", "unexpected startup probe result: " + executed.stdout);
+		assertTrue(executed.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\n", "unexpected startup probe result: " + executed.stdout);
 		deleteRecursive(outputDirectory);
 	}
 }
