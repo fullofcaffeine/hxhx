@@ -767,6 +767,9 @@ Notes:
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
 - Module declaration coverage is in `npm run test:m14:hih-module-type-declaration-skip`.
   It checks final class modifiers, class metadata, and module-level final fields, plus complete typedef, enum, and abstract declaration boundaries.
+- `npm run test:m14:hih-expr-text-parser` also checks dollar-prefixed expressions through the complete module parser.
+  Ordinary expressions retain Neko primitive names such as `$new`. Inside macro quotations, dollar expressions insert an existing expression into the quoted syntax.
+  The parser restores this context across nested quotations and rejects braced reification outside a quotation.
 - JS statement lowering coverage for try/catch + throw is in `npm run test:m14:js-stmt-try-throw`.
 - JS statement multi-catch dispatch lowering coverage is in `npm run test:m14:js-stmt-multi-catch`.
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and

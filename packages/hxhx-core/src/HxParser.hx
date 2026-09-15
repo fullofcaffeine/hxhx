@@ -30,6 +30,7 @@ class HxParser {
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
 	var capturedReturnStringLiteral:String = "";
+	var inMacroQuote:Bool = false;
 
 	static function keywordText(k:HxKeyword):String {
 		// IMPORTANT (bootstrap / backend independence)
@@ -1687,7 +1688,7 @@ class HxParser {
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c) if (c == "$".code):
-				parseMacroReificationExpr();
+				parseDollarExpression();
 			case TOther(c):
 				final raw = String.fromCharCode(c);
 				bump();
@@ -1752,7 +1753,11 @@ class HxParser {
 		return EWhile(condition, body, bodyIsBlock, position);
 	}
 
-	function parseMacroReificationExpr():HxExpr {
+	/**
+		Dollar names are primitive identifiers in ordinary expressions and value
+		splices inside a macro quote. Braced splice payloads are ordinary expressions.
+	**/
+	function parseDollarExpression():HxExpr {
 		// Macro reification splice: `$i{name}`, `$e{expr}`, `$b{expr}`, ...
 		//
 		// Bring-up scope
@@ -1764,12 +1769,17 @@ class HxParser {
 		//   splice markers and let normal postfix parsing consume field/call suffixes.
 		if (!acceptOtherChar("$"))
 			return EUnsupported("$");
-		switch (cur.kind) {
-			case TIdent(name) if (!peekKind().match(TLBrace)):
-				bump();
-				return ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(name)]);
-			case _:
+		final dollarName = switch (cur.kind) {
+			case TIdent(name): name;
+			case TKeyword(keyword): keywordText(keyword);
+			case _: "";
 		}
+		if (dollarName.length > 0 && !peekKind().match(TLBrace)) {
+			bump();
+			return inMacroQuote ? ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(dollarName)]) : EIdent("$" + dollarName);
+		}
+		if (!inMacroQuote)
+			fail("Reification is not allowed outside of a macro expression");
 		final spliceKind = switch (cur.kind) {
 			case TIdent(name):
 				bump();
@@ -1779,13 +1789,14 @@ class HxParser {
 		}
 		final payload = if (cur.kind.match(TLBrace)) {
 			bump();
-			final inner = parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			final inner = withMacroQuoteContext(false, () -> parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 			if (cur.kind.match(TRBrace))
 				bump();
 			inner;
 		} else {
-			parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
-				|| cur.kind.match(TEof));
+			withMacroQuoteContext(false,
+				() -> parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
+					|| cur.kind.match(TEof)));
 		}
 		return switch (spliceKind) {
 			case "i":
@@ -3004,7 +3015,28 @@ class HxParser {
 		return readDottedPath();
 	}
 
+	/** Restores quote context after successful parsing or a recoverable parser error. */
+	function withMacroQuoteContext(quoted:Bool, parse:() -> HxExpr):HxExpr {
+		final previous = inMacroQuote;
+		inMacroQuote = quoted;
+		try {
+			final expression = parse();
+			inMacroQuote = previous;
+			return expression;
+		} catch (error:HxParseError) {
+			inMacroQuote = previous;
+			throw error;
+		} catch (error:String) {
+			inMacroQuote = previous;
+			throw error;
+		}
+	}
+
 	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {
+		return withMacroQuoteContext(true, () -> parseMacroQuoteContents(stop));
+	}
+
+	function parseMacroQuoteContents(stop:() -> Bool):HxExpr {
 		final wrappers = new Array<String>();
 		if (cur.kind.match(TKeyword(KUntyped))) {
 			bump();
