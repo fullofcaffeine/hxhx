@@ -20,12 +20,16 @@ typedef NekoProjectedFunction = {
 	during reachability or emission. Missing semantic facts fail at construction.
 **/
 class NekoTypedProgramProjection {
+	public final classGraph:TypedBackendClassGraph;
+
 	final classes = new StringMap<TypedBackendClassProjection>();
+	final classIdentities = new haxe.ds.ObjectMap<HxClassDecl, String>();
 	final functions = new StringMap<NekoProjectedFunction>();
 	final symbols = new StringMap<String>();
 	final occupiedNames = new StringMap<Bool>();
 
-	public function new(modules:Array<TypedBackendModuleProjection>) {
+	public function new(programRevision:String, modules:Array<TypedBackendModuleProjection>) {
+		final classFacts = new Array<TypedBackendClassSemanticFacts>();
 		for (module in modules) {
 			for (owner in module.getClasses()) {
 				final facts = owner.requireSemanticFacts();
@@ -33,6 +37,8 @@ class NekoTypedProgramProjection {
 				if (classes.exists(identity))
 					throw "Neko typed program contains duplicate class " + identity;
 				classes.set(identity, owner);
+				classIdentities.set(owner.getDeclaration(), identity);
+				classFacts.push(facts);
 				for (body in owner.getFunctions()) {
 					for (local in body.getLocalCatalog().getEntries())
 						occupiedNames.set(local.getProjectedName(), true);
@@ -64,6 +70,15 @@ class NekoTypedProgramProjection {
 				}
 			}
 		}
+		classGraph = new TypedBackendClassGraph(programRevision, classFacts);
+	}
+
+	/** Projected declaration identity joins runtime spellings to canonical secondary-type owners. */
+	public function requireClassIdentity(declaration:HxClassDecl):String {
+		final identity = classIdentities.get(declaration);
+		if (identity == null)
+			throw "Neko typed program cannot identify projected class " + HxClassDecl.getName(declaration);
+		return identity;
 	}
 
 	/** Existing generated declarations must not shadow an exact helper symbol. */
@@ -78,6 +93,16 @@ class NekoTypedProgramProjection {
 	/** Choose a shared helper table name that no projected local or generated function can shadow. */
 	public function exactHelperTableName():String {
 		final base = "__hxhx_exact_helpers";
+		var name = base;
+		var suffix = 0;
+		while (occupiedNames.exists(name))
+			name = base + "_" + ++suffix;
+		return name;
+	}
+
+	/** One receiver spelling stays distinct from every projected constructor and method local. */
+	public function constructionReceiverName():String {
+		final base = "__hxhx_self";
 		var name = base;
 		var suffix = 0;
 		while (occupiedNames.exists(name))

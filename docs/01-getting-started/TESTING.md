@@ -784,6 +784,8 @@ Notes:
 - `npm run test:m14:neko-typed-local-projection` includes native String construction with the real Neko standard library.
   The fixture compares both output layouts with upstream Haxe. It checks argument effects and an ordinary qualified class also named `String`.
   The core String constructor must use its native primitive without emitting an unused object implementation.
+- The same Neko group covers inherited construction, field order, default arguments, virtual calls, and receiver identity across three class levels.
+  It also loads the real `haxe.ValueException` provider and checks its inherited message and `unwrap()` result in both output layouts.
 - Neko standard-library selection coverage is in `npm run test:m14:neko-standard-library-paths`.
   It checks that project sources take precedence, then Neko implementations in `std/neko/_std`, then common declarations in `std`.
   For example, ordinary Neko lookup selects `std/neko/_std/haxe/Exception.hx` before `std/haxe/Exception.hx`.
