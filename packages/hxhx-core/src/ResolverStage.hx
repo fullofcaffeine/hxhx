@@ -251,7 +251,22 @@ class ResolverStage {
 	}
 
 	/**
-		Resolve only the explicit root modules, without walking import or heuristic dependency closure.
+		Include the installed standard declarations before callers build type signatures.
+
+		Haxe implicitly exposes public types from `StdTypes`, such as `ArrayAccess`.
+		Resolve that source through the request's normal provider so class-path selection
+		and source observations apply equally to implicit and explicit modules. Small
+		isolated projects with no standard-library path retain their supplied roots.
+	**/
+	static function withStandardTypesRoot(classPaths:Array<String>, roots:Array<String>, sources:CompilerSourceProvider):Array<String> {
+		final selected = roots == null ? [] : roots.copy();
+		if (selected.length > 0 && selected.indexOf("StdTypes") < 0 && sources.resolveModule(classPaths, "StdTypes").filePath != null)
+			selected.push("StdTypes");
+		return selected;
+	}
+
+	/**
+		Resolve the explicit roots and standard declarations, without walking their dependencies.
 
 		Why
 		- Stage3 `--hxhx-no-emit` is a no-output compiler-latency lane. It should behave closer to
@@ -288,9 +303,7 @@ class ResolverStage {
 			return out;
 		}
 
-		if (roots == null)
-			return out;
-		for (root in roots) {
+		for (root in withStandardTypesRoot(classPaths, roots, sources)) {
 			if (root == null)
 				continue;
 			final modulePath = StringTools.trim(root);
@@ -372,15 +385,13 @@ class ResolverStage {
 		}
 
 		final stack = new Array<String>();
-		if (roots != null) {
-			for (r in roots) {
-				if (r == null)
-					continue;
-				final m = StringTools.trim(r);
-				if (m.length == 0)
-					continue;
-				stack.push(m);
-			}
+		for (r in withStandardTypesRoot(classPaths, roots, sources)) {
+			if (r == null)
+				continue;
+			final m = StringTools.trim(r);
+			if (m.length == 0)
+				continue;
+			stack.push(m);
 		}
 
 		// Use an explicit worklist instead of recursion so widening the module graph (e.g. upstream suites)

@@ -319,7 +319,7 @@ class TyperIndex {
 		return false;
 	}
 
-	/** Resolve one nominal path using local-module, import, package, then unique-short-name evidence. **/
+	/** Resolve a nominal path through local declarations, imports, packages, and implicit standard declarations. **/
 	function resolveIdentity(typePath:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>):Null<TyNominalTypeId> {
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		if (raw.length == 0)
@@ -381,6 +381,9 @@ class TyperIndex {
 			if (identityVisibleFromModule(packageIdentity, currentModulePath))
 				return packageIdentity;
 		}
+		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
+		if (standardIdentity != null)
+			return standardIdentity;
 		if (hidesOriginalNameBehindAlias(raw, directives) || rawStaticWildcardHidesType(raw, directives))
 			return null;
 
@@ -816,6 +819,10 @@ class TyperIndex {
 			if (typeVisibleFromModule(direct, currentModulePath))
 				return direct;
 		}
+		// A declaration in this module wins over imports and the implicit StdTypes scope.
+		for (local in getDeclaredByModulePath(currentModulePath))
+			if (local.getShortName() == raw)
+				return local;
 		if (resolvedDirectives != null) {
 			for (offset in 0...resolvedDirectives.length) {
 				final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
@@ -885,6 +892,9 @@ class TyperIndex {
 				current = current.substr(0, dot);
 			}
 		}
+		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
+		if (standardIdentity != null)
+			return getByFullName(standardIdentity.getCanonicalName());
 		if (hidesOriginalNameBehindAlias(raw, directives)
 			|| rawStaticWildcardHidesType(raw, directives)
 			|| resolvedStaticWildcardHidesType(raw, resolvedDirectives))
