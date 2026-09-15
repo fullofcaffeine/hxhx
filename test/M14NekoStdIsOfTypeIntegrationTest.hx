@@ -19,13 +19,17 @@ class M14NekoStdIsOfTypeIntegrationTest {
 	}
 
 	static function main():Void {
-		final fixture = "test/neko_std_is_of_type";
-		final root = ".tmp/neko_std_is_of_type_" + Date.now().getTime();
+		assertFixture("test/neko_std_is_of_type", "NEKO_STD_IS_OF_TYPE");
+	}
+
+	/** Exercise a standard-library consumer with ordinary roots and both generated layouts. */
+	static function assertFixture(fixture:String, marker:String):Void {
+		final root = ".tmp/" + fixture.split("/").pop() + "_" + Date.now().getTime();
 		FileSystem.createDirectory(root);
 		final expected = File.getContent(fixture + "/expected.stdout");
 		run("haxe", ["-cp", fixture, "-main", "Main", "-neko", root + "/upstream.n"]);
 		if (run("neko", [root + "/upstream.n"]) != expected)
-			throw "upstream standard type predicate result changed";
+			throw "upstream fixture result changed: " + fixture;
 
 		final arguments = Stage1Args.parse(["-cp", fixture, "-main", "Main"], true);
 		if (arguments == null)
@@ -75,8 +79,8 @@ class M14NekoStdIsOfTypeIntegrationTest {
 			final actual = run("neko", [root + "/" + layout + ".n"]);
 			File.saveContent(root + "/" + layout + ".stdout", actual);
 			if (actual != expected)
-				throw "standard type predicate differs in " + layout + ": " + root;
-			Sys.println("NEKO_STD_IS_OF_TYPE:PASS layout=" + layout);
+				throw fixture + " differs in " + layout + ": " + root;
+			Sys.println(marker + ":PASS layout=" + layout);
 		}
 	}
 }

@@ -352,7 +352,7 @@
     "test:m14:compilation-server-request-dispatcher": "haxe test/m14_compilation_server_request_dispatcher_integration_test.hxml",
     "test:m14:compilation-server-source-cache": "haxe test/m14_compilation_server_source_cache_integration_test.hxml",
     "test:m14:compiler-dependency-observation": "haxe test/m14_compiler_dependency_observation_test.hxml",
-    "test:m14:inheritance-module-loading": "haxe test/m14_inheritance_module_loading_integration_test.hxml && haxe test/m14_module_fallback_identity_integration_test.hxml && haxe test/m14_standard_types_loading_integration_test.hxml",
+    "test:m14:inheritance-module-loading": "haxe test/m14_inheritance_module_loading_integration_test.hxml && haxe test/m14_module_fallback_identity_integration_test.hxml && haxe test/m14_standard_types_loading_integration_test.hxml && haxe test/m14_signature_dependency_loading_integration_test.hxml && haxe test/m14_neko_exception_conversion_integration_test.hxml",
     "test:m14:module-import-alias-targets": "haxe test/m14_module_import_alias_target_integration_test.hxml",
     "test:m14:compiler-dependency-edit-sequence": "haxe test/m14_compiler_dependency_edit_sequence_test.hxml",
     "test:m14:compilation-server-dependency-observation": "haxe test/m14_compilation_server_dependency_observation_integration_test.hxml",

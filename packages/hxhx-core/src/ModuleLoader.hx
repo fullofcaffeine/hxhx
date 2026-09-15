@@ -108,6 +108,7 @@ class ModuleLoader extends LazyTypeLoader {
 		return onMissingType == null ? false : onMissingType.invoke(mp);
 	}
 
+	/** Register prepared roots, then finish their signatures before body typing starts. */
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
 		if (resolved == null)
 			return;
@@ -117,6 +118,28 @@ class ModuleLoader extends LazyTypeLoader {
 				visited.set(mp, true);
 			visitedSourceFiles.set(haxe.io.Path.normalize(ResolvedModule.getFilePath(m)), true);
 		}
+		for (module in resolved)
+			prepareSignatureDependencies(module);
+	}
+
+	/**
+		Load declaration-only dependencies through ordinary contextual lookup.
+
+		All source identities are registered before this walk, so a cycle can name
+		its owner without re-entering its load. Rebuild only this unpublished module
+		after new dependencies resolve; typed callers must receive its final records.
+	**/
+	function prepareSignatureDependencies(module:ResolvedModule):Void {
+		if (index == null)
+			return;
+		final declaration = ResolvedModule.getParsed(module).getDecl();
+		final missing = TySignatureDependencies.unresolved(index, ResolvedModule.getModulePath(module));
+		var resolved = false;
+		for (path in missing)
+			if (ensureTypeAvailable(path, HxModuleDecl.getPackagePath(declaration), HxModuleDecl.getDirectives(declaration)) != null)
+				resolved = true;
+		if (resolved)
+			index.addResolvedModule(module);
 	}
 
 	public function drainNewModules():Array<ResolvedModule> {
@@ -368,6 +391,7 @@ class ModuleLoader extends LazyTypeLoader {
 
 		if (index != null)
 			index.addResolvedModule(rm);
+		prepareSignatureDependencies(rm);
 
 		// Keep lazily loaded modules link-safe by recursively loading their direct dependencies.
 		//
