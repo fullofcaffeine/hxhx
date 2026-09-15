@@ -781,6 +781,9 @@ Notes:
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.
+- `npm run test:m14:neko-typed-local-projection` includes native String construction with the real Neko standard library.
+  The fixture compares both output layouts with upstream Haxe. It checks argument effects and an ordinary qualified class also named `String`.
+  The core String constructor must use its native primitive without emitting an unused object implementation.
 - Neko standard-library selection coverage is in `npm run test:m14:neko-standard-library-paths`.
   It checks that project sources take precedence, then Neko implementations in `std/neko/_std`, then common declarations in `std`.
   For example, ordinary Neko lookup selects `std/neko/_std/haxe/Exception.hx` before `std/haxe/Exception.hx`.
