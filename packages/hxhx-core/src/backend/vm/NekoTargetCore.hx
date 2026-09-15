@@ -211,7 +211,7 @@ class NekoTargetCore {
 		final emitContext:NekoEmitContext = {
 			classes: classMap,
 			typedProgram: typedProgram,
-			currentFunction: null,
+			currentExecutable: null,
 			abstractHelpers: [],
 			abstractHelperIds: new StringMap(),
 			directAbstractReceiver: false,
@@ -257,7 +257,7 @@ class NekoTargetCore {
 		final emitContext:NekoEmitContext = {
 			classes: buildClassMap(modules),
 			typedProgram: typedProgram,
-			currentFunction: null,
+			currentExecutable: null,
 			abstractHelpers: [],
 			abstractHelperIds: new StringMap(),
 			directAbstractReceiver: false,
@@ -2689,7 +2689,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
-			currentFunction: context.currentFunction,
+			currentExecutable: context.currentExecutable,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: context.directAbstractReceiver,
@@ -2726,7 +2726,21 @@ class NekoTargetCore {
 		for (arg in HxFunctionDecl.getArgs(fn))
 			names.push(arg.name);
 		final next = withLocals(context, names);
-		next.currentFunction = context.typedProgram.requireDeclaredFunction(fn);
+		next.currentExecutable = FunctionBody(context.typedProgram.requireDeclaredFunction(fn));
+		return next;
+	}
+
+	/** Select the exact field catalog before rendering its expression on the owning receiver. */
+	static function withFieldInitializer(context:NekoEmitContext, field:HxFieldDecl):NekoEmitContext {
+		final selected = context.typedProgram.requireDeclaredInitializer(field);
+		if (context.currentClass == null
+			|| context.typedProgram.requireClassIdentity(context.currentClass.cls) != selected.getField().getOwner().getCanonicalName())
+			throw "Neko field initializer requires its owning class context";
+		final next = childContext(context);
+		next.currentExecutable = FieldInitializer(selected);
+		next.locals = emptyLocals();
+		for (local in selected.getLocalCatalog().getEntries())
+			registerLocal(next, local.getProjectedName());
 		return next;
 	}
 
@@ -2754,7 +2768,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
-			currentFunction: context.currentFunction,
+			currentExecutable: context.currentExecutable,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: false,
@@ -2772,7 +2786,7 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			typedProgram: context.typedProgram,
-			currentFunction: context.currentFunction,
+			currentExecutable: context.currentExecutable,
 			abstractHelpers: context.abstractHelpers,
 			abstractHelperIds: context.abstractHelperIds,
 			directAbstractReceiver: context.directAbstractReceiver,

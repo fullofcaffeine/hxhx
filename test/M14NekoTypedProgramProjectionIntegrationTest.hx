@@ -86,6 +86,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertConstantReadBoundary();
 		assertConstantRuntime();
 		assertStaticCallBoundary();
+		assertExecutableProjections();
 		expectFailure("requires 3 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub"), ["value"]));
 		expectFailure("requires 2 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__sget"), ["value"]));
 		expectFailure("requires 1 argument", () -> backend.vm.NekoStringIntrinsics.renderConstructor([]));
@@ -98,6 +99,58 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertRuntimeFixture("test/neko_qualified_static_calls", true, ["Main", "providers.Api", "other.Api"]);
 		assertRuntimeFixture("test/neko_statement_separation", true);
 		Sys.println("OK m14 Neko typed program projection");
+	}
+
+	/** Type operands must retain their exact function or field-initializer owner in child scopes. */
+	static function assertExecutableProjections():Void {
+		final source = "class Parent {} class Main { var first = Parent; var second = Parent; static function value() return Parent; }";
+		final module = project(source);
+		final program = new NekoTypedProgramProjection("executable-test", [module]);
+		final owner = program.requireClass("Main");
+		final fields = owner.getFieldInitializers();
+		final context:backend.vm.NekoEmitContext = {
+			classes: new haxe.ds.StringMap(),
+			typedProgram: program,
+			currentExecutable: null,
+			abstractHelpers: [],
+			abstractHelperIds: new haxe.ds.StringMap(),
+			directAbstractReceiver: false,
+			selfName: null,
+			currentClass: null,
+			symbolTable: null,
+			packFunctionArguments: false,
+			locals: new haxe.ds.StringMap(),
+			insideTry: false,
+			breakFlag: null
+		};
+		final info:backend.vm.NekoEmitContext.NekoClassInfo = {fullName: "Main", shortName: "Main", cls: owner.getDeclaration()};
+		final instance = @:privateAccess NekoTargetCore.withSelf(context, "self", info);
+		final fieldContext = @:privateAccess NekoTargetCore.withFieldInitializer(instance, fields[0].getDeclaration());
+		final child = @:privateAccess NekoTargetCore.childContext(fieldContext);
+		final marker = fields[0].getRuntimeTypeCatalog().getEntries()[0].getExpression();
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(child, marker) != fields[0].requireRuntimeType(marker))
+			throw "initializer child scope lost its exact type occurrence";
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(context, EInt(1)) != null)
+			throw "ordinary expression acquired a runtime type plan";
+		expectFailure("requires an executable projection", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(context, marker));
+		final other = @:privateAccess NekoTargetCore.withFieldInitializer(instance, fields[1].getDeclaration());
+		expectFailure("absent from the current initializer", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(other, marker));
+		final foreign = new NekoTypedProgramProjection("executable-test", [project(source)]).requireClass("Main").getFieldInitializers();
+		expectFailure("cannot identify projected initializer", () -> program.requireDeclaredInitializer(foreign[0].getDeclaration()));
+		final foreignContext = @:privateAccess NekoTargetCore.childContext(fieldContext);
+		foreignContext.currentExecutable = FieldInitializer(foreign[0]);
+		expectFailure("cannot identify projected initializer",
+			() -> backend.vm.NekoRuntimeTypePlan.fromExpression(foreignContext, foreign[0].getRuntimeTypeCatalog().getEntries()[0].getExpression()));
+		expectFailure("requires its owning class context", () -> @:privateAccess NekoTargetCore.withFieldInitializer(context, fields[0].getDeclaration()));
+		final fn = owner.getFunctions()[0];
+		final functionContext = @:privateAccess NekoTargetCore.withFunctionArgs(fieldContext, fn.getDeclaration());
+		final functionMarker = fn.getRuntimeTypeCatalog().getEntries()[0].getExpression();
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(functionContext, functionMarker) != fn.requireRuntimeType(functionMarker))
+			throw "function scope did not replace initializer ownership";
+		expectFailure("absent from the current function", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(functionContext, marker));
+		final replaced = @:privateAccess NekoTargetCore.withFieldInitializer(functionContext, fields[0].getDeclaration());
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(replaced, marker) != fields[0].requireRuntimeType(marker))
+			throw "initializer scope did not replace function ownership";
 	}
 
 	/** Static calls must bind their exact owner and reject malformed transport records. */

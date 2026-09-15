@@ -79,8 +79,13 @@ class NekoConstructionEmitter {
 		for (field in HxClassDecl.getFields(info.cls)) {
 			final init = HxFieldDecl.getInit(field);
 			if (!HxFieldDecl.getIsStatic(field) && init != null)
-				out.push("  " + selfName + "." + NekoTargetCore.safeIdent(HxFieldDecl.getName(field)) + " = "
-					+ NekoTargetCore.renderExpr(instanceContext, init) + ";");
+				out.push("  "
+					+ selfName
+					+ "."
+					+ NekoTargetCore.safeIdent(HxFieldDecl.getName(field))
+					+ " = "
+					+ NekoTargetCore.renderExpr(NekoTargetCore.withFieldInitializer(instanceContext, field), init)
+					+ ";");
 		}
 		final declared = NekoTargetCore.findFunction(info.cls, "new", false);
 		if (declared != null && !NekoTargetCore.isMacroFunction(declared)) {

@@ -15,8 +15,8 @@ typedef NekoEmitContext = {
 	var classes:StringMap<NekoClassInfo>;
 	var typedProgram:NekoTypedProgramProjection;
 
-	/** Exact enclosing function; null only for code outside a projected function body. */
-	var currentFunction:Null<NekoProjectedFunction>;
+	/** Exact function or initializer; child expression scopes retain the same owner. */
+	var currentExecutable:Null<NekoExecutableProjection>;
 
 	var abstractHelpers:Array<NekoProjectedFunction>;
 	var abstractHelperIds:StringMap<Bool>;

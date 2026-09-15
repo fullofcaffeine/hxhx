@@ -26,6 +26,7 @@ class NekoTypedProgramProjection {
 	final classIdentities = new haxe.ds.ObjectMap<HxClassDecl, String>();
 	final functions = new StringMap<NekoProjectedFunction>();
 	final functionDeclarations = new haxe.ds.ObjectMap<HxFunctionDecl, String>();
+	final initializers = new haxe.ds.ObjectMap<HxFieldDecl, TypedBackendFieldInitializerProjection>();
 	final symbols = new StringMap<String>();
 	final occupiedNames = new StringMap<Bool>();
 
@@ -40,6 +41,16 @@ class NekoTypedProgramProjection {
 				classes.set(identity, owner);
 				classIdentities.set(owner.getDeclaration(), identity);
 				classFacts.push(facts);
+				for (initializer in owner.getFieldInitializers()) {
+					final field = initializer.getField();
+					if (field.getOwner().getCanonicalName() != identity || facts.findField(field.getCanonicalKey()) == null)
+						throw "Neko typed program initializer has a different field owner: " + initializer.getStableIdentity();
+					if (initializers.exists(initializer.getDeclaration()))
+						throw "Neko typed program contains duplicate field initializer " + initializer.getStableIdentity();
+					initializers.set(initializer.getDeclaration(), initializer);
+					for (local in initializer.getLocalCatalog().getEntries())
+						occupiedNames.set(local.getProjectedName(), true);
+				}
 				for (body in owner.getFunctions()) {
 					for (local in body.getLocalCatalog().getEntries())
 						occupiedNames.set(local.getProjectedName(), true);
@@ -136,6 +147,14 @@ class NekoTypedProgramProjection {
 		if (selected == null || selected.body.getDeclaration() != declaration)
 			throw "Neko typed program lost projected function " + identity;
 		return requireFunction(selected.owner.requireSemanticFacts().getClassIdentity(), identity);
+	}
+
+	/** Same-named fields from another projection cannot supply this program's initializer catalog. */
+	public function requireDeclaredInitializer(declaration:HxFieldDecl):TypedBackendFieldInitializerProjection {
+		final selected = declaration == null ? null : initializers.get(declaration);
+		if (selected == null || selected.getDeclaration() != declaration)
+			throw "Neko typed program cannot identify projected initializer";
+		return selected;
 	}
 
 	/** Requires the selected declaration to belong to the selected exact owner. */
