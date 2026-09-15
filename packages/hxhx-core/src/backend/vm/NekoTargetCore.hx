@@ -590,9 +590,11 @@ class NekoTargetCore {
 		}
 		switch (expr) {
 			case ENew(typePath, args):
-				final info = lookupClass(context, typePath);
-				if (info != null)
-					addConstructor(info);
+				if (!NekoStringIntrinsics.ownsConstructor(typePath)) {
+					final info = lookupClass(context, typePath);
+					if (info != null)
+						addConstructor(info);
+				}
 				for (arg in args)
 					collectExprRefs(context, arg, addConstructor, addStatic);
 			case ECall(callee, args):
@@ -1644,7 +1646,7 @@ class NekoTargetCore {
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
-		if (typePath == "String")
+		if (NekoStringIntrinsics.ownsConstructor(typePath))
 			return NekoStringIntrinsics.renderConstructor([for (arg in args) renderExpr(context, arg)]);
 		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
 			return "$array()";

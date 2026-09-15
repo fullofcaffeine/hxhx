@@ -13,6 +13,10 @@ package backend.vm;
 	indexes functions through class declarations.
 **/
 class NekoStringIntrinsics {
+	/** Only the canonical core String type uses native construction, never a qualified namesake. */
+	public static function ownsConstructor(typePath:String):Bool
+		return typePath == "String";
+
 	/** Ordinary calls return null; a selected intrinsic must have its exact arity. */
 	public static function renderCall(callee:HxExpr, arguments:Array<String>):Null<String> {
 		return switch (callee) {
