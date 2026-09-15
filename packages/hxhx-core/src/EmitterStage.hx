@@ -6916,6 +6916,7 @@ class EmitterStage {
 
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(p.getTypedModules(), "OCaml emitter");
 		traceEmitToDirEntry("emitToDir_enter");
 		final outAbs = requireEmitToDirOutAbs(outDir);
 		installEmitToDirProfile(ocamlProfile);
@@ -7322,6 +7323,7 @@ class EmitterStage {
 			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
 
 			final moduleProjection = tm.getBackendProjection();
+			moduleProjection.assertRuntimeTypeOperandsAbsent("OCaml emitter");
 			final decl = moduleProjection.getDeclaration();
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final mainClassProjection = moduleProjection.findClass(mainClass);

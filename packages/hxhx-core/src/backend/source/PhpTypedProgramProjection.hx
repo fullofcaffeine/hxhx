@@ -57,6 +57,7 @@ class PhpTypedProgramProjection {
 		typedProgramRevision = program.getTypedProgramRevision();
 		for (typed in program.getTypedModules()) {
 			final projection = typed.getBackendProjection();
+			projection.assertRuntimeTypeOperandsAbsent("PHP backend");
 			final moduleIdentity = typed.getSourceOrigin().sourceModulePath;
 			modules.push({typed: typed, projection: projection, moduleIdentity: moduleIdentity});
 			for (projectedClass in projection.getClasses()) {

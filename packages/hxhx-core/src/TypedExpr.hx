@@ -12,6 +12,8 @@ enum TypedExprTag {
 	IntValue;
 	FloatValue;
 	EnumValue;
+	RuntimeTypeValue;
+	RuntimeTypeTest;
 	ThisValue;
 	SuperValue;
 	LocalRead;
@@ -77,11 +79,12 @@ class TypedExpr {
 	final fieldInfo:Null<TyFieldInfo>;
 	final localBindings:Array<TyLocalBinding>;
 	final extensionProvider:Null<TyNominalTypeId>;
+	final runtimeTypeTarget:Null<TypedRuntimeTypeTarget>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
 			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo, ?localBindings:Array<TyLocalBinding>,
-			?extensionProvider:TyNominalTypeId) {
+			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget) {
 		this.tag = tag;
 		this.type = type == null ? TyType.unknown() : type;
 		this.position = position;
@@ -98,6 +101,7 @@ class TypedExpr {
 		this.fieldInfo = fieldInfo;
 		this.localBindings = localBindings == null ? [] : localBindings.copy();
 		this.extensionProvider = extensionProvider;
+		this.runtimeTypeTarget = runtimeTypeTarget;
 	}
 
 	public static function nullValue(type:TyType, position:Null<HxPos>):TypedExpr
@@ -117,6 +121,19 @@ class TypedExpr {
 
 	public static function enumValue(name:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(EnumValue, type, position, [name]);
+
+	/** Carries a class value without reconstructing its identity from source text. */
+	public static function runtimeTypeValue(target:TypedRuntimeTypeTarget, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(RuntimeTypeValue, target.getValueType(), position, null, null, null, false, 0, 0.0, null, null, null, null, null, null, null,
+			target);
+
+	/** Evaluates only the value child; the target was selected in the type namespace. */
+	public static function runtimeTypeTest(value:TypedExpr, target:TypedRuntimeTypeTarget, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(RuntimeTypeTest, TyType.fromHintText("Bool"), position, null, [value], null, false, 0, 0.0, null, null, null, null, null, null,
+			null, target);
+
+	public function getRuntimeTypeTarget():Null<TypedRuntimeTypeTarget>
+		return runtimeTypeTarget;
 
 	public static function thisValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(ThisValue, type, position);
@@ -312,10 +329,10 @@ class TypedExpr {
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
 		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind, fieldInfo, localBindings, extensionProvider);
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
 		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
-			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider);
+			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget);
 }

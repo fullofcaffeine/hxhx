@@ -204,7 +204,7 @@ class TypedBodySource {
 	**/
 	static function resolvedTypeExpression(sourceName:String, identity:Null<TyNominalTypeId>):HxExpr {
 		final resolved = resolvedNameWhenAliased(sourceName, identity);
-		if (resolved == sourceName || resolved.indexOf(".") < 0)
+		if (resolved.indexOf(".") < 0)
 			return EIdent(resolved);
 		final parts = resolved.split(".");
 		var expression:HxExpr = EIdent(parts.shift());
@@ -327,10 +327,11 @@ class TypedBodySource {
 		return projected;
 	}
 
-	static function expressionTail(expressions:Array<TypedExpr>, start:Int, ?catalog:TypedBackendLocalCatalog):Array<HxExpr> {
+	static function expressionTail(expressions:Array<TypedExpr>, start:Int, ?catalog:TypedBackendLocalCatalog,
+			?runtimeTypes:TypedRuntimeTypeProjectionBuilder):Array<HxExpr> {
 		final out = new Array<HxExpr>();
 		for (index in start...expressions.length)
-			out.push(expression(expressions[index], catalog));
+			out.push(expression(expressions[index], catalog, runtimeTypes));
 		return out;
 	}
 
@@ -343,7 +344,8 @@ class TypedBodySource {
 		names must move with the lambda bindings or the target can silently lose
 		the optional default.
 	**/
-	static function optionalLambdaCall(expressions:Array<TypedExpr>, catalog:Null<TypedBackendLocalCatalog>):HxExpr {
+	static function optionalLambdaCall(expressions:Array<TypedExpr>, catalog:Null<TypedBackendLocalCatalog>,
+			?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxExpr {
 		if (expressions.length != 3)
 			throw "typed optional-lambda marker has an invalid structural payload";
 		final wrapped = expressions[1];
@@ -377,10 +379,10 @@ class TypedBodySource {
 				throw "typed optional-lambda marker references unknown parameter " + sourceName;
 			projectedOptionalNames.push(EString(projectedNames[index]));
 		}
-		return ECall(expression(expressions[0], catalog), [expression(wrapped, catalog), EArrayDecl(projectedOptionalNames)]);
+		return ECall(expression(expressions[0], catalog, runtimeTypes), [expression(wrapped, catalog, runtimeTypes), EArrayDecl(projectedOptionalNames)]);
 	}
 
-	static function blockExpression(children:Array<TypedExpr>, ?catalog:TypedBackendLocalCatalog):HxExpr {
+	static function blockExpression(children:Array<TypedExpr>, ?catalog:TypedBackendLocalCatalog, ?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxExpr {
 		var continuation:HxExpr = ENull;
 		var hasContinuation = false;
 		var sequenceIndex = 0;
@@ -397,10 +399,10 @@ class TypedBodySource {
 					var binder:HxExpr = ELambda([projectedName], continuation);
 					if (StringTools.trim(texts[1]).length > 0)
 						binder = ECast(binder, "(" + texts[1] + ")->Dynamic");
-					continuation = ECall(binder, [expression(values[0], catalog)]);
+					continuation = ECall(binder, [expression(values[0], catalog, runtimeTypes)]);
 					hasContinuation = true;
 				case _:
-					final projected = expression(child, catalog);
+					final projected = expression(child, catalog, runtimeTypes);
 					if (!hasContinuation) {
 						continuation = projected;
 					} else {
@@ -420,13 +422,14 @@ class TypedBodySource {
 		if (receiver.getFieldInfo() != null || receiver.getLocalBindings().length != 0)
 			return false;
 		return switch (receiver.getTag()) {
+			case RuntimeTypeValue: true;
 			case NameRead: true;
 			case FieldRead: constantTypeReceiver(receiver.getExpressions()[0]);
 			case _: false;
 		};
 	}
 
-	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog):HxExpr {
+	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog, ?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxExpr {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
 		return switch (typedExpression.getTag()) {
@@ -436,6 +439,11 @@ class TypedBodySource {
 			case IntValue: EInt(typedExpression.getIntValue());
 			case FloatValue: EFloat(typedExpression.getFloatValue());
 			case EnumValue: EEnumValue(texts[0]);
+			case RuntimeTypeValue | RuntimeTypeTest:
+				if (runtimeTypes == null)
+					throw "runtime type expression requires an exact executable projection";
+				final value = typedExpression.getTag() == RuntimeTypeTest ? expression(expressions[0], catalog, runtimeTypes) : null;
+				runtimeTypes.project(typedExpression.getRuntimeTypeTarget(), value);
 			case ThisValue: EThis;
 			case SuperValue: ESuper;
 			case LocalRead: EIdent(exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed local read"));
@@ -450,8 +458,15 @@ class TypedBodySource {
 					resolvedTypeExpression(texts[0], identity);
 				}
 			case FieldRead:
-				var receiver = expression(expressions[0], catalog);
 				final field = typedExpression.getFieldInfo();
+				// A class literal before a member name is a static qualifier. This also
+				// covers method values and assignments to dynamic methods, which have no
+				// ordinary field record. A class object stored in a local remains a value
+				// receiver and follows the usual expression path.
+				final typeQualifier = expressions[0].getTag() == RuntimeTypeValue ? expressions[0].getRuntimeTypeTarget() : null;
+				final qualifierOwner = typeQualifier == null ? null : typeQualifier.getDeclarationIdentity();
+				var receiver = qualifierOwner == null ? expression(expressions[0], catalog,
+					runtimeTypes) : resolvedTypeExpression(typeQualifier.getSourceSpelling(), field != null && field.getIsStatic() ? field.getOwner() : qualifierOwner);
 				if (field != null && field.getIsStatic()) {
 					switch (receiver) {
 						case EIdent(name): receiver = resolvedTypeExpression(name, field.getOwner());
@@ -462,12 +477,20 @@ class TypedBodySource {
 				if (constant != null && !constantTypeReceiver(expressions[0]))
 					throw "enum constant read cannot discard a value receiver: " + field.getCanonicalKey();
 				constant == null ? EField(receiver, texts[0]) : constant;
-			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog), texts[0]);
+			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog, runtimeTypes), texts[0]);
 			case Call:
-				final callee = expression(expressions[0], catalog);
-				final arguments = expressionTail(expressions, 1, catalog);
 				final declaration = typedExpression.getDeclaration();
 				final extensionProvider = typedExpression.getExtensionProvider();
+				final sourceCallee = expressions[0];
+				final staticTypeQualifier = declaration != null
+					&& declaration.getIsStatic()
+					&& extensionProvider == null
+					&& sourceCallee.getTag() == FieldRead
+					&& sourceCallee.getExpressions()[0].getTag() == RuntimeTypeValue;
+				final callee:HxExpr = staticTypeQualifier ? EField(resolvedTypeExpression(sourceCallee.getExpressions()[0].getRuntimeTypeTarget()
+				.getSourceSpelling(), declaration.getOwner()),
+					declaration.getSignature().getName()) : expression(sourceCallee, catalog, runtimeTypes);
+				final arguments = expressionTail(expressions, 1, catalog, runtimeTypes);
 				if (extensionProvider != null) {
 					if (declaration == null || !declaration.getIsStatic())
 						throw "typed extension call is missing its exact static declaration";
@@ -483,7 +506,7 @@ class TypedBodySource {
 					&& expressions[0].getTag() == NameRead
 					&& expressions[0].getTexts().length == 1
 					&& expressions[0].getTexts()[0] == "__hxhx_optional_lambda") {
-					optionalLambdaCall(expressions, catalog);
+					optionalLambdaCall(expressions, catalog, runtimeTypes);
 				} else if (declaration != null && declaration.getIsEnumConstructor()) {
 					TypedExactEnumConstructorSource.encode(declaration.getOwner().getCanonicalName(), declaration.getModulePath(),
 						declaration.getIdentity().getCanonicalKey(), declaration.getSignature().getName(), callee, arguments);
@@ -515,7 +538,7 @@ class TypedBodySource {
 							ECall(callee, arguments);
 					}
 				}
-			case ReturnExpr: EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog));
+			case ReturnExpr: EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog, runtimeTypes));
 			case VariableDeclarations:
 				final declarations = new Array<HxExpr>();
 				for (declaration in expressions) {
@@ -525,46 +548,50 @@ class TypedBodySource {
 					final declarationValues = declaration.getExpressions();
 					final projectedName = exactProjectedName(catalog, declaration.getLocalBindings(), declarationTexts[0], "typed expression variable");
 					declarations.push(HxExprVarDecl.make(projectedName, declarationTexts[1],
-						declarationValues.length == 0 ? null : expression(declarationValues[0], catalog), sourcePosition(declaration.getPosition()),
-						declaration.getVariableIsFinal(), declaration.getVariableIsStatic()));
+						declarationValues.length == 0 ? null : expression(declarationValues[0], catalog, runtimeTypes),
+						sourcePosition(declaration.getPosition()), declaration.getVariableIsFinal(), declaration.getVariableIsStatic()));
 				}
 				EVars(declarations);
 			case VariableDeclaration:
 				throw "typed variable declaration must be nested inside a declaration list";
 			case WhileExpr:
-				EWhile(expression(expressions[0], catalog), expressionTail(expressions, 1, catalog), typedExpression.getBoolValue(),
-					sourcePosition(typedExpression.getPosition()));
+				EWhile(expression(expressions[0], catalog, runtimeTypes), expressionTail(expressions, 1, catalog, runtimeTypes),
+					typedExpression.getBoolValue(), sourcePosition(typedExpression.getPosition()));
 			case BreakExpr: EBreak(sourcePosition(typedExpression.getPosition()));
 			case ContinueExpr: EContinue(sourcePosition(typedExpression.getPosition()));
-			case MacroExpr: EMacroExpr(expression(expressions[0], catalog), texts.copy());
+			case MacroExpr: EMacroExpr(expression(expressions[0], catalog, runtimeTypes), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda:
-				ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"), expression(expressions[0], catalog));
+				ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"),
+					expression(expressions[0], catalog, runtimeTypes));
 			case SwitchExpr:
-				ESwitch(expression(expressions[0], catalog), projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
-					expressionTail(expressions, 1, catalog));
+				ESwitch(expression(expressions[0], catalog, runtimeTypes),
+					projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+					expressionTail(expressions, 1, catalog, runtimeTypes));
 			case NewValue:
 				final identity = typedExpression.getType().getNominalIdentity();
-				ENew(resolvedNameWhenAliased(texts[0], identity), expressionTail(expressions, 0, catalog));
-			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog));
-			case Binary: EBinop(texts[0], expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Assign: EBinop("=", expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case CompoundAssign: EBinop(texts[0], expression(expressions[0], catalog), expression(expressions[1], catalog));
+				ENew(resolvedNameWhenAliased(texts[0], identity), expressionTail(expressions, 0, catalog, runtimeTypes));
+			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog, runtimeTypes));
+			case Binary: EBinop(texts[0], expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes));
+			case Assign: EBinop("=", expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes));
+			case CompoundAssign: EBinop(texts[0], expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes));
 			case Ternary:
-				ETernary(expression(expressions[0], catalog), expression(expressions[1], catalog), expression(expressions[2], catalog));
-			case Anonymous: EAnon(texts.copy(), expressionTail(expressions, 0, catalog));
+				ETernary(expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes),
+					expression(expressions[2], catalog, runtimeTypes));
+			case Anonymous: EAnon(texts.copy(), expressionTail(expressions, 0, catalog, runtimeTypes));
 			case ArrayComprehension:
 				var guard:Null<HxExpr> = null;
 				if (typedExpression.getBoolValue())
-					guard = expression(expressions[1], catalog);
+					guard = expression(expressions[1], catalog, runtimeTypes);
 				final valueIndex = typedExpression.getBoolValue() ? 2 : 1;
 				final projectedName = exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed array comprehension");
-				EArrayComprehension(projectedName, expression(expressions[0], catalog), guard, expression(expressions[valueIndex], catalog));
-			case ArrayDecl: EArrayDecl(expressionTail(expressions, 0, catalog));
-			case ArrayAccess: EArrayAccess(expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Range: ERange(expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Cast: ECast(expression(expressions[0], catalog), texts[0]);
-			case Untyped: EUntyped(expression(expressions[0], catalog));
+				EArrayComprehension(projectedName, expression(expressions[0], catalog, runtimeTypes), guard,
+					expression(expressions[valueIndex], catalog, runtimeTypes));
+			case ArrayDecl: EArrayDecl(expressionTail(expressions, 0, catalog, runtimeTypes));
+			case ArrayAccess: EArrayAccess(expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes));
+			case Range: ERange(expression(expressions[0], catalog, runtimeTypes), expression(expressions[1], catalog, runtimeTypes));
+			case Cast: ECast(expression(expressions[0], catalog, runtimeTypes), texts[0]);
+			case Untyped: EUntyped(expression(expressions[0], catalog, runtimeTypes));
 			case Opaque:
 				switch (typedExpression.getOpaqueKind()) {
 					case TryCatch: ETryCatchRaw(texts[0]);
@@ -572,43 +599,45 @@ class TypedBodySource {
 					case Unsupported: EUnsupported(texts[0]);
 					case null: throw "typed opaque expression is missing its kind";
 				}
-			case Block: blockExpression(expressions, catalog);
+			case Block: blockExpression(expressions, catalog, runtimeTypes);
 			case Temporary:
 				throw "typed temporary must be nested inside a typed block expression";
 		};
 	}
 
-	public static function statement(typedStatement:TypedStmt, ?catalog:TypedBackendLocalCatalog):HxStmt {
+	public static function statement(typedStatement:TypedStmt, ?catalog:TypedBackendLocalCatalog, ?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxStmt {
 		final position = sourcePosition(typedStatement.getPosition());
 		final names = typedStatement.getNames();
 		final expressions = typedStatement.getExpressions();
 		final statements = typedStatement.getStatements();
 		return switch (typedStatement.getTag()) {
-			case Block: SBlock([for (entry in statements) statement(entry, catalog)], position);
+			case Block: SBlock([for (entry in statements) statement(entry, catalog, runtimeTypes)], position);
 			case Var:
 				final typedInitializer = expressions.length == 1 ? expressions[0] : null;
 				final typeHint = variableTypeHint(names[1], typedInitializer);
 				var initializer:Null<HxExpr> = null;
 				if (expressions.length > 0)
-					initializer = expression(expressions[0], catalog);
+					initializer = expression(expressions[0], catalog, runtimeTypes);
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed variable statement");
 				SVar(projectedName, typeHint, initializer, position, typedStatement.getMetadata());
 			case If:
 				var whenFalse:Null<HxStmt> = null;
 				if (statements.length > 1)
-					whenFalse = statement(statements[1], catalog);
-				SIf(expression(expressions[0], catalog), statement(statements[0], catalog), whenFalse, position);
+					whenFalse = statement(statements[1], catalog, runtimeTypes);
+				SIf(expression(expressions[0], catalog, runtimeTypes), statement(statements[0], catalog, runtimeTypes), whenFalse, position);
 			case ForIn:
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed for-in statement");
-				SForIn(projectedName, expression(expressions[0], catalog), statement(statements[0], catalog), position);
+				SForIn(projectedName, expression(expressions[0], catalog, runtimeTypes), statement(statements[0], catalog, runtimeTypes), position);
 			case ForKeyValue:
 				final projectedNames = exactProjectedNames(catalog, typedStatement.getLocalBindings(), names, "typed key/value for-in statement");
-				SForKeyValue(projectedNames[0], projectedNames[1], expression(expressions[0], catalog), statement(statements[0], catalog), position);
-			case While: SWhile(expression(expressions[0], catalog), statement(statements[0], catalog), position);
-			case DoWhile: SDoWhile(statement(statements[0], catalog), expression(expressions[0], catalog), position);
+				SForKeyValue(projectedNames[0], projectedNames[1], expression(expressions[0], catalog, runtimeTypes),
+					statement(statements[0], catalog, runtimeTypes), position);
+			case While: SWhile(expression(expressions[0], catalog, runtimeTypes), statement(statements[0], catalog, runtimeTypes), position);
+			case DoWhile: SDoWhile(statement(statements[0], catalog, runtimeTypes), expression(expressions[0], catalog, runtimeTypes), position);
 			case Switch:
-				SSwitch(expression(expressions[0], catalog), projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
-					[for (body in statements) statement(body, catalog)], position);
+				SSwitch(expression(expressions[0], catalog, runtimeTypes),
+					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
+					[for (body in statements) statement(body, catalog, runtimeTypes)], position);
 			case Try:
 				final catchNames = typedStatement.getCatchNames();
 				final catchTypeHints = typedStatement.getCatchTypeHints();
@@ -618,22 +647,23 @@ class TypedBodySource {
 					catches.push({
 						name: projectedCatchNames[index],
 						typeHint: catchTypeHints[index],
-						body: statement(statements[index + 1], catalog)
+						body: statement(statements[index + 1], catalog, runtimeTypes)
 					});
-				STry(statement(statements[0], catalog), catches, position);
+				STry(statement(statements[0], catalog, runtimeTypes), catches, position);
 			case Break: SBreak(position);
 			case Continue: SContinue(position);
-			case Throw: SThrow(expression(expressions[0], catalog), position);
+			case Throw: SThrow(expression(expressions[0], catalog, runtimeTypes), position);
 			case ReturnVoid: SReturnVoid(position);
-			case Return: SReturn(expression(expressions[0], catalog), position);
-			case Expression: SExpr(expression(expressions[0], catalog), position);
+			case Return: SReturn(expression(expressions[0], catalog, runtimeTypes), position);
+			case Expression: SExpr(expression(expressions[0], catalog, runtimeTypes), position);
 		};
 	}
 
-	public static function statements(body:TypedFunctionBody, ?catalog:TypedBackendLocalCatalog):Array<HxStmt>
-		return [for (entry in body.getStatements()) statement(entry, catalog)];
+	public static function statements(body:TypedFunctionBody, ?catalog:TypedBackendLocalCatalog, ?runtimeTypes:TypedRuntimeTypeProjectionBuilder):Array<HxStmt>
+		return [for (entry in body.getStatements()) statement(entry, catalog, runtimeTypes)];
 
-	public static function functionDeclaration(typedFunction:TypedFunction, ?catalog:TypedBackendLocalCatalog):HxFunctionDecl {
+	public static function functionDeclaration(typedFunction:TypedFunction, ?catalog:TypedBackendLocalCatalog,
+			?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxFunctionDecl {
 		final source = typedFunction.getSourceDeclaration();
 		var arguments = HxFunctionDecl.getArgs(source);
 		var returnTypeHint = HxFunctionDecl.getReturnTypeHint(source);
@@ -663,12 +693,15 @@ class TypedBodySource {
 				returnTypeHint = canonicalTypeHint(signature.getReturnType());
 		}
 		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source), arguments,
-			returnTypeHint, statements(typedFunction.getBody(), catalog), HxFunctionDecl.getReturnStringLiteral(source), HxFunctionDecl.getMetadata(source),
-			HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
+			returnTypeHint, statements(typedFunction.getBody(), catalog, runtimeTypes), HxFunctionDecl.getReturnStringLiteral(source),
+			HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
 	}
 
 	/** Project one function while keeping its exact local and bare field-read catalogs inseparable from the source-shaped body. **/
 	public static function functionProjection(typedFunction:TypedFunction):TypedBackendFunctionProjection {
+		final identity = typedFunction.getStableIdentity();
+		final revision = CompilerTypedTreeRevision.functionBody(typedFunction);
+		final runtimeTypes = new TypedRuntimeTypeProjectionBuilder(identity, revision);
 		final fields = fieldReadCatalog(typedFunction);
 		final locals = localCatalog(typedFunction, fields.getReservedProjectedNames());
 		final environment = typedFunction.getEnvironment();
@@ -683,20 +716,21 @@ class TypedBodySource {
 			declaration == null ? TyType.fromHintText(HxFunctionDecl.getReturnTypeHint(typedFunction.getSourceDeclaration())) : declaration.getSignature()
 				.getReturnType();
 		};
-		return new TypedBackendFunctionProjection(typedFunction.getStableIdentity(), CompilerTypedTreeRevision.functionBody(typedFunction),
-			functionDeclaration(typedFunction, locals), locals, returnType, fields, parameterBindingIdentities);
+		final projectedDeclaration = functionDeclaration(typedFunction, locals, runtimeTypes);
+		return new TypedBackendFunctionProjection(identity, revision, projectedDeclaration, locals, returnType, fields, parameterBindingIdentities,
+			runtimeTypes.seal(TypedRuntimeTypeSource.inStatements(HxFunctionDecl.getBody(projectedDeclaration))));
 	}
 
 	/** Project one field from its resolved type and typed initializer when available. **/
-	static function fieldDeclaration(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>, initializer:Null<TypedExpr>,
-			?catalog:TypedBackendLocalCatalog):HxFieldDecl {
+	static function fieldDeclaration(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>, initializer:Null<TypedExpr>, ?catalog:TypedBackendLocalCatalog,
+			?runtimeTypes:TypedRuntimeTypeProjectionBuilder):HxFieldDecl {
 		var typeHint = HxFieldDecl.getTypeHint(source);
 		if (typeHint.length > 0 && semanticInfo != null) {
 			final fieldInfo = semanticInfo.fieldInfo(HxFieldDecl.getName(source));
 			if (fieldInfo != null && containsAliasSpelling(fieldInfo.getType()))
 				typeHint = canonicalTypeHint(fieldInfo.getType());
 		}
-		final projectedInitializer = initializer == null ? HxFieldDecl.getInit(source) : expression(initializer, catalog);
+		final projectedInitializer = initializer == null ? HxFieldDecl.getInit(source) : expression(initializer, catalog, runtimeTypes);
 		return new HxFieldDecl(HxFieldDecl.getName(source), HxFieldDecl.getVisibility(source), HxFieldDecl.getIsStatic(source), typeHint,
 			projectedInitializer, HxFieldDecl.getMetadata(source), HxFieldDecl.getPos(source), HxFieldDecl.getEndPos(source), HxFieldDecl.getIsFinal(source),
 			HxFieldDecl.getPropertyGet(source), HxFieldDecl.getPropertySet(source), initializer == null ? HxFieldDecl.getInitText(source) : "");
@@ -707,11 +741,13 @@ class TypedBodySource {
 		final typedExpression = initializer.getExpression();
 		final fieldReads = fieldReadCatalogForExpression(typedExpression);
 		final locals = localCatalogForExpression(typedExpression, fieldReads.getReservedProjectedNames());
-		final declaration = fieldDeclaration(source, semanticInfo, typedExpression, locals);
 		final field = initializer.getField();
 		final identity = field.getCanonicalKey() + "|initializer";
 		final revision = CompilerTypedTreeRevision.expression(field.getCanonicalKey(), typedExpression);
-		return new TypedBackendFieldInitializerProjection(identity, revision, field, declaration, locals, fieldReads);
+		final runtimeTypes = new TypedRuntimeTypeProjectionBuilder(identity, revision);
+		final declaration = fieldDeclaration(source, semanticInfo, typedExpression, locals, runtimeTypes);
+		return new TypedBackendFieldInitializerProjection(identity, revision, field, declaration, locals, fieldReads,
+			runtimeTypes.seal(TypedRuntimeTypeSource.inExpression(HxFieldDecl.getInit(declaration))));
 	}
 
 	static function projectedClassDeclaration(typedClass:TypedClass, functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>):HxClassDecl {
@@ -729,8 +765,18 @@ class TypedBodySource {
 			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceImplements[index];
 			}
 		];
+		final sourceInterfaceExtends = HxClassDecl.getInterfaceExtendsPaths(source);
+		final resolvedInterfaceExtends = typedClass.getResolvedInterfaceExtends();
+		final interfaceExtendsPaths = [
+			for (index in 0...sourceInterfaceExtends.length) {
+				final resolved = index < resolvedInterfaceExtends.length ? resolvedInterfaceExtends[index] : null;
+				resolved != null
+			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceInterfaceExtends[index];
+			}
+		];
 		return new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), functions, fields, extendsPath,
-			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source));
+			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source), interfaceExtendsPaths,
+			HxClassDecl.getIsExtern(source));
 	}
 
 	public static function classProjection(typedClass:TypedClass):TypedBackendClassProjection {
@@ -759,7 +805,10 @@ class TypedBodySource {
 		// including class-parameter binder identities. The older projected
 		// `resolvedExtends` spelling may still contain unresolved type arguments
 		// and must not become a competing backend semantic input.
-		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions());
+		// Interface headers finish loading their providers during typing. Their
+		// resolved types retain the indexed generic binders and refine early names.
+		final interfaces = HxClassDecl.getIsInterface(typedClass.getSourceDeclaration()) ? typedClass.getResolvedInterfaceExtends() : typedClass.getResolvedImplements();
+		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces);
 		return new TypedBackendClassProjection(declaration, functions, fieldInitializers, semanticFacts);
 	}
 
@@ -812,6 +861,7 @@ class TypedBodySource {
 	**/
 	public static function moduleDeclarationCatalog(parsed:ParsedModule, typedClasses:Array<TypedClass>):TypedBackendDeclarationCatalog {
 		final classes = new Array<HxClassDecl>();
+		final runtimeTypeCatalogs = new Array<TypedBackendRuntimeTypeCatalog>();
 		final functionEntries = new Array<{
 			backendClass:HxClassDecl,
 			backendFunction:HxFunctionDecl,
@@ -824,19 +874,33 @@ class TypedBodySource {
 				stableIdentity:String
 			}>();
 			for (typedFunction in typedClass.getFunctions()) {
-				final projectedFunction = functionDeclaration(typedFunction);
+				final runtimeTypes = new TypedRuntimeTypeProjectionBuilder(typedFunction.getStableIdentity(),
+					CompilerTypedTreeRevision.functionBody(typedFunction));
+				final projectedFunction = functionDeclaration(typedFunction, null, runtimeTypes);
+				runtimeTypeCatalogs.push(runtimeTypes.seal(TypedRuntimeTypeSource.inStatements(HxFunctionDecl.getBody(projectedFunction))));
 				projectedFunctions.push(projectedFunction);
 				classFunctions.push({
 					declaration: projectedFunction,
 					stableIdentity: typedFunction.getStableIdentity()
 				});
 			}
-			final initializerByField = new Map<String, TypedExpr>();
+			final initializerByField = new Map<String, TypedFieldInitializer>();
 			for (initializer in typedClass.getFieldInitializers())
-				initializerByField.set(initializer.getField().getName(), initializer.getExpression());
+				initializerByField.set(initializer.getField().getName(), initializer);
 			final projectedFields = [
-				for (field in HxClassDecl.getFields(typedClass.getSourceDeclaration()))
-					fieldDeclaration(field, typedClass.getSemanticInfo(), initializerByField.get(HxFieldDecl.getName(field)))
+				for (field in HxClassDecl.getFields(typedClass.getSourceDeclaration())) {
+					final initializer = initializerByField.get(HxFieldDecl.getName(field));
+					if (initializer == null) {
+						fieldDeclaration(field, typedClass.getSemanticInfo(), null);
+					} else {
+						final key = initializer.getField().getCanonicalKey();
+						final expression = initializer.getExpression();
+						final runtimeTypes = new TypedRuntimeTypeProjectionBuilder(key + "|initializer", CompilerTypedTreeRevision.expression(key, expression));
+						final declaration = fieldDeclaration(field, typedClass.getSemanticInfo(), expression, null, runtimeTypes);
+						runtimeTypeCatalogs.push(runtimeTypes.seal(TypedRuntimeTypeSource.inExpression(HxFieldDecl.getInit(declaration))));
+						declaration;
+					}
+				}
 			];
 			final projectedClass = projectedClassDeclaration(typedClass, projectedFunctions, projectedFields);
 			classes.push(projectedClass);
@@ -847,6 +911,6 @@ class TypedBodySource {
 					stableIdentity: classFunction.stableIdentity
 				});
 		}
-		return new TypedBackendDeclarationCatalog(projectedModuleDeclaration(parsed, typedClasses, classes), functionEntries);
+		return new TypedBackendDeclarationCatalog(projectedModuleDeclaration(parsed, typedClasses, classes), functionEntries, runtimeTypeCatalogs);
 	}
 }

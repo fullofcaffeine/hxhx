@@ -19,9 +19,10 @@ class HxhxOcamlTargetLiteralAdapter {
 				if (values.length != 1)
 					throw "native OCaml string literal has no exact value";
 				OcamlTargetLiteralFact.stringLiteral(values[0], typeDisplay);
-			case FloatValue | EnumValue | LocalRead | NameRead | FieldRead | NullSafeFieldRead | Call | MacroExpr | MacroType | Lambda | SwitchExpr |
-				NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl | ArrayAccess | Range | Cast |
-				Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr | BreakExpr | ContinueExpr:
+			case FloatValue | EnumValue | RuntimeTypeValue | RuntimeTypeTest | LocalRead | NameRead | FieldRead | NullSafeFieldRead | Call | MacroExpr |
+				MacroType | Lambda | SwitchExpr | NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl |
+				ArrayAccess | Range | Cast | Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr |
+				BreakExpr | ContinueExpr:
 				null;
 		};
 	}

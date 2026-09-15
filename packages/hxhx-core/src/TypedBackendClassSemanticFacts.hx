@@ -72,17 +72,33 @@ class TypedBackendClassSemanticFacts {
 	final superClassIdentity:Null<String>;
 	final superTypeIdentity:Null<String>;
 	final superTypeDisplay:Null<String>;
+	final isInterface:Bool;
+	final isExtern:Bool;
+	final interfaceTypes:Array<TyType>;
 	final fields:Array<TypedBackendClassFieldFact>;
 	final methods:Array<TypedBackendClassMethodFact>;
 	final fieldIndex:haxe.ds.StringMap<TypedBackendClassFieldFact>;
 	final methodIndex:haxe.ds.StringMap<TypedBackendClassMethodFact>;
 	final canonicalIdentity:String;
 
-	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>) {
+	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>, ?resolvedInterfaces:Array<TyType>) {
 		if (info == null)
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
 		moduleIdentity = normalize(info.getModulePath());
+		// Only class declarations own interface relationships. This checked boundary
+		// keeps enum and abstract facts out of the class/interface membership graph.
+		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
+		isInterface = classInfo != null && classInfo.getIsInterface();
+		isExtern = classInfo != null && classInfo.getIsExtern();
+		final indexedInterfaces = classInfo == null ? [] : classInfo.getInterfaceTypes();
+		interfaceTypes = resolvedInterfaces == null ? indexedInterfaces : resolvedInterfaces.copy();
+		if (indexedInterfaces.length != interfaceTypes.length)
+			throw "typed backend interface parent count changed for " + classIdentity;
+		for (index in 0...indexedInterfaces.length)
+			if (!hasUnresolvedHeaderType(indexedInterfaces[index])
+				&& indexedInterfaces[index].getSemanticKey() != interfaceTypes[index].getSemanticKey())
+				throw "typed backend interface parent conflicts with indexed identity for " + classIdentity;
 		// This checked semantic-class boundary preserves the typed abstract carrier;
 		// targets must not recover abstract identity from its erased display name.
 		nominalKind = if (Std.isOfType(info, TyAbstractInfo)) {
@@ -135,6 +151,8 @@ class TypedBackendClassSemanticFacts {
 		superTypeDisplay = selectedSuperType == null ? null : selectedSuperType.getCanonicalDisplay();
 		if (selectedSuperType != null)
 			requireDeclaredTypeParameters(selectedSuperType, typeParameters, "superclass " + classIdentity);
+		for (interfaceType in interfaceTypes)
+			requireDeclaredTypeParameters(interfaceType, typeParameters, "interface parent " + classIdentity);
 
 		fieldIndex = new haxe.ds.StringMap<TypedBackendClassFieldFact>();
 		for (field in info.getFieldInfos()) {
@@ -279,6 +297,13 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(superClassIdentity);
 		identityFacts.push(superTypeIdentity);
 		identityFacts.push(superTypeDisplay);
+		identityFacts.push(isInterface ? "interface" : "non-interface");
+		identityFacts.push(isExtern ? "extern" : "generated");
+		identityFacts.push(Std.string(interfaceTypes.length));
+		for (interfaceType in interfaceTypes) {
+			identityFacts.push(interfaceType.getSemanticKey());
+			identityFacts.push(interfaceType.getCanonicalDisplay());
+		}
 		identityFacts.push("fields");
 		identityFacts.push(Std.string(fields.length));
 		for (field in fields) {
@@ -359,6 +384,27 @@ class TypedBackendClassSemanticFacts {
 	public function getSuperType():Null<TyType>
 		return superType;
 
+	/** Extern status belongs to the selected declaration and affects target generation. */
+	public function getIsExtern():Bool
+		return isExtern;
+
+	public function getIsInterface():Bool
+		return isInterface;
+
+	/** Exact implemented or extended interface types, without constructor meaning. */
+	public function getInterfaceTypes():Array<TyType>
+		return interfaceTypes.copy();
+
+	/** Early index observations can retain names whose provider has not loaded yet. */
+	static function hasUnresolvedHeaderType(type:TyType):Bool {
+		if (type.isUnknown() || type.isUnresolved())
+			return true;
+		for (argument in type.getTypeArguments())
+			if (hasUnresolvedHeaderType(argument))
+				return true;
+		return false;
+	}
+
 	public function getSuperTypeIdentity():Null<String>
 		return superTypeIdentity;
 
@@ -366,7 +412,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v7";
+		return "typed-backend-class-semantic-facts-v9";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected

@@ -203,7 +203,7 @@ class ParserStage {
 				changed = true;
 			return overlayChanged ? new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields,
 				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls),
-				HxClassDecl.getVisibility(cls)) : cls;
+				HxClassDecl.getVisibility(cls), HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls)) : cls;
 		}
 
 		final parsedMain = HxModuleDecl.getMainClass(parsed);
@@ -288,6 +288,6 @@ class ParserStage {
 		compiler process now has exactly one parser.
 	**/
 	public static function cacheConfigurationRevision():String {
-		return "hxhx-parser-schema-v2|frontend=haxe";
+		return "hxhx-parser-schema-v3|frontend=haxe";
 	}
 }

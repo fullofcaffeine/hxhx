@@ -62,6 +62,8 @@ class CompilerDependencyCollector {
 			collectResolvedHeaderType(edgeByKey, consumerModule, index, typedClass.getResolvedExtends(), "extends");
 			for (implemented in typedClass.getResolvedImplements())
 				collectResolvedHeaderType(edgeByKey, consumerModule, index, implemented, "implements");
+			for (extended in typedClass.getResolvedInterfaceExtends())
+				collectResolvedHeaderType(edgeByKey, consumerModule, index, extended, "interface-extends");
 			final semanticInfo = typedClass.getSemanticInfo();
 			if (semanticInfo != null)
 				for (declaration in semanticInfo.getDeclarations()) {
@@ -95,6 +97,10 @@ class CompilerDependencyCollector {
 		if (expression == null)
 			return;
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
+		if (runtimeOwner != null)
+			collectType(edgeByKey, consumerModule, index, TyType.nominal(runtimeOwner, []), "runtime-type-target", staticInitializer);
 		collectConstantRead(edgeByKey, consumerModule, index, currentOwner, expression);
 		final field = resolvedFieldRead(index, currentOwner, expression);
 		if (field != null)
@@ -151,6 +157,8 @@ class CompilerDependencyCollector {
 			case FloatValue:
 				null;
 			case EnumValue:
+				null;
+			case RuntimeTypeValue | RuntimeTypeTest:
 				null;
 			case ThisValue:
 				null;

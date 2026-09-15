@@ -101,6 +101,21 @@ class TypedBodyInvariant {
 	static function assertExpr(expression:TypedExpr, owner:String):Void {
 		if (expression == null)
 			throw "typed body contains a null expression in " + owner;
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		switch (expression.getTag()) {
+			case RuntimeTypeValue | RuntimeTypeTest:
+				if (runtimeTarget == null)
+					throw "runtime type expression has no exact target in " + owner;
+				final isTest = expression.getTag() == RuntimeTypeTest;
+				final expectedType = isTest ? TyType.fromHintText("Bool") : runtimeTarget.getValueType();
+				if (expression.getType().getSemanticKey() != expectedType.getSemanticKey()
+					|| expression.getExpressions().length != (isTest ? 1 : 0)
+					|| expression.getTexts().length != 0)
+					throw "runtime type expression has an invalid structural shape in " + owner;
+			case _:
+				if (runtimeTarget != null)
+					throw "ordinary expression carries a runtime type target in " + owner;
+		}
 		for (child in expression.getExpressions())
 			assertExpr(child, owner);
 		if (expression.getTag() == Call) {

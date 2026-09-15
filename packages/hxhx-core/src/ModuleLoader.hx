@@ -33,7 +33,8 @@ private typedef ModulePreparationHook = {
 	- This loader is intentionally conservative:
 	  - It only attempts candidate module paths that are derivable from the current typing context
 		(fully-qualified, explicit imports, same-package).
-	  - It is cycle-safe via a `visited` set keyed by module path.
+	  - It tracks requested paths and selected source files separately. Secondary
+		types and static members cannot cause the same source to enter typing twice.
 	  - It applies `HxConditionalCompilation.filterSource` before parsing so inactive branches
 		don’t spuriously pull modules into the compilation.
 
@@ -61,6 +62,7 @@ class ModuleLoader extends LazyTypeLoader {
 
 	// Module-path based cycle/dup guard.
 	final visited:haxe.ds.StringMap<Bool>;
+	final visitedSourceFiles = new haxe.ds.StringMap<Bool>();
 	final typeNotFoundTried:haxe.ds.StringMap<Bool>;
 
 	// Newly loaded modules (drained by the Stage3 driver).
@@ -106,6 +108,7 @@ class ModuleLoader extends LazyTypeLoader {
 		return onMissingType == null ? false : onMissingType.invoke(mp);
 	}
 
+	/** Register prepared roots, then finish their signatures before body typing starts. */
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
 		if (resolved == null)
 			return;
@@ -113,7 +116,30 @@ class ModuleLoader extends LazyTypeLoader {
 			final mp = ResolvedModule.getModulePath(m);
 			if (mp != null && mp.length > 0)
 				visited.set(mp, true);
+			visitedSourceFiles.set(haxe.io.Path.normalize(ResolvedModule.getFilePath(m)), true);
 		}
+		for (module in resolved)
+			prepareSignatureDependencies(module);
+	}
+
+	/**
+		Load declaration-only dependencies through ordinary contextual lookup.
+
+		All source identities are registered before this walk, so a cycle can name
+		its owner without re-entering its load. Rebuild only this unpublished module
+		after new dependencies resolve; typed callers must receive its final records.
+	**/
+	function prepareSignatureDependencies(module:ResolvedModule):Void {
+		if (index == null)
+			return;
+		final declaration = ResolvedModule.getParsed(module).getDecl();
+		final missing = TySignatureDependencies.unresolved(index, ResolvedModule.getModulePath(module));
+		var resolved = false;
+		for (path in missing)
+			if (ensureTypeAvailable(path, HxModuleDecl.getPackagePath(declaration), HxModuleDecl.getDirectives(declaration)) != null)
+				resolved = true;
+		if (resolved)
+			index.addResolvedModule(module);
 	}
 
 	public function drainNewModules():Array<ResolvedModule> {
@@ -295,6 +321,13 @@ class ModuleLoader extends LazyTypeLoader {
 				Sys.println("loader_load miss module=" + modulePath);
 			return;
 		}
+		// Resolve every new lookup before checking the source. Its observation must
+		// still record whether a direct file shadows a secondary-type fallback.
+		final selectedFileKey = haxe.io.Path.normalize(filePath);
+		if (visitedSourceFiles.exists(selectedFileKey)) {
+			visited.set(modulePath, true);
+			return;
+		}
 
 		final source = sourceProvider.readSource(filePath);
 		if (source == null) {
@@ -343,7 +376,14 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final parsedModule = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
+		// Match eager resolution: declarations belong to the source module, while
+		// the origin retains the exact lookup that selected that source.
+		final packagePath = HxModuleDecl.getPackagePath(parsed.getDecl());
+		final moduleName = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(filePath));
+		final canonicalModulePath = packagePath == null || packagePath.length == 0 ? moduleName : packagePath + "." + moduleName;
+		visited.set(canonicalModulePath, true);
+		visitedSourceFiles.set(selectedFileKey, true);
+		final parsedModule = new ResolvedModule(canonicalModulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
 		final rm = prepareResolvedModule(parsedModule);
 		pending.push(rm);
 		if (trace)
@@ -351,6 +391,7 @@ class ModuleLoader extends LazyTypeLoader {
 
 		if (index != null)
 			index.addResolvedModule(rm);
+		prepareSignatureDependencies(rm);
 
 		// Keep lazily loaded modules link-safe by recursively loading their direct dependencies.
 		//
