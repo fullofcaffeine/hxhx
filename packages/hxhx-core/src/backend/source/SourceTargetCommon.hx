@@ -14008,6 +14008,7 @@ class SourceTargetCommon {
 			appendPythonMetaSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
+		final pythonFields = new PythonFieldAccessLowering(program);
 		final pythonClassesByName = new Map<String, HxClassDecl>();
 		for (cls in pending)
 			pythonClassesByName.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), cls);
@@ -14015,7 +14016,7 @@ class SourceTargetCommon {
 			if (out.length > 0)
 				out.push("");
 			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
-			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className)))
+			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className), pythonFields))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -19105,8 +19106,8 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>,
-			packagePath:String):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>, packagePath:String,
+			pythonFields:PythonFieldAccessLowering):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final fullName = packagePath != null
 			&& packagePath.length > 0 ? packagePath + "." + HxClassDecl.getName(cls) : HxClassDecl.getName(cls);
@@ -19138,7 +19139,9 @@ class SourceTargetCommon {
 		final fieldVisited:Map<String, Bool> = [];
 		final instanceMethodNames = pythonInstanceMethodNames(cls, classesByName, methodVisited);
 		final instanceFieldNames = pythonInstanceFieldNames(cls, classesByName, fieldVisited);
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (legacyFunction in HxClassDecl.getFunctions(cls)) {
+			final projection = pythonFields.projection(cls, legacyFunction);
+			final fn = projection.getDeclaration();
 			if (isCompileTimeOnlyFunction(fn) && !pythonShouldEmitNeutralCompileTimeOnlyFunction(fullName, fn))
 				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
@@ -19169,9 +19172,10 @@ class SourceTargetCommon {
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, fullName, className, HxFunctionDecl.getName(fn))) {
+				final loweredBody = pythonFields.body(projection);
 				final body = !isStatic
-					|| isCtor ? pythonRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
-						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
+					|| isCtor ? pythonRewriteSameClassMembersInStmts(loweredBody, instanceMethodNames, instanceFieldNames,
+						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : loweredBody;
 				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
