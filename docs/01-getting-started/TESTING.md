@@ -74,6 +74,16 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Function bodies after return types
+
+Run `npm run test:m14:parser-stage-scan-expression-body` to check function body
+boundaries in the parser and helper scanner. The test checks call expressions,
+nested return types, and preservation of the following method. Static methods
+with a structured body must retain that body without an explicit final `return`.
+
+The Python static-member test below also runs a helper with a single-expression
+body. It compares the generated program with upstream Haxe behavior.
+
 ### Python static members
 
 Run `npm run test:m14:python-entry-members` to check static calls and fields on
