@@ -27,6 +27,8 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
   // Neko joins exact calls to their indexed class and function before rendering.
   "packages/hxhx-core/src/backend/vm/NekoTypedProgramProjection.hx",
+  // Registry entries consume exact nominal facts and precomputed interface membership.
+  "packages/hxhx-core/src/backend/vm/NekoRuntimeTypeRegistry.hx",
 ]);
 
 function requireFragment(relative, fragment, claim) {

@@ -41,6 +41,10 @@ class NekoTypedProgramProjection {
 				classes.set(identity, owner);
 				classIdentities.set(owner.getDeclaration(), identity);
 				classFacts.push(facts);
+				for (field in facts.copyFields())
+					occupiedNames.set(field.name, true);
+				for (method in facts.copyMethods())
+					occupiedNames.set(method.name, true);
 				for (initializer in owner.getFieldInitializers()) {
 					final field = initializer.getField();
 					if (field.getOwner().getCanonicalName() != identity || facts.findField(field.getCanonicalKey()) == null)
@@ -101,6 +105,15 @@ class NekoTypedProgramProjection {
 			if (symbols.exists(symbol))
 				throw "Neko exact declaration symbol conflicts with generated symbol " + symbol;
 		}
+	}
+
+	/** Choose an internal helper or instance-slot name after reserving all projected member and local names. */
+	public function runtimeHelperName(base:String):String {
+		var name = base;
+		var suffix = 0;
+		while (occupiedNames.exists(name))
+			name = base + "_" + ++suffix;
+		return name;
 	}
 
 	/** Choose a shared helper table name that no projected local or generated function can shadow. */

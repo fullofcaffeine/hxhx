@@ -42,6 +42,16 @@ class NekoConstructionEmitter {
 				out.push("  var " + args[index] + " = " + arrayName + "[" + index + "];");
 		}
 		out.push("  var " + selfName + " = $new(null);");
+		final typeSlot = context.typedProgram.runtimeHelperName("__hxhx_runtime_type");
+		out.push("  "
+			+ selfName
+			+ "."
+			+ typeSlot
+			+ " = "
+			+ typeSlot
+			+ "("
+			+ NekoTargetCore.quote("nominal:" + context.typedProgram.requireClassIdentity(info.cls))
+			+ ");");
 		out.push("  " + selfName + ".__hx_ctor = " + NekoTargetCore.quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
 		out.push("  " + selfName + ".__hx_value = " + (args.length > 0 ? args[0] : "null") + ";");
