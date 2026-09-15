@@ -756,6 +756,11 @@ Notes:
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.
+- Neko standard-library selection coverage is in `npm run test:m14:neko-standard-library-paths`.
+  It checks that project sources take precedence, then Neko implementations in `std/neko/_std`, then common declarations in `std`.
+  For example, ordinary Neko lookup selects `std/neko/_std/haxe/Exception.hx` before `std/haxe/Exception.hx`.
+  The test also checks that the last explicit `-cp` wins and that other targets exclude the Neko directory.
+  This test proves source selection. Complete exception compilation and runtime behavior require separate coverage.
 - HashLink native backend boundary smoke coverage is in `npm run test:m14:hashlink-native-backend-smoke`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
