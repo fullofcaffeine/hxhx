@@ -33,6 +33,7 @@ class Main {
  static function check(value:Parent):Bool { return value is Parent; }
  static function ordinaryField():Int { return Parent.answer; }
  static function ordinaryCall():Int { return Parent.read(); }
+ static function ordinaryQualifiedCall():Int { return Main.Parent.read(); }
  static function ordinaryMethodValue():Void { var callback = Parent.word; }
  static function ordinaryMethodWrite():Void { Parent.word = function():String return "after"; }
  static function ordinaryDynamicCall():String { return Parent.word(); }
@@ -56,12 +57,16 @@ class Main {
 		for (name in [
 			"ordinaryField",
 			"ordinaryCall",
+			"ordinaryQualifiedCall",
 			"ordinaryMethodValue",
 			"ordinaryMethodWrite",
 			"ordinaryDynamicCall"
 		])
 			if (functions.get(name).getRuntimeTypeCatalog().getEntries().length != 0)
 				throw "a statically selected member must not require a runtime class object: " + name;
+		final qualifiedCall = TypedExactStaticCallSource.decode(returned(functions.get("ordinaryQualifiedCall")));
+		if (qualifiedCall == null || !qualifiedCall.callee.match(EField(EField(EIdent("Main"), "Parent"), "read")))
+			throw "an explicitly qualified static owner must remain a structural path";
 		final second = functions.get("second");
 		final check = functions.get("check");
 		final firstMarker = returned(first);

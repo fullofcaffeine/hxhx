@@ -204,7 +204,7 @@ class TypedBodySource {
 	**/
 	static function resolvedTypeExpression(sourceName:String, identity:Null<TyNominalTypeId>):HxExpr {
 		final resolved = resolvedNameWhenAliased(sourceName, identity);
-		if (resolved == sourceName || resolved.indexOf(".") < 0)
+		if (resolved.indexOf(".") < 0)
 			return EIdent(resolved);
 		final parts = resolved.split(".");
 		var expression:HxExpr = EIdent(parts.shift());
@@ -764,8 +764,17 @@ class TypedBodySource {
 			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceImplements[index];
 			}
 		];
+		final sourceInterfaceExtends = HxClassDecl.getInterfaceExtendsPaths(source);
+		final resolvedInterfaceExtends = typedClass.getResolvedInterfaceExtends();
+		final interfaceExtendsPaths = [
+			for (index in 0...sourceInterfaceExtends.length) {
+				final resolved = index < resolvedInterfaceExtends.length ? resolvedInterfaceExtends[index] : null;
+				resolved != null
+			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceInterfaceExtends[index];
+			}
+		];
 		return new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), functions, fields, extendsPath,
-			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source));
+			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source), interfaceExtendsPaths);
 	}
 
 	public static function classProjection(typedClass:TypedClass):TypedBackendClassProjection {
@@ -794,7 +803,10 @@ class TypedBodySource {
 		// including class-parameter binder identities. The older projected
 		// `resolvedExtends` spelling may still contain unresolved type arguments
 		// and must not become a competing backend semantic input.
-		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions());
+		// Interface headers finish loading their providers during typing. Their
+		// resolved types retain the indexed generic binders and refine early names.
+		final interfaces = HxClassDecl.getIsInterface(typedClass.getSourceDeclaration()) ? typedClass.getResolvedInterfaceExtends() : typedClass.getResolvedImplements();
+		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces);
 		return new TypedBackendClassProjection(declaration, functions, fieldInitializers, semanticFacts);
 	}
 

@@ -89,7 +89,7 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v4");
+		publicFacts.push("typed-module-public-interface-v5");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
@@ -206,6 +206,8 @@ class CompilerTypedModuleRevision {
 		addResolvedHeaderType(out, "extends", typedClass.getResolvedExtends());
 		for (implemented in typedClass.getResolvedImplements())
 			addResolvedHeaderType(out, "implements", implemented);
+		for (extended in typedClass.getResolvedInterfaceExtends())
+			addResolvedHeaderType(out, "interface-extends", extended);
 		addStrings(out, HxClassDecl.getMetadata(sourceClass));
 
 		for (field in HxClassDecl.getFields(sourceClass)) {

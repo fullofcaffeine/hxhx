@@ -39,6 +39,7 @@ class ParsedModuleIntegrity {
 		add(out, HxClassDecl.getIsInterface(parsedClass) ? "interface" : "class");
 		add(out, HxClassDecl.getVisibility(parsedClass) == HxVisibility.Public ? "public" : "private");
 		addStrings(out, HxClassDecl.getImplementsPaths(parsedClass));
+		addStrings(out, HxClassDecl.getInterfaceExtendsPaths(parsedClass));
 		addStrings(out, HxClassDecl.getMetadata(parsedClass));
 
 		final fields = HxClassDecl.getFields(parsedClass);

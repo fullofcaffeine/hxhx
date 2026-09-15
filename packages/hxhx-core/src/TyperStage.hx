@@ -18,6 +18,7 @@ private typedef TypedClassBuildResult = {
 private typedef TypedClassHeaderTypes = {
 	final extendsType:Null<TyType>;
 	final implementsTypes:Array<TyType>;
+	final interfaceExtendsTypes:Array<TyType>;
 };
 
 /**
@@ -84,22 +85,28 @@ class TyperStage {
 		return resolveTypeInContext(TyType.fromHintText(raw), ctx);
 	}
 
-	static function resolveTypeInContext(type:TyType, ctx:TyperContext):TyType {
+	static function resolveTypeInContext(type:TyType, ctx:TyperContext, ?typeParameters:Array<TyTypeParameterId>):TyType {
 		if (type == null)
 			return TyType.unknown();
 		if (type.isNullable())
-			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx), type.getDisplay());
+			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx, typeParameters), type.getDisplay());
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
 			return TyType.functionType([
 				for (argument in type.getFunctionArguments())
-					resolveTypeInContext(argument, ctx)
+					resolveTypeInContext(argument, ctx, typeParameters)
 			],
-				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx), type.getDisplay());
+				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx, typeParameters), type.getDisplay());
 		}
 		if (!type.isUnresolved())
 			return type;
-		final arguments = [for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx)];
+		final arguments = [
+			for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx, typeParameters)
+		];
+		if (typeParameters != null && arguments.length == 0)
+			for (parameter in typeParameters)
+				if (parameter.getName() == type.getUnresolvedPath())
+					return TyType.typeParameter(parameter);
 		final nominal = ctx == null ? null : ctx.resolveType(type.getUnresolvedPath());
 		return nominal == null ? TyType.unresolved(type.getUnresolvedPath(), arguments,
 			type.getDisplay()) : TyType.nominal(nominal.getIdentity(), arguments, type.getDisplay());
@@ -429,7 +436,7 @@ class TyperStage {
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
 			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions, typedFieldInitializers, headerTypes.extendsType,
-				headerTypes.implementsTypes));
+				headerTypes.implementsTypes, headerTypes.interfaceExtendsTypes));
 		}
 
 		final loweredClasses = index == null
@@ -446,14 +453,22 @@ class TyperStage {
 		source files. Parsing the header as a type also discovers generic arguments.
 	**/
 	static function resolveClassHeaderTypes(classDeclaration:HxClassDecl, context:TyperContext):TypedClassHeaderTypes {
+		// Header loading can resolve a provider after the declaration index was
+		// built. Keep the index's exact generic binders while selecting that provider.
+		final owner = context.currentClass();
+		final typeParameters = owner != null && Std.isOfType(owner, TyClassInfo) ? (cast owner : TyClassInfo).getTypeParameterIds() : [];
 		final extendsPath = HxClassDecl.getExtendsPath(classDeclaration);
 		final extendsType = extendsPath != null
-			&& StringTools.trim(extendsPath).length > 0 ? resolveTypeInContext(TyType.fromHintText(extendsPath), context) : null;
+			&& StringTools.trim(extendsPath).length > 0 ? resolveTypeInContext(TyType.fromHintText(extendsPath), context, typeParameters) : null;
 		final implementsTypes = new Array<TyType>();
 		for (implementedPath in HxClassDecl.getImplementsPaths(classDeclaration))
 			if (implementedPath != null && StringTools.trim(implementedPath).length > 0)
-				implementsTypes.push(resolveTypeInContext(TyType.fromHintText(implementedPath), context));
-		return {extendsType: extendsType, implementsTypes: implementsTypes};
+				implementsTypes.push(resolveTypeInContext(TyType.fromHintText(implementedPath), context, typeParameters));
+		final interfaceExtendsTypes = [
+			for (path in HxClassDecl.getInterfaceExtendsPaths(classDeclaration))
+				resolveTypeInContext(TyType.fromHintText(path), context, typeParameters)
+		];
+		return {extendsType: extendsType, implementsTypes: implementsTypes, interfaceExtendsTypes: interfaceExtendsTypes};
 	}
 
 	/**

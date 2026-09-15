@@ -203,7 +203,7 @@ class ParserStage {
 				changed = true;
 			return overlayChanged ? new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields,
 				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls),
-				HxClassDecl.getVisibility(cls)) : cls;
+				HxClassDecl.getVisibility(cls), HxClassDecl.getInterfaceExtendsPaths(cls)) : cls;
 		}
 
 		final parsedMain = HxModuleDecl.getMainClass(parsed);

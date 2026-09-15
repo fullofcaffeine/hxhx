@@ -353,7 +353,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			[]);
 		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
 			[]);
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v7",
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v8",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
@@ -432,7 +432,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final childFacts = emptyClassFacts("unit.Child", "unit.Child", leftBaseType);
 		final orderedGraph = new TypedBackendClassGraph("typed-program-revision", [rightBaseFacts, childFacts, leftBaseFacts]);
 		final reversedGraph = new TypedBackendClassGraph("typed-program-revision", [leftBaseFacts, childFacts, rightBaseFacts]);
-		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v3",
+		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v4",
 			"typed backend class graphs should version their target-neutral representation");
 		assertTrue(orderedGraph.getCanonicalIdentity() == reversedGraph.getCanonicalIdentity(),
 			"typed backend class graphs should not depend on module or class traversal order");

@@ -62,6 +62,8 @@ class CompilerDependencyCollector {
 			collectResolvedHeaderType(edgeByKey, consumerModule, index, typedClass.getResolvedExtends(), "extends");
 			for (implemented in typedClass.getResolvedImplements())
 				collectResolvedHeaderType(edgeByKey, consumerModule, index, implemented, "implements");
+			for (extended in typedClass.getResolvedInterfaceExtends())
+				collectResolvedHeaderType(edgeByKey, consumerModule, index, extended, "interface-extends");
 			final semanticInfo = typedClass.getSemanticInfo();
 			if (semanticInfo != null)
 				for (declaration in semanticInfo.getDeclarations()) {

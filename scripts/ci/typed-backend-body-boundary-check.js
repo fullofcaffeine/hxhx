@@ -106,7 +106,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v7"',
+  'return "typed-backend-class-semantic-facts-v8"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(
@@ -126,7 +126,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassGraph.hx",
-  'return "typed-backend-class-graph-v3"',
+  'return "typed-backend-class-graph-v4"',
   "versioned immutable typed backend class graph",
 );
 requireFragment(
@@ -146,7 +146,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBodySource.hx",
-  "new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions())",
+  "new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces)",
   "single-owner typed class semantic-fact handoff to backend projection",
 );
 requireFragment(
