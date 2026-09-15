@@ -19,8 +19,8 @@ Ordinary fields and locals can use the preferred internal names. The compiler
 selects different helper and instance-slot names for that program. Native
 String and Array reflection names are also compared with upstream.
 
-This fixture covers nominal class and interface checks. Shared core type
-operands, static initialization, exact Std.isOfType calls, and typed exception
+This fixture covers nominal class and interface checks. Static initialization,
+exact Std.isOfType calls, and typed exception
 conversion remain separate unfinished parts of haxe_ocaml-41m6r.
 Special native carriers that bypass ordinary class construction still need
 explicit type-object integration. This fixture does not prove their reflection.

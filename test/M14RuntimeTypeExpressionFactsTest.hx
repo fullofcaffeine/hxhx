@@ -10,8 +10,8 @@ class M14RuntimeTypeExpressionFactsTest {
 	}
 
 	static function main():Void {
-		final parent = new TypedRuntimeTypeTarget(new TyNominalTypeId("sample.Parent"));
-		final other = new TypedRuntimeTypeTarget(new TyNominalTypeId("other.Parent"));
+		final parent = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("sample.Parent")));
+		final other = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("other.Parent")));
 		final value = TypedExpr.nullValue(TyType.fromHintText("Dynamic"), null);
 		final test = TypedExpr.runtimeTypeTest(value, parent, null);
 		final literal = TypedExpr.runtimeTypeValue(parent, null);
@@ -28,7 +28,7 @@ class M14RuntimeTypeExpressionFactsTest {
 		if (copied.getRuntimeTypeTarget() != parent)
 			throw "typed expression copy lost its exact runtime target";
 		final revision = CompilerTypedTreeRevision.expression("owner", test);
-		final renamedTarget = new TypedRuntimeTypeTarget(parent.getIdentity(), "ParentAlias");
+		final renamedTarget = new TypedRuntimeTypeTarget(parent.getKind(), "ParentAlias");
 		if (renamedTarget.getSemanticKey() != parent.getSemanticKey()
 			|| CompilerTypedTreeRevision.expression("owner", TypedExpr.runtimeTypeTest(value, renamedTarget, null)) == revision)
 			throw "source spelling must affect projection revision without changing target identity";
@@ -40,6 +40,22 @@ class M14RuntimeTypeExpressionFactsTest {
 		reject(() -> @:privateAccess TypedBodyInvariant.assertExpr(test.withType(TyType.fromHintText("String")), "owner"));
 		reject(() -> @:privateAccess TypedBodyInvariant.assertExpr(test.withExpressions([]), "owner"));
 		reject(() -> @:privateAccess TypedBodyInvariant.assertExpr(literal.withExpressions([value]), "owner"));
+		// A String instance type is primitive, but its runtime class operand must
+		// still observe the selected String provider's public interface.
+		final coreTarget = new TypedRuntimeTypeTarget(StringCore);
+		final coreTest = TypedExpr.runtimeTypeTest(value, coreTarget, null);
+		final provider = new ResolvedModule("String", "String.hx", ParserStage.parse("extern class String {}", "String.hx"));
+		final index = TyperIndex.build([provider]);
+		final dependencies = new haxe.ds.StringMap<CompilerDependencyEdge>();
+		@:privateAccess CompilerDependencyCollector.collectExpression(dependencies, "Main", index, null, coreTest);
+		var observed = false;
+		for (edge in dependencies)
+			if (edge.providerModule == "String" && edge.factIdentity == "runtime-type-target:String")
+				observed = true;
+		if (!observed)
+			throw "core String target lost its provider dependency";
+		if (coreTarget.getSemanticKey() == new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("String"))).getSemanticKey())
+			throw "core and nominal runtime representations acquired the same revision key";
 		Sys.println("RUNTIME_TYPE_EXPRESSION_FACTS:PASS");
 	}
 }

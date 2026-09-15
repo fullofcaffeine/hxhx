@@ -57,6 +57,16 @@ class TypedRuntimeTypeResolver {
 			}
 		}
 		final selected = context.resolveType(name);
+		// Core names are language-defined. A resolved package or secondary type
+		// with the same short spelling remains nominal; ordinary values won above.
+		final canonical = selected == null ? name : selected.getIdentity().getCanonicalName();
+		switch (canonical) {
+			case "Array":
+				return new TypedRuntimeTypeTarget(ArrayCore, name);
+			case "String":
+				return new TypedRuntimeTypeTarget(StringCore, name);
+			case _:
+		}
 		if (selected == null)
 			return null;
 		if (!Std.isOfType(selected, TyClassInfo) || selected.getIsEnum()) {
@@ -64,6 +74,6 @@ class TypedRuntimeTypeResolver {
 				throw "unsupported runtime type target: " + selected.getFullName();
 			return null;
 		}
-		return new TypedRuntimeTypeTarget(selected.getIdentity(), name);
+		return new TypedRuntimeTypeTarget(Nominal(selected.getIdentity()), name);
 	}
 }

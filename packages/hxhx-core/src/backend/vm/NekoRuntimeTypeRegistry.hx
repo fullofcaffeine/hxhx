@@ -1,6 +1,6 @@
 package backend.vm;
 
-/** One compiler-selected type object and its precomputed nominal membership. */
+/** Runtime representations supported by this target's class-object registry. */
 private enum abstract RegistryKind(String) {
 	var NominalClass = "class";
 	var NominalInterface = "interface";
@@ -16,10 +16,17 @@ private typedef RegistryEntry = {
 }
 
 /** Validate the exact nominal declaration before a runtime operand references the registry. */
-function requireNominal(program:NekoTypedProgramProjection, target:TypedRuntimeTypeTarget):String {
+function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTypeTarget):String {
+	switch (target.getKind()) {
+		case ArrayCore:
+			return "core:Array";
+		case StringCore:
+			return "core:String";
+		case Nominal(_):
+	}
 	final identity = target.getIdentity().getCanonicalName();
 	if (identity == "Array" || identity == "String")
-		throw "Neko runtime type target requires explicit core admission: " + identity;
+		throw "Neko core runtime target cannot use a nominal representation: " + identity;
 	final owner = program.requireClass(identity);
 	if (!owner.requireSemanticFacts().getNominalKind().match(ClassInstance))
 		throw "Neko runtime type target is not an admitted class or interface: " + identity;
@@ -32,8 +39,8 @@ function requireNominal(program:NekoTypedProgramProjection, target:TypedRuntimeT
 
 	Haxe owns nominal membership and public names. The runtime receives complete
 	ancestor lists and interns one object per identity. Enum and abstract values
-	are excluded. Array and String objects serve native reflection only until
-	shared typing admits their explicit core operand forms.
+	are excluded. Array and String use the same core objects for class literals,
+	reflection, and predicates.
 **/
 function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection, modules:Array<TypedBackendModuleProjection>, symbols:String):Void {
 	final entries:Array<RegistryEntry> = [
@@ -55,6 +62,9 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 		for (owner in module.getClasses()) {
 			final facts = owner.requireSemanticFacts();
 			if (!facts.getNominalKind().match(ClassInstance))
+				continue;
+			// Core providers share the explicitly admitted native objects above.
+			if (facts.getClassIdentity() == "Array" || facts.getClassIdentity() == "String")
 				continue;
 			final name = HxClassDecl.getName(owner.getDeclaration());
 			entries.push({

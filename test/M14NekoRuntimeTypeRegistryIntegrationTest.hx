@@ -2,6 +2,7 @@
 class M14NekoRuntimeTypeRegistryIntegrationTest {
 	static function main():Void {
 		@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.assertRuntimeFixture("test/neko_runtime_type_registry", true);
+		@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.assertRuntimeFixture("test/neko_core_runtime_types", true);
 		assertForgedTypeObjects();
 		Sys.println("NEKO_RUNTIME_TYPE_REGISTRY:PASS");
 	}

@@ -1,7 +1,7 @@
 /** Checks projection object identity without loading the full compiler pipeline. */
 class M14RuntimeTypeOccurrenceIdentityTest {
 	static function main():Void {
-		final target = new TypedRuntimeTypeTarget(new TyNominalTypeId("sample.Parent"));
+		final target = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("sample.Parent")));
 		final occurrence = new TypedBackendRuntimeTypeOccurrence("owner", "revision", target);
 		final catalog = new TypedBackendRuntimeTypeCatalog("owner", "revision", [occurrence]);
 		if (catalog.require(occurrence.getExpression(), "owner", "revision") != occurrence)

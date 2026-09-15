@@ -42,7 +42,7 @@ class NativeDeclarationAdapterFixture {
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
-		final runtimeTarget = new TypedRuntimeTypeTarget(owner);
+		final runtimeTarget = new TypedRuntimeTypeTarget(Nominal(owner));
 		final typeValue = TypedExpr.runtimeTypeValue(runtimeTarget, HxPos.unknown());
 		final typeTest = TypedExpr.runtimeTypeTest(TypedExpr.nullValue(TyType.fromHintText("Dynamic"), HxPos.unknown()), runtimeTarget, HxPos.unknown());
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(typeValue) != null

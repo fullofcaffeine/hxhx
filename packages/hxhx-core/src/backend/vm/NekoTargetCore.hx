@@ -396,13 +396,13 @@ class NekoTargetCore {
 			for (owner in module.getClasses()) {
 				for (fn in owner.getFunctions())
 					for (operation in fn.getRuntimeTypeCatalog().getEntries())
-						NekoRuntimeTypeRegistry.requireNominal(program, operation.getTarget());
+						NekoRuntimeTypeRegistry.requireTarget(program, operation.getTarget());
 				for (initializer in owner.getFieldInitializers()) {
 					// Ordinary static initialization still needs its own ordered emission.
 					if (initializer.getField().getIsStatic())
 						initializer.getRuntimeTypeCatalog().assertUnsupportedAbsent("Neko backend");
 					for (operation in initializer.getRuntimeTypeCatalog().getEntries())
-						NekoRuntimeTypeRegistry.requireNominal(program, operation.getTarget());
+						NekoRuntimeTypeRegistry.requireTarget(program, operation.getTarget());
 				}
 			}
 	}
@@ -1254,7 +1254,7 @@ class NekoTargetCore {
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
 		final runtimeType = NekoRuntimeTypePlan.fromExpression(context, expr);
 		if (runtimeType != null) {
-			final identity = NekoRuntimeTypeRegistry.requireNominal(context.typedProgram, runtimeType.getTarget());
+			final identity = NekoRuntimeTypeRegistry.requireTarget(context.typedProgram, runtimeType.getTarget());
 			final target = context.typedProgram.runtimeHelperName("__hxhx_runtime_type") + "(" + quote(identity) + ")";
 			return runtimeType.getValue() == null ? target : context.typedProgram.runtimeHelperName("__hxhx_is_of_type")
 				+ "("

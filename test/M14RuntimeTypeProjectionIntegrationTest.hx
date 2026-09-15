@@ -120,7 +120,7 @@ class Main {
 		}
 		reject(() -> check.requireRuntimeType(testMarker), "mutated arguments");
 		final builder = new TypedRuntimeTypeProjectionBuilder("owner", "revision");
-		final target = new TypedRuntimeTypeTarget(new TyNominalTypeId("Main.Parent"));
+		final target = new TypedRuntimeTypeTarget(Nominal(new TyNominalTypeId("Main.Parent")));
 		builder.project(target);
 		final retained = builder.project(target);
 		final catalog = builder.seal([retained]);
