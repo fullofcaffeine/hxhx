@@ -196,6 +196,7 @@
     "test:snapshot": "target-packages",
     "test:examples": "target-packages",
     "test:hxhx-targets": "hxhx-targets",
-    "test:clean-artifacts": "compiler-focused"
+    "test:clean-artifacts": "compiler-focused",
+    "test:m14:python-entry-members": "compiler-focused"
   }
 }

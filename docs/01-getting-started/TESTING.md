@@ -74,6 +74,15 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Python static members
+
+Run `npm run test:m14:python-entry-members` to check static calls and fields on
+the program's entry class. The test also checks local-name collisions and
+references to the entry function during static initialization.
+It compares authored output with upstream Haxe and generated Python execution.
+See the [fixture guide](../../test/python_entry_members/README.md) for prerequisites
+and the limits of this evidence.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime
