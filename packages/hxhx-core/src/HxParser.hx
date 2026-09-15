@@ -5351,17 +5351,6 @@ class HxParser {
 				pendingTypeMetadata.push(parseMetadataText());
 				continue;
 			}
-			switch (cur.kind) {
-				case TKeyword(KFinal):
-					pendingTypeMetadata = [];
-					parseModuleField(true);
-					continue;
-				case TKeyword(KVar):
-					pendingTypeMetadata = [];
-					parseModuleField(false);
-					continue;
-				case _:
-			}
 			var moduleMemberVisibility:HxVisibility = Public;
 			final moduleFunctionMetadata = pendingTypeMetadata.copy();
 			var keepModuleModifiers = true;
@@ -5377,6 +5366,14 @@ class HxParser {
 					keepModuleModifiers = true;
 				} else if (acceptKeyword(KInline)) {
 					moduleFunctionMetadata.push("inline");
+					keepModuleModifiers = true;
+				} else if (cur.kind.match(TKeyword(KFinal))
+					&& (peekKind().match(TKeyword(KClass))
+						|| peekKind().match(TKeyword(KPrivate))
+						|| peekKind().match(TIdent("extern")))) {
+					// A class modifier precedes class or another class modifier. A module final precedes its field name.
+					pendingTypeMetadata.push("final");
+					bump();
 					keepModuleModifiers = true;
 				} else {
 					switch (cur.kind) {
