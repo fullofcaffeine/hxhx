@@ -51,6 +51,16 @@ class NekoClassConstructionPlan {
 		}
 	}
 
+	/** Only the selected zero-argument String method can supply the VM conversion hook. */
+	public function hasStringConversion():Bool {
+		for (method in methods)
+			if (HxFunctionDecl.getName(method.body.getDeclaration()) == "toString") {
+				final result = method.body.getReturnType().getSemanticKey();
+				return method.body.getParameters().length == 0 && (result == "primitive:String" || result == "nominal:String");
+			}
+		return false;
+	}
+
 	/** Bare inherited reads use the receiver only after local shadowing is resolved. */
 	public function hasInstanceField(name:String):Bool
 		return instanceFields.exists(name);

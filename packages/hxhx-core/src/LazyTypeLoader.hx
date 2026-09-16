@@ -21,6 +21,10 @@
 class LazyTypeLoader {
 	public function new() {}
 
+	/** Query the request's conditional-compilation policy without exposing its mutable define map. */
+	public function hasDefine(_name:String):Bool
+		return false;
+
 	public function ensureTypeAvailable(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
 			?resolvedDirectives:Array<TyModuleDirective>):Null<TyNominalInfo> {
 		// Default no-op implementation.

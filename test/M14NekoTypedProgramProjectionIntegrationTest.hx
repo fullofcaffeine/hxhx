@@ -57,6 +57,11 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			throw "the selected helper lost its canonical owner or declaration";
 		if (selected.body.getReturnType().getCanonicalDisplay() != "String" || selected.body.getBody().length == 0)
 			throw "the selected helper lost its typed result or body";
+		if (projection.requireDeclaredFunction(selected.body.getDeclaration()).body != selected.body)
+			throw "function rendering lost its exact projected body";
+		final repeated = new NekoTypedProgramProjection("neko-projection-test", [project(source)]);
+		final foreignDeclaration = repeated.requireFunction("Main.Flavor", declaration).body.getDeclaration();
+		expectFailure("cannot identify projected function", () -> projection.requireDeclaredFunction(foreignDeclaration));
 		expectFailure("cannot find class Flavor", () -> projection.requireClass("Flavor"));
 		expectFailure("does not belong to Main", () -> projection.requireFunction("Main", declaration));
 		expectFailure("cannot find function missing", () -> projection.requireFunction("Main.Flavor", "missing"));
@@ -81,6 +86,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertConstantReadBoundary();
 		assertConstantRuntime();
 		assertStaticCallBoundary();
+		assertExecutableProjections();
 		expectFailure("requires 3 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__ssub"), ["value"]));
 		expectFailure("requires 2 arguments", () -> backend.vm.NekoStringIntrinsics.renderCall(EIdent("__dollar__sget"), ["value"]));
 		expectFailure("requires 1 argument", () -> backend.vm.NekoStringIntrinsics.renderConstructor([]));
@@ -93,6 +99,58 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		assertRuntimeFixture("test/neko_qualified_static_calls", true, ["Main", "providers.Api", "other.Api"]);
 		assertRuntimeFixture("test/neko_statement_separation", true);
 		Sys.println("OK m14 Neko typed program projection");
+	}
+
+	/** Type operands must retain their exact function or field-initializer owner in child scopes. */
+	static function assertExecutableProjections():Void {
+		final source = "class Parent {} class Main { var first = Parent; var second = Parent; static function value() return Parent; }";
+		final module = project(source);
+		final program = new NekoTypedProgramProjection("executable-test", [module]);
+		final owner = program.requireClass("Main");
+		final fields = owner.getFieldInitializers();
+		final context:backend.vm.NekoEmitContext = {
+			classes: new haxe.ds.StringMap(),
+			typedProgram: program,
+			currentExecutable: null,
+			abstractHelpers: [],
+			abstractHelperIds: new haxe.ds.StringMap(),
+			directAbstractReceiver: false,
+			selfName: null,
+			currentClass: null,
+			symbolTable: null,
+			packFunctionArguments: false,
+			locals: new haxe.ds.StringMap(),
+			insideTry: false,
+			breakFlag: null
+		};
+		final info:backend.vm.NekoEmitContext.NekoClassInfo = {fullName: "Main", shortName: "Main", cls: owner.getDeclaration()};
+		final instance = @:privateAccess NekoTargetCore.withSelf(context, "self", info);
+		final fieldContext = @:privateAccess NekoTargetCore.withFieldInitializer(instance, fields[0].getDeclaration());
+		final child = @:privateAccess NekoTargetCore.childContext(fieldContext);
+		final marker = fields[0].getRuntimeTypeCatalog().getEntries()[0].getExpression();
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(child, marker) != fields[0].requireRuntimeType(marker))
+			throw "initializer child scope lost its exact type occurrence";
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(context, EInt(1)) != null)
+			throw "ordinary expression acquired a runtime type plan";
+		expectFailure("requires an executable projection", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(context, marker));
+		final other = @:privateAccess NekoTargetCore.withFieldInitializer(instance, fields[1].getDeclaration());
+		expectFailure("absent from the current initializer", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(other, marker));
+		final foreign = new NekoTypedProgramProjection("executable-test", [project(source)]).requireClass("Main").getFieldInitializers();
+		expectFailure("cannot identify projected initializer", () -> program.requireDeclaredInitializer(foreign[0].getDeclaration()));
+		final foreignContext = @:privateAccess NekoTargetCore.childContext(fieldContext);
+		foreignContext.currentExecutable = FieldInitializer(foreign[0]);
+		expectFailure("cannot identify projected initializer",
+			() -> backend.vm.NekoRuntimeTypePlan.fromExpression(foreignContext, foreign[0].getRuntimeTypeCatalog().getEntries()[0].getExpression()));
+		expectFailure("requires its owning class context", () -> @:privateAccess NekoTargetCore.withFieldInitializer(context, fields[0].getDeclaration()));
+		final fn = owner.getFunctions()[0];
+		final functionContext = @:privateAccess NekoTargetCore.withFunctionArgs(fieldContext, fn.getDeclaration());
+		final functionMarker = fn.getRuntimeTypeCatalog().getEntries()[0].getExpression();
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(functionContext, functionMarker) != fn.requireRuntimeType(functionMarker))
+			throw "function scope did not replace initializer ownership";
+		expectFailure("absent from the current function", () -> backend.vm.NekoRuntimeTypePlan.fromExpression(functionContext, marker));
+		final replaced = @:privateAccess NekoTargetCore.withFieldInitializer(functionContext, fields[0].getDeclaration());
+		if (backend.vm.NekoRuntimeTypePlan.fromExpression(replaced, marker) != fields[0].requireRuntimeType(marker))
+			throw "initializer scope did not replace function ownership";
 	}
 
 	/** Static calls must bind their exact owner and reject malformed transport records. */
@@ -154,48 +212,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 
 	/** Compare authored Haxe with both generated layouts; target primitives require the upstream Neko target. */
 	static function assertRuntimeFixture(fixture:String, upstreamNeko:Bool, ?modulePaths:Array<String>):Void {
-		final expected = File.getContent(fixture + "/expected.stdout");
-		final directory = Path.normalize(Sys.getCwd() + "/.tmp/m14_neko_enum_values_" + Std.string(Date.now().getTime()));
-		FileSystem.createDirectory(directory);
-		final upstream = if (upstreamNeko) {
-			run("haxe", ["-cp", fixture, "-main", "Main", "-neko", directory + "/upstream.n"]);
-			run("neko", [directory + "/upstream.n"]);
-		} else {
-			run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
-		};
-		if (upstream != expected)
-			throw "upstream runtime fixture differs from its expected output: " + fixture + "; artifacts: " + directory;
-		final modules = modulePaths == null ? ["Main"] : modulePaths;
-		final resolved = [
-			for (module in modules) {
-				final file = fixture + "/" + StringTools.replace(module, ".", "/") + ".hx";
-				new ResolvedModule(module, file, ParserStage.parse(File.getContent(file), file));
-			}
-		];
-		final index = TyperIndex.build(resolved);
-		final loader = new ModuleLoader([fixture], new haxe.ds.StringMap<String>(), index, _ -> false);
-		loader.markResolvedAlready(resolved);
-		final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index, loader)], false);
-		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
-		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
-		File.saveContent(directory + "/main.neko", split.entrySource);
-		for (part in split.support)
-			File.saveContent(part.path, part.source);
-		File.saveContent(directory + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
-		for (file in FileSystem.readDirectory(directory)) {
-			if (!StringTools.endsWith(file, ".neko"))
-				continue;
-			final path = directory + "/" + file;
-			if (File.getContent(path).indexOf("must-stay-unused") >= 0)
-				throw "unused abstract helper became reachable in " + path;
-			run("nekoc", [path]);
-		}
-		for (layout in ["single", "main"])
-			if (run("neko", [directory + "/" + layout + ".n"]) != expected)
-				throw fixture + " runtime differs in " + layout + "; artifacts: " + directory;
-		for (file in FileSystem.readDirectory(directory))
-			FileSystem.deleteFile(directory + "/" + file);
-		FileSystem.deleteDirectory(directory);
+		NekoRuntimeFixture.exercise(fixture, false, upstreamNeko, modulePaths);
 	}
 
 	/** A provider edit must change the caller's body revision and retain its constant-value dependency. */

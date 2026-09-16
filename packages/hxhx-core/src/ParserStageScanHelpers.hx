@@ -61,6 +61,7 @@ class ParserStageScanHelpers {
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
 		var pendingTypeVisibility = HxVisibility.Public;
+		var pendingTypeExtern = false;
 		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
 			final colon = scanNextToken(source, j);
@@ -132,14 +133,21 @@ class ParserStageScanHelpers {
 					pendingTypeVisibility = HxVisibility.Public;
 					continue;
 				}
-				if (t.text == "extern" || t.text == "final")
+				if (t.text == "extern") {
+					pendingTypeExtern = true;
+					continue;
+				}
+				if (t.text == "final")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeExtern = false;
 				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final classMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final classExtern = pendingTypeExtern;
+			pendingTypeExtern = false;
 			final classVisibility = pendingTypeVisibility;
 			pendingTypeVisibility = HxVisibility.Public;
 
@@ -160,7 +168,7 @@ class ParserStageScanHelpers {
 			if (!alreadySeen)
 				seen.set(className, true);
 
-			final header = scanClassHeader(source, i);
+			final header = scanClassHeader(source, i, isInterface);
 			if (header.bodyStart < 0)
 				continue;
 
@@ -170,7 +178,7 @@ class ParserStageScanHelpers {
 			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
 				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
-					header.implementsPaths, classVisibility));
+					header.implementsPaths, classVisibility, header.interfaceExtendsPaths, classExtern));
 		}
 
 		return out;
@@ -218,14 +226,16 @@ class ParserStageScanHelpers {
 		return out;
 	}
 
-	static function scanClassHeader(source:String, start:Int):{
+	static function scanClassHeader(source:String, start:Int, isInterface:Bool):{
 		bodyStart:Int,
 		nextPos:Int,
 		extendsPath:String,
+		interfaceExtendsPaths:Array<String>,
 		implementsPaths:Array<String>,
 		typeParams:Array<String>
 	} {
 		var extendsPath = "";
+		final interfaceExtendsPaths = new Array<String>();
 		var mode = "";
 		var genericDepth = 0;
 		var path = "";
@@ -234,9 +244,12 @@ class ParserStageScanHelpers {
 		function flushPath():Void {
 			if (path.length == 0 || mode.length == 0)
 				return;
-			if (mode == "extends")
-				extendsPath = path;
-			else if (mode == "implements")
+			if (mode == "extends") {
+				if (isInterface)
+					interfaceExtendsPaths.push(path);
+				else
+					extendsPath = path;
+			} else if (mode == "implements")
 				implementsPaths.push(path);
 			path = "";
 		}
@@ -287,6 +300,7 @@ class ParserStageScanHelpers {
 			bodyStart: tok.text == "{" ? tok.nextPos : -1,
 			nextPos: tok.nextPos,
 			extendsPath: extendsPath,
+			interfaceExtendsPaths: interfaceExtendsPaths,
 			implementsPaths: implementsPaths,
 			typeParams: typeParams.params
 		};

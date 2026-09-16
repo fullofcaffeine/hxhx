@@ -6,6 +6,12 @@
 	migrated targets.
 **/
 class TypedBackendModuleProjection {
+	/** Check the complete input before a backend starts publishing separate modules. */
+	public static function assertProgramRuntimeTypeOperandsAbsent(modules:Array<TypedModule>, consumer:String):Void {
+		for (module in modules)
+			module.getBackendProjection().assertRuntimeTypeOperandsAbsent(consumer);
+	}
+
 	final declaration:HxModuleDecl;
 	final classes:Array<TypedBackendClassProjection>;
 
@@ -27,6 +33,16 @@ class TypedBackendModuleProjection {
 
 	public function getClasses():Array<TypedBackendClassProjection>
 		return classes.copy();
+
+	/** Reject unsupported type operations before a target publishes any generated file. */
+	public function assertRuntimeTypeOperandsAbsent(consumer:String):Void {
+		for (owner in classes) {
+			for (fn in owner.getFunctions())
+				fn.getRuntimeTypeCatalog().assertUnsupportedAbsent(consumer);
+			for (initializer in owner.getFieldInitializers())
+				initializer.getRuntimeTypeCatalog().assertUnsupportedAbsent(consumer);
+		}
+	}
 
 	/** Select the strict class projection paired with an exact projected declaration. **/
 	public function findClass(declaration:HxClassDecl):Null<TypedBackendClassProjection> {

@@ -92,7 +92,7 @@ class TypedBodyBuilder {
 	static function expressionType(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, resolver:Null<TypedExprTypeResolver>):TyType {
 		if (resolver == null || environment == null)
 			return fallbackType(expression, environment);
-		final resolved = resolver(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment);
+		final resolved = resolver.expressionType(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment);
 		return resolved == null ? TyType.unknown() : resolved;
 	}
 
@@ -239,7 +239,8 @@ class TypedBodyBuilder {
 			var failed = false;
 			var resolvedType:Null<TyType> = null;
 			try {
-				resolvedType = typeResolver(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment.copyForInference());
+				resolvedType = typeResolver.expressionType(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition,
+					environment.copyForInference());
 				failed = false;
 			} catch (_:TyperError) {
 				failed = true;
@@ -583,7 +584,12 @@ class TypedBodyBuilder {
 					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 					if (environment != null)
 						environment.exitLexicalScope();
-					final handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					var handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					if (typeResolver != null && bindings.length == 1) {
+						final use = typeResolver.catchUse(bindings[0]);
+						if (use != null)
+							handler = handler.withCatchUses([use]);
+					}
 					typedEntries.push(TypedExpr.arrayDecl([typedName, typedHint, handler],
 						expressionType(entry, diagnosticPosition, environment, typeResolver), null));
 				case _:
@@ -608,6 +614,11 @@ class TypedBodyBuilder {
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
 			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
 		final nodeType = expressionType(expression, diagnosticPosition, environment, typeResolver);
+		if (typeResolver != null && environment != null) {
+			final target = typeResolver.runtimeTypeTarget(expression, environment, ValueExpression);
+			if (target != null)
+				return TypedExpr.runtimeTypeValue(target, position);
+		}
 		return switch (expression) {
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
@@ -620,7 +631,15 @@ class TypedBodyBuilder {
 			case EFloat(value):
 				TypedExpr.floatLiteral(value, nodeType, position);
 			case EEnumValue(name):
-				TypedExpr.enumValue(name, nodeType, position);
+				final local = environment == null ? null : environment.resolveSymbol(name);
+				if (local != null) {
+					TypedExpr.localRead(name, nodeType, position, local.toBinding());
+				} else {
+					final fieldResolution = fieldResolver == null
+						|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
+					fieldResolution == null ? TypedExpr.enumValue(name, nodeType,
+						position) : TypedExpr.nameRead(name, nodeType, position, fieldResolution.getField(), fieldResolution.getRequiresOwnerQualification());
+				}
 			case EThis:
 				TypedExpr.thisValue(nodeType, position);
 			case ESuper:
@@ -743,6 +762,12 @@ class TypedBodyBuilder {
 			case EUnop(op, fixity, inner):
 				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType,
 					position);
+			case EBinop("is", value, operand):
+				final target = typeResolver == null
+					|| environment == null ? null : typeResolver.runtimeTypeTarget(operand, environment, TypeOperand);
+				if (target == null)
+					throw "runtime type test requires a resolved target";
+				TypedExpr.runtimeTypeTest(buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), target, position);
 			case EBinop("=", left, right):
 				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
@@ -925,7 +950,14 @@ class TypedBodyBuilder {
 						if (environment != null)
 							environment.exitLexicalScope();
 					}
-				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings);
+				final uses = new Array<TypedCatchUse>();
+				if (typeResolver != null)
+					for (binding in catchBindings) {
+						final use = typeResolver.catchUse(binding);
+						if (use != null)
+							uses.push(use);
+					}
+				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings).withCatchUses(uses);
 			case SBreak(_):
 				TypedStmt.breakStmt(storedPosition);
 			case SContinue(_):

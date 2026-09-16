@@ -12,15 +12,18 @@ class TypedClass {
 	final semanticInfo:Null<TyNominalInfo>;
 	final resolvedExtends:Null<TyType>;
 	final resolvedImplements:Array<TyType>;
+	final resolvedInterfaceExtends:Array<TyType>;
 	final functions:Array<TypedFunction>;
 	final fieldInitializers:Array<TypedFieldInitializer>;
 
 	public function new(sourceDeclaration:HxClassDecl, semanticInfo:Null<TyNominalInfo>, functions:Array<TypedFunction>,
-			?fieldInitializers:Array<TypedFieldInitializer>, ?resolvedExtends:TyType, ?resolvedImplements:Array<TyType>) {
+			?fieldInitializers:Array<TypedFieldInitializer>, ?resolvedExtends:TyType, ?resolvedImplements:Array<TyType>,
+			?resolvedInterfaceExtends:Array<TyType>) {
 		this.sourceDeclaration = sourceDeclaration;
 		this.semanticInfo = semanticInfo;
 		this.resolvedExtends = resolvedExtends;
 		this.resolvedImplements = resolvedImplements == null ? [] : resolvedImplements.copy();
+		this.resolvedInterfaceExtends = resolvedInterfaceExtends == null ? [] : resolvedInterfaceExtends.copy();
 		this.functions = functions == null ? [] : functions.copy();
 		this.fieldInitializers = fieldInitializers == null ? [] : fieldInitializers.copy();
 	}
@@ -37,6 +40,10 @@ class TypedClass {
 	public function getResolvedImplements():Array<TyType>
 		return resolvedImplements.copy();
 
+	/** Exact parents of an interface, kept separate from the class parent. */
+	public function getResolvedInterfaceExtends():Array<TyType>
+		return resolvedInterfaceExtends.copy();
+
 	public function getFunctions():Array<TypedFunction>
 		return functions.copy();
 
@@ -45,5 +52,6 @@ class TypedClass {
 
 	/** Return the same source/semantic class paired with rewritten typed functions. **/
 	public function withFunctions(loweredFunctions:Array<TypedFunction>):TypedClass
-		return new TypedClass(sourceDeclaration, semanticInfo, loweredFunctions, fieldInitializers, resolvedExtends, resolvedImplements);
+		return new TypedClass(sourceDeclaration, semanticInfo, loweredFunctions, fieldInitializers, resolvedExtends, resolvedImplements,
+			resolvedInterfaceExtends);
 }

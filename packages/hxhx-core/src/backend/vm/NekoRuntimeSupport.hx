@@ -36,7 +36,9 @@ typedef NekoRuntimeClassMeta = {
 	  backend references the helper instead of inlining another emitter stub.
 **/
 class NekoRuntimeSupport {
-	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
+	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, symbolTable:String, program:NekoTypedProgramProjection):Void {
+		if (symbolTable == null || symbolTable.length == 0)
+			throw "Neko runtime support requires the shared symbol object";
 		NekoStringRuntimeSource.render(out);
 		out.push("var __hxhx_array_indexOf = function(a, value) {");
 		out.push("  var i = 0;");
@@ -84,14 +86,10 @@ class NekoRuntimeSupport {
 			out.push("$objset(__hxhx_instance_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.instanceFields) + ");");
 			out.push("$objset(__hxhx_static_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.staticFields) + ");");
 		}
-		if (symbolTable == null) {
-			out.push("var __hxhx_static_objects = $new(null);");
-		} else {
-			out.push("var __hxhx_static_objects = (function() {");
-			out.push("  if (" + symbolTable + ".__hxhx_static_objects == null) " + symbolTable + ".__hxhx_static_objects = $new(null);");
-			out.push("  return " + symbolTable + ".__hxhx_static_objects;");
-			out.push("})();");
-		}
+		out.push("var __hxhx_static_objects = (function() {");
+		out.push("  if (" + symbolTable + ".__hxhx_static_objects == null) " + symbolTable + ".__hxhx_static_objects = $new(null);");
+		out.push("  return " + symbolTable + ".__hxhx_static_objects;");
+		out.push("})();");
 		out.push("var __hxhx_static_object = function(name) {");
 		out.push("  var object = $objget(__hxhx_static_objects, $hash(name));");
 		out.push("  if (object == null) {");
@@ -101,20 +99,9 @@ class NekoRuntimeSupport {
 		out.push("  }");
 		out.push("  return object;");
 		out.push("}");
-		out.push("var __hxhx_type_class_name = function(c) {");
-		out.push("  if (c == null) return null;");
-		out.push("  return \"\" + c;");
-		out.push("}");
-		out.push("");
-		out.push("var __hxhx_type_get_class = function(o) {");
-		out.push("  if (o == null) return null;");
-		out.push("  if ($typeof(o) == $tarray) return \"Array\";");
-		out.push("  if ($typeof(o) == $tobject && o.__hx_ctor != null) return o.__hx_ctor;");
-		out.push("  return null;");
-		out.push("}");
-		out.push("");
+		NekoRuntimeTypeRegistry.renderPrelude(out, symbolTable, program);
 		out.push("var __hxhx_type_fields = function(map, c) {");
-		out.push("  var name = __hxhx_type_class_name(c);");
+		out.push("  var name = " + program.runtimeHelperName("__hxhx_type_class_name") + "(c);");
 		out.push("  if (name == null) return $array();");
 		out.push("  var fields = $objget(map, $hash(name));");
 		out.push("  return if (fields == null) $array() else fields;");

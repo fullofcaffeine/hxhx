@@ -8,6 +8,8 @@ typedef TypedBackendClassGraphNode = {
 	final superClassIdentity:Null<String>;
 	final superTypeIdentity:Null<String>;
 	final superTypeDisplay:Null<String>;
+	final isInterface:Bool;
+	final interfaceTypes:Array<TyType>;
 };
 
 typedef TypedBackendClassLineage = {
@@ -46,6 +48,10 @@ typedef TypedBackendSpecializedClassNode = {
 	until a caller asks to consume that class's lineage; unrelated executable
 	units are not rejected merely because their program also contains an
 	unresolved external class.
+
+	Interface parents are separate edges. Runtime membership uses their complete
+	closure, including diamond-shaped relationships. Constructor traversal uses
+	only superclass edges and therefore never executes an interface parent.
 **/
 class TypedBackendClassGraph {
 	final programRevision:String;
@@ -70,6 +76,7 @@ class TypedBackendClassGraph {
 		nodes = [for (identity in classIdentities) copyNode(nodesByClass.get(identity))];
 		for (node in nodes)
 			validateLineage(node.classIdentity);
+		validateInterfaceRelationships();
 
 		final identityFacts = new Array<Null<String>>();
 		identityFacts.push(getSchemaRevision());
@@ -82,6 +89,10 @@ class TypedBackendClassGraph {
 			identityFacts.push(node.superClassIdentity);
 			identityFacts.push(node.superTypeIdentity);
 			identityFacts.push(node.superTypeDisplay);
+			identityFacts.push(node.isInterface ? "interface" : "class");
+			identityFacts.push(Std.string(node.interfaceTypes.length));
+			for (interfaceType in node.interfaceTypes)
+				identityFacts.push(interfaceType.getSemanticKey());
 		}
 		canonicalIdentity = CompilerCacheIdentity.encode(identityFacts);
 	}
@@ -92,7 +103,7 @@ class TypedBackendClassGraph {
 
 	/** Return the independently versioned graph representation schema. **/
 	public function getSchemaRevision():String
-		return "typed-backend-class-graph-v3";
+		return "typed-backend-class-graph-v4";
 
 	/** Return the deterministic in-memory identity of the complete graph. **/
 	public function getCanonicalIdentity():String
@@ -109,6 +120,52 @@ class TypedBackendClassGraph {
 	/** Return the immutable declared-member record owned by one exact node. **/
 	public function findClassFacts(classIdentity:String):Null<TypedBackendClassSemanticFacts>
 		return factsByClass.get(normalize(classIdentity));
+
+	/**
+		Return the runtime membership closure, including the starting declaration.
+
+		Classes contribute their superclass and implemented interfaces. Interfaces
+		contribute all extended interfaces. Missing targets fail instead of silently
+		turning a positive type test into false. Constructor consumers continue to
+		use requireLineage, which traverses only superclass edges.
+
+		A target can supply runtime admission for its declaration representations.
+		An absent runtime node stops that path, including its parents. Omitting the
+		predicate retains the complete nominal relation used by shared consumers.
+	**/
+	public function requireAssignableTypes(classIdentity:String, ?admitRuntimeType:TypedBackendClassSemanticFacts->Bool):Array<TypedBackendClassGraphNode> {
+		final start = normalize(classIdentity);
+		final pending = [start];
+		final seen = new haxe.ds.StringMap<Bool>();
+		final result = new Array<TypedBackendClassGraphNode>();
+		while (pending.length > 0) {
+			final identity = pending.pop();
+			if (seen.exists(identity))
+				continue;
+			final node = nodesByClass.get(identity);
+			if (node == null)
+				throw "typed backend class graph is missing assignable type " + identity + " while tracing " + start;
+			seen.set(identity, true);
+			if (admitRuntimeType != null && !admitRuntimeType(factsByClass.get(identity)))
+				continue;
+			result.push(copyNode(node));
+			if (node.superTypeIdentity != null) {
+				if (node.superClassIdentity == null)
+					throw "typed backend class graph cannot identify superclass while tracing " + start;
+				pending.push(node.superClassIdentity);
+			}
+			for (interfaceType in node.interfaceTypes) {
+				final parent = interfaceType.getNominalIdentity();
+				if (parent == null)
+					throw "typed backend class graph cannot identify interface parent "
+						+ interfaceType.getSemanticKey()
+						+ " while tracing "
+						+ start;
+				pending.push(parent.getCanonicalName());
+			}
+		}
+		return result;
+	}
 
 	/**
 		Trace one child-to-root chain without hiding an absent projected parent.
@@ -235,7 +292,9 @@ class TypedBackendClassGraph {
 			classFactsIdentity: classFactsIdentity,
 			superClassIdentity: normalizeNullable(classFacts.getSuperClassIdentity()),
 			superTypeIdentity: normalizeNullable(classFacts.getSuperTypeIdentity()),
-			superTypeDisplay: normalizeNullable(classFacts.getSuperTypeDisplay())
+			superTypeDisplay: normalizeNullable(classFacts.getSuperTypeDisplay()),
+			isInterface: classFacts.getIsInterface(),
+			interfaceTypes: classFacts.getInterfaceTypes()
 		};
 		if ((node.superTypeIdentity == null) != (node.superTypeDisplay == null))
 			throw "typed backend class graph contains an incomplete superclass type for " + classIdentity;
@@ -273,13 +332,51 @@ class TypedBackendClassGraph {
 		}
 	}
 
+	/** Validate present interface edges; strict consumers also require missing nodes. */
+	function validateInterfaceRelationships():Void {
+		final active = new haxe.ds.StringMap<Bool>();
+		final complete = new haxe.ds.StringMap<Bool>();
+		function visit(identity:String):Void {
+			if (complete.exists(identity))
+				return;
+			if (active.exists(identity))
+				throw "typed backend class graph contains interface inheritance cycle at " + identity;
+			final node = nodesByClass.get(identity);
+			if (node == null)
+				return;
+			active.set(identity, true);
+			if (node.isInterface && node.superTypeIdentity != null)
+				throw "typed backend interface has a superclass constructor edge: " + identity;
+			if (node.superClassIdentity != null) {
+				final parent = nodesByClass.get(node.superClassIdentity);
+				if (parent != null && parent.isInterface)
+					throw "typed backend class superclass is an interface: " + node.superClassIdentity;
+				visit(node.superClassIdentity);
+			}
+			for (interfaceType in node.interfaceTypes) {
+				final parent = interfaceType.getNominalIdentity();
+				if (parent == null)
+					continue;
+				final target = nodesByClass.get(parent.getCanonicalName());
+				if (target != null && !target.isInterface)
+					throw "typed backend interface parent is not an interface: " + parent.getCanonicalName();
+				visit(parent.getCanonicalName());
+			}
+			active.remove(identity);
+			complete.set(identity, true);
+		}
+		for (node in nodes)
+			visit(node.classIdentity);
+	}
+
 	static function sameNode(left:TypedBackendClassGraphNode, right:TypedBackendClassGraphNode):Bool
 		return left.classIdentity == right.classIdentity
 			&& left.moduleIdentity == right.moduleIdentity
 			&& left.classFactsIdentity == right.classFactsIdentity
 			&& left.superClassIdentity == right.superClassIdentity
 			&& left.superTypeIdentity == right.superTypeIdentity
-			&& left.superTypeDisplay == right.superTypeDisplay;
+			&& left.superTypeDisplay == right.superTypeDisplay
+			&& left.isInterface == right.isInterface;
 
 	static function copyNode(node:TypedBackendClassGraphNode):TypedBackendClassGraphNode
 		return {
@@ -288,7 +385,9 @@ class TypedBackendClassGraph {
 			classFactsIdentity: node.classFactsIdentity,
 			superClassIdentity: node.superClassIdentity,
 			superTypeIdentity: node.superTypeIdentity,
-			superTypeDisplay: node.superTypeDisplay
+			superTypeDisplay: node.superTypeDisplay,
+			isInterface: node.isInterface,
+			interfaceTypes: node.interfaceTypes.copy()
 		};
 
 	static function specializeNode(node:TypedBackendClassGraphNode, classFacts:TypedBackendClassSemanticFacts,

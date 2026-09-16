@@ -5392,6 +5392,7 @@ class HxParser {
 				continue;
 			}
 			var moduleMemberVisibility:HxVisibility = Public;
+			var typeIsExtern = false;
 			final moduleFunctionMetadata = pendingTypeMetadata.copy();
 			var keepModuleModifiers = true;
 			while (keepModuleModifiers) {
@@ -5422,6 +5423,8 @@ class HxParser {
 							bump();
 							keepModuleModifiers = true;
 						case TIdent(name) if (name == "extern" || name == "override"):
+							if (name == "extern")
+								typeIsExtern = true;
 							bump();
 							keepModuleModifiers = true;
 						case _:
@@ -5450,13 +5453,18 @@ class HxParser {
 					if (classTypeParameters.length > 0)
 						classMetadata.push("__hxhx_type_params=" + classTypeParameters.join(","));
 					var extendsPath = "";
+					final interfaceExtendsPaths = new Array<String>();
 					final implementsPaths = new Array<String>();
 					var readingImplements = false;
 					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
 						switch (cur.kind) {
 							case TIdent(name) if (name == "extends"):
 								bump();
-								extendsPath = readHeaderTypePath();
+								final parentPath = readHeaderTypePath();
+								if (isInterface)
+									interfaceExtendsPaths.push(parentPath);
+								else
+									extendsPath = parentPath;
 								readingImplements = false;
 							case TIdent(name) if (name == "implements"):
 								bump();
@@ -5489,7 +5497,7 @@ class HxParser {
 					}
 
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
-						moduleMemberVisibility));
+						moduleMemberVisibility, interfaceExtendsPaths, typeIsExtern));
 				// `parseClassMembers` consumes the closing `}`.
 				case TIdent("typedef") | TIdent("enum") | TIdent("abstract"):
 					pendingTypeMetadata = [];
@@ -5534,7 +5542,7 @@ class HxParser {
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
 				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base),
-				HxClassDecl.getVisibility(base));
+				HxClassDecl.getVisibility(base), HxClassDecl.getInterfaceExtendsPaths(base), HxClassDecl.getIsExtern(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {

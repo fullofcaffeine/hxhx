@@ -14,6 +14,10 @@ typedef NekoClassInfo = {
 typedef NekoEmitContext = {
 	var classes:StringMap<NekoClassInfo>;
 	var typedProgram:NekoTypedProgramProjection;
+
+	/** Exact function or initializer; child expression scopes retain the same owner. */
+	var currentExecutable:Null<NekoExecutableProjection>;
+
 	var abstractHelpers:Array<NekoProjectedFunction>;
 	var abstractHelperIds:StringMap<Bool>;
 	var directAbstractReceiver:Bool;

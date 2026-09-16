@@ -42,6 +42,16 @@ class NekoConstructionEmitter {
 				out.push("  var " + args[index] + " = " + arrayName + "[" + index + "];");
 		}
 		out.push("  var " + selfName + " = $new(null);");
+		final typeSlot = context.typedProgram.runtimeHelperName("__hxhx_runtime_type");
+		out.push("  "
+			+ selfName
+			+ "."
+			+ typeSlot
+			+ " = "
+			+ typeSlot
+			+ "("
+			+ NekoTargetCore.quote("nominal:" + context.typedProgram.requireClassIdentity(info.cls))
+			+ ");");
 		out.push("  " + selfName + ".__hx_ctor = " + NekoTargetCore.quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
 		out.push("  " + selfName + ".__hx_value = " + (args.length > 0 ? args[0] : "null") + ";");
@@ -53,6 +63,10 @@ class NekoConstructionEmitter {
 			final owner = NekoTargetCore.exactClassInfo(context, method.owner);
 			NekoTargetCore.renderInstanceMethod(out, NekoTargetCore.withSelf(context, selfName, owner), selfName, method.body.getDeclaration());
 		}
+		// The VM string primitive calls __string. Select the Haxe method through
+		// the construction plan, then read its receiver slot at conversion time.
+		if (plan.hasStringConversion())
+			out.push("  " + selfName + ".__string = function() { return " + selfName + ".toString(); };");
 		out.push("  " + NekoTargetCore.renderInitializerRef(context, info) + "(" + [selfName].concat(args).join(", ") + ");");
 		out.push("  return " + selfName + ";");
 		out.push(NekoTargetCore.renderFunctionEnd(useVarArgs));
@@ -79,8 +93,13 @@ class NekoConstructionEmitter {
 		for (field in HxClassDecl.getFields(info.cls)) {
 			final init = HxFieldDecl.getInit(field);
 			if (!HxFieldDecl.getIsStatic(field) && init != null)
-				out.push("  " + selfName + "." + NekoTargetCore.safeIdent(HxFieldDecl.getName(field)) + " = "
-					+ NekoTargetCore.renderExpr(instanceContext, init) + ";");
+				out.push("  "
+					+ selfName
+					+ "."
+					+ NekoTargetCore.safeIdent(HxFieldDecl.getName(field))
+					+ " = "
+					+ NekoTargetCore.renderExpr(NekoTargetCore.withFieldInitializer(instanceContext, field), init)
+					+ ";");
 		}
 		final declared = NekoTargetCore.findFunction(info.cls, "new", false);
 		if (declared != null && !NekoTargetCore.isMacroFunction(declared)) {

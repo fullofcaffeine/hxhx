@@ -143,6 +143,15 @@ class M14CompilerDependencyObservationTest {
 	}
 
 	static function main():Void {
+		final catchOnly = typedProgram("class Api { public function new() {} }",
+			"class Main { static function main():Void { try { throw 1; } catch (unused:Api) {} var result = try 1 catch (alsoUnused:Api) 2; } }");
+		final catchSnapshot = CompilerDependencyCollector.collect(catchOnly.modules, catchOnly.index);
+		var catchEdges = 0;
+		for (edge in catchSnapshot.getEdges())
+			if (edge.consumerModule == "Main" && edge.providerModule == "Api" && edge.factIdentity.indexOf("catch-binding:") == 0)
+				catchEdges++;
+		if (catchEdges != 2)
+			throw "both unused catch declarations must retain their provider dependency";
 		assertFunctionBodyRevisionPreservesTreeBoundaries();
 		final apiA = [
 			"class Api {",
