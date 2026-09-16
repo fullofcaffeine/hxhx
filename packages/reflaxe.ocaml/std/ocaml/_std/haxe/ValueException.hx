@@ -26,8 +26,12 @@ package haxe;
 @:coreApi
 #if ocaml_output
 class ValueException extends Exception {
+	/** Generated typed catches construct this payload even when source code never reads it. */
+	@:keep
 	public var value(default, null):Any;
 
+	/** The OCaml catch emitter calls this constructor after source-level dead-code elimination. */
+	@:keep
 	public function new(value:Any, ?previous:Exception, ?native:Any):Void {
 		super(Std.string(value), previous, native);
 		this.value = value;
