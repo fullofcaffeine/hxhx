@@ -1201,10 +1201,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	/** Type authored syntax fixtures so their bodies carry real local-variable bindings. */
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
-		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
-		return new TypedModule(new ParsedModule("", decl, filePath), env);
+		return TyperStage.typeModule(new ParsedModule("", decl, filePath));
 	}
 
 	/**
