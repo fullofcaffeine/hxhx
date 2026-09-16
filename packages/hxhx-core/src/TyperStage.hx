@@ -625,17 +625,24 @@ class TyperStage {
 						typeStmt(ss);
 					scope.exitLexicalScope();
 				case SSwitch(scrutinee, patterns, bodies, pos):
-					// Bring-up: type-check the scrutinee, then each case body.
-					// Binder patterns declare a best-effort local for the body.
+					// Check the finite source domain before accepting any case body.
 					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos);
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
 							final pattern = patterns[i];
 							final body = bodies[i];
 							scope.enterLexicalScope();
-							declarePatternBindings(scope, pattern, scrutTy);
-							typeStmt(body);
+							try {
+								declarePatternBindings(scope, pattern, scrutTy);
+								typeStmt(body);
+							} catch (error:Dynamic) {
+								// Haxe permits any thrown value. This cleanup boundary neither
+								// inspects nor converts it; callers receive the same failure.
+								scope.exitLexicalScope();
+								throw error;
+							}
 							scope.exitLexicalScope();
 						}
 					}
@@ -1815,6 +1822,7 @@ class TyperStage {
 				// Bring-up: type the scrutinee and unify case-expression types best-effort.
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos);
 				var out:TyType = TyType.unknown();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
@@ -1823,8 +1831,14 @@ class TyperStage {
 						final branchExpr = exprs[i];
 						var branchTy:TyType = TyType.unknown();
 						scope.enterLexicalScope();
-						declarePatternBindings(scope, pattern, scrutTy);
-						branchTy = inferExprType(branchExpr, scope, ctx, pos);
+						try {
+							declarePatternBindings(scope, pattern, scrutTy);
+							branchTy = inferExprType(branchExpr, scope, ctx, pos);
+						} catch (error:Dynamic) {
+							// Opaque rethrow is required to restore scope for every Haxe failure.
+							scope.exitLexicalScope();
+							throw error;
+						}
 						scope.exitLexicalScope();
 
 						if (out.isUnknown())

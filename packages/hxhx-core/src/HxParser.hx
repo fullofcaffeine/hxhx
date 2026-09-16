@@ -838,7 +838,8 @@ class HxParser {
 				switch (cur.kind) {
 					case TIdent(name):
 						bump();
-						PBind(name);
+						// Explicit `var` always captures, even when an enum member has this name.
+						PCapture(name, PWildcard);
 					case _:
 						PWildcard;
 				}
@@ -1046,9 +1047,16 @@ class HxParser {
 		var parenDepth = 0;
 		var bracketDepth = 0;
 		var braceDepth = 0;
+		// A qualified member shares the prefix of a static extractor call. Keep
+		// its token path when no extractor arrow follows; do not discard it as a guard.
+		final memberPath = new Array<String>();
+		var pathOnly = true;
+		var expectIdentifier = true;
 		while (!cur.kind.match(TEof)) {
 			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
-			if (atTop && (cur.kind.match(TColon) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)))
+			if (atTop
+				&& (cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KIf))
+					|| isOtherChar("|")))
 				break;
 			if (atTop && cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 				final extractorText = StringTools.trim(sliceSource(start, currentIndex()));
@@ -1056,6 +1064,16 @@ class HxParser {
 				bump(); // `>`
 				return PExtractor(extractorText, parseSwitchPatternOr());
 			}
+			if (pathOnly)
+				switch (cur.kind) {
+					case TIdent(name) if (expectIdentifier):
+						memberPath.push(name);
+						expectIdentifier = false;
+					case TDot if (!expectIdentifier):
+						expectIdentifier = true;
+					case _:
+						pathOnly = false;
+				}
 			switch (cur.kind) {
 				case TLParen:
 					parenDepth++;
@@ -1076,6 +1094,8 @@ class HxParser {
 			}
 			bump();
 		}
+		if (pathOnly && !expectIdentifier && memberPath.length > 1)
+			return PEnumValue(memberPath.join("."));
 		return PUnsupportedGuard(PWildcard);
 	}
 
