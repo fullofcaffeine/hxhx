@@ -657,6 +657,7 @@ class TyperIndex {
 				}
 
 			final fields = new StringMap<TyFieldInfo>();
+			final enumMembers = new Array<TyEnumAbstractDomain.TyEnumAbstractMember>();
 			final properties = new StringMap<TyPropertyInfo>();
 			final enumConstants = hasMetadata(classMetadata,
 				"__hxhx_enum_abstract") ? new TyEnumAbstractConstants(identity,
@@ -679,6 +680,8 @@ class TyperIndex {
 						.length > 0,
 						hasMetadata(HxFieldDecl.getMetadata(field), "noImportGlobal"), HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field),
 						isEnumValue ? enumConstants.resolve(fieldName) : null));
+				if (isEnumValue)
+					enumMembers.push({field: fields.get(fieldName), position: HxFieldDecl.getPos(field)});
 				final getter = HxFieldDecl.getPropertyGet(field);
 				final setter = HxFieldDecl.getPropertySet(field);
 				if (getter.length > 0 || setter.length > 0)
@@ -749,7 +752,8 @@ class TyperIndex {
 						semanticType(hint, packagePath, moduleName, directives, parameterIds)
 				];
 				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
-					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration));
+					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration),
+					enumConstants == null ? null : new TyEnumAbstractDomain(identity, enumMembers));
 				catalogOperators(info, ResolvedModule.getFilePath(module));
 				addNominal(info);
 				bySourceClass.set(classDeclaration, info);
@@ -937,6 +941,9 @@ class TyperIndex {
 				final abstractInfo:TyAbstractInfo = cast info;
 				lines.push("  underlying " + abstractInfo.getUnderlyingType().getSemanticKey());
 				lines.push("  type-params " + abstractInfo.getTypeParameters().join(","));
+				if (abstractInfo.getEnumDomain() != null)
+					for (member in abstractInfo.getEnumDomain().getMembers())
+						lines.push("  enum-member " + member.field.getCanonicalKey() + " " + member.field.getConstant().getCanonicalIdentity());
 				final conversionLines = [
 					for (type in abstractInfo.getImplicitFromTypes())
 						"  from " + type.getSemanticKey()

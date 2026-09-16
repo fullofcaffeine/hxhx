@@ -89,7 +89,7 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v6");
+		publicFacts.push("typed-module-public-interface-v7");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
@@ -210,6 +210,18 @@ class CompilerTypedModuleRevision {
 		for (extended in typedClass.getResolvedInterfaceExtends())
 			addResolvedHeaderType(out, "interface-extends", extended);
 		addStrings(out, HxClassDecl.getMetadata(sourceClass));
+		// A switch consumes the complete enum domain, including values it omits.
+		// Changing alias equality can turn a complete switch into an incomplete one.
+		// Unlike an ordinary constant read, that dependency is part of type checking.
+		// The runtime class check proves the subtype before accessing its domain.
+		final enumDomain = Std.isOfType(semanticInfo, TyAbstractInfo) ? (cast semanticInfo : TyAbstractInfo).getEnumDomain() : null;
+		if (enumDomain != null) {
+			out.push("enum-abstract-domain-v1");
+			for (member in enumDomain.getMembers()) {
+				out.push(member.field.getCanonicalKey());
+				out.push(member.field.getConstant().getCanonicalIdentity());
+			}
+		}
 
 		for (field in HxClassDecl.getFields(sourceClass)) {
 			if (HxFieldDecl.getVisibility(field) != HxVisibility.Public)
