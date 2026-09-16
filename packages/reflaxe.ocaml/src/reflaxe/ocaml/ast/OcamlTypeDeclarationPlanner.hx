@@ -1,15 +1,18 @@
 package reflaxe.ocaml.ast;
 
 /**
-	Orders type declarations before the declarations that refer to them.
+	Orders type groups before the declarations that refer to them.
 
-	This target cannot group mutually recursive class records because all records
-	contain the same `__hx_type` label. The planner rejects that cycle before file
-	publication. It preserves source order when no dependency requires a change.
+	An enum payload and a class field may refer to each other. Their declarations
+	must share one OCaml `type ... and ...` group. A strongly connected dependency
+	component supplies that group; dependencies outside it are emitted first.
+	Groups with multiple records retain the existing rejection because generated
+	class records share the `__hx_type` label. Independent declarations retain
+	the existing stable traversal order.
 **/
 class OcamlTypeDeclarationPlanner {
 	/** Returns declarations in the stable order that OCaml can compile. */
-	public static function plan(declarations:Array<OcamlTypeDecl>):Array<OcamlTypeDecl> {
+	public static function plan(declarations:Array<OcamlTypeDecl>):Array<Array<OcamlTypeDecl>> {
 		final declarationIndexByName:Map<String, Int> = [];
 		for (index in 0...declarations.length) {
 			final name = declarations[index].name;
@@ -32,36 +35,53 @@ class OcamlTypeDeclarationPlanner {
 			dependencies.push(indexes);
 		}
 
-		final state = [for (_ in 0...declarations.length) 0];
+		final discovery = [for (_ in 0...declarations.length) -1];
+		final low = [for (_ in 0...declarations.length) -1];
+		final active = [for (_ in 0...declarations.length) false];
 		final stack:Array<Int> = [];
-		final ordered:Array<OcamlTypeDecl> = [];
+		final ordered:Array<Array<OcamlTypeDecl>> = [];
+		var nextDiscovery = 0;
 		function visit(index:Int):Void {
-			if (state[index] == 2)
-				return;
-			if (state[index] == 1) {
-				final cycleStart = stack.indexOf(index);
-				final cycleIndexes = stack.slice(cycleStart < 0 ? 0 : cycleStart);
-				cycleIndexes.sort(compareInt);
-				final names = cycleIndexes.map(cycleIndex -> declarations[cycleIndex].name);
-				throw "reflaxe.ocaml [ocaml-type-order:unsupported-cycle]: generated class carriers "
-					+ names.join(", ")
-					+ " depend on each other in one OCaml module; their shared __hx_type record field prevents a valid recursive type group";
-			}
-
-			state[index] = 1;
+			discovery[index] = nextDiscovery;
+			low[index] = nextDiscovery++;
 			stack.push(index);
+			active[index] = true;
 			for (dependency in dependencies[index]) {
-				// One OCaml type declaration can refer to itself without a recursive group.
-				if (dependency != index)
+				if (discovery[dependency] < 0) {
 					visit(dependency);
+					if (low[dependency] < low[index])
+						low[index] = low[dependency];
+				} else if (active[dependency] && discovery[dependency] < low[index])
+					low[index] = discovery[dependency];
 			}
-			stack.pop();
-			state[index] = 2;
-			ordered.push(declarations[index]);
+			if (low[index] != discovery[index])
+				return;
+			final members:Array<Int> = [];
+			var member:Int;
+			do {
+				member = stack.pop();
+				active[member] = false;
+				members.push(member);
+			} while (member != index);
+			members.sort(compareInt);
+			final group = members.map(memberIndex -> declarations[memberIndex]);
+			var records = 0;
+			for (declaration in group)
+				switch (declaration.kind) {
+					case Record(_):
+						records++;
+					case _:
+				}
+			if (records > 1)
+				throw "reflaxe.ocaml [ocaml-type-order:unsupported-cycle]: generated class carriers "
+					+ group.map(declaration -> declaration.name).join(", ")
+					+ " depend on each other in one OCaml module; their shared __hx_type record field prevents a valid recursive type group";
+			ordered.push(group);
 		}
 
 		for (index in 0...declarations.length)
-			visit(index);
+			if (discovery[index] < 0)
+				visit(index);
 		return ordered;
 	}
 
