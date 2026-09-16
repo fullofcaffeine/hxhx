@@ -80,11 +80,12 @@ class TypedExpr {
 	final localBindings:Array<TyLocalBinding>;
 	final extensionProvider:Null<TyNominalTypeId>;
 	final runtimeTypeTarget:Null<TypedRuntimeTypeTarget>;
+	final catchUses:Array<TypedCatchUse>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
 			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo, ?localBindings:Array<TyLocalBinding>,
-			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget) {
+			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget, ?catchUses:Array<TypedCatchUse>) {
 		this.tag = tag;
 		this.type = type == null ? TyType.unknown() : type;
 		this.position = position;
@@ -102,6 +103,7 @@ class TypedExpr {
 		this.localBindings = localBindings == null ? [] : localBindings.copy();
 		this.extensionProvider = extensionProvider;
 		this.runtimeTypeTarget = runtimeTypeTarget;
+		this.catchUses = catchUses == null ? [] : catchUses.copy();
 	}
 
 	public static function nullValue(type:TyType, position:Null<HxPos>):TypedExpr
@@ -326,13 +328,21 @@ class TypedExpr {
 	public function getLocalBindings():Array<TyLocalBinding>
 		return localBindings.copy();
 
+	/** Implicit runtime uses owned by an exact catch-handler lambda. */
+	public function getCatchUses():Array<TypedCatchUse>
+		return catchUses.copy();
+
+	public function withCatchUses(uses:Array<TypedCatchUse>):TypedExpr
+		return new TypedExpr(tag, type, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, uses);
+
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
 		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget);
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
 		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
-			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget);
+			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses);
 }

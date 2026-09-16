@@ -1,3 +1,4 @@
+-cp packages/hxhx/src
 -cp packages/hxhx-core/src
 -cp test
 -main M14NekoCatchPlanIntegrationTest

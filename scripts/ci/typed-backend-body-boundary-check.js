@@ -29,7 +29,20 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/vm/NekoTypedProgramProjection.hx",
   // Registry entries consume exact nominal facts and precomputed interface membership.
   "packages/hxhx-core/src/backend/vm/NekoRuntimeTypeRegistry.hx",
+  // Catch plans validate exact implicit helper and payload owners before pruning.
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
 ]);
+
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoTargetCore.hx",
+  "plan.validate(program)",
+  "prepared Neko catch validation before executable pruning",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
+  "program.requireFunction(use.conversion.getOwner().getCanonicalName(), use.conversion.getIdentity().getCanonicalKey())",
+  "exact implicit catch helper ownership",
+);
 
 function requireFragment(relative, fragment, claim) {
   const source = fs.readFileSync(path.join(repoRoot, relative), "utf8");

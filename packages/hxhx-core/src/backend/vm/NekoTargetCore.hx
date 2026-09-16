@@ -394,10 +394,20 @@ class NekoTargetCore {
 	static function validateRuntimeTypeOperands(program:NekoTypedProgramProjection, modules:Array<TypedBackendModuleProjection>):Void {
 		for (module in modules)
 			for (owner in module.getClasses()) {
-				for (fn in owner.getFunctions())
+				for (fn in owner.getFunctions()) {
 					for (operation in fn.getRuntimeTypeCatalog().getEntries())
 						NekoRuntimeTypeRegistry.requireTarget(program, operation.getTarget());
+					for (plan in program.requireCatchCatalog(FunctionBody(program.requireDeclaredFunction(fn.getDeclaration()))).getPlans())
+						plan.validate(program);
+				}
 				for (initializer in owner.getFieldInitializers()) {
+					final catchPlans = program.requireCatchCatalog(FieldInitializer(initializer)).getPlans();
+					final needsTypedDispatch = Lambda.exists(catchPlans,
+						plan -> Lambda.exists(plan.getCases(), entry -> entry.use == null || !entry.use.view.match(Carrier)));
+					if (initializer.getField().getIsStatic() && needsTypedDispatch)
+						throw "Neko static initializer catch dispatch requires ordered static initialization: " + initializer.getStableIdentity();
+					for (plan in catchPlans)
+						plan.validate(program);
 					// Ordinary static initialization still needs its own ordered emission.
 					if (initializer.getField().getIsStatic())
 						initializer.getRuntimeTypeCatalog().assertUnsupportedAbsent("Neko backend");
@@ -575,6 +585,7 @@ class NekoTargetCore {
 				collectExprRefs(context, iterable, addConstructor, addStatic);
 				collectStmtRefs(context, body, addConstructor, addStatic);
 			case STry(tryBody, catches, _):
+				collectCatchRefs(context, NekoCatchPlan.forStatement(context.typedProgram, context.currentExecutable, stmt), addConstructor, addStatic);
 				collectStmtRefs(context, tryBody, addConstructor, addStatic);
 				for (c in catches)
 					collectStmtRefs(context, c.body, addConstructor, addStatic);
@@ -589,8 +600,30 @@ class NekoTargetCore {
 		}
 	}
 
+	/** Keep exact implicit catch providers in the ordinary executable closure. */
+	static function collectCatchRefs(context:NekoEmitContext, plan:NekoCatchPlan, addConstructor:NekoClassInfo->Void,
+			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		for (entry in plan.getCases()) {
+			final use = entry.use;
+			if (use == null)
+				throw "Neko catch reachability requires prepared implicit uses";
+			if (use.conversion != null) {
+				final helper = context.typedProgram.requireFunction(use.conversion.getOwner().getCanonicalName(),
+					use.conversion.getIdentity().getCanonicalKey());
+				addStatic(exactHelperClass(context, helper), helper.body.getDeclaration());
+			}
+			if (use.payload != null)
+				addConstructor(exactClassInfo(context, context.typedProgram.requireClass(use.payload.getOwner().getCanonicalName())));
+		}
+	}
+
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		switch (expr) {
+			case ECall(EIdent("__hxhx_try"), _):
+				collectCatchRefs(context, NekoCatchPlan.forExpression(context.typedProgram, context.currentExecutable, expr), addConstructor, addStatic);
+			case _:
+		}
 		final runtimeType = NekoRuntimeTypePlan.fromExpression(context, expr);
 		if (runtimeType != null) {
 			if (runtimeType.getValue() != null)
@@ -1103,7 +1136,7 @@ class NekoTargetCore {
 			case SThrow(expr, _):
 				out.push(indent + "$throw(" + renderExpr(context, expr) + ");");
 			case STry(tryBody, catches, _):
-				renderTryStmt(out, context, tryBody, catches, indent);
+				renderTryStmt(out, context, stmt, tryBody, indent);
 			case SSwitch(scrutinee, patterns, bodies, _):
 				renderSwitchStmt(out, context, scrutinee, patterns, bodies, indent);
 			case SDoWhile(_, _, _):
@@ -1175,20 +1208,47 @@ class NekoTargetCore {
 		out.push(indent + "}");
 	}
 
-	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
-			indent:String):Void {
+	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, statement:HxStmt, tryBody:HxStmt, indent:String):Void {
+		final plan = NekoCatchPlan.forStatement(context.typedProgram, context.currentExecutable, statement);
+		final carrier = catchCarrier(context, plan);
 		final tryContext = withInsideTry(context);
 		renderControlBlock(out, tryContext, "try", tryBody, indent);
-		if (catches == null || catches.length == 0) {
-			out.push(indent + "catch __hxhx_e");
-			out.push(indent + "{");
-			out.push(indent + "  $throw(__hxhx_e);");
-			out.push(indent + "}");
-			return;
-		}
-		final c = catches[0];
-		final catchContext = withLocal(tryContext, c.name);
-		renderControlBlock(out, catchContext, "catch " + safeIdent(c.name), c.body, indent);
+		out.push(indent + "catch " + carrier + " {");
+		for (line in renderCatchDispatch(tryContext, plan, carrier, indent + "  "))
+			out.push(line);
+		out.push(indent + "}");
+	}
+
+	static function catchCarrier(context:NekoEmitContext, plan:NekoCatchPlan):String
+		return context.typedProgram.runtimeHelperName("__hxhx_catch_" + haxe.crypto.Sha256.encode(plan.occurrenceIdentity));
+
+	/** Both source forms share selection and differ only in how their handler produces a result. */
+	static function renderCatchDispatch(context:NekoEmitContext, plan:NekoCatchPlan, carrier:String, indent:String):Array<String> {
+		return NekoCatchDispatch.render(plan, carrier, indent, index -> context.typedProgram.runtimeHelperName(carrier + "_value_" + index),
+			(value, target) -> {
+				final identity = NekoRuntimeTypeRegistry.requireTarget(context.typedProgram, target);
+				final typeValue = identity == null ? "null" : context.typedProgram.runtimeHelperName("__hxhx_runtime_type") + "(" + quote(identity) + ")";
+				return context.typedProgram.runtimeHelperName("__hxhx_is_of_type") + "(" + value + ", " + typeValue + ")";
+			}, (entry, value) -> {
+				final declaration = entry.use.conversion;
+				final selected = context.typedProgram.requireFunction(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey());
+				final owner = exactHelperClass(context, selected);
+				return renderFunctionRef(context, owner.fullName, HxFunctionDecl.getName(selected.body.getDeclaration())) + "(" + value + ")";
+			},
+			(entry, value) -> "__hxhx_field("
+				+ value
+				+ ", "
+				+ quote(entry.use.payload.getName())
+				+ ")", (entry, value, padding) -> {
+				final name = entry.local.getProjectedName();
+				final out = [padding + "var " + safeIdent(name) + " = " + value + ";"];
+				final local = withLocal(context, name);
+				switch (entry.body) {
+					case Statement(body): renderStmt(out, local, body, padding);
+					case Expression(body): out.push(padding + "return " + renderExpr(local, body) + ";");
+				}
+				return out;
+			});
 	}
 
 	static function stmtContainsBreak(stmt:HxStmt):Bool {
@@ -1253,6 +1313,11 @@ class NekoTargetCore {
 	}
 
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
+		switch (expr) {
+			case ECall(EIdent("__hxhx_try"), _):
+				return renderStructuralTryCatchExpr(context, expr);
+			case _:
+		}
 		final runtimeType = NekoRuntimeTypePlan.fromExpression(context, expr);
 		if (runtimeType != null) {
 			final identity = NekoRuntimeTypeRegistry.requireTarget(context.typedProgram, runtimeType.getTarget());
@@ -2470,8 +2535,6 @@ class NekoTargetCore {
 				// These wrappers emit no runtime operation. Expose a wrapped lambda
 				// so the ordinary callable renderer preserves its grouping.
 				return renderCall(context, inner, args, selectedStatic);
-			case EIdent("__hxhx_try"):
-				return renderStructuralTryCatchExpr(context, args);
 			case EIdent("__hxhx_throw"):
 				return "$throw(" + (args.length > 0 ? renderExpr(context, args[0]) : "null") + ")";
 			case _:
@@ -2597,39 +2660,20 @@ class NekoTargetCore {
 		method only chooses Neko syntax. It must not reparse source text or decide
 		which catch body applies.
 	**/
-	static function renderStructuralTryCatchExpr(context:NekoEmitContext, args:Array<HxExpr>):String {
-		if (args == null || args.length < 2)
-			return unsupportedExpr("ECall(__hxhx_try)");
-		final tryBody = switch (args[0]) {
-			case ELambda(lambdaArgs, body) if (lambdaArgs.length == 0): body;
-			case _: null;
+	static function renderStructuralTryCatchExpr(context:NekoEmitContext, expression:HxExpr):String {
+		final plan = NekoCatchPlan.forExpression(context.typedProgram, context.currentExecutable, expression);
+		final tryBody = switch (expression) {
+			case ECall(EIdent("__hxhx_try"), [ELambda([], body), _, _]): body;
+			case _: throw "Neko catch emission lost its prepared try expression";
 		};
-		if (tryBody == null)
-			return unsupportedExpr("ECall(__hxhx_try)");
-
-		final catches = switch (args[1]) {
-			case EArrayDecl(entries): entries;
-			case _: [];
-		};
-		if (catches.length == 0) {
-			return "(function() { try { return " + renderExpr(context, tryBody) + "; } catch __hxhx_e { $throw(__hxhx_e); return null; } })()";
-		}
-
-		return switch (catches[0]) {
-			case EArrayDecl([EString(name), EString(_), ELambda(lambdaArgs, catchBody)]) if (lambdaArgs.length == 1):
-				final sourceName = lambdaArgs[0].length == 0 ? name : lambdaArgs[0];
-				final catchName = safeIdent(sourceName);
-				final catchContext = context == null ? context : withLocal(context, sourceName);
-				"(function() { try { return "
-				+ renderExpr(context, tryBody)
-				+ "; } catch "
-				+ catchName
-				+ " { return "
-				+ renderExpr(catchContext, catchBody)
-				+ "; } })()";
-			case _:
-				unsupportedExpr("ECall(__hxhx_try)");
-		};
+		final carrier = catchCarrier(context, plan);
+		return "(function() { try { return "
+			+ renderExpr(context, tryBody)
+			+ "; } catch "
+			+ carrier
+			+ " {\n"
+			+ renderCatchDispatch(context, plan, carrier, "  ").join("\n")
+			+ "\n} })()";
 	}
 
 	static function renderEnumCtorCall(name:String, renderedArgs:Array<String>):String {

@@ -142,6 +142,9 @@ class ModuleLoader extends LazyTypeLoader {
 			index.addResolvedModule(module);
 	}
 
+	override public function hasDefine(name:String):Bool
+		return defines.exists(name);
+
 	public function drainNewModules():Array<ResolvedModule> {
 		if (pending.length == 0)
 			return [];

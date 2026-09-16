@@ -584,7 +584,12 @@ class TypedBodyBuilder {
 					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 					if (environment != null)
 						environment.exitLexicalScope();
-					final handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					var handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					if (typeResolver != null && bindings.length == 1) {
+						final use = typeResolver.catchUse(bindings[0]);
+						if (use != null)
+							handler = handler.withCatchUses([use]);
+					}
 					typedEntries.push(TypedExpr.arrayDecl([typedName, typedHint, handler],
 						expressionType(entry, diagnosticPosition, environment, typeResolver), null));
 				case _:
@@ -945,7 +950,14 @@ class TypedBodyBuilder {
 						if (environment != null)
 							environment.exitLexicalScope();
 					}
-				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings);
+				final uses = new Array<TypedCatchUse>();
+				if (typeResolver != null)
+					for (binding in catchBindings) {
+						final use = typeResolver.catchUse(binding);
+						if (use != null)
+							uses.push(use);
+					}
+				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings).withCatchUses(uses);
 			case SBreak(_):
 				TypedStmt.breakStmt(storedPosition);
 			case SContinue(_):

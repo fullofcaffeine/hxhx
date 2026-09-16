@@ -39,20 +39,24 @@ class TypedBodySource {
 		}
 	}
 
-	static function collectExpressionBindings(expression:TypedExpr, bindings:haxe.ds.StringMap<TyLocalBinding>):Void {
+	static function collectExpressionBindings(expression:TypedExpr, bindings:haxe.ds.StringMap<TyLocalBinding>, uses:Array<TypedCatchUse>):Void {
+		for (use in expression.getCatchUses())
+			uses.push(use);
 		for (binding in expression.getLocalBindings())
 			addBinding(bindings, binding);
 		for (child in expression.getExpressions())
-			collectExpressionBindings(child, bindings);
+			collectExpressionBindings(child, bindings, uses);
 	}
 
-	static function collectStatementBindings(statement:TypedStmt, bindings:haxe.ds.StringMap<TyLocalBinding>):Void {
+	static function collectStatementBindings(statement:TypedStmt, bindings:haxe.ds.StringMap<TyLocalBinding>, uses:Array<TypedCatchUse>):Void {
+		for (use in statement.getCatchUses())
+			uses.push(use);
 		for (binding in statement.getLocalBindings())
 			addBinding(bindings, binding);
 		for (expression in statement.getExpressions())
-			collectExpressionBindings(expression, bindings);
+			collectExpressionBindings(expression, bindings, uses);
 		for (child in statement.getStatements())
-			collectStatementBindings(child, bindings);
+			collectStatementBindings(child, bindings, uses);
 	}
 
 	static function collectExpressionFieldReads(expression:TypedExpr, reads:Array<TypedBackendFieldReadProjection>):Void {
@@ -91,25 +95,27 @@ class TypedBodySource {
 
 	static function localCatalog(typedFunction:TypedFunction, reservedProjectedNames:Array<String>):TypedBackendLocalCatalog {
 		final bindings = new haxe.ds.StringMap<TyLocalBinding>();
+		final uses = new Array<TypedCatchUse>();
 		final environment = typedFunction.getEnvironment();
 		if (environment != null)
 			for (parameter in environment.getParams())
 				addBinding(bindings, parameter.toBinding());
 		for (statement in typedFunction.getBody().getStatements())
-			collectStatementBindings(statement, bindings);
+			collectStatementBindings(statement, bindings, uses);
 		final ordered = new Array<TyLocalBinding>();
 		for (binding in bindings)
 			ordered.push(binding);
-		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames);
+		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames, uses);
 	}
 
 	static function localCatalogForExpression(expression:TypedExpr, reservedProjectedNames:Array<String>):TypedBackendLocalCatalog {
 		final bindings = new haxe.ds.StringMap<TyLocalBinding>();
-		collectExpressionBindings(expression, bindings);
+		final uses = new Array<TypedCatchUse>();
+		collectExpressionBindings(expression, bindings, uses);
 		final ordered = new Array<TyLocalBinding>();
 		for (binding in bindings)
 			ordered.push(binding);
-		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames);
+		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames, uses);
 	}
 
 	/**

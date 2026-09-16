@@ -101,6 +101,9 @@ class TypedBodyInvariant {
 	static function assertExpr(expression:TypedExpr, owner:String):Void {
 		if (expression == null)
 			throw "typed body contains a null expression in " + owner;
+		if (expression.getCatchUses().length > 0 && !expression.getTag().match(Lambda))
+			throw "implicit catch uses require a handler lambda in " + owner;
+		assertCatchUses(expression.getCatchUses(), expression.getLocalBindings(), owner);
 		final runtimeTarget = expression.getRuntimeTypeTarget();
 		switch (expression.getTag()) {
 			case RuntimeTypeValue | RuntimeTypeTest:
@@ -174,6 +177,9 @@ class TypedBodyInvariant {
 	static function assertStmt(statement:TypedStmt, owner:String):Void {
 		if (statement == null)
 			throw "typed body contains a null statement in " + owner;
+		if (statement.getCatchUses().length > 0 && !statement.getTag().match(Try))
+			throw "implicit catch uses require a try statement in " + owner;
+		assertCatchUses(statement.getCatchUses(), statement.getLocalBindings(), owner);
 		for (expression in statement.getExpressions())
 			assertExpr(expression, owner);
 		for (child in statement.getStatements())
@@ -190,6 +196,21 @@ class TypedBodyInvariant {
 			assertBindingNames(localBindings, statement.getNames(), owner);
 		} else if (tag == Try) {
 			assertBindingNames(localBindings, statement.getCatchNames(), owner);
+		}
+	}
+
+	/** Catch dependency facts must belong to these exact declarations, in source order. */
+	static function assertCatchUses(uses:Array<TypedCatchUse>, bindings:Array<TyLocalBinding>, owner:String):Void {
+		if (uses.length == 0)
+			return;
+		if (uses.length != bindings.length)
+			throw "implicit catch use count differs from its declarations in " + owner;
+		for (index in 0...uses.length) {
+			final use = uses[index];
+			if (use == null
+				|| !bindings[index].getKind().match(CatchVariable)
+				|| use.binding.getCanonicalIdentity() != bindings[index].getCanonicalIdentity())
+				throw "implicit catch use belongs to another binding in " + owner;
 		}
 	}
 

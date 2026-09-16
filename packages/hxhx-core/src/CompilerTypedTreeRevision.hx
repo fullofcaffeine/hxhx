@@ -22,7 +22,7 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v4");
+		facts.push("typed-function-body-v5");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
@@ -41,7 +41,7 @@ class CompilerTypedTreeRevision {
 		if (ownerIdentity == null || ownerIdentity.length == 0)
 			throw "typed expression revision requires an owner identity";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-expression-v4");
+		facts.push("typed-expression-v5");
 		facts.push(ownerIdentity);
 		addExpression(facts, expression);
 		return CompilerCacheIdentity.encode(facts);
@@ -58,6 +58,7 @@ class CompilerTypedTreeRevision {
 		addStrings(out, statement.getCatchTypeHints());
 		addStrings(out, statement.getMetadata());
 		addLocalBindings(out, statement.getLocalBindings());
+		addStrings(out, [for (use in statement.getCatchUses()) use.getCanonicalIdentity()]);
 		final patterns = statement.getPatterns();
 		out.push(Std.string(patterns.length));
 		for (pattern in patterns)
@@ -92,6 +93,7 @@ class CompilerTypedTreeRevision {
 		out.push(fieldInfo == null ? null : fieldInfo.getCanonicalKey());
 		out.push(fieldInfo == null ? null : fieldInfo.getConstant().getCanonicalIdentity());
 		addLocalBindings(out, expression.getLocalBindings());
+		addStrings(out, [for (use in expression.getCatchUses()) use.getCanonicalIdentity()]);
 		final extensionProvider = expression.getExtensionProvider();
 		out.push(extensionProvider == null ? null : extensionProvider.getCanonicalName());
 		out.push(unaryOperatorName(expression.getUnaryOperator()));

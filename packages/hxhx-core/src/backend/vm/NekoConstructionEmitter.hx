@@ -63,6 +63,10 @@ class NekoConstructionEmitter {
 			final owner = NekoTargetCore.exactClassInfo(context, method.owner);
 			NekoTargetCore.renderInstanceMethod(out, NekoTargetCore.withSelf(context, selfName, owner), selfName, method.body.getDeclaration());
 		}
+		// The VM string primitive calls __string. Select the Haxe method through
+		// the construction plan, then read its receiver slot at conversion time.
+		if (plan.hasStringConversion())
+			out.push("  " + selfName + ".__string = function() { return " + selfName + ".toString(); };");
 		out.push("  " + NekoTargetCore.renderInitializerRef(context, info) + "(" + [selfName].concat(args).join(", ") + ");");
 		out.push("  return " + selfName + ";");
 		out.push(NekoTargetCore.renderFunctionEnd(useVarArgs));

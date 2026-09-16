@@ -1,0 +1,14 @@
+bool:true
+array-payload:true
+base-first-identity:true
+string-payload:payload
+class-carrier:true
+interface-payload-identity:true
+dynamic-carrier-identity:true
+unmatched-carrier-identity:true
+expression-payload:payload
+ordinary-before-conversion:0
+subclass-conversions-before-dynamic:0:true
+subclass-carrier-identity:true
+wrapped-subclass-remains-carrier
+base-exception-conversion:1:payload-string

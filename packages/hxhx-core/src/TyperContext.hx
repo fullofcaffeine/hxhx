@@ -49,6 +49,10 @@ class TyperContext {
 	public function getIndex():TyperIndex
 		return index;
 
+	/** Whether the current request enabled a target or compilation policy define. */
+	public function hasDefine(name:String):Bool
+		return loader != null && loader.hasDefine(name);
+
 	public function getFilePath():String
 		return filePath;
 
@@ -186,7 +190,8 @@ class TyperContext {
 		return identity == null ? null : asClass(index.getByFullName(identity.getCanonicalName()));
 	}
 
-	function classIsOrExtends(candidate:Null<TyNominalInfo>, ancestor:TyNominalInfo):Bool {
+	/** Follow superclass identities; strict semantic plans reject incomplete or cyclic ancestry instead of guessing a mismatch. */
+	public function classIsOrExtends(candidate:Null<TyNominalInfo>, ancestor:TyNominalInfo, requireResolved:Bool = false):Bool {
 		if (candidate == null || ancestor == null)
 			return false;
 		final seen = new haxe.ds.StringMap<Bool>();
@@ -195,10 +200,19 @@ class TyperContext {
 			final name = current.getFullName();
 			if (name == ancestor.getFullName())
 				return true;
-			if (seen.exists(name))
+			if (seen.exists(name)) {
+				if (requireResolved)
+					throw "semantic superclass query encountered a cycle: " + name;
 				return false;
+			}
 			seen.set(name, true);
-			current = superclass(current);
+			final parent = current.getSuperType();
+			if (requireResolved && parent != null && parent.getNominalIdentity() == null)
+				throw "semantic superclass query requires resolved ancestry: " + name;
+			final resolvedParent = superclass(current);
+			if (requireResolved && parent != null && resolvedParent == null)
+				throw "semantic superclass query requires indexed ancestry: " + name;
+			current = resolvedParent;
 		}
 		return false;
 	}

@@ -86,6 +86,7 @@ class CompilerDependencyCollector {
 			currentOwner:Null<TyNominalInfo>, statement:TypedStmt, ?staticInitializer:TyFieldInfo):Void {
 		if (statement == null)
 			return;
+		collectCatchUses(edgeByKey, consumerModule, index, statement.getLocalBindings(), statement.getCatchUses(), staticInitializer);
 		for (expression in statement.getExpressions())
 			collectExpression(edgeByKey, consumerModule, index, currentOwner, expression, staticInitializer);
 		for (child in statement.getStatements())
@@ -96,6 +97,7 @@ class CompilerDependencyCollector {
 			currentOwner:Null<TyNominalInfo>, expression:TypedExpr, ?staticInitializer:TyFieldInfo):Void {
 		if (expression == null)
 			return;
+		collectCatchUses(edgeByKey, consumerModule, index, expression.getLocalBindings(), expression.getCatchUses(), staticInitializer);
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
 		final runtimeTarget = expression.getRuntimeTypeTarget();
 		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
@@ -109,7 +111,7 @@ class CompilerDependencyCollector {
 		if (declaration != null) {
 			final provider = index == null ? null : index.getByFullName(declaration.getOwner().getCanonicalName());
 			if (provider != null) {
-				final kind = declaration.getIsInline() ? CompilerDependencyKind.InlineImplementation : CompilerDependencyKind.PublicInterface;
+				final kind = declarationDependencyKind(declaration);
 				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, kind,
 					"declaration:" + declaration.getIdentity().getCanonicalKey());
 				addStaticInitializationEdge(edgeByKey, consumerModule, staticInitializer, provider.getModulePath(),
@@ -223,6 +225,45 @@ class CompilerDependencyCollector {
 			case ContinueExpr:
 				null;
 		};
+	}
+
+	/** Private signatures are absent from public revisions, including compiler-selected helpers. */
+	static function declarationDependencyKind(declaration:TyDeclarationInfo):CompilerDependencyKind {
+		if (declaration.getIsInline())
+			return CompilerDependencyKind.InlineImplementation;
+		return declaration.getIsPublic() ? CompilerDependencyKind.PublicInterface : CompilerDependencyKind.PrivateDeclaration;
+	}
+
+	/** Catch declarations retain dependencies even when their handlers never read the bound value. */
+	static function collectCatchUses(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			bindings:Array<TyLocalBinding>, uses:Array<TypedCatchUse>, staticInitializer:Null<TyFieldInfo>):Void {
+		for (binding in bindings)
+			if (binding.getKind().match(CatchVariable))
+				collectType(edgeByKey, consumerModule, index, binding.getType(), "catch-binding:"
+					+ binding.getIdentity().getCanonicalKey(), staticInitializer);
+		for (use in uses) {
+			final targetOwner = use.target == null ? null : use.target.getDeclarationIdentity();
+			if (targetOwner != null)
+				collectType(edgeByKey, consumerModule, index, TyType.nominal(targetOwner, []), "implicit-catch-target", staticInitializer);
+			if (use.conversion != null) {
+				final declaration = use.conversion;
+				final kind = declarationDependencyKind(declaration);
+				final provider = index.getByFullName(declaration.getOwner().getCanonicalName());
+				if (provider == null)
+					throw "implicit catch conversion lost its provider";
+				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, kind,
+					"implicit-catch-conversion:" + declaration.getIdentity().getCanonicalKey());
+				addStaticInitializationEdge(edgeByKey, consumerModule, staticInitializer, provider.getModulePath(),
+					"implicit-catch-conversion:" + declaration.getIdentity().getCanonicalKey());
+				for (argument in declaration.getSignature().getArgs())
+					collectType(edgeByKey, consumerModule, index, argument, "implicit-catch-conversion-argument", staticInitializer);
+			}
+			if (use.payload != null) {
+				collectType(edgeByKey, consumerModule, index, TyType.nominal(use.payload.getOwner(), []),
+					"implicit-catch-payload:" + use.payload.getCanonicalKey(), staticInitializer);
+				collectType(edgeByKey, consumerModule, index, use.payload.getType(), "implicit-catch-payload-type", staticInitializer);
+			}
+		}
 	}
 
 	static function collectType(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, type:TyType,

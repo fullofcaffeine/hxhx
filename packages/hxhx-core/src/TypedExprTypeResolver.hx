@@ -2,4 +2,5 @@
 typedef TypedExprTypeResolver = {
 	final expressionType:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> TyType;
 	final runtimeTypeTarget:(expression:HxExpr, environment:TyFunctionEnv, namespace:TypedRuntimeTypeNamespace) -> Null<TypedRuntimeTypeTarget>;
+	final catchUse:(binding:TyLocalBinding) -> Null<TypedCatchUse>;
 }

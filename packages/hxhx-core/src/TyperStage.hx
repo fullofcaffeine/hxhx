@@ -336,6 +336,9 @@ class TyperStage {
 				},
 				runtimeTypeTarget: function(expression, lexicalEnvironment, namespace) {
 					return TypedRuntimeTypeResolver.resolve(expression, lexicalEnvironment, context, namespace);
+				},
+				catchUse: function(binding) {
+					return context.hasDefine("neko") ? TypedCatchUse.resolve(binding, context) : null;
 				}
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {

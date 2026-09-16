@@ -212,48 +212,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 
 	/** Compare authored Haxe with both generated layouts; target primitives require the upstream Neko target. */
 	static function assertRuntimeFixture(fixture:String, upstreamNeko:Bool, ?modulePaths:Array<String>):Void {
-		final expected = File.getContent(fixture + "/expected.stdout");
-		final directory = Path.normalize(Sys.getCwd() + "/.tmp/m14_neko_enum_values_" + Std.string(Date.now().getTime()));
-		FileSystem.createDirectory(directory);
-		final upstream = if (upstreamNeko) {
-			run("haxe", ["-cp", fixture, "-main", "Main", "-neko", directory + "/upstream.n"]);
-			run("neko", [directory + "/upstream.n"]);
-		} else {
-			run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
-		};
-		if (upstream != expected)
-			throw "upstream runtime fixture differs from its expected output: " + fixture + "; artifacts: " + directory;
-		final modules = modulePaths == null ? ["Main"] : modulePaths;
-		final resolved = [
-			for (module in modules) {
-				final file = fixture + "/" + StringTools.replace(module, ".", "/") + ".hx";
-				new ResolvedModule(module, file, ParserStage.parse(File.getContent(file), file));
-			}
-		];
-		final index = TyperIndex.build(resolved);
-		final loader = new ModuleLoader([fixture], new haxe.ds.StringMap<String>(), index, _ -> false);
-		loader.markResolvedAlready(resolved);
-		final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index, loader)], false);
-		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
-		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
-		File.saveContent(directory + "/main.neko", split.entrySource);
-		for (part in split.support)
-			File.saveContent(part.path, part.source);
-		File.saveContent(directory + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
-		for (file in FileSystem.readDirectory(directory)) {
-			if (!StringTools.endsWith(file, ".neko"))
-				continue;
-			final path = directory + "/" + file;
-			if (File.getContent(path).indexOf("must-stay-unused") >= 0)
-				throw "unused abstract helper became reachable in " + path;
-			run("nekoc", [path]);
-		}
-		for (layout in ["single", "main"])
-			if (run("neko", [directory + "/" + layout + ".n"]) != expected)
-				throw fixture + " runtime differs in " + layout + "; artifacts: " + directory;
-		for (file in FileSystem.readDirectory(directory))
-			FileSystem.deleteFile(directory + "/" + file);
-		FileSystem.deleteDirectory(directory);
+		NekoRuntimeFixture.exercise(fixture, false, upstreamNeko, modulePaths);
 	}
 
 	/** A provider edit must change the caller's body revision and retain its constant-value dependency. */
