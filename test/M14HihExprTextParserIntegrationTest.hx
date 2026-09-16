@@ -1482,9 +1482,9 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(EIdent("values"), patterns, _):
 				assertTrue(patterns.length == 2, "expected guarded switch cases");
 				switch (patterns[0]) {
-					case PLengthGuard(PBind("rest"), "rest", 3):
+					case PLengthGuard(PCapture("rest", PWildcard), "rest", 3):
 					case _:
-						fail("expected guarded bind pattern with length comparison");
+						fail("expected explicit wildcard capture with length comparison");
 				}
 			case EUnsupported(raw):
 				fail("guarded switch expression parsed as unsupported: " + raw);
@@ -1505,6 +1505,11 @@ class M14HihExprTextParserIntegrationTest {
 					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
+				}
+				switch (patterns[2]) {
+					case PCapture("x", PWildcard):
+					case _:
+						fail("expected explicit var to retain its wildcard capture");
 				}
 				final comparePatternExpr = HxParser.parseExprText('switch v { case One(x) if (x <= 1): "<=1"; case One(x) if (x > 1): ">1"; case _: "_"; }');
 				switch (comparePatternExpr) {
