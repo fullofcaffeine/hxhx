@@ -12,7 +12,8 @@ class M14InterfaceInheritanceFactsIntegrationTest {
 	static function graph(source:String):TypedBackendClassGraph {
 		final module = typeSource(source);
 		final facts = [
-			for (declaration in module.getBackendProjection().getClasses()) declaration.requireSemanticFacts()
+			for (declaration in module.getBackendProjection().getClasses())
+				declaration.requireSemanticFacts()
 		];
 		return new TypedBackendClassGraph("interface-test", facts);
 	}
