@@ -231,7 +231,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/backend/source/PhpFunctionLoweringPlan.hx",
-  'return "php-function-lowering-plan-v5"',
+  'return "php-function-lowering-plan-v6"',
   "versioned immutable PHP function-plan schema",
 );
 requireFragment(

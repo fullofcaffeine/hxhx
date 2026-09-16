@@ -96,6 +96,8 @@ class PhpFunctionLoweringPlan {
 	final stringExtensionOwners:haxe.ds.StringMap<String>;
 	final fieldReads:Array<PhpFunctionPlanFieldReadFact>;
 	final enumConstructors:PhpFunctionPlanEnumConstructorCatalog;
+	final runtimeTypes:TypedBackendRuntimeTypeCatalog;
+	final selectRuntimeType:HxExpr->TypedBackendRuntimeTypeOccurrence;
 	final canonicalIdentity:String;
 
 	public function new(programFacts:PhpProgramRenderFacts, moduleFacts:PhpModuleRenderFacts, classGraph:TypedBackendClassGraph,
@@ -114,6 +116,9 @@ class PhpFunctionLoweringPlan {
 		final initializerMode = fieldInitializerProjection != null;
 		functionIdentity = normalize(initializerMode ? fieldInitializerProjection.getStableIdentity() : functionProjection.getStableIdentity());
 		bodyRevision = normalize(initializerMode ? fieldInitializerProjection.getBodyRevision() : functionProjection.getBodyRevision());
+		runtimeTypes = initializerMode ? fieldInitializerProjection.getRuntimeTypeCatalog() : functionProjection.getRuntimeTypeCatalog();
+		runtimeTypes.assertOwner(functionIdentity, bodyRevision);
+		selectRuntimeType = initializerMode ? fieldInitializerProjection.requireRuntimeType : functionProjection.requireRuntimeType;
 		if (programRevision.length == 0 || moduleRevision.length == 0 || moduleIdentity.length == 0 || classIdentity.length == 0
 			|| classFactsIdentity.length == 0 || functionIdentity.length == 0 || bodyRevision.length == 0)
 			throw "PHP function lowering plan contains an incomplete revision or semantic identity";
@@ -245,6 +250,11 @@ class PhpFunctionLoweringPlan {
 		identityFacts.push(classGraph.getCanonicalIdentity());
 		identityFacts.push(functionIdentity);
 		identityFacts.push(bodyRevision);
+		identityFacts.push("runtime-type-operands");
+		for (occurrence in runtimeTypes.getEntries()) {
+			identityFacts.push(occurrence.getTarget().getSemanticKey());
+			identityFacts.push(occurrence.getValue() == null ? "value" : "test");
+		}
 		identityFacts.push(emittedClassName);
 		identityFacts.push("class-uses-this-value-slot");
 		identityFacts.push(boolText(classUsesThisValueSlot));
@@ -324,7 +334,11 @@ class PhpFunctionLoweringPlan {
 	}
 
 	public function getSchemaRevision():String
-		return "php-function-lowering-plan-v5";
+		return "php-function-lowering-plan-v6";
+
+	/** Reject copied, foreign, or changed operands before PHP-specific syntax rewrites. */
+	public function requireRuntimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence
+		return selectRuntimeType(expression);
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
