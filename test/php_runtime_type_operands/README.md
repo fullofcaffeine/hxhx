@@ -4,7 +4,7 @@ This fixture checks PHP runtime type values and tests against upstream Haxe.
 `TypeTests` checks primitive, String, and Array predicates, evaluates an operand once,
 and carries type values through a static initializer and a nested closure.
 It distinguishes class values from instances and checks inheritance and null operands.
-Predicates select explicit text branches because Boolean printing has a separate known defect (`haxe_ocaml-pol15`).
+Predicates select explicit text branches to isolate type-test behavior from console formatting.
 
 The integration test also rejects copied, foreign, removed, and mutated type occurrences.
 A missing nominal provider must fail before creating output or replacing an existing artifact.

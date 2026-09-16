@@ -282,7 +282,7 @@
     "test:m14:source-native-backend-smoke:language": "HXHX_M14_SMOKE_GROUP=language haxe test/m14_source_native_backend_smoke_integration_test.hxml",
     "test:m14:source-native-backend-smoke:runtime": "HXHX_M14_SMOKE_GROUP=runtime haxe test/m14_source_native_backend_smoke_integration_test.hxml",
     "test:m14:source-native-backend-smoke:objects": "HXHX_M14_SMOKE_GROUP=objects haxe test/m14_source_native_backend_smoke_integration_test.hxml",
-    "test:m14:source-native-backend-smoke:platforms": "HXHX_M14_SMOKE_GROUP=platforms haxe test/m14_source_native_backend_smoke_integration_test.hxml",
+    "test:m14:source-native-backend-smoke:platforms": "haxe test/m14_php_console_output_integration_test.hxml && HXHX_M14_SMOKE_GROUP=platforms haxe test/m14_source_native_backend_smoke_integration_test.hxml",
     "test:m14:cpp-native-backend-smoke": "HXHX_M14_SMOKE_GROUP=all haxe test/m14_cpp_native_backend_smoke_integration_test.hxml",
     "test:m14:cpp-native-backend-smoke:render": "HXHX_M14_SMOKE_GROUP=render haxe test/m14_cpp_native_backend_smoke_integration_test.hxml",
     "test:m14:cpp-native-backend-smoke:generated": "HXHX_M14_SMOKE_GROUP=generated haxe test/m14_cpp_native_backend_smoke_integration_test.hxml",

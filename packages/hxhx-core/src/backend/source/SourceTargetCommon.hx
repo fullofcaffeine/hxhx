@@ -8776,7 +8776,7 @@ class SourceTargetCommon {
 			case Python: "print(" + expr + ")";
 			case Java: "System.out.println(" + expr + ");";
 			case Cs: "System.Console.WriteLine(" + expr + ");";
-			case Php: "echo " + expr + " . PHP_EOL;";
+			case Php: "Sys::println(" + expr + ");";
 			case Lua: "print(" + expr + ")";
 		};
 	}
