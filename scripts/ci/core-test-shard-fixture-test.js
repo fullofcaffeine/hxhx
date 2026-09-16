@@ -372,7 +372,7 @@ function main() {
     env: { ...process.env, CI: 'true' }
   })
   assert(ciList.status === 0, `CI-bypass shard listing failed\n${ciList.stderr}`)
-  assert(ciList.stdout.includes('HAXE_FAMILY_HEAVY_RUN:CI_BYPASS'), 'CI shard did not bypass the local lease')
+  assert(ciList.stderr.includes('HAXE_FAMILY_HEAVY_RUN:CI_BYPASS'), 'CI shard did not bypass the local lease')
   assert(ciList.stdout.includes('test:hxhx-targets'), 'wrapped shard did not receive its forwarded arguments')
 
   console.log(`[core-test-shard-fixture-test] commands=${plan.aggregateCommands.length} shards=${plan.shards.length}`)
