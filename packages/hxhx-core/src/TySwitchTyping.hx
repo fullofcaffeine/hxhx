@@ -44,6 +44,8 @@ function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int,
 	final result = new TySwitchAnalysis(domain).analyze([for (pattern in patterns) resolve(pattern)]);
 	switch (result) {
 		case Exhaustive:
+		case NonExhaustiveWildcard:
+			throw new TyperError(ctx.getFilePath(), pos, "Unmatched patterns: _");
 		case NonExhaustive(missing):
 			final names = [for (member in missing) member.getName()];
 			names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);

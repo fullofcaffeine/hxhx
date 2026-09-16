@@ -97,6 +97,17 @@ class M14EnumAbstractSwitchDiagnosticTest {
 		check("guard", signal, "case Red if (flag): 1; case Blue: 2;", "Unmatched patterns: Red");
 		check("true_guard", signal, "case Red if (true): 1; case Blue: 2;", "Unmatched patterns: Red");
 		check("guard_fallback", signal, "case Red if (flag): 1; case Red: 3; case Blue: 2;", null);
+		check("guarded_capture_only", signal, "case var Red if (flag): 1;", "Unmatched patterns: _");
+		check("guarded_wildcard_only", signal, "case _ if (flag): 1;", "Unmatched patterns: _");
+		check("guarded_binding_only", signal, "case value if (flag): 1;", "Unmatched patterns: _");
+		check("guarded_capture_then_member", signal, "case var value if (flag): 1; case Red: 2;", "Unmatched patterns: Blue");
+		check("member_then_guarded_capture", signal, "case Red: 2; case var value if (flag): 1;", "Unmatched patterns: Blue");
+		check("guarded_capture_and_member", signal, "case var value if (flag): 1; case Red if (flag): 2;", "Unmatched patterns: Blue | Red");
+		check("guarded_capture_complete", signal, "case var value if (flag): 1; case Red: 2; case Blue: 3;", null);
+		check("guarded_capture_default", signal, "case var value if (flag): 1; default: 2;", null);
+		check("guarded_or_members", signal, "case Red | Blue if (flag): 1;", "Unmatched patterns: Blue | Red");
+		check("guarded_wildcard_or_member", signal, "case _ | Red if (flag): 1;", "Unmatched patterns: Blue | Red");
+		check("guarded_member_or_wildcard", signal, "case Red | _ if (flag): 1;", "Unmatched patterns: Blue | Red");
 		check("invalid_guard_member", signal, "case Missing if (flag): 1; default: 2;", "Cannot analyze enum-abstract switch: unresolved enum pattern Missing");
 		final aliases = "enum abstract Signal(Int) { var Red = 10; var Alias = 10; var Blue = 20; }";
 		check("alias_coverage", aliases, "case Alias: 1; case Blue: 2;", null);

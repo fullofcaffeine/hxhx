@@ -13,6 +13,7 @@ enum TySwitchCaseCoverage {
 enum TySwitchCoverageResult {
 	Exhaustive;
 	NonExhaustive(missing:Array<TyFieldInfo>);
+	NonExhaustiveWildcard;
 	Indeterminate(reason:String);
 }
 
@@ -31,6 +32,7 @@ class TySwitchAnalysis {
 	public function analyze(cases:Array<TySwitchCaseCoverage>):TySwitchCoverageResult {
 		final covered = new StringMap<Bool>();
 		var catchAll = false;
+		var hasMemberPattern = false;
 		var unsupported:Null<String> = null;
 		function visit(pattern:TySwitchCaseCoverage, contributes:Bool):Void {
 			switch (pattern) {
@@ -40,6 +42,7 @@ class TySwitchAnalysis {
 					else
 						switch (field.getConstant().getKind()) {
 							case IntValue(_) | StringValue(_) | BoolValue(_):
+								hasMemberPattern = true;
 								if (contributes) covered.set(field.getConstant().getCanonicalIdentity(), true);
 							case Unresolved(reason): unsupported = reason;
 							case Ordinary: unsupported = "pattern is not a constant enum member";
@@ -78,6 +81,11 @@ class TySwitchAnalysis {
 				missing.push(member.field);
 			seen.set(key, true);
 		}
-		return missing.length == 0 ? Exhaustive : NonExhaustive(missing);
+		if (missing.length == 0)
+			return Exhaustive;
+		// Without a member pattern, failure of every guard leaves the whole
+		// scrutinee unmatched. A member pattern introduces named alternatives,
+		// even when its own guard prevents it from proving coverage.
+		return hasMemberPattern ? NonExhaustive(missing) : NonExhaustiveWildcard;
 	}
 }
