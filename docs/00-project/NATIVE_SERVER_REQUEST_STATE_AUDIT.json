@@ -96,6 +96,7 @@
         "final:KIND_NULL",
         "final:KIND_NULLABLE",
         "final:KIND_NOMINAL",
+        "final:KIND_ABSTRACT_META",
         "final:KIND_FUNCTION",
         "final:KIND_ANONYMOUS",
         "final:KIND_TYPE_PARAMETER",

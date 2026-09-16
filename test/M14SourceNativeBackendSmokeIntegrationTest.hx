@@ -8267,9 +8267,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final main = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
-		final helper = TyperStage.typeModule(ParserStage.parse(helperSrc, "checks/ArrayTools.hx"));
-		return MacroStage.expandProgram([main, helper], []);
+		final modules = [
+			new ResolvedModule("unit.Main", "unit/Main.hx", ParserStage.parse(mainSrc, "unit/Main.hx")),
+			new ResolvedModule("checks.ArrayTools", "checks/ArrayTools.hx", ParserStage.parse(helperSrc, "checks/ArrayTools.hx"))
+		];
+		final index = TyperIndex.build(modules);
+		return MacroStage.expandProgram([for (module in modules) TyperStage.typeResolvedModule(module, index)], []);
 	}
 
 	static function csNoMainLibraryProgram():GenIrProgram {
