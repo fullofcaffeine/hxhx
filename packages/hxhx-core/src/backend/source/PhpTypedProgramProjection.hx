@@ -13,6 +13,13 @@ private typedef PhpTypedFunctionOwner = {
 	final moduleIdentity:String;
 };
 
+/** The exact module, class, and function selected as the PHP entrypoint. */
+typedef PhpTypedMainProjection = {
+	final module:TypedBackendModuleProjection;
+	final cls:TypedBackendClassProjection;
+	final main:TypedBackendFunctionProjection;
+};
+
 /**
 	Own the immutable typed module and function records consumed by one PHP generation.
 
@@ -57,7 +64,6 @@ class PhpTypedProgramProjection {
 		typedProgramRevision = program.getTypedProgramRevision();
 		for (typed in program.getTypedModules()) {
 			final projection = typed.getBackendProjection();
-			projection.assertRuntimeTypeOperandsAbsent("PHP backend");
 			final moduleIdentity = typed.getSourceOrigin().sourceModulePath;
 			modules.push({typed: typed, projection: projection, moduleIdentity: moduleIdentity});
 			for (projectedClass in projection.getClasses()) {
@@ -106,6 +112,31 @@ class PhpTypedProgramProjection {
 				}
 			}
 		}
+	}
+
+	/** Select main through strict declarations, preserving the existing entrypoint fallback. */
+	public function requireMain(wanted:String):PhpTypedMainProjection {
+		var fallback:Null<PhpTypedMainProjection> = null;
+		for (module in modules) {
+			final packagePath = HxModuleDecl.getPackagePath(module.projection.getDeclaration());
+			for (cls in module.projection.getClasses()) {
+				final name = HxClassDecl.getName(cls.getDeclaration());
+				final fullName = packagePath.length == 0 ? name : packagePath + "." + name;
+				for (fn in cls.getFunctions()) {
+					final declaration = fn.getDeclaration();
+					if (HxFunctionDecl.getIsStatic(declaration) && HxFunctionDecl.getName(declaration) == "main") {
+						final selected:PhpTypedMainProjection = {module: module.projection, cls: cls, main: fn};
+						if (fallback == null)
+							fallback = selected;
+						if (wanted == null || wanted.length == 0 || wanted == name || wanted == fullName)
+							return selected;
+					}
+				}
+			}
+		}
+		if (fallback == null)
+			throw "PHP source target requires a static main entrypoint";
+		return fallback;
 	}
 
 	public function getModules():Array<PhpTypedModuleProjection>

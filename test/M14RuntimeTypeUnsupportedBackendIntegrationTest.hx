@@ -48,12 +48,6 @@ class Main {
 				}
 			},
 			{
-				name: "php",
-				emit: context -> {
-					SourceTargetCommon.emitPhpTarget(program, context);
-				}
-			},
-			{
 				name: "lua",
 				emit: context -> {
 					SourceTargetCommon.emitTarget(Lua, program, context);

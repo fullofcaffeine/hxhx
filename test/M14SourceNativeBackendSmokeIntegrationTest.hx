@@ -714,7 +714,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(runDeclaration != null && runProjection != null && planChildFacts != null,
 			"the typed PHP fixture should expose the exact PlanChild.run projection and class facts");
 		final functionPlan = planProjection.requireFunctionLoweringPlan(runDeclaration);
-		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v5",
+		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v6",
 			"the PHP function plan should version target-specific selection separately");
 		assertTrue(functionPlan.getProgramRevision() == planProgram.getTypedProgramRevision().getCanonicalIdentity()
 			&& functionPlan.getModuleIdentity() == "unit.PlanChild"

@@ -242,11 +242,11 @@ class SourceTargetCommon {
 	}
 
 	/** Find the typed directives belonging to the backend declaration being rendered. **/
-	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl):Array<TyModuleDirective> {
+	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl, strict:Bool = false):Array<TyModuleDirective> {
 		if (program == null || declaration == null)
 			return [];
 		for (typed in program.getTypedModules())
-			if (typed.getBackendDeclaration() == declaration)
+			if ((strict ? typed.getBackendProjection().getDeclaration() : typed.getBackendDeclaration()) == declaration)
 				return typed.getEnv().getResolvedDirectives();
 		return [];
 	}
@@ -343,9 +343,9 @@ class SourceTargetCommon {
 	}
 
 	public static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
-		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		if (target == Php)
 			return emitPhpTarget(program, context);
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		final maybeMain = findMainModule(program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
@@ -390,17 +390,17 @@ class SourceTargetCommon {
 		renderer used by this request.
 	**/
 	public static function emitPhpTarget(program:GenIrProgram, context:BackendContext):EmitResult {
-		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "PHP backend");
-		final main = mainModule(program, context);
-		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(main.cls));
-		final strictProjection = strictTypedMainProjection(program, main);
 		final projections = new PhpTypedProgramProjection(program);
-		final programRenderer = phpProgramBodyRenderer(program, main.decl, projections);
+		final strictProjection = projections.requireMain(context.mainModule);
+		final declaration = strictProjection.module.getDeclaration();
+		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(strictProjection.cls.getDeclaration()));
+		final programRenderer = phpProgramBodyRenderer(program, declaration, projections);
+		PhpRuntimeTypeLowering.validateProgram(projections, programRenderer.getProgramFacts());
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(Php, className)]);
 		ensureParentDirectory(outputPath);
 		sys.io.File.saveContent(outputPath,
-			renderPhpProgram(program, context, main.decl, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
+			renderPhpProgram(program, context, declaration, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
 				projections, programRenderer));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(Php), outputPath)], false);
 	}
@@ -1177,6 +1177,16 @@ class SourceTargetCommon {
 		if (staticCall != null)
 			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final phpRuntimeType = PhpRuntimeTypeLowering.decode(expr);
+		if (phpRuntimeType != null) {
+			if (target != Php)
+				throw "PHP runtime type operation reached a different target";
+			return phpRuntimeType.arguments.length == 0 ? phpClassValueExpr(phpRuntimeType.typeName) : "__hxhx_is_of_type("
+				+ renderExprWithFrame(frame, phpRuntimeType.arguments[0])
+				+ ", "
+				+ PhpSyntax.quoteString(phpRuntimeType.typeName)
+				+ ")";
+		}
 		final csStaticCall = CsSourceStaticCallLowering.decode(expr);
 		if (csStaticCall != null) {
 			if (target != Cs)
@@ -10643,7 +10653,8 @@ class SourceTargetCommon {
 			throw "PHP field initializer rendering requires a request-owned renderer and expression";
 		final frame = SourceFunctionRenderFrameTools.forPhpRenderer(renderer);
 		return try {
-			final renamed = phpRenameScopedLocalExpr(expression, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
+			final lowered = PhpRuntimeTypeLowering.expression(renderer, expression);
+			final renamed = phpRenameScopedLocalExpr(lowered, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
 			renderExprWithFrame(frame, renamed);
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -10657,7 +10668,8 @@ class SourceTargetCommon {
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		return try {
-			final rewrittenBody = phpRewriteSameClassMembersInStmts(body, renderer.copyCurrentInstanceMethodTargetNames(),
+			final lowered = PhpRuntimeTypeLowering.body(renderer, body);
+			final rewrittenBody = phpRewriteSameClassMembersInStmts(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
 				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
 				renderer.copyParameterTargetNames());
 			final renderBody = phpRenameScopedLocalStmts(rewrittenBody);
@@ -14408,7 +14420,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return counts;
 	}
 
@@ -14426,7 +14438,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14451,7 +14463,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14723,7 +14735,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "instance", instanceEntries);
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "statics", staticEntries);
@@ -15000,7 +15012,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_meta_object($entries) {");
 		lines.push("  if (array_key_exists(\"_\", $entries)) {");
 		lines.push("    if (!array_key_exists(\"new\", $entries)) $entries[\"new\"] = $entries[\"_\"];");
@@ -15074,7 +15086,7 @@ class SourceTargetCommon {
 		addName("List");
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15116,7 +15128,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, "");
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), typed.getParsed().getFilePath());
+			addDecl(typed.getBackendProjection().getDeclaration(), typed.getParsed().getFilePath());
 		return bases;
 	}
 
@@ -15196,7 +15208,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15249,7 +15261,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15317,7 +15329,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15366,7 +15378,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15386,12 +15398,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addImports(decl);
 		for (typed in program.getTypedModules())
-			addImports(typed.getBackendDeclaration());
+			addImports(typed.getBackendProjection().getDeclaration());
 		return aliases;
 	}
 
@@ -15429,7 +15441,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15459,7 +15471,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15487,7 +15499,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15522,7 +15534,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15572,7 +15584,7 @@ class SourceTargetCommon {
 
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 
 		for (shortName in classesByName.keys()) {
 			final cls = classesByName.get(shortName);
@@ -15636,7 +15648,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15687,7 +15699,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15722,7 +15734,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15857,12 +15869,12 @@ class SourceTargetCommon {
 
 		addDeclClassAliases(decl);
 		for (typed in program.getTypedModules()) {
-			addDeclClassAliases(typed.getBackendDeclaration());
-			addParsedModuleAlias(typed.getParsed(), typed.getBackendDeclaration());
+			addDeclClassAliases(typed.getBackendProjection().getDeclaration());
+			addParsedModuleAlias(typed.getParsed(), typed.getBackendProjection().getDeclaration());
 		}
-		addDeclExtensionContext(decl, resolvedDirectives(program, decl));
+		addDeclExtensionContext(decl, resolvedDirectives(program, decl, true));
 		for (typed in program.getTypedModules())
-			addDeclExtensionContext(typed.getBackendDeclaration(), typed.getEnv().getResolvedDirectives());
+			addDeclExtensionContext(typed.getBackendProjection().getDeclaration(), typed.getEnv().getResolvedDirectives());
 		return out;
 	}
 
@@ -15991,7 +16003,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -16140,7 +16152,7 @@ class SourceTargetCommon {
 	static function phpProgramDeclaresClass(program:GenIrProgram, className:String):Bool {
 		final cleanName = PhpName.typeIdentifier(className);
 		for (typed in program.getTypedModules()) {
-			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration())) {
+			for (cls in HxModuleDecl.getClasses(typed.getBackendProjection().getDeclaration())) {
 				if (PhpName.typeIdentifier(HxClassDecl.getName(cls)) == cleanName)
 					return true;
 			}
@@ -16223,12 +16235,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addDeclImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addDeclImports(decl);
 		for (typed in program.getTypedModules())
-			addDeclImports(typed.getBackendDeclaration());
+			addDeclImports(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
