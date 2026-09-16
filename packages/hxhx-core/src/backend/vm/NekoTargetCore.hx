@@ -1336,6 +1336,13 @@ class NekoTargetCore {
 					fixity == HxUnaryFixity.Postfix ? renderPostfixIncDecExpr(context, inner, 1) : renderCompoundAssignExpr(context, "+=", inner, EInt(1));
 				} else if (op == HxUnaryOperator.Decrement) {
 					fixity == HxUnaryFixity.Postfix ? renderPostfixIncDecExpr(context, inner, -1) : renderCompoundAssignExpr(context, "-=", inner, EInt(1));
+				} else if (op == HxUnaryOperator.Negate) {
+					// Native unary minus loses a literal's negative-zero sign. Fold only
+					// literal Float operands; ordinary runtime negation keeps Neko behavior.
+					switch (inner) {
+						case EFloat(value): renderFloatLiteral(-value);
+						case _: "(-" + renderExpr(context, inner) + ")";
+					}
 				} else {
 					"(" + HxUnaryOperatorTools.sourceToken(op) + renderExpr(context, inner) + ")";
 				}
@@ -1546,15 +1553,30 @@ class NekoTargetCore {
 		return raw;
 	}
 
+	/**
+		Preserve native Float representation, including integral and special values.
+
+		A decimal without a point becomes a Neko integer, which changes runtime
+		type tests at conversion boundaries. Add a point to integral spellings;
+		only exponent notation needs Neko's runtime $float parser.
+		Explicit arithmetic preserves non-finite values without locale-dependent
+		text parsing; the reciprocal distinguishes negative zero before stringifying.
+	**/
 	static function renderFloatLiteral(value:Float):String {
+		if (Math.isNaN(value))
+			return "(0.0 / 0.0)";
+		if (value == Math.POSITIVE_INFINITY)
+			return "(1.0 / 0.0)";
+		if (value == Math.NEGATIVE_INFINITY)
+			return "(-1.0 / 0.0)";
+		if (value == 0 && 1.0 / value < 0)
+			return '$$float("-0")';
 		final raw = Std.string(value);
 		if (!isNekoNumericLiteralText(raw))
-			return "null";
-		return hasExponent(raw) ? '$$float(${quote(raw)})' : raw;
-	}
-
-	static function hasExponent(value:String):Bool {
-		return value.indexOf("e") >= 0 || value.indexOf("E") >= 0;
+			throw "unsupported Neko float literal spelling";
+		if (raw.indexOf("e") >= 0 || raw.indexOf("E") >= 0)
+			return '$$float(${quote(raw)})';
+		return raw.indexOf(".") < 0 ? raw + ".0" : raw;
 	}
 
 	static function isNekoNumericLiteralText(value:String):Bool {

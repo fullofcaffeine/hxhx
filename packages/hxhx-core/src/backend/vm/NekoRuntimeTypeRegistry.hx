@@ -20,6 +20,9 @@ private enum abstract RegistryKind(String) {
 	var NominalInterface = "interface";
 	var NativeArray = "array";
 	var NativeString = "string";
+	var NativeInt = "int";
+	var NativeFloat = "float";
+	var NativeBool = "bool";
 }
 
 private typedef RegistryEntry = {
@@ -36,8 +39,12 @@ function requireTarget(program:NekoTypedProgramProjection, target:TypedRuntimeTy
 			return "core:Array";
 		case StringCore:
 			return "core:String";
-		case IntCore | FloatCore | BoolCore:
-			throw "Neko primitive runtime predicate is not implemented: " + target.getSemanticKey();
+		case IntCore:
+			return "core:Int";
+		case FloatCore:
+			return "core:Float";
+		case BoolCore:
+			return "core:Bool";
 		case Nominal(_):
 	}
 	final identity = target.requireDeclarationIdentity().getCanonicalName();
@@ -61,12 +68,30 @@ function hasRuntimeMembership(facts:TypedBackendClassSemanticFacts):Bool {
 	Create the registry once on the shared symbol object, before any chunk loads.
 
 	Haxe owns nominal membership and public names. The runtime receives complete
-	ancestor lists and interns one object per identity. Enum and abstract values
-	are excluded. Array and String use the same core objects for class literals,
-	reflection, and predicates.
+	ancestor lists and interns one object per identity. The primitive abstract
+	targets Int, Float, and Bool have explicit native kinds. Other abstracts and
+	enums remain excluded. Every chunk uses the same objects for type predicates.
 **/
 function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection, modules:Array<TypedBackendModuleProjection>, symbols:String):Void {
 	final entries:Array<RegistryEntry> = [
+		{
+			identity: "core:Int",
+			name: "Int",
+			kind: NativeInt,
+			assignable: []
+		},
+		{
+			identity: "core:Float",
+			name: "Float",
+			kind: NativeFloat,
+			assignable: []
+		},
+		{
+			identity: "core:Bool",
+			name: "Bool",
+			kind: NativeBool,
+			assignable: []
+		},
 		{
 			identity: "core:Array",
 			name: "Array",
@@ -158,6 +183,11 @@ function renderPrelude(out:Array<String>, symbols:String, program:NekoTypedProgr
 	out.push("  if (__hxhx_is_type_object(target) == false) return false;");
 	out.push("  if (target.kind == \"array\") return $typeof(value) == $tarray;");
 	out.push("  if (target.kind == \"string\") return $typeof(value) == $tstring;");
+	// Neko's float-to-int conversion has a narrower range than native integer
+	// storage. Test conversion equality instead of imposing a portable Int range.
+	out.push("  if (target.kind == \"int\") return $typeof(value) == $tint || ($typeof(value) == $tfloat && $int(value) == value);");
+	out.push("  if (target.kind == \"float\") return $typeof(value) == $tint || $typeof(value) == $tfloat;");
+	out.push("  if (target.kind == \"bool\") return $typeof(value) == $tbool;");
 	out.push("  var actual = " + getClass + "(value);");
 	out.push("  if (actual == null || actual.kind != \"class\") return false;");
 	out.push("  var parents = actual.assignable;");

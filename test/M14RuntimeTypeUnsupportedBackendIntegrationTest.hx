@@ -13,13 +13,12 @@ class Main {
  static function main():Void {}
 }', "does not support runtime type operands");
 		for (primitive in ["Int", "Float", "Bool"])
-			assertRejected("class Main { static function main():Void { var selected = " + primitive + "; } }",
-				"Neko primitive runtime predicate is not implemented");
+			assertRejected("class Main { static function main():Void { var selected = " + primitive + "; } }", null);
 		Sys.println("RUNTIME_TYPE_UNSUPPORTED_BACKENDS:PASS");
 	}
 
 	/** A rejected operation must leave the previous artifact and directory contents intact. */
-	static function assertRejected(source:String, nekoDiagnostic:String):Void {
+	static function assertRejected(source:String, nekoDiagnostic:Null<String>):Void {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
 		final index = TyperIndex.build([resolved]);
@@ -80,6 +79,8 @@ class Main {
 			}
 		];
 		for (check in checks) {
+			if (check.name == "neko" && nekoDiagnostic == null)
+				continue;
 			final directory = root + "/" + check.name;
 			sys.FileSystem.createDirectory(directory);
 			final path = directory + "/existing";

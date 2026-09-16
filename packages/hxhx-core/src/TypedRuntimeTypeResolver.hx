@@ -65,11 +65,11 @@ class TypedRuntimeTypeResolver {
 				return new TypedRuntimeTypeTarget(ArrayCore, name);
 			case "String":
 				return new TypedRuntimeTypeTarget(StringCore, name);
-			case "Int":
+			case "Int" | "StdTypes.Int":
 				return new TypedRuntimeTypeTarget(IntCore, name);
-			case "Float":
+			case "Float" | "StdTypes.Float":
 				return new TypedRuntimeTypeTarget(FloatCore, name);
-			case "Bool":
+			case "Bool" | "StdTypes.Bool":
 				return new TypedRuntimeTypeTarget(BoolCore, name);
 			case _:
 		}

@@ -20,6 +20,7 @@ class M14NekoStdIsOfTypeIntegrationTest {
 
 	static function main():Void {
 		assertFixture("test/neko_std_is_of_type", "NEKO_STD_IS_OF_TYPE");
+		assertFixture("test/neko_primitive_runtime_types", "NEKO_PRIMITIVE_RUNTIME_TYPES");
 	}
 
 	/** Exercise a standard-library consumer with ordinary roots and both generated layouts. */
