@@ -139,7 +139,7 @@ for (const [name, next, earlyValue, boxesFallback] of [
 	['boolThroughTry', 'primitiveBoolThroughTry', 'value', true]
 ]) {
 	const body = functionBody(name, next)
-	if (!body.includes(`raise (HxRuntime.Hx_return ${earlyValue})`)
+	if (!body.includes(`Stdlib.raise (HxRuntime.Hx_return ${earlyValue})`)
 		|| !body.includes('| HxRuntime.Hx_return __ret_')
 		|| !body.includes('-> (__ret_')
 		|| !body.includes(': Obj.t)')
@@ -159,7 +159,7 @@ for (const [name, next] of [
 	['primitiveBoolThroughTry', 'main']
 ]) {
 	const body = functionBody(name, next)
-	if (!body.includes('raise (HxRuntime.Hx_return (Obj.repr early))')
+	if (!body.includes('Stdlib.raise (HxRuntime.Hx_return (Obj.repr early))')
 		|| !body.includes('| HxRuntime.Hx_return __ret_')
 		|| !body.includes('-> (__ret_')
 		|| !body.includes(': Obj.t)')
@@ -171,8 +171,8 @@ for (const [name, next] of [
 }
 
 const mixedBody = functionBody('mixedInt', 'intThroughLoop')
-if (!mixedBody.includes('raise (HxRuntime.Hx_return (Obj.repr early))')
-	|| !mixedBody.includes('raise (HxRuntime.Hx_return nullable)')
+if (!mixedBody.includes('Stdlib.raise (HxRuntime.Hx_return (Obj.repr early))')
+	|| !mixedBody.includes('Stdlib.raise (HxRuntime.Hx_return nullable)')
 	|| !mixedBody.includes('try Obj.repr')
 	|| !mixedBody.includes('| HxRuntime.Hx_return __ret_')
 	|| !mixedBody.includes('-> (__ret_')
@@ -189,7 +189,7 @@ for (const [name, next] of [
 ]) {
 	const body = functionBody(name, next)
 	if (!body.includes('| HxRuntime.Hx_return __ret_')
-		|| !body.includes('-> raise (HxRuntime.Hx_return __ret_')) {
+		|| !body.includes('-> Stdlib.raise (HxRuntime.Hx_return __ret_')) {
 		fail(`a source catch can intercept ${name}'s private nullable-return signal`)
 	}
 }

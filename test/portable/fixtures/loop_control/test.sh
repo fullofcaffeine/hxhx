@@ -107,8 +107,8 @@ const tryEnd = source.indexOf('\nlet voidLoop =', tryStart)
 const tryBody = source.slice(tryStart, tryEnd)
 	if (tryStart < 0
 		|| tryEnd < 0
-		|| !/HxRuntime\.Hx_break -> raise \(HxRuntime\.Hx_break\)/.test(tryBody)
-		|| !/HxRuntime\.Hx_continue -> raise \(HxRuntime\.Hx_continue\)/.test(tryBody)) {
+		|| !/HxRuntime\.Hx_break -> Stdlib\.raise \(HxRuntime\.Hx_break\)/.test(tryBody)
+		|| !/HxRuntime\.Hx_continue -> Stdlib\.raise \(HxRuntime\.Hx_continue\)/.test(tryBody)) {
 	fail('a source catch can intercept a private loop-control signal')
 }
 

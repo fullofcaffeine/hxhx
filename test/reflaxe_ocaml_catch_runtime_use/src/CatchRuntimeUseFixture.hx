@@ -296,9 +296,9 @@ class CatchRuntimeUseFixture {
 		finalOutput.finishProgram();
 
 		final rendered = new OcamlASTPrinter().printExpr(expression);
-		assertTrue(rendered.contains("HxRuntime.Hx_return returned -> raise (HxRuntime.Hx_return returned)"),
+		assertTrue(rendered.contains("HxRuntime.Hx_return returned -> Stdlib.raise (HxRuntime.Hx_return returned)"),
 			"The checked catch chain must preserve a value-bearing return signal.");
-		assertTrue(rendered.contains("HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)"),
+		assertTrue(rendered.contains("HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)"),
 			"The checked catch chain must preserve a Void return signal.");
 		assertTrue(rendered.contains("HxRuntime.Hx_exception (value, tags)"), "The checked pattern must print the exact runtime constructor.");
 		assertTrue(rendered.contains("HxRuntime.hx_throw_typed value tags"), "The checked rethrow must print the exact runtime helper.");

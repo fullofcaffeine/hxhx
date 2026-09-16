@@ -96,7 +96,7 @@ for (const item of expectedVoid) {
 	const body = item.source.slice(start, end)
 	if (start < 0
 		|| end < 0
-		|| !body.includes('raise (HxRuntime.Hx_return_void)')
+		|| !body.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		throw new Error(`${item.generatedName} did not mechanically consume its payloadless return boundary`)
