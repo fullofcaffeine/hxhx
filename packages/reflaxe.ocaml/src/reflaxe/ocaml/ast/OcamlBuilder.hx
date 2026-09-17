@@ -115,6 +115,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
@@ -132,10 +133,12 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentati
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassMaterializer;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
@@ -906,6 +909,11 @@ class OcamlBuilder {
 				callPlanInvariant('callable carrier ${value.outputSemanticTypeId}/${value.outputCarrierTypeId} does not match representation "${value.outputRepresentationId}"',
 				position);
 		}
+		if (representation.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier) {
+			if (ctx.currentModuleId == null)
+				return callPlanInvariant("a native enum callable carrier reached syntax outside an OCaml module", position);
+			return OcamlNativeEnumRepresentation.typeExpr(representation, moduleIdToOcamlModuleName(ctx.currentModuleId));
+		}
 		if (OcamlMonomorphicClassMaterializer.isNominalClass(representation)) {
 			if (ctx.currentModuleId == null)
 				return callPlanInvariant("a nominal callable carrier reached syntax outside an OCaml module", position);
@@ -985,7 +993,17 @@ class OcamlBuilder {
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				body;
-			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool, BoxExactEnumToNullableEnum:
+			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
+			case BoxExactEnumToNullableEnum:
+				final reference = value.nullableEnumCarrier;
+				if (reference == null)
+					return callPlanInvariant("a nullable-enum result reached syntax without its carrier reference", position);
+				try {
+					OcamlNullableEnumCarrier.requireCurrent(reference, ctx, representationRegistry);
+				} catch (error:Dynamic) {
+					return callPlanInvariant(Std.string(error), position);
+				}
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);

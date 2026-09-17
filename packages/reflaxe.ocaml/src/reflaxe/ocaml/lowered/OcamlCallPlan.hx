@@ -14,6 +14,7 @@ import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUsePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier.OcamlNullableEnumCarrierReference;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
@@ -124,6 +125,7 @@ typedef OcamlCallValuePlan = {
 	final conversion:OcamlCallCarrierConversion;
 	final proofId:String;
 	final proofClaim:String;
+	final ?nullableEnumCarrier:OcamlNullableEnumCarrierReference;
 }
 
 /**
@@ -505,7 +507,8 @@ class OcamlCallPlan {
 			value.outputRepresentationId,
 			(value.conversion : String),
 			value.proofId,
-			value.proofClaim
+			value.proofClaim,
+			value.nullableEnumCarrier == null ? "" : OcamlNullableEnumCarrier.fingerprint(value.nullableEnumCarrier)
 		].join(":");
 	}
 
@@ -621,7 +624,8 @@ class OcamlCallPlan {
 			outputRepresentationId: value.outputRepresentationId,
 			conversion: value.conversion,
 			proofId: value.proofId,
-			proofClaim: value.proofClaim
+			proofClaim: value.proofClaim,
+			nullableEnumCarrier: value.nullableEnumCarrier == null ? null : OcamlNullableEnumCarrier.copy(value.nullableEnumCarrier)
 		};
 	}
 
@@ -646,7 +650,14 @@ class OcamlCallPlan {
 			&& left.outputRepresentationId == right.outputRepresentationId
 			&& left.conversion == right.conversion
 			&& left.proofId == right.proofId
-			&& left.proofClaim == right.proofClaim;
+			&& left.proofClaim == right.proofClaim
+			&& sameNullableEnumCarrier(left.nullableEnumCarrier, right.nullableEnumCarrier);
+	}
+
+	static function sameNullableEnumCarrier(left:Null<OcamlNullableEnumCarrierReference>, right:Null<OcamlNullableEnumCarrierReference>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return OcamlNullableEnumCarrier.same(left, right);
 	}
 
 	/**
@@ -705,6 +716,8 @@ class OcamlCallPlan {
 	public static function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
 		if (value.index != expectedIndex || value.proofId.length == 0 || value.proofClaim.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid index or empty conversion proof';
+		if ((value.conversion == OcamlCallCarrierConversion.BoxExactEnumToNullableEnum) != (value.nullableEnumCarrier != null))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has missing or unrelated nullable-enum carrier evidence';
 		switch (value.conversion) {
 			case Identity:
 				if (!sameRepresentationSides(value)
@@ -715,7 +728,8 @@ class OcamlCallPlan {
 						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !(expectedIndex < 0
-							&& isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)))
+							&& (isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+								|| isNullableNativeEnumSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))))
 					|| value.proofId != "identity-call-carrier-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
 				}
@@ -831,14 +845,19 @@ class OcamlCallPlan {
 		whose two semantic type names agree.
 	**/
 	public static function isExactEnumToNullableResult(value:OcamlCallValuePlan):Bool {
-		final nullableSemanticTypeId = 'Null<${value.inputSemanticTypeId}>';
+		final reference = value.nullableEnumCarrier;
+		if (reference == null)
+			return false;
+		OcamlNullableEnumCarrier.requireShape(reference);
+		final descriptor = reference.descriptor;
+		final nullableSemanticTypeId = 'Null<${descriptor.semanticTypeId}>';
 		return !value.parameterOptional
-			&& value.inputSemanticTypeId.length > 0
-			&& value.inputCarrierTypeId == 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
-			&& value.inputRepresentationId == 'representation:${value.inputSemanticTypeId}:internal-value'
+			&& value.inputSemanticTypeId == descriptor.semanticTypeId
+			&& value.inputCarrierTypeId == descriptor.targetTypeName
+			&& value.inputRepresentationId == reference.inputRepresentationId
 			&& value.outputSemanticTypeId == nullableSemanticTypeId
 			&& value.outputCarrierTypeId == "Obj.t"
-			&& value.outputRepresentationId == 'representation:$nullableSemanticTypeId:internal-value'
+			&& value.outputRepresentationId == reference.outputRepresentationId
 			&& value.conversion == OcamlCallCarrierConversion.BoxExactEnumToNullableEnum
 			&& value.proofId == "nullable-enum-function-result-box-v1";
 	}
@@ -1389,13 +1408,18 @@ class OcamlCallPlan {
 			}
 		}
 		final directionalNullableEnumResult = result != null && isExactEnumToNullableResult(result);
+		final preservedNullableEnumResult = result != null
+			&& isNullableNativeEnumSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			&& isNullableNativeEnumSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId);
 		if (resultKind == OcamlCallResultKind.Value
 			&& (result == null
 				|| (!isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
 					&& !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					&& !preservedNullableEnumResult
 					&& !directionalNullableEnumResult)
 				|| (!isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
 					&& !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+					&& !preservedNullableEnumResult
 					&& !directionalNullableEnumResult)
 				|| (!directionalNullableEnumResult
 					&& (!sameRepresentationSides(result) || result.conversion != OcamlCallCarrierConversion.Identity)))) {
@@ -1486,6 +1510,17 @@ class OcamlCallPlan {
 			&& semanticTypeId.indexOf("<") < 0
 			&& carrierTypeId.length > 0
 			&& !isAdmittedInternalSide(semanticTypeId, carrierTypeId, representationId)
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
+	/** Recognizes one already-boxed nullable carrier paired with a native enum. */
+	public static function isNullableNativeEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return false;
+		final nativeSemanticTypeId = semanticTypeId.substr(5, semanticTypeId.length - 6);
+		return nativeSemanticTypeId.length > 0
+			&& nativeSemanticTypeId.indexOf("<") < 0
+			&& carrierTypeId == "Obj.t"
 			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 
@@ -1648,6 +1683,18 @@ class OcamlCallPlanner {
 	/** Checks one requested call for an exact core String result without a whole-body scan. */
 	public function preliminaryProducesExactString(expression:TypedExpr):Bool {
 		return OcamlCallPlan.decisionProducesExactString(preliminaryDecisionFor(expression));
+	}
+
+	/** Returns the native enum semantic identity produced by one sealed call. */
+	public function preliminaryProducesNativeEnum(expression:TypedExpr):Null<String> {
+		final decision = preliminaryDecisionFor(expression);
+		final result = decision == null ? null : decision.result;
+		if (result == null || result.conversion != OcamlCallCarrierConversion.Identity)
+			return null;
+		final representation = representations.nativeEnumValue(result.outputSemanticTypeId);
+		return representation != null
+			&& representation.id == result.outputRepresentationId
+			&& representation.carrierTypeId == result.outputCarrierTypeId ? representation.semanticTypeId : null;
 	}
 
 	function preliminaryDecisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
@@ -2073,6 +2120,11 @@ class OcamlCallPlanner {
 					case TLocal(_): true;
 					case _: false;
 				}
+			case TCall(callee, _):
+				// Local planning can select a concrete carrier produced by a nested
+				// function body. Reevaluate the enclosing call after that selection;
+				// otherwise an earlier negative probe can hide a now-represented result.
+				functionValueCalleeForm(callee) != null;
 			case _: false;
 		}
 	}
@@ -2675,8 +2727,9 @@ class OcamlCallPlanner {
 	public static function functionValueSignatureIdForDecision(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
 			result:Null<OcamlCallValuePlan>):Null<String> {
 		final expectedNominalResult = result != null
-			&& OcamlCallPlan.isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId,
-				result.outputRepresentationId) ? result.outputSemanticTypeId : null;
+			&& (OcamlCallPlan.isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+				|| OcamlCallPlan.isNullableNativeEnumSide(result.outputSemanticTypeId, result.outputCarrierTypeId,
+					result.outputRepresentationId)) ? result.outputSemanticTypeId : null;
 		final signature = functionValueSignature(callee, arguments, resultType, null, expectedNominalResult);
 		return signature == null ? null : signature.id;
 	}
@@ -2690,7 +2743,7 @@ class OcamlCallPlanner {
 		if (signature == null || !functionValueArgumentsMatch(signature, arguments))
 			return null;
 		return switch (signature.resultKind) {
-			case Value: final actualResult = semanticTypeIdWithExpectedNominal(resultType, representations,
+			case Value: final actualResult = admittedFunctionResultSemanticTypeId(resultType, calleeForm, representations,
 					expectedNominalResult); signature.resultSemanticTypeId != null && actualResult == signature.resultSemanticTypeId ? signature : null;
 			case EffectOnlyVoid:
 				isExactVoid(resultType) ? signature : null;
@@ -2926,6 +2979,8 @@ class OcamlCallPlanner {
 				&& reference.domain == OcamlRepresentationDomain.InternalValue
 				&& reference.representationId == boundary.inputRepresentationId
 				&& reference.semanticTypeId == boundary.inputSemanticTypeId;
+			case TConst(TThis):
+				true;
 			case _:
 				false;
 		}
@@ -3078,8 +3133,9 @@ class OcamlCallPlanner {
 	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>, ?representations:OcamlRepresentationRegistry,
 			?expectedNominalResult:String):Null<OcamlAdmittedCallSignature> {
 		return switch (TypeTools.follow(type)) {
-			case TFun(arguments, result) if (semanticTypeIdWithExpectedNominal(result, representations, expectedNominalResult) != null
-				|| isExactVoid(result)):
+			case TFun(arguments, result)
+				if (admittedFunctionResultSemanticTypeId(result, calleeForm, representations, expectedNominalResult) != null
+					|| isExactVoid(result)):
 				var optionalCount = 0;
 				var valid = true;
 				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
@@ -3123,8 +3179,8 @@ class OcamlCallPlanner {
 					null;
 				} else {
 					final resultKind = isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value;
-					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeIdWithExpectedNominal(result, representations,
-						expectedNominalResult) : null;
+					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? admittedFunctionResultSemanticTypeId(result, calleeForm,
+						representations, expectedNominalResult) : null;
 					final parameterIds = selectedArguments.map(argument -> (argument.optional ? "?" : "") + argument.semanticTypeId);
 					final resultId = resultKind == OcamlCallResultKind.EffectOnlyVoid ? "Void" : resultSemanticTypeId;
 					{
@@ -3138,6 +3194,28 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	/**
+		Selects the extra result family allowed only at a computed-call occurrence.
+
+		A registry-wide nullable enum decision proves a carrier, not a direct method
+		declaration. Local and call-produced function values already carry their own
+		sealed occurrence proof, so they may join that carrier here. Program methods
+		must still enter through the request-wide callable declaration catalog.
+	**/
+	static function admittedFunctionResultSemanticTypeId(type:Type, calleeForm:Null<String>, representations:Null<OcamlRepresentationRegistry>,
+			expectedNominalResult:Null<String>):Null<String> {
+		if (calleeForm != null) {
+			final nullableNativeEnum = nullableNativeEnumSemanticTypeId(type);
+			if (nullableNativeEnum != null
+				&& (representations != null
+					&& representations.nullableNativeEnumValue(nullableNativeEnum) != null
+					|| nullableNativeEnum == expectedNominalResult)) {
+				return nullableNativeEnum;
+			}
+		}
+		return semanticTypeIdWithExpectedNominal(type, representations, expectedNominalResult);
 	}
 
 	/**
@@ -3168,6 +3246,19 @@ class OcamlCallPlanner {
 		final primitive = semanticTypeId(type);
 		if (primitive != null || representations == null)
 			return primitive;
+		// Preserve the declared wrapper boundary. Following `Null<Enum>` here would
+		// erase nullability and make an unrelated direct method look like it exports
+		// the native enum carrier merely because that enum is registered elsewhere.
+		final nativeEnum = switch (type) {
+			case TEnum(reference, parameters) if (parameters.length == 0):
+				final declaration = reference.get();
+				final semanticTypeId = declaration.pack.concat([declaration.name]).join(".");
+				representations.nativeEnumValue(semanticTypeId);
+			case _:
+				null;
+		}
+		if (nativeEnum != null)
+			return nativeEnum.semanticTypeId;
 		final layout = representations.monomorphicClassForType(type);
 		return layout == null ? null : layout.semanticTypeId;
 	}
@@ -3190,6 +3281,27 @@ class OcamlCallPlanner {
 			return null;
 		final observed = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type);
 		return observed == expectedNominalResult ? observed : null;
+	}
+
+	/** Returns the stable semantic ID only for direct core `Null<Enum>` syntax. */
+	static function nullableNativeEnumSemanticTypeId(type:Type):Null<String> {
+		return switch (type) {
+			case TAbstract(abstractRef, [inner]):
+				final abstractType = abstractRef.get();
+				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
+					null;
+				} else {
+					switch (TypeTools.follow(inner)) {
+						case TEnum(enumRef, parameters) if (parameters.length == 0):
+							final declaration = enumRef.get();
+							'Null<${declaration.pack.concat([declaration.name]).join(".")}>';
+						case _:
+							null;
+					}
+				}
+			case _:
+				null;
+		};
 	}
 
 	static function classSemanticTypeId(classType:ClassType):String {
@@ -3218,7 +3330,14 @@ class OcamlCallPlanner {
 			case "Null<Bool>": representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
 			case "String": representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 			case "Dynamic": representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
-			case _: representations.monomorphicClassValue(semanticType);
+			case _:
+				final nullableNativeEnum = representations.nullableNativeEnumValue(semanticType);
+				if (nullableNativeEnum != null) {
+					nullableNativeEnum;
+				} else {
+					final nativeEnum = representations.nativeEnumValue(semanticType);
+					nativeEnum == null ? representations.monomorphicClassValue(semanticType) : nativeEnum;
+				}
 		}
 	}
 

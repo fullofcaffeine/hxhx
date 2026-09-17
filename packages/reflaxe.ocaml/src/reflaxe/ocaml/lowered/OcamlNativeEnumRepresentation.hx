@@ -129,6 +129,21 @@ class OcamlNativeEnumRepresentation {
 			throw "reflaxe.ocaml [ocaml-native-enum:invalid-descriptor]: native enum identity or target naming facts changed";
 	}
 
+	/** Rejects a descriptor whose source identity no longer maps to current target names. */
+	public static function requireCurrent(descriptor:OcamlNativeEnumDescriptor, context:CompilationContext):Void {
+		validate(descriptor);
+		final separator = descriptor.sourceModuleId.lastIndexOf(".");
+		final sourcePackage = separator < 0 ? "" : descriptor.sourceModuleId.substr(0, separator);
+		final expectedSemanticTypeId = sourcePackage.length == 0 ? descriptor.sourceTypeName : sourcePackage + "." + descriptor.sourceTypeName;
+		final expectedTargetModuleName = context.ocamlModuleNameForModuleId(descriptor.sourceModuleId);
+		final expectedTargetTypeName = OcamlNameTools.enumTypeName(descriptor.sourceTypeName);
+		if (descriptor.semanticTypeId != expectedSemanticTypeId
+			|| descriptor.targetModuleName != expectedTargetModuleName
+			|| descriptor.targetTypeName != expectedTargetTypeName) {
+			throw "reflaxe.ocaml [ocaml-native-enum:stale-context]: native enum identity or generated names changed in the active compilation";
+		}
+	}
+
 	static function withRevision(descriptor:OcamlNativeEnumDescriptor):OcamlNativeEnumDescriptor {
 		return {
 			semanticTypeId: descriptor.semanticTypeId,

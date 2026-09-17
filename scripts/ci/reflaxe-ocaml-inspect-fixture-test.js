@@ -13,14 +13,10 @@ fs.mkdirSync(tempParent, {recursive: true})
 const tempRoot = fs.mkdtempSync(path.join(tempParent, 'reflaxe-ocaml-inspect-'))
 const sourceFixture = path.join(repoRoot, 'test/portable/fixtures/place_static_field_assign')
 const sha256Revision = /^sha256:[0-9a-f]{64}$/
-const haxeArgs = [
-	'-cp', 'packages/reflaxe.ocaml/src',
-	'--macro', 'nullSafety("reflaxe.ocaml")',
-	'--run', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun'
-]
+const inspectorPath = path.join(tempRoot, 'inspect.n')
 
 function runCli(args) {
-	return cp.spawnSync('haxe', haxeArgs.concat(args), {
+	return cp.spawnSync('neko', [inspectorPath].concat(args), {
 		cwd: repoRoot,
 		env: process.env,
 		encoding: 'utf8',
@@ -30,6 +26,23 @@ function runCli(args) {
 }
 
 try {
+	// Compile once while retaining a fresh process, exit status, and diagnostics
+	// for every report mutation below.
+	const inspectorCompile = cp.spawnSync('haxe', [
+		'-cp', 'packages/reflaxe.ocaml/src',
+		'--macro', 'nullSafety("reflaxe.ocaml")',
+		'-D', 'reflaxe_runtime',
+		'-main', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun',
+		'--neko', inspectorPath
+	], {
+		cwd: repoRoot,
+		env: process.env,
+		encoding: 'utf8',
+		maxBuffer: 50 * 1024 * 1024,
+		shell: false
+	})
+	assert.strictEqual(inspectorCompile.status, 0, inspectorCompile.stderr || inspectorCompile.stdout)
+
 	fs.cpSync(path.join(sourceFixture, 'src'), path.join(tempRoot, 'src'), {recursive: true})
 	const hxml = fs.readFileSync(path.join(sourceFixture, 'build.hxml'), 'utf8') + '\n-D ocaml_no_build\n'
 	fs.writeFileSync(path.join(tempRoot, 'build.hxml'), hxml)
@@ -519,7 +532,7 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
-	assert.strictEqual(lowering.schemaVersion, 88)
+	assert.strictEqual(lowering.schemaVersion, 89)
 	const oldSchemaValue = JSON.parse(loweringBytes)
 	oldSchemaValue.schemaVersion = 87
 	fs.writeFileSync(loweringPath, JSON.stringify(oldSchemaValue, null, 2) + '\n')
@@ -527,7 +540,7 @@ try {
 	assert.strictEqual(oldSchemaResult.status, 1)
 	const oldSchemaReport = JSON.parse(oldSchemaResult.stdout)
 	assert.strictEqual(oldSchemaReport.lowering.status, 'invalid')
-	assert(oldSchemaReport.lowering.message.includes('expected 88'))
+	assert(oldSchemaReport.lowering.message.includes('expected 89'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const corruptTypeCheckValue = JSON.parse(loweringBytes)
 	const corruptTypeCheck = corruptTypeCheckValue.stdIsOfType.find(decision => decision.runtimeRequirementIds.length > 0)

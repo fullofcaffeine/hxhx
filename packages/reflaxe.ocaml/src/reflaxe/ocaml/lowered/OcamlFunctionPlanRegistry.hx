@@ -4,10 +4,14 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
 import haxe.ds.StringMap;
+import haxe.macro.Type.ClassField;
+import haxe.macro.Type.ClassType;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.lowered.OcamlNativeEnumResultAdmission.OcamlEnumResultCandidate;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
@@ -409,6 +413,26 @@ class OcamlFunctionPlanRegistry {
 		standaloneIntUnaryById.clear();
 		standaloneStringFromCharCodeById.clear();
 		standaloneControlsByFunctionId.clear();
+	}
+
+	/** Records one ordinary method for request-wide native enum result analysis. */
+	public function observeNativeEnumResult(owner:ClassType, field:ClassField, isStatic:Bool, context:CompilationContext):Void {
+		nativeEnumResults.add(owner, field, isStatic, context);
+	}
+
+	/** Closes native enum result dependencies before callable declarations are selected. */
+	public function finishNativeEnumResults():Void {
+		nativeEnumResults.finish();
+	}
+
+	/** Returns the closed producer evidence for one callable declaration. */
+	public function nativeEnumResultCandidate(calleeId:String):Null<OcamlEnumResultCandidate> {
+		return nativeEnumResults.candidate(calleeId);
+	}
+
+	/** Rechecks one final preprocessed body before its enum result can be published. */
+	public function requireFinalNativeEnumResult(data:ClassFuncData, context:CompilationContext):Void {
+		nativeEnumResults.requireFinal(data, context);
 	}
 
 	/**

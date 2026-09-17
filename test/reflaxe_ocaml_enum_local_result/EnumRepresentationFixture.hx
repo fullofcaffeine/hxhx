@@ -2,6 +2,8 @@
 import haxe.macro.Context;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier.OcamlNullableEnumCarrierReference;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 #end
@@ -9,6 +11,17 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingP
 /** Checks native enum identity separately from the still-required value producer proof. */
 class EnumRepresentationFixture {
 	#if macro
+	static function expectRejected(check:Void->Void, message:String):Void {
+		var rejected = false;
+		try {
+			check();
+		} catch (_:haxe.Exception) {
+			rejected = true;
+		}
+		if (!rejected)
+			throw message;
+	}
+
 	public static function run():Void {
 		final context = new CompilationContext();
 		final descriptor = OcamlNativeEnumRepresentation.select(Context.getType("Payload"), context);
@@ -39,6 +52,30 @@ class EnumRepresentationFixture {
 		final registry = new OcamlRepresentationRegistry();
 		registry.beginProgram("enum-representation-fixture");
 		final selected = registry.selectNativeEnum(descriptor);
+		final nullable = registry.selectNullableNativeEnum(descriptor);
+		final carrierReference = OcamlNullableEnumCarrier.create(descriptor, selected, nullable, "enum-representation-fixture", context);
+		OcamlNullableEnumCarrier.requireCurrent(carrierReference, context, registry);
+		final reverseRegistry = new OcamlRepresentationRegistry();
+		reverseRegistry.beginProgram("enum-representation-fixture");
+		final reverseNullable = reverseRegistry.selectNullableNativeEnum(descriptor);
+		final reverseSelected = reverseRegistry.selectNativeEnum(descriptor);
+		final reverseReference = OcamlNullableEnumCarrier.create(descriptor, reverseSelected, reverseNullable, "enum-representation-fixture", context);
+		if (!OcamlNullableEnumCarrier.same(carrierReference, reverseReference))
+			throw "nullable enum evidence changed with representation preparation order";
+		final corruptedReference:OcamlNullableEnumCarrierReference = {
+			modelRevision: carrierReference.modelRevision,
+			revision: carrierReference.revision,
+			descriptor: carrierReference.descriptor,
+			inputRepresentationId: carrierReference.inputRepresentationId,
+			inputRepresentationRevision: carrierReference.inputRepresentationRevision,
+			outputRepresentationId: carrierReference.outputRepresentationId,
+			outputRepresentationRevision: "sha256:corrupted",
+			programRevision: carrierReference.programRevision,
+			crossingModel: carrierReference.crossingModel,
+			crossingRevision: carrierReference.crossingRevision
+		};
+		expectRejected(() -> OcamlNullableEnumCarrier.requireCurrent(corruptedReference, context, registry),
+			"edited nullable enum evidence retained its carrier authority");
 		if (!OcamlNativeEnumRepresentation.typeExpr(selected, "Reader").match(TIdent("Payload.payload"))
 			|| !OcamlNativeEnumRepresentation.typeExpr(selected, "Payload").match(TIdent("payload")))
 			throw "enum type materialization lost its same-module or qualified spelling";
@@ -79,6 +116,8 @@ class EnumRepresentationFixture {
 		registry.beginProgram("next-program");
 		if (registry.nativeEnumValue("Payload") != null)
 			throw "an old program retained its native enum representation";
+		expectRejected(() -> OcamlNullableEnumCarrier.requireCurrent(carrierReference, context, registry),
+			"a new program accepted the previous nullable enum carrier reference");
 		Sys.println("REFLAXE_OCAML_ENUM_REPRESENTATION:PASS");
 	}
 	#end

@@ -35,11 +35,11 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 88
+if (report.schemaVersion !== 89
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
-	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
+	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v6'
 	|| report.controlCount !== report.controls.length
 	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length

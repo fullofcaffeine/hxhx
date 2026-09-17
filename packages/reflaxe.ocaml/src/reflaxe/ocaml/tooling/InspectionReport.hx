@@ -410,6 +410,31 @@ typedef InspectionCallValue = {
 	final conversion:String;
 	final proofId:String;
 	final proofClaim:String;
+	final nullableEnumCarrier:Null<InspectionNullableEnumCarrierReference>;
+}
+
+/** Plain generated-name identity for one ordinary Haxe enum. */
+typedef InspectionNativeEnumDescriptor = {
+	final semanticTypeId:String;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final targetModuleName:String;
+	final targetTypeName:String;
+	final revision:String;
+}
+
+/** Revisioned join between a native enum and its nullable result carrier. */
+typedef InspectionNullableEnumCarrierReference = {
+	final modelRevision:String;
+	final revision:String;
+	final descriptor:InspectionNativeEnumDescriptor;
+	final inputRepresentationId:String;
+	final inputRepresentationRevision:String;
+	final outputRepresentationId:String;
+	final outputRepresentationRevision:String;
+	final programRevision:String;
+	final crossingModel:String;
+	final crossingRevision:String;
 }
 
 /** One validated source-order action in a sealed typed-call schedule. **/
@@ -780,6 +805,7 @@ typedef InspectionFunctionResultNullableEnumProof = {
 	final semanticTypeId:String;
 	final nullableSemanticTypeId:String;
 	final carrierTypeId:String;
+	final descriptor:InspectionNativeEnumDescriptor;
 	final sourceFile:String;
 	final sourceMin:Int;
 	final sourceMax:Int;
@@ -832,6 +858,7 @@ typedef InspectionControlPayload = {
 	final arrayLiteralProducerId:Null<String>;
 	final arrayLiteralProducerPlanRevision:Null<String>;
 	final enumCatchOrigin:Null<InspectionControlEnumCatchOrigin>;
+	final nullableEnumCarrier:Null<InspectionNullableEnumCarrierReference>;
 	final conversion:String;
 	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;

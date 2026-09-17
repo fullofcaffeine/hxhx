@@ -20,6 +20,8 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionReflectCompare;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStdIsOfType;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIntUnary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionNativeEnumDescriptor;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionNullableEnumCarrierReference;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionDynamicFunctionCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
@@ -81,7 +83,7 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
-	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v5";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v6";
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
@@ -472,8 +474,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 88) {
-						throw 'Unsupported lowering report schema $version; expected 88.';
+					if (version != 89) {
+						throw 'Unsupported lowering report schema $version; expected 89.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -957,6 +959,8 @@ class ReflaxeOcamlInspection {
 			}
 			final payload = control.payload;
 			if (payload != null) {
+				if (payload.nullableEnumCarrier != null)
+					validateNullableEnumCarrierReference(payload.nullableEnumCarrier, representationById, 'Control decision "${control.id}"');
 				final producerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
 				if (producerFieldCount != 0 && producerFieldCount != 2)
 					throw 'Control decision "${control.id}" has an incomplete array-literal producer reference.';
@@ -1023,14 +1027,18 @@ class ReflaxeOcamlInspection {
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
 							final nullableEnumSemanticTypeId = exactNullableEnumSemanticTypeId(payload.inputSemanticTypeId);
 							final nullableEnumRepresentation = nullableEnumSemanticTypeId == null ? null : representationById.get('representation:$nullableEnumSemanticTypeId:internal-value');
+							final nullableEnumCarrier = payload.nullableEnumCarrier;
 							final nullableEnumPayloadValid = nullableEnumSemanticTypeId != null
+								&& nullableEnumCarrier != null
 								&& payload.inputCarrierTypeId == "Obj.t"
 								&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
 								&& sameSides
 								&& nullableEnumRepresentation != null
 								&& nullableEnumRepresentation.semanticTypeId == nullableEnumSemanticTypeId
-								&& nullableEnumRepresentation.carrierTypeId == 'haxe-enum-native-variant-carrier-v1:$nullableEnumSemanticTypeId'
+								&& nullableEnumRepresentation.carrierTypeId == nullableEnumCarrier.descriptor.targetTypeName
 								&& nullableEnumRepresentation.domain == "internal-value"
+								&& nullableEnumRepresentation.boxingPolicy == "direct-native-enum-carrier"
+								&& payload.inputRepresentationId == nullableEnumCarrier.outputRepresentationId
 								&& payload.nominalRepresentation == null
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
@@ -1076,12 +1084,16 @@ class ReflaxeOcamlInspection {
 								&& payload.conversion == "box-exact-bool-to-nullable-carrier"
 								&& payload.proofId == "exact-bool-to-nullable-early-return-control-v1"
 								&& control.proofId == "exact-bool-to-nullable-early-return-control-v1";
-							final nullableEnumConversionValid = payload.inputSemanticTypeId.length > 0
-								&& payload.inputCarrierTypeId == 'haxe-enum-native-variant-carrier-v1:${payload.inputSemanticTypeId}'
-								&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
+							final enumInputRepresentation = payload.nullableEnumCarrier == null ? null : representationById.get(payload.nullableEnumCarrier.inputRepresentationId);
+							final nullableEnumConversionValid = payload.nullableEnumCarrier != null
+								&& payload.inputSemanticTypeId == payload.nullableEnumCarrier.descriptor.semanticTypeId
+								&& payload.inputCarrierTypeId == payload.nullableEnumCarrier.descriptor.targetTypeName
+								&& payload.inputRepresentationId == payload.nullableEnumCarrier.inputRepresentationId
+								&& enumInputRepresentation != null
+								&& enumInputRepresentation.revision == payload.nullableEnumCarrier.inputRepresentationRevision
 								&& payload.outputSemanticTypeId == 'Null<${payload.inputSemanticTypeId}>'
 								&& payload.outputCarrierTypeId == "Obj.t"
-								&& payload.outputRepresentationId == 'representation:${payload.outputSemanticTypeId}:internal-value'
+								&& payload.outputRepresentationId == payload.nullableEnumCarrier.outputRepresentationId
 								&& payload.nominalRepresentation == null
 								&& payload.conversion == "box-exact-enum-to-nullable-carrier"
 								&& payload.proofId == "exact-enum-to-nullable-early-return-control-v1"
@@ -1693,6 +1705,7 @@ class ReflaxeOcamlInspection {
 	static function controlPayload(value:Dynamic):InspectionControlPayload {
 		final nominalValue = Reflect.field(value, "nominalRepresentation");
 		final enumCatchOriginValue = Reflect.field(value, "enumCatchOrigin");
+		final nullableEnumCarrierValue = Reflect.field(value, "nullableEnumCarrier");
 		return {
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
 			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
@@ -1707,6 +1720,7 @@ class ReflaxeOcamlInspection {
 			arrayLiteralProducerId: optionalString(value, "arrayLiteralProducerId"),
 			arrayLiteralProducerPlanRevision: optionalString(value, "arrayLiteralProducerPlanRevision"),
 			enumCatchOrigin: enumCatchOriginValue == null ? null : controlEnumCatchOrigin(enumCatchOriginValue),
+			nullableEnumCarrier: nullableEnumCarrierValue == null ? null : nullableEnumCarrierReference(nullableEnumCarrierValue),
 			conversion: requiredString(value, "conversion"),
 			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			proofId: requiredString(value, "proofId"),
@@ -2506,6 +2520,7 @@ class ReflaxeOcamlInspection {
 	static function validateNestedNullableEnumResult(boundary:InspectionFunctionResultBoundary):Void {
 		final result = boundary.result;
 		final proof = boundary.nullableEnum;
+		final reference = result == null ? null : result.nullableEnumCarrier;
 		final expectedCallableBoundaryId = "nested-callable-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24);
 		if (boundary.callableBoundaryId != expectedCallableBoundaryId
 			|| boundary.anonymousStructure != null
@@ -2516,9 +2531,12 @@ class ReflaxeOcamlInspection {
 			|| boundary.resultKind != "value"
 			|| result == null
 			|| proof == null
+			|| reference == null
 			|| proof.semanticTypeId.length == 0
 			|| proof.nullableSemanticTypeId != 'Null<${proof.semanticTypeId}>'
-			|| proof.carrierTypeId != 'haxe-enum-native-variant-carrier-v1:${proof.semanticTypeId}'
+			|| proof.carrierTypeId != proof.descriptor.targetTypeName
+			|| proof.descriptor.semanticTypeId != proof.semanticTypeId
+			|| reference.descriptor.revision != proof.descriptor.revision
 			|| proof.sourceFile.length == 0
 			|| proof.sourceMin < 0
 			|| proof.sourceMax < proof.sourceMin
@@ -2539,6 +2557,7 @@ class ReflaxeOcamlInspection {
 	static function validateDeclarationNullableEnumResult(boundary:InspectionFunctionResultBoundary, isStatic:Bool):Void {
 		final result = boundary.result;
 		final proof = boundary.nullableEnum;
+		final reference = result == null ? null : result.nullableEnumCarrier;
 		if (boundary.callableBoundaryId != null
 			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length == 0
@@ -2548,9 +2567,12 @@ class ReflaxeOcamlInspection {
 			|| boundary.resultKind != "value"
 			|| result == null
 			|| proof == null
+			|| reference == null
 			|| proof.semanticTypeId.length == 0
 			|| proof.nullableSemanticTypeId != 'Null<${proof.semanticTypeId}>'
-			|| proof.carrierTypeId != 'haxe-enum-native-variant-carrier-v1:${proof.semanticTypeId}'
+			|| proof.carrierTypeId != proof.descriptor.targetTypeName
+			|| proof.descriptor.semanticTypeId != proof.semanticTypeId
+			|| reference.descriptor.revision != proof.descriptor.revision
 			|| proof.sourceFile.length == 0
 			|| proof.sourceMin < 0
 			|| proof.sourceMax < proof.sourceMin
@@ -2666,6 +2688,7 @@ class ReflaxeOcamlInspection {
 				semanticTypeId: requiredString(nullableEnum, "semanticTypeId"),
 				nullableSemanticTypeId: requiredString(nullableEnum, "nullableSemanticTypeId"),
 				carrierTypeId: requiredString(nullableEnum, "carrierTypeId"),
+				descriptor: nativeEnumDescriptor(requiredObject(nullableEnum, "descriptor")),
 				sourceFile: requiredString(requiredObject(nullableEnum, "source"), "file"),
 				sourceMin: requiredInt(requiredObject(nullableEnum, "source"), "min"),
 				sourceMax: requiredInt(requiredObject(nullableEnum, "source"), "max")
@@ -2694,7 +2717,11 @@ class ReflaxeOcamlInspection {
 			&& left.outputRepresentationId == right.outputRepresentationId
 			&& left.conversion == right.conversion
 			&& left.proofId == right.proofId
-			&& left.proofClaim == right.proofClaim;
+			&& left.proofClaim == right.proofClaim
+			&& ((left.nullableEnumCarrier == null && right.nullableEnumCarrier == null)
+				|| (left.nullableEnumCarrier != null
+					&& right.nullableEnumCarrier != null
+					&& left.nullableEnumCarrier.revision == right.nullableEnumCarrier.revision));
 	}
 
 	/**
@@ -2717,6 +2744,18 @@ class ReflaxeOcamlInspection {
 			final payload = control.payload;
 			if (control.kind != "return" || payload == null)
 				continue;
+			if (payload.nullableEnumCarrier != null) {
+				final boundary = byFunction.get(control.functionId);
+				final resultCarrier = boundary == null || boundary.result == null ? null : boundary.result.nullableEnumCarrier;
+				if (boundary == null
+					|| resultCarrier == null
+					|| resultCarrier.revision != payload.nullableEnumCarrier.revision
+					|| boundary.programRevision != control.programRevision
+					|| boundary.bodyRevision != control.bodyRevision
+					|| boundary.pipelineRevision != control.pipelineRevision) {
+					throw 'Control decision "${control.id}" does not match its function-owned nullable-enum carrier reference.';
+				}
+			}
 			if (payload.conversion != "box-and-recover-typed-function-result"
 				&& payload.conversion != "box-bool-and-recover-dynamic-typed-function-result")
 				continue;
@@ -2766,6 +2805,7 @@ class ReflaxeOcamlInspection {
 
 	static function callValue(value:Dynamic):InspectionCallValue {
 		final conversion = requiredString(value, "conversion");
+		final nullableEnumCarrierValue = Reflect.field(value, "nullableEnumCarrier");
 		return {
 			index: requiredInt(value, "index"),
 			parameterOptional: requiredBool(value, "parameterOptional"),
@@ -2777,7 +2817,34 @@ class ReflaxeOcamlInspection {
 			outputRepresentationId: requiredString(value, "outputRepresentationId"),
 			conversion: conversion,
 			proofId: requiredString(value, "proofId"),
-			proofClaim: requiredString(value, "proofClaim")
+			proofClaim: requiredString(value, "proofClaim"),
+			nullableEnumCarrier: nullableEnumCarrierValue == null ? null : nullableEnumCarrierReference(nullableEnumCarrierValue)
+		};
+	}
+
+	static function nullableEnumCarrierReference(value:Dynamic):InspectionNullableEnumCarrierReference {
+		return {
+			modelRevision: requiredString(value, "modelRevision"),
+			revision: requiredSha256Revision(value, "revision"),
+			descriptor: nativeEnumDescriptor(requiredObject(value, "descriptor")),
+			inputRepresentationId: requiredString(value, "inputRepresentationId"),
+			inputRepresentationRevision: requiredSha256Revision(value, "inputRepresentationRevision"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			outputRepresentationRevision: requiredSha256Revision(value, "outputRepresentationRevision"),
+			programRevision: requiredString(value, "programRevision"),
+			crossingModel: requiredString(value, "crossingModel"),
+			crossingRevision: requiredSha256Revision(value, "crossingRevision")
+		};
+	}
+
+	static function nativeEnumDescriptor(value:Dynamic):InspectionNativeEnumDescriptor {
+		return {
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			sourceModuleId: requiredString(value, "sourceModuleId"),
+			sourceTypeName: requiredString(value, "sourceTypeName"),
+			targetModuleName: requiredString(value, "targetModuleName"),
+			targetTypeName: requiredString(value, "targetTypeName"),
+			revision: requiredSha256Revision(value, "revision")
 		};
 	}
 
@@ -3092,6 +3159,10 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateCallValue(value:InspectionCallValue, representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
+		if ((value.conversion == "box-exact-enum-to-nullable-enum") != (value.nullableEnumCarrier != null))
+			throw '$owner has missing or unrelated nullable-enum carrier evidence.';
+		if (value.nullableEnumCarrier != null)
+			validateNullableEnumCarrierReference(value.nullableEnumCarrier, representations, owner);
 		validateCallValueSide(value.inputRepresentationId, value.inputSemanticTypeId, value.inputCarrierTypeId, representations, owner + " input");
 		validateCallValueSide(value.outputRepresentationId, value.outputSemanticTypeId, value.outputCarrierTypeId, representations, owner + " output");
 		final sameSides = value.inputSemanticTypeId == value.outputSemanticTypeId
@@ -3137,14 +3208,16 @@ class ReflaxeOcamlInspection {
 					|| value.proofId != "nullable-bool-call-box-v1")
 					throw '$owner has an invalid exact Bool-to-Null<Bool> boxing crossing.';
 			case "box-exact-enum-to-nullable-enum":
+				final reference = value.nullableEnumCarrier;
 				if (value.index != -1
 					|| value.parameterOptional
-					|| value.inputSemanticTypeId.length == 0
-					|| value.inputCarrierTypeId != 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
-					|| value.inputRepresentationId != 'representation:${value.inputSemanticTypeId}:internal-value'
+					|| reference == null
+					|| value.inputSemanticTypeId != reference.descriptor.semanticTypeId
+					|| value.inputCarrierTypeId != reference.descriptor.targetTypeName
+					|| value.inputRepresentationId != reference.inputRepresentationId
 					|| value.outputSemanticTypeId != 'Null<${value.inputSemanticTypeId}>'
 					|| value.outputCarrierTypeId != "Obj.t"
-					|| value.outputRepresentationId != 'representation:${value.outputSemanticTypeId}:internal-value'
+					|| value.outputRepresentationId != reference.outputRepresentationId
 					|| value.proofId != "nullable-enum-function-result-box-v1")
 					throw '$owner has an invalid exact enum-to-nullable-enum result crossing.';
 			case "preserve-dynamic-carrier":
@@ -3345,10 +3418,18 @@ class ReflaxeOcamlInspection {
 			final functionResult:InspectionCallValue = result;
 			if ((!isAdmittedCallValueSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId)
 				&& !isAdmittedNominalSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId,
-					representations))
+					representations)
+				&& !isAdmittedNativeEnumSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId,
+					representations)
+				&& !isAdmittedNullableNativeEnumSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId,
+					functionResult.inputRepresentationId, representations))
 				|| (!isAdmittedCallValueSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId, functionResult.outputRepresentationId)
 					&& !isAdmittedNominalSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId, functionResult.outputRepresentationId,
-						representations))
+						representations)
+					&& !isAdmittedNativeEnumSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId,
+						functionResult.outputRepresentationId, representations)
+					&& !isAdmittedNullableNativeEnumSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId,
+						functionResult.outputRepresentationId, representations))
 				|| functionResult.inputSemanticTypeId != functionResult.outputSemanticTypeId
 				|| functionResult.inputCarrierTypeId != functionResult.outputCarrierTypeId
 				|| functionResult.inputRepresentationId != functionResult.outputRepresentationId
@@ -3383,11 +3464,15 @@ class ReflaxeOcamlInspection {
 			representations:Map<String, InspectionRepresentationDecision>):Bool {
 		if (isAdmittedCallValueSide(semanticTypeId, carrierTypeId, representationId))
 			return true;
+		if ((kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method" || kind == "typed-function-value")
+			&& isAdmittedNullableNativeEnumSide(semanticTypeId, carrierTypeId, representationId, representations))
+			return true;
 		return (kind == "direct-static-haxe-method"
 			|| kind == "direct-instance-haxe-method"
 			|| kind == "direct-haxe-constructor"
 			|| kind == "typed-function-value")
-			&& isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations);
+			&& (isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations)
+				|| isAdmittedNativeEnumSide(semanticTypeId, carrierTypeId, representationId, representations));
 	}
 
 	/**
@@ -3408,11 +3493,128 @@ class ReflaxeOcamlInspection {
 			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 
+	/** Joins one exact enum result to its registry-owned native variant carrier. */
+	static function isAdmittedNativeEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
+		final representation = representations.get(representationId);
+		return semanticTypeId.length > 0
+			&& semanticTypeId.indexOf("<") < 0
+			&& representation != null
+			&& representation.semanticTypeId == semanticTypeId
+			&& representation.carrierTypeId == carrierTypeId
+			&& representation.domain == "internal-value"
+			&& representation.nullPolicy == "non-null"
+			&& representation.boxingPolicy == "direct-native-enum-carrier"
+			&& representation.nominalTargetModuleName != null
+			&& representation.nominalTargetTypeName == carrierTypeId
+			&& representation.nominalLayoutRevision != null
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
+	/** Joins one reported nullable enum carrier back to its native enum decision. */
+	static function isAdmittedNullableNativeEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return false;
+		final nativeSemanticTypeId = semanticTypeId.substr(5, semanticTypeId.length - 6);
+		if (nativeSemanticTypeId.length == 0 || nativeSemanticTypeId.indexOf("<") >= 0)
+			return false;
+		final nullable = representations.get(representationId);
+		final native = representations.get('representation:$nativeSemanticTypeId:internal-value');
+		return nullable != null
+			&& nullable.semanticTypeId == semanticTypeId
+			&& nullable.carrierTypeId == carrierTypeId
+			&& carrierTypeId == "Obj.t"
+			&& nullable.domain == "internal-value"
+			&& nullable.nullPolicy == "runtime-sentinel"
+			&& nullable.boxingPolicy == "direct-runtime-container"
+			&& representationId == 'representation:$semanticTypeId:internal-value'
+			&& native != null
+			&& native.semanticTypeId == nativeSemanticTypeId
+			&& native.domain == "internal-value"
+			&& native.boxingPolicy == "direct-native-enum-carrier"
+			&& native.nominalTargetTypeName == native.carrierTypeId;
+	}
+
 	static function isCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String, expectedSemanticTypeId:String,
 			expectedCarrierTypeId:String):Bool {
 		return semanticTypeId == expectedSemanticTypeId
 			&& carrierTypeId == expectedCarrierTypeId
 			&& representationId == 'representation:$expectedSemanticTypeId:internal-value';
+	}
+
+	static function validateNullableEnumCarrierReference(reference:InspectionNullableEnumCarrierReference,
+			representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
+		final descriptor = reference.descriptor;
+		final separator = descriptor.sourceModuleId.lastIndexOf(".");
+		final sourcePackage = separator < 0 ? "" : descriptor.sourceModuleId.substr(0, separator);
+		final expectedSemanticTypeId = sourcePackage.length == 0 ? descriptor.sourceTypeName : sourcePackage + "." + descriptor.sourceTypeName;
+		final expectedDescriptorRevision = hashLengthPrefixed([
+			"ocaml-native-enum-variant-v1",
+			descriptor.semanticTypeId,
+			descriptor.sourceModuleId,
+			descriptor.sourceTypeName,
+			descriptor.targetModuleName,
+			descriptor.targetTypeName
+		]);
+		final expectedCrossingRevision = hashLengthPrefixed([
+			"ocaml-native-enum-to-nullable-result-v1",
+			descriptor.revision,
+			reference.inputRepresentationId,
+			reference.inputRepresentationRevision,
+			reference.outputRepresentationId,
+			reference.outputRepresentationRevision,
+			reference.programRevision
+		]);
+		final expectedRevision = hashLengthPrefixed([
+			"ocaml-nullable-enum-carrier-reference-v1",
+			descriptor.revision,
+			reference.inputRepresentationId,
+			reference.inputRepresentationRevision,
+			reference.outputRepresentationId,
+			reference.outputRepresentationRevision,
+			reference.programRevision,
+			reference.crossingModel,
+			reference.crossingRevision
+		]);
+		final input = representations.get(reference.inputRepresentationId);
+		final output = representations.get(reference.outputRepresentationId);
+		if (input == null || output == null)
+			throw '$owner refers to a missing nullable-enum representation decision.';
+		final sealedInput = input;
+		final sealedOutput = output;
+		if (reference.modelRevision != "ocaml-nullable-enum-carrier-reference-v1"
+			|| reference.crossingModel != "ocaml-native-enum-to-nullable-result-v1"
+			|| descriptor.semanticTypeId != expectedSemanticTypeId
+			|| descriptor.targetModuleName.length == 0
+			|| descriptor.targetTypeName.length == 0
+			|| descriptor.revision != expectedDescriptorRevision
+			|| reference.crossingRevision != expectedCrossingRevision
+			|| reference.revision != expectedRevision
+			|| sealedInput.programRevision != reference.programRevision
+			|| sealedInput.revision != reference.inputRepresentationRevision
+			|| sealedInput.semanticTypeId != descriptor.semanticTypeId
+			|| sealedInput.carrierTypeId != descriptor.targetTypeName
+			|| sealedInput.domain != "internal-value"
+			|| sealedInput.boxingPolicy != "direct-native-enum-carrier"
+			|| sealedInput.nominalTargetModuleName != descriptor.targetModuleName
+			|| sealedInput.nominalTargetTypeName != descriptor.targetTypeName
+			|| sealedInput.nominalLayoutRevision != descriptor.revision
+			|| sealedOutput.programRevision != reference.programRevision
+			|| sealedOutput.revision != reference.outputRepresentationRevision
+			|| sealedOutput.semanticTypeId != 'Null<${descriptor.semanticTypeId}>'
+			|| sealedOutput.carrierTypeId != "Obj.t"
+			|| sealedOutput.domain != "internal-value"
+			|| sealedOutput.nullPolicy != "runtime-sentinel"
+			|| sealedOutput.identityPolicy != "reference-identity"
+			|| sealedOutput.aliasingPolicy != "shared-reference-aliases"
+			|| sealedOutput.boxingPolicy != "direct-runtime-container") {
+			throw '$owner has invalid or stale nullable-enum carrier evidence.';
+		}
+	}
+
+	static function hashLengthPrefixed(fields:Array<String>):String {
+		return "sha256:" + Sha256.encode([for (field in fields) field.length + ":" + field].join(""));
 	}
 
 	/**
@@ -4011,7 +4213,8 @@ class ReflaxeOcamlInspection {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
 		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier"
-			|| decision.boxingPolicy == "direct-nominal-value-carrier";
+			|| decision.boxingPolicy == "direct-nominal-value-carrier"
+			|| decision.boxingPolicy == "direct-native-enum-carrier";
 		if (isNominal != (nominalCount == 3))
 			throw 'Representation decision "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
 		if (isNominal
@@ -4072,9 +4275,21 @@ class ReflaxeOcamlInspection {
 			if (decision.storageMutationPolicy != expectedStoragePolicy) {
 				throw 'Representation decision "${decision.id}" selects ${decision.storageMutationPolicy} storage for nominal carrier domain ${decision.domain}, expected $expectedStoragePolicy.';
 			}
+		} else if (decision.boxingPolicy == "direct-native-enum-carrier") {
+			if (decision.domain != "internal-value"
+				|| decision.nullPolicy != "non-null"
+				|| decision.identityPolicy != "reference-identity"
+				|| decision.aliasingPolicy != "shared-reference-aliases"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "immutable-value"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.nominalLayoutRevision == null
+				|| decision.proofId != "ocaml-native-enum-variant-v1:" + decision.nominalLayoutRevision) {
+				throw 'Representation decision "${decision.id}" does not match its sealed native enum carrier.';
+			}
 		}
 		final expectedRevision = "sha256:" + Sha256.encode([
-			"ocaml-representation-v21",
+			"ocaml-representation-v23",
 			decision.semanticTypeId,
 			decision.domain,
 			decision.carrierTypeId,

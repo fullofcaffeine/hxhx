@@ -30,10 +30,10 @@ class EnumAdmissionFixture {
 		final context = new CompilationContext();
 		final target = OcamlTargetDefinition.create();
 		target.compiler.setOptions(target.options);
-		final registry = target.compiler.functionPlanRegistry;
-		final catalog = @:privateAccess registry.nativeEnumResults;
+		final catalog = new OcamlNativeEnumResultAdmission();
 		function prepare(reverse:Bool):Void {
 			target.compiler.beginProgramRevision(new ProgramRevision("enum-admission-fixture", 1, fields.length));
+			catalog.beginProgram("enum-admission-fixture");
 			final ordered = fields.copy();
 			if (reverse)
 				ordered.reverse();
@@ -85,7 +85,7 @@ class EnumAdmissionFixture {
 			if (scans != fields.length || edges > fields.length)
 				throw "enum source or graph preparation was not bounded";
 		}
-		registry.beginProgram("next-program");
+		catalog.beginProgram("next-program");
 		final previous = ClassFieldHelper.findFuncData(fields[0], owner, false);
 		if (previous == null)
 			throw "expected a previous request's body";
