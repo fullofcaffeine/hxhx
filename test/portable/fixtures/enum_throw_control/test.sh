@@ -31,7 +31,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 88
+if (report.schemaVersion !== 89
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27') {
 	fail('unexpected enum throw report schema or control model')
 }

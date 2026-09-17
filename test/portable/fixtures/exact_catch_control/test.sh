@@ -35,7 +35,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 88
+if (report.schemaVersion !== 89
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v7'
 	|| report.controlCatchCount !== report.controlCatches.length

@@ -77,14 +77,15 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 88;
+	public static inline final SCHEMA_VERSION = 89;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
 		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier
-			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier;
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier;
 		if (isNominal != (nominalCount == 3))
 			throw 'Program representation "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
 		if (!isNominal)
@@ -104,6 +105,14 @@ class OcamlLoweringReportWriter {
 				|| decision.domain != OcamlRepresentationDomain.InternalValue
 				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
 				throw 'Program representation "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
+			}
+			return;
+		}
+		if (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier) {
+			if (decision.proof.id != OcamlNativeEnumRepresentation.MODEL_REVISION + ":" + decision.nominalLayoutRevision
+				|| decision.domain != OcamlRepresentationDomain.InternalValue
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
+				throw 'Program representation "${decision.id}" does not match its sealed native enum carrier.';
 			}
 			return;
 		}

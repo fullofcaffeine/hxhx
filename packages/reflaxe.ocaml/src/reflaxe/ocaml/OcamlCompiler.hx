@@ -506,6 +506,29 @@ class OcamlCompiler extends DirectToStringCompiler {
 		callable boundary before the target command succeeds.
 	**/
 	function planCallableDeclarations(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>, programRevision:String):Void {
+		final observedEnumCallees:Map<String, Bool> = [];
+		for (moduleId in moduleOrder) {
+			final classes = moduleToClasses.get(moduleId);
+			if (classes == null)
+				continue;
+			for (classType in classes) {
+				for (field in classType.statics.get()) {
+					final calleeId = OcamlCallPlanner.calleeId(classType, field);
+					if (!observedEnumCallees.exists(calleeId)) {
+						observedEnumCallees.set(calleeId, true);
+						functionPlanRegistry.observeNativeEnumResult(classType, field, true, ctx);
+					}
+				}
+				for (field in classType.fields.get()) {
+					final calleeId = OcamlCallPlanner.calleeId(classType, field);
+					if (!observedEnumCallees.exists(calleeId)) {
+						observedEnumCallees.set(calleeId, true);
+						functionPlanRegistry.observeNativeEnumResult(classType, field, false, ctx);
+					}
+				}
+			}
+		}
+		functionPlanRegistry.finishNativeEnumResults();
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
 			if (classes == null)
@@ -518,12 +541,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 						functionPlanRegistry.registerCallableDeclaration(declaration);
 				}
 				for (field in classType.statics.get()) {
+					final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
+					if (candidate != null)
+						representationRegistry.selectNativeEnum(candidate.descriptor);
 					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
 						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
 					if (declaration != null)
 						functionPlanRegistry.registerCallableDeclaration(declaration);
 				}
 				for (field in classType.fields.get()) {
+					final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
+					if (candidate != null)
+						representationRegistry.selectNativeEnum(candidate.descriptor);
 					final declaration = OcamlCallPlanner.declarationFor(classType, field, false, representationRegistry, programRevision,
 						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
 					if (declaration != null)
@@ -4654,17 +4683,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	static function ocamlTypeName(haxeName:String):String {
-		if (haxeName == null || haxeName.length == 0)
-			return "t";
-		final first = haxeName.charCodeAt(0);
-		final isUpper = first >= 65 && first <= 90;
-		var s = (isUpper ? String.fromCharCode(first + 32) : haxeName.substr(0, 1)) + haxeName.substr(1);
-		s = sanitizeLowerIdent(s);
-		if (s.length == 0)
-			return "t";
-		// OCaml keywords are not valid identifiers in type declarations (`type type = ...` is a syntax error).
-		// Keep emission deterministic by prefixing reserved names.
-		return OcamlNameTools.isOcamlReservedValueName(s) ? ("hx_" + s) : s;
+		return OcamlNameTools.enumTypeName(haxeName);
 	}
 
 	static function ocamlTypeParam(haxeName:String):String {

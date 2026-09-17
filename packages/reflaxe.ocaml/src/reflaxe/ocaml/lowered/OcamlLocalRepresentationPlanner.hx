@@ -51,6 +51,11 @@ private typedef ExactMonomorphicClassCarrierInput = {
 	final semanticTypeId:String;
 }
 
+private typedef ExactNativeEnumCarrierInput = {
+	final sourceLocalId:Null<Int>;
+	final semanticTypeId:String;
+}
+
 /**
 	Connects local carrier choices to the program representation registry.
 
@@ -187,6 +192,40 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
+	/** Accepts only a producer that already owns one registered native variant carrier. */
+	static function exactNativeEnumCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>, enumSemanticTypeByLocalId:Map<Int, String>,
+			representations:OcamlRepresentationRegistry, producesExactNativeEnum:Null<TypedExpr->Null<String>>):Null<ExactNativeEnumCarrierInput> {
+		final semanticTypeId = nativeEnumSemanticTypeId(expression.t);
+		if (semanticTypeId == null)
+			return null;
+		final unwrapped = unwrapTransparent(expression);
+		return switch (unwrapped.expr) {
+			case TLocal(local) if (declaredLocalIds.exists(local.id) && enumSemanticTypeByLocalId.get(local.id) == semanticTypeId):
+				{sourceLocalId: local.id, semanticTypeId: semanticTypeId};
+			case _: producesExactNativeEnum != null && producesExactNativeEnum(unwrapped) == semanticTypeId ? {
+					sourceLocalId: null,
+					semanticTypeId: semanticTypeId
+				} : null;
+		}
+	}
+
+	static function nativeEnumSemanticTypeId(type:Type):Null<String> {
+		return switch (TypeTools.follow(type)) {
+			case TEnum(reference, parameters) if (parameters.length == 0):
+				final declaration = reference.get();
+				if (declaration.params.length != 0
+					|| declaration.isExtern
+					|| declaration.meta.has(":native")
+					|| (declaration.pack.length > 0 && declaration.pack[0] == "ocaml")) {
+					null;
+				} else {
+					declaration.pack.concat([declaration.name]).join(".");
+				}
+			case _:
+				null;
+		}
+	}
+
 	/**
 		Classifies the exact payload entering an immutable Dynamic local.
 
@@ -281,7 +320,8 @@ class OcamlLocalRepresentationPlanner {
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storage:OcamlLocalStoragePlan,
 			representations:OcamlRepresentationRegistry, ?binding:OcamlFunctionPlanBinding, ?preservesNullableBoolArgument:(TypedExpr, Int) -> Bool,
-			?producesNullableBool:TypedExpr->Bool, ?producesExactString:TypedExpr->Bool):OcamlLocalRepresentationPlan {
+			?producesNullableBool:TypedExpr->Bool, ?producesExactString:TypedExpr->Bool,
+			?producesExactNativeEnum:TypedExpr->Null<String>):OcamlLocalRepresentationPlan {
 		final typeByLocalId:Map<Int, Type> = [];
 		final declaredLocalIds:Map<Int, Bool> = [];
 		final identityBoolInitializerByLocalId:Map<Int, Bool> = [];
@@ -294,6 +334,10 @@ class OcamlLocalRepresentationPlanner {
 		final identityClassInitializerByLocalId:Map<Int, Bool> = [];
 		final identityClassAssignmentsByLocalId:Map<Int, Bool> = [];
 		final classSourceLocalIdsByLocalId:Map<Int, Array<Int>> = [];
+		final enumSemanticTypeByLocalId:Map<Int, String> = [];
+		final identityEnumInitializerByLocalId:Map<Int, Bool> = [];
+		final enumSourceLocalIdsByLocalId:Map<Int, Array<Int>> = [];
+		final unsupportedEnumLocalIds:Map<Int, Bool> = [];
 		final identityArrayInitializerByLocalId:Map<Int, Bool> = [];
 		final identityArrayAssignmentsByLocalId:Map<Int, Bool> = [];
 		final unsupportedNullableLocalIds:Map<Int, Bool> = [];
@@ -455,6 +499,58 @@ class OcamlLocalRepresentationPlanner {
 			return preservesNullableBoolArgument != null && preservesNullableBoolArgument(callExpression, argumentIndex);
 		}
 
+		/**
+			Collects only identity-preserving enum locals owned by nested functions.
+
+			Nested functions get their own conversion binding, so this root plan must
+			not adopt their nullable or Dynamic occurrence conversions. Native enum
+			locals have identity-only reads and writes, however, and syntax consumes
+			their stable lexical identity from the enclosing whole-body plan.
+		**/
+		function visitNestedNativeEnumLocals(current:TypedExpr):Void {
+			switch (current.expr) {
+				case TVar(local, initializer):
+					record(local.id, local.t);
+					declaredLocalIds.set(local.id, true);
+					final semanticTypeId = nativeEnumSemanticTypeId(local.t);
+					if (semanticTypeId != null) {
+						enumSemanticTypeByLocalId.set(local.id, semanticTypeId);
+						final input = initializer == null ? null : exactNativeEnumCarrierInput(initializer, declaredLocalIds, enumSemanticTypeByLocalId,
+							representations, producesExactNativeEnum);
+						identityEnumInitializerByLocalId.set(local.id, input != null && input.semanticTypeId == semanticTypeId);
+						if (input != null && input.sourceLocalId != null)
+							enumSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+					}
+					if (initializer != null)
+						visitNestedNativeEnumLocals(initializer);
+				case TBinop(OpAssign | OpAssignOp(_), left, right):
+					switch (left.expr) {
+						case TLocal(local) if (enumSemanticTypeByLocalId.exists(local.id)):
+							unsupportedEnumLocalIds.set(local.id, true);
+						case _:
+					}
+					visitNestedNativeEnumLocals(left);
+					visitNestedNativeEnumLocals(right);
+				case TUnop(OpIncrement | OpDecrement, _, operand):
+					switch (operand.expr) {
+						case TLocal(local) if (enumSemanticTypeByLocalId.exists(local.id)):
+							unsupportedEnumLocalIds.set(local.id, true);
+						case _:
+					}
+					visitNestedNativeEnumLocals(operand);
+				case TLocal(local):
+					record(local.id, local.t);
+				case TFunction(tfunc):
+					for (argument in tfunc.args) {
+						record(argument.v.id, argument.v.t);
+						declaredLocalIds.set(argument.v.id, true);
+					}
+					visitNestedNativeEnumLocals(tfunc.expr);
+				case _:
+					TypedExprTools.iter(current, visitNestedNativeEnumLocals);
+			}
+		}
+
 		var visit:TypedExpr->Void = null;
 
 		function visitCheckedInt(current:TypedExpr):Void {
@@ -482,6 +578,13 @@ class OcamlLocalRepresentationPlanner {
 		visit = function(current:TypedExpr):Void {
 			var visitChildren = true;
 			switch (current.expr) {
+				case TFunction(tfunc):
+					for (argument in tfunc.args) {
+						record(argument.v.id, argument.v.t);
+						declaredLocalIds.set(argument.v.id, true);
+					}
+					visitNestedNativeEnumLocals(tfunc.expr);
+					visitChildren = false;
 				case TVar(local, initializer):
 					record(local.id, local.t);
 					declaredLocalIds.set(local.id, true);
@@ -494,6 +597,15 @@ class OcamlLocalRepresentationPlanner {
 							&& input.semanticTypeId == classLayout.semanticTypeId);
 						if (input != null && input.sourceLocalId != null)
 							classSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+					}
+					final enumSemanticTypeId = nativeEnumSemanticTypeId(local.t);
+					if (enumSemanticTypeId != null) {
+						enumSemanticTypeByLocalId.set(local.id, enumSemanticTypeId);
+						final input = initializer == null ? null : exactNativeEnumCarrierInput(initializer, declaredLocalIds, enumSemanticTypeByLocalId,
+							representations, producesExactNativeEnum);
+						identityEnumInitializerByLocalId.set(local.id, input != null && input.semanticTypeId == enumSemanticTypeId);
+						if (input != null && input.sourceLocalId != null)
+							enumSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
 					}
 					if (OcamlRepresentationRegistry.normalizedDirectFlatArray(local.t) != null) {
 						final identityInitializer = initializer != null && isRepresentedArrayCarrierExpression(initializer);
@@ -532,6 +644,8 @@ class OcamlLocalRepresentationPlanner {
 						addNullBoolRead(local.id, current, false);
 				case TBinop(OpAssign, left, right):
 					switch (left.expr) {
+						case TLocal(local) if (enumSemanticTypeByLocalId.exists(local.id)):
+							unsupportedEnumLocalIds.set(local.id, true);
 						case TLocal(local) if (OcamlRepresentationRegistry.normalizedDirectFlatArray(local.t) != null):
 							final identityAssignment = isRepresentedArrayCarrierExpression(right);
 							if (!identityAssignment
@@ -693,6 +807,10 @@ class OcamlLocalRepresentationPlanner {
 					|| (storage.decisionFor(stableLocalId(localIdentities, localId)) != null
 						&& !storage.isCaptured(stableLocalId(localIdentities, localId)))))
 				unsupportedClassLocalIds.set(localId, true);
+			if (enumSemanticTypeByLocalId.exists(localId)
+				&& (identityEnumInitializerByLocalId.get(localId) != true
+					|| storage.decisionFor(stableLocalId(localIdentities, localId)) != null))
+				unsupportedEnumLocalIds.set(localId, true);
 		}
 		var propagatedUnsupportedBool = true;
 		while (propagatedUnsupportedBool) {
@@ -742,6 +860,25 @@ class OcamlLocalRepresentationPlanner {
 						|| classSemanticTypeByLocalId.get(sourceLocalId) != classSemanticTypeByLocalId.get(localId)) {
 						unsupportedClassLocalIds.set(localId, true);
 						propagatedUnsupportedClass = true;
+						break;
+					}
+				}
+			}
+		}
+		var propagatedUnsupportedEnum = true;
+		while (propagatedUnsupportedEnum) {
+			propagatedUnsupportedEnum = false;
+			for (localId in enumSourceLocalIdsByLocalId.keys()) {
+				if (unsupportedEnumLocalIds.exists(localId))
+					continue;
+				final sourceLocalIds = enumSourceLocalIdsByLocalId.get(localId);
+				if (sourceLocalIds == null)
+					continue;
+				for (sourceLocalId in sourceLocalIds) {
+					if (unsupportedEnumLocalIds.exists(sourceLocalId)
+						|| enumSemanticTypeByLocalId.get(sourceLocalId) != enumSemanticTypeByLocalId.get(localId)) {
+						unsupportedEnumLocalIds.set(localId, true);
+						propagatedUnsupportedEnum = true;
 						break;
 					}
 				}
@@ -799,6 +936,10 @@ class OcamlLocalRepresentationPlanner {
 			final type = typeByLocalId.get(hostLocalId);
 			if (type == null)
 				throw 'reflaxe.ocaml [ocaml-representation:missing-local-type]: storage decision for local ${decision.localId} has no typed local occurrence in the sealed function body';
+			if (enumSemanticTypeByLocalId.exists(hostLocalId)) {
+				decisions.push(unmigratedDecision(localIdentities, hostLocalId, TypeTools.toString(type)));
+				continue;
+			}
 			if (classSemanticTypeByLocalId.exists(hostLocalId)) {
 				final domain = localDomain(decision);
 				if (unsupportedClassLocalIds.exists(hostLocalId) || domain != OcamlRepresentationDomain.CapturedLocalStorage) {
@@ -928,6 +1069,25 @@ class OcamlLocalRepresentationPlanner {
 			if (plannedLocalIds.exists(localId))
 				continue;
 			final type = cast typeByLocalId.get(localId);
+			if (declaredLocalIds.exists(localId)
+				&& enumSemanticTypeByLocalId.exists(localId)
+				&& !unsupportedEnumLocalIds.exists(localId)) {
+				final semanticTypeId = enumSemanticTypeByLocalId.get(localId);
+				if (semanticTypeId == null)
+					throw 'reflaxe.ocaml [ocaml-representation:missing-native-enum-identity]: local $localId lost its admitted native enum identity';
+				final representation = representations.nativeEnumValue(semanticTypeId);
+				if (representation == null)
+					throw 'reflaxe.ocaml [ocaml-representation:missing-native-enum]: local $localId lost its admitted native enum decision';
+				decisions.push({
+					localId: stableLocalId(localIdentities, localId),
+					choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.revision, representation.semanticTypeId,
+						OcamlRepresentationDomain.InternalValue),
+					initializerConversion: OcamlLocalCarrierConversion.Identity,
+					assignmentConversion: OcamlLocalCarrierConversion.Identity,
+					readConversion: OcamlLocalCarrierConversion.Identity
+				});
+				continue;
+			}
 			if (declaredLocalIds.exists(localId)
 				&& OcamlRepresentationRegistry.isExactBool(type)
 				&& !unsupportedBoolLocalIds.exists(localId)) {

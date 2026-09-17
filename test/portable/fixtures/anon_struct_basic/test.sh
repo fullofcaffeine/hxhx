@@ -63,7 +63,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 88
+if (report.schemaVersion !== 89
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v4'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount

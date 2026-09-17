@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 88
+if (report.schemaVersion !== 89
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length

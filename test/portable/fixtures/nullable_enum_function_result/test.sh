@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_ROOT="$(mktemp -d)"
-trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_ROOT"' EXIT
+INSPECTOR_DIR="$(mktemp -d)"
+trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_ROOT" "$INSPECTOR_DIR"' EXIT
 
 node - out/Main.ml out/ocaml_lowering_report.json <<'NODE'
 const fs = require('fs')
@@ -16,19 +17,27 @@ const admission = report.controlAdmissions.find(entry => entry.functionId === bo
 const returns = admission?.families?.find(entry => entry.family === 'return')
 const earlyReturn = report.controls.find(entry => entry.functionId === boundary?.functionId && entry.kind === 'return')
 
-if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
+if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v6'
 	|| boundary?.source !== 'non-generic-instance-nullable-enum-declaration'
 	|| boundary.callableBoundaryId != null
 	|| boundary.result?.inputSemanticTypeId !== 'Choice'
-	|| boundary.result?.inputCarrierTypeId !== 'haxe-enum-native-variant-carrier-v1:Choice'
+	|| boundary.result?.inputCarrierTypeId !== 'choice'
 	|| boundary.result?.outputSemanticTypeId !== 'Null<Choice>'
 	|| boundary.result?.outputCarrierTypeId !== 'Obj.t'
 	|| boundary.result?.conversion !== 'box-exact-enum-to-nullable-enum'
 	|| boundary.nullableEnum?.semanticTypeId !== 'Choice'
+	|| boundary.nullableEnum.carrierTypeId !== 'choice'
+	|| boundary.nullableEnum.descriptor?.targetModuleName !== 'Main'
+	|| boundary.nullableEnum.descriptor?.targetTypeName !== 'choice'
+	|| boundary.result.nullableEnumCarrier?.modelRevision !== 'ocaml-nullable-enum-carrier-reference-v1'
+	|| boundary.result.nullableEnumCarrier?.descriptor?.revision !== boundary.nullableEnum.descriptor.revision
+	|| boundary.result.nullableEnumCarrier?.inputRepresentationId !== boundary.result.inputRepresentationId
+	|| boundary.result.nullableEnumCarrier?.outputRepresentationId !== boundary.result.outputRepresentationId
 	|| boundary.proofId !== 'non-generic-instance-nullable-enum-function-result-v1'
 	|| earlyReturn?.payload?.inputSemanticTypeId !== 'Choice'
 	|| earlyReturn.payload.outputSemanticTypeId !== 'Null<Choice>'
 	|| earlyReturn.payload.conversion !== 'box-exact-enum-to-nullable-carrier'
+	|| earlyReturn.payload.nullableEnumCarrier?.revision !== boundary.result.nullableEnumCarrier.revision
 	|| earlyReturn.proofId !== 'exact-enum-to-nullable-early-return-control-v1'
 	|| returns?.status !== 'admitted'
 	|| returns.occurrenceCount !== 1
@@ -50,7 +59,9 @@ NODE
 
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
 node - "$INSPECTION_COPY" <<'NODE'
@@ -66,7 +77,7 @@ if (report.summary.valid !== true
 }
 NODE
 
-for mutation in enum-name carrier source-span missing-proof; do
+for mutation in enum-name carrier source-span missing-proof descriptor-target input-revision crossing-revision reference-revision; do
 	invalid_output="$INVALID_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
@@ -93,6 +104,18 @@ switch (mutation) {
 	case 'missing-proof':
 		boundary.nullableEnum = null
 		break
+	case 'descriptor-target':
+		boundary.result.nullableEnumCarrier.descriptor.targetTypeName = 'other_choice'
+		break
+	case 'input-revision':
+		boundary.result.nullableEnumCarrier.inputRepresentationRevision = `sha256:${'0'.repeat(64)}`
+		break
+	case 'crossing-revision':
+		boundary.result.nullableEnumCarrier.crossingRevision = `sha256:${'1'.repeat(64)}`
+		break
+	case 'reference-revision':
+		boundary.result.nullableEnumCarrier.revision = `sha256:${'2'.repeat(64)}`
+		break
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
@@ -100,9 +123,7 @@ report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').up
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted nullable-enum $mutation evidence" >&2
 		exit 1
