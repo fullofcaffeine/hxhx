@@ -89,7 +89,7 @@ for (const [label, source] of [
 	['CallStack.parseFileLine', callStackSource],
 	['NativeStackTrace.parseFileLine', nativeStackSource]
 ]) {
-	if (!source.includes('raise (HxRuntime.Hx_return (HxRuntime.hx_null))')
+	if (!source.includes('Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null))')
 		|| !source.includes('| HxRuntime.Hx_return __ret_')
 		|| source.includes('Hx_return (Obj.repr (HxRuntime.hx_null))')
 		|| source.includes('Hx_return (Obj.magic (HxRuntime.hx_null))')) {

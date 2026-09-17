@@ -102,7 +102,7 @@ for (const name of [
 	'pushAfterGuard'
 ]) {
 	const body = functionBody(name)
-	if (!body.includes('raise (HxRuntime.Hx_return_void)')
+	if (!body.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		fail(`${name} did not mechanically consume its payloadless return signal and boundary`)
@@ -115,13 +115,13 @@ if (!pushBody.includes('ignore (try ignore (')
 
 for (const name of ['throughTry', 'fromCatch']) {
 	const body = functionBody(name)
-	if (!body.includes('| HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)'))
+	if (!body.includes('| HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)'))
 		fail(`a source catch can intercept ${name}'s private Void-return signal`)
 }
 
 const closureBody = functionBody('nestedClosure')
 if (!closureBody.includes('let local = fun')
-	|| !closureBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !closureBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !closureBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| !closureBody.includes('"outer"')) {
 	fail('the nested anonymous function did not keep an independent return boundary')

@@ -173,7 +173,8 @@ class OcamlASTPrinter {
 			case ERaise(exception):
 				work.push(EmitText(")"));
 				pushExpression(work, exception, PREC_TOP, indentation);
-				work.push(EmitText("raise ("));
+				// This node owns the OCaml primitive, not a source-level function call.
+				work.push(EmitText("Stdlib.raise ("));
 			case ETuple(items):
 				work.push(EmitText(")"));
 				pushExpressionArray(work, items, ", ", PREC_TOP, indentation, needsTupleElementParens);
