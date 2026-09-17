@@ -166,6 +166,7 @@
     "test:m14:portable-numeric-lowering": "compiler-focused",
     "test:m14:portable-auto-metalization-planner": "compiler-focused",
     "test:m14:metal-array-string-specialization": "compiler-focused",
+    "test:m14:python-bool-string": "compiler-focused",
     "test:m14:js-target-core-wiring": "compiler-focused",
     "test:m14:js-static-init-ordering": "compiler-focused",
     "test:m14:js-stmt-try-throw": "compiler-focused",

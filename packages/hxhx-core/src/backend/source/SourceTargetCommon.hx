@@ -2484,7 +2484,9 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Php:
 				"__hxhx_add_string(" + renderExprWithFrame(frame, expr) + ")";
-			case Python, Java, Cs, Lua:
+			case Python:
+				"hxhx_std_string(" + renderExprWithFrame(frame, expr) + ")";
+			case Java, Cs, Lua:
 				stringCall(target, renderExprWithFrame(frame, expr));
 		};
 	}
