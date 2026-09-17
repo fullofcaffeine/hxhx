@@ -14,9 +14,10 @@ class TypedBackendFieldInitializerProjection {
 	final declaration:HxFieldDecl;
 	final localCatalog:TypedBackendLocalCatalog;
 	final fieldReadCatalog:TypedBackendFieldReadCatalog;
+	final runtimeTypeCatalog:TypedBackendRuntimeTypeCatalog;
 
 	public function new(stableIdentity:String, bodyRevision:String, field:TyFieldInfo, declaration:HxFieldDecl, localCatalog:TypedBackendLocalCatalog,
-			?fieldReadCatalog:TypedBackendFieldReadCatalog) {
+			?fieldReadCatalog:TypedBackendFieldReadCatalog, ?runtimeTypeCatalog:TypedBackendRuntimeTypeCatalog) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend field initializer projection requires a stable identity";
 		if (bodyRevision == null || bodyRevision.length == 0)
@@ -33,10 +34,23 @@ class TypedBackendFieldInitializerProjection {
 		this.declaration = declaration;
 		this.localCatalog = localCatalog;
 		this.fieldReadCatalog = fieldReadCatalog == null ? new TypedBackendFieldReadCatalog([]) : fieldReadCatalog;
+		this.runtimeTypeCatalog = runtimeTypeCatalog == null ? new TypedBackendRuntimeTypeCatalog(stableIdentity, bodyRevision, []) : runtimeTypeCatalog;
+		this.runtimeTypeCatalog.assertOwner(stableIdentity, bodyRevision);
+		this.runtimeTypeCatalog.assertMarkers(TypedRuntimeTypeSource.inExpression(HxFieldDecl.getInit(declaration)));
 	}
 
 	public function getStableIdentity():String
 		return stableIdentity;
+
+	public function getRuntimeTypeCatalog():TypedBackendRuntimeTypeCatalog
+		return runtimeTypeCatalog;
+
+	/** Select an operand only from this exact initializer projection and revision. */
+	public function requireRuntimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence {
+		if (TypedRuntimeTypeSource.inExpression(getExpression()).indexOf(expression) < 0)
+			throw "runtime type operand is absent from the current initializer projection";
+		return runtimeTypeCatalog.require(expression, stableIdentity, bodyRevision);
+	}
 
 	public function getBodyRevision():String
 		return bodyRevision;

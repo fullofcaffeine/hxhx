@@ -5,7 +5,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
-/** Proves two non-C++ backends execute the same shared unary declaration decision. **/
+/** Proves JavaScript and Python preserve unary helpers and once-only instance/static property updates. **/
 class M14AbstractUnaryCrossBackendIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -38,7 +38,7 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 			"abstract Step(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(-A) public static function arbitraryStaticResult(value:Step):Int return 11;",
-			"  @:op(++A) public static function propertyMustNotCall(value:Step):Step return value;",
+			"  @:op(++A) public static function propertyMustNotCall(value:Step):Step { StaticHolder.operatorCalls++; return value; }",
 			"  public function get():Int return this;",
 			"}",
 			"class Holder {",
@@ -50,6 +50,15 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 			"  public function get_step():Step { getterCalls++; return stored; }",
 			"  public function set_step(value:Step):Step { setterCalls++; stored = value; return value; }",
 			"  public function value():Step return stored;",
+			"}",
+			"class StaticHolder {",
+			"  static var stored:Step = 7;",
+			"  public static var events:String = '';",
+			"  public static var operatorCalls:Int = 0;",
+			"  public static var step(get, set):Step;",
+			"  static function get_step():Step { StaticHolder.events += 'g'; return StaticHolder.stored; }",
+			"  static function set_step(value:Step):Step { StaticHolder.events += 's'; StaticHolder.stored = value; return value; }",
+			"  public static function peek():Step return StaticHolder.stored;",
 			"}",
 			"class Main { static function main() {",
 			"  var step:Step = 1;",
@@ -64,6 +73,13 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 			"  Sys.println(holder.value());",
 			"  Sys.println(holder.getterCalls);",
 			"  Sys.println(holder.setterCalls);",
+			"  Sys.println(++StaticHolder.step);",
+			"  Sys.println(StaticHolder.step++);",
+			"  Sys.println(--StaticHolder.step);",
+			"  Sys.println(StaticHolder.step--);",
+			"  Sys.println(StaticHolder.peek());",
+			"  Sys.println(StaticHolder.events);",
+			"  Sys.println(StaticHolder.operatorCalls);",
 			"} }",
 		].join("\n");
 		final parsed = ParserStage.parse(source, "Main.hx");
@@ -99,7 +115,7 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 			assertTrue(generated.indexOf(entry.callText) >= 0, entry.target + " rebound or lost the arbitrary-name helper selected by the shared typer");
 			final executed = run(entry.executable, emitted.entryPath);
 			assertTrue(executed.code == 0, entry.target + " abstract-unary artifact failed: " + executed.stderr);
-			assertTrue(executed.stdout == "11\n-3\n5\n5\n6\n2\n2\n",
+			assertTrue(executed.stdout == "11\n-3\n5\n5\n6\n2\n2\n8\n8\n8\n8\n7\ngsgsgsgs\n0\n",
 				entry.target + " produced unexpected abstract/property/ordinary unary output: " + executed.stdout);
 		}
 		deleteRecursive(root);

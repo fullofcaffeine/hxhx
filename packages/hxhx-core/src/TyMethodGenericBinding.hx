@@ -45,6 +45,8 @@ class TyMethodGenericBinding {
 	public static function sameTypeConstructor(left:TyType, right:TyType):Bool {
 		if (left == null || right == null)
 			return false;
+		if (left.isAbstractMeta() || right.isAbstractMeta())
+			return left.isAbstractMeta() && right.isAbstractMeta();
 		final leftIdentity = left.getNominalIdentity();
 		final rightIdentity = right.getNominalIdentity();
 		if (leftIdentity != null || rightIdentity != null)
@@ -71,6 +73,9 @@ class TyMethodGenericBinding {
 			bindings.set(parameterKey, unified);
 			return true;
 		}
+		// Null does not determine T when the parameter accepts Null<T>.
+		if (expected.isNullable() && actual.isNullLiteral())
+			return true;
 		if (expected.isNullable() || actual.isNullable())
 			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings);
 		if (expected.isFunction() || actual.isFunction()) {
@@ -101,8 +106,13 @@ class TyMethodGenericBinding {
 			methodTypeParameters:Array<TyTypeParameterId>):Null<haxe.ds.StringMap<TyType>> {
 		final result = new haxe.ds.StringMap<TyType>();
 		final expected = sig.getArgs();
+		final optional = sig.getArgOptional();
 		for (index in 0...suppliedArity) {
 			if (index >= expected.length || index >= argTypes.length)
+				continue;
+			// An optional null argument requests the default; it must not bind a
+			// method type parameter to the null-literal type.
+			if (index < optional.length && optional[index] && argTypes[index].isNullLiteral())
 				continue;
 			if (!collect(expected[index], argTypes[index], methodTypeParameters, result))
 				return null;
@@ -166,6 +176,8 @@ class TyMethodGenericBinding {
 		if (arguments.length == 0)
 			return type;
 		final substituted = [for (argument in arguments) substitute(argument, methodTypeParameters, inferred)];
+		if (type.isAbstractMeta())
+			return TyType.abstractMeta(substituted[0]);
 		final identity = type.getNominalIdentity();
 		if (identity != null)
 			return TyType.nominal(identity, substituted, substitutedGenericDisplay(type, substituted));

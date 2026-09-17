@@ -1,5 +1,6 @@
 Two Haxe classes call each other across compilation units. The generated OCaml program must print `3` and `4` through their original module paths.
 The target stores the recursive group in the first module file and keeps the other file as an alias.
+The entry module also declares and matches an enum. Its declaration must remain structured when the compiler assembles recursive modules elsewhere in the program.
 
 Run `PORTABLE_FIXTURE_ALLOWLIST=module_recursive_functions npm run test:portable`.
 The runner builds and executes the OCaml program. Then `test.sh` verifies that an eager initializer in a recursive group fails before OCaml module publication.

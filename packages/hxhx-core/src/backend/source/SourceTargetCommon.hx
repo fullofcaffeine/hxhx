@@ -242,11 +242,11 @@ class SourceTargetCommon {
 	}
 
 	/** Find the typed directives belonging to the backend declaration being rendered. **/
-	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl):Array<TyModuleDirective> {
+	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl, strict:Bool = false):Array<TyModuleDirective> {
 		if (program == null || declaration == null)
 			return [];
 		for (typed in program.getTypedModules())
-			if (typed.getBackendDeclaration() == declaration)
+			if ((strict ? typed.getBackendProjection().getDeclaration() : typed.getBackendDeclaration()) == declaration)
 				return typed.getEnv().getResolvedDirectives();
 		return [];
 	}
@@ -345,6 +345,7 @@ class SourceTargetCommon {
 	public static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
 		if (target == Php)
 			return emitPhpTarget(program, context);
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		final maybeMain = findMainModule(program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
@@ -389,16 +390,17 @@ class SourceTargetCommon {
 		renderer used by this request.
 	**/
 	public static function emitPhpTarget(program:GenIrProgram, context:BackendContext):EmitResult {
-		final main = mainModule(program, context);
-		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(main.cls));
-		final strictProjection = strictTypedMainProjection(program, main);
 		final projections = new PhpTypedProgramProjection(program);
-		final programRenderer = phpProgramBodyRenderer(program, main.decl, projections);
+		final strictProjection = projections.requireMain(context.mainModule);
+		final declaration = strictProjection.module.getDeclaration();
+		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(strictProjection.cls.getDeclaration()));
+		final programRenderer = phpProgramBodyRenderer(program, declaration, projections);
+		PhpRuntimeTypeLowering.validateProgram(projections, programRenderer.getProgramFacts());
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(Php, className)]);
 		ensureParentDirectory(outputPath);
 		sys.io.File.saveContent(outputPath,
-			renderPhpProgram(program, context, main.decl, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
+			renderPhpProgram(program, context, declaration, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
 				projections, programRenderer));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(Php), outputPath)], false);
 	}
@@ -1171,7 +1173,28 @@ class SourceTargetCommon {
 	}
 
 	static function renderExprWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):String {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final phpRuntimeType = PhpRuntimeTypeLowering.decode(expr);
+		if (phpRuntimeType != null) {
+			if (target != Php)
+				throw "PHP runtime type operation reached a different target";
+			return phpRuntimeType.arguments.length == 0 ? phpClassValueExpr(phpRuntimeType.typeName) : "__hxhx_is_of_type("
+				+ renderExprWithFrame(frame, phpRuntimeType.arguments[0])
+				+ ", "
+				+ PhpSyntax.quoteString(phpRuntimeType.typeName)
+				+ ")";
+		}
+		final csStaticCall = CsSourceStaticCallLowering.decode(expr);
+		if (csStaticCall != null) {
+			if (target != Cs)
+				throw "C# source static call reached a different target";
+			return callExpr(Cs,
+				csGlobalClassRef(csStaticCall.packagePath, csStaticCall.className, csStaticCall.noRoot) + "." + sanitizeCsIdentifier(csStaticCall.method),
+				csStaticCall.arguments);
+		}
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return renderExprWithFrame(frame, TypedExactCallSource.ordinaryInstanceCall(exactCall));
@@ -8753,7 +8776,7 @@ class SourceTargetCommon {
 			case Python: "print(" + expr + ")";
 			case Java: "System.out.println(" + expr + ");";
 			case Cs: "System.Console.WriteLine(" + expr + ");";
-			case Php: "echo " + expr + " . PHP_EOL;";
+			case Php: "Sys::println(" + expr + ");";
 			case Lua: "print(" + expr + ")";
 		};
 	}
@@ -10630,7 +10653,8 @@ class SourceTargetCommon {
 			throw "PHP field initializer rendering requires a request-owned renderer and expression";
 		final frame = SourceFunctionRenderFrameTools.forPhpRenderer(renderer);
 		return try {
-			final renamed = phpRenameScopedLocalExpr(expression, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
+			final lowered = PhpRuntimeTypeLowering.expression(renderer, expression);
+			final renamed = phpRenameScopedLocalExpr(lowered, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
 			renderExprWithFrame(frame, renamed);
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -10644,7 +10668,8 @@ class SourceTargetCommon {
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		return try {
-			final rewrittenBody = phpRewriteSameClassMembersInStmts(body, renderer.copyCurrentInstanceMethodTargetNames(),
+			final lowered = PhpRuntimeTypeLowering.body(renderer, body);
+			final rewrittenBody = phpRewriteSameClassMembersInStmts(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
 				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
 				renderer.copyParameterTargetNames());
 			final renderBody = phpRenameScopedLocalStmts(rewrittenBody);
@@ -12615,7 +12640,7 @@ class SourceTargetCommon {
 		final packagePath = HxModuleDecl.getPackagePath(decl);
 		final outputPackagePath = csOutputPackagePath(packagePath, noRoot);
 		final rawClassName = HxClassDecl.getName(cls);
-		for (line in renderCsHeader(program, decl, rawClassName))
+		for (line in renderCsHeader(program, decl, rawClassName, noRoot))
 			out.push(line);
 		if (out.length > 1)
 			out.push("");
@@ -12876,12 +12901,21 @@ class SourceTargetCommon {
 		return out.join("\n");
 	}
 
-	static function renderCsHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String):Array<String> {
+	static function renderCsHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String, noRoot:Bool = false):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		appendCsUsing(out, seen, "haxe.io");
 		appendCsUsing(out, seen, "sys");
 		appendCsUsing(out, seen, "sys.io");
+		for (selected in CsSourceTypeImports.collect(program, resolvedDirectives(program, decl))) {
+			if (!noRoot && selected.packagePath.length == 0 && selected.localName == selected.className)
+				continue;
+			out.push("using "
+				+ sanitizeCsIdentifier(selected.localName)
+				+ " = "
+				+ csGlobalClassRef(selected.packagePath, selected.className, noRoot)
+				+ ";");
+		}
 		for (directive in resolvedDirectives(program, decl)) {
 			if (directive.getKind().match(UsingType))
 				continue;
@@ -14003,6 +14037,7 @@ class SourceTargetCommon {
 			appendPythonMetaSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
+		final pythonFields = new PythonFieldAccessLowering(program);
 		final pythonClassesByName = new Map<String, HxClassDecl>();
 		for (cls in pending)
 			pythonClassesByName.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), cls);
@@ -14010,7 +14045,7 @@ class SourceTargetCommon {
 			if (out.length > 0)
 				out.push("");
 			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
-			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className)))
+			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className), pythonFields))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -14385,7 +14420,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return counts;
 	}
 
@@ -14403,7 +14438,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14428,7 +14463,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14700,7 +14735,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "instance", instanceEntries);
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "statics", staticEntries);
@@ -14977,7 +15012,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_meta_object($entries) {");
 		lines.push("  if (array_key_exists(\"_\", $entries)) {");
 		lines.push("    if (!array_key_exists(\"new\", $entries)) $entries[\"new\"] = $entries[\"_\"];");
@@ -15051,7 +15086,7 @@ class SourceTargetCommon {
 		addName("List");
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15093,7 +15128,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, "");
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), typed.getParsed().getFilePath());
+			addDecl(typed.getBackendProjection().getDeclaration(), typed.getParsed().getFilePath());
 		return bases;
 	}
 
@@ -15173,7 +15208,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15226,7 +15261,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15294,7 +15329,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15343,7 +15378,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15363,12 +15398,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addImports(decl);
 		for (typed in program.getTypedModules())
-			addImports(typed.getBackendDeclaration());
+			addImports(typed.getBackendProjection().getDeclaration());
 		return aliases;
 	}
 
@@ -15406,7 +15441,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15436,7 +15471,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15464,7 +15499,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15499,7 +15534,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15549,7 +15584,7 @@ class SourceTargetCommon {
 
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 
 		for (shortName in classesByName.keys()) {
 			final cls = classesByName.get(shortName);
@@ -15613,7 +15648,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15664,7 +15699,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15699,7 +15734,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15834,12 +15869,12 @@ class SourceTargetCommon {
 
 		addDeclClassAliases(decl);
 		for (typed in program.getTypedModules()) {
-			addDeclClassAliases(typed.getBackendDeclaration());
-			addParsedModuleAlias(typed.getParsed(), typed.getBackendDeclaration());
+			addDeclClassAliases(typed.getBackendProjection().getDeclaration());
+			addParsedModuleAlias(typed.getParsed(), typed.getBackendProjection().getDeclaration());
 		}
-		addDeclExtensionContext(decl, resolvedDirectives(program, decl));
+		addDeclExtensionContext(decl, resolvedDirectives(program, decl, true));
 		for (typed in program.getTypedModules())
-			addDeclExtensionContext(typed.getBackendDeclaration(), typed.getEnv().getResolvedDirectives());
+			addDeclExtensionContext(typed.getBackendProjection().getDeclaration(), typed.getEnv().getResolvedDirectives());
 		return out;
 	}
 
@@ -15968,7 +16003,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -16117,7 +16152,7 @@ class SourceTargetCommon {
 	static function phpProgramDeclaresClass(program:GenIrProgram, className:String):Bool {
 		final cleanName = PhpName.typeIdentifier(className);
 		for (typed in program.getTypedModules()) {
-			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration())) {
+			for (cls in HxModuleDecl.getClasses(typed.getBackendProjection().getDeclaration())) {
 				if (PhpName.typeIdentifier(HxClassDecl.getName(cls)) == cleanName)
 					return true;
 			}
@@ -16200,12 +16235,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addDeclImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addDeclImports(decl);
 		for (typed in program.getTypedModules())
-			addDeclImports(typed.getBackendDeclaration());
+			addDeclImports(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -19100,8 +19135,8 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>,
-			packagePath:String):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>, packagePath:String,
+			pythonFields:PythonFieldAccessLowering):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final fullName = packagePath != null
 			&& packagePath.length > 0 ? packagePath + "." + HxClassDecl.getName(cls) : HxClassDecl.getName(cls);
@@ -19133,7 +19168,9 @@ class SourceTargetCommon {
 		final fieldVisited:Map<String, Bool> = [];
 		final instanceMethodNames = pythonInstanceMethodNames(cls, classesByName, methodVisited);
 		final instanceFieldNames = pythonInstanceFieldNames(cls, classesByName, fieldVisited);
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (legacyFunction in HxClassDecl.getFunctions(cls)) {
+			final projection = pythonFields.projection(cls, legacyFunction);
+			final fn = projection.getDeclaration();
 			if (isCompileTimeOnlyFunction(fn) && !pythonShouldEmitNeutralCompileTimeOnlyFunction(fullName, fn))
 				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
@@ -19164,9 +19201,10 @@ class SourceTargetCommon {
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, fullName, className, HxFunctionDecl.getName(fn))) {
+				final loweredBody = pythonFields.body(projection);
 				final body = !isStatic
-					|| isCtor ? pythonRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
-						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
+					|| isCtor ? pythonRewriteSameClassMembersInStmts(loweredBody, instanceMethodNames, instanceFieldNames,
+						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : loweredBody;
 				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
@@ -19580,7 +19618,7 @@ class SourceTargetCommon {
 				if (strictMainClass == null)
 					throw "C# source backend requires the exact strict main-class projection";
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
-				for (line in renderCsHeader(program, decl, className))
+				for (line in renderCsHeader(program, decl, className, context.hasDefine("no_root")))
 					lines.push(line);
 				if (lines.length > 1)
 					lines.push("");

@@ -74,6 +74,19 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Abstract method declarations
+
+Run `npm run test:m14:typer-abstract-catalog` when you change abstract declaration
+parsing or operator indexing. The command checks ordinary abstracts and enum
+abstracts, both as primary types and as additional types in a module.
+
+The original `test/enum_abstract_catalog` fixture runs with upstream Haxe 4.3.7.
+The catalog test checks method signatures, generic constraints, modifiers,
+operator metadata, bodies, source ranges, enum values, and loading order.
+The native test generates OCaml and executes branching static methods against
+the upstream result. These checks do not establish full target compatibility
+or prove a freshly rebuilt native compiler.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime
@@ -110,6 +123,18 @@ types, instance members, and a static lambda. It builds and runs generated OCaml
 and compares the output with upstream Haxe 4.3.7. It also rejects stale types,
 foreign function bindings, and reordered parameters. This focused check does
 not replace current-source compiler builds or the upstream compatibility suites.
+
+To check shared variable identities and catch types, run:
+
+```bash
+npm run test:m14:typed-local-identity
+```
+
+Catch variables must keep their declared types in statement and expression
+forms. An omitted type selects `haxe.Exception`. The fixtures also check nested
+catches, captured variables, and ordinary lambda parameters. These checks prove
+the facts supplied to targets; target runtime checks must also prove exception
+wrapping, handler selection, and rethrow behavior.
 
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
@@ -756,10 +781,29 @@ Notes:
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.
+- `npm run test:m14:neko-typed-local-projection` includes native String construction with the real Neko standard library.
+  The fixture compares both output layouts with upstream Haxe. It checks argument effects and an ordinary qualified class also named `String`.
+  The core String constructor must use its native primitive without emitting an unused object implementation.
+- The same Neko group covers inherited construction, field order, default arguments, virtual calls, and receiver identity across three class levels.
+  It also loads the real `haxe.ValueException` provider and checks its inherited message and `unwrap()` result in both output layouts.
+- Neko standard-library selection coverage is in `npm run test:m14:neko-standard-library-paths`.
+  It checks that project sources take precedence, then Neko implementations in `std/neko/_std`, then common declarations in `std`.
+  For example, ordinary Neko lookup selects `std/neko/_std/haxe/Exception.hx` before `std/haxe/Exception.hx`.
+  The test also checks that the last explicit `-cp` wins and that other targets exclude the Neko directory.
+  This test proves source selection. Complete exception compilation and runtime behavior require separate coverage.
 - HashLink native backend boundary smoke coverage is in `npm run test:m14:hashlink-native-backend-smoke`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
+- `npm run test:m14:neko-startup-try` compiles and runs successful and caught-failure try expressions, including local and static-field assignments.
+  `npm run test:m14:typed-body-boundary` checks that assignment operands retain their calls, result types, and source lines without opaque executable syntax.
+  The startup command also compares stack primitives with upstream Haxe in both Neko output layouts. It preserves ordinary class-member calls and rejects invalid primitive argument counts.
+  The same runtime fixture checks calls to later functions, mutual recursion, and constructor references across generated definitions.
+- Module declaration coverage is in `npm run test:m14:hih-module-type-declaration-skip`.
+  It checks final class modifiers, class metadata, and module-level final fields, plus complete typedef, enum, and abstract declaration boundaries.
+- `npm run test:m14:hih-expr-text-parser` also checks dollar-prefixed expressions through the complete module parser.
+  Ordinary expressions retain Neko primitive names such as `$new`. Inside macro quotations, dollar expressions insert an existing expression into the quoted syntax.
+  The parser restores this context across nested quotations and rejects braced reification outside a quotation.
 - JS statement lowering coverage for try/catch + throw is in `npm run test:m14:js-stmt-try-throw`.
 - JS statement multi-catch dispatch lowering coverage is in `npm run test:m14:js-stmt-multi-catch`.
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and

@@ -176,8 +176,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateModules:Array<String> = [];
 	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
-	final classCarrierDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
-	final classCarrierOwnerKeys:Map<String, Bool> = [];
+	final typeDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
+	final typeDeclarationOwnerKeys:Map<String, Bool> = [];
 	final moduleChunks:OcamlModuleChunks = new OcamlModuleChunks();
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
@@ -468,8 +468,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		profileLogLine("reflaxe.ocaml: program_revision_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
 		super.beginProgramRevision(revision);
-		classCarrierDeclarationsByModule.clear();
-		classCarrierOwnerKeys.clear();
+		typeDeclarationsByModule.clear();
+		typeDeclarationOwnerKeys.clear();
 		moduleChunks.clear();
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
@@ -1185,30 +1185,31 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	/**
-		Retains and observes class record declarations for one generated OCaml module.
+		Retains and observes enum and class record declarations for one generated OCaml module.
 
-		Class compilation records these declarations without printing them beside
-		constructors or static initializers. Module assembly can then place the types
-		before every class value without changing executable Haxe declaration order.
+		Compilation retains these declarations until all local dependencies are
+		known. Recursive enum/class types share a declaration group before any
+		values, without changing constructor or static-initializer execution order.
 	**/
-	function classCarrierPrelude(moduleId:String):Array<OcamlModuleItem> {
-		final declarations = classCarrierDeclarationsByModule.get(moduleId);
+	function typeDeclarationPrelude(moduleId:String):Array<OcamlModuleItem> {
+		final declarations = typeDeclarationsByModule.get(moduleId);
 		if (declarations == null || declarations.length == 0)
 			return [];
-		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(declaration -> OcamlModuleItem.IType([declaration], false));
-		ctx.finalRuntimeUses.observeModuleItems(items, "class-carrier-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
+		// OCaml uses `type ... and ...`, never `type rec`, for recursive types.
+		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(group -> OcamlModuleItem.IType(group, false));
+		ctx.finalRuntimeUses.observeModuleItems(items, "type-declaration-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
 		return items;
 	}
 
-	/** Records one structured class carrier for later module-level declaration. */
-	function registerClassCarrier(moduleId:String, ownerTypeName:String, declaration:OcamlTypeDecl):Void {
-		var declarations = classCarrierDeclarationsByModule.get(moduleId);
+	/** Retain a structured type and its runtime references until module assembly. */
+	function registerTypeDeclaration(moduleId:String, ownerTypeName:String, declaration:OcamlTypeDecl):Void {
+		var declarations = typeDeclarationsByModule.get(moduleId);
 		if (declarations == null) {
 			declarations = [];
-			classCarrierDeclarationsByModule.set(moduleId, declarations);
+			typeDeclarationsByModule.set(moduleId, declarations);
 		}
 		declarations.push(declaration);
-		classCarrierOwnerKeys.set(moduleId + "\n" + ownerTypeName, true);
+		typeDeclarationOwnerKeys.set(moduleId + "\n" + ownerTypeName, true);
 		RuntimeUsageCollector.collectFromModuleItems([OcamlModuleItem.IType([declaration], false)], (moduleName) -> ctx.markRuntimeModule(moduleName));
 	}
 
@@ -1309,12 +1310,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 			final b = buckets.get(key);
 			if (b != null) {
-				if (classCarrierOwnerKeys.exists(info.baseType.module + "\n" + info.baseType.name)
-					&& !b.ownerTypeNames.exists("__class_carrier_prelude__")) {
-					final prelude = classCarrierPrelude(info.baseType.module);
+				if (typeDeclarationOwnerKeys.exists(info.baseType.module + "\n" + info.baseType.name)
+					&& !b.ownerTypeNames.exists("__type_declaration_prelude__")) {
+					final prelude = typeDeclarationPrelude(info.baseType.module);
 					if (prelude.length > 0)
 						b.parts.push(ModuleDeclarations("", prelude));
-					b.ownerTypeNames.set("__class_carrier_prelude__", true);
+					b.ownerTypeNames.set("__type_declaration_prelude__", true);
 				}
 				final items = moduleChunks.itemsForOutput(info.baseType.module, info.baseType.name, info.data);
 				b.parts.push(items == null ? OpaqueModuleText(moduleChunks.render(info.baseType.module, info.baseType.name, info.data,
@@ -2204,7 +2205,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					});
 				}
 				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
-				registerClassCarrier(classType.module, classType.name, {
+				registerTypeDeclaration(classType.module, classType.name, {
 					name: instanceTypeName,
 					params: [],
 					kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
@@ -2542,7 +2543,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				kind: OcamlTypeDeclKind.Record(typeFields)
 			};
 			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
-			registerClassCarrier(classType.module, classType.name, typeDecl);
+			registerTypeDeclaration(classType.module, classType.name, typeDecl);
 
 			// create: allocate record, run ctor body, return self
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
@@ -4612,12 +4613,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 			kind: OcamlTypeDeclKind.Variant(ctors)
 		};
 
-		final items:Array<OcamlModuleItem> = [OcamlModuleItem.IType([decl], false)];
-		RuntimeUsageCollector.collectFromModuleItems(items, (moduleName) -> ctx.markRuntimeModule(moduleName));
-
-		var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n\n";
-		ctx.finalRuntimeUses.observeModuleItems(items, "enum:" + fullName, ctx.activateStagedTypeRuntimeUse);
-		moduleChunks.record(enumType.module, enumType.name, items, out);
+		registerTypeDeclaration(enumType.module, enumType.name, decl);
+		final out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n";
+		// The module's type prelude owns the declaration. Retain this empty chunk
+		// so its header cannot be mistaken for unstructured framework output.
+		moduleChunks.record(enumType.module, enumType.name, [], out);
 		return out;
 	}
 

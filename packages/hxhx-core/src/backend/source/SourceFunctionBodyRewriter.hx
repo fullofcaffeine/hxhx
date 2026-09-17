@@ -13,13 +13,24 @@ class SourceFunctionBodyRewriter {
 	public static function body(statements:Array<HxStmt>, transform:HxExpr->HxExpr):Array<HxStmt> {
 		if (transform == null)
 			throw "source function body rewriter requires an expression transform";
+		return bodyWithOriginal(statements, (_, rebuilt) -> transform(rebuilt));
+	}
+
+	/** Validate occurrence-owned facts against the original node while transforming rebuilt children. */
+	public static function bodyWithOriginal(statements:Array<HxStmt>, transform:(HxExpr, HxExpr) -> HxExpr):Array<HxStmt> {
+		if (transform == null)
+			throw "source function body rewriter requires an expression transform";
 		return statements == null ? [] : [for (statement in statements) statementNode(statement, transform)];
 	}
 
-	static function nullableExpression(value:Null<HxExpr>, transform:HxExpr->HxExpr):Null<HxExpr>
+	/** Apply the same original-node contract to a typed field initializer. */
+	public static function expressionWithOriginal(value:HxExpr, transform:(HxExpr, HxExpr) -> HxExpr):HxExpr
+		return expressionNode(value, transform);
+
+	static function nullableExpression(value:Null<HxExpr>, transform:(HxExpr, HxExpr) -> HxExpr):Null<HxExpr>
 		return value == null ? null : expressionNode(value, transform);
 
-	static function statementNode(statement:HxStmt, transform:HxExpr->HxExpr):HxStmt {
+	static function statementNode(statement:HxStmt, transform:(HxExpr, HxExpr) -> HxExpr):HxStmt {
 		return switch (statement) {
 			case SBlock(statements, position):
 				SBlock([for (child in statements) statementNode(child, transform)], position);
@@ -59,7 +70,7 @@ class SourceFunctionBodyRewriter {
 		};
 	}
 
-	static function expressionNode(value:HxExpr, transform:HxExpr->HxExpr):HxExpr {
+	static function expressionNode(value:HxExpr, transform:(HxExpr, HxExpr) -> HxExpr):HxExpr {
 		final rebuilt:HxExpr = switch (value) {
 			case EField(receiver, field):
 				EField(expressionNode(receiver, transform), field);
@@ -109,6 +120,6 @@ class SourceFunctionBodyRewriter {
 			case _:
 				value;
 		};
-		return transform(rebuilt);
+		return transform(value, rebuilt);
 	}
 }

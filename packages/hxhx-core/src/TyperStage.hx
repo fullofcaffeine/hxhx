@@ -18,6 +18,7 @@ private typedef TypedClassBuildResult = {
 private typedef TypedClassHeaderTypes = {
 	final extendsType:Null<TyType>;
 	final implementsTypes:Array<TyType>;
+	final interfaceExtendsTypes:Array<TyType>;
 };
 
 /**
@@ -84,22 +85,29 @@ class TyperStage {
 		return resolveTypeInContext(TyType.fromHintText(raw), ctx);
 	}
 
-	static function resolveTypeInContext(type:TyType, ctx:TyperContext):TyType {
+	static function resolveTypeInContext(type:TyType, ctx:TyperContext, ?typeParameters:Array<TyTypeParameterId>):TyType {
 		if (type == null)
 			return TyType.unknown();
 		if (type.isNullable())
-			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx), type.getDisplay());
+			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx, typeParameters), type.getDisplay());
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
 			return TyType.functionType([
 				for (argument in type.getFunctionArguments())
-					resolveTypeInContext(argument, ctx)
+					resolveTypeInContext(argument, ctx, typeParameters)
 			],
-				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx), type.getDisplay());
+				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx, typeParameters), type.getDisplay());
 		}
 		if (!type.isUnresolved())
 			return type;
-		final arguments = [for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx)];
+		final arguments = [
+			for (argument in type.getTypeArguments())
+				resolveTypeInContext(argument, ctx, typeParameters)
+		];
+		if (typeParameters != null && arguments.length == 0)
+			for (parameter in typeParameters)
+				if (parameter.getName() == type.getUnresolvedPath())
+					return TyType.typeParameter(parameter);
 		final nominal = ctx == null ? null : ctx.resolveType(type.getUnresolvedPath());
 		return nominal == null ? TyType.unresolved(type.getUnresolvedPath(), arguments,
 			type.getDisplay()) : TyType.nominal(nominal.getIdentity(), arguments, type.getDisplay());
@@ -259,6 +267,11 @@ class TyperStage {
 		return method == null ? null : TyType.unknown();
 	}
 
+	/**
+		Select the property declaration before choosing an abstract update operator.
+		A class value has type Class<T>; its resolved runtime target owns static
+		properties, while an instance type owns instance properties.
+	**/
 	static function accessorPropertyForAccess(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Null<TyPropertyInfo> {
 		var receiver:Null<HxExpr> = null;
 		var field = "";
@@ -270,10 +283,13 @@ class TyperStage {
 		}
 		if (receiver == null)
 			return null;
-		final owner = switch (receiver) {
-			case EThis: ctx.currentClass();
-			case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
-		};
+		final runtimeTarget = TypedRuntimeTypeResolver.resolve(receiver, scope, ctx, ValueExpression);
+		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
+		final owner = runtimeTarget != null ? (runtimeOwner == null ? null : ctx.getIndex()
+			.getByFullName(runtimeOwner.getCanonicalName())) : switch (receiver) {
+				case EThis: ctx.currentClass();
+				case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
+			};
 		final property = owner == null ? null : owner.propertyInfo(field);
 		return property != null && property.usesExplicitAccessors() ? property : null;
 	}
@@ -314,8 +330,16 @@ class TyperStage {
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
-			final typeResolver:TypedExprTypeResolver = function(expression, position, lexicalEnvironment) {
-				return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+			final typeResolver:TypedExprTypeResolver = {
+				expressionType: function(expression, position, lexicalEnvironment) {
+					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+				},
+				runtimeTypeTarget: function(expression, lexicalEnvironment, namespace) {
+					return TypedRuntimeTypeResolver.resolve(expression, lexicalEnvironment, context, namespace);
+				},
+				catchUse: function(binding) {
+					return context.hasDefine("neko") ? TypedCatchUse.resolve(binding, context) : null;
+				}
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
 				final inferenceEnvironment = lexicalEnvironment.copyForInference();
@@ -355,7 +379,7 @@ class TyperStage {
 				if (field == null)
 					return null;
 				final importedBareField = switch (expression) {
-					case EIdent(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
+					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.fieldInfo(name) == null) && context.importedStaticField(name) == field;
 					case _: false;
 				};
@@ -424,7 +448,7 @@ class TyperStage {
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
 			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions, typedFieldInitializers, headerTypes.extendsType,
-				headerTypes.implementsTypes));
+				headerTypes.implementsTypes, headerTypes.interfaceExtendsTypes));
 		}
 
 		final loweredClasses = index == null
@@ -441,14 +465,22 @@ class TyperStage {
 		source files. Parsing the header as a type also discovers generic arguments.
 	**/
 	static function resolveClassHeaderTypes(classDeclaration:HxClassDecl, context:TyperContext):TypedClassHeaderTypes {
+		// Header loading can resolve a provider after the declaration index was
+		// built. Keep the index's exact generic binders while selecting that provider.
+		final owner = context.currentClass();
+		final typeParameters = owner != null && Std.isOfType(owner, TyClassInfo) ? (cast owner : TyClassInfo).getTypeParameterIds() : [];
 		final extendsPath = HxClassDecl.getExtendsPath(classDeclaration);
 		final extendsType = extendsPath != null
-			&& StringTools.trim(extendsPath).length > 0 ? resolveTypeInContext(TyType.fromHintText(extendsPath), context) : null;
+			&& StringTools.trim(extendsPath).length > 0 ? resolveTypeInContext(TyType.fromHintText(extendsPath), context, typeParameters) : null;
 		final implementsTypes = new Array<TyType>();
 		for (implementedPath in HxClassDecl.getImplementsPaths(classDeclaration))
 			if (implementedPath != null && StringTools.trim(implementedPath).length > 0)
-				implementsTypes.push(resolveTypeInContext(TyType.fromHintText(implementedPath), context));
-		return {extendsType: extendsType, implementsTypes: implementsTypes};
+				implementsTypes.push(resolveTypeInContext(TyType.fromHintText(implementedPath), context, typeParameters));
+		final interfaceExtendsTypes = [
+			for (path in HxClassDecl.getInterfaceExtendsPaths(classDeclaration))
+				resolveTypeInContext(TyType.fromHintText(path), context, typeParameters)
+		];
+		return {extendsType: extendsType, implementsTypes: implementsTypes, interfaceExtendsTypes: interfaceExtendsTypes};
 	}
 
 	/**
@@ -500,6 +532,11 @@ class TyperStage {
 			ResolvedModule.getGeneratedDeclarations(m));
 	}
 
+	/**
+		Builds the scope and completion type of a function body.
+		A constructor's written Void result describes body completion. Its indexed
+		call signature describes the allocated instance and cannot supply that hint.
+	**/
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext, functionIdentity:String, ?semanticDeclaration:TyDeclarationInfo):TyFunctionEnv {
 		// Stage 3 local scope:
 		// - parameters (type hints, if any)
@@ -522,7 +559,9 @@ class TyperStage {
 		final returnExprTy = inferReturnType(semanticBody, scope, ctx);
 		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
 		final retTy = if (retHintText != null && retHintText.length > 0) {
-			final hinted = semanticDeclaration == null ? typeFromHintInContext(retHintText, ctx) : semanticDeclaration.getSignature().getReturnType();
+			final constructorBody = HxFunctionDecl.getName(fn) == "new" && !HxFunctionDecl.getIsStatic(fn);
+			final hinted = semanticDeclaration == null
+				|| constructorBody ? typeFromHintInContext(retHintText, ctx) : semanticDeclaration.getSignature().getReturnType();
 			// If we couldn't infer a concrete return type (e.g. because the parser produced an
 			// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
 			if (!returnExprTy.isUnknown()) {
@@ -586,17 +625,24 @@ class TyperStage {
 						typeStmt(ss);
 					scope.exitLexicalScope();
 				case SSwitch(scrutinee, patterns, bodies, pos):
-					// Bring-up: type-check the scrutinee, then each case body.
-					// Binder patterns declare a best-effort local for the body.
+					// Check the finite source domain before accepting any case body.
 					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos);
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
 							final pattern = patterns[i];
 							final body = bodies[i];
 							scope.enterLexicalScope();
-							declarePatternBindings(scope, pattern, scrutTy);
-							typeStmt(body);
+							try {
+								declarePatternBindings(scope, pattern, scrutTy);
+								typeStmt(body);
+							} catch (error:Dynamic) {
+								// Haxe permits any thrown value. This cleanup boundary neither
+								// inspects nor converts it; callers receive the same failure.
+								scope.exitLexicalScope();
+								throw error;
+							}
 							scope.exitLexicalScope();
 						}
 					}
@@ -628,7 +674,7 @@ class TyperStage {
 					for (c in catches) {
 						scope.enterLexicalScope();
 						final writtenCatchType = StringTools.trim(c.typeHint == null ? "" : c.typeHint);
-						final catchType = writtenCatchType.length == 0 ? TyType.fromHintText("Dynamic") : typeFromHintInContext(writtenCatchType, ctx);
+						final catchType = typeFromHintInContext(writtenCatchType.length == 0 ? "haxe.Exception" : writtenCatchType, ctx);
 						scope.declareLocal(c.name, catchType, CatchVariable);
 						typeStmt(c.body);
 						scope.exitLexicalScope();
@@ -933,6 +979,10 @@ class TyperStage {
 			return actual.isUnknown() || actual.isDynamic() ? 0 : 1;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
+		// A null literal satisfies an explicitly nullable parameter without
+		// supplying evidence about the parameter's underlying type.
+		if (expected.isNullable() && actual.isNullLiteral())
+			return 0;
 		if (expected.isNullable() || actual.isNullable())
 			return overloadArgScore(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, semanticIndex);
 		if (expected.isFunction() || actual.isFunction()) {
@@ -971,7 +1021,7 @@ class TyperStage {
 			return score;
 		}
 		final implicitConversion = TyImplicitConversionPlan.select(semanticIndex, expected, actual);
-		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractTo(semanticIndex))
+		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractConversion(semanticIndex))
 			return implicitConversion.getScore();
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
@@ -983,8 +1033,13 @@ class TyperStage {
 		if (!sig.acceptsArity(suppliedArity))
 			return -1;
 		final expected = sig.getArgs();
+		final optional = sig.getArgOptional();
 		var score = 0;
 		for (i in 0...suppliedArity) {
+			// Explicit null selects an optional argument's default just like an
+			// omitted value. It supplies no type evidence for overload ranking.
+			if (i < optional.length && optional[i] && i < argTypes.length && argTypes[i].isNullLiteral())
+				continue;
 			final argScore = overloadArgScore(i < expected.length ? expected[i] : TyType.fromHintText("Dynamic"),
 				i < argTypes.length ? argTypes[i] : TyType.unknown(), methodTypeParameters, semanticIndex);
 			if (argScore < 0)
@@ -1005,10 +1060,10 @@ class TyperStage {
 	/**
 		Select representation-safe conversions for explicit call arguments.
 
-		A declared `to` conversion proves that the call is legal. This helper emits a
-		plain typed cast only when the abstract's storage type is also the exact
-		parameter type. Custom conversion methods need a separate typed call model and
-		must not be mistaken for storage projection here.
+		A declared input or output conversion proves that the call is legal. This
+		helper emits a typed cast only when the selected conversion preserves the
+		stored value. Custom conversion methods need a separate typed call model
+		and must not be mistaken for storage casts here.
 	**/
 	static function callArgumentConversions(declaration:Null<TyDeclarationInfo>, extensionProvider:Null<TyNominalTypeId>, arguments:Array<HxExpr>,
 			scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Array<Null<TyImplicitConversionPlan>> {
@@ -1029,7 +1084,7 @@ class TyperStage {
 			final actualType = inferExprType(arguments[argumentIndex], scope, ctx, pos);
 			final expectedType = expectedTypes[parameterIndex];
 			final conversion = TyImplicitConversionPlan.select(ctx.getIndex(), expectedType, actualType);
-			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractTo(ctx.getIndex());
+			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractConversion(ctx.getIndex());
 			conversions.push(representationSafe ? conversion : null);
 			if (representationSafe)
 				found = true;
@@ -1183,7 +1238,8 @@ class TyperStage {
 			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
-						final staticOwner = isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
+						final staticOwner = scope.resolveSymbol(typeOrValue) == null
+							&& isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
 						if (staticOwner != null) return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
 					case EThis:
 						final owner = ctx.currentClass();
@@ -1193,7 +1249,7 @@ class TyperStage {
 						if (dotted.length > 0) {
 							final parts = dotted.split(".");
 							final last = parts.length == 0 ? "" : parts[parts.length - 1];
-							if (isUpperStartName(last)) {
+							if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 								final staticOwner = ctx.resolveType(dotted);
 								if (staticOwner != null)
 									return resolveCallDeclarationCandidate(staticOwner, field, true, args, scope, ctx, pos);
@@ -1266,12 +1322,12 @@ class TyperStage {
 		if (structure == null)
 			return null;
 
-		final handlers = new Array<HxExpr>();
+		final handlers = new Array<{name:String, typeHint:String, body:HxExpr}>();
 		for (entry in structure.catches)
 			switch (entry) {
-				case EArrayDecl([EString(_), EString(_), ELambda(handlerArguments, handlerBody)]) if (handlerArguments.length == 1):
-					final handler:HxExpr = ELambda(handlerArguments, handlerBody);
-					handlers.push(handler);
+				case EArrayDecl([EString(name), EString(typeHint), ELambda(handlerArguments, handlerBody)])
+					if (handlerArguments.length == 1 && handlerArguments[0] == name):
+					handlers.push({name: name, typeHint: typeHint, body: handlerBody});
 				case _:
 					return null;
 			}
@@ -1281,10 +1337,13 @@ class TyperStage {
 		if (result == null)
 			result = TyType.unknown();
 		for (handler in handlers) {
-			final handlerType = inferExprType(handler, scope, ctx, pos);
-			final catchResult = handlerType.getFunctionReturn();
-			if (catchResult == null)
-				continue;
+			// The parser uses a lambda to carry the handler body, but its parameter
+			// is a catch declaration with a source-owned type, not an untyped lambda argument.
+			scope.enterLexicalScope();
+			final hint = StringTools.trim(handler.typeHint);
+			scope.declareLocal(handler.name, typeFromHintInContext(hint.length == 0 ? "haxe.Exception" : hint, ctx), CatchVariable);
+			final catchResult = inferExprType(handler.body, scope, ctx, pos);
+			scope.exitLexicalScope();
 			if (!result.isUnknown() && !result.isDynamic() && catchResult.isDynamic())
 				continue;
 			final unified = TyType.unify(result, catchResult);
@@ -1322,7 +1381,7 @@ class TyperStage {
 		return candidates.length == 1 ? functionReferenceType(candidates[0]) : null;
 	}
 
-	/** Resolve a bare field in the current class before treating an uppercase name as a type. **/
+	/** Return the current class field selected by ordinary value lookup. **/
 	static function currentFieldReferenceType(name:String, ctx:TyperContext):Null<TyType> {
 		final current = ctx.currentClass();
 		return current == null ? null : current.fieldType(name);
@@ -1337,7 +1396,7 @@ class TyperStage {
 	**/
 	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyFieldInfo> {
 		return switch (expression) {
-			case EIdent(name):
+			case EIdent(name) | EEnumValue(name):
 				if (scope.resolveSymbol(name) != null) {
 					null;
 				} else {
@@ -1349,7 +1408,9 @@ class TyperStage {
 				final dotted = dottedFieldPath(object);
 				final dottedParts = dotted.split(".");
 				final dottedLast = dottedParts.length == 0 ? "" : dottedParts[dottedParts.length - 1];
-				final staticOwner = dotted.length == 0 || !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
+				final staticOwner = dotted.length == 0
+					|| scope.resolveSymbol(dottedParts[0]) != null
+					|| !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
 				if (staticOwner != null) {
 					final selected = staticOwner.fieldInfo(field);
 					selected != null
@@ -1369,6 +1430,9 @@ class TyperStage {
 	}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		final runtimeTarget = TypedRuntimeTypeResolver.resolve(expr, scope, ctx, ValueExpression);
+		if (runtimeTarget != null)
+			return runtimeTarget.getValueType();
 		return switch (expr) {
 			case ENull:
 				TyType.fromHintText("Null");
@@ -1380,16 +1444,12 @@ class TyperStage {
 				TyType.fromHintText("Int");
 			case EFloat(_):
 				TyType.fromHintText("Float");
-			case EEnumValue(_):
-				// Bring-up: model enum-like tags as strings so switch dispatch can work
-				// without a real enum/abstract runtime.
-				TyType.fromHintText("String");
 			case EThis:
 				currentThisType(ctx);
 			case ESuper:
 				// Stage 3: `super` typing requires class hierarchy (future stage).
 				TyType.unknown();
-			case EIdent(name):
+			case EIdent(name) | EEnumValue(name):
 				final sym = scope.resolveSymbol(name);
 				if (sym != null) {
 					sym.getType();
@@ -1397,9 +1457,6 @@ class TyperStage {
 					final fieldType = currentFieldReferenceType(name, ctx);
 					final importedField = fieldType == null ? ctx.importedStaticField(name) : null;
 					final currentMethod = fieldType == null && importedField == null ? currentStaticMethodReferenceType(name, ctx) : null;
-					// Only upper-start simple identifiers can be unqualified Haxe type names in this
-					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
-					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
 					final methodRef = currentMethod == null
 						&& fieldType == null
 						&& importedField == null ? importedStaticMethodReferenceType(name, ctx) : currentMethod;
@@ -1410,8 +1467,12 @@ class TyperStage {
 					} else if (methodRef != null) {
 						methodRef;
 					} else {
-						final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
-						t != null ? TyType.nominal(t.getIdentity(), [], t.getFullName()) : TyType.unknown();
+						// Runtime class values were resolved above. Preserve the existing enum
+						// constructor path until its separate typed-enum owner replaces it.
+						switch (expr) {
+							case EEnumValue(_): TyType.fromHintText("String");
+							case _: TyType.unknown();
+						}
 					}
 				}
 			case EField(obj, _field):
@@ -1454,7 +1515,7 @@ class TyperStage {
 				if (dotted.length > 0) {
 					final parts = dotted.split(".");
 					final last = parts.length == 0 ? "" : parts[parts.length - 1];
-					if (isUpperStartName(last)) {
+					if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 						final c = ctx.resolveType(dotted);
 						if (c != null) {
 							final memberType = declaredMemberReadType(c, _field, true);
@@ -1626,7 +1687,8 @@ class TyperStage {
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
 							case EIdent(typeName):
-								final c = isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
+								final c = scope.resolveSymbol(typeName) == null
+									&& isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
 									resolveMethodCall(c, field, true, args, scope, ctx, pos).type;
 								} else {
@@ -1670,7 +1732,7 @@ class TyperStage {
 								if (dotted.length > 0) {
 									final parts = dotted.split(".");
 									final last = parts.length == 0 ? "" : parts[parts.length - 1];
-									if (isUpperStartName(last)) {
+									if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 										final c = ctx.resolveType(dotted);
 										if (c != null) {
 											return resolveMethodCall(c, field, true, args, scope, ctx, pos).type;
@@ -1771,6 +1833,7 @@ class TyperStage {
 				// Bring-up: type the scrutinee and unify case-expression types best-effort.
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos);
 				var out:TyType = TyType.unknown();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
@@ -1779,8 +1842,14 @@ class TyperStage {
 						final branchExpr = exprs[i];
 						var branchTy:TyType = TyType.unknown();
 						scope.enterLexicalScope();
-						declarePatternBindings(scope, pattern, scrutTy);
-						branchTy = inferExprType(branchExpr, scope, ctx, pos);
+						try {
+							declarePatternBindings(scope, pattern, scrutTy);
+							branchTy = inferExprType(branchExpr, scope, ctx, pos);
+						} catch (error:Dynamic) {
+							// Opaque rethrow is required to restore scope for every Haxe failure.
+							scope.exitLexicalScope();
+							throw error;
+						}
 						scope.exitLexicalScope();
 
 						if (out.isUnknown())
@@ -1840,6 +1909,11 @@ class TyperStage {
 				}
 			case EBinop(op, a, b):
 				switch (op) {
+					case "is":
+						inferExprType(a, scope, ctx, pos);
+						if (TypedRuntimeTypeResolver.resolve(b, scope, ctx, TypeOperand) == null)
+							throw new TyperError(ctx.getFilePath(), pos, "runtime type test requires a resolved target");
+						TyType.fromHintText("Bool");
 					case "??":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
