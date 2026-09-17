@@ -546,6 +546,22 @@ class TypedBodyBuilder {
 		return TySwitchPatternBindings.declare(environment, pattern, baseType);
 	}
 
+	/** Seal lambda bindings with their selected parameter types before typing captured reads. */
+	static function buildLambda(arguments:Array<String>, body:HxExpr, parameterTypes:Array<TyType>, position:Null<HxPos>, diagnosticPosition:HxPos,
+			environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
+		final bindings = new Array<TyLocalBinding>();
+		if (environment != null) {
+			environment.enterLexicalScope();
+			for (index in 0...arguments.length)
+				bindings.push(environment.declareLocal(arguments[index], parameterTypes[index], LambdaParameter).toBinding());
+		}
+		final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		if (environment != null)
+			environment.exitLexicalScope();
+		return TypedExpr.lambda(arguments.copy(), typedBody, TyType.functionType(parameterTypes, typedBody.getType()), position, bindings);
+	}
+
 	/**
 		Build one typed expression while replaying the local declarations recorded by
 		the typer.
@@ -553,8 +569,9 @@ class TypedBodyBuilder {
 		Child expressions must be built in the same explicit order used by
 		`TyperStage`. Building two children as arguments to one constructor is unsafe:
 		Haxe targets may evaluate those arguments in different orders, which can make
-		a native compiler consume an inner lambda's local identity before the outer
-		lambda identity that typing recorded first.
+		a native compiler consume local identities in a different order from typing.
+		An immediately called lambda types its arguments before declaring parameters;
+		this also keeps a shadowing parameter out of its own argument expressions.
 	**/
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
@@ -596,6 +613,14 @@ class TypedBodyBuilder {
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field,
 					nodeType, position);
 			case ECall(callee, arguments):
+				switch (callee) {
+					case ELambda(names, body) if (names.length == arguments.length):
+						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+						final typedLambda = buildLambda(names, body, [for (argument in typedArguments) argument.getType()], null, diagnosticPosition,
+							environment, typeResolver, callResolver, fieldResolver);
+						return TypedExpr.call(typedLambda, typedArguments, null, typedLambda.getType().getFunctionReturn(), position);
+					case _:
+				}
 				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
 				if (loweredProbe != null) {
 					loweredProbe;
@@ -651,16 +676,8 @@ class TypedBodyBuilder {
 			case EMacroType(typeText):
 				TypedExpr.macroType(typeText, nodeType, position);
 			case ELambda(arguments, body):
-				final argumentBindings = new Array<TyLocalBinding>();
-				if (environment != null) {
-					environment.enterLexicalScope();
-					for (argument in arguments)
-						argumentBindings.push(environment.declareLocal(argument, TyType.fromHintText("Dynamic"), LambdaParameter).toBinding());
-				}
-				final typedLambdaBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				if (environment != null)
-					environment.exitLexicalScope();
-				TypedExpr.lambda(arguments == null ? [] : arguments.copy(), typedLambdaBody, nodeType, position, argumentBindings);
+				buildLambda(arguments, body, [for (_ in arguments) TyType.fromHintText("Dynamic")], position, diagnosticPosition, environment, typeResolver,
+					callResolver, fieldResolver);
 			case ETryCatchRaw(raw):
 				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				if (block != null) {
@@ -738,8 +755,13 @@ class TypedBodyBuilder {
 				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				TypedExpr.range(typedStart, typedEnd, nodeType, position);
 			case ECast(inner, typeHint):
-				TypedExpr.castValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), typeHint, nodeType,
-					position);
+				final typedInner = switch (inner) {
+					case ELambda(names, body) if (nodeType.isFunction() && nodeType.getFunctionArguments().length == names.length):
+						buildLambda(names, body, nodeType.getFunctionArguments(), null, diagnosticPosition, environment, typeResolver, callResolver,
+							fieldResolver);
+					case _: buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				};
+				TypedExpr.castValue(typedInner, typeHint, nodeType, position);
 			case EUntyped(inner):
 				TypedExpr.untypedValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EUnsupported(raw):

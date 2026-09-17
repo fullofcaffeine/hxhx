@@ -666,7 +666,8 @@ class M14HihExprTextParserIntegrationTest {
 		switch (typedLocalFunctionBlockStmts[0]) {
 			case SReturn(ETryCatchRaw(raw), _):
 				fail("typed local function block expression should not stay opaque: " + raw);
-			case SReturn(ECall(ELambda(_, _), _), _):
+			case SReturn(ECall(ECast(ELambda(["helper"], _), signature), _), _):
+				assertTrue(signature == "(()->String)->Dynamic", "local function continuation lost its written callable type");
 			case other:
 				fail("expected typed local function block expression to lower through lambda continuations, got " + Type.enumConstructor(other));
 		}

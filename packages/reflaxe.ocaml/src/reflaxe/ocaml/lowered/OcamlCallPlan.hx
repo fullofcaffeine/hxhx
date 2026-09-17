@@ -2019,16 +2019,25 @@ class OcamlCallPlanner {
 		representation planning cannot make that call newly admissible. The one
 		current dependent shape—an ordinary instance call through a local nominal
 		receiver—is always evaluated again.
+
+		Only calls and constructors can have decisions. Restrict preliminary-map
+		lookups to those shapes: querying every non-call node in a large body can
+		cost more than computing the calls. Child traversal still visits every
+		expression, including calls inside blocks, arguments, and nested functions.
 	**/
 	public function plan(expression:TypedExpr, ?preliminary:OcamlCallPlanner):OcamlCallPlan {
 		if (preliminary != null)
 			requireReusablePreliminaryPlanner(preliminary);
 		final decisions:Array<OcamlCallDecision> = [];
 		function visit(current:TypedExpr):Void {
-			final reuse = preliminary == null ? null : preliminary.reusablePreliminaryDecisionFor(current);
-			final decision = reuse == null ? decisionFor(current) : reuse.decision;
-			if (decision != null)
-				decisions.push(decision);
+			switch (current.expr) {
+				case TCall(_, _), TNew(_, _, _):
+					final reuse = preliminary == null ? null : preliminary.reusablePreliminaryDecisionFor(current);
+					final decision = reuse == null ? decisionFor(current) : reuse.decision;
+					if (decision != null)
+						decisions.push(decision);
+				case _:
+			}
 			TypedExprTools.iter(current, visit);
 		}
 		visit(expression);

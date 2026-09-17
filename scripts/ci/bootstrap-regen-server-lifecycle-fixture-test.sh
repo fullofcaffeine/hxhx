@@ -46,7 +46,14 @@ if [ "${1:-}" = "--wait" ]; then
 	trap stop_server TERM INT
 	case "${FAKE_SERVER_MODE:-idle}" in
 		busy)
-			node -e 'const retained = Buffer.alloc(64 * 1024 * 1024, 1); while (true) retained[0] ^= 1' &
+			# Keep the allocation active across its full extent. Touching only
+			# its first byte lets the host reclaim the other resident pages.
+			node -e '
+const retained = Buffer.alloc(64 * 1024 * 1024, 1)
+while (true) {
+  for (let offset = 0; offset < retained.length; offset += 4096) retained[offset] ^= 1
+}
+' &
 			;;
 		idle)
 			tail -f /dev/null &
@@ -205,10 +212,15 @@ const fs = require("fs")
 const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
 const trace = fs.readFileSync(process.argv[2], "utf8").trim().split("\n").map(JSON.parse)
 const observed = report.stage0_observability
-if (observed.connected_server_observed !== true) process.exit(1)
-if (observed.last_progress_reason !== "cpu-time") process.exit(1)
-if (observed.heartbeat_peak_tree_rss_mb < 32) process.exit(1)
-if (!trace.some(sample => sample.owned_server_pids.length > 0)) process.exit(1)
+const failures = []
+if (observed.connected_server_observed !== true) failures.push("owned server was not observed")
+if (observed.last_progress_reason !== "cpu-time") failures.push("CPU progress was not observed")
+if (observed.heartbeat_peak_tree_rss_mb < 32) failures.push("resident memory stayed below 32 MB")
+if (!trace.some(sample => sample.owned_server_pids.length > 0)) failures.push("trace omitted owned server PIDs")
+if (failures.length > 0) {
+  console.error(JSON.stringify({ failures, observed, trace }, null, 2))
+  process.exit(1)
+}
 ' "$busy_report" "$TMP_DIR/busy.trace.jsonl" \
 	|| fail "busy owned server was absent from watchdog progress or memory telemetry"
 

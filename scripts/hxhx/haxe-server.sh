@@ -298,11 +298,24 @@ start_server() {
 	fi
 
 	echo "haxe-server: starting port=$port haxe_bin=$requested_identity" >&2
+	# A signal can arrive as soon as the child starts, before its PID is saved.
+	# Remember it across this short registration window so EXIT cleanup can use
+	# the same recorded ownership as an interruption during the readiness wait.
+	local startup_signal=0
+	trap 'startup_signal=129' HUP
+	trap 'startup_signal=130' INT
+	trap 'startup_signal=143' TERM
 	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 &
 	local pid="$!"
 	printf '%s\n' "$pid" >"$PID_FILE"
 	printf '%s\n' "$requested_identity" >"$BIN_FILE"
 	START_IN_PROGRESS=1
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	if [ "$startup_signal" -ne 0 ]; then
+		exit "$startup_signal"
+	fi
 	record_server_processes "$pid"
 
 	if ! wait_for_server_ready "$port"; then

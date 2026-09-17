@@ -27,7 +27,7 @@ const expected = [
 ]
 const stringResults = report.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-exact-string-declaration')
-if (report.schemaVersion !== 86 || stringResults.length !== expected.length) {
+if (report.schemaVersion !== 88 || stringResults.length !== expected.length) {
 	throw new Error(`expected ${expected.length} declaration-only instance String results, got ${stringResults.length}`)
 }
 
@@ -115,7 +115,7 @@ const stringResults = report.lowering.functionResultBoundaries.filter(boundary =
 	boundary.source === 'non-generic-instance-exact-string-declaration')
 const voidResults = report.lowering.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-effect-only-void-declaration')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| stringResults.length !== 3
 	|| voidResults.length !== 3
@@ -137,6 +137,7 @@ for mutation in int-source carrier callable-owner; do
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -162,7 +163,7 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
@@ -185,6 +186,7 @@ for mutation in wrong-source value-carrier callable-owner; do
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -216,7 +218,7 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/void-$mutation.log"

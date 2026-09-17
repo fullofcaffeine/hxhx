@@ -124,7 +124,7 @@ class OcamlFunctionPlanSealer {
 				case OcamlControlTransferKind.Throw:
 					context.recordThrowRuntimeRequirement(decision);
 					final payload = decision.payload;
-					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+					if (payload != null && OcamlControlPlan.requiresEnumThrowRuntime(payload))
 						context.recordEnumThrowRuntimeRequirement(decision);
 				case Break, Continue:
 			}
@@ -268,13 +268,13 @@ class OcamlFunctionPlanSealer {
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
-		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
-			arrayLiteralProducers).plan(data.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromDeclaration(data, binding));
+		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities, arrayLiteralProducers,
+			localStorage).plan(data.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromDeclaration(data, binding));
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
 		telemetryCheckpoint("structures_and_control");
-		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
+		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations, localStorage);
 		telemetryCheckpoint("nested");
 
 		final moduleId = data.classType.module;
@@ -324,7 +324,7 @@ class OcamlFunctionPlanSealer {
 				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
 		}
 		for (conversion in containerElements.decisions())
-			context.recordEnumDynamicContainerRuntimeRequirement(conversion);
+			context.recordContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
 			final runtimeUsePlan = calls.runtimeUsePlanFor(call.id);
@@ -382,7 +382,7 @@ class OcamlFunctionPlanSealer {
 		nested function cannot reintroduce the removed catch compiler.
 	**/
 	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan,
-			localRepresentations:OcamlLocalRepresentationPlan):Void {
+			localRepresentations:OcamlLocalRepresentationPlan, localStorage:OcamlLocalStoragePlan):Void {
 		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
 			switch (expression.expr) {
 				case TFunction(tfunc):
@@ -501,9 +501,8 @@ class OcamlFunctionPlanSealer {
 					}
 					arrayLiteralProducers.requirePlanBinding(nestedBinding);
 					arrayLiteralProducers.requireRepresentations(representations);
-					final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
-						arrayLiteralProducers).plan(tfunc.expr, functionResultBoundary,
-							OcamlTypedFunctionResultBoundary.fromNestedFunction(tfunc, nestedBinding));
+					final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities, arrayLiteralProducers,
+						localStorage).plan(tfunc.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromNestedFunction(tfunc, nestedBinding));
 					requireCompleteCatchCoverage(controls, expression.pos);
 					validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
 					recordControlRuntimeRequirements(controls);
@@ -614,9 +613,11 @@ class OcamlFunctionPlanSealer {
 			}
 			if (OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload))
 				continue;
-			if (OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+			if (OcamlControlPlan.isAdmittedEnumThrowFamily(payload))
 				continue;
 			if (OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload))
+				continue;
+			if (control.kind == Throw && OcamlControlPlan.isAdmittedOpaqueAnonymousThrowPayload(payload))
 				continue;
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);

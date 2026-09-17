@@ -10,6 +10,7 @@ import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.macros.StrictModeSourceAnnotation.hasExplicitDynamicLocal;
+import reflaxe.ocaml.macros.OcamlNativeSurfaceQuery.NativeSurfaceCapture;
 
 private typedef StrictModeSnapshot = {
 	final mode:String;
@@ -139,6 +140,14 @@ class StrictModeEnforcer {
 		performancePortableNativeSurfaceChecks = 0;
 		performanceAtomicSemanticsChecks = 0;
 
+		var capturedDeclarations:Null<NativeSurfaceCapture> = null;
+		// Inventory reads belong to the first native query, after its strict checks.
+		// An inactive policy or earlier strict error must not trigger this prepass.
+		function getCapturedDeclarations():NativeSurfaceCapture {
+			if (capturedDeclarations == null)
+				capturedDeclarations = OcamlNativeSurfaceQuery.captureDeclarations(types);
+			return capturedDeclarations;
+		}
 		final reported:Map<String, Bool> = [];
 		final violationIds:Map<String, Bool> = [];
 		for (moduleType in types) {
@@ -156,8 +165,10 @@ class StrictModeEnforcer {
 						final expr = field.expr();
 						if (expr == null)
 							continue;
+						// The decoded body owns this cache; the next field read gets a fresh scan.
+						final nativeScan = new OcamlNativeSurfaceScan(getCapturedDeclarations, !strictForModule);
 						scanExpr(expr, strictForModule, strictHardError, buildContext.portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled,
-							reported, violationIds);
+							reported, violationIds, nativeScan);
 					}
 				case _:
 			}
@@ -181,7 +192,7 @@ class StrictModeEnforcer {
 	}
 
 	static function scanExpr(expr:TypedExpr, strictForModule:Bool, strictHardError:Bool, portableNativeSurfacePolicy:OcamlPortableNativeSurfacePolicy,
-			atomicEmulationDiagnosticsEnabled:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
+			atomicEmulationDiagnosticsEnabled:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>, nativeScan:OcamlNativeSurfaceScan):Void {
 		if (performanceLogLine != null) {
 			performanceExpressionVisits++;
 			if (strictForModule)
@@ -191,9 +202,12 @@ class StrictModeEnforcer {
 			if (atomicEmulationDiagnosticsEnabled)
 				performanceAtomicSemanticsChecks++;
 			if (performanceExpressionVisits % PERFORMANCE_PROGRESS_INTERVAL == 0) {
+				// Logging is caller-supplied code, so no class result may survive its callback.
+				nativeScan.invalidate();
 				performanceLogLine("reflaxe.ocaml: strict_mode_progress visits=" + Std.string(performanceExpressionVisits) + " strict_checks="
 					+ Std.string(performanceStrictChecks) + " portable_native_surface_checks=" + Std.string(performancePortableNativeSurfaceChecks)
-					+ " atomic_semantics_checks=" + Std.string(performanceAtomicSemanticsChecks));
+					+ " atomic_semantics_checks=" + Std.string(performanceAtomicSemanticsChecks) + " body_class_hits=" + Std.string(nativeScan.classHits)
+					+ " body_class_queries=" + Std.string(nativeScan.classQueries));
 			}
 		}
 		if (strictForModule)
@@ -203,13 +217,14 @@ class StrictModeEnforcer {
 			requestedNativeSurfaces |= NATIVE_SURFACE_OCAML;
 		if (atomicEmulationDiagnosticsEnabled)
 			requestedNativeSurfaces |= NATIVE_SURFACE_HAXE_ATOMIC;
-		final nativeSurfaces = requestedNativeSurfaces == 0 ? 0 : expressionNativeSurfaceMask(expr, requestedNativeSurfaces);
+		final nativeSurfaces = requestedNativeSurfaces == 0 ? 0 : nativeScan.find(expr, requestedNativeSurfaces);
 		if ((nativeSurfaces & NATIVE_SURFACE_OCAML) != 0)
 			scanExprPortableNativeSurface(expr, portableNativeSurfacePolicy, reported, violationIds);
 		if ((nativeSurfaces & NATIVE_SURFACE_HAXE_ATOMIC) != 0)
 			scanExprAtomicSemantics(expr, reported, violationIds);
 		TypedExprTools.iter(expr,
-			e -> scanExpr(e, strictForModule, strictHardError, portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled, reported, violationIds));
+			e -> scanExpr(e, strictForModule, strictHardError, portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled, reported, violationIds,
+				nativeScan));
 	}
 
 	static function scanExprStrict(expr:TypedExpr, strictHardError:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
@@ -264,116 +279,6 @@ class StrictModeEnforcer {
 		emitAtomicSemanticsDiagnostic("portable_atomic_emulated",
 			"portable profile uses emulated `haxe.atomic.*` semantics (single-thread API parity only; not hardware/thread-level atomicity).", expr.pos,
 			reported, violationIds);
-	}
-
-	/**
-		Finds the requested target-native type families for one expression.
-
-		The returned bit mask lets portable-surface and atomic policy share one recursive type walk.
-		Additional expression-owned types are checked only for families that the expression result type
-		did not already prove.
-	**/
-	static function expressionNativeSurfaceMask(expr:TypedExpr, requestedMask:Int):Int {
-		var found = typeNativeSurfaceMask(expr.t, 16, requestedMask);
-		var remaining = requestedMask & ~found;
-		if (remaining == 0)
-			return found;
-		found |= switch (expr.expr) {
-			case TTypeExpr(moduleType):
-				moduleTypeNativeSurfaceMask(moduleType) & remaining;
-			case TVar(variable, _):
-				typeNativeSurfaceMask(variable.t, 16, remaining);
-			case TFunction(fn):
-				var argumentSurfaces = 0;
-				for (arg in fn.args) {
-					argumentSurfaces |= typeNativeSurfaceMask(arg.v.t, 16, remaining & ~argumentSurfaces);
-					if (argumentSurfaces == remaining)
-						break;
-				}
-				argumentSurfaces;
-			case _:
-				0;
-		}
-		return found;
-	}
-
-	static function moduleTypeNativeSurfaceMask(moduleType:ModuleType):Int {
-		return switch (moduleType) {
-			case TClassDecl(classRef): packageNativeSurfaceMask(classRef.get().pack);
-			case TEnumDecl(enumRef): packageNativeSurfaceMask(enumRef.get().pack);
-			case TTypeDecl(typeRef): packageNativeSurfaceMask(typeRef.get().pack);
-			case TAbstract(abstractRef): packageNativeSurfaceMask(abstractRef.get().pack);
-		}
-	}
-
-	static function packageNativeSurfaceMask(pack:Array<String>):Int {
-		var found = 0;
-		if (pack.length > 0 && pack[0] == "ocaml")
-			found |= NATIVE_SURFACE_OCAML;
-		if (pack.length > 1 && pack[0] == "haxe" && pack[1] == "atomic")
-			found |= NATIVE_SURFACE_HAXE_ATOMIC;
-		return found;
-	}
-
-	/**
-		Finds requested target-native families in a Haxe macro type without changing or resolving it.
-
-		The depth limit preserves the previous fail-safe boundary for recursive aliases. Once every
-		requested family is found, later branches are skipped because they cannot change policy output.
-	**/
-	static function typeNativeSurfaceMask(type:Type, maxDepth:Int, requestedMask:Int):Int {
-		if (maxDepth <= 0 || requestedMask == 0)
-			return 0;
-		return switch (type) {
-			case TInst(classRef, params):
-				final own = packageNativeSurfaceMask(classRef.get().pack) & requestedMask;
-				own | typeParamsNativeSurfaceMask(params, maxDepth - 1, requestedMask & ~own);
-			case TEnum(enumRef, params):
-				final own = packageNativeSurfaceMask(enumRef.get().pack) & requestedMask;
-				own | typeParamsNativeSurfaceMask(params, maxDepth - 1, requestedMask & ~own);
-			case TType(typeRef, params):
-				final typeDef = typeRef.get();
-				var found = packageNativeSurfaceMask(typeDef.pack) & requestedMask;
-				found |= typeParamsNativeSurfaceMask(params, maxDepth - 1, requestedMask & ~found);
-				found | typeNativeSurfaceMask(typeDef.type, maxDepth - 1, requestedMask & ~found);
-			case TAbstract(abstractRef, params):
-				final abstractDef = abstractRef.get();
-				var found = packageNativeSurfaceMask(abstractDef.pack) & requestedMask;
-				found |= typeParamsNativeSurfaceMask(params, maxDepth - 1, requestedMask & ~found);
-				found | typeNativeSurfaceMask(abstractDef.type, maxDepth - 1, requestedMask & ~found);
-			case TFun(args, ret):
-				var found = 0;
-				for (arg in args) {
-					found |= typeNativeSurfaceMask(arg.t, maxDepth - 1, requestedMask & ~found);
-					if (found == requestedMask)
-						break;
-				}
-				found | typeNativeSurfaceMask(ret, maxDepth - 1, requestedMask & ~found);
-			case TAnonymous(anonRef):
-				var found = 0;
-				for (field in anonRef.get().fields) {
-					found |= typeNativeSurfaceMask(field.type, maxDepth - 1, requestedMask & ~found);
-					if (found == requestedMask)
-						break;
-				}
-				found;
-			case TDynamic(inner): inner == null ? 0 : typeNativeSurfaceMask(inner, maxDepth - 1, requestedMask);
-			case TLazy(thunk):
-				typeNativeSurfaceMask(thunk(), maxDepth - 1, requestedMask);
-			case TMono(ref):
-				final resolved = ref.get();
-				resolved == null ? 0 : typeNativeSurfaceMask(resolved, maxDepth - 1, requestedMask);
-		}
-	}
-
-	static function typeParamsNativeSurfaceMask(params:Array<Type>, maxDepth:Int, requestedMask:Int):Int {
-		var found = 0;
-		for (param in params) {
-			found |= typeNativeSurfaceMask(param, maxDepth, requestedMask & ~found);
-			if (found == requestedMask)
-				break;
-		}
-		return found;
 	}
 
 	static function isOcamlInjectionCall(callTarget:TypedExpr):Bool {

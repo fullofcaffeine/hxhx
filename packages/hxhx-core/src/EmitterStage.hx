@@ -873,19 +873,16 @@ class EmitterStage {
 	}
 
 	/**
-		Read a value from a map-like object (`Map` or lowered `Obj.t`) at emission boundaries.
+		Read an emission-context map through its typed API, preserving missing keys as null.
 
-		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
+		Native OCaml maps are hash tables, so reflecting on a `get` object field loses
+		valid import and local-type bindings. The map type must survive this helper boundary.
+		Inlining keeps each caller's concrete value type in generated OCaml.
 	**/
-	static function mapGetRaw<TMap, TValue>(mapLike:Null<TMap>, key:String):Null<TValue> {
+	static inline function mapGetRaw<TValue>(mapLike:Null<Map<String, TValue>>, key:String):Null<TValue> {
 		if (mapLike == null || key == null)
 			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final getFn = Reflect.field(mapLikeObj, "get");
-		if (getFn == null)
-			return null;
-		final value = Reflect.callMethod(mapLikeObj, getFn, [key]);
-		return value == null ? null : cast value;
+		return mapLike.get(key);
 	}
 
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
@@ -1001,6 +998,10 @@ class EmitterStage {
 			return switch (cond) {
 				case EBool(v):
 					v ? "true" : "false";
+				case EIdent(name) if (tyForIdent(name) == "Bool"):
+					// A checked Boolean local must select the string branch at runtime.
+					// Use ordinary reads so mutable locals retain their reference access.
+					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					final checked = stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + s + ")" : s;
@@ -2927,16 +2928,18 @@ class EmitterStage {
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
-			if (exactCall.receiver.match(EThis) && ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
+			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
 				for (partIndex in 1...ownerParts.length)
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
-				return exprToOcaml(ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments)), arityByIdentRaw,
-					tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				// Keep the typed owner and explicit receiver together through call
+				// planning. Rebuilding receiver.method would rediscover it by name.
+				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+			} else {
+				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			}
-			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
-				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		}
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
@@ -3688,10 +3691,10 @@ class EmitterStage {
 					}
 
 					var fullArgs = args.copy();
-					final sourceAlreadyCarriesThis = fullArgs.length > 0 && switch (fullArgs[0]) {
+					final sourceAlreadyCarriesThis = exactCall != null || (fullArgs.length > 0 && switch (fullArgs[0]) {
 						case EThis: true;
 						case _: false;
-					};
+					});
 					final needsRecoveredQualifiedReceiver = sig != null && sig.needsReceiver && !receiverPreApplied && !sourceAlreadyCarriesThis
 						&& fullArgs.length < sig.required && switch (callee) {
 							case EField(obj, _) if (isTypePathExpr(obj)):
@@ -5041,12 +5044,12 @@ class EmitterStage {
 			if (hinted != null)
 				return hinted;
 			var key = name;
-			if (mapGetRaw(cast tyByIdent, key) == null) {
+			if (mapGetRaw(tyByIdent, key) == null) {
 				final lowered = ocamlValueIdent(name);
-				if (lowered != name && mapGetRaw(cast tyByIdent, lowered) != null)
+				if (lowered != name && mapGetRaw(tyByIdent, lowered) != null)
 					key = lowered;
 			}
-			final resolved = mapGetRaw(cast tyByIdent, key);
+			final resolved = mapGetRaw(tyByIdent, key);
 			if (resolved == null)
 				return TyType.unknown();
 			final typed:TyType = cast resolved;
@@ -5332,7 +5335,7 @@ class EmitterStage {
 		}
 
 		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
-			final resolved = mapGetRaw(cast value, name);
+			final resolved = mapGetRaw(value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
@@ -7294,25 +7297,9 @@ class EmitterStage {
 		}
 
 		function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
-			// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
-			// upstream-style harness code (RunCi, macro host, etc).
-			//
-			// However, the Haxe standard library contains many constructs we do not model yet
-			// (regex literals, abstracts, complex typing), and attempting to emit full bodies
-			// for `std/` quickly explodes the surface area.
-			//
-			// Pragmatic rule:
-			// - When `emitFullBodies=true`, still skip full-body emission for modules under `std/`.
-			function allowFullBodiesForFile(filePath:String, isRoot:Bool):Bool {
-				if (isRoot)
-					return true;
-				if (filePath == null || filePath.length == 0)
-					return false;
-				final p = filePath;
-				final isStd = p.indexOf("/std/") != -1 || p.indexOf("\\std\\") != -1;
-				return !isStd;
-			}
-			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
+			// The caller selects full-body emission for the whole program. Directory
+			// names must not discard declarations and effects needed by its returns.
+			final moduleEmitBodies = emitFullBodies;
 
 			final moduleProjection = tm.getBackendProjection();
 			final decl = moduleProjection.getDeclaration();

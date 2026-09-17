@@ -18,7 +18,7 @@ node - "$report" <<'NODE'
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-if (report.schemaVersion !== 86) {
+if (report.schemaVersion !== 88) {
 	throw new Error(`Expected lowering schema 84, received ${report.schemaVersion}`)
 }
 if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v4') {
@@ -38,7 +38,7 @@ if (JSON.stringify(domains) !== JSON.stringify([
 }
 for (const decision of report.reflectCompare) {
 	if (decision.proofId !== `ocaml-reflect-compare-intrinsic-v2:${decision.domain}`
-		|| !['ocaml-function-plans-v113', 'ocaml-standalone-expression-plans-v16'].includes(decision.pipelineRevision)) {
+		|| !['ocaml-function-plans-v114', 'ocaml-standalone-expression-plans-v16'].includes(decision.pipelineRevision)) {
 		throw new Error(`Incomplete Reflect.compare proof: ${JSON.stringify(decision)}`)
 	}
 	const stringRequirementId = `${decision.id}:runtime:haxe-reflect-compare-string-null`
@@ -91,7 +91,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| !report.summary?.valid
 	|| report.summary.reflectCompareCount !== 16
 	|| report.lowering?.reflectCompare?.length !== 16) {
@@ -104,6 +104,7 @@ NODE
 # digest. Inspection must compare both sections before it accepts the report.
 node - "$report" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
@@ -111,7 +112,7 @@ const requirement = report.runtimeRequirements.find(entry => entry.semanticCapab
 if (!requirement)
 	throw new Error('Missing String null-check requirement for corruption check')
 requirement.semanticCapability = 'haxe-reflect-compare-failure'
-report.runtimeRequirementRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.runtimeRequirements)).digest('hex')}`
+report.runtimeRequirementRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.runtimeRequirements)).digest('hex')}`
 fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 
@@ -133,11 +134,12 @@ cp "$original_report" "$report"
 # false claim before a user or another tool relies on it.
 node - "$report" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 report.reflectCompare[0].proofId = 'ocaml-reflect-compare-intrinsic-v2:invalid'
-report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.reflectCompare)).digest('hex')}`
+report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.reflectCompare)).digest('hex')}`
 fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 
@@ -160,6 +162,7 @@ cp "$original_report" "$report"
 # and require inspection to reject the contradiction against the sealed domain.
 node - "$report" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
@@ -167,7 +170,7 @@ const exceptional = report.reflectCompare.find(decision => decision.domain === '
 if (!exceptional)
 	throw new Error('Missing exceptional Reflect.compare decision for corruption check')
 exceptional.runtimeUseOccurrences[0].exactSymbol = 'HxRuntime.hx_throw_typed'
-report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.reflectCompare)).digest('hex')}`
+report.reflectCompareRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.reflectCompare)).digest('hex')}`
 fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 

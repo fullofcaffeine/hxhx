@@ -40,7 +40,11 @@ import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlLetBinding;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
+import reflaxe.ocaml.ast.OcamlModuleAssembly;
+import reflaxe.ocaml.ast.OcamlModuleAssembly.assembleModules;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -174,6 +178,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
 	final classCarrierDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
 	final classCarrierOwnerKeys:Map<String, Bool> = [];
+	final moduleChunks:OcamlModuleChunks = new OcamlModuleChunks();
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
@@ -465,6 +470,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.beginProgramRevision(revision);
 		classCarrierDeclarationsByModule.clear();
 		classCarrierOwnerKeys.clear();
+		moduleChunks.clear();
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
 		nextStandardMapCarrierOrdinal = 0;
@@ -1153,8 +1159,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 	#end
 
-	/** Emits only cells whose proven carrier may safely precede generated class types. */
-	function staticStoragePrelude(moduleId:String, emittedOwnerTypes:Map<String, Bool>):String {
+	/** Retains and observes cells whose proven carrier may precede generated class types. */
+	function staticStoragePrelude(moduleId:String, emittedOwnerTypes:Map<String, Bool>):Array<OcamlModuleItem> {
 		final items:Array<OcamlModuleItem> = [];
 		for (entry in staticStoragePlan.entriesForModule(moduleId)) {
 			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.ModulePrelude || !emittedOwnerTypes.exists(entry.ownerTypeName))
@@ -1174,33 +1180,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 			], false));
 		}
 		RuntimeUsageCollector.collectFromModuleItems(items, moduleName -> ctx.markRuntimeModule(moduleName));
-		return printFinalModule(items, "static-storage-prelude:" + moduleId);
+		ctx.finalRuntimeUses.observeModuleItems(items, "static-storage-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
+		return items;
 	}
 
 	/**
-		Checks one complete structured output chunk before OCaml text loses hidden IDs.
-
-		The printer still owns formatting only. Permission for a private runtime
-		helper comes from its lowering plan and is counted here before rendering.
-	**/
-	function printFinalModule(items:Array<OcamlModuleItem>, outputUnitId:String):String {
-		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId, ctx.activateStagedTypeRuntimeUse);
-		return printer.printModule(items);
-	}
-
-	/**
-		Prints all class record declarations for one generated OCaml module.
+		Retains and observes class record declarations for one generated OCaml module.
 
 		Class compilation records these declarations without printing them beside
 		constructors or static initializers. Module assembly can then place the types
 		before every class value without changing executable Haxe declaration order.
 	**/
-	function classCarrierPrelude(moduleId:String):String {
+	function classCarrierPrelude(moduleId:String):Array<OcamlModuleItem> {
 		final declarations = classCarrierDeclarationsByModule.get(moduleId);
 		if (declarations == null || declarations.length == 0)
-			return "";
+			return [];
 		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(declaration -> OcamlModuleItem.IType([declaration], false));
-		return printFinalModule(items, "class-carrier-prelude:" + moduleId);
+		ctx.finalRuntimeUses.observeModuleItems(items, "class-carrier-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
+		return items;
 	}
 
 	/** Records one structured class carrier for later module-level declaration. */
@@ -1286,7 +1283,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
 		final ext = options.fileOutputExtension != null ? options.fileOutputExtension : "";
 
-		final buckets:Map<String, {rep:DataAndFileInfo<String>, parts:Array<String>, ownerTypeNames:Map<String, Bool>}> = [];
+		final buckets:Map<String, {
+			rep:DataAndFileInfo<String>,
+			name:String,
+			parts:Array<OcamlModulePart>,
+			ownerTypeNames:Map<String, Bool>
+		}> = [];
 		final fileOrder:Array<String> = [];
 
 		inline function outputKey(info:DataAndFileInfo<String>):String {
@@ -1297,7 +1299,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		for (info in all) {
 			final key = outputKey(info);
 			if (!buckets.exists(key)) {
-				buckets.set(key, {rep: info, parts: [], ownerTypeNames: []});
+				buckets.set(key, {
+					rep: info,
+					name: moduleIdToOcamlModuleName(info.baseType.module),
+					parts: [],
+					ownerTypeNames: []
+				});
 				fileOrder.push(key);
 			}
 			final b = buckets.get(key);
@@ -1306,14 +1313,28 @@ class OcamlCompiler extends DirectToStringCompiler {
 					&& !b.ownerTypeNames.exists("__class_carrier_prelude__")) {
 					final prelude = classCarrierPrelude(info.baseType.module);
 					if (prelude.length > 0)
-						b.parts.push(prelude);
+						b.parts.push(ModuleDeclarations("", prelude));
 					b.ownerTypeNames.set("__class_carrier_prelude__", true);
 				}
-				b.parts.push(info.data);
+				final items = moduleChunks.itemsForOutput(info.baseType.module, info.baseType.name, info.data);
+				b.parts.push(items == null ? OpaqueModuleText(moduleChunks.render(info.baseType.module, info.baseType.name, info.data,
+					printer)) : ModuleDeclarations(info.data, items));
 				b.ownerTypeNames.set(info.baseType.name, true);
 			}
 		}
 
+		// Plan every unit before exposing the first file to the framework publisher.
+		final assembly:Array<OcamlModuleAssemblyInput> = [];
+		for (key in fileOrder) {
+			final bucket = buckets.get(key);
+			if (bucket == null)
+				throw "Missing output bucket for: " + key;
+			final staticPrelude = staticStoragePrelude(bucket.rep.baseType.module, bucket.ownerTypeNames);
+			if (staticPrelude.length > 0)
+				bucket.parts.unshift(ModuleDeclarations("", staticPrelude));
+			assembly.push({name: bucket.name, parts: bucket.parts});
+		}
+		final plannedOutput = assembleModules(assembly, printer);
 		var index = 0;
 		return {
 			hasNext: () -> index < fileOrder.length,
@@ -1322,8 +1343,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final bucket = buckets.get(key);
 				if (bucket == null)
 					throw "Missing output bucket for: " + key;
-				final staticPrelude = staticStoragePrelude(bucket.rep.baseType.module, bucket.ownerTypeNames);
-				final joined = (staticPrelude.length == 0 ? [] : [staticPrelude]).concat(bucket.parts).join("\n\n");
+				final joined = plannedOutput.get(bucket.name);
+				if (joined == null)
+					throw "Missing planned output for: " + bucket.name;
 
 				final out = if (!useLineDirectives || joined.length == 0) {
 					joined;
@@ -1795,7 +1817,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
 		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
 		for (conversion in plan.containerElements.decisions())
-			ctx.recordEnumDynamicContainerRuntimeRequirement(conversion);
+			ctx.recordContainerRuntimeRequirement(conversion);
 		for (decision in plan.anonymousStructures.operations())
 			ctx.recordAnonymousStructureRuntimeRequirement(decision);
 		for (decision in plan.structuralFields.decisions())
@@ -1852,7 +1874,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case OcamlControlTransferKind.Throw:
 					ctx.recordThrowRuntimeRequirement(decision);
 					final payload = decision.payload;
-					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+					if (payload != null && OcamlControlPlan.requiresEnumThrowRuntime(payload))
 						ctx.recordEnumThrowRuntimeRequirement(decision);
 				case Break, Continue:
 			}
@@ -2066,7 +2088,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		items.push(OcamlModuleItem.ILet([
 			{
 				name: "__reflaxe_ocaml__",
-				expr: OcamlExpr.EConst(OcamlConst.CUnit)
+				expr: OcamlExpr.EConst(OcamlConst.CUnit),
+				visibility: CompilerInternal
 			}
 		], false));
 
@@ -2543,7 +2566,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				};
 				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
 				constructionBoundary = syntaxInput.constructionBoundary;
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)) {
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)
+					.expression) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -2684,7 +2708,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (!isAbstractImplementation) {
 				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
 					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
-				lets.push({name: createName, expr: OcamlExpr.EFun(createParams, createBody)});
+				// The selected record type and emitted parameter annotations define this
+				// allocator's exact OCaml signature; no Haxe type inference is repeated.
+				final createExpr = OcamlExpr.EFun(createParams, createBody);
+				final createSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
+				lets.push(createSignature == null ? {name: createName, expr: createExpr} : {
+					name: createName,
+					expr: createExpr,
+					signature: createSignature
+				});
 
 				// `Type.createEmptyInstance` support (M10): allocate an instance without running
 				// the constructor body. Abstract implementation carriers are excluded because
@@ -2692,7 +2724,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
 				lets.push({
 					name: emptyName,
-					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record"))
+					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record")),
+					signature: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TIdent(instanceTypeName))
 				});
 			}
 
@@ -2737,7 +2770,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case _: f.expr.t;
 					};
 					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)) {
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)
+						.expression) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2839,12 +2873,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (requiredSharedFunction == sharedFunctionSelector && sharedFunction == null)
 				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
 			#end
-			final compiled = if (sharedFunction == null) {
+			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
 				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
-				OcamlTargetFunctionLowerer.build(sharedFunction);
+				{expression: OcamlTargetFunctionLowerer.build(sharedFunction), signature: null};
 			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
@@ -2855,6 +2889,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 			#end
+
+			final compiled = builtFunction.expression;
 
 			// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
 			// (including statics, see upstream Issue5556). Model them like mutable statics:
@@ -2875,7 +2911,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			};
 			final bindingName = storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
-			lets.push({name: bindingName, expr: expr});
+			final binding:OcamlLetBinding = if (!isDynamicMethod && builtFunction.signature != null) {
+				{name: bindingName, expr: expr, signature: builtFunction.signature};
+			} else {
+				{name: bindingName, expr: expr};
+			};
+			lets.push(binding);
 		}
 
 		// Static vars (M6+)
@@ -3001,22 +3042,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final printStartS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
 		#if macro
 		if (profileVerbose && profClassMatch)
-			profileLogLine("reflaxe.ocaml: class_print_begin class=" + profClassName);
+			profileLogLine("reflaxe.ocaml: class_syntax_record_begin class=" + profClassName);
 		#end
-		final printed = printFinalModule(items, "class:" + fullName);
+		ctx.finalRuntimeUses.observeModuleItems(items, "class:" + fullName, ctx.activateStagedTypeRuntimeUse);
+		moduleChunks.record(classType.module, classType.name, items, out);
 		final printEndS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
-		out += printed;
 		#if macro
 		if (profileVerbose && profClassMatch) {
 			final dtMs = Std.int((printEndS - printStartS) * 1000);
-			profileLogLine("reflaxe.ocaml: class_print class=" + profClassName + " dt_ms=" + Std.string(dtMs) + " chars="
-				+ Std.string(printed != null ? printed.length : 0));
+			profileLogLine("reflaxe.ocaml: class_syntax_record class="
+				+ profClassName
+				+ " dt_ms="
+				+ Std.string(dtMs)
+				+ " items="
+				+ Std.string(items.length));
 		}
 		if (profileVerbose) {
 			final classEndS = profileNowS();
 			final dtMs = Std.int((classEndS - profClassStartS) * 1000);
 			profileLogLine("reflaxe.ocaml: class_end count=" + Std.string(profClassCount) + " name=" + profClassName + " dt_ms=" + Std.string(dtMs)
-				+ " chars=" + Std.string(out.length));
+				+ " header_chars=" + Std.string(out.length));
 		}
 		#end
 
@@ -4571,7 +4616,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		RuntimeUsageCollector.collectFromModuleItems(items, (moduleName) -> ctx.markRuntimeModule(moduleName));
 
 		var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n\n";
-		out += printFinalModule(items, "enum:" + fullName);
+		ctx.finalRuntimeUses.observeModuleItems(items, "enum:" + fullName, ctx.activateStagedTypeRuntimeUse);
+		moduleChunks.record(enumType.module, enumType.name, items, out);
 		return out;
 	}
 

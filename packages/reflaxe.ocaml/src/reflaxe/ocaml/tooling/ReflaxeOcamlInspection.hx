@@ -2,6 +2,8 @@ package reflaxe.ocaml.tooling;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -27,6 +29,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlEnumCatchOrigin;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlNominalRepresentationProof;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionContainerElementConversion;
@@ -103,7 +106,7 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v113";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v114";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
 
@@ -142,7 +145,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 47,
+			schemaVersion: 48,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -469,8 +472,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 86) {
-						throw 'Unsupported lowering report schema $version; expected 86.';
+					if (version != 88) {
+						throw 'Unsupported lowering report schema $version; expected 88.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -757,7 +760,7 @@ class ReflaxeOcamlInspection {
 		final rawAdmissions = requiredArray(value, "controlAdmissions");
 		if (rawAdmissions.length != requiredInt(value, "controlAdmissionCount"))
 			throw "Control-admission count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawAdmissions));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(rawAdmissions));
 		if (requiredSha256Revision(value, "controlAdmissionRevision") != expectedRevision)
 			throw "Control-admission report revision does not match its function inventory.";
 		final admissions = [for (entry in rawAdmissions) controlAdmissionSnapshot(entry)];
@@ -886,17 +889,17 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v26")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v27")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
 			throw "Control count does not match its inventory.";
-		final canonicalControls = Json.stringify({
+		final canonicalControls = reportJson({
 			targets: requiredArray(value, "controlTargets"),
 			decisions: rawControls,
 			catchChains: requiredArray(value, "controlCatches")
 		});
-		final expectedControlRevision = "sha256:" + Sha256.encode(canonicalControls);
+		final expectedControlRevision = "sha256:" + hashUtf8(canonicalControls);
 		final reportedControlRevision = requiredSha256Revision(value, "controlRevision");
 		if (reportedControlRevision != expectedControlRevision)
 			throw "Control report revision does not match its targets, decisions, and catch chains.";
@@ -925,6 +928,10 @@ class ReflaxeOcamlInspection {
 		for (target in targets)
 			targetById.set(target.id, target);
 		final controls = [for (entry in rawControls) controlDecision(entry)];
+		final catchChains = [for (entry in requiredArray(value, "controlCatches")) controlCatchChain(entry)];
+		final catchChainById:Map<String, InspectionControlCatchChain> = [];
+		for (chain in catchChains)
+			catchChainById.set(chain.id, chain);
 		final ids:Map<String, Bool> = [];
 		final bindingByFunction:Map<String, {programRevision:String, bodyRevision:String, pipelineRevision:String}> = [];
 		for (control in controls) {
@@ -1157,13 +1164,14 @@ class ReflaxeOcamlInspection {
 					}
 					final enumCarrier = "haxe-enum-native-variant-carrier-v1:" + payload.inputSemanticTypeId;
 					final enumRepresentation = "control-representation:enum-direct-v1:" + payload.inputSemanticTypeId;
-					final claimsDirectEnumPayload = payload.conversion == "box-enum-throw-carrier"
-						|| payload.proofId == "exact-enum-constructor-throw-control-v1"
-						|| control.proofId == "exact-enum-constructor-throw-control-v1"
-						|| payload.inputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
-						|| payload.outputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
-						|| payload.inputRepresentationId.startsWith("control-representation:enum-direct-v1:")
-						|| payload.outputRepresentationId.startsWith("control-representation:enum-direct-v1:");
+					final claimsDirectEnumPayload = payload.enumCatchOrigin == null
+						&& (payload.conversion == "box-enum-throw-carrier"
+							|| payload.proofId == "exact-enum-constructor-throw-control-v1"
+							|| control.proofId == "exact-enum-constructor-throw-control-v1"
+							|| payload.inputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+							|| payload.outputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+							|| payload.inputRepresentationId.startsWith("control-representation:enum-direct-v1:")
+							|| payload.outputRepresentationId.startsWith("control-representation:enum-direct-v1:"));
 					final directEnumPayload = payload.inputSemanticTypeId.length > 0
 						&& payload.inputCarrierTypeId == enumCarrier
 						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
@@ -1174,6 +1182,28 @@ class ReflaxeOcamlInspection {
 					if (claimsDirectEnumPayload && !directEnumPayload) {
 						throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
 					}
+					final enumCatchOrigin = payload.enumCatchOrigin;
+					final caughtEnumPayload = enumCatchOrigin != null
+						&& payload.inputSemanticTypeId.length > 0
+						&& payload.inputCarrierTypeId == enumCarrier
+						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+						&& payload.outputCarrierTypeId == enumCarrier
+						&& payload.inputRepresentationId == "control-representation:enum-catch-v1:" + payload.inputSemanticTypeId
+						&& payload.outputRepresentationId == payload.inputRepresentationId
+						&& payload.conversion == "preserve-enum-catch-throw-carrier"
+						&& payload.proofId == "exact-enum-catch-binding-rethrow-control-v1"
+						&& control.proofId == payload.proofId
+						&& payload.nominalRepresentation == null
+						&& enumCatchOrigin.semanticTypeId == payload.inputSemanticTypeId
+						&& enumCatchOrigin.carrierTypeId == payload.inputCarrierTypeId
+						&& enumCatchOrigin.representationId == payload.inputRepresentationId
+						&& isReusableLexicalLocalId(enumCatchOrigin.localId)
+						&& enumCatchOrigin.functionId == control.functionId
+						&& enumCatchOrigin.programRevision == control.programRevision
+						&& enumCatchOrigin.bodyRevision == control.bodyRevision
+						&& enumCatchOrigin.pipelineRevision == control.pipelineRevision;
+					if (enumCatchOrigin != null && !caughtEnumPayload)
+						throw 'Control decision "${control.id}" has an invalid enum catch-binding origin.';
 					final runtimeClassCarrier = "haxe-class-runtime-tagged-carrier-v1:" + payload.inputSemanticTypeId;
 					final runtimeClassRepresentation = "control-representation:runtime-class-throw-v1:" + payload.inputSemanticTypeId;
 					final claimsRuntimeClassPayload = payload.conversion == "box-runtime-class-throw-carrier"
@@ -1199,6 +1229,19 @@ class ReflaxeOcamlInspection {
 						throw 'Control decision "${control.id}" has an invalid runtime-tagged class exception carrier.';
 					}
 					final representedArrayPayload = payload.arrayDescriptorId != null;
+					final opaqueAnonymousPayload = ~/^anonymous-container:[0-9a-f]{64}$/.match(payload.inputSemanticTypeId)
+						&& payload.inputCarrierTypeId == "Obj.t"
+						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+						&& payload.outputCarrierTypeId == "Obj.t"
+						&& payload.inputRepresentationId == 'control-representation:${payload.inputSemanticTypeId}:hxanon-v1'
+						&& payload.outputRepresentationId == payload.inputRepresentationId
+						&& payload.representationRevision == null
+						&& payload.arrayDescriptorId == null
+						&& payload.arrayDescriptorRevision == null
+						&& payload.arrayLiteralProducerId == null
+						&& payload.arrayLiteralProducerPlanRevision == null
+						&& payload.nominalRepresentation == null
+						&& enumCatchOrigin == null;
 					final anonymousPayload = payload.inputSemanticTypeId.startsWith("anonymous{")
 						&& payload.inputSemanticTypeId.endsWith("}")
 						&& payload.inputCarrierTypeId == "Obj.t"
@@ -1306,33 +1349,34 @@ class ReflaxeOcamlInspection {
 							|| payload.nominalRepresentation != null) {
 							throw 'Control decision "${control.id}" has an invalid exact Haxe exception-wrapper carrier.';
 						}
-					} else if (!directEnumPayload && !runtimeClassPayload) {
+					} else if (!directEnumPayload && !caughtEnumPayload && !runtimeClassPayload && !opaqueAnonymousPayload) {
 						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
 							'Control decision "${control.id}" input', control.programRevision);
 						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
 							'Control decision "${control.id}" output', control.programRevision);
 					}
-					final expectedConversion = representedArrayPayload ? "box-represented-array-throw-carrier" : runtimeClassPayload ? "box-runtime-class-throw-carrier" : nullLiteralPayload ? "preserve-null-literal-throw-carrier" : anonymousPayload ? "preserve-anonymous-throw-carrier" : switch (payload.inputSemanticTypeId) {
+					final expectedConversion = opaqueAnonymousPayload ? "preserve-opaque-anonymous-throw-carrier" : representedArrayPayload ? "box-represented-array-throw-carrier" : runtimeClassPayload ? "box-runtime-class-throw-carrier" : nullLiteralPayload ? "preserve-null-literal-throw-carrier" : anonymousPayload ? "preserve-anonymous-throw-carrier" : switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
 						case "Dynamic": "preserve-dynamic-throw-carrier";
 						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
-						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
+						case _: caughtEnumPayload ? "preserve-enum-catch-throw-carrier" : directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
 					};
 					final expectedTags = representedArrayPayload ? ["Dynamic", "Array"] : runtimeClassPayload
-						|| anonymousPayload ? ["Dynamic"] : switch (payload.inputSemanticTypeId) {
+						|| anonymousPayload
+						|| opaqueAnonymousPayload ? ["Dynamic"] : switch (payload.inputSemanticTypeId) {
 							case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
-							case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
+							case _: directEnumPayload || caughtEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
 						};
-					final expectedProofId = representedArrayPayload ? "represented-array-throw-control-v1" : runtimeClassPayload ? "runtime-tagged-class-throw-control-v1" : nullLiteralPayload ? "null-literal-throw-control-v1" : anonymousPayload ? "exact-anonymous-carrier-throw-control-v1" : switch (payload.inputSemanticTypeId) {
+					final expectedProofId = opaqueAnonymousPayload ? "opaque-anonymous-container-throw-v1" : representedArrayPayload ? "represented-array-throw-control-v1" : runtimeClassPayload ? "runtime-tagged-class-throw-control-v1" : nullLiteralPayload ? "null-literal-throw-control-v1" : anonymousPayload ? "exact-anonymous-carrier-throw-control-v1" : switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
 						case "Dynamic": "dynamic-carrier-throw-control-v1";
 						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
-						case _: directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");
+						case _: caughtEnumPayload ? "exact-enum-catch-binding-rethrow-control-v1" : directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");
 					};
 					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,
 						payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.nominalRepresentation,
@@ -1350,8 +1394,8 @@ class ReflaxeOcamlInspection {
 						|| control.proofId != expectedProofId
 						|| !sameStrings(control.runtimeTags, expectedTags)
 						|| control.runtimeTagPolicy != "merge-dynamic-with-exact-runtime-value") {
-						if (directEnumPayload)
-							throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
+						if (directEnumPayload || caughtEnumPayload)
+							throw 'Control decision "${control.id}" has an invalid enum exception carrier.';
 						throw 'Control decision "${control.id}" has an invalid represented Haxe exception crossing.';
 					}
 				case _:
@@ -1369,12 +1413,31 @@ class ReflaxeOcamlInspection {
 			}
 			ids.set(control.id, true);
 		}
+		for (control in controls) {
+			final origin = control.payload == null ? null : control.payload.enumCatchOrigin;
+			if (origin == null)
+				continue;
+			final chain = catchChainById.get(origin.chainId);
+			if (control.kind != "throw" || control.proofId != "exact-enum-catch-binding-rethrow-control-v1" || chain == null) {
+				throw 'Control decision "${control.id}" does not refer to its exact enum catch clause.';
+			}
+			final clause = Lambda.find(chain.clauses, candidate -> candidate.id == origin.clauseId);
+			if (clause == null)
+				throw 'Control decision "${control.id}" does not refer to its exact enum catch clause.';
+			if (clause.localId != origin.localId
+				|| clause.semanticTypeId != origin.semanticTypeId
+				|| clause.outputCarrierTypeId != origin.carrierTypeId
+				|| clause.outputRepresentationId != origin.representationId
+				|| clause.conversion != "recover-enum-value") {
+				throw 'Control decision "${control.id}" does not refer to its exact enum catch clause.';
+			}
+		}
 		controls.sort((left, right) -> compareStrings(left.id, right.id));
 		return controls;
 	}
 
 	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
-		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v6")
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v7")
 			throw "Unsupported control catch-chain report model.";
 		final rawChains = requiredArray(value, "controlCatches");
 		if (rawChains.length != requiredInt(value, "controlCatchCount"))
@@ -1402,7 +1465,7 @@ class ReflaxeOcamlInspection {
 				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
 				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
 				|| chain.reason.length == 0
-				|| chain.proofId != "represented-value-catch-control-v6"
+				|| chain.proofId != "represented-value-catch-control-v7"
 				|| chain.proofClaim.length == 0
 				|| chain.functionId.length == 0
 				|| chain.programRevision.length == 0
@@ -1419,10 +1482,11 @@ class ReflaxeOcamlInspection {
 					|| clause.sourceMax < clause.sourceMin
 					|| clause.order != index
 					|| clause.variableName.length == 0
+					|| !isReusableLexicalLocalId(clause.localId)
 					|| clause.signalCarrierTypeId != "Obj.t"
 					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
 					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
-					|| clause.proofId != "represented-value-catch-control-v6"
+					|| clause.proofId != "represented-value-catch-control-v7"
 					|| clause.proofClaim.length == 0
 					|| clause.functionId != chain.functionId
 					|| clause.programRevision != chain.programRevision
@@ -1562,6 +1626,7 @@ class ReflaxeOcamlInspection {
 			sourceMax: requiredInt(source, "max"),
 			order: requiredInt(value, "order"),
 			variableName: requiredString(value, "variableName"),
+			localId: requiredString(value, "localId"),
 			semanticTypeId: requiredString(value, "semanticTypeId"),
 			signalCarrierTypeId: requiredString(value, "signalCarrierTypeId"),
 			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
@@ -1627,6 +1692,7 @@ class ReflaxeOcamlInspection {
 
 	static function controlPayload(value:Dynamic):InspectionControlPayload {
 		final nominalValue = Reflect.field(value, "nominalRepresentation");
+		final enumCatchOriginValue = Reflect.field(value, "enumCatchOrigin");
 		return {
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
 			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
@@ -1640,10 +1706,26 @@ class ReflaxeOcamlInspection {
 			arrayDescriptorRevision: optionalString(value, "arrayDescriptorRevision"),
 			arrayLiteralProducerId: optionalString(value, "arrayLiteralProducerId"),
 			arrayLiteralProducerPlanRevision: optionalString(value, "arrayLiteralProducerPlanRevision"),
+			enumCatchOrigin: enumCatchOriginValue == null ? null : controlEnumCatchOrigin(enumCatchOriginValue),
 			conversion: requiredString(value, "conversion"),
 			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim")
+		};
+	}
+
+	static function controlEnumCatchOrigin(value:Dynamic):InspectionControlEnumCatchOrigin {
+		return {
+			chainId: requiredString(value, "chainId"),
+			clauseId: requiredString(value, "clauseId"),
+			localId: requiredString(value, "localId"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			carrierTypeId: requiredString(value, "carrierTypeId"),
+			representationId: requiredString(value, "representationId"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
 		};
 	}
 
@@ -1683,7 +1765,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "reflectCompare");
 		if (raw.length != requiredInt(value, "reflectCompareCount"))
 			throw "Reflect.compare count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "reflectCompareRevision") != expectedRevision)
 			throw "Reflect.compare revision does not match its ordered decision inventory.";
 		final decisions = [for (entry in raw) reflectCompareDecision(entry)];
@@ -1788,7 +1870,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "stdIsOfType");
 		if (raw.length != requiredInt(value, "stdIsOfTypeCount"))
 			throw "Std.isOfType count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "stdIsOfTypeRevision") != expectedRevision)
 			throw "Std.isOfType revision does not match its ordered decision inventory.";
 
@@ -1916,7 +1998,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "intUnary");
 		if (raw.length != requiredInt(value, "intUnaryCount"))
 			throw "Integer unary count does not match its inventory.";
-		if (requiredSha256Revision(value, "intUnaryRevision") != "sha256:" + Sha256.encode(Json.stringify(raw)))
+		if (requiredSha256Revision(value, "intUnaryRevision") != "sha256:" + hashUtf8(reportJson(raw)))
 			throw "Integer unary revision does not match its ordered decision inventory.";
 		final decisions = [for (entry in raw) intUnaryDecision(entry)];
 		final ids:Map<String, Bool> = [];
@@ -2330,7 +2412,7 @@ class ReflaxeOcamlInspection {
 		final rawBoundaries = requiredArray(value, "functionResultBoundaries");
 		if (rawBoundaries.length != requiredInt(value, "functionResultBoundaryCount"))
 			throw "Function-result boundary count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawBoundaries));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(rawBoundaries));
 		if (requiredSha256Revision(value, "functionResultBoundaryRevision") != expectedRevision)
 			throw "Function-result boundary revision does not match its ordered inventory.";
 
@@ -3469,7 +3551,7 @@ class ReflaxeOcamlInspection {
 		final expectedCount = requiredInt(value, "representationCount");
 		if (rawDecisions.length != expectedCount)
 			throw 'Representation report representationCount is $expectedCount but representations contains ${rawDecisions.length} entries.';
-		if (requiredSha256Revision(value, "representationRevision") != "sha256:" + Sha256.encode(Json.stringify(rawDecisions)))
+		if (requiredSha256Revision(value, "representationRevision") != "sha256:" + hashUtf8(reportJson(rawDecisions)))
 			throw "Representation report revision does not match its sorted decisions.";
 		final decisions = [for (decision in rawDecisions) representationDecision(decision)];
 		decisions.sort((left, right) -> compareStrings(left.id, right.id));
@@ -3490,7 +3572,7 @@ class ReflaxeOcamlInspection {
 		if (rawRepresentedArrays.length != requiredInt(value, "representedArrayCount"))
 			throw "Represented-array count does not match its inventory.";
 		final representedArrayRevision = requiredSha256Revision(value, "representedArrayRevision");
-		if (representedArrayRevision != "sha256:" + Sha256.encode(Json.stringify(rawRepresentedArrays)))
+		if (representedArrayRevision != "sha256:" + hashUtf8(reportJson(rawRepresentedArrays)))
 			throw "Represented-array report revision does not match its sorted descriptors.";
 		final representedArrays = [for (descriptor in rawRepresentedArrays) representedArrayDescriptor(descriptor)];
 		representedArrays.sort((left, right) -> compareStrings(left.id, right.id));
@@ -3686,7 +3768,7 @@ class ReflaxeOcamlInspection {
 			seen.set(id, true);
 			previous = id;
 		}
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(ids));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(ids));
 		if (requiredSha256Revision(value, "containerElementRequiredConversionRevision") != expectedRevision)
 			throw "Required container-element conversion revision does not match its inventory.";
 		return ids;
@@ -3698,7 +3780,7 @@ class ReflaxeOcamlInspection {
 		final raw = requiredArray(value, "containerElementConversions");
 		if (raw.length != requiredInt(value, "containerElementConversionCount"))
 			throw "Container-element conversion count does not match its inventory.";
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson(raw));
 		if (requiredSha256Revision(value, "containerElementConversionRevision") != expectedRevision)
 			throw "Container-element conversion revision does not match its inventory.";
 		final seen:Map<String, Bool> = [];
@@ -3736,6 +3818,12 @@ class ReflaxeOcamlInspection {
 				if (seen.exists(result.id)) throw 'Container-element conversion report contains duplicate identity "${result.id}".';
 				final expectedPipelineRevision = StringTools.startsWith(result.functionId,
 					"standalone:") ? STANDALONE_EXPRESSION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+				final boolBox = result.conversion == "box-exact-bool-to-dynamic";
+				final validInput = boolBox ? result.inputSemanticTypeId == "Bool"
+					&& result.inputCarrierTypeId == "bool" : result.conversion == "box-exact-enum-to-dynamic"
+					&& result.inputSemanticTypeId.length > 0
+					&& result.inputCarrierTypeId == "haxe-enum-native-variant-carrier-v1:"
+						+ result.inputSemanticTypeId;
 				if (result.role != "array-literal-dynamic-element"
 					|| result.containerOrdinal < 0
 					|| result.elementIndex < 0
@@ -3745,19 +3833,18 @@ class ReflaxeOcamlInspection {
 					|| result.sourceMin < 0
 					|| result.sourceMax < result.sourceMin
 					|| result.inputSemanticTypeId.length == 0
-					|| result.inputCarrierTypeId != "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId
+					|| !validInput
 					|| result.outputSemanticTypeId != "Dynamic"
 					|| result.outputCarrierTypeId != "Obj.t"
-					|| result.conversion != "box-exact-enum-to-dynamic"
 					|| result.reason.length == 0
-					|| result.proofId != "dynamic-array-element-box-exact-enum-v1"
+					|| result.proofId != (boolBox ? "dynamic-array-element-box-exact-bool-v1" : "dynamic-array-element-box-exact-enum-v1")
 					|| result.proofClaim.length == 0
 					|| result.profileEligibility.length == 0
 					|| result.functionId.length == 0
 					|| result.programRevision.length == 0
 					|| result.bodyRevision.length == 0
 					|| result.pipelineRevision != expectedPipelineRevision) {
-					throw 'Container-element conversion "${result.id}" has an invalid exact enum-to-Dynamic array contract.';
+					throw 'Container-element conversion "${result.id}" has an invalid type-preserving Dynamic array contract.';
 				}
 				final canonicalId = containerElementOccurrenceId(result);
 				if (result.id != canonicalId)
@@ -3855,9 +3942,9 @@ class ReflaxeOcamlInspection {
 				final conversion:Dynamic = conversionById.get(result.conversionId);
 				if (conversion == null
 					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed conversion.';
-				if (conversion.conversion == "box-exact-enum-to-dynamic"
-					&& (result.id != conversion.id + ":unsafe:box-exact-enum-to-dynamic"
-						|| result.operation != "box-exact-enum-to-dynamic"
+				if ((conversion.conversion == "box-exact-enum-to-dynamic" || conversion.conversion == "box-exact-bool-to-dynamic")
+					&& (result.id != conversion.id + ":unsafe:" + conversion.conversion
+						|| result.operation != conversion.conversion
 						|| result.sourceFile != conversion.sourceFile
 						|| result.sourceMin != conversion.sourceMin
 						|| result.sourceMax != conversion.sourceMax
@@ -4302,7 +4389,9 @@ class ReflaxeOcamlInspection {
 			referenced.set(requirementId, true);
 		}
 		for (conversion in containerElementConversions) {
-			final requirementId = conversion.id + ":runtime:haxe-enum-dynamic-box";
+			final boolBox = conversion.conversion == "box-exact-bool-to-dynamic";
+			final capability = boolBox ? "haxe-bool-dynamic-box" : "haxe-enum-dynamic-box";
+			final requirementId = conversion.id + ":runtime:" + capability;
 			final requirement = requirements.get(requirementId);
 			if (requirement == null)
 				throw 'Container-element conversion "${conversion.id}" refers to missing runtime requirement "$requirementId".';
@@ -4314,16 +4403,16 @@ class ReflaxeOcamlInspection {
 				|| requiredString(source, "file") != conversion.sourceFile
 				|| requiredInt(source, "min") != conversion.sourceMin
 				|| requiredInt(source, "max") != conversion.sourceMax
-				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "semanticCapability") != capability
 				|| requiredString(requirement, "cause") != "lowering-decision"
 				|| requiredString(requirement, "decisionId") != conversion.id
 				|| requiredString(subject, "kind") != "haxe-type"
 				|| requiredString(subject, "id") != conversion.inputSemanticTypeId
-				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| requiredString(requirement, "implementationFeature") != capability + "-v1"
 				|| roots.length != 1
-				|| roots[0] != "HxEnum"
+				|| roots[0] != (boolBox ? "HxRuntime" : "HxEnum")
 				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
-				throw 'Container-element conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+				throw 'Container-element conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed boxing dependency.';
 			}
 			referenced.set(requirementId, true);
 		}
@@ -4368,7 +4457,7 @@ class ReflaxeOcamlInspection {
 			final requirementId = control.id + ":runtime:haxe-enum-dynamic-box";
 			final requirement = requirements.get(requirementId);
 			if (requirement == null)
-				throw 'Direct enum throw "${control.id}" refers to missing runtime requirement "$requirementId".';
+				throw 'Enum throw "${control.id}" refers to missing runtime requirement "$requirementId".';
 			final source = requiredObject(requirement, "source");
 			final subject = requiredObject(requirement, "subject");
 			final roots = requiredStringArray(requirement, "rootModules");
@@ -4386,7 +4475,7 @@ class ReflaxeOcamlInspection {
 				|| roots.length != 1
 				|| roots[0] != "HxEnum"
 				|| requiredStringArray(requirement, "profileEligibility").join(",") != control.profileEligibility.join(",")) {
-				throw 'Direct enum throw "${control.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+				throw 'Enum throw "${control.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
 			}
 			referenced.set(requirementId, true);
 		}
@@ -5213,6 +5302,10 @@ class ReflaxeOcamlInspection {
 			throw 'Expected "$name" to be a sha256: revision.';
 		}
 		return result;
+	}
+
+	static function isReusableLexicalLocalId(value:String):Bool {
+		return value != null && ~/^lexical-local-v1:[0-9a-f]{64}$/.match(value);
 	}
 
 	static function requiredInt(value:Dynamic, name:String):Int {

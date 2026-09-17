@@ -16,13 +16,6 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_Impl_" } : t) in (
-  ignore ();
-  self
-)
-
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_Impl_" } : t)
-
 let get_length = fun this1 -> HxArray.length this1
 
 let parseFileLine = fun line -> (try let fileNeedle = "file \"" in let fileStart0 = let __string_receiver_1 = line in let __string_argument_0_2 = fileNeedle in HxString.indexOf __string_receiver_1 __string_argument_0_2 0 in (

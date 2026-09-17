@@ -46,6 +46,11 @@ class M14Stage3OptionalArgumentSkippingIntegrationTest {
 			"  }",
 			"  static function main():Void {",
 			"    install(\"HaxeFoundation\", \"hxjava\", true);",
+			"    install(\"HaxeFoundation\", \"hxjava\", false);",
+			"    var enabled:Bool = false;",
+			"    Sys.println(enabled ? \"on\" : \"off\");",
+			"    enabled = true;",
+			"    Sys.println(enabled ? \"on\" : \"off\");",
 			"  }",
 			"}",
 		].join("\n");
@@ -55,7 +60,7 @@ class M14Stage3OptionalArgumentSkippingIntegrationTest {
 		try {
 			final baseline = commandOutput("haxe", ["-cp", sourceDir, "--run", "Main"]);
 			assertTrue(baseline.code == 0, "Haxe 4.3.7 rejected the optional-skipping fixture: " + baseline.stderr);
-			assertTrue(baseline.stdout == "retry\n", "unexpected Haxe 4.3.7 optional-skipping output: " + baseline.stdout);
+			assertTrue(baseline.stdout == "retry\nnoretry\noff\non\n", "unexpected Haxe 4.3.7 optional-skipping output: " + baseline.stdout);
 
 			final parsed = ParserStage.parse(source, sourcePath);
 			final typed = TyperStage.typeModule(parsed);

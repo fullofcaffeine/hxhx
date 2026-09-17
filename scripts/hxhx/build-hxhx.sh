@@ -41,6 +41,7 @@ HXHX_BOOTSTRAP_BUILD_RETAIN="${HXHX_BOOTSTRAP_BUILD_RETAIN:-2}"
 HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY="${HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
 DEFAULT_STAGE0_OUT_DIR="$HXHX_DIR/out"
@@ -269,6 +270,26 @@ cleanup_stage0_log_file() {
     rm -f "$path"
   fi
 }
+
+# A Lix launcher can outlive or orphan its native compiler if only the launcher
+# is signalled. Stop the verified client tree before returning or retrying;
+# separately managed compilation servers remain owned by cleanup_repo_server.
+stop_stage0_client() {
+  local pid="$1"
+  local attempt
+  stage0_watchdog_terminate_process_tree "$pid"
+  wait "$pid" 2>/dev/null || true
+  for attempt in {1..20}; do
+    stage0_watchdog_record_cleanup_result
+    if [ "$STAGE0_WATCHDOG_CLEANUP" = "complete" ]; then
+      return 0
+    fi
+    sleep 0.1
+  done
+  echo "Stage0 client cleanup incomplete: $STAGE0_WATCHDOG_TERMINATED_TREE_PIDS" >&2
+  return 1
+}
+
 collect_process_tree_pids() {
   local root_pid="$1"
   local frontier="$root_pid"
@@ -945,7 +966,7 @@ resolve_stage0_connect
       if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
         if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
           echo "Stage0 build exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-          kill -9 "$pid" >/dev/null 2>&1 || true
+          stop_stage0_client "$pid" || return 1
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
           cleanup_stage0_log_file "$log_file"
@@ -1032,11 +1053,7 @@ resolve_stage0_connect
           if [ "$connect_idle_elapsed" -ge "$HXHX_STAGE0_CONNECT_IDLE_SECS" ]; then
             echo "Stage0 build appears stalled on --connect handoff (idle ${connect_idle_elapsed}s; log static)." >&2
             echo "Retrying once without --connect (set HXHX_STAGE0_CONNECT_IDLE_SECS=0 to disable this detector)." >&2
-            kill "$pid" >/dev/null 2>&1 || true
-            sleep 2
-            if kill -0 "$pid" >/dev/null 2>&1; then
-              kill -9 "$pid" >/dev/null 2>&1 || true
-            fi
+            stop_stage0_client "$pid" || return 1
             echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines before retry:" >&2
             tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
             cleanup_stage0_log_file "$log_file"
@@ -1102,7 +1119,7 @@ resolve_stage0_connect
         rss_mb="$((rss_kb / 1024))"
         if [ "$HXHX_STAGE0_MAX_RSS_MB" != "0" ] && [ "$tree_rss_mb" -ge "$HXHX_STAGE0_MAX_RSS_MB" ]; then
           echo "Stage0 build exceeded RSS cap (${HXHX_STAGE0_MAX_RSS_MB}MB). Killing pid=$pid." >&2
-          kill -9 "$pid" >/dev/null 2>&1 || true
+          stop_stage0_client "$pid" || return 1
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
           cleanup_stage0_log_file "$log_file"
