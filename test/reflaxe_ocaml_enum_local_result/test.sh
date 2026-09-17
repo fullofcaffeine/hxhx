@@ -9,6 +9,15 @@ fixture=test/reflaxe_ocaml_enum_local_result
 mkdir -p "$output"
 "$haxe_bin" -cp packages/reflaxe.ocaml/src -cp "$fixture" -lib reflaxe \
   --macro 'nullSafety("reflaxe.ocaml")' --macro 'EnumRepresentationFixture.run()' --no-output
+for preprocessors in enabled disabled; do
+  options=(-D reflaxe_ocaml_enum_result_test)
+  if [[ "$preprocessors" == disabled ]]; then
+    options+=(-D reflaxe_ocaml_disable_expression_preprocessors)
+  fi
+  "$haxe_bin" -cp packages/reflaxe.ocaml/src -cp "$fixture" -lib reflaxe \
+    "${options[@]}" --macro 'nullSafety("reflaxe.ocaml")' \
+    --macro 'EnumAdmissionFixture.run()' --no-output
+done
 "$haxe_bin" -cp "$fixture" --run EnumReturnProbe > "$output/upstream.stdout"
 diff -u "$fixture/expected.stdout" "$output/upstream.stdout"
 node scripts/dev/run-with-timeout-heartbeat.js \

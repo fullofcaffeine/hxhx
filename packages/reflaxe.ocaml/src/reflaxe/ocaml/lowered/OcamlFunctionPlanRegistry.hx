@@ -352,6 +352,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	var currentProgramRevision:Null<String> = null;
+	final nativeEnumResults = new OcamlNativeEnumResultAdmission();
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
 	final originsByFunction:StringMap<Array<String>> = new StringMap();
 	final sealedFunctions:StringMap<OcamlSealedFunctionRecord> = new StringMap();
@@ -385,6 +386,7 @@ class OcamlFunctionPlanRegistry {
 		if (programRevision.length == 0)
 			throw "reflaxe.ocaml [ocaml-lowering:missing-program-revision]: the target-selected program revision is empty";
 		currentProgramRevision = programRevision;
+		nativeEnumResults.beginProgram(programRevision);
 		plansByOrigin.clear();
 		originsByFunction.clear();
 		sealedFunctions.clear();
