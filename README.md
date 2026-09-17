@@ -275,6 +275,8 @@ For full command reference (tests, gates, promotion, plugin matrix):
 - Node.js + npm
 - Haxe `4.3.7`
 - OCaml `5.2+`, `dune`, `ocaml-findlib`
+- Repository server helper: `flock` on Linux or `lockf` on macOS.
+  These tools serialize server ownership updates and cleanup.
 
 macOS:
 
