@@ -6963,7 +6963,7 @@ class EmitterStage {
 			return out;
 		}
 
-		final typedModules = uniqueTypedModules(typedModulesRaw);
+		final typedModules = backend.ocaml.OcamlIntFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {

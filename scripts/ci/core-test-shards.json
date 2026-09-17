@@ -145,6 +145,7 @@
     "test:m14:typed-abstract-binary": "compiler-focused",
     "test:m14:abstract-unary-cross-backend": "compiler-focused",
     "test:m14:abstract-binary-cross-backend": "compiler-focused",
+    "test:m14:ocaml-int-field-update": "compiler-focused",
     "test:m14:stage3-int64-add-int": "compiler-focused",
     "test:m14:cpp-abstract-unary": "compiler-focused",
     "test:m14:cpp-abstract-binary": "compiler-focused",
