@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Exercises bootstrap-regeneration server cleanup without touching generated
-# output. The fake Haxe server starts normally, while the fake compile client
-# fails immediately so both report preservation and EXIT cleanup are tested.
+# output. A fake client fails after either startup or two resource observations.
+# Busy/idle servers prove attribution, timeout, report preservation, and cleanup.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
@@ -16,6 +16,7 @@ SERVER_PID_CAPTURE="$TMP_DIR/server.pid"
 SERVER_CHILD_CAPTURE="$TMP_DIR/server-child.pid"
 COMPILE_ARGS_CAPTURE="$TMP_DIR/compile-args.txt"
 PORT=31874
+FIXTURE_CASE="${1:-all}"
 
 cleanup() {
 	HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$FAKE_HAXE" \
@@ -28,6 +29,11 @@ fail() {
 	echo "[bootstrap-regen-server-lifecycle-fixture-test] ERROR: $*" >&2
 	exit 1
 }
+
+case "$FIXTURE_CASE" in
+	all|busy) ;;
+	*) fail "expected all or busy fixture case" ;;
+esac
 
 mkdir -p "$FAKE_BIN_DIR"
 cat >"$FAKE_HAXE" <<'FAKE_HAXE_SCRIPT'
@@ -80,7 +86,17 @@ fi
 if [ "$has_connect" = "1" ]; then
 	case "${FAKE_COMPILE_MODE:-immediate}" in
 		immediate) ;;
-		sleep-four) sleep 4 ;;
+		observe-worker)
+			# The assertion needs two real samples, not an assumed observer speed.
+			deadline="$((SECONDS + 30))"
+			while [ "$SECONDS" -lt "$deadline" ]; do
+				if [ -f "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ] \
+					&& [ "$(wc -l <"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" | tr -d ' ')" -ge 2 ]; then
+					break
+				fi
+				sleep 0.1
+			done
+			;;
 		sleep-long) sleep 20 ;;
 		*)
 			echo "unknown fake compile mode: ${FAKE_COMPILE_MODE:-}" >&2
@@ -165,79 +181,86 @@ if (report.status !== "error" || report.exit_code !== 23) process.exit(1)
 ' "$report_path" || fail "failure report did not preserve status=error and exit_code=23"
 }
 
-temporary_report="$TMP_DIR/temporary-server-report.json"
-run_failing_regen "$temporary_report" 23 idle immediate temporary repo
-assert_failure_report "$temporary_report"
-grep -Fx -- "reflaxe.dont_output_metadata_id" "$COMPILE_ARGS_CAPTURE" >/dev/null \
-	|| fail "regeneration did not request stable Reflaxe output metadata"
-temporary_server_pid="$(cat "$SERVER_PID_CAPTURE")"
-[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "temporary run left its server PID state behind"
-[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "temporary run left its server identity state behind"
-if kill -0 "$temporary_server_pid" >/dev/null 2>&1; then
-	fail "temporary run left its server process alive"
+if [ "$FIXTURE_CASE" = "all" ]; then
+	temporary_report="$TMP_DIR/temporary-server-report.json"
+	run_failing_regen "$temporary_report" 23 idle immediate temporary repo
+	assert_failure_report "$temporary_report"
+	grep -Fx -- "reflaxe.dont_output_metadata_id" "$COMPILE_ARGS_CAPTURE" >/dev/null \
+		|| fail "regeneration did not request stable Reflaxe output metadata"
+	temporary_server_pid="$(cat "$SERVER_PID_CAPTURE")"
+	[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "temporary run left its server PID state behind"
+	[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "temporary run left its server identity state behind"
+	if kill -0 "$temporary_server_pid" >/dev/null 2>&1; then
+		fail "temporary run left its server process alive"
+	fi
+
+	kept_report="$TMP_DIR/kept-server-report.json"
+	run_failing_regen "$kept_report" 23 idle immediate kept repo --keep-repo-server
+	assert_failure_report "$kept_report"
+	kept_server_pid="$(cat "$STATE_DIR/haxe-server.pid")"
+	kill -0 "$kept_server_pid" >/dev/null 2>&1 || fail "--keep-repo-server did not keep the server alive"
+	expected_server_identity="$(cd "$(dirname "$FAKE_HAXE")" && pwd -P)/$(basename "$FAKE_HAXE")"
+	actual_server_identity="$(cat "$STATE_DIR/haxe-server.bin")"
+	[ "$actual_server_identity" = "$expected_server_identity" ] \
+		|| fail "repo server used $actual_server_identity instead of selected Haxe $expected_server_identity"
+
+	HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$FAKE_HAXE" \
+		bash "$SERVER_HELPER" stop >/dev/null
+	[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "explicit stop left PID state behind"
+	[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "explicit stop left identity state behind"
+
+	# A manually supplied endpoint has no repository ownership receipt. The client
+	# still runs, but the watchdog must not classify that external server as owned.
+	manual_report="$TMP_DIR/manual-connect-report.json"
+	run_failing_regen "$manual_report" 23 idle immediate manual-connect manual
+	assert_failure_report "$manual_report"
+	grep -Fq '"connected_server_observed": false' "$manual_report" \
+		|| fail "manual --connect endpoint was classified as a repository-owned server"
+	[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "manual --connect unexpectedly created repo server state"
 fi
-
-kept_report="$TMP_DIR/kept-server-report.json"
-run_failing_regen "$kept_report" 23 idle immediate kept repo --keep-repo-server
-assert_failure_report "$kept_report"
-kept_server_pid="$(cat "$STATE_DIR/haxe-server.pid")"
-kill -0 "$kept_server_pid" >/dev/null 2>&1 || fail "--keep-repo-server did not keep the server alive"
-expected_server_identity="$(cd "$(dirname "$FAKE_HAXE")" && pwd -P)/$(basename "$FAKE_HAXE")"
-actual_server_identity="$(cat "$STATE_DIR/haxe-server.bin")"
-[ "$actual_server_identity" = "$expected_server_identity" ] \
-	|| fail "repo server used $actual_server_identity instead of selected Haxe $expected_server_identity"
-
-HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$FAKE_HAXE" \
-	bash "$SERVER_HELPER" stop >/dev/null
-[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "explicit stop left PID state behind"
-[ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "explicit stop left identity state behind"
-
-# A manually supplied endpoint has no repository ownership receipt. The client
-# still runs, but the watchdog must not classify that external server as owned.
-manual_report="$TMP_DIR/manual-connect-report.json"
-run_failing_regen "$manual_report" 23 idle immediate manual-connect manual
-assert_failure_report "$manual_report"
-grep -Fq '"connected_server_observed": false' "$manual_report" \
-	|| fail "manual --connect endpoint was classified as a repository-owned server"
-[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "manual --connect unexpectedly created repo server state"
 
 # The connected client sleeps while the exact repository-owned server performs
 # CPU- and memory-heavy work. The soft stall timer must observe that server
 # worker, and telemetry must include its retained memory.
 busy_report="$TMP_DIR/busy-server-report.json"
-run_failing_regen "$busy_report" 23 busy sleep-four busy repo
+run_failing_regen "$busy_report" 23 busy observe-worker busy repo
 assert_failure_report "$busy_report"
 node -e '
 const fs = require("fs")
 const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
 const trace = fs.readFileSync(process.argv[2], "utf8").trim().split("\n").map(JSON.parse)
+const workerPid = Number(fs.readFileSync(process.argv[3], "utf8"))
 const observed = report.stage0_observability
-const failures = []
-if (observed.connected_server_observed !== true) failures.push("owned server was not observed")
-if (observed.last_progress_reason !== "cpu-time") failures.push("CPU progress was not observed")
-if (observed.heartbeat_peak_tree_rss_mb < 32) failures.push("resident memory stayed below 32 MB")
-if (!trace.some(sample => sample.owned_server_pids.length > 0)) failures.push("trace omitted owned server PIDs")
-if (failures.length > 0) {
-  console.error(JSON.stringify({ failures, observed, trace }, null, 2))
-  process.exit(1)
+function expect(condition, message) {
+  if (!condition) throw new Error(message + " " + JSON.stringify({observed, trace, workerPid}))
 }
-' "$busy_report" "$TMP_DIR/busy.trace.jsonl" \
+expect(observed.connected_server_observed === true, "server was not observed")
+expect(observed.last_progress_reason === "cpu-time", "server CPU did not advance progress")
+expect(observed.heartbeat_peak_tree_rss_mb >= 32, "server memory was not counted")
+expect(trace.some(sample => sample.owned_server_pids.length > 0), "trace lost server ownership")
+const worker = trace.find(sample => sample.focus_pid === workerPid && sample.focus_role === "server-worker")
+expect(worker && worker.pid !== workerPid && Number(worker.cpu_pct) > 0 && worker.rss_mb >= 32, "focus did not identify the working server")
+expect(worker.tree_cpu_pct >= Number(worker.cpu_pct), "tree CPU omitted the server worker")
+expect(observed.heartbeat_peak_tree_cpu_pct >= worker.tree_cpu_pct, "final report lost the CPU peak")
+' "$busy_report" "$TMP_DIR/busy.trace.jsonl" "$SERVER_CHILD_CAPTURE" \
 	|| fail "busy owned server was absent from watchdog progress or memory telemetry"
 
 # A connected client and server that are both idle still hit the soft limit.
 # Timeout cleanup overrides --keep-repo-server because the request cannot be
 # detached safely from this single owned server.
-idle_report="$TMP_DIR/idle-server-report.json"
-run_failing_regen "$idle_report" 124 idle sleep-long idle-timeout repo --keep-repo-server
-idle_server_pid="$(cat "$SERVER_PID_CAPTURE")"
-idle_server_child_pid="$(cat "$SERVER_CHILD_CAPTURE")"
-[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "timed-out request retained owned server state"
-if kill -0 "$idle_server_pid" >/dev/null 2>&1 || kill -0 "$idle_server_child_pid" >/dev/null 2>&1; then
-	fail "timed-out request left an owned server process consuming resources"
+if [ "$FIXTURE_CASE" = "all" ]; then
+	idle_report="$TMP_DIR/idle-server-report.json"
+	run_failing_regen "$idle_report" 124 idle sleep-long idle-timeout repo --keep-repo-server
+	idle_server_pid="$(cat "$SERVER_PID_CAPTURE")"
+	idle_server_child_pid="$(cat "$SERVER_CHILD_CAPTURE")"
+	[ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "timed-out request retained owned server state"
+	if kill -0 "$idle_server_pid" >/dev/null 2>&1 || kill -0 "$idle_server_child_pid" >/dev/null 2>&1; then
+		fail "timed-out request left an owned server process consuming resources"
+	fi
+	grep -Fq '"timeout_kind": "stall"' "$idle_report" \
+		|| fail "idle connected server did not retain its stall result"
+	grep -Fq '"timeout_cleanup": "complete"' "$idle_report" \
+		|| fail "idle connected server did not report complete cleanup"
 fi
-grep -Fq '"timeout_kind": "stall"' "$idle_report" \
-	|| fail "idle connected server did not retain its stall result"
-grep -Fq '"timeout_cleanup": "complete"' "$idle_report" \
-	|| fail "idle connected server did not report complete cleanup"
 
 echo "BOOTSTRAP_REGEN_SERVER_LIFECYCLE_FIXTURE:PASS"
