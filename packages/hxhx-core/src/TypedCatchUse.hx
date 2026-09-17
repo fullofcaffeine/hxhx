@@ -38,6 +38,15 @@ class TypedCatchUse {
 		if (type.isDynamic())
 			return new TypedCatchUse(binding, Carrier, null, null, null);
 		final identity = type.getNominalIdentity();
+		if (identity != null && identity.getCanonicalName() == "Any") {
+			final provider = requireProvider(context, "Any");
+			final abstractInfo = context.getIndex().getAbstractByFullName(provider.getFullName());
+			// The standard Any abstract preserves the thrown carrier, including an
+			// explicit ValueException. A user class with the same short name does not.
+			if (abstractInfo == null || !abstractInfo.getUnderlyingType().isDynamic())
+				throw "implicit Any catch requires the standard Dynamic-backed abstract";
+			return new TypedCatchUse(binding, Carrier, null, null, null);
+		}
 		if (identity != null && identity.getCanonicalName() == "haxe.Exception") {
 			final provider = requireProvider(context, "haxe.Exception");
 			final candidates = provider.staticMethodCandidates("caught");
@@ -81,7 +90,8 @@ class TypedCatchUse {
 			|| payload.getType().getSemanticKey() != "nominal:Any"
 			|| payload.getPropertyGet() != "default"
 			|| payload.getOwner().getCanonicalName() != "haxe.ValueException")
-			throw "implicit catch payload requires the real haxe.ValueException.value field";
+			throw "implicit catch payload requires the real haxe.ValueException.value field; selected type: "
+				+ (payload == null ? "missing" : payload.getType().getSemanticKey());
 		return new TypedCatchUse(binding, OrdinaryValue, target, null, payload);
 	}
 

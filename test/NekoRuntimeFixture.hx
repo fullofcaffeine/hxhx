@@ -74,8 +74,11 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 		File.saveContent(part.path, part.source);
 	File.saveContent(root + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
 	for (file in FileSystem.readDirectory(root))
-		if (StringTools.endsWith(file, ".neko"))
+		if (StringTools.endsWith(file, ".neko")) {
+			if (File.getContent(root + "/" + file).indexOf("must-stay-unused") >= 0)
+				throw "unused abstract helper became reachable in " + root + "/" + file;
 			run("nekoc", [root + "/" + file]);
+		}
 	var failed = false;
 	for (layout in ["main", "single"]) {
 		final process = new sys.io.Process("neko", [root + "/" + layout + ".n"]);

@@ -16,6 +16,7 @@ class M14SignatureDependencyLoadingIntegrationTest {
 				+ ' public static function callback(value:Box->Box):Box->Box return value;'
 				+ ' public static function cycle(value:Left):Right return null; }'},
 			{name: "Box", source: 'abstract Box(Dynamic) from Dynamic {}'},
+			{name: "Other", source: 'class Other {} class Box {}'},
 			{name: "Envelope", source: 'class Envelope<T> { public var value:T; }'},
 			{name: "Left", source: 'class Left { public var right:Right; }'},
 			{name: "Right", source: 'class Right { public var left:Left; }'},
@@ -26,8 +27,11 @@ class M14SignatureDependencyLoadingIntegrationTest {
 		final upstream = @:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("haxe", ["-cp", root, "-main", "Main", "--interp"]);
 		check(upstream == "true\n", "upstream signature dependency contract differs");
 		for (shallow in [false, true]) {
-			final resolved = shallow ? ResolverStage.parseProjectRootsShallow([root], ["Main"]) : ResolverStage.parseProjectRoots([root], ["Main"]);
+			final resolved = shallow ? ResolverStage.parseProjectRootsShallow([root],
+				["Main", "Other"]) : ResolverStage.parseProjectRoots([root], ["Main", "Other"]);
 			final index = TyperIndex.build(resolved);
+			check(index.resolveTypePath("Box", "", []) == null, "an unrelated module's secondary type must not capture an unloaded root type");
+			check(index.resolveTypePath("missing.Box", "", []) == null, "a missing qualified type must not resolve by its final name");
 			final prepared = new Array<String>();
 			final loader = new ModuleLoader([root], new haxe.ds.StringMap<String>(), index, _ -> false, !shallow, null, module -> {
 				final name = ResolvedModule.getModulePath(module);

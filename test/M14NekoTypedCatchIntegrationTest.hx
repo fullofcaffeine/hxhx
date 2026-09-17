@@ -3,6 +3,7 @@ class M14NekoTypedCatchIntegrationTest {
 	static function main():Void {
 		final fixtures = [
 			"test/neko_typed_catch",
+			"test/neko_any_catch",
 			"test/neko_exception_provider",
 			"test/neko_catch_value_views",
 			"test/neko_numeric_catches"

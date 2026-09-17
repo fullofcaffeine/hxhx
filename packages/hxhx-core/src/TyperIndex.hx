@@ -23,7 +23,6 @@ class TyperIndex {
 	final byFullName:StringMap<TyNominalInfo>;
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
-	final identityByShortName:StringMap<Array<TyNominalTypeId>>;
 	final identitiesByModulePath:StringMap<Array<TyNominalTypeId>>;
 	final visibilityByFullName:StringMap<HxVisibility>;
 	final bySourceClass:ObjectMap<HxClassDecl, TyNominalInfo>;
@@ -32,7 +31,6 @@ class TyperIndex {
 		byFullName = new StringMap();
 		byShortName = new StringMap();
 		identityByFullName = new StringMap();
-		identityByShortName = new StringMap();
 		identitiesByModulePath = new StringMap();
 		visibilityByFullName = new StringMap();
 		bySourceClass = new ObjectMap();
@@ -200,14 +198,11 @@ class TyperIndex {
 		];
 	}
 
-	function registerIdentity(fullName:String, shortName:String):TyNominalTypeId {
+	function registerIdentity(fullName:String):TyNominalTypeId {
 		if (identityByFullName.exists(fullName))
 			return identityByFullName.get(fullName);
 		final identity = new TyNominalTypeId(fullName);
 		identityByFullName.set(fullName, identity);
-		final candidates = identityByShortName.exists(shortName) ? identityByShortName.get(shortName) : [];
-		candidates.push(identity);
-		identityByShortName.set(shortName, candidates);
 		return identity;
 	}
 
@@ -222,7 +217,7 @@ class TyperIndex {
 			final shortName = HxClassDecl.getName(classDeclaration);
 			if (shortName == null || shortName.length == 0)
 				continue;
-			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName), shortName);
+			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName));
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
 			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
 			var alreadyRegistered = false;
@@ -265,57 +260,6 @@ class TyperIndex {
 		for (candidate in identitiesByModulePath.get(modulePath))
 			if (candidate.equals(identity))
 				return true;
-		return false;
-	}
-
-	/**
-		Whether an alias import deliberately withholds a provider's original short
-		name from this module. For example, `import model.User as Account` introduces
-		`Account`, not `User`. This prevents the compiler's temporary global
-		unique-name fallback from silently making `User` visible anyway.
-	**/
-	static function hidesOriginalNameBehindAlias(raw:String, directives:Array<HxModuleDirective>):Bool {
-		if (raw == null || raw.indexOf(".") >= 0 || directives == null)
-			return false;
-		for (directive in directives) {
-			switch (HxModuleDirective.getKind(directive)) {
-				case ImportAlias(alias):
-					final path = HxModuleDirective.getPath(directive);
-					final dot = path.lastIndexOf(".");
-					final originalName = dot < 0 ? path : path.substr(dot + 1);
-					if (originalName == raw && alias != raw)
-						return true;
-				case ImportNormal | ImportAll | Using:
-			}
-		}
-		return false;
-	}
-
-	/** Prevent the temporary unique-name fallback from widening a type wildcard. **/
-	function rawStaticWildcardHidesType(raw:String, directives:Array<HxModuleDirective>):Bool {
-		if (raw == null || directives == null)
-			return false;
-		for (directive in directives)
-			if (HxModuleDirective.getKind(directive).match(ImportAll)) {
-				final providerPath = HxModuleDirective.getPath(directive);
-				if (identityByFullName.exists(providerPath) && identityFromModuleByShortName(providerPath, raw) != null)
-					return true;
-			}
-		return false;
-	}
-
-	function resolvedStaticWildcardHidesType(raw:String, directives:Array<TyModuleDirective>):Bool {
-		if (raw == null || directives == null)
-			return false;
-		for (directive in directives)
-			if (directive.getKind().match(StaticWildcardImport)) {
-				final provider = directive.getSingleProvider();
-				final providerInfo = provider == null ? null : getByFullName(provider.getCanonicalName());
-				if (providerInfo != null)
-					for (moduleType in getByModulePath(providerInfo.getModulePath()))
-						if (moduleType.getShortName() == raw)
-							return true;
-			}
 		return false;
 	}
 
@@ -374,12 +318,16 @@ class TyperIndex {
 			}
 		}
 
-		final inPackage = packagePath == null
-			|| StringTools.trim(packagePath).length == 0 ? raw : StringTools.trim(packagePath) + "." + raw;
-		if (identityByFullName.exists(inPackage)) {
-			final packageIdentity = identityByFullName.get(inPackage);
-			if (identityVisibleFromModule(packageIdentity, currentModulePath))
-				return packageIdentity;
+		var currentPackage = packagePath == null ? "" : StringTools.trim(packagePath);
+		while (currentPackage.length > 0) {
+			final inPackage = currentPackage + "." + raw;
+			if (identityByFullName.exists(inPackage)) {
+				final packageIdentity = identityByFullName.get(inPackage);
+				if (identityVisibleFromModule(packageIdentity, currentModulePath))
+					return packageIdentity;
+			}
+			final dot = currentPackage.lastIndexOf(".");
+			currentPackage = dot < 0 ? "" : currentPackage.substr(0, dot);
 		}
 		if (identityByFullName.exists(raw)) {
 			final rootIdentity = identityByFullName.get(raw);
@@ -389,15 +337,10 @@ class TyperIndex {
 		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
 		if (standardIdentity != null)
 			return standardIdentity;
-		if (hidesOriginalNameBehindAlias(raw, directives) || rawStaticWildcardHidesType(raw, directives))
-			return null;
 
-		final shortName = raw.indexOf(".") < 0 ? raw : raw.substr(raw.lastIndexOf(".") + 1);
-		final candidates = identityByShortName.exists(shortName) ? [
-			for (candidate in identityByShortName.get(shortName))
-				if (identityVisibleFromModule(candidate, currentModulePath)) candidate
-		] : [];
-		return candidates.length == 1 ? candidates[0] : null;
+		// A namesake in an unrelated package is not in scope. Keep the hint
+		// unresolved so dependency loading can select its actual source module.
+		return null;
 	}
 
 	/**
@@ -909,15 +852,7 @@ class TyperIndex {
 		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
 		if (standardIdentity != null)
 			return getByFullName(standardIdentity.getCanonicalName());
-		if (hidesOriginalNameBehindAlias(raw, directives)
-			|| rawStaticWildcardHidesType(raw, directives)
-			|| resolvedStaticWildcardHidesType(raw, resolvedDirectives))
-			return null;
-		final alternatives = [
-			for (candidate in getByShortName(raw))
-				if (typeVisibleFromModule(candidate, currentModulePath)) candidate
-		];
-		return alternatives.length == 1 ? alternatives[0] : null;
+		return null;
 	}
 
 	static function typeVisibleFromModule(info:Null<TyNominalInfo>, currentModulePath:Null<String>):Bool {

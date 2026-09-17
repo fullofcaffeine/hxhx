@@ -4,9 +4,11 @@ import backend.BackendRegistry;
 import backend.vm.NekoMacroExprLowering;
 import backend.vm.NekoTargetCore;
 import haxe.io.Path;
+import hxhx.Stage3SetupSupport;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Checks Neko source structure after shared typing; runtime fixtures separately execute the emitted code. */
 class M14NekoNativeBackendSmokeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -21,6 +23,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 	static function assertNotContains(haystack:String, needle:String, message:String):Void {
 		if (haystack.indexOf(needle) >= 0)
 			throw message + " (unexpected `" + needle + "` in `" + haystack + "`)";
+	}
+
+	/** Catch carriers have occurrence identities; the authored binding is introduced inside dispatch. */
+	static function assertTypedCatch(source:String, tryBody:String, handler:String):Void {
+		assertContains(source, tryBody, "typed catch changed its protected expression");
+		assertContains(source, "catch __hxhx_catch_", "typed catch lost its occurrence-owned carrier");
+		assertContains(source, "var e = ", "typed catch lost its authored local binding");
+		assertContains(source, handler, "typed catch changed its handler result");
 	}
 
 	static function assertFailsContains(fn:Void->Void, expected:String):Void {
@@ -47,12 +57,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		}
 	}
 
-	static function program(source:String):MacroExpandedProgram {
-		return programMany([{path: "Main.hx", source: source}]);
+	static function program(source:String, withProviders:Bool = false):MacroExpandedProgram {
+		return programMany([{path: "Main.hx", source: source}], withProviders);
 	}
 
-	/** Exercise the same program-wide declaration index and loader as ordinary compilation. */
-	static function programMany(sources:Array<{path:String, source:String}>):MacroExpandedProgram {
+	/**
+		Index authored declarations with the Neko target policy before emission.
+		Typed catches request real standard-library providers; syntax-only cases
+		can keep their small declaration set without loading unrelated libraries.
+	**/
+	static function programMany(sources:Array<{path:String, source:String}>, withProviders:Bool = false):MacroExpandedProgram {
+		if (withProviders)
+			return NekoSourceProgramFixture.build(sources);
 		final resolved = [
 			for (source in sources) {
 				final parsed = ParserStage.parse(source.source, source.path);
@@ -61,11 +77,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 				new ResolvedModule(packagePath.length == 0 ? name : packagePath + "." + name, source.path, parsed);
 			}
 		];
+		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final index = TyperIndex.build(resolved);
-		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
+		final loader = new ModuleLoader(["."], defines, index, function(_):Bool return false);
 		loader.markResolvedAlready(resolved);
-		final modules = [for (module in resolved) TyperStage.typeResolvedModule(module, index, loader)];
-		return MacroStage.expandProgram(modules, []);
+		final pending = resolved.copy();
+		final modules = new Array<TypedModule>();
+		var cursor = 0;
+		while (cursor < pending.length) {
+			modules.push(TyperStage.typeResolvedModule(pending[cursor++], index, loader, true));
+			for (loaded in loader.drainNewModules())
+				pending.push(loaded);
+		}
+		return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(modules, index), false);
 	}
 
 	static function supportSource(split:{support:Array<{source:String}>}):String {
@@ -84,13 +108,6 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"for-expression recovery fragments should render as neutral null");
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("=")) == "null",
 			"single-token assignment recovery fragments should render as neutral null");
-		final structuralTry = @:privateAccess NekoTargetCore.renderExpr(cast null, ECall(EIdent("__hxhx_try"), [
-			ELambda([], ECall(EIdent("__hxhx_throw"), [EString("boom")])),
-			EArrayDecl([EArrayDecl([EString("e"), EString("Dynamic"), ELambda(["e"], EIdent("e"))])]),
-			ENull
-		]));
-		assertContains(structuralTry, 'try { return $' + 'throw("boom"); } catch e { return e; }',
-			"shared expression-level try/catch should emit from structural branches without raw source parsing");
 		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("not_numeric")), "EUnsupported(not_numeric)");
 		assertTrue(@:privateAccess NekoTargetCore.isNekoNumericLiteralText("1.2e+35"), "scientific float text should be valid Neko numeric text");
 		assertTrue(! @:privateAccess NekoTargetCore.isNekoNumericLiteralText(String.fromCharCode(0xF0) + "bad"),
@@ -165,10 +182,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(source, "$print(\"hello neko\", \"\\n\")", "expected Sys.println lowering");
 		assertContains(source, "Main_main();", "expected entrypoint invocation");
 
+		// Catch emission needs the binding and conversion facts from the typer.
+		// A synthetic expression with a null context cannot represent that contract.
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var value = try { throw "boom"; "never"; } catch (e:Dynamic) e; Sys.println(value); } }'), context);
+		final structuralTry = File.getContent(sourcePath);
+		assertContains(structuralTry, 'try { return', "a typed value catch must retain its expression-level try body");
+		assertContains(structuralTry, '$' + 'throw("boom")', "a typed value catch must retain the original thrown value");
+		assertContains(structuralTry, 'return e;', "a typed value catch must return its resolved catch binding");
+
 		final splitContext = new BackendContext(outDir, outputHint, "Main", true, false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Helper { public static function value() return 40; } class Main { static function main() { Sys.println(Helper.value() + 2); } }'),
 			splitContext, sourcePath);
-		assertContains(split.support[0].source, "$exports.symbols = $new(null);", "expected split Neko symbol table module");
+		assertContains(split.support[0].source, "var __hxhx_symbols = $new(null);", "expected one split Neko symbol table allocation");
+		assertContains(split.support[0].source, "$exports.symbols = __hxhx_symbols;", "expected export of the initialized symbol table");
 		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value = function()", "expected split static function registration");
 		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value()", "expected split static calls to use symbol table");
 		assertContains(split.support[1].source, "var __hxhx_array_push = function(a, value)",
@@ -929,11 +956,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
-		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }'),
-			context);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }', true), context);
 		final trySource = File.getContent(sourcePath);
 		assertContains(trySource, "try {", "expected Neko try statement lowering");
-		assertContains(trySource, "catch e {", "expected Neko catch binding lowering");
+		assertContains(trySource, "catch __hxhx_catch_", "expected distinct Neko catch carrier");
+		assertContains(trySource, "var e = ", "expected authored catch binding after typed dispatch");
 		assertContains(trySource, "$throw(\"boom\");", "expected throw lowering inside try");
 		assertContains(trySource, "$print(e, \"\\n\")", "expected catch body lowering");
 
@@ -945,7 +973,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final singleTrySource = File.getContent(sourcePath);
 		assertContains(singleTrySource, "try {", "expected single-statement Neko try body to use a block");
 		assertContains(singleTrySource, "copy();", "expected try expression body to remain inside the block");
-		assertContains(singleTrySource, "catch e {", "expected single-statement Neko catch body to use a block");
+		assertContains(singleTrySource, "catch __hxhx_catch_", "expected single-statement Neko catch body to use a carrier block");
 
 		deleteRecursive(outDir);
 
@@ -992,9 +1020,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final bytesSubTryExprSource = File.getContent(sourcePath);
 		assertContains(bytesSubTryExprSource, "__hxhx_symbols.__hxhx_new_Bytes = function(length, data)", "expected Bytes constructor factory");
-		assertContains(bytesSubTryExprSource,
-			"try { return __hxhx_symbols.__hxhx_new_Bytes(len, $ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
-			"expected structural try/catch around the native slice and local Bytes constructor");
+		assertTypedCatch(bytesSubTryExprSource, "try { return __hxhx_symbols.__hxhx_new_Bytes(len, $ssub(b, pos, len)); }",
+			"return $throw(\"OutsideBounds\");");
 
 		deleteRecursive(outDir);
 
@@ -1003,27 +1030,27 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var len = 1; var b = untyped __dollar__string(123); var pos = 0; var value = try { new String(untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw "OutsideBounds"; }; Sys.println(value); } }'),
 			context);
 		final stringSubTryExprSource = File.getContent(sourcePath);
-		assertContains(stringSubTryExprSource, "try { return $string($ssub(b, pos, len)); } catch e { return $throw(\"OutsideBounds\"); }",
-			"expected structural try/catch around native slicing and String construction");
+		assertTypedCatch(stringSubTryExprSource, "try { return $string($ssub(b, pos, len)); }", "return $throw(\"OutsideBounds\");");
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { function test() { throw "boom"; } var result = try { test(); } catch(e:String) { e; }; Sys.println(result); } }'),
+			program('class Main { static function main() { function test() { throw "boom"; } var result = try { test(); } catch(e:String) { e; }; Sys.println(result); } }',
+				true),
 			context);
 		final simpleCallCatchSource = File.getContent(sourcePath);
-		assertContains(simpleCallCatchSource, "try { return test(); } catch e { return e; }", "expected simple call catch-value raw lowering");
+		assertTypedCatch(simpleCallCatchSource, "try { return test(); }", "return e;");
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { var nf1:{s:String} = null; var result = try { nf1.s; } catch(e:Any) { "NPE"; }; Sys.println(result); } }'),
+			program('class Main { static function main() { var nf1:{s:String} = null; var result = try { nf1.s; } catch(e:Any) { "NPE"; }; Sys.println(result); } }',
+				true),
 			context);
 		final fieldReadCatchSource = File.getContent(sourcePath);
-		assertContains(fieldReadCatchSource, "try { return __hxhx_field(nf1, \"s\"); } catch e { return \"NPE\"; }",
-			"expected structural field access to preserve the catch result on a null receiver");
+		assertTypedCatch(fieldReadCatchSource, "try { return __hxhx_field(nf1, \"s\"); }", "return \"NPE\";");
 
 		deleteRecursive(outDir);
 
@@ -1032,42 +1059,40 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var pl = ["a", "b"]; var result = try { pl.join(","); } catch(e:Dynamic) { "???"; }; Sys.println(result); } }'),
 			context);
 		final methodCallCatchSource = File.getContent(sourcePath);
-		assertContains(methodCallCatchSource, "try { return __hxhx_field(pl, \"join\")(\",\"); } catch e { return \"???\"; }",
-			"expected structural array method lookup inside try/catch");
+		assertTypedCatch(methodCallCatchSource, "try { return __hxhx_field(pl, \"join\")(\",\"); }", "return \"???\";");
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { var uname = { stdout: { readLine: function() return "Linux" } }; var result = try { uname.stdout.readLine(); } catch(e:haxe.io.Eof) { ""; }; Sys.println(result); } }'),
+			program('class Main { static function main() { var uname = { stdout: { readLine: function() return "Linux" } }; var result = try { uname.stdout.readLine(); } catch(e:haxe.io.Eof) { ""; }; Sys.println(result); } }',
+				true),
 			context);
 		final nestedMethodCallCatchSource = File.getContent(sourcePath);
-		assertContains(nestedMethodCallCatchSource, "try { return __hxhx_field(__hxhx_field(uname, \"stdout\"), \"readLine\")(); } catch e { return \"\"; }",
-			"expected nested structural method lookup inside try/catch");
+		assertTypedCatch(nestedMethodCallCatchSource, "try { return __hxhx_field(__hxhx_field(uname, \"stdout\"), \"readLine\")(); }", "return \"\";");
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { var ok = try { Sys.putEnv("NON_EXISTENT", null); true; } catch(e) { trace(e); false; }; Sys.println(ok); } }'),
+			program('class Main { static function main() { var ok = try { Sys.putEnv("NON_EXISTENT", null); true; } catch(e) { trace(e); false; }; Sys.println(ok); } }',
+				true),
 			context);
 		final sysPutEnvTrySource = File.getContent(sourcePath);
 		assertContains(sysPutEnvTrySource, "var __hxhx_sys_put_env = function(name, value) {", "expected Sys.putEnv Neko runtime helper");
-		assertContains(sysPutEnvTrySource, 'return true; })(__hxhx_sys_put_env("NON_EXISTENT", null)); } catch e { return (function(',
-			"expected structural sequencing of Sys.putEnv before the successful Boolean result");
-		assertContains(sysPutEnvTrySource, 'return false; })($$print(e, "\\n")); }', "expected structural sequencing of catch logging before the false result");
+		assertTypedCatch(sysPutEnvTrySource, 'return true; })(__hxhx_sys_put_env("NON_EXISTENT", null)); }', 'return false; })($$print(e, "\\n"));');
 
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Log { public static function warn(message:String) {} } class Main { static function main() { var platformsJson = "platforms.json"; var min = try { haxe.Json.parse(sys.io.File.getContent(platformsJson)).min; } catch(e) { Log.warn("Unable to determine minimum supported Android platform: " + e.toString()); null; }; Sys.println(min); } }'),
+			program('class Log { public static function warn(message:String) {} } class Main { static function main() { var platformsJson = "platforms.json"; var min = try { haxe.Json.parse(sys.io.File.getContent(platformsJson)).min; } catch(e) { Log.warn("Unable to determine minimum supported Android platform: " + e.toString()); null; }; Sys.println(min); } }',
+				true),
 			context);
 		final hxcppAndroidMinTrySource = File.getContent(sourcePath);
-		assertContains(hxcppAndroidMinTrySource, "var __hxhx_json_min_field_from_file = function(path) {",
-			"expected Neko runtime support helper for hxcpp Android platform-min JSON");
-		assertContains(hxcppAndroidMinTrySource, "__hxhx_json_min_field_from_file(platformsJson)",
-			"expected hxcpp Android platform-min try/catch to call the runtime helper");
+		assertTypedCatch(hxcppAndroidMinTrySource,
+			'try { return __hxhx_field(__hxhx_symbols.haxe_Json_parse(__hxhx_symbols.sys_io_File_getContent(platformsJson)), "min"); }',
+			'__hxhx_symbols.Log_warn(("Unable to determine minimum supported Android platform: " + __hxhx_field(e, "toString")()))');
 		assertNotContains(hxcppAndroidMinTrySource, "ETryCatchRaw(try{haxe.Json.parse", "hxcpp Android platform-min try/catch must not stay unsupported");
 
 		deleteRecursive(outDir);
@@ -1087,7 +1112,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var result = { var b: { v:Dynamic } = { v: "foo" }; }; Sys.println(result); } }'), context);
 		final opaqueObjectLocalSource = File.getContent(sourcePath);
-		assertContains(opaqueObjectLocalSource, "var b = (function() { var __hxhx_o = $new(null); __hxhx_o.v = \"foo\"; return __hxhx_o; })(); return null;",
+		assertContains(opaqueObjectLocalSource,
+			"(function(b) { return null; })((function() { var __hxhx_o = $new(null); __hxhx_o.v = \"foo\"; return __hxhx_o; })())",
 			"expected typed local object opaque block lowering");
 
 		deleteRecursive(outDir);
@@ -1097,7 +1123,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var result = { var b: { v:Int } = { v: 1.2 }; }; Sys.println(result); } }'), context);
 		final opaqueNumericObjectLocalSource = File.getContent(sourcePath);
 		assertContains(opaqueNumericObjectLocalSource,
-			"var b = (function() { var __hxhx_o = $new(null); __hxhx_o.v = 1.2; return __hxhx_o; })(); return null;",
+			"(function(b) { return null; })((function() { var __hxhx_o = $new(null); __hxhx_o.v = 1.2; return __hxhx_o; })())",
 			"expected numeric typed local object opaque block lowering");
 
 		deleteRecursive(outDir);
@@ -1116,7 +1142,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('typedef TypedefToStringMap<T> = haxe.ds.StringMap<T>; class Main { static function main() { var result = { var x:TypedefToStringMap<String>; x; }; Sys.println(result); } }'),
 			context);
 		final opaqueTypedLocalRefSource = File.getContent(sourcePath);
-		assertContains(opaqueTypedLocalRefSource, "var x = null; return x;", "expected typed local reference opaque block lowering");
+		assertContains(opaqueTypedLocalRefSource, "(function(x) { return x; })(null)", "expected typed local reference opaque block lowering");
 
 		deleteRecursive(outDir);
 
@@ -1124,7 +1150,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var z = 1; var result = { var i:Int = z; }; Sys.println(result); } }'), context);
 		final opaqueTypedLocalInitSource = File.getContent(sourcePath);
-		assertContains(opaqueTypedLocalInitSource, "var i = z; return null;", "expected typed local init opaque block lowering");
+		assertContains(opaqueTypedLocalInitSource, "(function(i) { return null; })(z)", "expected typed local init opaque block lowering");
 
 		deleteRecursive(outDir);
 
@@ -1201,7 +1227,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var ok = 1 is Int; Sys.println(ok); } }'), context);
 		final isSource = File.getContent(sourcePath);
-		assertContains(isSource, 'var ok = Std_isOfType(1, "Int");', "expected Haxe is-expression to lower through Std.isOfType");
+		assertContains(isSource, 'var ok = __hxhx_is_of_type(1, __hxhx_runtime_type("core:Int"));',
+			"expected Haxe is-expression to use the canonical Int runtime predicate");
 		assertNotContains(isSource, " is ", "Haxe is-expression syntax should not leak into Neko source");
 		deleteRecursive(outDir);
 	}
