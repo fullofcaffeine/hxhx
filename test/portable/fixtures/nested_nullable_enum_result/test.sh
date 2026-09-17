@@ -35,7 +35,7 @@ if (start < 0
 	|| !body.includes('HxRuntime.Hx_return (HxRuntime.hx_null)')
 	|| !body.includes('HxRuntime.Hx_return (Obj.repr value)')
 	|| !body.includes('| HxRuntime.Hx_return __ret_')
-	|| !body.includes(': Obj.t) in Wrapped')
+	|| !/: Obj\.t\) in let (__enum_arg_\d+) = Obj\.obj \(HxEnum\.unbox_or_obj "Choice" \(choose \(\)\)\) in Wrapped \(Stdlib\.Sys\.opaque_identity \1\)/.test(body)
 	|| body.includes('Obj.magic (HxRuntime.hx_null)')) {
 	throw new Error('generated choose did not convert each nullable-enum result exactly once')
 }

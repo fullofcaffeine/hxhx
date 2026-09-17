@@ -35,7 +35,8 @@ if (start < 0
 	|| !body.includes(': Obj.t)')) {
 	throw new Error('generated rebuild did not box its exact normal result once')
 }
-if (!source.includes('Wrapped (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.FixtureChoice" (rebuild'))
+const wrap = source.match(/let wrap = fun present -> let (__enum_arg_\d+) = (.+) in Haxe_macro_FixtureEnvelope\.Wrapped \(Stdlib\.Sys\.opaque_identity \1\)/)
+if (wrap?.[2] !== 'Obj.obj (HxEnum.unbox_or_obj "haxe.macro.FixtureChoice" (rebuild (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.FixtureChoice" (choose present)))))')
 	throw new Error('generated constructor did not consume the nullable result carrier')
 NODE
 
