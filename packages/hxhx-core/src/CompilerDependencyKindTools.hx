@@ -4,6 +4,7 @@ class CompilerDependencyKindTools {
 		return switch (kind) {
 			case ModuleResolution: "module-resolution";
 			case PublicInterface: "public-interface";
+			case PrivateDeclaration: "private-declaration";
 			case InlineImplementation: "inline-implementation";
 			case ConstantValue: "constant-value";
 			case ConditionalCompilation: "conditional-compilation";
@@ -18,6 +19,7 @@ class CompilerDependencyKindTools {
 	public static function consumesImplementation(kind:CompilerDependencyKind):Bool {
 		return switch (kind) {
 			case InlineImplementation: true;
+			case PrivateDeclaration: true;
 			case ConstantValue: true;
 			case ConditionalCompilation: false;
 			case GeneratedDeclaration: true;

@@ -16,7 +16,7 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
 import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeRequirementContract;
 import reflaxe.ocaml.target.OcamlTargetProgramCore;
@@ -30,7 +30,7 @@ class NativeDeclarationAdapterFixture {
 		fields.set("count", new TyFieldInfo(owner, "unit.NativeSample", "count", TyType.fromHintText("Int"), false, true, false, false, true));
 		final info = new TyClassInfo(owner, "NativeSample", "unit.NativeSample", fields, new haxe.ds.StringMap(), new haxe.ds.StringMap(),
 			new haxe.ds.StringMap(), new haxe.ds.StringMap(), new haxe.ds.StringMap(), [], Public, false);
-		final request = HxhxOcamlTargetDeclarationAdapter.fromClassFacts("native-fixture-program", [new TypedBackendClassSemanticFacts(info, null)]);
+		final request = HxhxOcamlTargetDeclarationAdapter.fromClassFacts("native-fixture-program", [new TypedBackendClassSemanticFacts(info, null, [])]);
 		final classes = request.copyClasses();
 		if (classes.length != 1 || classes[0].copyFields().length != 1 || classes[0].copyFields()[0].typeDisplay != "Int")
 			throw "native semantic field was not copied into target-owned facts";
@@ -42,6 +42,12 @@ class NativeDeclarationAdapterFixture {
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
+		final runtimeTarget = new TypedRuntimeTypeTarget(Nominal(owner));
+		final typeValue = TypedExpr.runtimeTypeValue(runtimeTarget, HxPos.unknown());
+		final typeTest = TypedExpr.runtimeTypeTest(TypedExpr.nullValue(TyType.fromHintText("Dynamic"), HxPos.unknown()), runtimeTarget, HxPos.unknown());
+		if (HxhxOcamlTargetLiteralAdapter.fromExpression(typeValue) != null
+			|| HxhxOcamlTargetLiteralAdapter.fromExpression(typeTest) != null)
+			throw "native literal adapter must not reinterpret runtime type operations as literals";
 		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
 		final binding = new TyLocalBinding(localId, "value", TyType.fromHintText("Int"), Variable);
 		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", binding, "root/block-item/0/binding");

@@ -63,7 +63,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
+if (report.schemaVersion !== 89
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v4'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -113,7 +113,7 @@ for (const operation of operations) {
 	]
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
@@ -224,7 +224,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_REPORT" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| !report.summary?.valid
 	|| report.summary.anonymousStructureCount !== report.lowering?.anonymousStructures?.length
 	|| report.summary.anonymousStructureOperationCount !== report.lowering?.anonymousStructureOperations?.length
@@ -272,6 +272,7 @@ fi
 cp -R out "$INVALID_REVISION_OUTPUT"
 node - "$INVALID_REVISION_OUTPUT/ocaml_lowering_report.json" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -282,7 +283,7 @@ if (!representation) {
 }
 representation.revision = `sha256:${'0'.repeat(64)}`
 report.representationRevision = 'sha256:' + crypto.createHash('sha256')
-	.update(JSON.stringify(report.representations)).digest('hex')
+	.update(reportJson(report.representations)).digest('hex')
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 

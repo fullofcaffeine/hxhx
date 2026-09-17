@@ -17,9 +17,10 @@ class TypedBackendFunctionProjection {
 	final fieldReadCatalog:TypedBackendFieldReadCatalog;
 	final parameterBindingIdentities:Array<String>;
 	final returnType:TyType;
+	final runtimeTypeCatalog:TypedBackendRuntimeTypeCatalog;
 
 	public function new(stableIdentity:String, bodyRevision:String, declaration:HxFunctionDecl, localCatalog:TypedBackendLocalCatalog, returnType:TyType,
-			?fieldReadCatalog:TypedBackendFieldReadCatalog, ?parameterBindingIdentities:Array<String>) {
+			?fieldReadCatalog:TypedBackendFieldReadCatalog, ?parameterBindingIdentities:Array<String>, ?runtimeTypeCatalog:TypedBackendRuntimeTypeCatalog) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend function projection requires a stable identity";
 		if (bodyRevision == null || bodyRevision.length == 0)
@@ -37,6 +38,9 @@ class TypedBackendFunctionProjection {
 		this.fieldReadCatalog = fieldReadCatalog == null ? new TypedBackendFieldReadCatalog([]) : fieldReadCatalog;
 		this.parameterBindingIdentities = parameterBindingIdentities == null ? [] : parameterBindingIdentities.copy();
 		this.returnType = returnType;
+		this.runtimeTypeCatalog = runtimeTypeCatalog == null ? new TypedBackendRuntimeTypeCatalog(stableIdentity, bodyRevision, []) : runtimeTypeCatalog;
+		this.runtimeTypeCatalog.assertOwner(stableIdentity, bodyRevision);
+		this.runtimeTypeCatalog.assertMarkers(TypedRuntimeTypeSource.inStatements(HxFunctionDecl.getBody(declaration)));
 		for (local in localCatalog.getEntries())
 			if (local.getBinding().getIdentity().getOwnerIdentity() != stableIdentity)
 				throw "typed backend function projection contains a local from another function " + stableIdentity;
@@ -55,6 +59,16 @@ class TypedBackendFunctionProjection {
 
 	public function getDeclaration():HxFunctionDecl
 		return declaration;
+
+	public function getRuntimeTypeCatalog():TypedBackendRuntimeTypeCatalog
+		return runtimeTypeCatalog;
+
+	/** Select an operand only from this exact function projection and body revision. */
+	public function requireRuntimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence {
+		if (TypedRuntimeTypeSource.inStatements(getBody()).indexOf(expression) < 0)
+			throw "runtime type operand is absent from the current function projection";
+		return runtimeTypeCatalog.require(expression, stableIdentity, bodyRevision);
+	}
 
 	/**
 		Return the source-shaped body rebuilt from this projection's sealed typed

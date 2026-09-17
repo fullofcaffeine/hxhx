@@ -17,6 +17,7 @@ class TyType {
 	static final KIND_NULL = "null";
 	static final KIND_NULLABLE = "nullable";
 	static final KIND_NOMINAL = "nominal";
+	static final KIND_ABSTRACT_META = "abstract-meta";
 	static final KIND_FUNCTION = "function";
 	static final KIND_ANONYMOUS = "anonymous";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
@@ -96,6 +97,22 @@ class TyType {
 		}
 		return new TyType(shown, KIND_NOMINAL, identity, actualArgs, null, "");
 	}
+
+	/**
+		Describe a runtime abstract type value, such as the expression `Int`.
+
+		Haxe reports this internal meta-type as `Abstract<T>`. It is neither an
+		instance of T nor a Class<T>, and it has no nominal declaration owner.
+		Keep the argument structural so substitution and dependency walks see it.
+	**/
+	public static function abstractMeta(instance:TyType):TyType {
+		if (instance == null)
+			throw "abstract meta-type requires an instance type";
+		return new TyType("Abstract<" + instance.getDisplay() + ">", KIND_ABSTRACT_META, null, [instance], null, "");
+	}
+
+	public function isAbstractMeta():Bool
+		return kind == KIND_ABSTRACT_META;
 
 	/** Create a structural function type whose arguments and result remain available to call typing. **/
 	public static function functionType(arguments:Array<TyType>, result:TyType, ?display:String):TyType {
@@ -184,6 +201,10 @@ class TyType {
 	public function isNullable():Bool
 		return kind == KIND_NULLABLE;
 
+	/** The null literal is distinct from a value whose declared type permits null. */
+	public function isNullLiteral():Bool
+		return kind == KIND_NULL;
+
 	public function isUnresolved():Bool
 		return kind == KIND_UNRESOLVED;
 
@@ -251,6 +272,8 @@ class TyType {
 					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getSemanticKey()
 			].join(",") + "}";
 		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.getSemanticKey()].join(",") + ">";
+		if (kind == KIND_ABSTRACT_META)
+			return "abstract-meta" + args;
 		if (kind == KIND_NOMINAL)
 			return "nominal:" + (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + args;
 		return "unresolved:" + unresolvedPath + args;
@@ -276,6 +299,8 @@ class TyType {
 					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getCanonicalDisplay()
 			].join(",") + "}";
 		final arguments = typeArguments.length == 0 ? "" : "<" + [for (argument in typeArguments) argument.getCanonicalDisplay()].join(",") + ">";
+		if (kind == KIND_ABSTRACT_META)
+			return "Abstract" + arguments;
 		if (kind == KIND_NOMINAL)
 			return (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + arguments;
 		if (kind == KIND_UNRESOLVED)

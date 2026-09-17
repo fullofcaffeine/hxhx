@@ -5,6 +5,7 @@ const cp = require('child_process')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
+const reportJson = require('./ocaml-report-json')
 
 const repoRoot = path.resolve(__dirname, '../..')
 const tempParent = path.join(repoRoot, '.tmp')
@@ -12,14 +13,10 @@ fs.mkdirSync(tempParent, {recursive: true})
 const tempRoot = fs.mkdtempSync(path.join(tempParent, 'reflaxe-ocaml-inspect-'))
 const sourceFixture = path.join(repoRoot, 'test/portable/fixtures/place_static_field_assign')
 const sha256Revision = /^sha256:[0-9a-f]{64}$/
-const haxeArgs = [
-	'-cp', 'packages/reflaxe.ocaml/src',
-	'--macro', 'nullSafety("reflaxe.ocaml")',
-	'--run', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun'
-]
+const inspectorPath = path.join(tempRoot, 'inspect.n')
 
 function runCli(args) {
-	return cp.spawnSync('haxe', haxeArgs.concat(args), {
+	return cp.spawnSync('neko', [inspectorPath].concat(args), {
 		cwd: repoRoot,
 		env: process.env,
 		encoding: 'utf8',
@@ -29,6 +26,23 @@ function runCli(args) {
 }
 
 try {
+	// Compile once while retaining a fresh process, exit status, and diagnostics
+	// for every report mutation below.
+	const inspectorCompile = cp.spawnSync('haxe', [
+		'-cp', 'packages/reflaxe.ocaml/src',
+		'--macro', 'nullSafety("reflaxe.ocaml")',
+		'-D', 'reflaxe_runtime',
+		'-main', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun',
+		'--neko', inspectorPath
+	], {
+		cwd: repoRoot,
+		env: process.env,
+		encoding: 'utf8',
+		maxBuffer: 50 * 1024 * 1024,
+		shell: false
+	})
+	assert.strictEqual(inspectorCompile.status, 0, inspectorCompile.stderr || inspectorCompile.stdout)
+
 	fs.cpSync(path.join(sourceFixture, 'src'), path.join(tempRoot, 'src'), {recursive: true})
 	const hxml = fs.readFileSync(path.join(sourceFixture, 'build.hxml'), 'utf8') + '\n-D ocaml_no_build\n'
 	fs.writeFileSync(path.join(tempRoot, 'build.hxml'), hxml)
@@ -44,7 +58,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 47)
+	assert.strictEqual(report.schemaVersion, 48)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -518,12 +532,22 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
+	assert.strictEqual(lowering.schemaVersion, 89)
+	const oldSchemaValue = JSON.parse(loweringBytes)
+	oldSchemaValue.schemaVersion = 87
+	fs.writeFileSync(loweringPath, JSON.stringify(oldSchemaValue, null, 2) + '\n')
+	const oldSchemaResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(oldSchemaResult.status, 1)
+	const oldSchemaReport = JSON.parse(oldSchemaResult.stdout)
+	assert.strictEqual(oldSchemaReport.lowering.status, 'invalid')
+	assert(oldSchemaReport.lowering.message.includes('expected 89'))
+	fs.writeFileSync(loweringPath, loweringBytes)
 	const corruptTypeCheckValue = JSON.parse(loweringBytes)
 	const corruptTypeCheck = corruptTypeCheckValue.stdIsOfType.find(decision => decision.runtimeRequirementIds.length > 0)
 	assert(corruptTypeCheck)
 	corruptTypeCheck.strategy = 'static-true'
 	corruptTypeCheckValue.stdIsOfTypeRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(corruptTypeCheckValue.stdIsOfType)).digest('hex')
+		.update(reportJson(corruptTypeCheckValue.stdIsOfType)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(corruptTypeCheckValue, null, 2) + '\n')
 	const corruptTypeCheckResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(corruptTypeCheckResult.status, 1)
@@ -563,7 +587,7 @@ try {
 	assert(staleArrayDescriptor)
 	staleArrayDescriptor.elementRepresentationRevision = 'sha256:' + '0'.repeat(64)
 	staleArrayDescriptorValue.representedArrayRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(staleArrayDescriptorValue.representedArrays)).digest('hex')
+		.update(reportJson(staleArrayDescriptorValue.representedArrays)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(staleArrayDescriptorValue, null, 2) + '\n')
 	const staleArrayDescriptorResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(staleArrayDescriptorResult.status, 1)
@@ -577,7 +601,7 @@ try {
 	assert(staleRepresentationLeaf)
 	staleRepresentationLeaf.reason += ' corrupted'
 	staleRepresentationLeafValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(staleRepresentationLeafValue.representations)).digest('hex')
+		.update(reportJson(staleRepresentationLeafValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(staleRepresentationLeafValue, null, 2) + '\n')
 	const staleRepresentationLeafResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(staleRepresentationLeafResult.status, 1)
@@ -651,7 +675,7 @@ try {
 	const [removedRepresentation] = missingRepresentationValue.representations.splice(removedRepresentationIndex, 1)
 	missingRepresentationValue.representationCount -= 1
 	missingRepresentationValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(missingRepresentationValue.representations)).digest('hex')
+		.update(reportJson(missingRepresentationValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(missingRepresentationValue, null, 2) + '\n')
 	const missingRepresentation = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(missingRepresentation.status, 1)
@@ -666,7 +690,7 @@ try {
 	assert(staticRepresentation)
 	staticRepresentation.domain = 'array-element'
 	wrongDomainValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(wrongDomainValue.representations)).digest('hex')
+		.update(reportJson(wrongDomainValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(wrongDomainValue, null, 2) + '\n')
 	const wrongDomain = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(wrongDomain.status, 1)
@@ -677,7 +701,7 @@ try {
 	const missingMutationPolicyValue = JSON.parse(loweringBytes)
 	delete missingMutationPolicyValue.representations[0].storageMutationPolicy
 	missingMutationPolicyValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
-		.update(JSON.stringify(missingMutationPolicyValue.representations)).digest('hex')
+		.update(reportJson(missingMutationPolicyValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(missingMutationPolicyValue, null, 2) + '\n')
 	const missingMutationPolicy = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(missingMutationPolicy.status, 1)

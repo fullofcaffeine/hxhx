@@ -695,6 +695,11 @@ class CppLocalTypeInference {
 	}
 
 	function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<String>):Void {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null) {
+			collectStringMapLocalTypeOverridesFromExpr(TypedExactStaticCallSource.ordinaryCall(staticCall), scope, candidates);
+			return;
+		}
 		final exact = TypedExactCallSource.decodeInstance(expr);
 		if (exact != null) {
 			collectStringMapLocalTypeOverridesFromExpr(TypedExactCallSource.ordinaryInstanceCall(exact), scope, candidates);

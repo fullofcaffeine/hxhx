@@ -2,6 +2,8 @@ package reflaxe.ocaml.tooling;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureField;
@@ -75,7 +77,7 @@ class ReflaxeOcamlAnonymousStructureInspection {
 		}
 
 		final revision = requiredSha256Revision(value, "anonymousStructureRevision");
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify({
+		final expectedRevision = "sha256:" + hashUtf8(reportJson({
 			structures: structures,
 			operations: operations
 		}));
@@ -320,7 +322,7 @@ class ReflaxeOcamlAnonymousStructureInspection {
 
 	static function requiredArray(value:Dynamic, name:String):Array<Dynamic> {
 		final result = Reflect.field(value, name);
-		if (!Std.isOfType(result, Array))
+		if (result == null || !Std.isOfType(result, Array))
 			throw 'Expected "$name" to be an array.';
 		return cast result;
 	}
@@ -337,7 +339,7 @@ class ReflaxeOcamlAnonymousStructureInspection {
 
 	static function requiredString(value:Dynamic, name:String):String {
 		final result = Reflect.field(value, name);
-		if (!Std.isOfType(result, String))
+		if (result == null || !Std.isOfType(result, String))
 			throw 'Expected "$name" to be a string.';
 		return cast result;
 	}
@@ -353,7 +355,7 @@ class ReflaxeOcamlAnonymousStructureInspection {
 
 	static function requiredInt(value:Dynamic, name:String):Int {
 		final result = Reflect.field(value, name);
-		if (!Std.isOfType(result, Int))
+		if (result == null || !Std.isOfType(result, Int))
 			throw 'Expected "$name" to be an integer.';
 		return cast result;
 	}

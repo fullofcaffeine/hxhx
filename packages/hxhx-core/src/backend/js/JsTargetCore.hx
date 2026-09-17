@@ -65,6 +65,7 @@ class JsTargetCore implements ITargetCore {
 
 		for (typed in typedModules) {
 			final moduleProjection = typed.getBackendProjection();
+			moduleProjection.assertRuntimeTypeOperandsAbsent("JavaScript backend");
 			final decl = moduleProjection.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final mainClass = HxModuleDecl.getMainClass(decl);

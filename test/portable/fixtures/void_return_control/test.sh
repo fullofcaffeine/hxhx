@@ -27,8 +27,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
+if (report.schemaVersion !== 89
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
 }
@@ -73,7 +73,7 @@ for (const control of controls) {
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
 			? 'ocaml-nested-function-plans-v33'
-			: 'ocaml-function-plans-v113')
+			: 'ocaml-function-plans-v114')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -102,7 +102,7 @@ for (const name of [
 	'pushAfterGuard'
 ]) {
 	const body = functionBody(name)
-	if (!body.includes('raise (HxRuntime.Hx_return_void)')
+	if (!body.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		fail(`${name} did not mechanically consume its payloadless return signal and boundary`)
@@ -115,13 +115,13 @@ if (!pushBody.includes('ignore (try ignore (')
 
 for (const name of ['throughTry', 'fromCatch']) {
 	const body = functionBody(name)
-	if (!body.includes('| HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)'))
+	if (!body.includes('| HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)'))
 		fail(`a source catch can intercept ${name}'s private Void-return signal`)
 }
 
 const closureBody = functionBody('nestedClosure')
 if (!closureBody.includes('let local = fun')
-	|| !closureBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !closureBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !closureBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| !closureBody.includes('"outer"')) {
 	fail('the nested anonymous function did not keep an independent return boundary')
@@ -149,7 +149,7 @@ const controls = report.lowering.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 6

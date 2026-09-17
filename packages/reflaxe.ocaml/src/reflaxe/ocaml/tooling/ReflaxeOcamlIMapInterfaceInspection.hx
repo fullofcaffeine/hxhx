@@ -2,6 +2,8 @@ package reflaxe.ocaml.tooling;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceContract;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
@@ -42,7 +44,7 @@ typedef InspectionIMapInterfaceInventory = {
 	Edited, missing, or stale evidence makes inspection fail.
 **/
 class ReflaxeOcamlIMapInterfaceInspection {
-	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v113";
+	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v114";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
 	static inline final NESTED_FUNCTION_ID_MARKER = "|nested-function|";
 
@@ -75,7 +77,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		validateRetainedSurface(conversions, calls);
 
 		final revision = requiredSha256Revision(value, "iMapInterfaceRevision");
-		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify({conversions: conversions, calls: calls, storageAliases: storageAliases}));
+		final expectedRevision = "sha256:" + hashUtf8(reportJson({conversions: conversions, calls: calls, storageAliases: storageAliases}));
 		if (revision != expectedRevision)
 			throw 'IMap interface report revision is $revision but its validated inventory produces $expectedRevision.';
 
@@ -421,7 +423,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 
 	static function requiredArray(value:Dynamic, field:String):Array<Dynamic> {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, Array))
+		if (result == null || !Std.isOfType(result, Array))
 			throw 'Expected IMap interface array "$field".';
 		return cast result;
 	}
@@ -436,7 +438,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 
 	static function requiredString(value:Dynamic, field:String):String {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, String) || (cast result : String).length == 0)
+		if (result == null || !Std.isOfType(result, String) || (cast result : String).length == 0)
 			throw 'Expected non-empty IMap interface string "$field".';
 		return cast result;
 	}
@@ -452,7 +454,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 
 	static function requiredInt(value:Dynamic, field:String):Int {
 		final result = Reflect.field(value, field);
-		if (!Std.isOfType(result, Int))
+		if (result == null || !Std.isOfType(result, Int))
 			throw 'Expected IMap interface integer "$field".';
 		return cast result;
 	}

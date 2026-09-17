@@ -24,6 +24,16 @@ class M14HihExprTextParserIntegrationTest {
 	}
 
 	static function main() {
+		final rawUntypedTry = switch (HxParser.parseExprText('try { untyped probe(); } catch (error:String) { error; }')) {
+			case ETryCatchRaw(raw): raw;
+			case _: throw "try expression did not retain its bootstrap text";
+		};
+		switch (TypedBodyBuilder.recoveredStructuralExpression(rawUntypedTry)) {
+			case ECall(EIdent("__hxhx_try"), [ELambda([], EUntyped(ECall(EIdent("probe"), []))), _, _]):
+			case _:
+				throw "try expression merged the untyped keyword into the called identifier";
+		}
+
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
@@ -666,7 +676,8 @@ class M14HihExprTextParserIntegrationTest {
 		switch (typedLocalFunctionBlockStmts[0]) {
 			case SReturn(ETryCatchRaw(raw), _):
 				fail("typed local function block expression should not stay opaque: " + raw);
-			case SReturn(ECall(ELambda(_, _), _), _):
+			case SReturn(ECall(ECast(ELambda(["helper"], _), signature), _), _):
+				assertTrue(signature == "(()->String)->Dynamic", "local function continuation lost its written callable type");
 			case other:
 				fail("expected typed local function block expression to lower through lambda continuations, got " + Type.enumConstructor(other));
 		}
@@ -1472,9 +1483,9 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(EIdent("values"), patterns, _):
 				assertTrue(patterns.length == 2, "expected guarded switch cases");
 				switch (patterns[0]) {
-					case PLengthGuard(PBind("rest"), "rest", 3):
+					case PLengthGuard(PCapture("rest", PWildcard), "rest", 3):
 					case _:
-						fail("expected guarded bind pattern with length comparison");
+						fail("expected explicit wildcard capture with length comparison");
 				}
 			case EUnsupported(raw):
 				fail("guarded switch expression parsed as unsupported: " + raw);
@@ -1495,6 +1506,11 @@ class M14HihExprTextParserIntegrationTest {
 					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
+				}
+				switch (patterns[2]) {
+					case PCapture("x", PWildcard):
+					case _:
+						fail("expected explicit var to retain its wildcard capture");
 				}
 				final comparePatternExpr = HxParser.parseExprText('switch v { case One(x) if (x <= 1): "<=1"; case One(x) if (x > 1): ">1"; case _: "_"; }');
 				switch (comparePatternExpr) {

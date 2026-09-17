@@ -31,8 +31,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26') {
+if (report.schemaVersion !== 89
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27') {
 	fail('unexpected enum throw report schema or control model')
 }
 
@@ -49,7 +49,7 @@ for (const functionName of expectedFunctions) {
 	const control = controls.find(item => item.functionId.includes(`|function|${functionName}|`))
 	const payload = control?.payload
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| control.proofId !== 'exact-enum-constructor-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic,Signal'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -70,8 +70,8 @@ for (const functionName of expectedFunctions) {
 const plannedBoxes = source.match(/HxEnum\.box_if_needed "Signal" \(Obj\.repr /g) ?? []
 if (plannedBoxes.length !== 3
 	|| !source.includes('Obj.repr Idle')
-	|| !source.includes('Obj.repr (Payload ')
-	|| !source.includes('Obj.repr (Pair ')
+	|| !/Obj\.repr \(let (__enum_arg_\d+) = [^\n]+ in Payload \(Stdlib\.Sys\.opaque_identity \1\)\)/.test(source)
+	|| !/Obj\.repr \(let (__enum_arg_\d+) = \(label : string\) in let (__enum_arg_\d+) = [^\n]+ in Pair \(Stdlib\.Sys\.opaque_identity \1, \2\)\)/.test(source)
 	|| !source.includes('["Dynamic"; "Signal"]')
 	|| !source.includes('HxEnum.unbox_or_obj "Signal"')) {
 	fail('generated OCaml did not mechanically apply the three sealed enum throw decisions')
@@ -120,7 +120,7 @@ const sourceFile = 'external-source/src/Main.hx'
 const controls = report.lowering.controls.filter(item =>
 	item.sourceFile === sourceFile
 	&& item.payload?.conversion === 'box-enum-throw-carrier')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| controls.length !== 3
 	|| controls.some(item =>
@@ -219,8 +219,8 @@ NODE
 }
 
 expect_invalid carrier "invalid direct enum-constructor exception carrier"
-expect_invalid tags "invalid direct enum-constructor exception carrier"
-expect_invalid proof "invalid direct enum-constructor exception carrier"
+expect_invalid tags "invalid enum exception carrier"
+expect_invalid proof "invalid enum exception carrier"
 expect_invalid source "Control report revision does not match its targets, decisions, and catch chains"
 expect_invalid function "Control report revision does not match its targets, decisions, and catch chains"
 expect_invalid enum "Control report revision does not match its targets, decisions, and catch chains"

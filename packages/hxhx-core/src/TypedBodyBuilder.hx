@@ -92,7 +92,7 @@ class TypedBodyBuilder {
 	static function expressionType(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, resolver:Null<TypedExprTypeResolver>):TyType {
 		if (resolver == null || environment == null)
 			return fallbackType(expression, environment);
-		final resolved = resolver(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment);
+		final resolved = resolver.expressionType(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment);
 		return resolved == null ? TyType.unknown() : resolved;
 	}
 
@@ -239,7 +239,8 @@ class TypedBodyBuilder {
 			var failed = false;
 			var resolvedType:Null<TyType> = null;
 			try {
-				resolvedType = typeResolver(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment.copyForInference());
+				resolvedType = typeResolver.expressionType(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition,
+					environment.copyForInference());
 				failed = false;
 			} catch (_:TyperError) {
 				failed = true;
@@ -546,6 +547,75 @@ class TypedBodyBuilder {
 		return TySwitchPatternBindings.declare(environment, pattern, baseType);
 	}
 
+	/** Seal lambda bindings with their selected parameter types before typing captured reads. */
+	static function buildLambda(arguments:Array<String>, body:HxExpr, parameterTypes:Array<TyType>, position:Null<HxPos>, diagnosticPosition:HxPos,
+			environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
+		final bindings = new Array<TyLocalBinding>();
+		if (environment != null) {
+			environment.enterLexicalScope();
+			for (index in 0...arguments.length)
+				bindings.push(environment.declareLocal(arguments[index], parameterTypes[index], LambdaParameter).toBinding());
+		}
+		final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		if (environment != null)
+			environment.exitLexicalScope();
+		return TypedExpr.lambda(arguments.copy(), typedBody, TyType.functionType(parameterTypes, typedBody.getType()), position, bindings);
+	}
+
+	/**
+		Replay expression catches as catch declarations, preserving the typer's exact
+		type and identity. The parser stores handlers as lambdas only to carry their
+		bodies; ordinary lambda inference must not replace the catch parameter type.
+		Validate the full shape before consuming any declarations from the replay.
+	**/
+	static function buildStructuralTryArguments(arguments:Array<HxExpr>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<Array<TypedExpr>> {
+		final entries = switch (arguments) {
+			case [ELambda([], _), EArrayDecl(entries), _]: entries;
+			case _: return null;
+		};
+		for (entry in entries)
+			switch (entry) {
+				case EArrayDecl([EString(name), EString(_), ELambda([argument], _)]) if (argument == name):
+				case _:
+					return null;
+			}
+		final tryBody = buildExpr(arguments[0], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		final typedEntries = new Array<TypedExpr>();
+		for (entry in entries)
+			switch (entry) {
+				case EArrayDecl([nameExpression, EString(hint), ELambda([name], body)]):
+					final typedName = buildExpr(nameExpression, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedHint = buildExpr(EString(hint), null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final bindings = new Array<TyLocalBinding>();
+					var argumentType = TyType.fromHintText(StringTools.trim(hint).length == 0 ? "haxe.Exception" : hint);
+					if (environment != null) {
+						environment.enterLexicalScope();
+						final binding = environment.declareLocal(name, argumentType, CatchVariable).toBinding();
+						bindings.push(binding);
+						argumentType = binding.getType();
+					}
+					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					if (environment != null)
+						environment.exitLexicalScope();
+					var handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
+					if (typeResolver != null && bindings.length == 1) {
+						final use = typeResolver.catchUse(bindings[0]);
+						if (use != null)
+							handler = handler.withCatchUses([use]);
+					}
+					typedEntries.push(TypedExpr.arrayDecl([typedName, typedHint, handler],
+						expressionType(entry, diagnosticPosition, environment, typeResolver), null));
+				case _:
+					throw "validated structural catch changed during typed-body construction";
+			}
+		final typedCatches = TypedExpr.arrayDecl(typedEntries, expressionType(arguments[1], diagnosticPosition, environment, typeResolver), null);
+		final continuation = buildExpr(arguments[2], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		return [tryBody, typedCatches, continuation];
+	}
+
 	/**
 		Build one typed expression while replaying the local declarations recorded by
 		the typer.
@@ -553,13 +623,19 @@ class TypedBodyBuilder {
 		Child expressions must be built in the same explicit order used by
 		`TyperStage`. Building two children as arguments to one constructor is unsafe:
 		Haxe targets may evaluate those arguments in different orders, which can make
-		a native compiler consume an inner lambda's local identity before the outer
-		lambda identity that typing recorded first.
+		a native compiler consume local identities in a different order from typing.
+		An immediately called lambda types its arguments before declaring parameters;
+		this also keeps a shadowing parameter out of its own argument expressions.
 	**/
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
 			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
 		final nodeType = expressionType(expression, diagnosticPosition, environment, typeResolver);
+		if (typeResolver != null && environment != null) {
+			final target = typeResolver.runtimeTypeTarget(expression, environment, ValueExpression);
+			if (target != null)
+				return TypedExpr.runtimeTypeValue(target, position);
+		}
 		return switch (expression) {
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
@@ -572,7 +648,15 @@ class TypedBodyBuilder {
 			case EFloat(value):
 				TypedExpr.floatLiteral(value, nodeType, position);
 			case EEnumValue(name):
-				TypedExpr.enumValue(name, nodeType, position);
+				final local = environment == null ? null : environment.resolveSymbol(name);
+				if (local != null) {
+					TypedExpr.localRead(name, nodeType, position, local.toBinding());
+				} else {
+					final fieldResolution = fieldResolver == null
+						|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
+					fieldResolution == null ? TypedExpr.enumValue(name, nodeType,
+						position) : TypedExpr.nameRead(name, nodeType, position, fieldResolution.getField(), fieldResolution.getRequiresOwnerQualification());
+				}
 			case EThis:
 				TypedExpr.thisValue(nodeType, position);
 			case ESuper:
@@ -596,6 +680,14 @@ class TypedBodyBuilder {
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field,
 					nodeType, position);
 			case ECall(callee, arguments):
+				switch (callee) {
+					case ELambda(names, body) if (names.length == arguments.length):
+						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+						final typedLambda = buildLambda(names, body, [for (argument in typedArguments) argument.getType()], null, diagnosticPosition,
+							environment, typeResolver, callResolver, fieldResolver);
+						return TypedExpr.call(typedLambda, typedArguments, null, typedLambda.getType().getFunctionReturn(), position);
+					case _:
+				}
 				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
 				if (loweredProbe != null) {
 					loweredProbe;
@@ -603,9 +695,11 @@ class TypedBodyBuilder {
 					final resolution = callResolver == null
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-					var typedArguments = applyCallArgumentConversions(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver,
-						fieldResolver),
-						resolution.getArgumentConversions());
+					var typedArguments = callee.match(EIdent("__hxhx_try")) ? buildStructuralTryArguments(arguments, diagnosticPosition, environment,
+						typeResolver, callResolver, fieldResolver) : null;
+					if (typedArguments == null)
+						typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					typedArguments = applyCallArgumentConversions(typedArguments, resolution.getArgumentConversions());
 					if (callee.match(EIdent("__hxhx_try")))
 						typedArguments = alignStructuralTryCatchResults(typedArguments, nodeType);
 					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
@@ -651,16 +745,8 @@ class TypedBodyBuilder {
 			case EMacroType(typeText):
 				TypedExpr.macroType(typeText, nodeType, position);
 			case ELambda(arguments, body):
-				final argumentBindings = new Array<TyLocalBinding>();
-				if (environment != null) {
-					environment.enterLexicalScope();
-					for (argument in arguments)
-						argumentBindings.push(environment.declareLocal(argument, TyType.fromHintText("Dynamic"), LambdaParameter).toBinding());
-				}
-				final typedLambdaBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				if (environment != null)
-					environment.exitLexicalScope();
-				TypedExpr.lambda(arguments == null ? [] : arguments.copy(), typedLambdaBody, nodeType, position, argumentBindings);
+				buildLambda(arguments, body, [for (_ in arguments) TyType.fromHintText("Dynamic")], position, diagnosticPosition, environment, typeResolver,
+					callResolver, fieldResolver);
 			case ETryCatchRaw(raw):
 				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				if (block != null) {
@@ -693,6 +779,12 @@ class TypedBodyBuilder {
 			case EUnop(op, fixity, inner):
 				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType,
 					position);
+			case EBinop("is", value, operand):
+				final target = typeResolver == null
+					|| environment == null ? null : typeResolver.runtimeTypeTarget(operand, environment, TypeOperand);
+				if (target == null)
+					throw "runtime type test requires a resolved target";
+				TypedExpr.runtimeTypeTest(buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), target, position);
 			case EBinop("=", left, right):
 				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
@@ -738,8 +830,13 @@ class TypedBodyBuilder {
 				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				TypedExpr.range(typedStart, typedEnd, nodeType, position);
 			case ECast(inner, typeHint):
-				TypedExpr.castValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), typeHint, nodeType,
-					position);
+				final typedInner = switch (inner) {
+					case ELambda(names, body) if (nodeType.isFunction() && nodeType.getFunctionArguments().length == names.length):
+						buildLambda(names, body, nodeType.getFunctionArguments(), null, diagnosticPosition, environment, typeResolver, callResolver,
+							fieldResolver);
+					case _: buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				};
+				TypedExpr.castValue(typedInner, typeHint, nodeType, position);
 			case EUntyped(inner):
 				TypedExpr.untypedValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EUnsupported(raw):
@@ -875,7 +972,14 @@ class TypedBodyBuilder {
 						if (environment != null)
 							environment.exitLexicalScope();
 					}
-				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings);
+				final uses = new Array<TypedCatchUse>();
+				if (typeResolver != null)
+					for (binding in catchBindings) {
+						final use = typeResolver.catchUse(binding);
+						if (use != null)
+							uses.push(use);
+					}
+				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings).withCatchUses(uses);
 			case SBreak(_):
 				TypedStmt.breakStmt(storedPosition);
 			case SContinue(_):

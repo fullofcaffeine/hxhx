@@ -197,7 +197,7 @@ if [ "$(printf '%s\n' "$checked_result_source" | grep -c 'HxRuntime.nullable_int
 	echo "The checked Null<Int> result must unwrap exactly once on normal fall-through" >&2
 	exit 1
 fi
-if ! printf '%s\n' "$checked_result_source" | grep -Fq 'raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
+if ! printf '%s\n' "$checked_result_source" | grep -Fq 'Stdlib.raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
 	echo "The exact Int early return must keep its sealed private return-control path" >&2
 	exit 1
 fi
@@ -223,7 +223,7 @@ if printf '%s\n' "$dynamic_result_source" | grep -Fq 'Obj.magic'; then
 	exit 1
 fi
 all_path_source="$(sed -n '/^let allPathNullable =/,/^let main =/p' "$main_source")"
-if [ "$(printf '%s\n' "$all_path_source" | grep -c 'raise (HxRuntime.Hx_return')" -ne 3 ]; then
+if [ "$(printf '%s\n' "$all_path_source" | grep -c 'Stdlib.raise (HxRuntime.Hx_return')" -ne 3 ]; then
 	echo "Every all-path nullable branch must use its sealed private return signal" >&2
 	exit 1
 fi
@@ -321,7 +321,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 86 || report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 89 || report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -460,7 +460,7 @@ if (!checkedResultBoundary
 	|| checkedResult.proofId !== 'nullable-int-call-checked-unbox-v1'
 	|| typeof checkedResultBoundary.bodyRevision !== 'string'
 	|| typeof checkedResultBoundary.programRevision !== 'string'
-	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v113') {
+	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v114') {
 	throw new Error('the callable boundary did not seal the checked Null<Int>-to-Int result crossing')
 }
 if (checkedResultCalls.length !== 2 || checkedResultCalls.some(call =>
@@ -522,7 +522,7 @@ if (!allPathBoundary
 	|| !isIdentity(allPathBoundary.arguments[0], 'String', 'string')
 	|| !isIdentity(allPathBoundary.result, 'Null<Int>', 'Obj.t')
 	|| !allPathBoundary.reason?.includes('Every path in its final typed body exits through sealed return control')
-	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v113'
+	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v114'
 	|| typeof allPathBoundary.bodyRevision !== 'string'
 	|| typeof allPathBoundary.programRevision !== 'string') {
 	throw new Error('the all-path nullable function did not retain one declared callable result boundary')

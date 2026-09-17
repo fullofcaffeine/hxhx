@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_ROOT="$(mktemp -d)"
-trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_ROOT"' EXIT
+INSPECTOR_DIR="$(mktemp -d)"
+trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_ROOT" "$INSPECTOR_DIR"' EXIT
 
 node - out/Main.ml out/ocaml_lowering_report.json <<'NODE'
 const fs = require('fs')
@@ -13,13 +14,17 @@ const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 const boundary = report.functionResultBoundaries.find(entry => entry.source === 'nested-nullable-enum-callable')
 const controls = report.controls.filter(entry => entry.functionId === boundary?.functionId && entry.kind === 'return')
 
-if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
+if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v6'
 	|| boundary?.result?.inputSemanticTypeId !== 'Choice'
-	|| boundary.result.inputCarrierTypeId !== 'haxe-enum-native-variant-carrier-v1:Choice'
+	|| boundary.result.inputCarrierTypeId !== 'choice'
 	|| boundary.result.outputSemanticTypeId !== 'Null<Choice>'
 	|| boundary.result.outputCarrierTypeId !== 'Obj.t'
 	|| boundary.result.conversion !== 'box-exact-enum-to-nullable-enum'
 	|| boundary.nullableEnum?.semanticTypeId !== 'Choice'
+	|| boundary.nullableEnum.carrierTypeId !== 'choice'
+	|| boundary.result.nullableEnumCarrier?.descriptor?.targetTypeName !== 'choice'
+	|| boundary.result.nullableEnumCarrier?.descriptor?.revision !== boundary.nullableEnum.descriptor?.revision
+	|| controls.some(entry => entry.payload?.nullableEnumCarrier?.revision !== boundary.result.nullableEnumCarrier.revision)
 	|| boundary.proofId !== 'nested-nullable-enum-function-result-v1'
 	|| controls.length !== 2
 	|| !controls.some(entry => entry.payload?.conversion === 'preserve-nullable-carrier')
@@ -35,7 +40,7 @@ if (start < 0
 	|| !body.includes('HxRuntime.Hx_return (HxRuntime.hx_null)')
 	|| !body.includes('HxRuntime.Hx_return (Obj.repr value)')
 	|| !body.includes('| HxRuntime.Hx_return __ret_')
-	|| !body.includes(': Obj.t) in Wrapped')
+	|| !/: Obj\.t\) in let (__enum_arg_\d+) = Obj\.obj \(HxEnum\.unbox_or_obj "Choice" \(let (__call_callee_\d+) = choose in \2 \(\)\)\) in Wrapped \(Stdlib\.Sys\.opaque_identity \1\)/.test(body)
 	|| body.includes('Obj.magic (HxRuntime.hx_null)')) {
 	throw new Error('generated choose did not convert each nullable-enum result exactly once')
 }
@@ -43,7 +48,9 @@ NODE
 
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
 node - "$INSPECTION_COPY" <<'NODE'
@@ -62,6 +69,7 @@ for mutation in enum-name source-kind callable-id carrier missing-proof reordere
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -91,13 +99,11 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted nested nullable-enum $mutation evidence" >&2
 		exit 1

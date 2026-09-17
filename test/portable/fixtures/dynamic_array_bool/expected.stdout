@@ -1,0 +1,8 @@
+false-bool=true
+false-not-int=true
+zero-int=true
+null=true
+true-bool=true
+one-int=true
+calls=1
+alias-length=6

@@ -349,9 +349,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				new StringMap(), declarations, Public, false, TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
 		}
 
-		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v5",
+		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v9",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
@@ -396,7 +398,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new StringMap(), new StringMap(), new StringMap(), conflictDeclarations, Public, false);
 		var conflictingClassFactsMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(conflictingInfo, null);
+			new TypedBackendClassSemanticFacts(conflictingInfo, null, []);
 		} catch (error) {
 			conflictingClassFactsMessage = Std.string(error);
 		}
@@ -410,7 +412,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false);
 		var foreignFieldMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(foreignInfo, null);
+			new TypedBackendClassSemanticFacts(foreignInfo, null, []);
 		} catch (error) {
 			foreignFieldMessage = Std.string(error);
 		}
@@ -421,7 +423,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final shortName = classIdentity.indexOf(".") < 0 ? classIdentity : classIdentity.substr(classIdentity.lastIndexOf(".") + 1);
 			final info = new TyClassInfo(new TyNominalTypeId(classIdentity), shortName, moduleIdentity, new StringMap(), new StringMap(), new StringMap(),
 				new StringMap(), new StringMap(), new StringMap(), [], Public, false, superType);
-			return new TypedBackendClassSemanticFacts(info, superType);
+			return new TypedBackendClassSemanticFacts(info, superType, []);
 		}
 
 		final leftBaseType = TyType.nominal(new TyNominalTypeId("unit.Left.Base"), [TyType.fromHintText("String")]);
@@ -430,7 +432,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final childFacts = emptyClassFacts("unit.Child", "unit.Child", leftBaseType);
 		final orderedGraph = new TypedBackendClassGraph("typed-program-revision", [rightBaseFacts, childFacts, leftBaseFacts]);
 		final reversedGraph = new TypedBackendClassGraph("typed-program-revision", [leftBaseFacts, childFacts, rightBaseFacts]);
-		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v3",
+		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v4",
 			"typed backend class graphs should version their target-neutral representation");
 		assertTrue(orderedGraph.getCanonicalIdentity() == reversedGraph.getCanonicalIdentity(),
 			"typed backend class graphs should not depend on module or class traversal order");
@@ -490,7 +492,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			HxPos.unknown(), false, true, "unit.GenericBase", false, [shadowParameter]));
 		final genericBaseInfo = new TyClassInfo(genericBaseIdentity, "GenericBase", "unit.GenericBase", genericBaseFields, new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), genericBaseDeclarations, Public, false, null, [genericBaseParameter]);
-		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null);
+		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null, []);
 
 		final genericMiddleIdentity = new TyNominalTypeId("unit.GenericMiddle");
 		final genericMiddleParameter = TyTypeParameterId.nominal(genericMiddleIdentity, 0, "U");
@@ -499,19 +501,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		]);
 		final genericMiddleInfo = new TyClassInfo(genericMiddleIdentity, "GenericMiddle", "unit.GenericMiddle", new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericMiddleSuper, [genericMiddleParameter]);
-		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper);
+		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper, []);
 
 		final genericChildIdentity = new TyNominalTypeId("unit.GenericChild");
 		final genericChildSuper = TyType.nominal(genericMiddleIdentity, [TyType.fromHintText("String")]);
 		final genericChildInfo = new TyClassInfo(genericChildIdentity, "GenericChild", "unit.GenericChild", new StringMap(), new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericChildSuper);
-		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper);
+		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper, []);
 		final unrelatedBaseIdentity = new TyNominalTypeId("other.GenericBase");
 		final unrelatedBaseParameter = TyTypeParameterId.nominal(unrelatedBaseIdentity, 0, "T");
 		final unrelatedBaseFacts = new TypedBackendClassSemanticFacts(new TyClassInfo(unrelatedBaseIdentity, "GenericBase", "other.GenericBase",
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, null,
 			[unrelatedBaseParameter]),
-			null);
+			null, []);
 
 		final specializedGraph = new TypedBackendClassGraph("generic-program-revision",
 			[unrelatedBaseFacts, genericBaseFacts, genericMiddleFacts, genericChildFacts]);
@@ -555,7 +557,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			new TypedBackendClassGraph("generic-program-revision", [
 				genericBaseFacts,
-				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType())
+				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType(), [])
 			]).requireSpecializedLineage("unit.RawChild");
 		} catch (error) {
 			genericArityMessage = Std.string(error);
@@ -712,7 +714,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(runDeclaration != null && runProjection != null && planChildFacts != null,
 			"the typed PHP fixture should expose the exact PlanChild.run projection and class facts");
 		final functionPlan = planProjection.requireFunctionLoweringPlan(runDeclaration);
-		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v5",
+		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v6",
 			"the PHP function plan should version target-specific selection separately");
 		assertTrue(functionPlan.getProgramRevision() == planProgram.getTypedProgramRevision().getCanonicalIdentity()
 			&& functionPlan.getModuleIdentity() == "unit.PlanChild"
@@ -1199,10 +1201,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	/** Type authored syntax fixtures so their bodies carry real local-variable bindings. */
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
-		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
-		return new TypedModule(new ParsedModule("", decl, filePath), env);
+		return TyperStage.typeModule(new ParsedModule("", decl, filePath));
 	}
 
 	/**
@@ -8266,9 +8267,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final main = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
-		final helper = TyperStage.typeModule(ParserStage.parse(helperSrc, "checks/ArrayTools.hx"));
-		return MacroStage.expandProgram([main, helper], []);
+		final modules = [
+			new ResolvedModule("unit.Main", "unit/Main.hx", ParserStage.parse(mainSrc, "unit/Main.hx")),
+			new ResolvedModule("checks.ArrayTools", "checks/ArrayTools.hx", ParserStage.parse(helperSrc, "checks/ArrayTools.hx"))
+		];
+		final index = TyperIndex.build(modules);
+		return MacroStage.expandProgram([for (module in modules) TyperStage.typeResolvedModule(module, index)], []);
 	}
 
 	static function csNoMainLibraryProgram():GenIrProgram {
@@ -10618,7 +10622,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class __HxAnon {", "PHP anonymous object literals should emit the anonymous-object runtime helper");
 		assertContains(content, "$info = new __HxAnon([\"label\" => \"ok\", \"count\" => 1]);",
 			"PHP anonymous object literals should lower through the helper-backed object runtime");
-		assertContains(content, "echo $info->label . PHP_EOL;", "PHP anonymous object field access should keep using arrow syntax");
+		assertContains(content, "Sys::println($info->label);", "PHP anonymous object field access should keep using arrow syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10727,7 +10731,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Helper {", "PHP support classes should be emitted before main");
 		assertContains(content, "public static function message() {", "PHP support classes should include static methods");
 		assertContains(content, "if (Flags::$ready) {", "PHP static property access should use class property syntax");
-		assertContains(content, "echo Helper::message() . PHP_EOL;", "PHP static method access should use class method syntax");
+		assertContains(content, "Sys::println(Helper::message());", "PHP static method access should use class method syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10746,7 +10750,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public function message() {", "PHP helper instance methods should be emitted");
 		assertContains(content, "return $this->value;", "PHP instance methods should read lowered fields");
 		assertContains(content, "$helper = new Helper();", "PHP main should instantiate helper classes");
-		assertContains(content, "echo $helper->message() . PHP_EOL;", "PHP main should call helper instance methods");
+		assertContains(content, "Sys::println($helper->message());", "PHP main should call helper instance methods");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10939,14 +10943,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "public static function field($object, $field)", "PHP Reflect helper should support dynamic field lookup");
 		assertContains(content, "Reflect::field($keyword, \"new\")", "PHP Reflect.field should lower as a static helper call");
-		assertContains(content, "echo __hxhx_add(\"\", 5) . PHP_EOL;", "PHP literal interpolation should lower to string concat");
-		assertContains(content, "echo __hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x",
+		assertContains(content, "Sys::println(__hxhx_add(\"\", 5));", "PHP literal interpolation should lower to string concat");
+		assertContains(content, "Sys::println(__hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x",
 			"PHP identifier interpolation should keep prefix, payload, and suffix");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
-		assertContains(content, "echo __hxhx_array_join($values, \"#\") . PHP_EOL;", "PHP Array.join should lower for Lambda.array results");
+		assertContains(content, "Sys::println(__hxhx_array_join($values, \"#\"));", "PHP Array.join should lower for Lambda.array results");
 		assertContains(content, "$keys = Lambda::array(new __HxAnon([\"iterator\" => (function() use ($sm) { return $sm->keys(); })]));",
 			"PHP Lambda.array should accept structural iterator method closures");
-		assertContains(content, "echo __hxhx_array_join($keys, \"#\") . PHP_EOL;", "PHP Array.join should lower for structural iterator results");
+		assertContains(content, "Sys::println(__hxhx_array_join($keys, \"#\"));", "PHP Array.join should lower for structural iterator results");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -11562,7 +11566,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"\", new __HxAnon([\"a\" => 1]))", "PHP anonymous object string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
-		assertContains(content, "echo __hxhx_add_string([\"x\"]) . PHP_EOL;", "PHP Std.string on array literals should use Haxe stringification");
+		assertContains(content, "Sys::println(__hxhx_add_string([\"x\"]));", "PHP Std.string on array literals should use Haxe stringification");
 		assertContains(content, "function() use (&$s)", "PHP local functions that mutate outer locals should capture by reference");
 		assertContains(content, "function($__hxhx_lambda_seq_0) use (&$s)", "PHP local function statement continuations should see call-argument mutations");
 		assertContains(content, "$s = __hxhx_add($s, \"b\")", "PHP string-like add-assign should use Haxe plus semantics");
@@ -11682,12 +11686,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function() use ($op, $left, $right)",
 			"PHP switch-expression closures should capture branch-only values referenced outside the scrutinee");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
-		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
-		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
+		assertContains(content, "Sys::println(__hxhx_add_string($e));", "PHP Std.string on enum values should use Haxe stringification");
+		assertContains(content, "Sys::println(__hxhx_add_string([$e]));", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\nEConst(CFloatBox(12))\n20\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\ntrue\nC(2,y)\ntrue\nid(3)\ntrue\n4z\nSE_A\ntrue\nWith(9)\ntrue\nA\ntrue\nSE_A\ntrue\nD(A)\ntrue\nSame\ntrue\nEConst(CFloatBox(12))\n20\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n"
 				+ run.stdout);
 		}
@@ -11769,7 +11773,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.io.Error support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "OutsideBounds\n1\nCustom(disk)\n", "generated PHP haxe.io.Error output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "OutsideBounds\ntrue\nCustom(disk)\n", "generated PHP haxe.io.Error output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -11787,7 +11791,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.io.Error runtime failures should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "write-bounds:OutsideBounds\n1\nwrite-overflow:Overflow\n1\nread-bounds:OutsideBounds\n1\n",
+			assertTrue(run.stdout == "write-bounds:OutsideBounds\ntrue\nwrite-overflow:Overflow\ntrue\nread-bounds:OutsideBounds\ntrue\n",
 				"generated PHP haxe.io.Error runtime failure output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -11984,13 +11988,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo __hxhx_add_string(((!true) ? true : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(((!true) ? true : true)));",
 			"PHP ternary should bind after unary not for `!true ? true : true`");
-		assertContains(content, "echo __hxhx_add_string($k = (true ? false : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string($k = (true ? false : true)));",
 			"PHP assignment should bind looser than ternary in expression form");
-		assertContains(content, "echo __hxhx_add_string((($k = true) ? false : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string((($k = true) ? false : true)));",
 			"PHP parenthesized assignment should remain the ternary condition");
-		assertContains(content, "echo __hxhx_add_string((true || (false && false))) . PHP_EOL;", "PHP logical and should bind tighter than logical or");
+		assertContains(content, "Sys::println(__hxhx_add_string((true || (false && false))));", "PHP logical and should bind tighter than logical or");
 		assertNotContains(content, "((!true ? true : true))", "PHP unary not should not wrap the full ternary");
 		deleteRecursive(tmpRoot);
 	}
@@ -12011,31 +12015,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_substr($value, $pos, $len = null)", "PHP runtime should include a String.substr helper");
 		assertContains(content, "function __hxhx_string_value($value)", "PHP runtime should include abstract-aware string receiver support");
 		assertContains(content, "$s = __hxhx_string_value($value);", "PHP string helpers should unwrap abstract string receivers before conversion");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")));",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)));",
 			"PHP string literal receivers should lower indexOf with a start index");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)));",
 			"PHP string literal receivers should lower lastIndexOf with a start index");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))));",
 			"PHP string split should compose with array length");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)));",
 			"PHP string split results should use safe array reads");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 0)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 0)));",
 			"PHP string charCodeAt should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 99)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 99)));",
 			"PHP out-of-range charCodeAt should lower through the nullable helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"a\", 0)));",
 			"PHP string literal .code should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of($str, \"b\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of($str, \"b\")));",
 			"PHP string variable indexOf should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of($str, \"b\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_last_index_of($str, \"b\")));",
 			"PHP string variable lastIndexOf should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at($str, 1)));",
 			"PHP string variable charCodeAt should lower through the helper");
-		assertContains(content, "echo __hxhx_string_substr($str, 1, 2) . PHP_EOL;", "PHP string variable substr should lower with explicit length");
-		assertContains(content, "echo __hxhx_string_substr($str, 3) . PHP_EOL;", "PHP string variable substr should lower with omitted length");
-		assertContains(content, "echo __hxhx_string_substr($str, 5) . PHP_EOL;", "PHP out-of-range substr should lower through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 1, 2));", "PHP string variable substr should lower with explicit length");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 3));", "PHP string variable substr should lower with omitted length");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 5));", "PHP out-of-range substr should lower through the helper");
 		assertContains(content, "__hxhx_string_index_of(__hxhx_message_field($exc), \"Unclosed node <flow>\")",
 			"PHP exception message indexOf should lower through the string helper");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
@@ -12111,9 +12115,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_string_from_char_code($code)", "PHP runtime should include a String.fromCharCode helper");
-		assertContains(content, "echo __hxhx_string_from_char_code(77) . PHP_EOL;", "PHP String.fromCharCode should lower through the helper");
-		assertContains(content, "echo __hxhx_string_from_char_code((-1)) . PHP_EOL;", "PHP negative char codes should route through the helper");
-		assertContains(content, "echo __hxhx_string_from_char_code(256) . PHP_EOL;", "PHP oversized char codes should route through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code(77));", "PHP String.fromCharCode should lower through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code((-1)));", "PHP negative char codes should route through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code(256));", "PHP oversized char codes should route through the helper");
 		assertNotContains(content, "String::fromCharCode", "PHP should not emit calls to a missing String class");
 		deleteRecursive(tmpRoot);
 	}
@@ -12597,9 +12601,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$values = [];", "PHP Array constructor should lower to array literal syntax");
 		assertContains(content, "function __hxhx_length($value)", "PHP runtime should include a Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length($values)) . PHP_EOL;", "PHP array constructor length should use the Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length($items)) . PHP_EOL;", "PHP array literal length should use the Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length(\"abc\")) . PHP_EOL;", "PHP string length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length($values)));", "PHP array constructor length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length($items)));", "PHP array literal length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length(\"abc\")));", "PHP string length should use the Haxe length helper");
 		assertNotContains(content, "new Array()", "PHP should not emit reserved Array constructor syntax");
 		assertNotContains(content, "$items->length", "PHP arrays should not use object-property length access");
 		deleteRecursive(tmpRoot);
@@ -12626,10 +12630,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_map($array, $callback)", "PHP runtime should include an Array.map helper");
 		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
 		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($a, 3)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get($a, 3)));",
 			"PHP out-of-bounds array reads should go through safe Haxe read helper");
 		assertContains(content, "__hxhx_array_sort($a, [Reflect::class, \"compare\"]);", "PHP Array.sort should lower through the mutating helper");
-		assertContains(content, "echo __hxhx_array_join($a, \"#\") . PHP_EOL;", "PHP Array.join should lower through the join helper");
+		assertContains(content, "Sys::println(__hxhx_array_join($a, \"#\"));", "PHP Array.join should lower through the join helper");
 		assertContains(content, "__hxhx_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$mapped = __hxhx_array_map($base,", "PHP Array.map should lower through the array map helper");
@@ -13073,7 +13077,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(exceptionContent, "catch (\\Exception $__hxhx_caught) {", "PHP Exception catches should catch the wrapper object");
 		assertNotContains(exceptionContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
 			"PHP Exception catches should preserve the ValueException object");
-		assertContains(exceptionContent, "echo __hxhx_message_field($e) . PHP_EOL;", "PHP Exception catch bodies should be able to read message");
+		assertContains(exceptionContent, "Sys::println(__hxhx_message_field($e));", "PHP Exception catch bodies should be able to read message");
 		assertContains(exceptionContent, "function __hxhx_message_field($value)", "PHP runtime should expose throwable-safe message reads");
 		deleteRecursive(exceptionTmpRoot);
 
@@ -13112,7 +13116,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final valueContent = File.getContent(Path.join([valueTmpRoot, "index.php"]));
 		assertContains(valueContent, "throw ValueException::thrown(123);", "PHP primitive throws should still wrap values for ValueException catches");
 		assertNotContains(valueContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP ValueException catches should preserve the wrapper object");
-		assertContains(valueContent, "echo $e->value . PHP_EOL;", "PHP ValueException catch bodies should be able to read value");
+		assertContains(valueContent, "Sys::println($e->value);", "PHP ValueException catch bodies should be able to read value");
 		deleteRecursive(valueTmpRoot);
 
 		final abstractTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_exception_catch_" + Std.string(Date.now().getTime()));
@@ -13152,7 +13156,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([enumTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP enum catches should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "EError\n1\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
+			assertTrue(run.stdout == "EError\ntrue\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
 		}
 		deleteRecursive(enumTmpRoot);
 
@@ -13163,12 +13167,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final catchShadowContent = File.getContent(Path.join([catchShadowTmpRoot, "index.php"]));
 		assertContains(catchShadowContent, "$e2 = __hxhx_unwrap_thrown_value($__hxhx_caught);",
 			"PHP catches should bind the catch local before rendering the body");
-		assertNotContains(catchShadowContent, "echo __hxhx_add_string(Expr::$e2)", "PHP catch locals should shadow same-named enum constructors");
+		assertNotContains(catchShadowContent, "Sys::println(__hxhx_add_string(Expr::$e2)", "PHP catch locals should shadow same-named enum constructors");
 		assertNotContains(catchShadowContent, "Type::enumEq(Expr::$e2", "PHP catch locals should shadow same-named enum constructors");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([catchShadowTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP catch local shadowing should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "OutsideBounds\n1\n", "generated PHP catch local shadowing output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "OutsideBounds\ntrue\n", "generated PHP catch local shadowing output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(catchShadowTmpRoot);
 
@@ -13232,7 +13236,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [Path.join([stackTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP CallStack support should execute, stderr:\n" + run.stderr);
 			assertContains(run.stdout, "2", "generated PHP CallStack support should produce stack entries");
-			assertContains(run.stdout, "1", "generated PHP Std.downcast should recognize haxe.Exception values");
+			assertContains(run.stdout, "true\n", "generated PHP Std.downcast should recognize haxe.Exception values");
 		}
 		deleteRecursive(stackTmpRoot);
 
@@ -13274,7 +13278,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final commonBaseContent = File.getContent(Path.join([commonBaseTmpRoot, "index.php"]));
 		assertContains(commonBaseContent, "\"unit._TestNullCoalescing.A\"",
 			"PHP HelperMacros.typeString should fold sibling-class null coalescing to the common private base type");
-		assertNotContains(commonBaseContent, "echo \"haxe.Exception\" . PHP_EOL;",
+		assertNotContains(commonBaseContent, "Sys::println(\"haxe.Exception\");",
 			"PHP HelperMacros.typeString should not emit the fallback haxe.Exception for typed sibling-class null coalescing");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([commonBaseTmpRoot, "index.php"])]);
@@ -13581,8 +13585,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$ok = true;", "PHP source backend should fold HelperMacros.typeError for expression-position for probes");
 		assertContains(content, "$message = \"Int has no field keyValueIterator\";",
 			"PHP source backend should fold HelperMacros.typeErrorText for key/value for probes");
-		assertContains(content, "echo __hxhx_add_string($ok) . PHP_EOL;", "folded typeError results should still flow through normal printing");
-		assertContains(content, "echo $message . PHP_EOL;", "folded typeErrorText results should still flow through normal printing");
+		assertContains(content, "Sys::println(__hxhx_add_string($ok));", "folded typeError results should still flow through normal printing");
+		assertContains(content, "Sys::println($message);", "folded typeErrorText results should still flow through normal printing");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13718,7 +13722,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "$typedAs(", "PHP source backend should fold unqualified HelperMacros.typedAs compile-time probes");
 		assertNotContains(content, "HelperMacros::typedAs", "PHP source backend should fold qualified HelperMacros.typedAs compile-time probes");
-		assertContains(content, "echo \"typedAs-ok\" . PHP_EOL;", "folded typedAs probes should keep following runtime statements reachable");
+		assertContains(content, "Sys::println(\"typedAs-ok\");", "folded typedAs probes should keep following runtime statements reachable");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typedAs helper probes should execute, stderr:\n" + run.stderr);
@@ -13847,7 +13851,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return __hxhx_mul($value, $i); };",
 			"PHP closures yielded from comprehensions should capture the comprehension binder");
 		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get($funcs, 0)(10)));",
 			"PHP array-comprehension-derived functions should still be callable from later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -14052,7 +14056,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP key/value loops should lower through the pair iterator helper");
 		assertContains(content, "$index = $__hx_kv_index_value[0];", "PHP key/value loops should bind the rendered key from pair slot 0");
 		assertContains(content, "$value = $__hx_kv_index_value[1];", "PHP key/value loops should bind the rendered value from pair slot 1");
-		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)));",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		assertContains(content, "foreach (__hxhx_iter($expected) as $c) {", "PHP string value loops should lower through the runtime iterator helper");
 		assertTrue(~/foreach \(__hxhx_key_value_iter\(\$expected\) as \$__hx_kv_i_c[A-Za-z0-9_]*\) \{/.match(content),
@@ -14398,7 +14402,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$value = (function($input) { return $input; })(1);", "PHP immediate lambda calls should wrap the closure before invocation");
-		assertContains(content, "echo __hxhx_add_string($value) . PHP_EOL;", "PHP immediate lambda-call results should still flow through later statements");
+		assertContains(content, "Sys::println(__hxhx_add_string($value));", "PHP immediate lambda-call results should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -15146,7 +15150,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTypeErrorGenericNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo __hxhx_add_string(true)", "PHP typeError(generic(null)) should fold to the helper macro result");
+		assertContains(content, "Sys::println(__hxhx_add_string(true)", "PHP typeError(generic(null)) should fold to the helper macro result");
 		assertNotContains(content, "$typeError", "PHP typeError(generic(null)) should not lower as a runtime variable call");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -15279,7 +15283,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "class TestIssues", "PHP support emission should skip compile-time-only macro helper classes");
 		assertContains(content, "/* hxhx skipped TestIssues.addIssueClasses */ null;",
 			"PHP compile-time-only TestIssues.addIssueClasses should not become a runtime class call");
-		assertContains(content, "echo \"ok\" . PHP_EOL;", "PHP main output should still emit when compile-time-only helpers are skipped");
+		assertContains(content, "Sys::println(\"ok\");", "PHP main output should still emit when compile-time-only helpers are skipped");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -16643,7 +16647,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.TestMisc", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo MyDynamicClass::get_W() . PHP_EOL;", "PHP static property reads should call get_<field> accessors");
+		assertContains(content, "Sys::println(MyDynamicClass::get_W());", "PHP static property reads should call get_<field> accessors");
 		assertContains(content, "$this->eq(MyDynamicClass::get_W(), 57);",
 			"PHP static property reads should use get_<field> accessors inside instance helper calls");
 		assertContains(content, "return __hxhx_add(MyDynamicClass::$W, 2);", "PHP static getters should read the backing field without accessor recursion");
@@ -17083,7 +17087,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$__hxhx_switch = \"python\";", "PHP switch statements should evaluate the scrutinee once");
 		assertContains(content, "if (($__hxhx_switch === \"python\")) {", "PHP switch statements should lower literal cases with strict comparison");
 		assertContains(content, "} elseif (true) {", "PHP wildcard switch branches should lower to elseif true");
-		assertContains(content, "echo \"other\" . PHP_EOL;", "PHP switch statement branch bodies should render");
+		assertContains(content, "Sys::println(\"other\");", "PHP switch statement branch bodies should render");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17146,7 +17150,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
-		emit("php-native", "php", "index.php", "echo __hxhx_add(\"source-native:\", \"php\") . PHP_EOL;");
+		emit("php-native", "php", "index.php", "Sys::println(__hxhx_add(\"source-native:\", \"php\"));");
 		emit("lua-native", "lua", "Main.lua", "print((tostring(\"source-native:\") .. tostring(\"lua\")))");
 		assertPythonOutputHint();
 		assertJavaJarPackaging();

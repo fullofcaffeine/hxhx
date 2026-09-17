@@ -25,7 +25,24 @@ const failures = [];
 const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+  // Neko joins exact calls to their indexed class and function before rendering.
+  "packages/hxhx-core/src/backend/vm/NekoTypedProgramProjection.hx",
+  // Registry entries consume exact nominal facts and precomputed interface membership.
+  "packages/hxhx-core/src/backend/vm/NekoRuntimeTypeRegistry.hx",
+  // Catch plans validate exact implicit helper and payload owners before pruning.
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
 ]);
+
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoTargetCore.hx",
+  "plan.validate(program)",
+  "prepared Neko catch validation before executable pruning",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
+  "program.requireFunction(use.conversion.getOwner().getCanonicalName(), use.conversion.getIdentity().getCanonicalKey())",
+  "exact implicit catch helper ownership",
+);
 
 function requireFragment(relative, fragment, claim) {
   const source = fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -104,7 +121,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v5"',
+  'return "typed-backend-class-semantic-facts-v9"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(
@@ -124,7 +141,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassGraph.hx",
-  'return "typed-backend-class-graph-v3"',
+  'return "typed-backend-class-graph-v4"',
   "versioned immutable typed backend class graph",
 );
 requireFragment(
@@ -144,7 +161,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBodySource.hx",
-  "new TypedBackendClassSemanticFacts(semanticInfo, null)",
+  "new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces)",
   "single-owner typed class semantic-fact handoff to backend projection",
 );
 requireFragment(
@@ -214,7 +231,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/backend/source/PhpFunctionLoweringPlan.hx",
-  'return "php-function-lowering-plan-v5"',
+  'return "php-function-lowering-plan-v6"',
   "versioned immutable PHP function-plan schema",
 );
 requireFragment(

@@ -430,6 +430,15 @@ class M14TypedAbstractUnaryIntegrationTest {
 		].join("\n"),
 			"Abstract property increment/decrement requires explicit get and set accessors");
 		typingFailure([
+			"abstract StaticReadOnly(Int) from Int {}",
+			"class StaticReadOnlyHolder {",
+			"  public static var value(get, never):StaticReadOnly;",
+			"  static function get_value():StaticReadOnly return 1;",
+			"}",
+			"class Main { static function main() { var result = ++StaticReadOnlyHolder.value; } }",
+		].join("\n"),
+			"Abstract property increment/decrement requires explicit get and set accessors");
+		final staticModule = typedModule([
 			"abstract StaticValue(Int) {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(++A) public static function mustNotRun(value:StaticValue):StaticValue return value;",
@@ -440,8 +449,35 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  static function get_value():StaticValue return stored;",
 			"  static function set_value(value:StaticValue):StaticValue return stored = value;",
 			"}",
-			"class Main { static function main() { var result = ++StaticHolder.value; } }",
-		].join("\n"), "Static abstract property increment/decrement is not supported yet");
+			"class Main { static function main() {",
+			"  var prefixInc = ++StaticHolder.value;",
+			"  var postfixInc = StaticHolder.value++;",
+			"  var prefixDec = --StaticHolder.value;",
+			"  var postfixDec = StaticHolder.value--;",
+			"} }",
+		].join("\n"), "Main.hx");
+		final staticMain = mainFunction(staticModule);
+		for (name in ["prefixInc", "postfixInc", "prefixDec", "postfixDec"]) {
+			final result = initializer(staticMain, name);
+			final getter = declarationExpression(result, "get_value");
+			final setter = declarationExpression(result, "set_value");
+			assertTrue(getter != null
+				&& setter != null
+				&& getter.getDeclaration().getIsStatic()
+				&& setter.getDeclaration().getIsStatic()
+				&& getter.getDeclaration().getOwner().getCanonicalName() == "Main.StaticHolder"
+				&& setter.getDeclaration().getOwner().getCanonicalName() == "Main.StaticHolder"
+				&& containsTag(result, TypedExprTag.Binary)
+				&& !containsDeclaration(result, "mustNotRun")
+				&& !containsTag(result, TypedExprTag.Unary),
+				name
+				+ " lost the exact static accessors or selected an abstract operator");
+			final block = inlineBlock(result);
+			assertTrue(block.getTag() == TypedExprTag.Block
+				&& block.getExpressions().length == (StringTools.startsWith(name, "postfix") ? 3 : 1),
+				name + " lost the static property update schedule");
+		}
+
 		crossModuleInlineTest();
 		inlineHelperShadowingTest();
 	}

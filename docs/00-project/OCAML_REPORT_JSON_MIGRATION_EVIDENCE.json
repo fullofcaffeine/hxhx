@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "task": "haxe_ocaml-1hd2w.1",
+  "comparisonBase": "a850b7de3",
+  "loweringSchemaBefore": 87,
+  "loweringSchemaAfter": 88,
+  "checks": {
+    "evalNekoFixedBytes": "pass",
+    "completeNekoInspectorFixture": "pass",
+    "correctedMapSemanticRejections": 8,
+    "deterministicNativeSnapshotFixtures": 6,
+    "haxeFormatting": {
+      "result": "pass",
+      "taskTimeoutSeconds": 600,
+      "default240SecondAttempt": "timed out",
+      "largestChunkSeconds": 261.536
+    }
+  },
+  "snapshotComparison": [
+    {
+      "fixture": "call_exact_int_static",
+      "changedRootFields": [
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    },
+    {
+      "fixture": "imap_runtime_boundary",
+      "changedRootFields": [
+        "admittedInputRevision",
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "structuralFieldRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    },
+    {
+      "fixture": "place_array_compound_assign",
+      "changedRootFields": [
+        "admittedInputRevision",
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    },
+    {
+      "fixture": "place_array_simple_assign",
+      "changedRootFields": [
+        "admittedInputRevision",
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    },
+    {
+      "fixture": "place_instance_field_assign",
+      "changedRootFields": [
+        "admittedInputRevision",
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    },
+    {
+      "fixture": "place_static_field_assign",
+      "changedRootFields": [
+        "admittedInputRevision",
+        "anonymousStructureRevision",
+        "callRevision",
+        "controlAdmissionRevision",
+        "controlCatchRevision",
+        "controlRevision",
+        "controlTargetRevision",
+        "functionResultBoundaryRevision",
+        "iMapInterfaceRevision",
+        "localConversionRevision",
+        "representationRevision",
+        "representedArrayRevision",
+        "runtimeRequirementRevision",
+        "schemaVersion",
+        "stdIsOfTypeRevision",
+        "unsafeOperationRevision"
+      ],
+      "semanticCollectionsUnchanged": true
+    }
+  ],
+  "limitations": [
+    "Local evidence; hosted review and merge remain outstanding.",
+    "No CLI startup-speed claim or runtime/compiler readiness increase.",
+    "Individual semantic hashes and other report formats retain their existing contracts."
+  ]
+}

@@ -79,7 +79,8 @@ class Stage3BuildMacroSupport {
 
 		final newClass = new HxClassDecl(HxClassDecl.getName(oldClass), HxClassDecl.getHasStaticMain(oldClass), mergedFunctions, mergedFields,
 			HxClassDecl.getExtendsPath(oldClass), HxClassDecl.getMetadata(oldClass), HxClassDecl.getIsInterface(oldClass),
-			HxClassDecl.getImplementsPaths(oldClass), HxClassDecl.getVisibility(oldClass));
+			HxClassDecl.getImplementsPaths(oldClass), HxClassDecl.getVisibility(oldClass), HxClassDecl.getInterfaceExtendsPaths(oldClass),
+			HxClassDecl.getIsExtern(oldClass));
 		final newClasses = new Array<HxClassDecl>();
 		for (candidate in HxModuleDecl.getClasses(oldDeclaration))
 			newClasses.push(HxClassDecl.getName(candidate) == HxClassDecl.getName(oldClass) ? newClass : candidate);

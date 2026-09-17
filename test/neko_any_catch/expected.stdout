@@ -1,0 +1,5 @@
+text=raw
+number=23
+exception=true
+wrapper=true
+shadow=fallback

@@ -36,13 +36,10 @@ typedef NekoRuntimeClassMeta = {
 	  backend references the helper instead of inlining another emitter stub.
 **/
 class NekoRuntimeSupport {
-	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
-		out.push("var __hxhx_string = function(value) {");
-		out.push("  if (value == null) return \"null\";");
-		out.push("  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
-		out.push("  return \"\" + value;");
-		out.push("}");
-		out.push("");
+	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, symbolTable:String, program:NekoTypedProgramProjection):Void {
+		if (symbolTable == null || symbolTable.length == 0)
+			throw "Neko runtime support requires the shared symbol object";
+		NekoStringRuntimeSource.render(out);
 		out.push("var __hxhx_array_indexOf = function(a, value) {");
 		out.push("  var i = 0;");
 		out.push("  var len = $asize(a);");
@@ -89,14 +86,10 @@ class NekoRuntimeSupport {
 			out.push("$objset(__hxhx_instance_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.instanceFields) + ");");
 			out.push("$objset(__hxhx_static_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.staticFields) + ");");
 		}
-		if (symbolTable == null) {
-			out.push("var __hxhx_static_objects = $new(null);");
-		} else {
-			out.push("var __hxhx_static_objects = (function() {");
-			out.push("  if (" + symbolTable + ".__hxhx_static_objects == null) " + symbolTable + ".__hxhx_static_objects = $new(null);");
-			out.push("  return " + symbolTable + ".__hxhx_static_objects;");
-			out.push("})();");
-		}
+		out.push("var __hxhx_static_objects = (function() {");
+		out.push("  if (" + symbolTable + ".__hxhx_static_objects == null) " + symbolTable + ".__hxhx_static_objects = $new(null);");
+		out.push("  return " + symbolTable + ".__hxhx_static_objects;");
+		out.push("})();");
 		out.push("var __hxhx_static_object = function(name) {");
 		out.push("  var object = $objget(__hxhx_static_objects, $hash(name));");
 		out.push("  if (object == null) {");
@@ -106,20 +99,9 @@ class NekoRuntimeSupport {
 		out.push("  }");
 		out.push("  return object;");
 		out.push("}");
-		out.push("var __hxhx_type_class_name = function(c) {");
-		out.push("  if (c == null) return null;");
-		out.push("  return \"\" + c;");
-		out.push("}");
-		out.push("");
-		out.push("var __hxhx_type_get_class = function(o) {");
-		out.push("  if (o == null) return null;");
-		out.push("  if ($typeof(o) == $tarray) return \"Array\";");
-		out.push("  if ($typeof(o) == $tobject && o.__hx_ctor != null) return o.__hx_ctor;");
-		out.push("  return null;");
-		out.push("}");
-		out.push("");
+		NekoRuntimeTypeRegistry.renderPrelude(out, symbolTable, program);
 		out.push("var __hxhx_type_fields = function(map, c) {");
-		out.push("  var name = __hxhx_type_class_name(c);");
+		out.push("  var name = " + program.runtimeHelperName("__hxhx_type_class_name") + "(c);");
 		out.push("  if (name == null) return $array();");
 		out.push("  var fields = $objget(map, $hash(name));");
 		out.push("  return if (fields == null) $array() else fields;");
@@ -204,10 +186,6 @@ class NekoRuntimeSupport {
 		out.push("  return $int($ssub(text, start, pos - start));");
 		out.push("}");
 		out.push("");
-		out.push("var __hxhx_neko_ndll_suffix = function(arch) {");
-		out.push("  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
-		out.push("}");
-		out.push("");
 		out.push("var __hxhx_main_loop_add = function(callback) {");
 		out.push("  var event = $new(null);");
 		out.push("  event.__hx_ctor = \"haxe.MainEvent\";");
@@ -281,9 +259,16 @@ class NekoRuntimeSupport {
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_field = function(o, field) {");
-		out.push("  if (o == null) return null;");
-		out.push("  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");
-		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else null;");
+		// Ordinary field access must throw; Reflect.field has a separate null-tolerant path.
+		out.push("  if (o == null) $throw(\"Invalid field access on null\");");
+		out.push("  if ($typeof(o) == $tarray) {");
+		out.push("    if (field == \"length\") return $asize(o);");
+		out.push("    if (field == \"join\") return function(separator) { return __hxhx_array_join(o, separator); };");
+		out.push("    return null;");
+		out.push("  }");
+		// The Neko stdlib reads String.__s before calling native primitives.
+		// Our strings already use that native representation; ordinary objects still use field lookup below.
+		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else if (field == \"__s\") o else null;");
 		out.push("  if ($typeof(o) != $tobject) return null;");
 		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
 		out.push("  if ($typeof(getter) == $tfunction) return getter();");

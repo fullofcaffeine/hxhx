@@ -120,8 +120,8 @@ class OcamlEnumRuntimeRequirementRecorder {
 	**/
 	public static function throwRequirement(decision:OcamlControlDecision):OcamlRuntimeRequirement {
 		final payload = decision.payload;
-		if (payload == null || !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)) {
-			throw 'reflaxe.ocaml [ocaml-enum:wrong-runtime-throw]: control decision "${decision.id}" is not a sealed direct enum-constructor throw';
+		if (payload == null || !OcamlControlPlan.requiresEnumThrowRuntime(payload)) {
+			throw 'reflaxe.ocaml [ocaml-enum:wrong-runtime-throw]: control decision "${decision.id}" is not a sealed enum throw';
 		}
 		return {
 			id: OcamlEnumDynamicCarrier.runtimeRequirementId(decision.id),
@@ -142,7 +142,7 @@ class OcamlEnumRuntimeRequirementRecorder {
 		};
 	}
 
-	/** Adds one direct enum-constructor throw to the request-owned runtime ledger. */
+	/** Adds one admitted direct-constructor enum throw to the request-owned runtime ledger. */
 	public static function recordThrow(ledger:OcamlRuntimeRequirementLedger, decision:OcamlControlDecision):Void {
 		ledger.record(throwRequirement(decision));
 	}

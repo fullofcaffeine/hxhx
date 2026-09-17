@@ -30,6 +30,7 @@ class HxParser {
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
 	var capturedReturnStringLiteral:String = "";
+	var inMacroQuote:Bool = false;
 
 	static function keywordText(k:HxKeyword):String {
 		// IMPORTANT (bootstrap / backend independence)
@@ -837,7 +838,8 @@ class HxParser {
 				switch (cur.kind) {
 					case TIdent(name):
 						bump();
-						PBind(name);
+						// Explicit `var` always captures, even when an enum member has this name.
+						PCapture(name, PWildcard);
 					case _:
 						PWildcard;
 				}
@@ -1045,9 +1047,16 @@ class HxParser {
 		var parenDepth = 0;
 		var bracketDepth = 0;
 		var braceDepth = 0;
+		// A qualified member shares the prefix of a static extractor call. Keep
+		// its token path when no extractor arrow follows; do not discard it as a guard.
+		final memberPath = new Array<String>();
+		var pathOnly = true;
+		var expectIdentifier = true;
 		while (!cur.kind.match(TEof)) {
 			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
-			if (atTop && (cur.kind.match(TColon) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)))
+			if (atTop
+				&& (cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KIf))
+					|| isOtherChar("|")))
 				break;
 			if (atTop && cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 				final extractorText = StringTools.trim(sliceSource(start, currentIndex()));
@@ -1055,6 +1064,16 @@ class HxParser {
 				bump(); // `>`
 				return PExtractor(extractorText, parseSwitchPatternOr());
 			}
+			if (pathOnly)
+				switch (cur.kind) {
+					case TIdent(name) if (expectIdentifier):
+						memberPath.push(name);
+						expectIdentifier = false;
+					case TDot if (!expectIdentifier):
+						expectIdentifier = true;
+					case _:
+						pathOnly = false;
+				}
 			switch (cur.kind) {
 				case TLParen:
 					parenDepth++;
@@ -1075,6 +1094,8 @@ class HxParser {
 			}
 			bump();
 		}
+		if (pathOnly && !expectIdentifier && memberPath.length > 1)
+			return PEnumValue(memberPath.join("."));
 		return PUnsupportedGuard(PWildcard);
 	}
 
@@ -1435,13 +1456,14 @@ class HxParser {
 		}
 	}
 
-	function readTypeHintText(stop:() -> Bool):String {
+	function readTypeHintText(stop:() -> Bool, stopAtExpressionBody:Bool = false):String {
 		// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
 		final parts = new Array<String>();
 		var parenDepth = 0;
 		var braceDepth = 0;
 		var angleDepth = 0;
 		var bracketDepth = 0;
+		var previousCanEndType = false;
 		while (true) {
 			// Special-case structural/anonymous type hints that begin with `{ ... }`.
 			//
@@ -1452,6 +1474,10 @@ class HxParser {
 			// Our callers often use `stop()` predicates that stop on `{` (body start), so we
 			// allow a leading `{` to be consumed into the type-hint text.
 			final atTopLevel = parenDepth == 0 && braceDepth == 0 && angleDepth == 0 && bracketDepth == 0;
+			final isIdentifier = cur.kind.match(TIdent(_));
+			// Without type punctuation, a second top-level name starts the function body.
+			if (stopAtExpressionBody && atTopLevel && previousCanEndType && isIdentifier)
+				break;
 			if (atTopLevel && stop() && !(parts.length == 0 && cur.kind.match(TLBrace)))
 				break;
 			switch (cur.kind) {
@@ -1521,6 +1547,11 @@ class HxParser {
 					}
 					bump();
 			}
+			final last = parts.length == 0 ? "" : parts[parts.length - 1];
+			previousCanEndType = isIdentifier
+				|| last == ")"
+				|| last == "}"
+				|| (last == ">" && (parts.length < 2 || parts[parts.length - 2] != "-"));
 		}
 		return parts.join("");
 	}
@@ -1531,7 +1562,7 @@ class HxParser {
 		// still consuming it before the body parser looks for `{` or `return`.
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
-		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis)));
+		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis)), true);
 		acceptKeyword(KUntyped);
 		return hint;
 	}
@@ -1687,7 +1718,7 @@ class HxParser {
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c) if (c == "$".code):
-				parseMacroReificationExpr();
+				parseDollarExpression();
 			case TOther(c):
 				final raw = String.fromCharCode(c);
 				bump();
@@ -1752,7 +1783,11 @@ class HxParser {
 		return EWhile(condition, body, bodyIsBlock, position);
 	}
 
-	function parseMacroReificationExpr():HxExpr {
+	/**
+		Dollar names are primitive identifiers in ordinary expressions and value
+		splices inside a macro quote. Braced splice payloads are ordinary expressions.
+	**/
+	function parseDollarExpression():HxExpr {
 		// Macro reification splice: `$i{name}`, `$e{expr}`, `$b{expr}`, ...
 		//
 		// Bring-up scope
@@ -1764,12 +1799,17 @@ class HxParser {
 		//   splice markers and let normal postfix parsing consume field/call suffixes.
 		if (!acceptOtherChar("$"))
 			return EUnsupported("$");
-		switch (cur.kind) {
-			case TIdent(name) if (!peekKind().match(TLBrace)):
-				bump();
-				return ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(name)]);
-			case _:
+		final dollarName = switch (cur.kind) {
+			case TIdent(name): name;
+			case TKeyword(keyword): keywordText(keyword);
+			case _: "";
 		}
+		if (dollarName.length > 0 && !peekKind().match(TLBrace)) {
+			bump();
+			return inMacroQuote ? ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(dollarName)]) : EIdent("$" + dollarName);
+		}
+		if (!inMacroQuote)
+			fail("Reification is not allowed outside of a macro expression");
 		final spliceKind = switch (cur.kind) {
 			case TIdent(name):
 				bump();
@@ -1779,13 +1819,14 @@ class HxParser {
 		}
 		final payload = if (cur.kind.match(TLBrace)) {
 			bump();
-			final inner = parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			final inner = withMacroQuoteContext(false, () -> parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 			if (cur.kind.match(TRBrace))
 				bump();
 			inner;
 		} else {
-			parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
-				|| cur.kind.match(TEof));
+			withMacroQuoteContext(false,
+				() -> parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
+					|| cur.kind.match(TEof)));
 		}
 		return switch (spliceKind) {
 			case "i":
@@ -2144,14 +2185,19 @@ class HxParser {
 				case SExpr(expr, _):
 					final temp = nextSeqTemp();
 					ECall(ELambda([temp], continuation), [expr]);
-				case SVar(name, _, init, _):
+				case SVar(name, typeHint, init, _):
 					final initExpr:HxExpr = switch (init) {
 						case null:
 							ENull;
 						case value:
 							value;
 					};
-					ECall(ELambda([name], continuation), [initExpr]);
+					// The lambda transports a source local. Keep its written type so
+					// immediate-call inference cannot narrow an explicit Dynamic binding.
+					final binder:HxExpr = ELambda([name], continuation);
+					final annotated:HxExpr = typeHint == null
+						|| StringTools.trim(typeHint).length == 0 ? binder : ECast(binder, "(" + typeHint + ")->Dynamic");
+					ECall(annotated, [initExpr]);
 				case SBlock(inner, _):
 					var acc = continuation;
 					var index = inner.length - 1;
@@ -2669,7 +2715,15 @@ class HxParser {
 			return parseAnonExprAfterOpen();
 
 		final stmts = parseFunctionBodyStatementsBestEffort(false);
-		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex()));
+		// Keep the exact closing token in the block slice. Advancing first skips
+		// comments and whitespace, which can attach the next declaration's docs to
+		// this expression and prevent typed block recovery.
+		var end = currentIndex();
+		if (cur.kind.match(TRBrace)) {
+			end++;
+			bump();
+		}
+		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, end));
 		if (blockExprShouldStayOpaque(stmts))
 			return ETryCatchRaw(raw);
 		final lowered = blockExprFromStmts(stmts);
@@ -2911,6 +2965,10 @@ class HxParser {
 				parseIfExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
 				parseSwitchExpr(stop);
+			case TKeyword(k) if (k == KTry):
+				// Assignment and binary operands enter here without passing through parseExpr.
+				// Reuse the same try body, catch boundaries, and structural recovery.
+				parseTryCatchExpr(stop);
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
 				//
@@ -3004,7 +3062,28 @@ class HxParser {
 		return readDottedPath();
 	}
 
+	/** Restores quote context after successful parsing or a recoverable parser error. */
+	function withMacroQuoteContext(quoted:Bool, parse:() -> HxExpr):HxExpr {
+		final previous = inMacroQuote;
+		inMacroQuote = quoted;
+		try {
+			final expression = parse();
+			inMacroQuote = previous;
+			return expression;
+		} catch (error:HxParseError) {
+			inMacroQuote = previous;
+			throw error;
+		} catch (error:String) {
+			inMacroQuote = previous;
+			throw error;
+		}
+	}
+
 	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {
+		return withMacroQuoteContext(true, () -> parseMacroQuoteContents(stop));
+	}
+
+	function parseMacroQuoteContents(stop:() -> Bool):HxExpr {
 		final wrappers = new Array<String>();
 		if (cur.kind.match(TKeyword(KUntyped))) {
 			bump();
@@ -3718,14 +3797,16 @@ class HxParser {
 			return EUnsupported("try");
 
 		final raw = new StringBuf();
+		var previousKeyword = false;
 
 		inline function tokText():String {
-			return switch (cur.kind) {
+			final text = switch (cur.kind) {
 				case TIdent(name):
 					name;
 				case TKeyword(k):
-					final text = keywordText(k);
-					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
+					// This text is parsed again. Separate keywords on both sides so
+					// nested expressions such as `try 2 catch` cannot become `try2catch`.
+					(previousKeyword ? "" : " ") + keywordText(k) + " ";
 				case TString(s, _):
 					"\"" + s + "\"";
 				case TInt(v):
@@ -3755,6 +3836,8 @@ class HxParser {
 				case TEof:
 					"";
 			};
+			previousKeyword = cur.kind.match(TKeyword(_));
+			return text;
 		}
 
 		function consumeBalancedBraces():Void {
@@ -4730,6 +4813,12 @@ class HxParser {
 		}
 	}
 
+	/**
+		Recover statements and leave their closing brace as the current token.
+
+		Expression-block callers need that token's position before advancing past
+		comments. Standalone body recovery discards the parser after this call.
+	**/
 	function parseFunctionBodyStatementsBestEffort(wrapperCloseOnly:Bool = true):Array<HxStmt> {
 		// Like `parseFunctionBodyStatements`, but never throws.
 		//
@@ -4788,7 +4877,6 @@ class HxParser {
 					// Nested block expressions are parsed from the real source stream, not a synthetic
 					// wrapper, so their close brace is always a valid boundary for this helper.
 					if (isWrapperCloseBrace()) {
-						bump();
 						return out;
 					}
 					// Stray brace: consume it and continue so we don't silently truncate the body.
@@ -5351,18 +5439,8 @@ class HxParser {
 				pendingTypeMetadata.push(parseMetadataText());
 				continue;
 			}
-			switch (cur.kind) {
-				case TKeyword(KFinal):
-					pendingTypeMetadata = [];
-					parseModuleField(true);
-					continue;
-				case TKeyword(KVar):
-					pendingTypeMetadata = [];
-					parseModuleField(false);
-					continue;
-				case _:
-			}
 			var moduleMemberVisibility:HxVisibility = Public;
+			var typeIsExtern = false;
 			final moduleFunctionMetadata = pendingTypeMetadata.copy();
 			var keepModuleModifiers = true;
 			while (keepModuleModifiers) {
@@ -5378,6 +5456,14 @@ class HxParser {
 				} else if (acceptKeyword(KInline)) {
 					moduleFunctionMetadata.push("inline");
 					keepModuleModifiers = true;
+				} else if (cur.kind.match(TKeyword(KFinal))
+					&& (peekKind().match(TKeyword(KClass))
+						|| peekKind().match(TKeyword(KPrivate))
+						|| peekKind().match(TIdent("extern")))) {
+					// A class modifier precedes class or another class modifier. A module final precedes its field name.
+					pendingTypeMetadata.push("final");
+					bump();
+					keepModuleModifiers = true;
 				} else {
 					switch (cur.kind) {
 						case TIdent(name) if (name == "overload"):
@@ -5385,6 +5471,8 @@ class HxParser {
 							bump();
 							keepModuleModifiers = true;
 						case TIdent(name) if (name == "extern" || name == "override"):
+							if (name == "extern")
+								typeIsExtern = true;
 							bump();
 							keepModuleModifiers = true;
 						case _:
@@ -5413,13 +5501,18 @@ class HxParser {
 					if (classTypeParameters.length > 0)
 						classMetadata.push("__hxhx_type_params=" + classTypeParameters.join(","));
 					var extendsPath = "";
+					final interfaceExtendsPaths = new Array<String>();
 					final implementsPaths = new Array<String>();
 					var readingImplements = false;
 					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
 						switch (cur.kind) {
 							case TIdent(name) if (name == "extends"):
 								bump();
-								extendsPath = readHeaderTypePath();
+								final parentPath = readHeaderTypePath();
+								if (isInterface)
+									interfaceExtendsPaths.push(parentPath);
+								else
+									extendsPath = parentPath;
 								readingImplements = false;
 							case TIdent(name) if (name == "implements"):
 								bump();
@@ -5452,7 +5545,7 @@ class HxParser {
 					}
 
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
-						moduleMemberVisibility));
+						moduleMemberVisibility, interfaceExtendsPaths, typeIsExtern));
 				// `parseClassMembers` consumes the closing `}`.
 				case TIdent("typedef") | TIdent("enum") | TIdent("abstract"):
 					pendingTypeMetadata = [];
@@ -5497,7 +5590,7 @@ class HxParser {
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
 				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base),
-				HxClassDecl.getVisibility(base));
+				HxClassDecl.getVisibility(base), HxClassDecl.getInterfaceExtendsPaths(base), HxClassDecl.getIsExtern(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {

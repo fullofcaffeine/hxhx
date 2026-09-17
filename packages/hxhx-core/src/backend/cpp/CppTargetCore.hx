@@ -216,6 +216,7 @@ class CppTargetCore {
 	static var processKnownStdlibSignatures:Null<CppKnownStdlibSignatures> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "C++ backend");
 		traceCppPhase("emit_before_main_module");
 		final main = mainModule(program, context);
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));

@@ -23,6 +23,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorage
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassDecision;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassField;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.OcamlNativeEnumDescriptor;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
@@ -50,7 +51,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v21";
+	public static inline final MODEL_REVISION = "ocaml-representation-v23";
 	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
@@ -62,6 +63,81 @@ class OcamlRepresentationRegistry {
 	final monomorphicClassesById:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 
 	public function new() {}
+
+	/**
+		Registers a native enum type without admitting an arbitrary enum-typed value.
+		Only internal non-null values are described here. Call and local planners
+		must prove the producer before selecting this representation for an occurrence.
+	**/
+	public function selectNativeEnum(descriptor:OcamlNativeEnumDescriptor):OcamlRepresentationDecision {
+		OcamlNativeEnumRepresentation.validate(descriptor);
+		return register({
+			semanticTypeId: descriptor.semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: descriptor.targetTypeName,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "A separately proven enum value retains its declared native OCaml variant without a null or Dynamic wrapper.",
+			proof: {
+				id: OcamlNativeEnumRepresentation.MODEL_REVISION + ":" + descriptor.revision,
+				claim: "The closed ordinary enum has one canonical variant type; occurrence-level producer proof remains required."
+			},
+			profileEligibility: ["metal", "portable"],
+			nominalTargetModuleName: descriptor.targetModuleName,
+			nominalTargetTypeName: descriptor.targetTypeName,
+			nominalLayoutRevision: descriptor.revision
+		});
+	}
+
+	/** Selects the nullable `Obj.t` result paired with one exact native enum. */
+	public function selectNullableNativeEnum(descriptor:OcamlNativeEnumDescriptor):OcamlRepresentationDecision {
+		OcamlNativeEnumRepresentation.validate(descriptor);
+		final semanticTypeId = 'Null<${descriptor.semanticTypeId}>';
+		return register({
+			semanticTypeId: semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "An exact native enum result uses Obj.t only at its declared nullable boundary, preserving either the Haxe null sentinel or the same reference-bearing variant payload.",
+			proof: {
+				id: "nullable-native-enum-result-v1:" + descriptor.revision,
+				claim: "The paired descriptor and non-null registry decision identify one exact native variant before this result crosses once into the nullable Obj.t carrier."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/** Looks up only the explicitly registered native enum family for this program. */
+	public function nativeEnumValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
+		return decision == null
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier ? null : copyDecision(decision);
+	}
+
+	/** Looks up the nullable carrier registered for one exact native enum. */
+	public function nullableNativeEnumValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return null;
+		final nativeSemanticTypeId = semanticTypeId.substr(5, semanticTypeId.length - 6);
+		if (nativeEnumValue(nativeSemanticTypeId) == null)
+			return null;
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
+		return decision == null
+			|| decision.carrierTypeId != "Obj.t"
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer ? null : copyDecision(decision);
+	}
 
 	/** Starts one compilation request and discards every previous decision. */
 	public function beginProgram(programRevision:String):Void {

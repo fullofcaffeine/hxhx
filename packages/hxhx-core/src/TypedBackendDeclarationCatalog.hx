@@ -8,6 +8,7 @@
 **/
 class TypedBackendDeclarationCatalog {
 	final declaration:HxModuleDecl;
+	final runtimeTypeCatalogs:Array<TypedBackendRuntimeTypeCatalog>;
 	final functions:Array<{
 		backendClass:HxClassDecl,
 		backendFunction:HxFunctionDecl,
@@ -18,15 +19,22 @@ class TypedBackendDeclarationCatalog {
 		backendClass:HxClassDecl,
 		backendFunction:HxFunctionDecl,
 		stableIdentity:String
-	}>) {
+	}>, ?runtimeTypeCatalogs:Array<TypedBackendRuntimeTypeCatalog>) {
 		if (declaration == null)
 			throw "typed backend declaration catalog requires a module declaration";
 		this.declaration = declaration;
 		this.functions = functions == null ? [] : functions.copy();
+		this.runtimeTypeCatalogs = runtimeTypeCatalogs == null ? [] : runtimeTypeCatalogs.copy();
 	}
 
 	public function getDeclaration():HxModuleDecl
 		return declaration;
+
+	/** Declaration-only consumers cannot interpret executable-owned type operands. */
+	public function assertRuntimeTypeOperandsAbsent():Void {
+		for (catalog in runtimeTypeCatalogs)
+			catalog.assertUnsupportedAbsent("declaration-only backend");
+	}
 
 	/** Resolve one exact declaration pair to the stable typed function identity created with it. **/
 	public function findFunctionIdentity(backendClass:HxClassDecl, backendFunction:HxFunctionDecl):Null<String> {
