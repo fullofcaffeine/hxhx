@@ -1456,13 +1456,14 @@ class HxParser {
 		}
 	}
 
-	function readTypeHintText(stop:() -> Bool):String {
+	function readTypeHintText(stop:() -> Bool, stopAtExpressionBody:Bool = false):String {
 		// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
 		final parts = new Array<String>();
 		var parenDepth = 0;
 		var braceDepth = 0;
 		var angleDepth = 0;
 		var bracketDepth = 0;
+		var previousCanEndType = false;
 		while (true) {
 			// Special-case structural/anonymous type hints that begin with `{ ... }`.
 			//
@@ -1473,6 +1474,10 @@ class HxParser {
 			// Our callers often use `stop()` predicates that stop on `{` (body start), so we
 			// allow a leading `{` to be consumed into the type-hint text.
 			final atTopLevel = parenDepth == 0 && braceDepth == 0 && angleDepth == 0 && bracketDepth == 0;
+			final isIdentifier = cur.kind.match(TIdent(_));
+			// Without type punctuation, a second top-level name starts the function body.
+			if (stopAtExpressionBody && atTopLevel && previousCanEndType && isIdentifier)
+				break;
 			if (atTopLevel && stop() && !(parts.length == 0 && cur.kind.match(TLBrace)))
 				break;
 			switch (cur.kind) {
@@ -1542,6 +1547,11 @@ class HxParser {
 					}
 					bump();
 			}
+			final last = parts.length == 0 ? "" : parts[parts.length - 1];
+			previousCanEndType = isIdentifier
+				|| last == ")"
+				|| last == "}"
+				|| (last == ">" && (parts.length < 2 || parts[parts.length - 2] != "-"));
 		}
 		return parts.join("");
 	}
@@ -1552,7 +1562,7 @@ class HxParser {
 		// still consuming it before the body parser looks for `{` or `return`.
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
-		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis)));
+		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis)), true);
 		acceptKeyword(KUntyped);
 		return hint;
 	}

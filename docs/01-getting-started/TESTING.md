@@ -98,6 +98,25 @@ A separate real-clock case checks the production timeout path without readiness.
 This fixture belongs to `npm run test:reflaxe-ocaml:runtime-use-authority`.
 The production runner still measures its phase deadline from process creation.
 
+### Function bodies after return types
+
+Run `npm run test:m14:parser-stage-scan-expression-body` to check function body
+boundaries in the parser and helper scanner. The test checks call expressions,
+nested return types, and preservation of the following method. Static methods
+with a structured body must retain that body without an explicit final `return`.
+
+The Python static-member test below also runs a helper with a single-expression
+body. It compares the generated program with upstream Haxe behavior.
+
+### Python static members
+
+Run `npm run test:m14:python-entry-members` to check static calls and fields on
+the program's entry class. The test also checks local-name collisions and
+references to the entry function during static initialization.
+It compares authored output with upstream Haxe and generated Python execution.
+See the [fixture guide](../../test/python_entry_members/README.md) for prerequisites
+and the limits of this evidence.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime

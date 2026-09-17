@@ -1530,6 +1530,7 @@ class ParserStageScanHelpers {
 			var bracketDepth = 0;
 			var braceDepth = 0;
 			var angleDepth = 0;
+			var previousCanEndType = false;
 			while (true) {
 				final tok = scanNextToken(source, j);
 				if (tok.text.length == 0)
@@ -1544,6 +1545,11 @@ class ParserStageScanHelpers {
 				// belongs to the body modifier, not to the return type.
 				if (atTop && stopAtUntypedBodyModifier && tok.isIdent && tok.text == "untyped")
 					return {hint: parts.join(""), nextPos: tok.nextPos};
+				// A completed return type needs punctuation before another type name.
+				// A bare identifier here starts an expression body, such as `Void log()`.
+				// Nested types and the result after `->` remain inside the type hint.
+				if (stopAtUntypedBodyModifier && atTop && tok.isIdent && previousCanEndType)
+					return {hint: parts.join(""), nextPos: j};
 				final startsStructuralType = atTop && tok.text == "{" && parts.length == 0;
 				if (atTop
 					&& (tok.text == ")"
@@ -1552,6 +1558,10 @@ class ParserStageScanHelpers {
 						|| tok.text == ";"
 						|| (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
+				previousCanEndType = tok.isIdent
+					|| tok.text == ")"
+					|| tok.text == "}"
+					|| (tok.text == ">" && (parts.length == 0 || parts[parts.length - 1] != "-"));
 				parts.push(tok.text);
 				j = tok.nextPos;
 				switch (tok.text) {
