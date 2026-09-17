@@ -2715,7 +2715,15 @@ class HxParser {
 			return parseAnonExprAfterOpen();
 
 		final stmts = parseFunctionBodyStatementsBestEffort(false);
-		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex()));
+		// Keep the exact closing token in the block slice. Advancing first skips
+		// comments and whitespace, which can attach the next declaration's docs to
+		// this expression and prevent typed block recovery.
+		var end = currentIndex();
+		if (cur.kind.match(TRBrace)) {
+			end++;
+			bump();
+		}
+		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, end));
 		if (blockExprShouldStayOpaque(stmts))
 			return ETryCatchRaw(raw);
 		final lowered = blockExprFromStmts(stmts);
@@ -4805,6 +4813,12 @@ class HxParser {
 		}
 	}
 
+	/**
+		Recover statements and leave their closing brace as the current token.
+
+		Expression-block callers need that token's position before advancing past
+		comments. Standalone body recovery discards the parser after this call.
+	**/
 	function parseFunctionBodyStatementsBestEffort(wrapperCloseOnly:Bool = true):Array<HxStmt> {
 		// Like `parseFunctionBodyStatements`, but never throws.
 		//
@@ -4863,7 +4877,6 @@ class HxParser {
 					// Nested block expressions are parsed from the real source stream, not a synthetic
 					// wrapper, so their close brace is always a valid boundary for this helper.
 					if (isWrapperCloseBrace()) {
-						bump();
 						return out;
 					}
 					// Stray brace: consume it and continue so we don't silently truncate the body.

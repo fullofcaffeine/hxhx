@@ -342,7 +342,7 @@
     "test:m14:js-expr-qualified-ctor": "haxe test/m14_js_expr_emitter_qualified_ctor_integration_test.hxml",
     "test:m14:js-generic-ctor-oracle": "bash scripts/ci/js-generic-constructor-oracle-test.sh",
     "test:m14:js-expr-function-literal": "haxe test/m14_js_expr_emitter_function_literal_integration_test.hxml",
-    "test:m14:js-expr-try-catch": "haxe test/m14_js_expr_emitter_try_catch_integration_test.hxml",
+    "test:m14:js-expr-try-catch": "haxe test/m14_js_expr_emitter_try_catch_integration_test.hxml && haxe test/m14_js_value_block_integration_test.hxml",
     "test:m14:js-target-core-js-lib-runtime": "haxe test/m14_js_target_core_js_lib_extern_runtime_integration_test.hxml",
     "test:m14:js-target-core-systools": "haxe test/m14_js_target_core_systools_integration_test.hxml && neko .tmp/m14_js_target_core_systools_integration_test.n",
     "test:m14:js-target-core-private-helper-ctor": "haxe test/m14_js_target_core_private_helper_ctor_integration_test.hxml",
