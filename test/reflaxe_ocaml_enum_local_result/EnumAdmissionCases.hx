@@ -11,6 +11,9 @@ class EnumAdmissionCases {
 	public function alternateForwarded():Payload
 		return constructedLocal();
 
+	public static function freshReceiverForwarded():Payload
+		return new EnumAdmissionCases().direct();
+
 	public function foreign(receiver:EnumAdmissionCases):Payload
 		return receiver.direct();
 
@@ -24,6 +27,32 @@ class EnumAdmissionCases {
 		final value = forwarded();
 		Sys.println("effect");
 		return value;
+	}
+
+	public function retainedAfterPriorEffect():Payload {
+		Sys.println("prior effect");
+		final value = forwarded();
+		Sys.println("later effect");
+		return value;
+	}
+
+	public function retainedAcrossGuard(flag:Bool):Payload {
+		final value = forwarded();
+		if (flag)
+			Sys.println("guard");
+		return value;
+	}
+
+	public function controlledDependencies(flag:Bool):Payload {
+		if (flag)
+			return forwarded();
+		return constructedLocal();
+	}
+
+	public function controlledThrow(flag:Bool):Payload {
+		if (flag)
+			return direct();
+		throw "expected fixture throw";
 	}
 
 	public function constructedLocal():Payload {

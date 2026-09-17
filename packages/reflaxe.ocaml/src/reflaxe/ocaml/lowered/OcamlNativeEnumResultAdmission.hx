@@ -17,6 +17,7 @@ enum OcamlEnumResultShape {
 	Call;
 	RetainedConstructor;
 	RetainedCall;
+	Control;
 }
 
 /** Stable reasons why a declaration cannot supply a native enum result contract. */
@@ -38,8 +39,19 @@ typedef OcamlEnumResultCandidate = {
 	final descriptor:OcamlNativeEnumDescriptor;
 	final sourceFingerprint:String;
 	final shape:OcamlEnumResultShape;
-	final dependency:Null<String>;
-	final dependencySource:Null<OcamlLoweredSourceSpan>;
+	final dependencies:Array<String>;
+	final dependencySources:Array<OcamlLoweredSourceSpan>;
+}
+
+private typedef OcamlEnumResultSelection = {
+	final shape:OcamlEnumResultShape;
+	final dependencies:Array<String>;
+	final dependencySources:Array<OcamlLoweredSourceSpan>;
+}
+
+private enum OcamlEnumResultProducer {
+	DirectConstructor;
+	Dependency(calleeId:String, source:OcamlLoweredSourceSpan);
 }
 
 /**
@@ -51,7 +63,7 @@ typedef OcamlEnumResultCandidate = {
 	positive and negative results; queries never scan a function or graph again.
 **/
 class OcamlNativeEnumResultAdmission {
-	public static inline final MODEL = "ocaml-enum-result-source-v1";
+	public static inline final MODEL = "ocaml-enum-result-source-v2";
 
 	public var bodyScans(default, null):Int = 0;
 	public var edgeVisits(default, null):Int = 0;
@@ -122,8 +134,8 @@ class OcamlNativeEnumResultAdmission {
 			descriptor: descriptor,
 			sourceFingerprint: "sha256:" + Sha256.encode(MODEL + TypedExprTools.toString(body)),
 			shape: selected.shape,
-			dependency: selected.dependency,
-			dependencySource: selected.dependencySource
+			dependencies: selected.dependencies,
+			dependencySources: selected.dependencySources
 		});
 		exclusions.remove(id);
 	}
@@ -147,12 +159,15 @@ class OcamlNativeEnumResultAdmission {
 			}
 			active.set(id, true);
 			var valid = true;
-			if (source.dependency != null) {
+			for (dependencyId in source.dependencies) {
 				#if reflaxe_ocaml_enum_result_test
 				edgeVisits++;
 				#end
-				final dependency = sources.get(source.dependency);
-				valid = dependency != null && dependency.descriptor.revision == source.descriptor.revision && visit(source.dependency);
+				final dependency = sources.get(dependencyId);
+				if (dependency == null || dependency.descriptor.revision != source.descriptor.revision || !visit(dependencyId)) {
+					valid = false;
+					break;
+				}
 			}
 			active.remove(id);
 			closed.set(id, valid);
@@ -180,12 +195,12 @@ class OcamlNativeEnumResultAdmission {
 			descriptor: source.descriptor,
 			sourceFingerprint: source.sourceFingerprint,
 			shape: source.shape,
-			dependency: source.dependency,
-			dependencySource: source.dependencySource == null ? null : {
-				file: source.dependencySource.file,
-				min: source.dependencySource.min,
-				max: source.dependencySource.max
-			}
+			dependencies: source.dependencies.copy(),
+			dependencySources: source.dependencySources.map(source -> {
+				file: source.file,
+				min: source.min,
+				max: source.max
+			})
 		};
 	}
 
@@ -214,7 +229,7 @@ class OcamlNativeEnumResultAdmission {
 		if (descriptor == null || descriptor.revision != source.descriptor.revision || data.expr == null)
 			throw "enum result final body lost its declared variant: " + id;
 		final selected = classify(data.expr, data.classType, data.isStatic, descriptor, context);
-		if (selected == null || selected.shape != source.shape || selected.dependency != source.dependency)
+		if (selected == null || selected.shape != source.shape || selected.dependencies.join("|") != source.dependencies.join("|"))
 			throw "enum result final body changed its source completion: " + id;
 	}
 
@@ -227,7 +242,14 @@ class OcamlNativeEnumResultAdmission {
 	}
 
 	static function classify(body:TypedExpr, owner:ClassType, isStatic:Bool, descriptor:OcamlNativeEnumDescriptor,
-			context:CompilationContext):Null<{shape:OcamlEnumResultShape, dependency:Null<String>, dependencySource:Null<OcamlLoweredSourceSpan>}> {
+			context:CompilationContext):Null<OcamlEnumResultSelection> {
+		final simple = classifySimple(body, owner, isStatic, descriptor, context);
+		return simple == null ? classifyControl(body, owner, isStatic, descriptor, context) : simple;
+	}
+
+	/** Classifies one direct or retained completion with only bounded observations around it. */
+	static function classifySimple(body:TypedExpr, owner:ClassType, isStatic:Bool, descriptor:OcamlNativeEnumDescriptor,
+			context:CompilationContext):Null<OcamlEnumResultSelection> {
 		final statements = switch (unwrap(body).expr) {
 			case TBlock(items): items;
 			case _: [body];
@@ -242,52 +264,106 @@ class OcamlNativeEnumResultAdmission {
 		}
 		var local:Null<TVar> = null;
 		var producer = completed;
-		var firstEffect = 0;
-		if (statements.length > 1)
-			switch (unwrap(statements[0]).expr) {
-				case TVar(variable, initializer) if (initializer != null && !variable.capture && !variable.isStatic):
-					switch (completed.expr) {
-						case TLocal(returned) if (returned.id == variable.id):
+		var producerStatement = -1;
+		switch (completed.expr) {
+			case TLocal(returned):
+				for (index in 0...statements.length - 1)
+					switch (unwrap(statements[index]).expr) {
+						case TVar(variable, initializer) if (variable.id == returned.id && initializer != null && !variable.capture && !variable.isStatic):
 							local = variable;
 							producer = unwrap(initializer);
-							firstEffect = 1;
-						case _: return null;
+							producerStatement = index;
+						case _:
+					}
+				if (producerStatement < 0)
+					return null;
+			case _:
+		}
+		for (index in 0...statements.length - 1)
+			if (index != producerStatement && !safeEffect(statements[index], local))
+				return null;
+		return switch (classifyProducer(producer, owner, isStatic, descriptor, context)) {
+			case DirectConstructor:
+				{shape: local == null ? Constructor : RetainedConstructor, dependencies: [], dependencySources: []};
+			case Dependency(calleeId, source):
+				{shape: local == null ? Call : RetainedCall, dependencies: [calleeId], dependencySources: [source]};
+			case null:
+				null;
+		}
+	}
+
+	/** Classifies a function whose every owned return has the declared enum carrier. */
+	static function classifyControl(body:TypedExpr, owner:ClassType, isStatic:Bool, descriptor:OcamlNativeEnumDescriptor,
+			context:CompilationContext):Null<OcamlEnumResultSelection> {
+		if (!OcamlControlFlowFacts.definitelyReturnsOrThrows(body))
+			return null;
+		var supported = true;
+		var returnCount = 0;
+		final dependencySourceById:Map<String, OcamlLoweredSourceSpan> = [];
+		function visit(expression:TypedExpr):Void {
+			if (!supported)
+				return;
+			switch (expression.expr) {
+				case TFunction(_):
+				case TReturn(value):
+					returnCount++;
+					if (value == null) {
+						supported = false;
+					} else {
+						switch (classifyProducer(unwrap(value), owner, isStatic, descriptor, context)) {
+							case DirectConstructor:
+							case Dependency(calleeId, source):
+								if (!dependencySourceById.exists(calleeId)) dependencySourceById.set(calleeId, source);
+							case null:
+								supported = false;
+						}
 					}
 				case _:
+					TypedExprTools.iter(expression, visit);
 			}
-		for (index in firstEffect...statements.length - 1)
-			if (!safeEffect(statements[index], local))
-				return null;
+		}
+		visit(body);
+		if (!supported || returnCount == 0)
+			return null;
+		final dependencies = [for (calleeId in dependencySourceById.keys()) calleeId];
+		dependencies.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		return {
+			shape: Control,
+			dependencies: dependencies,
+			dependencySources: dependencies.map(calleeId -> cast dependencySourceById.get(calleeId))
+		};
+	}
+
+	/** Selects one exact constructor or one graph dependency for an enum result. */
+	static function classifyProducer(expression:TypedExpr, owner:ClassType, isStatic:Bool, descriptor:OcamlNativeEnumDescriptor,
+			context:CompilationContext):Null<OcamlEnumResultProducer> {
+		final producer = unwrap(expression);
 		final direct = OcamlNativeEnumRepresentation.selectDirectConstructor(producer, context);
-		if (direct != null && direct.revision == descriptor.revision)
-			return {shape: local == null ? Constructor : RetainedConstructor, dependency: null, dependencySource: null};
+		if (direct != null)
+			return direct.revision == descriptor.revision ? DirectConstructor : null;
 		final dependency = switch (producer.expr) {
 			case TCall(callee, _):
 				switch (unwrap(callee).expr) {
 					case TField(_, FStatic(reference, field)):
 						OcamlCallPlanner.calleeId(reference.get(), field.get());
 					case TField(receiver, FInstance(reference, parameters, field))
-						if (!isStatic
-							&& parameters.length == 0
-							&& reference.get().module == owner.module
-							&& reference.get().name == owner.name
-							&& unwrap(receiver).expr.match(TConst(TThis))):
-						OcamlCallPlanner.calleeId(reference.get(), field.get());
+						if (parameters.length == 0 && reference.get().module == owner.module && reference.get().name == owner.name):
+						final exactReceiver = switch (unwrap(receiver).expr) {
+							case TConst(TThis): !isStatic;
+							case TNew(receiverReference, receiverParameters, _): receiverParameters.length == 0 && receiverReference.get()
+									.module == owner.module && receiverReference.get().name == owner.name;
+							case _: false;
+						};
+						exactReceiver ? OcamlCallPlanner.calleeId(reference.get(), field.get()) : null;
 					case _: null;
 				}
 			case _: null;
 		};
-		return dependency == null ? null : {
-			shape: local == null ? Call : RetainedCall,
-			dependency: dependency,
-			dependencySource: OcamlLoweredOrigin.sourceSpan(producer.pos)
-		};
+		return dependency == null ? null : Dependency(dependency, OcamlLoweredOrigin.sourceSpan(producer.pos));
 	}
 
-	/** A supported intervening call cannot replace, capture, or expose the retained local. */
+	/** A supported intervening statement cannot replace, capture, or expose the retained local. */
 	static function safeEffect(expression:TypedExpr, local:Null<TVar>):Bool {
-		if (!unwrap(expression).expr.match(TCall(_, _)))
-			return false;
 		var safe = true;
 		function visit(value:TypedExpr):Void {
 			switch (value.expr) {
@@ -299,7 +375,25 @@ class OcamlNativeEnumResultAdmission {
 					TypedExprTools.iter(value, visit);
 			}
 		}
-		visit(expression);
+		final unwrapped = unwrap(expression);
+		switch (unwrapped.expr) {
+			case TCall(_, _):
+				visit(unwrapped);
+			case TIf(condition, thenExpression, elseExpression):
+				visit(condition);
+				if (safe)
+					safe = safeEffect(thenExpression, local);
+				if (safe && elseExpression != null)
+					safe = safeEffect(elseExpression, local);
+			case TBlock(expressions):
+				for (child in expressions)
+					if (!safeEffect(child, local)) {
+						safe = false;
+						break;
+					}
+			case _:
+				safe = false;
+		}
 		return safe;
 	}
 }

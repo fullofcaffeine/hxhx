@@ -2,8 +2,8 @@ package hxhxmacrohost;
 
 import haxe.crypto.Sha256;
 import haxe.io.Path;
-import hxhx.CompilerJsonArray;
 import hxhx.CompilerJsonParser;
+import hxhx.CompilerJsonValue;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -14,6 +14,8 @@ import sys.io.File;
 	plugin digest. Both in-process and external-host macro modes call this validator before loading
 	the same artifact. A receipt is optional; once selected through the environment, every missing
 	or mismatched field is a hard error rather than a fallback to stage0.
+	JSON strings and integer-valued version numbers are checked before artifact selection;
+	other value kinds are not coerced into identifiers, macro calls, paths, or versions.
 **/
 class NativeMacroModuleReceipt {
 	public static inline final SCHEMA:String = "hxhx.native-macro-module.v1";
@@ -27,28 +29,47 @@ class NativeMacroModuleReceipt {
 		return "native macro module receipt: " + message;
 	}
 
-	static function requiredString(value:Dynamic, field:String):String {
+	static function requiredText(value:Null<String>, field:String):String {
 		if (value == null)
 			throw failureMessage(field + " is required");
-		final out = StringTools.trim(Std.string(value));
+		final out = StringTools.trim(value);
 		if (out.length == 0)
 			throw failureMessage(field + " is required");
 		return out;
 	}
 
-	static function requiredInt(value:Dynamic, field:String):Int {
-		if (value == null)
-			throw failureMessage(field + " is required");
-		final parsed = Std.parseInt(Std.string(value));
-		if (parsed == null)
-			throw failureMessage(field + " must be an integer");
-		return parsed;
+	static function requiredString(value:CompilerJsonValue, field:String):String {
+		return switch (value) {
+			case JsonString(text): requiredText(text, field);
+			case JsonNull: throw failureMessage(field + " is required");
+			case _: throw failureMessage(field + " must be a string");
+		}
 	}
 
-	static function requiredField(value:Dynamic, field:String):Dynamic {
-		if (value == null || !Reflect.hasField(value, field))
-			throw failureMessage(field + " is required");
-		return Reflect.field(value, field);
+	static function requiredInt(value:CompilerJsonValue, field:String):Int {
+		switch (value) {
+			case JsonNull:
+				throw failureMessage(field + " is required");
+			case JsonInt(number):
+				return number;
+			case JsonFloat(number):
+				final integer = Std.int(number);
+				final asFloat:Float = integer;
+				if (asFloat == number)
+					return integer;
+			case _:
+		}
+		throw failureMessage(field + " must be an integer");
+	}
+
+	static function requiredField(value:CompilerJsonValue, field:String):CompilerJsonValue {
+		return switch (value) {
+			case JsonObject(fields):
+				if (!fields.exists(field))
+					throw failureMessage(field + " is required");
+				fields.get(field);
+			case _: throw failureMessage(field + " is required");
+		}
 	}
 
 	static function normalizeDirectory(path:String):String {
@@ -82,14 +103,10 @@ class NativeMacroModuleReceipt {
 		return digest;
 	}
 
-	static function decodeExpressions(value:Dynamic):Array<String> {
-		var raw:Array<Dynamic>;
-		if (Std.isOfType(value, CompilerJsonArray)) {
-			raw = (cast value : CompilerJsonArray).values;
-		} else if (Std.isOfType(value, Array)) {
-			raw = cast value;
-		} else {
-			throw failureMessage("expressions must be an array");
+	static function decodeExpressions(value:CompilerJsonValue):Array<String> {
+		final raw = switch (value) {
+			case JsonArray(values): values;
+			case _: throw failureMessage("expressions must be an array");
 		}
 		if (raw.length == 0)
 			throw failureMessage("expressions must contain at least one exact macro call");
@@ -119,25 +136,22 @@ class NativeMacroModuleReceipt {
 			throw failureMessage("file not found: " + selectedPath);
 		final receiptPath = Path.normalize(FileSystem.fullPath(selectedPath));
 
-		final decoded:Dynamic = try {
+		final decoded = try {
 			CompilerJsonParser.parse(File.getContent(receiptPath));
-		} catch (error:Dynamic) {
-			throw failureMessage("invalid JSON in `" + receiptPath + "`: " + Std.string(error));
+		} catch (error:haxe.Exception) {
+			throw failureMessage("invalid JSON in `" + receiptPath + "`: " + error.message);
 		}
-		if (decoded == null
-			|| Std.isOfType(decoded, String)
-			|| Std.isOfType(decoded, Bool)
-			|| Std.isOfType(decoded, Int)
-			|| Std.isOfType(decoded, Float)
-			|| Std.isOfType(decoded, Array)
-			|| Std.isOfType(decoded, CompilerJsonArray))
-			throw failureMessage("receipt JSON must be an object");
+		switch (decoded) {
+			case JsonObject(_):
+			case _:
+				throw failureMessage("receipt JSON must be an object");
+		}
 
 		final schema = requiredString(requiredField(decoded, "schema"), "schema");
 		if (schema != SCHEMA)
 			throw failureMessage("unsupported schema `" + schema + "` (expected `" + SCHEMA + "`)");
 		final candidateCommit = requiredString(requiredField(decoded, "candidateCommit"), "candidateCommit");
-		final expectedCandidate = requiredString(Sys.getEnv(CANDIDATE_ENV), CANDIDATE_ENV);
+		final expectedCandidate = requiredText(Sys.getEnv(CANDIDATE_ENV), CANDIDATE_ENV);
 		if (candidateCommit != expectedCandidate)
 			throw failureMessage("candidate mismatch: receipt has `" + candidateCommit + "`, current compiler expects `" + expectedCandidate + "`");
 		final pluginId = requiredString(requiredField(decoded, "pluginId"), "pluginId");
@@ -152,8 +166,8 @@ class NativeMacroModuleReceipt {
 		final selectedArtifactKind = StringTools.trim(artifactKind == null ? "" : artifactKind);
 		if (selectedArtifactKind != NATIVE_ARTIFACT && selectedArtifactKind != BYTECODE_ARTIFACT)
 			throw failureMessage("unsupported artifact kind `" + selectedArtifactKind + "`");
-		final artifacts:Dynamic = requiredField(decoded, "artifacts");
-		final artifact:Dynamic = requiredField(artifacts, selectedArtifactKind);
+		final artifacts = requiredField(decoded, "artifacts");
+		final artifact = requiredField(artifacts, selectedArtifactKind);
 		final artifactField = "artifacts." + selectedArtifactKind;
 		final artifactRelativePath = requiredString(requiredField(artifact, "path"), artifactField + ".path");
 		final expectedDigest = normalizeDigest(requiredString(requiredField(artifact, "sha256"), artifactField + ".sha256"));

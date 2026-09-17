@@ -7,6 +7,7 @@ class Reader {
 	}
 
 	public function parse():Payload {
+		Sys.println("before");
 		final value = read();
 		Sys.println("checked");
 		return value;

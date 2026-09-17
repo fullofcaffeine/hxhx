@@ -45,12 +45,29 @@ class EnumAdmissionFixture {
 			prepare(reverse);
 			for (field in fields) {
 				final id = OcamlCallPlanner.calleeId(owner, field);
-				final expected = ["direct", "forwarded", "alternateForwarded", "retained", "constructedLocal"].indexOf(field.name) >= 0;
-				if ((catalog.candidate(id) != null) != expected)
+				final expected = [
+					"direct",
+					"forwarded",
+					"alternateForwarded",
+					"freshReceiverForwarded",
+					"retained",
+					"retainedAfterPriorEffect",
+					"retainedAcrossGuard",
+					"controlledDependencies",
+					"controlledThrow",
+					"constructedLocal"
+				].indexOf(field.name) >= 0;
+				final candidate = catalog.candidate(id);
+				if ((candidate != null) != expected)
 					throw "unexpected enum admission classification: " + field.name;
 				if ((catalog.exclusion(id) == null) != expected)
 					throw "enum classification lost its exclusion reason: " + field.name;
 				if (expected) {
+					if (field.name == "controlledDependencies"
+						&& (candidate == null || candidate.dependencies.length != 2 || !candidate.shape.match(Control)))
+						throw "multi-branch enum results lost their closed dependency set";
+					if (field.name == "controlledThrow" && (candidate == null || !candidate.shape.match(Control)))
+						throw "an explicit throw invalidated otherwise concrete enum returns";
 					final original = ClassFieldHelper.findFuncData(field, owner, false);
 					if (original == null)
 						throw "expected a real function body";
