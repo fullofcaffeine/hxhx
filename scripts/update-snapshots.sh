@@ -26,7 +26,8 @@ compile_one() {
   (
     cd "$test_dir"
     rm -rf out
-    "$HAXE_BIN" compile.hxml
+    # Keep compiler input separate from the parent's fixture discovery stream.
+    "$HAXE_BIN" compile.hxml </dev/null
   )
 
   if [ ! -d "$test_dir/out" ]; then
@@ -47,4 +48,3 @@ while IFS= read -r -d '' hxml; do
 done < <(find "$SNAPSHOT_DIR" -name compile.hxml -print0 | sort -z)
 
 echo "✓ Snapshots updated"
-
