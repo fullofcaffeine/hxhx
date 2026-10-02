@@ -1120,6 +1120,15 @@ These checks run `haxe` compilations and/or compare emitted `.ml` text:
 - **Integration compile tests**: ensure the backend can compile representative Haxe code.
 - **Snapshot tests** (`test/snapshot/**`): golden `.ml` output comparisons (compile-to-OCaml only; no dune build).
 
+The snapshot checker and updater both accept `HXHX_SNAPSHOT_DIR` to select one fixture or a fixture group.
+For example, regenerate only the enum fixture with the repository compiler wrapper:
+
+```sh
+HXHX_SNAPSHOT_DIR="$PWD/test/snapshot/core/enums_basic" npm exec -- bash scripts/update-snapshots.sh
+```
+
+Review generated changes before committing them. Snapshot comparisons and OCaml parsing do not prove runtime behavior.
+
 These catch regressions in:
 
 - TypedExpr lowering (`OcamlBuilder`)

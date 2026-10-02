@@ -4,7 +4,7 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SNAPSHOT_DIR="$ROOT/test/snapshot"
+SNAPSHOT_DIR="${HXHX_SNAPSHOT_DIR:-"$ROOT/test/snapshot"}"
 
 if [ ! -d "$SNAPSHOT_DIR" ]; then
   echo "No snapshot directory found at $SNAPSHOT_DIR" >&2

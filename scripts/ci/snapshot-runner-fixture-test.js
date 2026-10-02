@@ -129,6 +129,29 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
       }
     }
 
+    const scopedSnapshots = path.join(tempRoot, 'scoped-snapshots')
+    writeFixture(scopedSnapshots, 'selected')
+    const untouched = path.join(updateSnapshots, 'first', 'intended', 'Main.ml')
+    fs.writeFileSync(untouched, 'let untouched = true\n')
+    const scopedResult = childProcess.spawnSync('bash', [updateScript], {
+      cwd: updateRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HAXE_BIN: fakeHaxe,
+        HXHX_SNAPSHOT_DIR: scopedSnapshots,
+        HXHX_SNAPSHOT_RUN_LOG: path.join(tempRoot, 'scoped-runs.txt'),
+        HXHX_SNAPSHOT_MUTATE_MAIN: '1'
+      }
+    })
+    if (scopedResult.error || scopedResult.status !== 0) fail('scoped updater did not complete')
+    if (fs.readFileSync(path.join(scopedSnapshots, 'selected', 'intended', 'Main.ml'), 'utf8') !== 'let fixture_name = "unexpected drift"\n') {
+      fail('scoped updater did not regenerate the selected fixture')
+    }
+    if (fs.readFileSync(untouched, 'utf8') !== 'let untouched = true\n') {
+      fail('scoped updater changed a fixture outside its selected directory')
+    }
+
     console.log('SNAPSHOT_RUNNER_BOUNDARY:PASS')
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true })
