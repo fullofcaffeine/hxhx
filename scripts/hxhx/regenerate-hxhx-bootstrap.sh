@@ -957,6 +957,9 @@ run_stage0_emit() {
 				"$last_progress_elapsed_local" "$last_progress_reason_local" "$timeout_cleanup_local" \
 				"$connected_server_observed_local" >"$metrics_file"
 		}
+		# Resolve the clock before launching a compiler, so clock failures cannot
+		# leave an unmonitored child behind.
+		stage0_watchdog_init
 		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		else
@@ -980,18 +983,23 @@ run_stage0_emit() {
 
 		local elapsed_hb=0
 		local status_elapsed=0
-		local repo_server_poll_elapsed="$HXHX_STAGE0_PROGRESS_POLL_SECS"
+		local repo_server_poll_elapsed="$((-HXHX_STAGE0_PROGRESS_POLL_SECS))"
 		local repo_server_pids_local=""
-		stage0_watchdog_init
+		# Compare the first delayed observation with an actual starting sample.
+		# Otherwise a slow first poll can mistake a busy compiler for a stall.
+		stage0_watchdog_poll 0 "$pid" "$log_file"
 		while kill -0 "$pid" >/dev/null 2>&1; do
 			sleep 1 || true
-			elapsed_hb="$((elapsed_hb + 1))"
-			status_elapsed="$((status_elapsed + 1))"
-			repo_server_poll_elapsed="$((repo_server_poll_elapsed + 1))"
+			# The compiler can finish while the observer sleeps. Preserve its exit
+			# status instead of replacing it with a timeout for an absent process.
+			if ! kill -0 "$pid" >/dev/null 2>&1; then
+				break
+			fi
+			elapsed_hb="$(stage0_watchdog_elapsed_seconds)"
 			if [ "$repo_server_selected" = "1" ] \
-				&& [ "$repo_server_poll_elapsed" -ge "$HXHX_STAGE0_PROGRESS_POLL_SECS" ]; then
+				&& [ "$((elapsed_hb - repo_server_poll_elapsed))" -ge "$HXHX_STAGE0_PROGRESS_POLL_SECS" ]; then
 				repo_server_pids_local="$(repo_server_owned_pids || true)"
-				repo_server_poll_elapsed=0
+				repo_server_poll_elapsed="$elapsed_hb"
 				if [ -n "$repo_server_pids_local" ]; then
 					connected_server_observed_local=1
 				fi
@@ -1023,10 +1031,10 @@ run_stage0_emit() {
 			if [ "$interval" = "0" ]; then
 				continue
 			fi
-			if [ "$status_elapsed" -lt "$interval" ]; then
+			if [ "$((elapsed_hb - status_elapsed))" -lt "$interval" ]; then
 				continue
 			fi
-			status_elapsed=0
+			status_elapsed="$elapsed_hb"
 
 			local child_pid
 			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"

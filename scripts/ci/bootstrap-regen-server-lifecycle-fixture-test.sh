@@ -27,6 +27,9 @@ trap cleanup EXIT
 
 fail() {
 	echo "[bootstrap-regen-server-lifecycle-fixture-test] ERROR: $*" >&2
+	for log in "$TMP_DIR"/*.log; do
+		[ -f "$log" ] && tail -n 30 "$log" >&2
+	done
 	exit 1
 }
 
@@ -137,6 +140,13 @@ run_failing_regen() {
 	local log_name="$5"
 	local connection_mode="$6"
 	shift 6
+	local hard_seconds=10
+	# This case proves that server CPU prevents a soft stall, with the optional
+	# hard limit disabled. Its fake client bounds the wait for two samples.
+	# The watchdog fixture separately proves the hard deadline with slow polls.
+	if [ "$compile_mode" = "observe-worker" ]; then
+		hard_seconds=0
+	fi
 	local connect_endpoint=""
 	local -a regen_args=(--incremental --no-verify --force)
 	case "$connection_mode" in
@@ -158,7 +168,7 @@ run_failing_regen() {
 	HXHX_STAGE0_HEARTBEAT_TRACE_FILE="$TMP_DIR/$log_name.trace.jsonl" \
 	HXHX_STAGE0_PROGRESS_POLL_SECS=1 \
 	HXHX_STAGE0_STALL_TIMEOUT_SECS=2 \
-	HXHX_STAGE0_FAILFAST_SECS=10 \
+	HXHX_STAGE0_FAILFAST_SECS="$hard_seconds" \
 	HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native \
 	HXHX_STAGE0_NATIVE_HAXE_BIN="$FAKE_HAXE" \
 	HAXE_CONNECT="$connect_endpoint" \
@@ -235,6 +245,9 @@ function expect(condition, message) {
   if (!condition) throw new Error(message + " " + JSON.stringify({observed, trace, workerPid}))
 }
 expect(observed.connected_server_observed === true, "server was not observed")
+expect(observed.hard_timeout_seconds === 0, "disabled hard timeout was not preserved")
+expect(observed.timeout_kind === "none", "busy server unexpectedly timed out")
+expect(trace.length >= 2, "busy server did not produce two resource samples")
 expect(observed.last_progress_reason === "cpu-time", "server CPU did not advance progress")
 expect(observed.heartbeat_peak_tree_rss_mb >= 32, "server memory was not counted")
 expect(trace.some(sample => sample.owned_server_pids.length > 0), "trace lost server ownership")
