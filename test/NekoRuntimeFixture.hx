@@ -18,10 +18,13 @@ private function run(command:String, arguments:Array<String>):String {
 }
 
 /** Loads authored source through production target selection and retains both runtime outcomes. */
-function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bool = true, ?roots:Array<String>):Void {
+function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bool = true, ?roots:Array<String>, ?runtimeVariants:Array<String>):Void {
 	final root = ".tmp/neko_runtime_fixture_" + fixture.split("/").pop() + "_" + Date.now().getTime();
 	FileSystem.createDirectory(root);
-	final expected = File.getContent(fixture + "/expected.stdout");
+	final snapshots = [File.getContent(fixture + "/expected.stdout")];
+	if (runtimeVariants != null)
+		for (variant in runtimeVariants)
+			snapshots.push(File.getContent(fixture + "/" + variant));
 	final upstream = if (upstreamNeko) {
 		run("haxe", ["-cp", fixture, "-main", "Main", "-neko", root + "/upstream.n"]);
 		run("neko", [root + "/upstream.n"]);
@@ -29,8 +32,9 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 		run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
 	};
 	File.saveContent(root + "/upstream.stdout", upstream);
-	if (upstream != expected)
-		throw "upstream fixture output changed: " + root;
+	// Admit recorded upstream results, then require this runtime's exact result in both generated layouts.
+	if (!snapshots.contains(upstream))
+		throw "upstream fixture output changed: " + root + "\n" + upstream;
 	Sys.println("UPSTREAM_NEKO_FIXTURE:PASS fixture=" + fixture + " artifacts=" + root);
 
 	final arguments = Stage1Args.parse(["-cp", fixture, "-main", "Main"], true);
@@ -88,7 +92,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 		process.close();
 		File.saveContent(root + "/" + layout + ".stdout", actual);
 		File.saveContent(root + "/" + layout + ".stderr", errors);
-		if (code != 0 || actual != expected) {
+		if (code != 0 || actual != upstream) {
 			failed = true;
 			Sys.println("NEKO_RUNTIME_FIXTURE:FAIL fixture=" + fixture + " layout=" + layout + " exit=" + code);
 		} else {

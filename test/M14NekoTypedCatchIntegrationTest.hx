@@ -12,7 +12,9 @@ class M14NekoTypedCatchIntegrationTest {
 		for (fixture in requested)
 			if (fixtures.indexOf(fixture) < 0)
 				throw "unknown catch fixture: " + fixture;
-		for (fixture in (requested.length == 0 ? fixtures : requested))
-			NekoRuntimeFixture.exercise(fixture, true);
+		for (fixture in (requested.length == 0 ? fixtures : requested)) {
+			final variants = fixture == "test/neko_numeric_catches" ? ["expected.linux-x86_64.stdout"] : [];
+			NekoRuntimeFixture.exercise(fixture, true, true, null, variants);
+		}
 	}
 }
