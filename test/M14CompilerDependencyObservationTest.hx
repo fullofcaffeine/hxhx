@@ -171,6 +171,15 @@ class M14CompilerDependencyObservationTest {
 		].join("\n");
 		final first = typedProgram(apiA, mainSource);
 		final snapshot = CompilerDependencyCollector.collect(first.modules, first.index);
+		final grouped = typedProgram(apiA,
+			StringTools.replace(StringTools.replace(mainSource, "Api.answer()", "((Api.answer()))"), "Api.twice(answer)", "((Api.twice(answer)))"));
+		final groupedSnapshot = CompilerDependencyCollector.collect(grouped.modules, grouped.index);
+		assertTrue(hasEdge(groupedSnapshot, CompilerDependencyKind.PublicInterface, "answer"),
+			"nested grouping must retain the selected ordinary call dependency");
+		assertTrue(hasEdge(groupedSnapshot, CompilerDependencyKind.InlineImplementation, "twice"),
+			"nested grouping must retain the selected inline body dependency");
+		assertTrue(functionBodyRevision(first.modules, "Main", "main") != functionBodyRevision(grouped.modules, "Main", "main"),
+			"authored grouping must remain visible in the typed body revision");
 		assertTrue(hasEdge(snapshot, CompilerDependencyKind.ModuleResolution, "import-normal:Api"),
 			"an ordinary import should record both its source meaning and selected provider module");
 		assertTrue(hasEdge(snapshot, CompilerDependencyKind.PublicInterface, "answer"), "ordinary call should depend on the selected public declaration");

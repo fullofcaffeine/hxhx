@@ -138,6 +138,7 @@ class CompilerDependencyCollector {
 			return selectedField;
 		final texts = expression.getTexts();
 		return switch (expression.getTag()) {
+			case Parenthesized: null;
 			case NameRead: texts.length == 0 || currentOwner == null ? null : currentOwner.fieldInfo(texts[0]);
 			case FieldRead:
 				final children = expression.getExpressions();

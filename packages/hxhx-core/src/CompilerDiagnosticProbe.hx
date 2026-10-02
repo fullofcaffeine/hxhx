@@ -13,7 +13,7 @@
 class CompilerDiagnosticProbe {
 	public static function getErrorMessage(expression:HxExpr, ?localInitializer:String->Null<HxExpr>):Null<String> {
 		return switch (expression) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				getErrorMessage(inner, localInitializer);
 			case ESwitch(scrutinee, patterns, _):
 				final diagnosticScrutinee = diagnosticScrutineeExpr(scrutinee, localInitializer);
@@ -26,7 +26,7 @@ class CompilerDiagnosticProbe {
 
 	static function diagnosticScrutineeExpr(expression:HxExpr, localInitializer:Null<String->Null<HxExpr>>):HxExpr {
 		return switch (expression) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				diagnosticScrutineeExpr(inner, localInitializer);
 			case EIdent(name) if (localInitializer != null):
 				final initializer = localInitializer(name);

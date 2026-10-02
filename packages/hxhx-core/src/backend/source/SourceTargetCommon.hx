@@ -1377,8 +1377,8 @@ class SourceTargetCommon {
 				fieldAccessExprWithFrame(frame, receiver, field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExprWithFrame(frame, receiver, index);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				"(" + renderExprWithFrame(frame, args[0]) + ")";
+			case EParenthesized(inner, _):
+				"(" + renderExprWithFrame(frame, inner) + ")";
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]):
 				renderExprWithFrame(frame, inner);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
@@ -1505,6 +1505,7 @@ class SourceTargetCommon {
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
 			case ECast(_, _): "ECast";
+			case EParenthesized(_, _): "EParenthesized";
 			case EUntyped(_): "EUntyped";
 			case EUnsupported(raw): "EUnsupported(" + summarizeRaw(raw) + ")";
 		};
@@ -2152,7 +2153,7 @@ class SourceTargetCommon {
 				fieldCallExpr(Php, expr, "invert", []);
 			case ECast(inner, castHint) if (phpTypeHasInstanceMethod(castHint, "invert") || phpReceiverHasInstanceMethod(inner, "invert")):
 				fieldCallExpr(Php, expr, "invert", []);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpUnaryMinusOperatorCall(inner);
 			case _:
 				null;
@@ -2169,7 +2170,7 @@ class SourceTargetCommon {
 				if (phpTypeHasInstanceMethodWithFrame(frame, castHint, "invert")
 					|| phpReceiverHasInstanceMethodWithFrame(frame, inner, "invert")):
 				fieldCallExprWithFrame(frame, expr, "invert", []);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpUnaryMinusOperatorCallWithFrame(frame, inner);
 			case _:
 				null;
@@ -2599,7 +2600,7 @@ class SourceTargetCommon {
 				true;
 			case ECast(_, typeHint) if (isDynamicTypeHint(typeHint)):
 				true;
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpShouldUseFieldReadHelper(inner, field);
 			case ENull:
 				true;
@@ -2618,7 +2619,7 @@ class SourceTargetCommon {
 				true;
 			case ECast(_, typeHint) if (isDynamicTypeHint(typeHint)):
 				true;
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpShouldUseFieldReadHelperWithFrame(frame, inner, field);
 			case ENull:
 				true;
@@ -3337,7 +3338,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceMethod(typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceMethod(castHint, field) || phpReceiverHasInstanceMethod(inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceMethod(inner, field);
 			case _:
 				false;
@@ -3354,7 +3355,7 @@ class SourceTargetCommon {
 				phpTypeHasInstanceMethodWithFrame(frame, typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceMethodWithFrame(frame, castHint,
 					field) || phpReceiverHasInstanceMethodWithFrame(frame, inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceMethodWithFrame(frame, inner, field);
 			case _:
 				false;
@@ -3379,7 +3380,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceField(typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceField(castHint, field) || phpReceiverHasInstanceField(inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceField(inner, field);
 			case _:
 				false;
@@ -3397,7 +3398,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceFieldWithFrame(frame, typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceFieldWithFrame(frame, castHint, field) || phpReceiverHasInstanceFieldWithFrame(frame, inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceFieldWithFrame(frame, inner, field);
 			case _:
 				false;
@@ -3421,7 +3422,7 @@ class SourceTargetCommon {
 				phpPoint3LikeTypeHint(typePath);
 			case ECast(_, castHint):
 				phpPoint3LikeTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPoint3LikeReceiver(inner);
 			case _:
 				false;
@@ -3437,7 +3438,7 @@ class SourceTargetCommon {
 				phpPoint3LikeTypeHint(typePath);
 			case ECast(_, castHint):
 				phpPoint3LikeTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPoint3LikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3492,7 +3493,7 @@ class SourceTargetCommon {
 				phpRuntimeListType(typePath);
 			case ECast(_, castHint):
 				phpRuntimeListType(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpListLikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3507,7 +3508,7 @@ class SourceTargetCommon {
 				phpRuntimeListType(typePath);
 			case ECast(_, castHint):
 				phpRuntimeListType(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpListLikeReceiver(inner);
 			case _:
 				false;
@@ -3642,7 +3643,7 @@ class SourceTargetCommon {
 				phpGenericStackTypeHint(typePath);
 			case ECast(_, castHint):
 				phpGenericStackTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericStackReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3657,7 +3658,7 @@ class SourceTargetCommon {
 				phpGenericStackTypeHint(typePath);
 			case ECast(_, castHint):
 				phpGenericStackTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericStackReceiver(inner);
 			case _:
 				false;
@@ -3689,7 +3690,7 @@ class SourceTargetCommon {
 				phpArrayItemTypeHint(phpInstanceFieldTypeHintForType(phpLocalTypeHint(name), field));
 			case ECast(_, castHint):
 				phpArrayItemTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverArrayItemTypeHint(inner);
 			case _:
 				"";
@@ -3711,7 +3712,7 @@ class SourceTargetCommon {
 				phpArrayItemTypeHint(phpInstanceFieldTypeHintForType(receiverHint, field));
 			case ECast(_, castHint):
 				phpArrayItemTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverArrayItemTypeHintWithFrame(frame, inner);
 			case _:
 				"";
@@ -3727,7 +3728,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpArrayBackedAbstractTypeHint(typePath);
 			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpArrayBackedReceiver(inner);
 			case _:
 				false;
@@ -3745,7 +3746,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpArrayBackedAbstractTypeHint(typePath);
 			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpArrayBackedReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3914,7 +3915,7 @@ class SourceTargetCommon {
 			case ECall(EField(EIdent("String"), "new"), _):
 				true;
 			case ECast(inner, castHint): isStringTypeHint(luaUnwrapNullTypeHint(castHint)) || isDynamicTypeHint(castHint) && luaStringLikeOperand(inner);
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				luaStringFieldReceiver(inner);
 			case _:
 				false;
@@ -3940,7 +3941,7 @@ class SourceTargetCommon {
 					case _:
 						false;
 				}
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpKnownStringResultReceiver(inner);
 			case _:
 				false;
@@ -3971,7 +3972,7 @@ class SourceTargetCommon {
 					case _:
 						false;
 				}
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpKnownStringResultReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -4047,7 +4048,7 @@ class SourceTargetCommon {
 				typePath == "EReg";
 			case ECast(_, castHint):
 				StringTools.trim(castHint == null ? "" : castHint) == "EReg";
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpERegLikeReceiver(inner);
 			case _:
 				false;
@@ -4062,7 +4063,7 @@ class SourceTargetCommon {
 				typePath == "EReg";
 			case ECast(_, castHint):
 				StringTools.trim(castHint == null ? "" : castHint) == "EReg";
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpERegLikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -4084,7 +4085,7 @@ class SourceTargetCommon {
 	static function phpArrayResultReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
 			case ECall(EField(base, "split"), args): args.length == 1 && phpStringMethodReceiver(base, "split");
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayResultReceiver(inner);
 			case _:
 				false;
@@ -5157,7 +5158,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index) | ERange(receiver, index):
 				phpCollectUsedIdentsWithFrame(frame, receiver, names, bound);
 				phpCollectUsedIdentsWithFrame(frame, index, names, bound);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectUsedIdentsWithFrame(frame, inner, names, bound);
 			case _:
 		}
@@ -5220,7 +5221,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index) | ERange(receiver, index):
 				phpCollectUsedIdents(receiver, names);
 				phpCollectUsedIdents(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectUsedIdents(inner, names);
 			case _:
 		}
@@ -5335,7 +5336,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index):
 				phpCollectAssignedIdents(receiver, names);
 				phpCollectAssignedIdents(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectAssignedIdents(inner, names);
 			case _:
 		}
@@ -5419,7 +5420,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index):
 				phpCollectAssignedIdentsWithFrame(frame, receiver, names);
 				phpCollectAssignedIdentsWithFrame(frame, index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectAssignedIdentsWithFrame(frame, inner, names);
 			case _:
 		}
@@ -5438,7 +5439,7 @@ class SourceTargetCommon {
 			case EIdent(name) if (phpArrayBackedReceiver(receiver) || phpLocalExists(name)):
 				final clean = sanitizeTypeName(name);
 				clean.length == 0 ? null : clean;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayMutatingReceiverLocal(inner, field, args);
 			case _:
 				null;
@@ -5452,7 +5453,7 @@ class SourceTargetCommon {
 			case EIdent(name): final clean = PhpName.valueIdentifier(name); final local = SourceFunctionRenderFrameTools.requirePhpScope(frame)
 					.findLocal(clean); clean.length == 0 || (local == null
 					&& !phpArrayBackedReceiverWithFrame(frame, receiver)) ? null : clean;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayMutatingReceiverLocalWithFrame(frame, inner, field, args);
 			case _:
 				null;
@@ -5968,7 +5969,7 @@ class SourceTargetCommon {
 		if (mapLiteralResult != null)
 			return mapLiteralResult;
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResult(inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
@@ -6001,7 +6002,7 @@ class SourceTargetCommon {
 		if (mapLiteralResult != null)
 			return mapLiteralResult;
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResultWithFrame(frame, inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHintWithFrame(frame, name), value);
@@ -6062,7 +6063,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasNumericAbstractWrapper(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasNumericAbstractWrapper(inner);
 			case EIdent(name): phpLocalHasInstanceMethod(name, "get") && (phpLocalHasInstanceMethod(name, "invert")
 					|| phpLocalHasInstanceMethod(name, "incr"));
@@ -6078,7 +6079,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasNumericAbstractWrapperWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasNumericAbstractWrapperWithFrame(frame, inner);
 			case EIdent(name): final typeHint = phpLocalTypeHintWithFrame(frame,
 					name); phpTypeHasInstanceMethodWithFrame(frame, typeHint,
@@ -6097,7 +6098,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasMyStringType(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasMyStringType(inner);
 			case EIdent(name): final hint = sanitizeTypeName(phpLocalTypeHint(name)); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
 			case ECast(_, typeHint): final hint = sanitizeTypeName(typeHint); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
@@ -6108,7 +6109,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasMyStringTypeWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasMyStringTypeWithFrame(frame, inner);
 			case EIdent(name): final hint = sanitizeTypeName(phpLocalTypeHintWithFrame(frame,
 					name)); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
@@ -6120,7 +6121,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralTypeError(expr:HxExpr):Null<Bool> {
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperMapLiteralTypeError(inner);
 			case EArrayDecl(items):
 				if (items.length == 0)
@@ -6156,7 +6157,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralKeySignature(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperMapLiteralKeySignature(inner);
 			case EInt(value):
 				"i:" + Std.string(value);
@@ -6173,7 +6174,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralProbeKind(expr:HxExpr, isKey:Bool):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperMapLiteralProbeKind(inner, isKey);
 			case EInt(_):
 				"number";
@@ -6195,7 +6196,7 @@ class SourceTargetCommon {
 	static function helperTypeErrorLoweredBlockResult(expr:HxExpr, ?abstractLocals:Array<String>):Null<Bool> {
 		final knownAbstractLocals = abstractLocals == null ? [] : abstractLocals;
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperTypeErrorLoweredBlockResult(inner, knownAbstractLocals);
 			case ECall(ELambda([], body), []):
 				return helperTypeErrorLoweredBlockResult(body, knownAbstractLocals);
@@ -6228,7 +6229,7 @@ class SourceTargetCommon {
 
 	static function helperAbstractCastCarrierName(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperAbstractCastCarrierName(inner);
 			case ECall(EIdent("__hxhx_copy_value"), [inner]):
 				helperAbstractCastCarrierName(inner);
@@ -6241,7 +6242,7 @@ class SourceTargetCommon {
 
 	static function helperExprCreatesAbstractCastCarrier(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprCreatesAbstractCastCarrier(inner);
 			case ENew(path, _): final clean = sanitizeTypeName(path); clean == "AbstractBase" || StringTools.endsWith(clean, "_AbstractBase");
 			case _:
@@ -6657,7 +6658,7 @@ class SourceTargetCommon {
 		if (args == null || args.length == 0)
 			return null;
 		final raw = switch (args[0]) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperTypeErrorBlockResult([inner]);
 			case ETryCatchRaw(raw):
 				raw;
@@ -6747,7 +6748,7 @@ class SourceTargetCommon {
 				}
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpTypeStringExprHintWithFrame(frame, inner, seen);
 			case _:
 				phpExprTypeHint(expr);
@@ -6792,7 +6793,7 @@ class SourceTargetCommon {
 				}
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpTypeStringExprHint(inner, seen);
 			case _:
 				phpExprTypeHint(expr);
@@ -6855,7 +6856,7 @@ class SourceTargetCommon {
 			case _:
 		}
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperExprNullableStateWithFrame(frame, inner, seen);
 			case EBinop("??", left, right):
 				final leftNullable = helperExprNullableStateWithFrame(frame, left, seen);
@@ -6941,7 +6942,7 @@ class SourceTargetCommon {
 			case _:
 		}
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperExprNullableState(inner, seen);
 			case EBinop("??", left, right):
 				final leftNullable = helperExprNullableState(left, seen);
@@ -7445,8 +7446,6 @@ class SourceTargetCommon {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						pythonMacroEnum("EParenthesis", [pythonMacroExprObject(exprDef)]);
 					case "untyped":
 						pythonMacroEnum("EUntyped", [pythonMacroExprObject(exprDef)]);
 					case _:
@@ -7489,11 +7488,15 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) pythonMacroExpr(value, [])];
 				pythonMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
-				pythonMacroEnum("EBinop", [pythonMacroEnum("OpIn", []), pythonMacroExpr(left, []), pythonMacroExpr(right, [])]);
-			case EBinop("=>", left, right):
+			case EBinop(op, left, right):
 				pythonMacroEnum("EBinop", [
-					pythonMacroEnum("OpArrow", []),
+					HxMacroBinaryOperator.render(op, pythonMacroEnum),
+					pythonMacroExpr(left, []),
+					pythonMacroExpr(right, [])
+				]);
+			case ERange(left, right):
+				pythonMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", pythonMacroEnum),
 					pythonMacroExpr(left, []),
 					pythonMacroExpr(right, [])
 				]);
@@ -7519,6 +7522,8 @@ class SourceTargetCommon {
 				pythonMacroEnum("ECall", [pythonMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				pythonMacroEnum("EUntyped", [pythonMacroExpr(inner, [])]);
+			case EParenthesized(inner, _):
+				pythonMacroEnum("EParenthesis", [pythonMacroExpr(inner, [])]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				pythonMacroEnum("EUnop", [
@@ -7603,8 +7608,6 @@ class SourceTargetCommon {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						phpMacroEnum("EParenthesis", [phpMacroExprObject(exprDef)]);
 					case "untyped":
 						phpMacroEnum("EUntyped", [phpMacroExprObject(exprDef)]);
 					case _:
@@ -7903,10 +7906,18 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) phpMacroExpr(value, [])];
 				phpMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
-				phpMacroEnum("EBinop", [phpMacroEnum("OpIn", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
-			case EBinop("=>", left, right):
-				phpMacroEnum("EBinop", [phpMacroEnum("OpArrow", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
+			case EBinop(op, left, right):
+				phpMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render(op, phpMacroEnum),
+					phpMacroExpr(left, []),
+					phpMacroExpr(right, [])
+				]);
+			case ERange(left, right):
+				phpMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", phpMacroEnum),
+					phpMacroExpr(left, []),
+					phpMacroExpr(right, [])
+				]);
 			case ECall(EIdent("__hxhx_macro_if"), args):
 				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
 				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
@@ -7926,6 +7937,8 @@ class SourceTargetCommon {
 				phpMacroEnum("ECall", [phpMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				phpMacroEnum("EUntyped", [phpMacroExpr(inner, [])]);
+			case EParenthesized(inner, _):
+				phpMacroEnum("EParenthesis", [phpMacroExpr(inner, [])]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				phpMacroEnum("EUnop", [
@@ -8853,6 +8866,8 @@ class SourceTargetCommon {
 				ECast(javaExprWithStmtTraceLine(inner, pos), typeHint);
 			case EUntyped(inner):
 				EUntyped(javaExprWithStmtTraceLine(inner, pos));
+			case EParenthesized(inner, position):
+				EParenthesized(javaExprWithStmtTraceLine(inner, pos), position);
 			case ELambda(args, body):
 				ELambda(args, javaExprWithStmtTraceLine(body, pos));
 			case _:
@@ -9413,7 +9428,7 @@ class SourceTargetCommon {
 				phpEnumNameFromTypeHint(phpLocalTypeHint(name));
 			case ECast(_, typeHint):
 				phpEnumNameFromTypeHint(typeHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPreferredEnumFromExpr(inner);
 			case _:
 				null;
@@ -9463,7 +9478,7 @@ class SourceTargetCommon {
 			case EIdent(name):
 				final local = SourceFunctionRenderFrameTools.requirePhpScope(frame).findLocal(PhpName.valueIdentifier(name));
 				local == null ? null : SourceFunctionRenderFrameTools.requirePhpRenderer(frame).findEnumOwnerIdentity(local.semanticType);
-			case EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
 				phpPreferredEnumFromExprWithFrame(frame, inner);
 			case _:
 				null;
@@ -9884,7 +9899,7 @@ class SourceTargetCommon {
 				castHint;
 			case EThis:
 				SourceFunctionRenderFrameTools.requirePhpScope(frame).getPlan().getClassIdentity();
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return phpInstanceOverloadMethodNameWithFrame(frame, inner, field, args);
 			case _:
 				phpExprTypeHint(receiver);
@@ -10115,7 +10130,7 @@ class SourceTargetCommon {
 			case ECast(inner, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				final innerHint = phpExprTypeHint(inner);
 				if (isNullTypeHint(innerHint) && phpUnwrapNullTypeHint(innerHint) == normalizeTypeHint(castHint)) innerHint; else castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				inferLocalTypeHint("", inner);
 			case _:
 				"";
@@ -10152,7 +10167,7 @@ class SourceTargetCommon {
 			case ETernary(cond, thenExpr, elseExpr):
 				phpExprTypeHint(cond);
 				phpTernaryTypeHint(thenExpr, elseExpr);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprTypeHint(inner);
 			case _:
 				"";
@@ -10293,7 +10308,7 @@ class SourceTargetCommon {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				phpExprIsInt64Value(inner);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64(inner);
 			case _:
 				false;
@@ -10344,7 +10359,7 @@ class SourceTargetCommon {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				phpExprIsInt64ValueWithFrame(frame, inner);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64WithFrame(frame, inner);
 			case _:
 				false;
@@ -10418,7 +10433,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EField(_, _): true;
 			case ECast(inner, _): csExprIsBoxedFieldAccess(inner);
-			case EUntyped(inner): csExprIsBoxedFieldAccess(inner);
+			case EParenthesized(inner, _) | EUntyped(inner): csExprIsBoxedFieldAccess(inner);
 			case _: false;
 		};
 	}
@@ -13555,7 +13570,7 @@ class SourceTargetCommon {
 				collectJavaEntryBodyFunctionRefsInExpr(callee, out, true);
 				for (arg in args)
 					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
-			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
 			case EBinop(_, left, right):
 				collectJavaEntryBodyFunctionRefsInExpr(left, out, false);
@@ -13802,7 +13817,7 @@ class SourceTargetCommon {
 				collectJavaEntryBodyDirectCallsInExpr(callee, out);
 				for (arg in args)
 					collectJavaEntryBodyDirectCallsInExpr(arg, out);
-			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
 			case EBinop(_, left, right):
 				collectJavaEntryBodyDirectCallsInExpr(left, out);
@@ -13844,7 +13859,7 @@ class SourceTargetCommon {
 	}
 
 	static function isJavaBuiltinDirectCall(name:String):Bool {
-		return name == "trace" || name == "__hxhx_parenthesized" || name == "__hxhx_int_literal" || name == "__hxhx_for_in" || name == "__hxhx_throw";
+		return name == "trace" || name == "__hxhx_int_literal" || name == "__hxhx_for_in" || name == "__hxhx_throw";
 	}
 
 	static function javaSyntheticObjectArgs(arity:Int):String {
@@ -14542,7 +14557,7 @@ class SourceTargetCommon {
 			case ENew(_, args) | EArrayDecl(args):
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				phpRecordReferencedMemberExpr(inner, names);
 			case EBinop(_, left, right):
 				phpRecordReferencedMemberExpr(left, names);
@@ -16406,7 +16421,7 @@ class SourceTargetCommon {
 				typeHint;
 			case EIdent(name) if (localTypes != null && localTypes.exists(sanitizeTypeName(name))):
 				localTypes.get(sanitizeTypeName(name));
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericTypeHintFromExpr(inner, localTypes);
 			case _:
 				"";
@@ -16489,7 +16504,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EArrayDecl(values):
 				values.length == 0;
-			case ECast(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericExprIsEmptyArray(inner);
 			case _:
 				false;
@@ -16661,7 +16676,7 @@ class SourceTargetCommon {
 				phpGenericSpecializationSuffixFromExpr(inner, localTypes);
 			case EIdent(name) if (localTypes != null && localTypes.exists(sanitizeTypeName(name))):
 				phpGenericTypeSuffix(localTypes.get(sanitizeTypeName(name)));
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericSpecializationSuffixFromExpr(inner, localTypes);
 			case _:
 				null;
@@ -17028,7 +17043,7 @@ class SourceTargetCommon {
 					phpCollectGenericStaticSpecializationsFromExpr(arg, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EField(receiver, _):
 				phpCollectGenericStaticSpecializationsFromExpr(receiver, className, genericFns, localTypes, specializations, allowDirectCalls);
-			case EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EUnop(_, _, inner):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
@@ -17853,7 +17868,7 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				phpExprListTouchesThis(values);
 			case EArrayAccess(receiver, index): phpExprTouchesThis(receiver) || phpExprTouchesThis(index);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpExprTouchesThis(inner);
 			case _:
 				false;
@@ -18087,7 +18102,7 @@ class SourceTargetCommon {
 				phpExprListHasRefCaptureOfNames(values, names);
 			case EArrayAccess(receiver, index) | ERange(receiver, index): phpExprHasRefCaptureOfNames(receiver,
 					names) || phpExprHasRefCaptureOfNames(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpExprHasRefCaptureOfNames(inner, names);
 			case _:
 				false;
@@ -18406,6 +18421,8 @@ class SourceTargetCommon {
 				ECast(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), typeHint);
 			case EUntyped(inner):
 				EUntyped(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText));
+			case EParenthesized(inner, position):
+				EParenthesized(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), position);
 			case _:
 				expr;
 		};
@@ -18644,6 +18661,8 @@ class SourceTargetCommon {
 				ECast(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), position);
 			case _:
 				expr;
 		}
@@ -18949,6 +18968,8 @@ class SourceTargetCommon {
 				ECast(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals), position);
 			case _:
 				expr;
 		}
@@ -19123,6 +19144,8 @@ class SourceTargetCommon {
 				ECast(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals), position);
 			case _:
 				expr;
 		}

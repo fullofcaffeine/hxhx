@@ -439,6 +439,9 @@ class TypedBodySource {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
 		return switch (typedExpression.getTag()) {
+			case Parenthesized:
+				EParenthesized(expression(expressions[0], catalog, runtimeTypes),
+					typedExpression.getPosition() == null ? HxPos.unknown() : typedExpression.getPosition());
 			case NullValue: ENull;
 			case BoolValue: EBool(typedExpression.getBoolValue());
 			case StringValue: EString(texts[0]);

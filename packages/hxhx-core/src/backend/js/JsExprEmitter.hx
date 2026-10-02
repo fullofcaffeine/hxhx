@@ -107,6 +107,8 @@ class JsExprEmitter {
 				emitArrayRead(array, index, scope);
 			case ELambda(args, body):
 				emitLambda(args, body, scope);
+			case EParenthesized(inner, _):
+				"(" + emit(inner, scope) + ")";
 			case ECast(inner, _):
 				emit(inner, scope);
 			case EUntyped(inner):
@@ -938,8 +940,6 @@ class JsExprEmitter {
 			case EIdent("__hxhx_throw"):
 				final thrown = args.length > 0 ? emit(args[0], scope) : "null";
 				return "(function(){ throw " + thrown + "; })()";
-			case EIdent("__hxhx_parenthesized") if (args.length == 1):
-				return "(" + emit(args[0], scope) + ")";
 			case EIdent("__hxhx_spread"):
 				return args.length > 0 ? "..." + emit(args[0], scope) : "";
 			case EIdent("__hxhx_optional_lambda") if (args.length >= 1):
@@ -1737,8 +1737,6 @@ class JsExprEmitter {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						macroEnum("EParenthesis", [macroExprObject(exprDef)]);
 					case "untyped":
 						macroEnum("EUntyped", [macroExprObject(exprDef)]);
 					case _:
@@ -1787,9 +1785,15 @@ class JsExprEmitter {
 			case EArrayDecl(values):
 				final items = values == null ? [] : values.map(v -> emitMacroExpr(v, [], scope));
 				macroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
+			case EBinop(op, left, right):
 				macroEnum("EBinop", [
-					macroEnum("OpIn", []),
+					HxMacroBinaryOperator.render(op, macroEnum),
+					emitMacroExpr(left, [], scope),
+					emitMacroExpr(right, [], scope)
+				]);
+			case ERange(left, right):
+				macroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", macroEnum),
 					emitMacroExpr(left, [], scope),
 					emitMacroExpr(right, [], scope)
 				]);
@@ -1815,6 +1819,8 @@ class JsExprEmitter {
 				macroEnum("ECall", [emitMacroExpr(callee, [], scope), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [emitMacroExpr(inner, [], scope)]);
+			case EParenthesized(inner, _):
+				macroEnum("EParenthesis", [emitMacroExpr(inner, [], scope)]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				macroEnum("EUnop", [

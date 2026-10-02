@@ -221,6 +221,7 @@ class CompilerTypedTreeRevision {
 
 	static function expressionTagName(tag:TypedExprTag):String {
 		return switch (tag) {
+			case Parenthesized: "parenthesized";
 			case NullValue: "null";
 			case BoolValue: "bool";
 			case StringValue: "string";

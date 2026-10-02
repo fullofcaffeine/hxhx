@@ -165,8 +165,6 @@ class CppMacroExpr {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						macroEnum("EParenthesis", [macroExprObject(exprDef)]);
 					case "untyped":
 						macroEnum("EUntyped", [macroExprObject(exprDef)]);
 					case _:
@@ -215,12 +213,18 @@ class CppMacroExpr {
 				macroEnum("EArray", [macroExpr(receiver, []), macroExpr(index, [])]);
 			case EArrayDecl(values):
 				macroEnum("EArrayDecl", values == null ? [] : [for (value in values) macroExpr(value, [])]);
-			case EBinop("in", left, right):
-				macroEnum("EBinop", [macroEnum("OpIn", []), macroExpr(left, []), macroExpr(right, [])]);
-			case EBinop("=>", left, right):
-				macroEnum("EBinop", [macroEnum("OpArrow", []), macroExpr(left, []), macroExpr(right, [])]);
 			case EBinop(op, left, right):
-				macroEnum("EBinop", [macroString(op), macroExpr(left, []), macroExpr(right, [])]);
+				macroEnum("EBinop", [
+					HxMacroBinaryOperator.render(op, macroEnum),
+					macroExpr(left, []),
+					macroExpr(right, [])
+				]);
+			case ERange(left, right):
+				macroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", macroEnum),
+					macroExpr(left, []),
+					macroExpr(right, [])
+				]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				macroEnum("EUnop", [
@@ -230,6 +234,8 @@ class CppMacroExpr {
 				]);
 			case ECall(callee, args):
 				macroEnum("ECall", [macroExpr(callee, [])].concat(args == null ? [] : [for (arg in args) macroExpr(arg, [])]));
+			case EParenthesized(inner, _):
+				macroEnum("EParenthesis", [macroExpr(inner, [])]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [macroExpr(inner, [])]);
 			case EMacroExpr(inner, innerWrappers):
@@ -266,6 +272,7 @@ class CppMacroExpr {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case EParenthesized(_, _): "EParenthesized";
 			case ENull: "ENull";
 			case EBool(_): "EBool";
 			case EString(_): "EString";

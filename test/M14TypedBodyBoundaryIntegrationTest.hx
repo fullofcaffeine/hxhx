@@ -163,7 +163,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(call.getTag() == TypedExprTag.Call, "shouldFail call was not kept as a structural typed call");
 		final returnExpression = call.getExpressions()[1];
 		assertTrue(returnExpression.getTag() == TypedExprTag.ReturnExpr, "return macro argument lost its typed return node");
-		final typedCast = returnExpression.getExpressions()[0];
+		final grouping = returnExpression.getExpressions()[0];
+		assertTrue(grouping.getTag() == TypedExprTag.Parenthesized && grouping.getExpressions().length == 1,
+			"return macro argument lost its authored grouping");
+		final typedCast = grouping.getExpressions()[0];
 		assertTrue(typedCast.getTag() == TypedExprTag.Cast && typedCast.getType().getDisplay() == "Null<String>",
 			"return macro argument lost its Null<String> cast");
 		assertTrue(typedCast.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return cast lost its null child");

@@ -5,8 +5,8 @@ class TypedBackendSourceWalk {
 			return;
 		onExpression(node);
 		switch (node) {
-			case EField(value, _) | ENullSafeField(value, _) | EMacroExpr(value, _) | ELambda(_, value) | EUnop(_, _, value) | ECast(value, _) |
-				EUntyped(value) | EReturn(value):
+			case EParenthesized(value, _) | EField(value, _) | ENullSafeField(value, _) | EMacroExpr(value, _) | ELambda(_, value) | EUnop(_, _, value) |
+				ECast(value, _) | EUntyped(value) | EReturn(value):
 				expression(value, onExpression);
 			case ECall(callee, arguments):
 				expression(callee, onExpression);

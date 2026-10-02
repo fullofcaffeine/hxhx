@@ -397,6 +397,8 @@ class HxParser {
 
 	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos, bodyStartIndex:Int):HxExpr {
 		return switch (expr) {
+			case EParenthesized(inner, position):
+				EParenthesized(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case ECall(EIdent(name), args) if (StringTools.startsWith(name, "__hxhx_trace_at_")):
 				final line = Std.parseInt(name.substr("__hxhx_trace_at_".length));
 				final rebased = line == null ? 0 : base.getLine() + line - 2;
@@ -523,6 +525,8 @@ class HxParser {
 				ECast(offsetFunctionBodyExprColumns(inner, delta), typeHint);
 			case EUntyped(inner):
 				EUntyped(offsetFunctionBodyExprColumns(inner, delta));
+			case EParenthesized(inner, position):
+				EParenthesized(offsetFunctionBodyExprColumns(inner, delta), offsetFunctionBodyPosColumn(position, delta));
 			case _:
 				expr;
 		};
@@ -1571,21 +1575,13 @@ class HxParser {
 		return switch (cur.kind) {
 			case TLParen:
 				// Parenthesized expression: `(expr)`.
+				final position = cur.pos;
 				bump(); // '('
 				final inner = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				// Best-effort: resync to the closing `)`.
-				if (!cur.kind.match(TRParen)) {
-					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-						bump();
-				}
-				if (cur.kind.match(TRParen))
-					bump();
-				switch (inner) {
-					case EBinop(op, _, _) if (isAssignmentBinop(op)):
-						ECall(EIdent("__hxhx_parenthesized"), [inner]);
-					case _:
-						inner;
-				}
+				if (!cur.kind.match(TRParen))
+					fail("Expected closing parenthesis");
+				bump();
+				EParenthesized(inner, position);
 			case TLBrace:
 				parseBraceExpr();
 			case TKeyword(k):
@@ -2474,46 +2470,8 @@ class HxParser {
 			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
 		}
 
-		function parenthesizedContainsTopLevelFatArrow():Bool {
-			final start = currentIndex();
-			if (start < 0 || start >= source.length || source.charCodeAt(start) != "(".code)
-				return false;
-			var i = start + 1;
-			var depth = 1;
-			while (i < source.length && depth > 0) {
-				final c = source.charCodeAt(i);
-				if (depth == 1 && c == "=".code && i + 1 < source.length && source.charCodeAt(i + 1) == ">".code)
-					return true;
-				switch (c) {
-					case "(".code:
-						depth++;
-					case ")".code:
-						depth--;
-					case _:
-				}
-				i++;
-			}
-			return false;
-		}
-
-		function tryReadParenthesizedMapEntry():Null<HxExpr> {
-			if (!cur.kind.match(TLParen) || !parenthesizedContainsTopLevelFatArrow())
-				return null;
-			bump(); // '('
-			final keyExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (!isFatArrowStart())
-				return keyExpr;
-			bump(); // '='
-			bump(); // '>'
-			final valueExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (cur.kind.match(TRParen))
-				bump();
-			return EBinop("=>", keyExpr, valueExpr);
-		}
-
-		// Array comprehension: `[for (name in iterable) expr]`
-		//
-		// This is required by upstream `tests/RunCi.hx` for computing the `tests` list.
+		// Array comprehension: `[for (name in iterable) expr]`.
+		// Its source-preserving replacement is tracked separately in haxe_ocaml-20jan.
 		if (cur.kind.match(TKeyword(KFor))) {
 			bump(); // `for`
 			expect(TLParen, "'('");
@@ -2545,9 +2503,17 @@ class HxParser {
 				guardExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
 				expect(TRParen, "')'");
 			}
-			final mapEntryExpr = tryReadParenthesizedMapEntry();
-			final yieldExpr = mapEntryExpr == null ? parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof)) : mapEntryExpr;
-			var result:HxExpr = switch (yieldExpr) {
+			final yieldExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			var entry = yieldExpr;
+			while (true) {
+				switch entry {
+					case EParenthesized(inner, _):
+						entry = inner;
+					case _:
+						break;
+				}
+			}
+			var result:HxExpr = switch (entry) {
 				case EBinop("=>", keyExpr, valueExpr):
 					ECall(EIdent("__hxhx_map_comprehension"), [iterable, ELambda([name], EArrayDecl([keyExpr, valueExpr]))]);
 				case _:
@@ -2830,7 +2796,7 @@ class HxParser {
 
 	static function binopPrec(op:String):Int {
 		return switch (op) {
-			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=": 1;
+			case "=>" | "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=": 1;
 			case "?": 2;
 			case "??": 2;
 			case "||": 2;
@@ -2857,7 +2823,7 @@ class HxParser {
 	}
 
 	static function isRightAssoc(op:String):Bool {
-		return isAssignmentBinop(op);
+		return op == "=>" || isAssignmentBinop(op);
 	}
 
 	function parsePostfixExpr(stop:() -> Bool):HxExpr {
@@ -2873,6 +2839,10 @@ class HxParser {
 
 		while (!stop()) {
 			switch (cur.kind) {
+				case TKeyword(KIn):
+					// The public macro grammar binds in before the surrounding ternary.
+					bump();
+					e = EBinop("in", e, parseBinaryExpr(1, stop));
 				case TDot if (isTripleDotAhead()):
 					// Expression-level range: `start...end`.
 					//
@@ -3098,16 +3068,7 @@ class HxParser {
 		if (cur.kind.match(TKeyword(KClass)))
 			return parseMacroClassQuoteExpr();
 
-		final quoted = if (cur.kind.match(TLParen)) {
-			bump();
-			wrappers.push("parenthesis");
-			final inner = parseMacroQuotePayload(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (cur.kind.match(TRParen))
-				bump();
-			inner;
-		} else {
-			parseMacroQuotePayload(stop);
-		}
+		final quoted = parseMacroQuotePayload(stop);
 		return HxExpr.EMacroExpr(quoted, wrappers);
 	}
 
@@ -3163,13 +3124,7 @@ class HxParser {
 		if (cur.kind.match(TKeyword(KIf)))
 			return parseMacroQuoteIfPayload(stop);
 
-		final left = parseExpr(() -> stop() || cur.kind.match(TKeyword(KIn)));
-		if (cur.kind.match(TKeyword(KIn))) {
-			bump();
-			final right = parseExpr(stop);
-			return EBinop("in", left, right);
-		}
-		return left;
+		return parseExpr(stop);
 	}
 
 	function parseMacroQuoteIfPayload(stop:() -> Bool):HxExpr {
@@ -3227,7 +3182,7 @@ class HxParser {
 			case TOther(c):
 				switch (c) {
 					case "=".code:
-						nextIsOther("=".code) ? {op: "==", len: 2} : {op: "=", len: 1};
+						nextIsOther("=".code) ? {op: "==", len: 2} : nextIsOther(">".code) ? {op: "=>", len: 2} : {op: "=", len: 1};
 					case "!".code:
 						nextIsOther("=".code) ? {op: "!=", len: 2} : null;
 					case "<".code:
@@ -3379,7 +3334,7 @@ class HxParser {
 			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
 			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.
 			e = switch (e) {
-				case EBinop(op, left, right) if (isAssignmentBinop(op)):
+				case EBinop(op, left, right) if (isAssignmentBinop(op) || op == "=>"):
 					EBinop(op, left, ETernary(right, thenExpr, elseExpr));
 				case _:
 					ETernary(e, thenExpr, elseExpr);
@@ -3626,6 +3581,8 @@ class HxParser {
 				ECast(applyDefaultedLambdaArgs(inner, defaultedArgs), typeHint);
 			case EUntyped(inner):
 				EUntyped(applyDefaultedLambdaArgs(inner, defaultedArgs));
+			case EParenthesized(inner, position):
+				EParenthesized(applyDefaultedLambdaArgs(inner, defaultedArgs), position);
 			case _:
 				expr;
 		};
@@ -3668,21 +3625,7 @@ class HxParser {
 		// Upstream-style code commonly omits the parentheses:
 		//   switch Sys.systemName() { ... }
 		// Haxe accepts this, so Stage3 bring-up must too.
-		var scrutinee:HxExpr;
-		if (cur.kind.match(TLParen)) {
-			bump(); // '('
-			scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			// Best-effort resync to `)`.
-			if (!cur.kind.match(TRParen)) {
-				while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-					bump();
-			}
-			if (cur.kind.match(TRParen))
-				bump();
-		} else {
-			// Parse until the opening brace starts the switch block.
-			scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
-		}
+		final scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
 
 		// `{ <cases> }`
 		if (!cur.kind.match(TLBrace)) {
@@ -4481,19 +4424,7 @@ class HxParser {
 				// Upstream-style code commonly omits the parentheses:
 				//   switch Sys.systemName() { ... }
 				// Haxe accepts this, so Stage3 bring-up must too.
-				final scrutinee = if (cur.kind.match(TLParen)) {
-					bump(); // '('
-					final e = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-					if (!cur.kind.match(TRParen)) {
-						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-							bump();
-					}
-					if (cur.kind.match(TRParen))
-						bump();
-					e;
-				} else {
-					parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
-				};
+				final scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
 
 				if (!cur.kind.match(TLBrace)) {
 					syncToStmtEnd();

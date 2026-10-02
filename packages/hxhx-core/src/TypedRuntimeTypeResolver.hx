@@ -8,6 +8,7 @@
 class TypedRuntimeTypeResolver {
 	static function path(expression:HxExpr):Null<String> {
 		return switch (expression) {
+			case EParenthesized(inner, _): path(inner);
 			case EIdent(name) | EEnumValue(name): name;
 			case EField(owner, name):
 				final parent = path(owner);

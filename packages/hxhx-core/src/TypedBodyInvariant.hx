@@ -121,6 +121,16 @@ class TypedBodyInvariant {
 		}
 		for (child in expression.getExpressions())
 			assertExpr(child, owner);
+		if (expression.getTag() == Parenthesized) {
+			final children = expression.getExpressions();
+			if (children.length != 1
+				|| expression.getTexts().length != 0
+				|| expression.getLocalBindings().length != 0
+				|| expression.getDeclaration() != null
+				|| expression.getFieldInfo() != null
+				|| children[0].getType().getSemanticKey() != expression.getType().getSemanticKey())
+				throw "parenthesized expression changed its child type or acquired semantic ownership in " + owner;
+		}
 		if (expression.getTag() == Call) {
 			final declaration = expression.getDeclaration();
 			if (declaration != null && declaration.getIdentity().getCanonicalKey().length == 0)

@@ -796,7 +796,7 @@ class CppTargetCore {
 					addTypeHint(typePath, scope, true);
 					for (arg in args)
 						addExpr(arg, scope);
-				case ECast(inner, _) | EUntyped(inner):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 					addExpr(inner, scope);
 				case ESwitch(scrutinee, _, exprs):
 					addExpr(scrutinee, scope);
@@ -879,7 +879,7 @@ class CppTargetCore {
 					exprMayContributeAnonStruct(inner, scope);
 				case ETernary(cond, thenExpr, elseExpr): exprMayContributeAnonStruct(cond,
 						scope) || exprMayContributeAnonStruct(thenExpr, scope) || exprMayContributeAnonStruct(elseExpr, scope);
-				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 					exprMayContributeAnonStruct(inner, scope);
 				case ESwitch(scrutinee, _, exprs): exprMayContributeAnonStruct(scrutinee, scope) || exprsMayContributeAnonStruct(exprs, scope);
 				case EArrayComprehension(_, iterable, guardExpr, yieldExpr): exprMayContributeAnonStruct(iterable,
@@ -998,7 +998,7 @@ class CppTargetCore {
 						final struct = anonStruct(fieldNames, fieldValues, scope);
 						if (struct.name == returnType)
 							addStruct(struct);
-					case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+					case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 						addReturnExpr(inner);
 					case ETernary(_, thenExpr, elseExpr):
 						addReturnExpr(thenExpr);
@@ -2494,7 +2494,7 @@ class CppTargetCore {
 			case EBinop(_, left, right):
 				addExprClassDependencies(left, add, scope);
 				addExprClassDependencies(right, add, scope);
-			case EUnop(_, _, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
 				addExprClassDependencies(inner, add, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				addExprClassDependencies(cond, add, scope);
@@ -4353,7 +4353,7 @@ class CppTargetCore {
 		if (scope == null || init == null)
 			return false;
 		return switch (init) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				isPrimitiveBackedAbstractStaticFieldInit(inner, scope);
 			case EField(receiver, field):
 				final owner = staticReceiverClassName(receiver, scope);
@@ -4731,7 +4731,7 @@ class CppTargetCore {
 				exprForwardsArgToUtestPosition(receiver, argName);
 			case EArrayAccess(array, index) | EBinop(_, array, index): exprForwardsArgToUtestPosition(array,
 					argName) || exprForwardsArgToUtestPosition(index, argName);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprForwardsArgToUtestPosition(inner, argName);
 			case EArrayDecl(elements):
 				exprListForwardsArgToUtestPosition(elements, argName);
@@ -7846,7 +7846,7 @@ class CppTargetCore {
 						collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, guardExpr, scope, matches);
 					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, yieldExpr, scope, matches);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, inner, scope, matches);
 			case EBinop(_, left, right):
 				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, left, scope, matches);
@@ -8021,7 +8021,7 @@ class CppTargetCore {
 						collectOptionalLambdaLocalCandidatesFromExpr(guardExpr, scope, candidates);
 					collectOptionalLambdaLocalCandidatesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectOptionalLambdaLocalCandidatesFromExpr(inner, scope, candidates);
 			case EBinop(_, left, right):
 				collectOptionalLambdaLocalCandidatesFromExpr(left, scope, candidates);
@@ -8116,7 +8116,7 @@ class CppTargetCore {
 				if (guardExpr != null)
 					collectOptionalLambdaLocalCallsFromExpr(guardExpr, scope, callShapes);
 				collectOptionalLambdaLocalCallsFromExpr(yieldExpr, scope, callShapes);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectOptionalLambdaLocalCallsFromExpr(inner, scope, callShapes);
 			case EBinop(_, left, right):
 				collectOptionalLambdaLocalCallsFromExpr(left, scope, callShapes);
@@ -8246,7 +8246,7 @@ class CppTargetCore {
 			case ETernary(EBinop("==", ENull, EIdent(arg)), thenExpr, EIdent(elseArg))
 				if (sanitizeIdentifier(arg) == name && sanitizeIdentifier(elseArg) == name):
 				inferExprCppType(thenExpr, scope);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				optionalLambdaDefaultValueType(name, inner, scope);
 			case EBinop(_, left, right):
 				final leftType = optionalLambdaDefaultValueType(name, left, scope);
@@ -8471,7 +8471,7 @@ class CppTargetCore {
 						collectGenericFactoryLocalTypeOverridesFromExpr(guardExpr, scope, candidates, mapped);
 					collectGenericFactoryLocalTypeOverridesFromExpr(yieldExpr, scope, candidates, mapped);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectGenericFactoryLocalTypeOverridesFromExpr(inner, scope, candidates, mapped);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectGenericFactoryLocalTypeOverridesFromExpr(cond, scope, candidates, mapped);
@@ -8811,7 +8811,7 @@ class CppTargetCore {
 						collectDynamicLocalTypeOverridesFromExprWithCandidates(guardExpr, scope, candidates);
 					collectDynamicLocalTypeOverridesFromExprWithCandidates(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectDynamicLocalTypeOverridesFromExprWithCandidates(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectDynamicLocalTypeOverridesFromExprWithCandidates(cond, scope, candidates);
@@ -9066,7 +9066,7 @@ class CppTargetCore {
 				if (guardExpr != null)
 					collectBindCallableEvidenceFromExpr(guardExpr, scope, candidates, evidence, "bool");
 				collectBindCallableEvidenceFromExpr(yieldExpr, scope, candidates, evidence, "");
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectBindCallableEvidenceFromExpr(inner, scope, candidates, evidence, expectedType);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectBindCallableEvidenceFromExpr(cond, scope, candidates, evidence, "bool");
@@ -9328,7 +9328,7 @@ class CppTargetCore {
 						collectHelperTypedAsLocalTypeOverridesFromExpr(guardExpr, scope);
 					collectHelperTypedAsLocalTypeOverridesFromExpr(yieldExpr, scope);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectHelperTypedAsLocalTypeOverridesFromExpr(inner, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
@@ -9548,7 +9548,7 @@ class CppTargetCore {
 						collectAssignedArgTypeOverridesFromExpr(guardExpr, scope, candidates);
 					collectAssignedArgTypeOverridesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectAssignedArgTypeOverridesFromExpr(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectAssignedArgTypeOverridesFromExpr(cond, scope, candidates);
@@ -9734,7 +9734,7 @@ class CppTargetCore {
 
 	static function arithmeticContextExpectedType(expr:HxExpr, scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				arithmeticContextExpectedType(inner, scope);
 			case EInt(_):
 				"int";
@@ -9971,7 +9971,7 @@ class CppTargetCore {
 			case EField(_, _) | EArrayAccess(_, _) | ECall(_, _) | EBinop(_, _, _) | EUnop(_, _, _) | EAnon(_, _) | EArrayDecl(_) |
 				EArrayComprehension(_, _, _, _) | ERange(_, _) | ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_) | EUnsupported(_):
 				true;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				helperMacrosTypeErrorProbeArg(inner);
 			case _:
 				false;
@@ -10157,7 +10157,7 @@ class CppTargetCore {
 			case EField(receiver, _):
 				exprReferencesCallableArgCandidate(receiver, candidates);
 			case ECall(callee, args): exprReferencesCallableArgCandidate(callee, candidates) || exprListReferencesCallableArgCandidate(args, candidates);
-			case EMacroExpr(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				exprReferencesCallableArgCandidate(inner, candidates);
 			case ELambda(args, body): stringListReferencesCallableArgCandidate(args, candidates) || exprReferencesCallableArgCandidate(body, candidates);
 			case ESwitch(scrutinee, _, exprs): exprReferencesCallableArgCandidate(scrutinee,
@@ -11195,7 +11195,7 @@ class CppTargetCore {
 		if (scope == null || !scope.returnOnlyTypeParamAuto)
 			return null;
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				autoReturnAnonExpr(inner, scope);
 			case EAnon(fieldNames, fieldValues):
 				if (!anonNeedsLocalAutoReturn(fieldValues, scope)) null; else localAutoAnonExpr(fieldNames, fieldValues, scope);
@@ -11215,7 +11215,7 @@ class CppTargetCore {
 				case EField(receiver, _) if (isScopeTypeParam(exprCppType(receiver, scope), scope)
 					|| isBareCppTypeParamName(exprCppType(receiver, scope))):
 					return true;
-				case ECast(inner, _) | EUntyped(inner):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 					if (anonNeedsLocalAutoReturn([inner], scope))
 						return true;
 				case _:
@@ -11729,7 +11729,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EBool(false):
 				true;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				conditionKnownFalse(inner, scope);
 			case EBinop("==", left, ENull) if (exprHasNonNullableValueType(left, scope)):
 				true;
@@ -11954,8 +11954,8 @@ class CppTargetCore {
 				+ ")";
 			case ECall(EField(EIdent("__global__"), method), args):
 				globalIntrinsicCallExpr(method, args, scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				"(" + renderExpr(args[0], scope) + ")";
+			case EParenthesized(inner, _):
+				"(" + renderExpr(inner, scope) + ")";
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
 				&& StringTools.startsWith(raw, "for_expr:")):
 				quoteString("Int has no field keyValueIterator");
@@ -12358,7 +12358,7 @@ class CppTargetCore {
 
 	static function enumMetadataFieldInitExpr(init:HxExpr, typeName:String, ?scope:CppRenderScope):Null<String> {
 		return switch (init) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumMetadataFieldInitExpr(inner, typeName, scope);
 			case EAnon(fieldNames, _) if (isEnumMetadataFieldNames(fieldNames)):
 				final prefix = "std::shared_ptr<";
@@ -13536,7 +13536,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECall(EField(receiver, "value"), []):
 				receiver;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				optionalValueCallReceiver(inner, scope);
 			case _:
 				null;
@@ -13547,7 +13547,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case ENull:
 				true;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprIsNullLiteral(inner);
 			case _:
 				false;
@@ -14139,7 +14139,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EArrayDecl(values):
 				values.length == 0;
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				isEmptyArrayLiteral(inner);
 			case _:
 				false;
@@ -14314,7 +14314,7 @@ class CppTargetCore {
 					scope.localTypeHints.get(source);
 				}
 				hinted == null ? "" : hinted;
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				rawTypeHintForExpr(inner, scope);
 			case _:
 				"";
@@ -15857,7 +15857,7 @@ class CppTargetCore {
 
 	static function primitiveLiteralCallArgCppType(arg:HxExpr):Null<String> {
 		return switch (arg) {
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				primitiveLiteralCallArgCppType(inner);
 			case EUnop(op, fixity, EInt(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"int";
@@ -15934,8 +15934,8 @@ class CppTargetCore {
 				scope.argTypeOverrides.get(sanitizeIdentifier(name)) == "std::any";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				argHasErasedArgTypeOverride(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				argHasErasedArgTypeOverride(args[0], scope);
+			case EParenthesized(inner, _):
+				argHasErasedArgTypeOverride(inner, scope);
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				argHasErasedArgTypeOverride(inner, scope);
 			case _:
@@ -16155,8 +16155,8 @@ class CppTargetCore {
 				optionalStorageExpr(inner, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				optionalStorageExpr(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				optionalStorageExpr(args[0], scope);
+			case EParenthesized(inner, _):
+				optionalStorageExpr(inner, scope);
 			case _:
 				renderExpr(expr, scope);
 		};
@@ -16189,8 +16189,8 @@ class CppTargetCore {
 				exprCppType(inner, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				exprCppType(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				exprCppType(args[0], scope);
+			case EParenthesized(inner, _):
+				exprCppType(inner, scope);
 			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
 				"int";
 			case EField(ECall(EField(receiver, method), args), "length") if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
@@ -16577,7 +16577,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECast(inner, typeHint): final clean = StringTools.trim(typeHint == null ? "" : typeHint); clean.length > 0 && primitiveBackedAbstractCppTypeForTypeHint(clean,
 					scope) != null ? clean : exprHaxeTypeHint(inner, scope);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				exprHaxeTypeHint(inner, scope);
 			case EThis:
 				HxClassDecl.getName(scope.owner);
@@ -17651,7 +17651,7 @@ class CppTargetCore {
 		if (!isDynamicLikeTypeHint(explicit) || init == null)
 			return "";
 		return switch (init) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				dynamicRuntimeClassFactoryLocalCppType(explicit, inner, scope);
 			case ECall(EField(receiver, method), args)
 				if (isTypeStaticReceiver(receiver) && (method == "createInstance" || method == "createEmptyInstance") && args.length >= 1):
@@ -17819,8 +17819,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				inferExprCppType(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				inferExprCppType(args[0], scope);
+			case EParenthesized(inner, _):
+				inferExprCppType(inner, scope);
 			case ECall(callee, args) if (helperMacrosGetMetaReturnType(callee, args, scope).length > 0):
 				helperMacrosGetMetaReturnType(callee, args, scope);
 			case ECall(callee, _) if (testGadtMacroProbeReturnType(callee).length > 0):
@@ -18598,7 +18598,7 @@ class CppTargetCore {
 
 		function isStringMapNew(value:Null<HxExpr>):Bool {
 			return switch (value) {
-				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 					isStringMapNew(inner);
 				case EBinop("=", _, rhs):
 					isStringMapNew(rhs);
@@ -18613,7 +18613,7 @@ class CppTargetCore {
 
 		function pushStringSetEntry(value:HxExpr):Bool {
 			return switch (value) {
-				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 					pushStringSetEntry(inner);
 				case ECall(EField(EIdent(name), "set"), args) if (args.length == 2 && isStringLike(args[0]) && isStringLike(args[1])):
 					if (!setLocal(name)) false; else {
@@ -18628,7 +18628,7 @@ class CppTargetCore {
 
 		function walk(value:HxExpr):Bool {
 			return switch (value) {
-				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 					walk(inner);
 				case ECall(ELambda(lambdaArgs, body), args) if (args.length == 1 && isStringMapNew(args[0]) && !sawInit):
 					sawInit = true;
@@ -18759,7 +18759,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EString(value):
 				value;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				stringLiteralValue(inner);
 			case ECall(EIdent("__unprotect__"), [inner]):
 				stringLiteralValue(inner);
@@ -19070,7 +19070,7 @@ class CppTargetCore {
 
 	static function enumCtorPayloadAnyExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumCtorPayloadAnyExpr(inner, scope);
 			case EEnumValue(name):
 				"std::any(" + enumValuePtrExpr(name, [], scope) + ")";
@@ -19096,7 +19096,7 @@ class CppTargetCore {
 
 	static function enumCtorPayloadStringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumCtorPayloadStringExpr(inner, scope);
 			case EIdent(name) if (importedEnumConstructorExpr(name, [], scope) != null):
 				"__hxhx_stringify(" + importedEnumConstructorExpr(name, [], scope) + ")";
@@ -19179,7 +19179,7 @@ class CppTargetCore {
 
 	static function enumCtorPayloadValueExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumCtorPayloadValueExpr(inner, scope);
 			case EIdent(name) if (importedEnumConstructorExpr(name, [], scope) != null):
 				importedEnumConstructorExpr(name, [], scope);
@@ -19195,7 +19195,7 @@ class CppTargetCore {
 		if (!isCppEnumCarrierReferenceType(expectedType, scope))
 			return null;
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumMetadataAnonValueExprForExpectedType(inner, expectedType, scope);
 			case EAnon(_, _) if (isEnumMetadataAnonInit(expr)):
 				final rawCarrierType = classNameFromCppExprType(expectedType, scope);
@@ -19209,7 +19209,7 @@ class CppTargetCore {
 		if (scope == null)
 			return null;
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				staticEnumFieldExprForExpectedType(inner, expectedType, scope);
 			case EIdent(field) if (!exprNameHasLocalStorage(field, scope)):
 				final carrierType = classNameFromCppExprType(expectedType, scope);
@@ -19379,7 +19379,7 @@ class CppTargetCore {
 		if (isCppEnumCarrierReferenceType(expectedType, scope))
 			return null;
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				staticFieldExprForExpectedType(inner, expectedType, scope);
 			case EIdent(field) if (!exprNameHasLocalStorage(field, scope)):
 				currentOwnerStaticFieldExpr(field, expectedType, scope);
@@ -19466,7 +19466,7 @@ class CppTargetCore {
 
 	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				pointerCtorExprForExpectedType(inner, expectedType, scope);
 			case ECall(EField(receiver, "raw_ptr"), args) if (args.length == 0 && exprCppType(receiver, scope) == "std::string"):
 				final carrier = pointerCarrierType(expectedType, "RawConstPointer");
@@ -19830,8 +19830,8 @@ class CppTargetCore {
 				exceptionConstructionMessageStringExpr(inner, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				exceptionConstructionMessageStringExpr(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				exceptionConstructionMessageStringExpr(args[0], scope);
+			case EParenthesized(inner, _):
+				exceptionConstructionMessageStringExpr(inner, scope);
 			case _:
 				null;
 		};
@@ -19910,7 +19910,7 @@ class CppTargetCore {
 				CppMacroExpr.macroExpr(inner, wrappers);
 			case EMacroType(typeText):
 				macroTypeExpr(typeText);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				stringExpr(inner, scope);
 			case EBool(_):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
@@ -20473,7 +20473,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(id):
 				sanitizeIdentifier(id) == sanitizeIdentifier(name);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				exprIsIdentifier(inner, name);
 			case _:
 				false;
@@ -20730,8 +20730,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				isCppInt64Expr(args[2], scope);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				isCppInt64Expr(args[0], scope);
+			case EParenthesized(inner, _):
+				isCppInt64Expr(inner, scope);
 			case ECall(callee, args):
 				switch (callee) {
 					case EIdent("__hxhx_int_literal"):
@@ -22165,8 +22165,6 @@ class CppTargetCore {
 			while (i > 0) {
 				i--;
 				text = switch (wrappers[i]) {
-					case "parenthesis":
-						"EParenthesis(" + text + ")";
 					case "untyped":
 						"EUntyped(" + text + ")";
 					case other:
@@ -22179,6 +22177,8 @@ class CppTargetCore {
 
 	static function macroExprDefText(expr:HxExpr):String {
 		return switch (expr) {
+			case EParenthesized(inner, _):
+				"EParenthesis(" + macroExprText(inner, []) + ")";
 			case EString(value):
 				"EConst(CString(" + value + "))";
 			case EInt(value):
@@ -22197,12 +22197,16 @@ class CppTargetCore {
 				"EArray(" + macroExprText(receiver, []) + "," + macroExprText(index, []) + ")";
 			case EArrayDecl(values):
 				"EArrayDecl([" + [for (value in values) macroExprText(value, [])].join(",") + "])";
-			case EBinop("in", left, right):
-				"EBinop(OpIn," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
-			case EBinop("=>", left, right):
-				"EBinop(OpArrow," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
 			case EBinop(op, left, right):
-				"EBinop(" + op + "," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
+				"EBinop("
+				+ HxMacroBinaryOperator.render(op, (name, args) -> args.length == 0 ? name : name + "(" + args.join(",") + ")")
+				+ ","
+				+ macroExprText(left, [])
+				+ ","
+				+ macroExprText(right, [])
+				+ ")";
+			case ERange(left, right):
+				"EBinop(OpInterval," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				"EUnop("
@@ -22583,6 +22587,7 @@ class CppTargetCore {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case EParenthesized(_, _): "EParenthesized";
 			case ENull: "ENull";
 			case EBool(_): "EBool";
 			case EString(_): "EString";
@@ -23368,7 +23373,7 @@ class CppTargetCore {
 	**/
 	static function isRuntimeClassMetaExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				isRuntimeClassMetaExpr(inner, scope);
 			case ECall(EField(receiver, "resolveClass"), args) if (args.length == 1): isTypeStaticReceiver(receiver) || isTypeResolverMetaReceiver(receiver,
 					scope);
@@ -23463,7 +23468,7 @@ class CppTargetCore {
 
 	static function typeEnumConstructorNameLiteral(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumConstructorNameLiteral(inner);
 			case ECall(EIdent("__unprotect__"), args) if (args.length == 1):
 				typeEnumConstructorNameLiteral(args[0]);
@@ -23476,7 +23481,7 @@ class CppTargetCore {
 
 	static function typeEnumConstructorIndexLiteral(expr:HxExpr):Null<Int> {
 		switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				return typeEnumConstructorIndexLiteral(inner);
 			case EInt(value):
 				return value;
@@ -23489,7 +23494,7 @@ class CppTargetCore {
 		if (expr == null)
 			return [];
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumFactoryPayloadArgs(inner);
 			case EArrayDecl(values):
 				values == null ? [] : values;
@@ -23527,7 +23532,7 @@ class CppTargetCore {
 
 	static function typeEnumConstructorNameArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumConstructorNameArgExpr(inner, scope);
 			case ECall(EIdent("__unprotect__"), args) if (args.length == 1):
 				typeEnumConstructorNameArgExpr(args[0], scope);
@@ -23582,7 +23587,7 @@ class CppTargetCore {
 		if (isCppEnumCarrierReferenceType(explicitType, scope))
 			return explicitType;
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumEqArgCarrierCppType(inner, scope);
 			case EIdent(name):
 				final owner = importedEnumConstructorOwner(name, false, scope);
@@ -23601,7 +23606,7 @@ class CppTargetCore {
 
 	static function typeEnumEqNullArg(expr:HxExpr):Bool {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumEqNullArg(inner);
 			case ENull:
 				true;
@@ -24819,7 +24824,7 @@ class CppTargetCore {
 				found;
 			case ESwitchRaw(_):
 				true;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprReturnsErasedDynamicValue(inner, scope, erasedLocals);
 			case _:
 				false;

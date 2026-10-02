@@ -1457,11 +1457,21 @@ class TyperStage {
 		};
 	}
 
+	/** Haxe preserves grouped reads but rejects grouping around an assignment destination. */
+	static function rejectGroupedWrite(expression:HxExpr, ctx:TyperContext):Void {
+		switch expression {
+			case EParenthesized(_, position):
+				throw new TyperError(ctx.getFilePath(), position, "Invalid assign");
+			case _:
+		}
+	}
+
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		final runtimeTarget = TypedRuntimeTypeResolver.resolve(expr, scope, ctx, ValueExpression);
 		if (runtimeTarget != null)
 			return runtimeTarget.getValueType();
 		return switch (expr) {
+			case EParenthesized(inner, position): inferExprType(inner, scope, ctx, position);
 			case ENull:
 				TyType.fromHintText("Null");
 			case EBool(_):
@@ -1608,8 +1618,6 @@ class TyperStage {
 					return TyType.fromHintText("String");
 				}
 				switch (callee) {
-					case EIdent("__hxhx_parenthesized") if (args.length == 1):
-						return inferExprType(args[0], scope, ctx, pos);
 					case EIdent("__hxhx_try"):
 						final tryResult = inferStructuralTryResult(args, scope, ctx, pos);
 						if (tryResult != null) return tryResult;
@@ -1900,6 +1908,8 @@ class TyperStage {
 				// nominal identity and its arguments reach local facts together.
 				typeFromHintInContext(_typePath, ctx);
 			case EUnop(_op, _fixity, e):
+				if (_op == Increment || _op == Decrement)
+					rejectGroupedWrite(e, ctx);
 				final inner = inferExprType(e, scope, ctx, pos);
 				final semanticIndex = ctx.getIndex();
 				final isPropertyUpdate = (_op == Increment || _op == Decrement)
@@ -1936,6 +1946,8 @@ class TyperStage {
 					}
 				}
 			case EBinop(op, a, b):
+				if (op == "=" || op == "??=" || HxBinaryOperatorTools.isCompoundAssignment(op))
+					rejectGroupedWrite(a, ctx);
 				switch (op) {
 					case "is":
 						inferExprType(a, scope, ctx, pos);

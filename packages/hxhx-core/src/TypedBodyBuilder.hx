@@ -631,12 +631,15 @@ class TypedBodyBuilder {
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
 			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
 		final nodeType = expressionType(expression, diagnosticPosition, environment, typeResolver);
-		if (typeResolver != null && environment != null) {
+		if (typeResolver != null && environment != null && !expression.match(EParenthesized(_, _))) {
 			final target = typeResolver.runtimeTypeTarget(expression, environment, ValueExpression);
 			if (target != null)
 				return TypedExpr.runtimeTypeValue(target, position);
 		}
 		return switch (expression) {
+			case EParenthesized(inner, sourcePosition):
+				TypedExpr.parenthesized(buildExpr(inner, null, sourcePosition, environment, typeResolver, callResolver, fieldResolver),
+					exactPosition(sourcePosition));
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
 			case EBool(value):

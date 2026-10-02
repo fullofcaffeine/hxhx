@@ -1,0 +1,5 @@
+paren(paren(value))
+paren(assign(value,3))
+paren(paren(assign(value,3)))
+mul(paren(add(1,2)),3)
+assign(paren(value),4)

@@ -47,7 +47,7 @@ class RuntimeMacroExprs {
 	public static function parse(expr:String, pos:Position):Expr {
 		if (expr == null)
 			throw "runtime macro parse: null source";
-		final parsed = HxParser.parseExprText(expr);
+		final parsed = HxParser.parseCompleteExprText(expr);
 		return convert(parsed, pos == null ? defaultPos() : pos);
 	}
 
@@ -596,6 +596,7 @@ class RuntimeMacroExprs {
 
 	static function convertDef(expr:HxExpr, pos:Position):ExprDef {
 		return switch (expr) {
+			case EParenthesized(inner, _): EParenthesis(convert(inner, pos));
 			case ENull:
 				EConst(CIdent("null"));
 			case EBool(value):
@@ -663,7 +664,9 @@ class RuntimeMacroExprs {
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				EUnop(macroUnop(op), fixity == HxUnaryFixity.Postfix, convert(inner, pos));
 			case EBinop(op, left, right):
-				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
+				EBinop(HxMacroBinaryOperator.parse(op), convert(left, pos), convert(right, pos));
+			case ERange(left, right):
+				EBinop(OpInterval, convert(left, pos), convert(right, pos));
 			case EReturn(value):
 				EReturn(value == null ? null : convert(value, pos));
 			case EVars(declarations):
@@ -695,8 +698,7 @@ class RuntimeMacroExprs {
 				EBreak;
 			case EContinue(_):
 				EContinue;
-			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
-				EUnsupported(_):
+			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";
 		};
 	}
@@ -755,38 +757,6 @@ class RuntimeMacroExprs {
 			case BitwiseNot: OpNegBits;
 			case Increment: OpIncrement;
 			case Decrement: OpDecrement;
-		};
-	}
-
-	static function parseBinop(op:String):Binop {
-		if (op != null && op.length > 1 && StringTools.endsWith(op, "="))
-			return OpAssignOp(parseBinop(op.substr(0, op.length - 1)));
-		return switch (op) {
-			case "+": OpAdd;
-			case "-": OpSub;
-			case "*": OpMult;
-			case "/": OpDiv;
-			case "%": OpMod;
-			case "=": OpAssign;
-			case "==": OpEq;
-			case "!=": OpNotEq;
-			case ">": OpGt;
-			case ">=": OpGte;
-			case "<": OpLt;
-			case "<=": OpLte;
-			case "&&": OpBoolAnd;
-			case "||": OpBoolOr;
-			case "&": OpAnd;
-			case "|": OpOr;
-			case "^": OpXor;
-			case "<<": OpShl;
-			case ">>": OpShr;
-			case ">>>": OpUShr;
-			case "in": OpIn;
-			case "...": OpInterval;
-			case "??": OpNullCoal;
-			case _:
-				throw "runtime macro parse: unsupported binary operator " + op;
 		};
 	}
 

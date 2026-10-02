@@ -109,6 +109,8 @@ class SourceFunctionBodyRewriter {
 				ECast(expressionNode(inner, transform), typeHint);
 			case EUntyped(inner):
 				EUntyped(expressionNode(inner, transform));
+			case EParenthesized(inner, position):
+				EParenthesized(expressionNode(inner, transform), position);
 			case EReturn(inner):
 				EReturn(nullableExpression(inner, transform));
 			case EVars(declarations):

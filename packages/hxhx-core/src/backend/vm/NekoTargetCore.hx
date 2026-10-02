@@ -689,7 +689,7 @@ class NekoTargetCore {
 					collectExprRefs(context, initializer, addConstructor, addStatic);
 			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectExprRefs(context, inner, addConstructor, addStatic);
 			case EBinop(_, left, right):
 				collectExprRefs(context, left, addConstructor, addStatic);
@@ -1425,6 +1425,8 @@ class NekoTargetCore {
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
 				renderConditionalExpr(context, cond, thenExpr, elseExpr);
+			case EParenthesized(inner, _):
+				"(" + renderExpr(context, inner) + ")";
 			case ECast(inner, _) | EUntyped(inner):
 				renderExpr(context, inner);
 			case EMacroExpr(inner, wrappers):
@@ -1702,6 +1704,7 @@ class NekoTargetCore {
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
 			case ECast(_, typeHint): "ECast(" + typeHint + ")";
+			case EParenthesized(_, _): "EParenthesized";
 			case EUntyped(_): "EUntyped";
 			case EUnsupported(raw): "EUnsupported(" + raw + ")";
 		}
@@ -2531,7 +2534,7 @@ class NekoTargetCore {
 
 	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				// These wrappers emit no runtime operation. Expose a wrapped lambda
 				// so the ordinary callable renderer preserves its grouping.
 				return renderCall(context, inner, args, selectedStatic);

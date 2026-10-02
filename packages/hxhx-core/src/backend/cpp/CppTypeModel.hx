@@ -116,7 +116,7 @@ class CppTypeModel {
 
 	static function primitiveLiteralExprCppType(expr:Null<HxExpr>):Null<String> {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				primitiveLiteralExprCppType(inner);
 			case EInt(_):
 				"int";

@@ -6,6 +6,7 @@
 	of creating a module or declaration cycle between a node and its kind.
 **/
 enum TypedExprTag {
+	Parenthesized;
 	NullValue;
 	BoolValue;
 	StringValue;
@@ -139,6 +140,10 @@ class TypedExpr {
 
 	public static function thisValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(ThisValue, type, position);
+
+	/** Preserve source grouping without allocating a local binding or control destination. */
+	public static function parenthesized(inner:TypedExpr, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(Parenthesized, inner.getType(), position, null, [inner]);
 
 	public static function superValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(SuperValue, type, position);
