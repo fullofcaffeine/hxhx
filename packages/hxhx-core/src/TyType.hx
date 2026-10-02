@@ -21,6 +21,7 @@ class TyType {
 	static final KIND_FUNCTION = "function";
 	static final KIND_ANONYMOUS = "anonymous";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
+	static final KIND_OPEN_METHOD_PARAMETER = "open-method-parameter";
 	static final KIND_UNRESOLVED = "unresolved";
 	static final KIND_NO_NORMAL_COMPLETION = "no-normal-completion";
 
@@ -36,10 +37,11 @@ class TyType {
 	final anonymousFieldNames:Array<String>;
 	final anonymousFieldTypes:Array<TyType>;
 	final typeParameterIdentity:Null<TyTypeParameterId>;
+	final openMethodParameterIdentity:Null<TyOpenMethodParameterId>;
 
 	function new(display:String, kind:String, nominalIdentity:Null<TyNominalTypeId>, typeArguments:Array<TyType>, nullableInner:Null<TyType>,
 			unresolvedPath:String, ?functionArguments:Array<TyType>, ?functionReturn:TyType, ?anonymousFieldNames:Array<String>,
-			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId) {
+			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId, ?openMethodParameterIdentity:TyOpenMethodParameterId) {
 		this.display = display;
 		this.kind = kind;
 		this.nominalIdentity = nominalIdentity;
@@ -51,6 +53,7 @@ class TyType {
 		this.anonymousFieldNames = anonymousFieldNames == null ? [] : anonymousFieldNames.copy();
 		this.anonymousFieldTypes = anonymousFieldTypes == null ? [] : anonymousFieldTypes.copy();
 		this.typeParameterIdentity = typeParameterIdentity;
+		this.openMethodParameterIdentity = openMethodParameterIdentity;
 	}
 
 	public static function unknown():TyType {
@@ -162,6 +165,30 @@ class TyType {
 		return new TyType(identity.getName(), KIND_TYPE_PARAMETER, null, [], null, "", null, null, null, null, identity);
 	}
 
+	/** A sealed open method instance is a valid type fact, distinct from failed lookup, Unknown, or Dynamic. */
+	public static function openMethodParameter(identity:TyOpenMethodParameterId):TyType {
+		if (identity == null)
+			throw "open method type requires its immutable instance identity";
+		return new TyType("Open<" + identity.getName() + ">", KIND_OPEN_METHOD_PARAMETER, null, [], null, "", null, null, null, null, null, identity);
+	}
+
+	public function isOpenMethodParameter():Bool
+		return kind == KIND_OPEN_METHOD_PARAMETER;
+
+	/** Source-shaped target hints must explicitly erase open parameters without changing semantic facts. */
+	public function hasOpenMethodParameter():Bool {
+		if (isOpenMethodParameter())
+			return true;
+		if (nullableInner != null && nullableInner.hasOpenMethodParameter())
+			return true;
+		if (functionReturn != null && functionReturn.hasOpenMethodParameter())
+			return true;
+		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+			if (component.hasOpenMethodParameter())
+				return true;
+		return false;
+	}
+
 	public static function unresolved(path:String, args:Array<TyType>, ?display:String):TyType {
 		final cleanPath = path == null ? "" : StringTools.trim(path);
 		final actualArgs = args == null ? [] : args;
@@ -262,6 +289,8 @@ class TyType {
 		return typeParameterIdentity;
 
 	public function getSemanticKey():String {
+		if (kind == KIND_OPEN_METHOD_PARAMETER)
+			return "open-method-parameter:" + openMethodParameterIdentity.getCanonicalKey();
 		if (kind == KIND_PRIMITIVE)
 			return "primitive:" + display;
 		if (kind == KIND_DYNAMIC)
@@ -301,6 +330,11 @@ class TyType {
 		type hint without asking each target to repeat import and alias resolution.
 	**/
 	public function getCanonicalDisplay():String {
+		// Source-shaped backend hints use the opaque carrier for a valid open
+		// parameter. The typed graph and revision key retain its exact identity;
+		// this rendering must never be fed back as semantic inference evidence.
+		if (kind == KIND_OPEN_METHOD_PARAMETER)
+			return "Dynamic";
 		if (kind == KIND_NULLABLE)
 			return "Null<" + (nullableInner == null ? "Dynamic" : nullableInner.getCanonicalDisplay()) + ">";
 		if (kind == KIND_FUNCTION) {
