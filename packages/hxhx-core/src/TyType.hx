@@ -509,7 +509,38 @@ class TyType {
 		return functionType(arguments, fromHintText(resultText), text);
 	}
 
-	/** Parse the supported nominal/generic/nullable hint spine without guessing unresolved identities. **/
+	/**
+		Parse the short required-field record form before resolving its field types.
+
+		Optional fields, properties, extensions, and long declarations need richer
+		field contracts. Keep those forms unresolved instead of discarding their
+		meaning or treating an optional field as required.
+	**/
+	static function parseAnonymousType(text:String):Null<TyType> {
+		if (!StringTools.endsWith(text, "}"))
+			return null;
+		final inner = StringTools.trim(text.substring(1, text.length - 1));
+		if (inner.length == 0)
+			return anonymous([], []);
+		final names = new Array<String>();
+		final types = new Array<TyType>();
+		final fields = splitTopLevel(inner, ",");
+		for (index in 0...fields.length) {
+			if (fields[index].length == 0 && index == fields.length - 1)
+				continue;
+			final parts = splitTopLevel(fields[index], ":");
+			if (parts.length != 2
+				|| !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(parts[0])
+				|| names.indexOf(parts[0]) >= 0
+				|| parts[1].length == 0)
+				return null;
+			names.push(parts[0]);
+			types.push(fromHintText(parts[1]));
+		}
+		return anonymous(names, types);
+	}
+
+	/** Parse supported structural hints without guessing unresolved declaration identities. **/
 	public static function fromHintText(hint:String):TyType {
 		if (hint == null)
 			return unknown();
@@ -525,6 +556,10 @@ class TyType {
 		final parsedFunction = parseFunctionType(text);
 		if (parsedFunction != null)
 			return parsedFunction;
+		if (StringTools.startsWith(text, "{")) {
+			final parsedAnonymous = parseAnonymousType(text);
+			return parsedAnonymous == null ? unresolved(text, [], text) : parsedAnonymous;
+		}
 
 		final open = genericStart(text);
 		if (open > 0 && StringTools.endsWith(text, ">")) {

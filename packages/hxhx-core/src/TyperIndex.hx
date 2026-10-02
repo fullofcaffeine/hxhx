@@ -363,6 +363,11 @@ class TyperIndex {
 			],
 				result == null ? TyType.unknown() : resolveSemanticType(result, packagePath, moduleName, directives, parameters), type.getDisplay());
 		}
+		if (type.isAnonymous())
+			return TyType.anonymous(type.getAnonymousFieldNames(), [
+				for (fieldType in type.getAnonymousFieldTypes())
+					resolveSemanticType(fieldType, packagePath, moduleName, directives, parameters)
+			]);
 		if (!type.isUnresolved())
 			return type;
 
@@ -652,6 +657,14 @@ class TyperIndex {
 						TyTypeParameterId.method(identity, isStatic, functionName, methodOccurrence, index, methodParameterNames[index])
 				];
 				final functionParams = parameterIds.concat(methodParameterIds);
+				final writtenConstraints = HxFunctionTypeParamMetadata.constraints(functionMetadata);
+				final resolvedConstraints = new StringMap<Array<TyType>>();
+				for (parameter in methodParameterIds)
+					if (writtenConstraints.exists(parameter.getName()))
+						resolvedConstraints.set(parameter.getCanonicalKey(), [
+							for (hint in HxFunctionTypeParamMetadata.constraintHints(writtenConstraints.get(parameter.getName())))
+								semanticType(hint, packagePath, moduleName, directives, functionParams)
+						]);
 				final args = new Array<TyType>();
 				final argNames = new Array<String>();
 				final argOptional = new Array<Bool>();
@@ -679,8 +692,8 @@ class TyperIndex {
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);
 				declarations.push(new TyDeclarationInfo(declarationId, identity, signature, functionMetadata, functionDeclaration,
 					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline"),
-					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public,
-					semanticModulePath, isEnum && isStatic && !StringTools.startsWith(functionName, "__hx_"), methodParameterIds));
+					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public, semanticModulePath,
+					resolvedConstraints, isEnum && isStatic && !StringTools.startsWith(functionName, "__hx_"), methodParameterIds));
 			}
 
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {

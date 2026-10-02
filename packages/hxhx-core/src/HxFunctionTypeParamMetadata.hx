@@ -93,7 +93,16 @@ class HxFunctionTypeParamMetadata {
 		return out;
 	}
 
+	/** Split compound bounds without splitting type arguments, function groups, or anonymous fields. */
+	public static function constraintHints(text:String):Array<String> {
+		return [for (part in splitTopLevel(text, "&")) StringTools.trim(part)];
+	}
+
 	static function splitTopLevelComma(text:String):Array<String> {
+		return splitTopLevel(text, ",");
+	}
+
+	static function splitTopLevel(text:String, separator:String):Array<String> {
 		final out = new Array<String>();
 		var start = 0;
 		var angle = 0;
@@ -123,7 +132,7 @@ class HxFunctionTypeParamMetadata {
 				case "]":
 					if (bracket > 0)
 						bracket--;
-				case "," if (angle == 0 && paren == 0 && brace == 0 && bracket == 0):
+				case ch if (ch == separator && angle == 0 && paren == 0 && brace == 0 && bracket == 0):
 					out.push(text.substring(start, i));
 					start = i + 1;
 				case _:

@@ -341,9 +341,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			], "String", [SReturn(EString("string"), HxPos.unknown())], "",
 				["inline", "noImportGlobal"]);
 			final firstDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"), identity, firstSignature, [],
-				firstSource, HxPos.unknown(), false, true, "unit.Container");
+				firstSource, HxPos.unknown(), false, true, "unit.Container", new StringMap());
 			final secondDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:String:rest#0"), identity, secondSignature,
-				["inline", "noImportGlobal"], secondSource, HxPos.unknown(), true, true, "unit.Container");
+				["inline", "noImportGlobal"], secondSource, HxPos.unknown(), true, true, "unit.Container", new StringMap());
 			final declarations = reverse ? [secondDeclaration, firstDeclaration] : [firstDeclaration, secondDeclaration];
 			return new TyClassInfo(identity, "Helper", "unit.Container", fields, new StringMap(), new StringMap(), new StringMap(), new StringMap(),
 				new StringMap(), declarations, Public, false, TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
@@ -393,7 +393,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final conflictingSignature = new TyFunSig("different", true, [], [], [], [], TyType.fromHintText("Void"), HxPos.unknown());
 		conflictDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"),
 			new TyNominalTypeId("unit.Container.Helper"), conflictingSignature, [], new HxFunctionDecl("different", Public, true, [], "Void", [], ""),
-			HxPos.unknown(), false, true, "unit.Container"));
+			HxPos.unknown(), false, true, "unit.Container", new StringMap()));
 		final conflictingInfo = new TyClassInfo(conflictInfo.getIdentity(), "Helper", "unit.Container", new StringMap(), new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), conflictDeclarations, Public, false);
 		var conflictingClassFactsMessage = "";
@@ -481,7 +481,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			HxPos.unknown());
 		genericBaseDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.GenericBase#take#0"), genericBaseIdentity, classParameterSignature, [],
 			new HxFunctionDecl("take", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], ""), HxPos.unknown(), false,
-			true, "unit.GenericBase"));
+			true, "unit.GenericBase", new StringMap()));
 		final shadowParameter = TyTypeParameterId.method(genericBaseIdentity, false, "shadow", 0, 0, "T");
 		final shadowParameterType = TyType.typeParameter(shadowParameter);
 		final shadowSignature = new TyFunSig("shadow", false, ["value"], [shadowParameterType], [false], [false], shadowParameterType, HxPos.unknown());
@@ -489,7 +489,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"],
 			new HxFunctionDecl("shadow", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], "",
 				[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"]),
-			HxPos.unknown(), false, true, "unit.GenericBase", false, [shadowParameter]));
+			HxPos.unknown(), false, true, "unit.GenericBase", new StringMap(), false, [shadowParameter]));
 		final genericBaseInfo = new TyClassInfo(genericBaseIdentity, "GenericBase", "unit.GenericBase", genericBaseFields, new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), genericBaseDeclarations, Public, false, null, [genericBaseParameter]);
 		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null, []);

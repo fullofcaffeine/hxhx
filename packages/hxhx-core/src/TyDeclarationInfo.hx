@@ -19,9 +19,11 @@ class TyDeclarationInfo {
 	final modulePath:String;
 	final isEnumConstructor:Bool;
 	final typeParameters:Array<TyTypeParameterId>;
+	final resolvedConstraints:haxe.ds.StringMap<Array<TyType>>;
 
 	public function new(identity:TyDeclarationId, owner:TyNominalTypeId, signature:TyFunSig, metadata:Array<String>, sourceDeclaration:HxFunctionDecl,
-			position:HxPos, isInline:Bool, isPublic:Bool, modulePath:String, isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>) {
+			position:HxPos, isInline:Bool, isPublic:Bool, modulePath:String, resolvedConstraints:haxe.ds.StringMap<Array<TyType>>,
+			isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>) {
 		this.identity = identity;
 		this.owner = owner;
 		this.signature = signature;
@@ -33,6 +35,7 @@ class TyDeclarationInfo {
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.isEnumConstructor = isEnumConstructor;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
+		this.resolvedConstraints = [for (key => bounds in resolvedConstraints) key => bounds.copy()];
 		if (this.modulePath.length == 0)
 			throw "typed declaration information requires a module identity";
 		if (isEnumConstructor && !signature.getIsStatic())
@@ -114,4 +117,8 @@ class TyDeclarationInfo {
 	/** Source-level method type-parameter constraints retained by the shared parser bridge. **/
 	public function getTypeParameterConstraints():haxe.ds.StringMap<String>
 		return HxFunctionTypeParamMetadata.constraints(metadata);
+
+	/** Every bound is resolved in the declaring module; copied lists protect declaration-owned facts. */
+	public function getResolvedTypeParameterConstraints():haxe.ds.StringMap<Array<TyType>>
+		return [for (key => bounds in resolvedConstraints) key => bounds.copy()];
 }
