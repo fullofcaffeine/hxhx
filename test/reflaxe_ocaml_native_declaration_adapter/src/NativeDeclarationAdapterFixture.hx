@@ -229,6 +229,37 @@ class NativeDeclarationAdapterFixture {
 		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(fact)) != "let value = 7 in value")
 			throw "native host could not execute the recursive standalone target lowerer";
 		assertDanglingReadRejected(fact);
+		assertGroupedExpression(binding, fact);
+	}
+
+	/** Grouping preserves exact local identities and cannot admit an unsupported child. */
+	static function assertGroupedExpression(binding:TyLocalBinding, ordinary:OcamlTargetExpressionFact):Void {
+		final integer = TyType.fromHintText("Int");
+		final position = HxPos.unknown();
+		function group(expression:TypedExpr):TypedExpr
+			return TypedExpr.parenthesized(TypedExpr.parenthesized(expression, position), position);
+		final literal = group(TypedExpr.intLiteral(7, integer, position));
+		final fact = HxhxOcamlTargetLiteralAdapter.fromExpression(literal);
+		if (fact == null || fact.getCanonicalIdentity() != LiteralIdentityMacro.stockInt())
+			throw "grouping changed the exact literal fact";
+		final declaration = TypedExpr.variableDeclaration("value", "Int", literal, false, false, integer, position, binding);
+		final body = group(TypedExpr.block([
+			TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), position),
+			group(TypedExpr.localRead("value", integer, position, binding))
+		], integer, position));
+		final copied = HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", body);
+		if (copied == null
+			|| copied.getCanonicalIdentity() != ordinary.getCanonicalIdentity()
+			|| copied.getCanonicalIdentity() != BindingIdentityMacro.stockGroupedExpression())
+			throw "grouping changed the shared target expression or binding paths";
+		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(copied)) != "let value = 7 in value")
+			throw "grouped shared target expression lowered differently";
+		final unsupported = group(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), position));
+		final wrongType = literal.withType(TyType.fromHintText("String"));
+		for (expression in [unsupported, wrongType, literal.withExpressions([])])
+			if (HxhxOcamlTargetLiteralAdapter.fromExpression(expression) != null
+				|| HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", expression) != null)
+				throw "grouping admitted an unsupported child or inconsistent type";
 	}
 
 	static function assertDanglingReadRejected(valid:OcamlTargetExpressionFact):Void {

@@ -9,6 +9,9 @@ class HxhxOcamlTargetLiteralAdapter {
 			throw "native OCaml literal adapter requires a typed expression";
 		final typeDisplay = expression.getType().getCanonicalDisplay();
 		return switch (expression.getTag()) {
+			case Parenthesized: final children = expression.getExpressions(); children.length == 1 && children[0].getType()
+					.getSemanticKey() == expression.getType()
+					.getSemanticKey() ? fromExpression(children[0]) : null;
 			case NullValue: OcamlTargetLiteralFact.nullValue(typeDisplay);
 			case ThisValue: OcamlTargetLiteralFact.thisValue(typeDisplay);
 			case SuperValue: OcamlTargetLiteralFact.superValue(typeDisplay);
