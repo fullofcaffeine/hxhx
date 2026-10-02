@@ -38,7 +38,7 @@ class M14AbstractInputConversionIntegrationTest {
 		final incompatible = TyImplicitConversionPlan.select(index, TyType.nominal(new TyNominalTypeId("Boundary.WrongInput"), []),
 			TyType.fromHintText("Bool"));
 		check(incompatible != null
-			&& !incompatible.isRepresentationPreservingAbstractConversion(index), "incompatible header became a storage cast");
+			&& !incompatible.isRepresentationPreservingAbstractConversion(), "incompatible header became a storage cast");
 	}
 
 	static function main():Void {

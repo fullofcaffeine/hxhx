@@ -27,13 +27,15 @@ class TyImplicitConversionPlan {
 	final expectedType:TyType;
 	final viaType:Null<TyType>;
 	final score:Int;
+	final backingType:Null<TyType>;
 
-	function new(kind:String, actualType:TyType, expectedType:TyType, viaType:Null<TyType>, score:Int) {
+	function new(kind:String, actualType:TyType, expectedType:TyType, viaType:Null<TyType>, score:Int, ?backingType:TyType) {
 		this.kind = kind;
 		this.actualType = actualType;
 		this.expectedType = expectedType;
 		this.viaType = viaType;
 		this.score = score;
+		this.backingType = backingType;
 	}
 
 	static function nullableCompatible(expected:TyType, actual:TyType):Bool {
@@ -64,6 +66,13 @@ class TyImplicitConversionPlan {
 		return selected == null ? dynamicInput : selected;
 	}
 
+	/** Applied arguments bind exact declaration parameters before header or storage comparison. */
+	static function abstractBindings(info:Null<TyAbstractInfo>, applied:TyType):Null<haxe.ds.StringMap<TyType>> {
+		if (info == null || info.getTypeParameterIds().length != applied.getTypeArguments().length)
+			return null;
+		return TyTypeSubstitution.bind(info.getTypeParameterIds(), applied.getTypeArguments(), info.getIdentity().getCanonicalName());
+	}
+
 	/** Choose one bounded implicit conversion, or return null when none is proven. **/
 	public static function select(index:TyperIndex, expected:TyType, actual:TyType):Null<TyImplicitConversionPlan> {
 		if (expected == null || actual == null || expected.isUnknown() || actual.isUnknown())
@@ -76,19 +85,29 @@ class TyImplicitConversionPlan {
 		final actualIdentity = actual.getNominalIdentity();
 		final actualAbstract = actualIdentity == null
 			|| index == null ? null : index.getAbstractByFullName(actualIdentity.getCanonicalName());
-		if (actualAbstract != null) {
-			final via = uniqueCompatible(actualAbstract.getImplicitToTypes(), expected);
+		final actualBindings = abstractBindings(actualAbstract, actual);
+		if (actualBindings != null) {
+			final via = uniqueCompatible([
+				for (type in actualAbstract.getImplicitToTypes())
+					TyTypeSubstitution.apply(type, actualBindings)
+			], expected);
 			if (via != null)
-				return new TyImplicitConversionPlan(ABSTRACT_TO, actual, expected, via, 2);
+				return new TyImplicitConversionPlan(ABSTRACT_TO, actual, expected, via, 2,
+					TyTypeSubstitution.apply(actualAbstract.getUnderlyingType(), actualBindings));
 		}
 
 		final expectedIdentity = expected.getNominalIdentity();
 		final expectedAbstract = expectedIdentity == null
 			|| index == null ? null : index.getAbstractByFullName(expectedIdentity.getCanonicalName());
-		if (expectedAbstract != null) {
-			final via = uniqueCompatible(expectedAbstract.getImplicitFromTypes(), actual, true);
+		final expectedBindings = abstractBindings(expectedAbstract, expected);
+		if (expectedBindings != null) {
+			final via = uniqueCompatible([
+				for (type in expectedAbstract.getImplicitFromTypes())
+					TyTypeSubstitution.apply(type, expectedBindings)
+			], actual, true);
 			if (via != null)
-				return new TyImplicitConversionPlan(ABSTRACT_FROM, actual, expected, via, via.isDynamic() ? 1 : 2);
+				return new TyImplicitConversionPlan(ABSTRACT_FROM, actual, expected, via, via.isDynamic() ? 1 : 2,
+					TyTypeSubstitution.apply(expectedAbstract.getUnderlyingType(), expectedBindings));
 		}
 
 		if (expected.isDynamic())
@@ -123,27 +142,23 @@ class TyImplicitConversionPlan {
 		representation can require executable conversion logic and must not become
 		a plain typed cast here.
 	**/
-	public function isRepresentationPreservingAbstractConversion(index:TyperIndex):Bool {
-		if (index == null)
+	public function isRepresentationPreservingAbstractConversion():Bool {
+		if (backingType == null)
 			return false;
-		if (isAbstractTo()) {
-			final identity = actualType.getNominalIdentity();
-			final info = identity == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
-			return info != null && info.getUnderlyingType().getSemanticKey() == expectedType.getSemanticKey();
-		}
-		if (kind == ABSTRACT_FROM) {
-			final identity = expectedType.getNominalIdentity();
-			final info = identity == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
-			return info != null
-				&& (info.getUnderlyingType().isDynamic() || info.getUnderlyingType().getSemanticKey() == actualType.getSemanticKey());
-		}
+		if (isAbstractTo())
+			return backingType.getSemanticKey() == expectedType.getSemanticKey();
+		if (kind == ABSTRACT_FROM)
+			return backingType.isDynamic() || backingType.getSemanticKey() == actualType.getSemanticKey();
 		return false;
 	}
 
 	/** Materialize the already-selected conversion in the shared typed body. **/
 	public function apply(expression:TypedExpr):TypedExpr {
+		if (expression.getType().getSemanticKey() != actualType.getSemanticKey())
+			throw "implicit conversion operand differs from its selected source type";
 		if (kind == EXACT)
 			return expression.withType(expectedType);
-		return TypedExpr.castValue(expression, expectedType.getDisplay(), expectedType, expression.getPosition());
+		return TypedExpr.castValue(expression, expectedType.getDisplay(), expectedType, expression.getPosition(),
+			isRepresentationPreservingAbstractConversion());
 	}
 }

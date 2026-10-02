@@ -1021,7 +1021,7 @@ class TyperStage {
 			return score;
 		}
 		final implicitConversion = TyImplicitConversionPlan.select(semanticIndex, expected, actual);
-		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractConversion(semanticIndex))
+		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractConversion())
 			return implicitConversion.getScore();
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
@@ -1085,7 +1085,7 @@ class TyperStage {
 			final actualType = inferExprType(arguments[argumentIndex], scope, ctx, pos);
 			final expectedType = expectedTypes[parameterIndex];
 			final conversion = TyImplicitConversionPlan.select(ctx.getIndex(), expectedType, actualType);
-			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractConversion(ctx.getIndex());
+			final representationSafe = conversion != null && conversion.isRepresentationPreservingAbstractConversion();
 			conversions.push(representationSafe ? conversion : null);
 			if (representationSafe)
 				found = true;

@@ -252,8 +252,12 @@ class TypedExpr {
 	public static function range(start:TypedExpr, end:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Range, type, position, null, [start, end]);
 
-	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(Cast, type, position, [typeHint], [expression]);
+	/** Only a selected abstract conversion may certify unchanged value storage; authored casts use false. */
+	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>, preservesRepresentation:Bool = false):TypedExpr
+		return new TypedExpr(Cast, type, position, [typeHint], [expression], null, preservesRepresentation);
+
+	public function isRepresentationPreservingCast():Bool
+		return tag == Cast && boolValue;
 
 	public static function untypedValue(expression:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Untyped, type, position, null, [expression]);
@@ -343,11 +347,18 @@ class TypedExpr {
 
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
-		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses);
+		return new TypedExpr(tag, type, position, texts, children, patterns,
+			tag != Cast ? boolValue : boolValue
+			&& children.length == 1
+			&& expressions.length == 1
+			&& children[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey(),
+			intValue, floatValue, declaration, unaryOperator, unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget,
+			catchUses);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
-		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
+		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns,
+			tag != Cast ? boolValue : boolValue
+			&& semanticType.getSemanticKey() == type.getSemanticKey(), intValue, floatValue, declaration, unaryOperator,
 			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses);
 }
