@@ -44,10 +44,10 @@ let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> 
         __old_18
       )
     )) done) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_9 -> raise (HxRuntime.Hx_return __ret_9)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_9 -> Stdlib.raise (HxRuntime.Hx_return __ret_9)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_10, __exn_tags_11) -> if HxRuntime.tags_has __exn_tags_11 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_10 : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore ()
@@ -55,7 +55,7 @@ let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> 
       | __exn_12 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_12) : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore ()
-      ) else raise (__exn_12));
+      ) else Stdlib.raise (__exn_12));
     HxInt.sub len (!k)
   )
 )
@@ -75,7 +75,7 @@ let readAll__impl = fun (self : t) (bufsize : Obj.t) -> let tempNumber = ref (0 
   ));
   let size = !tempNumber in let buf = Obj.magic (let __bytes_producer_arg_0_23 = size in HxBytes.alloc __bytes_producer_arg_0_23) in let total = Obj.magic (Haxe_io_BytesBuffer.create ()) in (
     ignore (try while true do ignore (let len = (Obj.magic self : t).readBytes (Obj.magic self) (Obj.magic buf) 0 size in (
-      ignore (if len = 0 then raise (HxRuntime.Hx_break) else ());
+      ignore (if len = 0 then Stdlib.raise (HxRuntime.Hx_break) else ());
       Haxe_io_BytesBuffer.addBytes (Obj.magic total) (Obj.magic buf) 0 len
     )) done with
       | HxRuntime.Hx_break -> ());
@@ -104,7 +104,7 @@ let readUntil__impl = fun (self : t) (hx_end : int) -> let buf = Obj.magic (Haxe
       last := __assign_25;
       __assign_25
     ));
-    ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> hx_end))) then raise (HxRuntime.Hx_break) else ());
+    ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> hx_end))) then Stdlib.raise (HxRuntime.Hx_break) else ());
     let __array_receiver_26 = (Obj.magic buf : Haxe_io_BytesBuffer.t).b in let __array_arg_0_27 = !last in HxArray.push __array_receiver_26 __array_arg_0_27
   )) done with
     | HxRuntime.Hx_break -> ());
@@ -118,7 +118,7 @@ let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuff
         last := __assign_36;
         __assign_36
       ));
-      ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> 10))) then raise (HxRuntime.Hx_break) else ());
+      ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> 10))) then Stdlib.raise (HxRuntime.Hx_break) else ());
       let __array_receiver_37 = (Obj.magic buf : Haxe_io_BytesBuffer.t).b in let __array_arg_0_38 = !last in HxArray.push __array_receiver_37 __array_arg_0_38
     )) done with
       | HxRuntime.Hx_break -> ());
@@ -131,10 +131,10 @@ let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuff
       __assign_46
     )) else ()
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_32 -> raise (HxRuntime.Hx_return __ret_32)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_32 -> Stdlib.raise (HxRuntime.Hx_return __ret_32)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_33, __exn_tags_34) -> if HxRuntime.tags_has __exn_tags_34 "haxe.io.Eof" then let e = (Obj.obj __exn_v_33 : Haxe_io_Eof.t) in (
       ignore e;
       ignore ((
@@ -154,7 +154,7 @@ let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuff
         ));
         if (let __string_receiver_31 = !s in HxString.length __string_receiver_31) = 0 then HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"] else ()
       ))
-    ) else raise (__exn_35));
+    ) else Stdlib.raise (__exn_35));
   !s
 )
 
