@@ -34,6 +34,7 @@ private typedef PortableMetalizationReport = {
 	final excludedByCode:Array<PortableMetalizationCodeCount>;
 }
 
+/** Check emitted array operations and planning reports for the portable profile. */
 class M14PortableAutoMetalizationPlannerIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -120,8 +121,8 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 
 		var failure:Null<String> = null;
 		try {
-			final parsed = ParserStage.parse(source, "PortableAutoMetalizationMain.hx");
-			final typed = TyperStage.typeModule(parsed);
+			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final program = MacroStage.expandProgram([typed], []);
 			final context = new BackendContext(outDir, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
 			new OcamlTargetCore().emit(program, context);
