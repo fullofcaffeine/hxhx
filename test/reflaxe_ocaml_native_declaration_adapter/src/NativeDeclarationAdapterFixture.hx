@@ -16,7 +16,7 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
 import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeRequirementContract;
 import reflaxe.ocaml.target.OcamlTargetProgramCore;
@@ -30,7 +30,7 @@ class NativeDeclarationAdapterFixture {
 		fields.set("count", new TyFieldInfo(owner, "unit.NativeSample", "count", TyType.fromHintText("Int"), false, true, false, false, true));
 		final info = new TyClassInfo(owner, "NativeSample", "unit.NativeSample", fields, new haxe.ds.StringMap(), new haxe.ds.StringMap(),
 			new haxe.ds.StringMap(), new haxe.ds.StringMap(), new haxe.ds.StringMap(), [], Public, false);
-		final request = HxhxOcamlTargetDeclarationAdapter.fromClassFacts("native-fixture-program", [new TypedBackendClassSemanticFacts(info, null)]);
+		final request = HxhxOcamlTargetDeclarationAdapter.fromClassFacts("native-fixture-program", [new TypedBackendClassSemanticFacts(info, null, [])]);
 		final classes = request.copyClasses();
 		if (classes.length != 1 || classes[0].copyFields().length != 1 || classes[0].copyFields()[0].typeDisplay != "Int")
 			throw "native semantic field was not copied into target-owned facts";
@@ -42,6 +42,12 @@ class NativeDeclarationAdapterFixture {
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";
+		final runtimeTarget = new TypedRuntimeTypeTarget(Nominal(owner));
+		final typeValue = TypedExpr.runtimeTypeValue(runtimeTarget, HxPos.unknown());
+		final typeTest = TypedExpr.runtimeTypeTest(TypedExpr.nullValue(TyType.fromHintText("Dynamic"), HxPos.unknown()), runtimeTarget, HxPos.unknown());
+		if (HxhxOcamlTargetLiteralAdapter.fromExpression(typeValue) != null
+			|| HxhxOcamlTargetLiteralAdapter.fromExpression(typeTest) != null)
+			throw "native literal adapter must not reinterpret runtime type operations as literals";
 		final localId = TyLocalId.forSourceDeclaration("unit.BindingFixture.run", 0, Variable, "value");
 		final binding = new TyLocalBinding(localId, "value", TyType.fromHintText("Int"), Variable);
 		final nativeBinding = HxhxOcamlTargetBindingAdapter.fromBinding("unit.BindingFixture.run", binding, "root/block-item/0/binding");
@@ -223,6 +229,37 @@ class NativeDeclarationAdapterFixture {
 		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(fact)) != "let value = 7 in value")
 			throw "native host could not execute the recursive standalone target lowerer";
 		assertDanglingReadRejected(fact);
+		assertGroupedExpression(binding, fact);
+	}
+
+	/** Grouping preserves exact local identities and cannot admit an unsupported child. */
+	static function assertGroupedExpression(binding:TyLocalBinding, ordinary:OcamlTargetExpressionFact):Void {
+		final integer = TyType.fromHintText("Int");
+		final position = HxPos.unknown();
+		function group(expression:TypedExpr):TypedExpr
+			return TypedExpr.parenthesized(TypedExpr.parenthesized(expression, position), position);
+		final literal = group(TypedExpr.intLiteral(7, integer, position));
+		final fact = HxhxOcamlTargetLiteralAdapter.fromExpression(literal);
+		if (fact == null || fact.getCanonicalIdentity() != LiteralIdentityMacro.stockInt())
+			throw "grouping changed the exact literal fact";
+		final declaration = TypedExpr.variableDeclaration("value", "Int", literal, false, false, integer, position, binding);
+		final body = group(TypedExpr.block([
+			TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), position),
+			group(TypedExpr.localRead("value", integer, position, binding))
+		], integer, position));
+		final copied = HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", body);
+		if (copied == null
+			|| copied.getCanonicalIdentity() != ordinary.getCanonicalIdentity()
+			|| copied.getCanonicalIdentity() != BindingIdentityMacro.stockGroupedExpression())
+			throw "grouping changed the shared target expression or binding paths";
+		if (new OcamlASTPrinter().printExpr(OcamlTargetExpressionLowerer.build(copied)) != "let value = 7 in value")
+			throw "grouped shared target expression lowered differently";
+		final unsupported = group(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), position));
+		final wrongType = literal.withType(TyType.fromHintText("String"));
+		for (expression in [unsupported, wrongType, literal.withExpressions([])])
+			if (HxhxOcamlTargetLiteralAdapter.fromExpression(expression) != null
+				|| HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", expression) != null)
+				throw "grouping admitted an unsupported child or inconsistent type";
 	}
 
 	static function assertDanglingReadRejected(valid:OcamlTargetExpressionFact):Void {

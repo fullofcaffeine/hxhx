@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
+if (report.schemaVersion !== 89
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
 }
@@ -69,7 +69,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -139,7 +139,7 @@ for (const [name, next, earlyValue, boxesFallback] of [
 	['boolThroughTry', 'primitiveBoolThroughTry', 'value', true]
 ]) {
 	const body = functionBody(name, next)
-	if (!body.includes(`raise (HxRuntime.Hx_return ${earlyValue})`)
+	if (!body.includes(`Stdlib.raise (HxRuntime.Hx_return ${earlyValue})`)
 		|| !body.includes('| HxRuntime.Hx_return __ret_')
 		|| !body.includes('-> (__ret_')
 		|| !body.includes(': Obj.t)')
@@ -159,7 +159,7 @@ for (const [name, next] of [
 	['primitiveBoolThroughTry', 'main']
 ]) {
 	const body = functionBody(name, next)
-	if (!body.includes('raise (HxRuntime.Hx_return (Obj.repr early))')
+	if (!body.includes('Stdlib.raise (HxRuntime.Hx_return (Obj.repr early))')
 		|| !body.includes('| HxRuntime.Hx_return __ret_')
 		|| !body.includes('-> (__ret_')
 		|| !body.includes(': Obj.t)')
@@ -171,8 +171,8 @@ for (const [name, next] of [
 }
 
 const mixedBody = functionBody('mixedInt', 'intThroughLoop')
-if (!mixedBody.includes('raise (HxRuntime.Hx_return (Obj.repr early))')
-	|| !mixedBody.includes('raise (HxRuntime.Hx_return nullable)')
+if (!mixedBody.includes('Stdlib.raise (HxRuntime.Hx_return (Obj.repr early))')
+	|| !mixedBody.includes('Stdlib.raise (HxRuntime.Hx_return nullable)')
 	|| !mixedBody.includes('try Obj.repr')
 	|| !mixedBody.includes('| HxRuntime.Hx_return __ret_')
 	|| !mixedBody.includes('-> (__ret_')
@@ -189,7 +189,7 @@ for (const [name, next] of [
 ]) {
 	const body = functionBody(name, next)
 	if (!body.includes('| HxRuntime.Hx_return __ret_')
-		|| !body.includes('-> raise (HxRuntime.Hx_return __ret_')) {
+		|| !body.includes('-> Stdlib.raise (HxRuntime.Hx_return __ret_')) {
 		fail(`a source catch can intercept ${name}'s private nullable-return signal`)
 	}
 }
@@ -221,7 +221,7 @@ const preserved = controls.filter(control =>
 const directional = controls.filter(control =>
 	control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
 	|| control.payload?.conversion === 'box-exact-bool-to-nullable-carrier')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 12

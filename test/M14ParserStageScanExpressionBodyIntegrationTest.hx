@@ -1,5 +1,6 @@
 import ParserStageScanHelpers;
 
+/** Checks that helper declaration scanning preserves source bodies and following members. */
 class M14ParserStageScanExpressionBodyIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -7,6 +8,49 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 	}
 
 	static function main():Void {
+		final calls = ParserStageScanHelpers.scanModuleLocalHelperClasses([
+			"class CallBodies {",
+			"  static function qualified():Void Sys.println(\"qualified\");",
+			"  static function bare():Void qualified();",
+			"  static function result():Int return 17;",
+			"  static function conditional(value:Bool):Void { if (value) qualified(); }",
+			"}"
+		].join("\n"), null);
+		assertTrue(calls.length == 1, "expected the call-expression helper class");
+		final methods = HxClassDecl.getFunctions(calls[0]);
+		assertTrue(methods.length == 4, "expression bodies must not consume following declarations");
+		assertTrue(HxFunctionDecl.getReturnTypeHint(methods[0]) == "Void", "qualified body call must not become return-type text");
+		assertTrue(HxFunctionDecl.getBodyText(methods[0]) == 'Sys.println("qualified");', "retain the qualified call body");
+		assertTrue(HxFunctionDecl.getBodyText(methods[1]) == "qualified();", "retain the bare call body");
+		assertTrue(HxFunctionDecl.getBodyText(methods[2]) == "return 17;", "retain the following return body");
+		switch (HxFunctionDecl.getBody(methods[3])) {
+			case [HxStmt.SIf(_, _, _, _)]:
+			case _:
+				throw "a structured static body must not require a final return statement";
+		}
+		final typeCases = [
+			{hint: "Void", body: '/* body boundary */ Sys.println("ok");'},
+			{hint: "Array<Array<Int>>", body: "return [[1]];"},
+			{hint: "Void->Void", body: "return callback;"},
+			{hint: "{value:Int}", body: "return {value: 1};"},
+			{hint: "haxe.io.Bytes", body: "return null;"}
+		];
+		for (testCase in typeCases) {
+			final text = "class TypeBoundary { static function probe():"
+				+ testCase.hint
+				+ " "
+				+ testCase.body
+				+ " static function after():Int return 9; }";
+			final scanned = ParserStageScanHelpers.scanModuleLocalHelperClasses(text, null)[0];
+			final parsed = HxModuleDecl.getMainClass(new HxParser(text).parseModule("TypeBoundary"));
+			for (cls in [scanned, parsed]) {
+				final functions = HxClassDecl.getFunctions(cls);
+				assertTrue(functions.length == 2, "return type must not consume the following method: " + testCase.hint);
+				assertTrue(HxFunctionDecl.getReturnTypeHint(functions[0]) == testCase.hint, "preserve the complete type: " + testCase.hint);
+				assertTrue(HxFunctionDecl.getBody(functions[0]).length > 0, "retain the body after type: " + testCase.hint);
+			}
+		}
+
 		final source = [
 			"abstract LocalVector<T>(Array<T>) from Array<T> {",
 			"  inline public function fill(value:Int):Void for (i in 0...this.length) this[i] = value;",

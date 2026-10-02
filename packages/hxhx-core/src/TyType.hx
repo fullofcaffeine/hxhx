@@ -17,9 +17,11 @@ class TyType {
 	static final KIND_NULL = "null";
 	static final KIND_NULLABLE = "nullable";
 	static final KIND_NOMINAL = "nominal";
+	static final KIND_ABSTRACT_META = "abstract-meta";
 	static final KIND_FUNCTION = "function";
 	static final KIND_ANONYMOUS = "anonymous";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
+	static final KIND_OPEN_METHOD_PARAMETER = "open-method-parameter";
 	static final KIND_UNRESOLVED = "unresolved";
 	static final KIND_NO_NORMAL_COMPLETION = "no-normal-completion";
 
@@ -35,10 +37,11 @@ class TyType {
 	final anonymousFieldNames:Array<String>;
 	final anonymousFieldTypes:Array<TyType>;
 	final typeParameterIdentity:Null<TyTypeParameterId>;
+	final openMethodParameterIdentity:Null<TyOpenMethodParameterId>;
 
 	function new(display:String, kind:String, nominalIdentity:Null<TyNominalTypeId>, typeArguments:Array<TyType>, nullableInner:Null<TyType>,
 			unresolvedPath:String, ?functionArguments:Array<TyType>, ?functionReturn:TyType, ?anonymousFieldNames:Array<String>,
-			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId) {
+			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId, ?openMethodParameterIdentity:TyOpenMethodParameterId) {
 		this.display = display;
 		this.kind = kind;
 		this.nominalIdentity = nominalIdentity;
@@ -50,6 +53,7 @@ class TyType {
 		this.anonymousFieldNames = anonymousFieldNames == null ? [] : anonymousFieldNames.copy();
 		this.anonymousFieldTypes = anonymousFieldTypes == null ? [] : anonymousFieldTypes.copy();
 		this.typeParameterIdentity = typeParameterIdentity;
+		this.openMethodParameterIdentity = openMethodParameterIdentity;
 	}
 
 	public static function unknown():TyType {
@@ -96,6 +100,22 @@ class TyType {
 		}
 		return new TyType(shown, KIND_NOMINAL, identity, actualArgs, null, "");
 	}
+
+	/**
+		Describe a runtime abstract type value, such as the expression `Int`.
+
+		Haxe reports this internal meta-type as `Abstract<T>`. It is neither an
+		instance of T nor a Class<T>, and it has no nominal declaration owner.
+		Keep the argument structural so substitution and dependency walks see it.
+	**/
+	public static function abstractMeta(instance:TyType):TyType {
+		if (instance == null)
+			throw "abstract meta-type requires an instance type";
+		return new TyType("Abstract<" + instance.getDisplay() + ">", KIND_ABSTRACT_META, null, [instance], null, "");
+	}
+
+	public function isAbstractMeta():Bool
+		return kind == KIND_ABSTRACT_META;
 
 	/** Create a structural function type whose arguments and result remain available to call typing. **/
 	public static function functionType(arguments:Array<TyType>, result:TyType, ?display:String):TyType {
@@ -145,6 +165,30 @@ class TyType {
 		return new TyType(identity.getName(), KIND_TYPE_PARAMETER, null, [], null, "", null, null, null, null, identity);
 	}
 
+	/** A sealed open method instance is a valid type fact, distinct from failed lookup, Unknown, or Dynamic. */
+	public static function openMethodParameter(identity:TyOpenMethodParameterId):TyType {
+		if (identity == null)
+			throw "open method type requires its immutable instance identity";
+		return new TyType("Open<" + identity.getName() + ">", KIND_OPEN_METHOD_PARAMETER, null, [], null, "", null, null, null, null, null, identity);
+	}
+
+	public function isOpenMethodParameter():Bool
+		return kind == KIND_OPEN_METHOD_PARAMETER;
+
+	/** Source-shaped target hints must explicitly erase open parameters without changing semantic facts. */
+	public function hasOpenMethodParameter():Bool {
+		if (isOpenMethodParameter())
+			return true;
+		if (nullableInner != null && nullableInner.hasOpenMethodParameter())
+			return true;
+		if (functionReturn != null && functionReturn.hasOpenMethodParameter())
+			return true;
+		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+			if (component.hasOpenMethodParameter())
+				return true;
+		return false;
+	}
+
 	public static function unresolved(path:String, args:Array<TyType>, ?display:String):TyType {
 		final cleanPath = path == null ? "" : StringTools.trim(path);
 		final actualArgs = args == null ? [] : args;
@@ -159,6 +203,20 @@ class TyType {
 
 	public function isUnknown():Bool
 		return kind == KIND_UNKNOWN;
+
+	/** An incomplete structural type cannot serve as a fully selected backend contract. */
+	public function hasUnknownComponent():Bool {
+		if (isUnknown())
+			return true;
+		if (nullableInner != null && nullableInner.hasUnknownComponent())
+			return true;
+		if (functionReturn != null && functionReturn.hasUnknownComponent())
+			return true;
+		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+			if (component.hasUnknownComponent())
+				return true;
+		return false;
+	}
 
 	public function isNoNormalCompletion():Bool
 		return kind == KIND_NO_NORMAL_COMPLETION;
@@ -183,6 +241,10 @@ class TyType {
 
 	public function isNullable():Bool
 		return kind == KIND_NULLABLE;
+
+	/** The null literal is distinct from a value whose declared type permits null. */
+	public function isNullLiteral():Bool
+		return kind == KIND_NULL;
 
 	public function isUnresolved():Bool
 		return kind == KIND_UNRESOLVED;
@@ -227,6 +289,8 @@ class TyType {
 		return typeParameterIdentity;
 
 	public function getSemanticKey():String {
+		if (kind == KIND_OPEN_METHOD_PARAMETER)
+			return "open-method-parameter:" + openMethodParameterIdentity.getCanonicalKey();
 		if (kind == KIND_PRIMITIVE)
 			return "primitive:" + display;
 		if (kind == KIND_DYNAMIC)
@@ -251,6 +315,8 @@ class TyType {
 					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getSemanticKey()
 			].join(",") + "}";
 		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.getSemanticKey()].join(",") + ">";
+		if (kind == KIND_ABSTRACT_META)
+			return "abstract-meta" + args;
 		if (kind == KIND_NOMINAL)
 			return "nominal:" + (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + args;
 		return "unresolved:" + unresolvedPath + args;
@@ -264,6 +330,11 @@ class TyType {
 		type hint without asking each target to repeat import and alias resolution.
 	**/
 	public function getCanonicalDisplay():String {
+		// Source-shaped backend hints use the opaque carrier for a valid open
+		// parameter. The typed graph and revision key retain its exact identity;
+		// this rendering must never be fed back as semantic inference evidence.
+		if (kind == KIND_OPEN_METHOD_PARAMETER)
+			return "Dynamic";
 		if (kind == KIND_NULLABLE)
 			return "Null<" + (nullableInner == null ? "Dynamic" : nullableInner.getCanonicalDisplay()) + ">";
 		if (kind == KIND_FUNCTION) {
@@ -276,6 +347,8 @@ class TyType {
 					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getCanonicalDisplay()
 			].join(",") + "}";
 		final arguments = typeArguments.length == 0 ? "" : "<" + [for (argument in typeArguments) argument.getCanonicalDisplay()].join(",") + ">";
+		if (kind == KIND_ABSTRACT_META)
+			return "Abstract" + arguments;
 		if (kind == KIND_NOMINAL)
 			return (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + arguments;
 		if (kind == KIND_UNRESOLVED)
@@ -291,25 +364,7 @@ class TyType {
 	}
 
 	static function splitTypeArguments(text:String):Array<String> {
-		final out = new Array<String>();
-		var depth = 0;
-		var start = 0;
-		for (i in 0...text.length) {
-			final ch = text.charAt(i);
-			if (ch == "<") {
-				depth++;
-			} else if (ch == ">") {
-				if (depth > 0)
-					depth--;
-			} else if (ch == "," && depth == 0) {
-				out.push(StringTools.trim(text.substring(start, i)));
-				start = i + 1;
-			}
-		}
-		final tail = StringTools.trim(text.substr(start));
-		if (tail.length > 0)
-			out.push(tail);
-		return out;
+		return splitTopLevel(text, ",");
 	}
 
 	static function hasWrappingParentheses(text:String):Bool {
@@ -484,7 +539,38 @@ class TyType {
 		return functionType(arguments, fromHintText(resultText), text);
 	}
 
-	/** Parse the supported nominal/generic/nullable hint spine without guessing unresolved identities. **/
+	/**
+		Parse the short required-field record form before resolving its field types.
+
+		Optional fields, properties, extensions, and long declarations need richer
+		field contracts. Keep those forms unresolved instead of discarding their
+		meaning or treating an optional field as required.
+	**/
+	static function parseAnonymousType(text:String):Null<TyType> {
+		if (!StringTools.endsWith(text, "}"))
+			return null;
+		final inner = StringTools.trim(text.substring(1, text.length - 1));
+		if (inner.length == 0)
+			return anonymous([], []);
+		final names = new Array<String>();
+		final types = new Array<TyType>();
+		final fields = splitTopLevel(inner, ",");
+		for (index in 0...fields.length) {
+			if (fields[index].length == 0 && index == fields.length - 1)
+				continue;
+			final parts = splitTopLevel(fields[index], ":");
+			if (parts.length != 2
+				|| !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(parts[0])
+				|| names.indexOf(parts[0]) >= 0
+				|| parts[1].length == 0)
+				return null;
+			names.push(parts[0]);
+			types.push(fromHintText(parts[1]));
+		}
+		return anonymous(names, types);
+	}
+
+	/** Parse supported structural hints without guessing unresolved declaration identities. **/
 	public static function fromHintText(hint:String):TyType {
 		if (hint == null)
 			return unknown();
@@ -500,6 +586,10 @@ class TyType {
 		final parsedFunction = parseFunctionType(text);
 		if (parsedFunction != null)
 			return parsedFunction;
+		if (StringTools.startsWith(text, "{")) {
+			final parsedAnonymous = parseAnonymousType(text);
+			return parsedAnonymous == null ? unresolved(text, [], text) : parsedAnonymous;
+		}
 
 		final open = genericStart(text);
 		if (open > 0 && StringTools.endsWith(text, ">")) {

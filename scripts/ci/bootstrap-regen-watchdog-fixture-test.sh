@@ -22,6 +22,9 @@ trap cleanup EXIT
 
 fail() {
 	echo "[bootstrap-regen-watchdog-fixture-test] ERROR: $*" >&2
+	for log in "$TMP_DIR"/*.log; do
+		[ -f "$log" ] && tail -n 30 "$log" >&2
+	done
 	exit 1
 }
 
@@ -65,7 +68,7 @@ case "${FAKE_STAGE0_MODE:-}" in
 		done
 		exit 23
 		;;
-	stalled)
+	stalled|slow-poll)
 		sleep 20
 		exit 24
 		;;
@@ -83,6 +86,19 @@ case "${FAKE_STAGE0_MODE:-}" in
 esac
 FAKE_HAXE_SCRIPT
 chmod +x "$FAKE_HAXE"
+
+# Simulate expensive polling without a real compiler workload. Only the
+# watchdog's one-second sleep is delayed; compiler sleeps retain their duration.
+export WATCHDOG_FIXTURE_SLEEP="$(command -v sleep)"
+cat >"$FAKE_BIN_DIR/sleep" <<'FAKE_SLEEP'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${FAKE_STAGE0_MODE:-}" = "slow-poll" ] && [ "${1:-}" = "1" ]; then
+	exec "$WATCHDOG_FIXTURE_SLEEP" 4
+fi
+exec "$WATCHDOG_FIXTURE_SLEEP" "$@"
+FAKE_SLEEP
+chmod +x "$FAKE_BIN_DIR/sleep"
 
 for tool in dune ocamlc; do
 	cat >"$FAKE_BIN_DIR/$tool" <<'FAKE_TOOL'
@@ -151,5 +167,17 @@ grep -Fq 'cleanup=complete' "$TMP_DIR/hard-limit.log" \
 	|| fail "hard-limit case did not report deterministic cleanup"
 grep -Fq '"timeout_kind": "hard"' "$TMP_DIR/hard-limit.report.json" \
 	|| fail "hard-limit report did not preserve the timeout kind"
+
+# A delayed poll must count toward the hard deadline. The former loop counter
+# reports three seconds here, despite waiting at least twelve seconds.
+run_case slow-poll 0 3 124
+node - "$TMP_DIR/slow-poll.report.json" <<'CHECK_SLOW_POLL'
+const fs = require('node:fs');
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const watchdog = report.stage0_observability;
+if (!watchdog || watchdog.timeout_elapsed_seconds < 4) {
+  throw new Error('slow polling time was omitted from the watchdog clock');
+}
+CHECK_SLOW_POLL
 
 echo "BOOTSTRAP_REGEN_WATCHDOG_FIXTURE:PASS"

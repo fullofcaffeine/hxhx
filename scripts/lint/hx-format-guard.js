@@ -179,11 +179,19 @@ function killProcessTree(child) {
  * command its own process group and terminate the complete group on timeout,
  * preventing an abandoned formatter or Neko process from leaking into later
  * developer commands.
+ *
+ * Interactive callers can pass an AbortSignal and output callbacks. Cancellation
+ * stops that same tree; completion still waits for the child streams to close.
+ * Output capture remains enabled for the full guard's ordered reports.
  */
 function runCommandWithTimeout(command, args, options = {}) {
   return new Promise(resolve => {
     const started = Date.now()
     const timeoutMs = options.timeoutMs || DEFAULT_FORMATTER_TIMEOUT_MS
+    if (options.signal && options.signal.aborted) {
+      resolve({ code: null, signal: null, aborted: true, timedOut: false, timeoutMs, elapsedMs: 0, stdout: '', stderr: '' })
+      return
+    }
     const child = spawn(command, args, {
       cwd: options.cwd || process.cwd(),
       env: options.env || process.env,
@@ -194,16 +202,24 @@ function runCommandWithTimeout(command, args, options = {}) {
     let stderr = ''
     let finished = false
     let timedOut = false
+    let aborted = false
     let timer = null
+
+    function abort() {
+      aborted = true
+      killProcessTree(child)
+    }
 
     function finish(result) {
       if (finished) return
       finished = true
       if (timer) clearTimeout(timer)
+      if (options.signal) options.signal.removeEventListener('abort', abort)
       resolve({
         ...result,
         pid: child.pid,
         timedOut,
+        aborted,
         timeoutMs,
         elapsedMs: Date.now() - started,
         stdout,
@@ -211,14 +227,20 @@ function runCommandWithTimeout(command, args, options = {}) {
       })
     }
 
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
     child.stdout.on('data', chunk => {
-      stdout += chunk
+      if (options.captureOutput !== false) stdout += chunk
+      if (options.onStdout) options.onStdout(chunk)
     })
     child.stderr.on('data', chunk => {
-      stderr += chunk
+      if (options.captureOutput !== false) stderr += chunk
+      if (options.onStderr) options.onStderr(chunk)
     })
     child.on('error', error => finish({ error }))
     child.on('close', (code, signal) => finish({ code, signal }))
+
+    if (options.signal) options.signal.addEventListener('abort', abort, { once: true })
 
     timer = setTimeout(() => {
       timedOut = true

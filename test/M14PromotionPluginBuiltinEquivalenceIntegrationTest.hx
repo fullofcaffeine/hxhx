@@ -6,6 +6,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Built-in and registered JavaScript backends must emit and execute the same resolved program. */
 class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -32,7 +33,8 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 
 	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
 		final parsed = ParserStage.parse(source, filePath);
-		final typed = TyperStage.typeModule(parsed);
+		final resolved = new ResolvedModule("Main", filePath, parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		return MacroStage.expandProgram([typed], []);
 	}
 

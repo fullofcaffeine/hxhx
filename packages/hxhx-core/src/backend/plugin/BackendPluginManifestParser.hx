@@ -1,29 +1,17 @@
 package backend.plugin;
 
 import backend.BackendAbi;
-import hxhx.CompilerJsonArray;
 import hxhx.CompilerJsonParser;
+import hxhx.CompilerJsonValue;
 
-private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
+private typedef JsonObject = haxe.ds.StringMap<CompilerJsonValue>;
 
 /**
 	Parses and validates backend plugin manifests from JSON text.
 
-	Why
-	- Stage3 loader paths need deterministic, human-readable validation failures for
-	  missing/invalid plugin metadata.
-	- JSON parsing is a runtime boundary; we constrain untyped values here and return
-	  fully-typed manifest structures to the rest of the compiler.
-
-	How
-	- Parse JSON once at this boundary.
-	- Convert all required fields to typed values with explicit checks.
-	- Run compatibility validation (`BackendAbi`) before returning.
-
-	Gotchas
-	- `CompilerJsonParser` returns untyped values by design.
-	- This parser is the only place where `Dynamic` JSON values are accepted for plugin
-	  manifests; callers should use typed `BackendPluginManifest` values only.
+	Each schema field must match its decoded JSON variant before it reaches the
+	plugin loader. Missing fields and wrong kinds produce source-labelled errors.
+	Compatibility validation through `BackendAbi` runs before a manifest is returned.
 **/
 class BackendPluginManifestParser {
 	public static inline var SCHEMA_VERSION:Int = 1;
@@ -33,70 +21,59 @@ class BackendPluginManifestParser {
 		return s.length == 0 ? "<unknown-source>" : s;
 	}
 
-	static inline function fail(sourceLabel:String, message:String):Dynamic {
-		throw "invalid backend plugin manifest (" + normalizeSourceLabel(sourceLabel) + "): " + message;
+	static inline function failureMessage(sourceLabel:String, message:String):String {
+		return "invalid backend plugin manifest (" + normalizeSourceLabel(sourceLabel) + "): " + message;
 	}
 
-	static function requireObject(value:Dynamic, fieldPath:String, sourceLabel:String):JsonObject {
-		if (value == null)
-			fail(sourceLabel, "missing required object `" + fieldPath + "`");
-		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float)
-			|| Std.isOfType(value, Array) || Std.isOfType(value, CompilerJsonArray)) {
-			fail(sourceLabel, "field `" + fieldPath + "` must be an object");
+	static function requireObject(value:CompilerJsonValue, fieldPath:String, sourceLabel:String):JsonObject {
+		return switch (value) {
+			case JsonObject(fields): fields;
+			case JsonNull: throw failureMessage(sourceLabel, "missing required object `" + fieldPath + "`");
+			case _: throw failureMessage(sourceLabel, "field `" + fieldPath + "` must be an object");
 		}
-		return cast value;
 	}
 
-	static function requireField(object:JsonObject, fieldName:String, fieldPath:String, sourceLabel:String):Dynamic {
+	static function requireField(object:JsonObject, fieldName:String, fieldPath:String, sourceLabel:String):CompilerJsonValue {
 		if (!object.exists(fieldName))
-			fail(sourceLabel, "missing required field `" + fieldPath + "`");
+			throw failureMessage(sourceLabel, "missing required field `" + fieldPath + "`");
 		return object.get(fieldName);
 	}
 
-	static function requireString(value:Dynamic, fieldPath:String, sourceLabel:String):String {
-		if (!Std.isOfType(value, String))
-			fail(sourceLabel, "field `" + fieldPath + "` must be a string");
-		final s:String = cast value;
+	static function requireString(value:CompilerJsonValue, fieldPath:String, sourceLabel:String):String {
+		final s = switch (value) {
+			case JsonString(text): text;
+			case _: throw failureMessage(sourceLabel, "field `" + fieldPath + "` must be a string");
+		}
 		final normalized = StringTools.trim(s);
 		if (normalized.length == 0)
-			fail(sourceLabel, "field `" + fieldPath + "` must be a non-empty string");
+			throw failureMessage(sourceLabel, "field `" + fieldPath + "` must be a non-empty string");
 		return normalized;
 	}
 
-	static function requireInt(value:Dynamic, fieldPath:String, sourceLabel:String):Int {
-		if (Std.isOfType(value, Int))
-			return cast value;
-		if (Std.isOfType(value, Float)) {
-			final f = Std.parseFloat(Std.string(value));
-			final i = Std.int(f);
-			final iAsFloat:Float = i;
-			if (iAsFloat == f)
-				return i;
+	static function requireInt(value:CompilerJsonValue, fieldPath:String, sourceLabel:String):Int {
+		switch (value) {
+			case JsonInt(number):
+				return number;
+			case JsonFloat(number):
+				final i = Std.int(number);
+				final iAsFloat:Float = i;
+				if (iAsFloat == number)
+					return i;
+			case _:
 		}
-		fail(sourceLabel, "field `" + fieldPath + "` must be an integer");
-		return -1;
+		throw failureMessage(sourceLabel, "field `" + fieldPath + "` must be an integer");
 	}
 
-	static function requireStringArray(value:Dynamic, fieldPath:String, sourceLabel:String):Array<String> {
-		var raw:Array<Dynamic>;
-		if (Std.isOfType(value, CompilerJsonArray)) {
-			raw = (cast value : CompilerJsonArray).values;
-		} else if (Std.isOfType(value, Array)) {
-			raw = cast value;
-		} else {
-			fail(sourceLabel, "field `" + fieldPath + "` must be an array of strings");
-			raw = [];
+	static function requireStringArray(value:CompilerJsonValue, fieldPath:String, sourceLabel:String):Array<String> {
+		final raw = switch (value) {
+			case JsonArray(values): values;
+			case _: throw failureMessage(sourceLabel, "field `" + fieldPath + "` must be an array of strings");
 		}
 		final out = new Array<String>();
 		var index = 0;
 		for (entry in raw) {
 			final itemPath = fieldPath + "[" + index + "]";
-			if (!Std.isOfType(entry, String))
-				fail(sourceLabel, "field `" + itemPath + "` must be a string");
-			final normalized = StringTools.trim(cast entry);
-			if (normalized.length == 0)
-				fail(sourceLabel, "field `" + itemPath + "` must be a non-empty string");
-			out.push(normalized);
+			out.push(requireString(entry, itemPath, sourceLabel));
 			index++;
 		}
 		return out;
@@ -107,7 +84,7 @@ class BackendPluginManifestParser {
 			case BackendPluginManifestKind.LinkedProvider: BackendPluginManifestKind.LinkedProvider;
 			case BackendPluginManifestKind.OcamlDynlink: BackendPluginManifestKind.OcamlDynlink;
 			case _:
-				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: linked-provider, ocaml-dynlink)");
+				throw failureMessage(sourceLabel, "unsupported backend kind `" + value + "` (supported: linked-provider, ocaml-dynlink)");
 		}
 	}
 
@@ -171,12 +148,12 @@ class BackendPluginManifestParser {
 	public static function parse(content:String, sourceLabel:String):BackendPluginManifest {
 		final source = normalizeSourceLabel(sourceLabel);
 		if (content == null || StringTools.trim(content).length == 0)
-			fail(source, "content is empty");
+			throw failureMessage(source, "content is empty");
 
-		final raw:Dynamic = try {
+		final raw = try {
 			CompilerJsonParser.parse(content);
-		} catch (error:Dynamic) {
-			fail(source, "invalid JSON: " + Std.string(error));
+		} catch (error:haxe.Exception) {
+			throw failureMessage(source, "invalid JSON: " + error.message);
 		}
 
 		final root = requireObject(raw, "$", source);
@@ -203,7 +180,7 @@ class BackendPluginManifestParser {
 
 		final validationError = validate(manifest);
 		if (validationError != null)
-			fail(source, validationError);
+			throw failureMessage(source, validationError);
 
 		return manifest;
 	}

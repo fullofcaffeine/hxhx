@@ -438,10 +438,10 @@ class EmitterStage {
 		if (name == null)
 			return false;
 		return switch (name) {
-			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "else" | "end" | "exception" | "external" | "false" |
-				"for" | "fun" | "function" | "functor" | "if" | "in" | "include" | "inherit" | "initializer" | "lazy" | "let" | "match" | "method" |
-				"module" | "mutable" | "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" | "struct" | "then" | "to" |
-				"true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
+			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "effect" | "else" | "end" | "exception" |
+				"external" | "false" | "for" | "fun" | "function" | "functor" | "if" | "in" | "include" | "inherit" | "initializer" | "lazy" | "let" |
+				"match" | "method" | "module" | "mutable" | "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" |
+				"struct" | "then" | "to" | "true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
 				true;
 			case _:
 				false;
@@ -452,6 +452,10 @@ class EmitterStage {
 		final base = lowerFirst(raw);
 		if (base == "_" || base.length == 0)
 			return "_";
+		// OCaml's effect keyword needs an escape that cannot collide with a Haxe
+		// method named effect_. OCaml permits apostrophes in identifiers; Haxe does not.
+		if (base == "effect")
+			return "effect'";
 		return isOcamlKeyword(base) ? (base + "_") : base;
 	}
 
@@ -865,7 +869,7 @@ class EmitterStage {
 				}
 			case ECast(expr, _hint):
 				constFoldString(expr);
-			case EUntyped(expr):
+			case EParenthesized(expr, _) | EUntyped(expr):
 				constFoldString(expr);
 			case _:
 				null;
@@ -873,19 +877,16 @@ class EmitterStage {
 	}
 
 	/**
-		Read a value from a map-like object (`Map` or lowered `Obj.t`) at emission boundaries.
+		Read an emission-context map through its typed API, preserving missing keys as null.
 
-		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
+		Native OCaml maps are hash tables, so reflecting on a `get` object field loses
+		valid import and local-type bindings. The map type must survive this helper boundary.
+		Inlining keeps each caller's concrete value type in generated OCaml.
 	**/
-	static function mapGetRaw<TMap, TValue>(mapLike:Null<TMap>, key:String):Null<TValue> {
+	static inline function mapGetRaw<TValue>(mapLike:Null<Map<String, TValue>>, key:String):Null<TValue> {
 		if (mapLike == null || key == null)
 			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final getFn = Reflect.field(mapLikeObj, "get");
-		if (getFn == null)
-			return null;
-		final value = Reflect.callMethod(mapLikeObj, getFn, [key]);
-		return value == null ? null : cast value;
+		return mapLike.get(key);
 	}
 
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
@@ -1001,6 +1002,10 @@ class EmitterStage {
 			return switch (cond) {
 				case EBool(v):
 					v ? "true" : "false";
+				case EIdent(name) if (tyForIdent(name) == "Bool"):
+					// A checked Boolean local must select the string branch at runtime.
+					// Use ordinary reads so mutable locals retain their reference access.
+					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					final checked = stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + s + ")" : s;
@@ -1902,7 +1907,7 @@ class EmitterStage {
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsInt64Expr(thenExpr, tyByIdent) && stage3IsInt64Expr(elseExpr, tyByIdent);
 			case ECast(inner, _):
 				stage3IsInt64Expr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInt64Expr(inner, tyByIdent);
 			case _:
 				false;
@@ -1914,7 +1919,7 @@ class EmitterStage {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
 			case ECast(inner, _):
 				stage3IsInfNanFieldExpr(inner);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInfNanFieldExpr(inner);
 			case _:
 				false;
@@ -1926,7 +1931,7 @@ class EmitterStage {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf";
 			case ECast(inner, _):
 				stage3IsPositiveInfinityFieldExpr(inner);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsPositiveInfinityFieldExpr(inner);
 			case _:
 				false;
@@ -2002,7 +2007,7 @@ class EmitterStage {
 				stage3TyForIdent(name, tyByIdent) == "String";
 			case ECast(inner, _):
 				stage3IsStringExpr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsStringExpr(inner, tyByIdent);
 			case EBinop("+", a, b): stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsStringExpr(thenExpr, tyByIdent) && stage3IsStringExpr(elseExpr, tyByIdent);
@@ -2013,6 +2018,7 @@ class EmitterStage {
 
 	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsBoolExpr(inner, tyByIdent, callSigByCallee);
 			case EBool(_):
 				true;
 			case EIdent(name):
@@ -2044,7 +2050,7 @@ class EmitterStage {
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
 			case ECast(_, typeHint):
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(typeHint);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee);
 			case _:
 				false;
@@ -2296,7 +2302,7 @@ class EmitterStage {
 			case ECall(EField(inner, "concat"), [other]): stage3IsLikelyStringArrayExpr(inner, tyByIdent) && stage3IsLikelyStringArrayExpr(other, tyByIdent);
 			case ECast(inner, _):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
 			case _:
 				false;
@@ -2924,19 +2930,25 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+		final staticCall = TypedExactStaticCallSource.decode(e);
+		if (staticCall != null)
+			return exprToOcaml(TypedExactStaticCallSource.ordinaryCall(staticCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+				moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
-			if (exactCall.receiver.match(EThis) && ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
+			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
 				for (partIndex in 1...ownerParts.length)
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
-				return exprToOcaml(ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments)), arityByIdentRaw,
-					tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				// Keep the typed owner and explicit receiver together through call
+				// planning. Rebuilding receiver.method would rediscover it by name.
+				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+			} else {
+				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			}
-			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
-				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		}
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
@@ -3688,10 +3700,10 @@ class EmitterStage {
 					}
 
 					var fullArgs = args.copy();
-					final sourceAlreadyCarriesThis = fullArgs.length > 0 && switch (fullArgs[0]) {
+					final sourceAlreadyCarriesThis = exactCall != null || (fullArgs.length > 0 && switch (fullArgs[0]) {
 						case EThis: true;
 						case _: false;
-					};
+					});
 					final needsRecoveredQualifiedReceiver = sig != null && sig.needsReceiver && !receiverPreApplied && !sourceAlreadyCarriesThis
 						&& fullArgs.length < sig.required && switch (callee) {
 							case EField(obj, _) if (isTypePathExpr(obj)):
@@ -4350,6 +4362,8 @@ class EmitterStage {
 				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
 				stringCast == null ? value : stringCast;
+			case EParenthesized(inner, _):
+				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 			case EUntyped(expr):
 				// Bring-up: preserve shape by emitting the inner expression.
 				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
@@ -4435,6 +4449,9 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final staticCall = TypedExactStaticCallSource.decode(e);
+			if (staticCall != null)
+				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
 				if (hasBringupPoison(exactCall.receiver))
@@ -4621,7 +4638,7 @@ class EmitterStage {
 				case EArrayAccess(arr, idx): hasBringupPoison(arr) || hasBringupPoison(idx);
 				case ECast(expr, _hint):
 					hasBringupPoison(expr);
-				case EUntyped(expr):
+				case EParenthesized(expr, _) | EUntyped(expr):
 					hasBringupPoison(expr);
 				case _:
 					false;
@@ -4755,7 +4772,7 @@ class EmitterStage {
 						collectAssignedNamesInExprRec(branchExpr, out);
 			case ECast(inner, _hint):
 				collectAssignedNamesInExprRec(inner, out);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				collectAssignedNamesInExprRec(inner, out);
 			case ENew(_typePath, args):
 				if (args != null)
@@ -4886,7 +4903,7 @@ class EmitterStage {
 				scanExprForPreludeDepsRec(end, locals, calls, idents);
 			case ECast(expr, _):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EUntyped(expr):
+			case EParenthesized(expr, _) | EUntyped(expr):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
 			case _:
 		}
@@ -5041,12 +5058,12 @@ class EmitterStage {
 			if (hinted != null)
 				return hinted;
 			var key = name;
-			if (mapGetRaw(cast tyByIdent, key) == null) {
+			if (mapGetRaw(tyByIdent, key) == null) {
 				final lowered = ocamlValueIdent(name);
-				if (lowered != name && mapGetRaw(cast tyByIdent, lowered) != null)
+				if (lowered != name && mapGetRaw(tyByIdent, lowered) != null)
 					key = lowered;
 			}
-			final resolved = mapGetRaw(cast tyByIdent, key);
+			final resolved = mapGetRaw(tyByIdent, key);
 			if (resolved == null)
 				return TyType.unknown();
 			final typed:TyType = cast resolved;
@@ -5332,7 +5349,7 @@ class EmitterStage {
 		}
 
 		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
-			final resolved = mapGetRaw(cast value, name);
+			final resolved = mapGetRaw(value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
@@ -5348,6 +5365,8 @@ class EmitterStage {
 			return switch (e) {
 				case EBool(v):
 					v ? "true" : "false";
+				case EParenthesized(inner, _):
+					condToOcamlBool(inner, tyCtx);
 				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					final rendered = returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee);
@@ -5581,7 +5600,7 @@ class EmitterStage {
 							needle) || exprContainsIdent(thenExpr, needle) || exprContainsIdent(elseExpr, needle);
 					case ECast(inner, _):
 						exprContainsIdent(inner, needle);
-					case EUntyped(inner):
+					case EParenthesized(inner, _) | EUntyped(inner):
 						exprContainsIdent(inner, needle);
 					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprContainsIdent(scrutinee, needle)) true; else {
@@ -5641,7 +5660,7 @@ class EmitterStage {
 					case ETernary(cond, thenExpr, elseExpr): exprHintsInt(cond, needle) || exprHintsInt(thenExpr, needle) || exprHintsInt(elseExpr, needle);
 					case ECast(inner, _):
 						exprHintsInt(inner, needle);
-					case EUntyped(inner):
+					case EParenthesized(inner, _) | EUntyped(inner):
 						exprHintsInt(inner, needle);
 					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprHintsInt(scrutinee, needle)) true; else {
@@ -6909,6 +6928,7 @@ class EmitterStage {
 
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
+		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(p.getTypedModules(), "OCaml emitter");
 		traceEmitToDirEntry("emitToDir_enter");
 		final outAbs = requireEmitToDirOutAbs(outDir);
 		installEmitToDirProfile(ocamlProfile);
@@ -6952,7 +6972,7 @@ class EmitterStage {
 			return out;
 		}
 
-		final typedModules = uniqueTypedModules(typedModulesRaw);
+		final typedModules = backend.ocaml.OcamlIntFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
@@ -7294,27 +7314,12 @@ class EmitterStage {
 		}
 
 		function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
-			// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
-			// upstream-style harness code (RunCi, macro host, etc).
-			//
-			// However, the Haxe standard library contains many constructs we do not model yet
-			// (regex literals, abstracts, complex typing), and attempting to emit full bodies
-			// for `std/` quickly explodes the surface area.
-			//
-			// Pragmatic rule:
-			// - When `emitFullBodies=true`, still skip full-body emission for modules under `std/`.
-			function allowFullBodiesForFile(filePath:String, isRoot:Bool):Bool {
-				if (isRoot)
-					return true;
-				if (filePath == null || filePath.length == 0)
-					return false;
-				final p = filePath;
-				final isStd = p.indexOf("/std/") != -1 || p.indexOf("\\std\\") != -1;
-				return !isStd;
-			}
-			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
+			// The caller selects full-body emission for the whole program. Directory
+			// names must not discard declarations and effects needed by its returns.
+			final moduleEmitBodies = emitFullBodies;
 
 			final moduleProjection = tm.getBackendProjection();
+			moduleProjection.assertRuntimeTypeOperandsAbsent("OCaml emitter");
 			final decl = moduleProjection.getDeclaration();
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final mainClassProjection = moduleProjection.findClass(mainClass);
@@ -7542,7 +7547,13 @@ class EmitterStage {
 				}
 			}
 
-			function emitMainClass():Null<String> {
+			/**
+				Emit one class from its own typed projection, including module-local helpers.
+				The projection keeps bodies paired with their exact parameters and locals.
+				Only the selected root class may add the program's main invocation.
+			**/
+			function emitClass(classProjection:TypedBackendClassProjection, outputModuleName:String, isEntryPoint:Bool):Null<String> {
+				final emittedClass = classProjection.getDeclaration();
 				final prevOcamlModule = currentOcamlModuleName;
 				final prevModuleFilePath = currentModuleFilePath;
 				final prevLocalCallSigCache = currentLocalCallSigCache;
@@ -7550,13 +7561,13 @@ class EmitterStage {
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
 				final moduleFilePath = tm.getParsed().getFilePath();
-				final mainClassName = HxClassDecl.getName(mainClass);
-				currentOcamlModuleName = mainModuleName;
+				final emittedClassName = HxClassDecl.getName(emittedClass);
+				currentOcamlModuleName = outputModuleName;
 				currentModuleFilePath = moduleFilePath;
 				currentLocalCallSigCache = null;
 				currentImportInt64 = importInt64;
 				try {
-					final typedFns = mainClassProjection.getFunctions();
+					final typedFns = classProjection.getFunctions();
 					final parsedFns = [for (projection in typedFns) projection.getDeclaration()];
 					final projectionByName = new Map<String, TypedBackendFunctionProjection>();
 					for (projection in typedFns) {
@@ -7620,7 +7631,7 @@ class EmitterStage {
 							continue;
 						final fnArgs = HxFunctionDecl.getArgs(fn);
 						final sig = callSigFromFunction(fn);
-						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
+						EmitterStageDebug.traceCallSig(outputModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
 							sig.needsReceiver);
 						callSigByCallee.set(ocamlValueIdent(fnNameRaw), sig);
 					}
@@ -7642,7 +7653,7 @@ class EmitterStage {
 						final localName = HxClassDecl.getName(localCls);
 						if (localName == null || localName.length == 0 || localName == "Unknown")
 							continue;
-						if (localName == className)
+						if (localName == emittedClassName)
 							continue;
 						staticImportByIdent.set(localName, moduleNameForDecl(decl, moduleTypeName, localName));
 					}
@@ -7689,8 +7700,8 @@ class EmitterStage {
 					out.push("[@@@warning \"-21-26\"]");
 					out.push("");
 
-					final parsedFields = HxClassDecl.getFields(mainClass);
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(mainModuleName);
+					final parsedFields = HxClassDecl.getFields(emittedClass);
+					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)
@@ -7829,7 +7840,7 @@ class EmitterStage {
 							case ECast(expr, _):
 								if (expr != null)
 									staticInitWorklist.push(expr);
-							case EUntyped(expr):
+							case EParenthesized(expr, _) | EUntyped(expr):
 								if (expr != null)
 									staticInitWorklist.push(expr);
 							case _:
@@ -7942,7 +7953,7 @@ class EmitterStage {
 					//
 					// Note: This must apply in both "stub body" and "full body" emission modes. The failure mode
 					// (monomorphic `load` inside the recursive group) appears in both configurations.
-					final shouldHoistLoad = StringTools.startsWith(mainModuleName, "Haxe_macro_");
+					final shouldHoistLoad = StringTools.startsWith(outputModuleName, "Haxe_macro_");
 					if (shouldHoistLoad) {
 						for (tf in typedFns) {
 							final parsedFn = tf.getDeclaration();
@@ -7969,7 +7980,7 @@ class EmitterStage {
 								+ ")")
 								.join(" ");
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -8009,15 +8020,15 @@ class EmitterStage {
 							final parsedFn = tf.getDeclaration();
 							final nameRaw = HxFunctionDecl.getName(parsedFn);
 							final name = ocamlValueIdent(nameRaw);
-							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + outputModuleName + ":" + nameRaw);
 							final previousFunctionName = currentFunctionName;
 							currentFunctionName = nameRaw;
 							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
 							final previousFunctionShadowingValueNames = currentFunctionShadowingValueNames;
 							final previousFunctionLocalOcamlNames = currentFunctionLocalOcamlNames;
 							final previousRegionKey = currentPortableMetalizationRegionKey;
-							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
-								nameRaw);
+							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath,
+								emittedClassName, nameRaw);
 							if (name == "main")
 								sawMain = true;
 
@@ -8036,7 +8047,7 @@ class EmitterStage {
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -8083,15 +8094,15 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							final useStage3ModuleTypeNameBody = mainModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
-							final useStage3HxhxMainJsRouteBody = mainModuleName == "Hxhx_Main"
+							final useStage3ModuleTypeNameBody = outputModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
+							final useStage3HxhxMainJsRouteBody = outputModuleName == "Hxhx_Main"
 								&& nameRaw == "shouldRouteStandardJsToNative";
-							final useStage3WriteWaitStdioReplyBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3WriteWaitStdioReplyBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "writeWaitStdioReply";
-							final useStage3ReadConnectDisplayStdinBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3ReadConnectDisplayStdinBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "readConnectDisplayStdin";
-							final useStage3RunWaitStdioBody = mainModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
-							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(mainModuleName, nameRaw, args[0].getProjectedName()) : null;
+							final useStage3RunWaitStdioBody = outputModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
+							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(outputModuleName, nameRaw, args[0].getProjectedName()) : null;
 							var body = if (useStage3ModuleTypeNameBody) {
 								moduleTypeNameForStage3OcamlBody();
 							} else if (useStage3HxhxMainJsRouteBody) {
@@ -8123,12 +8134,12 @@ class EmitterStage {
 								+ retTy
 								+ ")";
 							};
-							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + outputModuleName + ":" + nameRaw);
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
-							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentFunctionShadowingValueNames = previousFunctionShadowingValueNames;
@@ -8161,7 +8172,7 @@ class EmitterStage {
 						if (inferredType != null && staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
-						installFieldLocalNames(mainClassProjection, f);
+						installFieldLocalNames(classProjection, f);
 						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
@@ -8421,7 +8432,7 @@ class EmitterStage {
 									case ECast(expr, _hint):
 										if (expr != null)
 											exprWorklist.push(expr);
-									case EUntyped(expr):
+									case EParenthesized(expr, _) | EUntyped(expr):
 										if (expr != null)
 											exprWorklist.push(expr);
 									case _:
@@ -8596,12 +8607,12 @@ class EmitterStage {
 						out.insert(2, exceptions.join("\n") + "\n");
 					}
 
-					if (isRoot && sawMain) {
+					if (isEntryPoint && sawMain) {
 						out.push("let () = ignore (main ())");
 						out.push("");
 					}
 
-					final mlPath = haxe.io.Path.join([outAbs, mainModuleName + ".ml"]);
+					final mlPath = haxe.io.Path.join([outAbs, outputModuleName + ".ml"]);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8609,7 +8620,7 @@ class EmitterStage {
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
-					return mainModuleName + ".ml";
+					return outputModuleName + ".ml";
 				} catch (e:TyperError) {
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8634,7 +8645,7 @@ class EmitterStage {
 			EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
 			// Emit the main class first (typed, optional full bodies).
-			final mainPath = isRuntimeProvided ? null : emitMainClass();
+			final mainPath = isRuntimeProvided ? null : emitClass(mainClassProjection, mainModuleName, isRoot);
 			EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
 			if (mainPath != null) {
 				files.push(mainPath);
@@ -8646,16 +8657,20 @@ class EmitterStage {
 			//
 			// Why
 			// - Upstream Haxe modules can declare helper types in the same file (often `private class Foo`).
-			// - Stage3 typing currently models only the chosen `mainClass`, but codegen still needs
-			//   providers for referenced static members like `Foo.bar`.
+			// - Each helper now has its own typed projection. Full-body output must use it
+			//   so calls such as `Foo.bar` reach the authored method instead of a placeholder.
 			for (c in HxModuleDecl.getClasses(decl)) {
 				final nm = HxClassDecl.getName(c);
 				if (nm == null || nm.length == 0 || nm == "Unknown")
 					continue;
 				if (nm == className)
 					continue;
-				EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
-				final p = emitStubClass(c);
+				final helperModuleName = moduleNameForDecl(decl, moduleTypeName, nm);
+				final helperProjection = moduleProjection.findClass(c);
+				if (helperProjection == null)
+					throw "Stage3 emitter cannot find the exact helper-class projection";
+				EmitterStageDebug.traceStage3Module(moduleEmitBodies ? "helper" : "stub", helperModuleName, tm.getParsed().getFilePath());
+				final p = moduleEmitBodies ? emitClass(helperProjection, helperModuleName, false) : emitStubClass(c);
 				if (p != null)
 					files.push(p);
 			}

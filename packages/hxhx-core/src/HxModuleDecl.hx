@@ -10,12 +10,13 @@
 	What:
 	- Optional package path (as dotted string, e.g. "a.b.c").
 	- Ordered import/using directives with their source-language meaning intact.
-	- One or more top-level class declarations.
+	- Zero or more top-level class declarations.
 
 	Note
-	- Haxe modules may contain multiple types. For bootstrap we only model `class`
-	  declarations, but we keep *all* of them so Stage3 emission can resolve
-	  module-local helper types (common in upstream unit tests).
+	- The class-shaped catalog contains real declarations, including parser-modeled
+	  abstracts, structural typedef fields, and module-level functions.
+	- `mainClass` can hold parser fallback metadata when this catalog is empty.
+	  That fallback is not a runtime class and must not enter typed class catalogs.
 **/
 class HxModuleDecl {
 	public final packagePath:String;
@@ -32,9 +33,10 @@ class HxModuleDecl {
 		this.packagePath = packagePath;
 		this.directives = directives == null ? [] : directives.copy();
 		this.mainClass = mainClass;
-		// Keep `classes` non-empty and consistent with `mainClass` for downstream stages.
+		// A type-only or empty module has no runtime class, even when mainClass
+		// supplies fallback metadata for callers that inspect the module header.
 		if (classes == null || classes.length == 0) {
-			this.classes = [mainClass];
+			this.classes = [];
 		} else {
 			var hasMain = false;
 			for (c in classes) {

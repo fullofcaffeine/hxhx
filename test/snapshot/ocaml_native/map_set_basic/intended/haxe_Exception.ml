@@ -65,7 +65,7 @@ let details__impl = fun (self : t) () -> (try (
       tempRight := __assign_15;
       __assign_15
     ));
-    raise (HxRuntime.Hx_return (Obj.repr (let __string_part_16 = "Exception: " in let __string_part_17 = HxString.toStdString ((Obj.magic self : t).toString (Obj.magic self) ()) in let __string_part_18 = HxString.toStdString (!tempRight) in (__string_part_16 ^ __string_part_17) ^ __string_part_18)))
+    Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_16 = "Exception: " in let __string_part_17 = HxString.toStdString ((Obj.magic self : t).toString (Obj.magic self) ()) in let __string_part_18 = HxString.toStdString (!tempRight) in (__string_part_16 ^ __string_part_17) ^ __string_part_18)))
   ) else ());
   let result = ref "" in let current = ref (Obj.magic self) in let prev = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : t) in (
     ignore (while !current != Obj.magic (HxRuntime.hx_null) do ignore ((

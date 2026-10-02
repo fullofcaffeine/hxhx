@@ -45,7 +45,7 @@ let ltrim = fun (s : string) -> (try let l = let __string_receiver_48 = s in HxS
     ignore (r := __new_52);
     __old_51
   )) done);
-  if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_53 = s in let __string_argument_0_54 = !r in let __string_argument_1_55 = HxInt.sub l (!r) in HxString.substr __string_receiver_53 __string_argument_0_54 __string_argument_1_55))) else raise (HxRuntime.Hx_return (Obj.repr s))
+  if !r > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_53 = s in let __string_argument_0_54 = !r in let __string_argument_1_55 = HxInt.sub l (!r) in HxString.substr __string_receiver_53 __string_argument_0_54 __string_argument_1_55))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr s))
 ) with
   | HxRuntime.Hx_return __ret_56 -> (Obj.obj __ret_56 : string) : string)
 
@@ -54,14 +54,14 @@ let rtrim = fun (s : string) -> (try let l = let __string_receiver_57 = s in HxS
     ignore (r := __new_61);
     __old_60
   )) done);
-  if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_62 = s in let __string_argument_0_63 = 0 in let __string_argument_1_64 = HxInt.sub l (!r) in HxString.substr __string_receiver_62 __string_argument_0_63 __string_argument_1_64))) else raise (HxRuntime.Hx_return (Obj.repr s))
+  if !r > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_62 = s in let __string_argument_0_63 = 0 in let __string_argument_1_64 = HxInt.sub l (!r) in HxString.substr __string_receiver_62 __string_argument_0_63 __string_argument_1_64))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr s))
 ) with
   | HxRuntime.Hx_return __ret_65 -> (Obj.obj __ret_65 : string) : string)
 
 let trim = fun (s : string) -> (let __call_arg_0_66 = let __call_arg_0_67 = s in rtrim __call_arg_0_67 in ltrim __call_arg_0_66 : string)
 
 let lpad = fun (s : string) (c : string) (l : int) -> let l = ref l in (try (
-  ignore (if (let __string_receiver_68 = c in HxString.length __string_receiver_68) <= 0 then raise (HxRuntime.Hx_return (Obj.repr s)) else ());
+  ignore (if (let __string_receiver_68 = c in HxString.length __string_receiver_68) <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr s)) else ());
   let buf = Obj.magic (StringBuf.create ()) in (
     ignore (l := HxInt.sub (!l) (let __string_receiver_69 = s in HxString.length __string_receiver_69));
     ignore (while StringBuf.get_length (Obj.magic buf) () < !l do ignore (StringBuf.add (Obj.magic buf) (Obj.repr c)) done);
@@ -72,7 +72,7 @@ let lpad = fun (s : string) (c : string) (l : int) -> let l = ref l in (try (
   | HxRuntime.Hx_return __ret_70 -> (Obj.obj __ret_70 : string) : string)
 
 let rpad = fun (s : string) (c : string) (l : int) -> (try (
-  ignore (if (let __string_receiver_71 = c in HxString.length __string_receiver_71) <= 0 then raise (HxRuntime.Hx_return (Obj.repr s)) else ());
+  ignore (if (let __string_receiver_71 = c in HxString.length __string_receiver_71) <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr s)) else ());
   let buf = Obj.magic (StringBuf.create ()) in (
     ignore (StringBuf.add (Obj.magic buf) (Obj.repr s));
     ignore (while StringBuf.get_length (Obj.magic buf) () < l do ignore (StringBuf.add (Obj.magic buf) (Obj.repr c)) done);
@@ -128,9 +128,9 @@ let _hexUpper = fun value -> let tempResult = ref (0 : int) in (
 )
 
 let _hexValue = fun code -> (try (
-  ignore (if code >= 48 && code <= 57 then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub code 48))) else ());
-  ignore (if code >= 65 && code <= 70 then raise (HxRuntime.Hx_return (Obj.repr (HxInt.add 10 (HxInt.sub code 65)))) else ());
-  ignore (if code >= 97 && code <= 102 then raise (HxRuntime.Hx_return (Obj.repr (HxInt.add 10 (HxInt.sub code 97)))) else ());
+  ignore (if code >= 48 && code <= 57 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub code 48))) else ());
+  ignore (if code >= 65 && code <= 70 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.add 10 (HxInt.sub code 65)))) else ());
+  ignore (if code >= 97 && code <= 102 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.add 10 (HxInt.sub code 97)))) else ());
   -1
 ) with
   | HxRuntime.Hx_return __ret_90 -> (Obj.obj __ret_90 : int) : int)
@@ -175,7 +175,7 @@ let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
         ignore (index := __new_117);
         __old_116
       ));
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
     ignore (if code = 37 && HxInt.add (!index) 2 < (let __bytes_receiver_118 = bytes in HxBytes.length __bytes_receiver_118) then ignore (let tempNumber = ref (0 : int) in let code2 = let __bytes_access_receiver_119 = bytes in let __bytes_access_arg_0_120 = HxInt.add (!index) 1 in HxBytes.get __bytes_access_receiver_119 __bytes_access_arg_0_120 in (
       ignore (if code2 >= 48 && code2 <= 57 then let __assign_121 = HxInt.sub code2 48 in (
@@ -208,7 +208,7 @@ let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
         let lo = !tempNumber1 in if hi >= 0 && lo >= 0 then ignore ((
           ignore (let __array_receiver_131 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_132 = HxInt.logor (HxInt.shl hi 4) lo in HxArray.push __array_receiver_131 __array_arg_0_132);
           ignore (index := HxInt.add (!index) 3);
-          raise (HxRuntime.Hx_continue)
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ()
       )
     )) else ());
@@ -225,7 +225,7 @@ let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
 let urlDecode = fun s -> let __call_arg_0_2 = s in _urlDecodeOcaml __call_arg_0_2
 
 let _quoteUnixArgOcaml = fun (argument : string) -> (try (
-  ignore (if (let __string_receiver_138 = argument in HxString.length __string_receiver_138) = 0 then raise (HxRuntime.Hx_return (Obj.repr "''")) else ());
+  ignore (if (let __string_receiver_138 = argument in HxString.length __string_receiver_138) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "''")) else ());
   let safe = ref true in let _g = ref 0 in let _g1 = let __string_receiver_139 = argument in HxString.length __string_receiver_139 in (
     ignore (try while !_g < _g1 do ignore (let index = let __old_140 = !_g in let __new_141 = HxInt.add __old_140 1 in (
       ignore (_g := __new_141);
@@ -235,10 +235,10 @@ let _quoteUnixArgOcaml = fun (argument : string) -> (try (
         safe := __assign_161;
         __assign_161
       ));
-      raise (HxRuntime.Hx_break)
+      Stdlib.raise (HxRuntime.Hx_break)
     )) else ()) done with
       | HxRuntime.Hx_break -> ());
-    ignore (if !safe then raise (HxRuntime.Hx_return (Obj.repr argument)) else ());
+    ignore (if !safe then Stdlib.raise (HxRuntime.Hx_return (Obj.repr argument)) else ());
     let __string_part_164 = "'" in let __string_part_165 = HxString.toStdString (HxArray.join (let __string_receiver_162 = argument in let __string_argument_0_163 = "'" in HxString.split __string_receiver_162 __string_argument_0_163) "'\"'\"'" (fun x -> x)) in let __string_part_166 = "'" in (__string_part_164 ^ __string_part_165) ^ __string_part_166
   )
 ) with

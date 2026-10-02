@@ -91,7 +91,7 @@ class PhpThisValueSlotFacts {
 			case EArrayDecl(values):
 				expressionListNeedsValueSlot(values);
 			case EArrayAccess(receiver, index): expressionNeedsValueSlot(receiver) || expressionNeedsValueSlot(index);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				expressionNeedsValueSlot(inner);
 			case _:
 				false;

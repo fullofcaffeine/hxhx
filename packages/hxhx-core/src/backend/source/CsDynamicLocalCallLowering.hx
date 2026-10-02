@@ -34,7 +34,7 @@ class CsDynamicLocalCallLowering {
 			case EIdent(name): final local = locals.findByProjectedName(name); local != null && local.getBinding().getType().unwrapNull().isDynamic();
 			case ECast(inner, _):
 				dependsOnExactDynamicLocal(inner, locals);
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				dependsOnExactDynamicLocal(inner, locals);
 			case _:
 				false;

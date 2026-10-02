@@ -14,14 +14,18 @@ class JsFunctionScope {
 	final instanceFields:haxe.ds.StringMap<String>;
 	final superClassRef:Null<String>;
 	final localCatalog:Null<TypedBackendLocalCatalog>;
+	final fieldCatalog:Null<TypedBackendFieldReadCatalog>;
+	final runtimeTypes:Null<JsRuntimeTypeScope>;
 	var tempCounter:Int = 0;
 
 	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>, ?superClassRef:String,
-			?localCatalog:TypedBackendLocalCatalog) {
+			?localCatalog:TypedBackendLocalCatalog, ?fieldCatalog:TypedBackendFieldReadCatalog, ?runtimeTypes:JsRuntimeTypeScope) {
 		this.classRefs = classRefs == null ? new haxe.ds.StringMap<String>() : classRefs;
 		this.instanceFields = instanceFields == null ? new haxe.ds.StringMap<String>() : instanceFields;
 		this.superClassRef = superClassRef;
 		this.localCatalog = localCatalog;
+		this.fieldCatalog = fieldCatalog;
+		this.runtimeTypes = runtimeTypes;
 	}
 
 	function reserve(name:String):String {
@@ -55,6 +59,16 @@ class JsFunctionScope {
 		final local = locals.get(raw);
 		if (local != null)
 			return local;
+		// Exact bare reads can belong to a static or inherited field. Locals have
+		// already been resolved above, so lexical shadowing retains precedence.
+		final read = fieldCatalog == null ? null : fieldCatalog.findByProjectedName(raw);
+		if (read != null) {
+			final field = read.getField();
+			final receiver = field.getIsStatic() ? classRefs.get(field.getOwner().getCanonicalName()) : "this";
+			if (receiver == null)
+				throw "JavaScript bare field has no exact emitted owner: " + field.getCanonicalKey();
+			return receiver + JsNameMangler.propertySuffix(field.getName());
+		}
 		return instanceFields.get(raw);
 	}
 
@@ -85,12 +99,14 @@ class JsFunctionScope {
 		return reserve("__tmp_fallback");
 	}
 
-	public function exprScope():JsEmitScope {
+	/** Initializers select their own executable catalog even when emitted inside a constructor. */
+	public function exprScope(?initializerTypes:JsRuntimeTypeScope):JsEmitScope {
 		final self = this;
 		return {
 			resolveLocal: function(name:String):Null<String> return self.resolveLocal(name),
 			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name),
-			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef()
+			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef(),
+			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes
 		};
 	}
 }

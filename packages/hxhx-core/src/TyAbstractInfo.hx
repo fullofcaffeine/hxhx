@@ -15,12 +15,13 @@ class TyAbstractInfo extends TyNominalInfo {
 	final implicitToTypes:Array<TyType>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
+	final enumDomain:Null<TyEnumAbstractDomain>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<TyTypeParameterId>, implicitFromTypes:Array<TyType>,
-			implicitToTypes:Array<TyType>, visibility:HxVisibility = HxVisibility.Public) {
+			implicitToTypes:Array<TyType>, visibility:HxVisibility = HxVisibility.Public, ?enumDomain:TyEnumAbstractDomain) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility);
 		this.underlyingType = underlyingType;
@@ -29,7 +30,12 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.implicitToTypes = implicitToTypes == null ? [] : implicitToTypes.copy();
 		this.unaryOperators = new haxe.ds.StringMap();
 		this.binaryOperators = new haxe.ds.StringMap();
+		this.enumDomain = enumDomain;
 	}
+
+	/** Ordered enum members before backing-value erasure; null for ordinary abstracts. */
+	public function getEnumDomain():Null<TyEnumAbstractDomain>
+		return enumDomain;
 
 	static function unaryKey(op:HxUnaryOperator, fixity:HxUnaryFixity):String {
 		return HxUnaryOperatorTools.sourceToken(op) + "|" + (fixity == HxUnaryFixity.Prefix ? "prefix" : "postfix");

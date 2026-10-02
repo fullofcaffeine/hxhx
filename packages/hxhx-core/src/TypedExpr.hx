@@ -6,12 +6,15 @@
 	of creating a module or declaration cycle between a node and its kind.
 **/
 enum TypedExprTag {
+	Parenthesized;
 	NullValue;
 	BoolValue;
 	StringValue;
 	IntValue;
 	FloatValue;
 	EnumValue;
+	RuntimeTypeValue;
+	RuntimeTypeTest;
 	ThisValue;
 	SuperValue;
 	LocalRead;
@@ -77,11 +80,13 @@ class TypedExpr {
 	final fieldInfo:Null<TyFieldInfo>;
 	final localBindings:Array<TyLocalBinding>;
 	final extensionProvider:Null<TyNominalTypeId>;
+	final runtimeTypeTarget:Null<TypedRuntimeTypeTarget>;
+	final catchUses:Array<TypedCatchUse>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
 			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo, ?localBindings:Array<TyLocalBinding>,
-			?extensionProvider:TyNominalTypeId) {
+			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget, ?catchUses:Array<TypedCatchUse>) {
 		this.tag = tag;
 		this.type = type == null ? TyType.unknown() : type;
 		this.position = position;
@@ -98,6 +103,8 @@ class TypedExpr {
 		this.fieldInfo = fieldInfo;
 		this.localBindings = localBindings == null ? [] : localBindings.copy();
 		this.extensionProvider = extensionProvider;
+		this.runtimeTypeTarget = runtimeTypeTarget;
+		this.catchUses = catchUses == null ? [] : catchUses.copy();
 	}
 
 	public static function nullValue(type:TyType, position:Null<HxPos>):TypedExpr
@@ -118,8 +125,25 @@ class TypedExpr {
 	public static function enumValue(name:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(EnumValue, type, position, [name]);
 
+	/** Carries a class value without reconstructing its identity from source text. */
+	public static function runtimeTypeValue(target:TypedRuntimeTypeTarget, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(RuntimeTypeValue, target.getValueType(), position, null, null, null, false, 0, 0.0, null, null, null, null, null, null, null,
+			target);
+
+	/** Evaluates only the value child; the target was selected in the type namespace. */
+	public static function runtimeTypeTest(value:TypedExpr, target:TypedRuntimeTypeTarget, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(RuntimeTypeTest, TyType.fromHintText("Bool"), position, null, [value], null, false, 0, 0.0, null, null, null, null, null, null,
+			null, target);
+
+	public function getRuntimeTypeTarget():Null<TypedRuntimeTypeTarget>
+		return runtimeTypeTarget;
+
 	public static function thisValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(ThisValue, type, position);
+
+	/** Preserve source grouping without allocating a local binding or control destination. */
+	public static function parenthesized(inner:TypedExpr, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(Parenthesized, inner.getType(), position, null, [inner]);
 
 	public static function superValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(SuperValue, type, position);
@@ -228,8 +252,12 @@ class TypedExpr {
 	public static function range(start:TypedExpr, end:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Range, type, position, null, [start, end]);
 
-	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(Cast, type, position, [typeHint], [expression]);
+	/** Only a selected abstract conversion may certify unchanged value storage; authored casts use false. */
+	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>, preservesRepresentation:Bool = false):TypedExpr
+		return new TypedExpr(Cast, type, position, [typeHint], [expression], null, preservesRepresentation);
+
+	public function isRepresentationPreservingCast():Bool
+		return tag == Cast && boolValue;
 
 	public static function untypedValue(expression:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Untyped, type, position, null, [expression]);
@@ -309,13 +337,28 @@ class TypedExpr {
 	public function getLocalBindings():Array<TyLocalBinding>
 		return localBindings.copy();
 
+	/** Implicit runtime uses owned by an exact catch-handler lambda. */
+	public function getCatchUses():Array<TypedCatchUse>
+		return catchUses.copy();
+
+	public function withCatchUses(uses:Array<TypedCatchUse>):TypedExpr
+		return new TypedExpr(tag, type, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, uses);
+
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
-		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind, fieldInfo, localBindings, extensionProvider);
+		return new TypedExpr(tag, type, position, texts, children, patterns,
+			tag != Cast ? boolValue : boolValue
+			&& children.length == 1
+			&& expressions.length == 1
+			&& children[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey(),
+			intValue, floatValue, declaration, unaryOperator, unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget,
+			catchUses);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
-		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
-			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider);
+		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns,
+			tag != Cast ? boolValue : boolValue
+			&& semanticType.getSemanticKey() == type.getSemanticKey(), intValue, floatValue, declaration, unaryOperator,
+			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses);
 }

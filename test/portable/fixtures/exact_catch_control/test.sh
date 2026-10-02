@@ -35,9 +35,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v6'
+if (report.schemaVersion !== 89
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v7'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| !sha256.test(report.controlCatchRevision)) {
 	fail('unexpected exact-catch report schema, model, inventory, or revision')
@@ -101,8 +101,8 @@ for (const chain of catches) {
 		|| chain.targetNativeRuntimeTags.join(',') !== 'OcamlExn'
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
-		|| chain.proofId !== 'represented-value-catch-control-v6'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v113'
+		|| chain.proofId !== 'represented-value-catch-control-v7'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v114'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -204,8 +204,8 @@ if (orderedStart < 0
 	fail('generated ordered catch syntax did not mechanically preserve Int, Bool, Dynamic order and Bool binding')
 }
 if (!source.includes('HxRuntime.Hx_return')
-	|| !source.includes('HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)')
-	|| !source.includes('HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)')
+	|| !source.includes('HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)')
+	|| !source.includes('HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)')
 	|| !source.includes('HxRuntime.Hx_exception')
 	|| !source.includes('| __exn_')) {
 	fail('generated catch syntax does not preserve both exception channels and private controls')
@@ -267,7 +267,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| report.lowering.controlCatches.length !== 19

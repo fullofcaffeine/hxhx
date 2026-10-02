@@ -1,0 +1,7 @@
+-cp test/reflaxe_ocaml_enum_local_result
+-main EnumReturnProbe
+--no-output
+-lib reflaxe.ocaml
+-D ocaml_output=.tmp/reflaxe-ocaml-enum-local-result/out
+-D ocaml_build=native
+-D reflaxe_ocaml_disable_expression_preprocessors

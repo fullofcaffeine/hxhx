@@ -3,7 +3,8 @@
  * Runs one unchanged local command while holding the Haxe-family heavy-run lease.
  *
  * The wrapper is scheduling only: it never changes the child command or its
- * correctness result. CI bypasses the user-scoped lease, while nested local
+ * correctness result. Status messages go to stderr so stdout remains the child output.
+ * CI bypasses the user-scoped lease, while nested local
  * wrappers reuse the outer owner identity without releasing its lease.
  */
 
@@ -166,7 +167,7 @@ async function waitForLease(options, ownerPid, cancellation) {
     const summary = leaseSummary(result)
     const signature = waitingStateSignature(summary)
     if (signature !== lastSignature) {
-      console.log(
+      console.error(
         `HAXE_FAMILY_HEAVY_RUN:WAITING label=${JSON.stringify(options.label)} ` +
           `owner_pid=${summary.ownerPid || 'unknown'} owner=${JSON.stringify(summary.ownerLabel || 'unknown')} ` +
           `repository=${JSON.stringify(summary.ownerRepository || 'unknown')}`
@@ -226,7 +227,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
       return 0
     }
     if (isCiEnvironment(env)) {
-      console.log(`HAXE_FAMILY_HEAVY_RUN:CI_BYPASS label=${JSON.stringify(options.label)}`)
+      console.error(`HAXE_FAMILY_HEAVY_RUN:CI_BYPASS label=${JSON.stringify(options.label)}`)
       const result = await runCommand(options.command, env, cancellation)
       return result.code === null ? SIGNAL_EXIT_CODES.get(result.signal) || 1 : result.code
     }
@@ -253,7 +254,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
       heartbeat.unref()
     }
 
-    console.log(
+    console.error(
       `HAXE_FAMILY_HEAVY_RUN:${lease.status.toUpperCase()} label=${JSON.stringify(options.label)} owner_pid=${ownerPid}`
     )
     const childEnv = {
@@ -274,7 +275,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
         ownerPid: ownedRecord.owner.pid,
         ownerToken: ownedRecord.owner.token
       })
-      console.log(`HAXE_FAMILY_HEAVY_RUN:LEASE_${released.status.toUpperCase()}`)
+      console.error(`HAXE_FAMILY_HEAVY_RUN:LEASE_${released.status.toUpperCase()}`)
     }
     for (const signal of SIGNAL_EXIT_CODES.keys()) process.removeListener(signal, onSignal)
   }

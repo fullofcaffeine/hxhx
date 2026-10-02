@@ -886,14 +886,14 @@ class CompilationContext {
 	}
 
 	/**
-		Records why one sealed enum array element needs `HxEnum`.
+		Records the runtime module required to preserve an array element type.
 
-		The container plan already owns the exact array slot, enum identity, and
+		The container plan already owns the exact array slot, input type, and
 		boxing operation. Packaging receives that typed reason without inspecting
 		the generated `HxArray.push` expression.
 	**/
-	public function recordEnumDynamicContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
-		OcamlEnumRuntimeRequirementRecorder.recordContainerElement(runtimeRequirements, decision);
+	public function recordContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
+		reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/**

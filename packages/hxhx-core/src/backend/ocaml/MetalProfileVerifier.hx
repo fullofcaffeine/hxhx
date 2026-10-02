@@ -167,6 +167,8 @@ class MetalProfileVerifier {
 
 	static function verifyExpr(filePath:String, className:String, fnName:String, stmtPos:Null<HxPos>, expr:HxExpr, violations:Array<MetalViolation>):Void {
 		switch (expr) {
+			case EParenthesized(inner, position):
+				verifyExpr(filePath, className, fnName, position, inner, violations);
 			case EUntyped(inner):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNTYPED, "`untyped` expression",
 					"metal profile forbids `untyped` because it bypasses typed lowering and native guarantees",

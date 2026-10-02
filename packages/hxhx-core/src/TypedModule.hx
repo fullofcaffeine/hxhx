@@ -79,6 +79,7 @@ class TypedModule {
 		structural typed body.
 	**/
 	public function getBackendDeclaration():HxModuleDecl {
+		backendDeclarationCatalog.assertRuntimeTypeOperandsAbsent();
 		return backendDeclaration;
 	}
 

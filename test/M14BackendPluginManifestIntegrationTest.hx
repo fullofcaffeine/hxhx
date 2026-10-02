@@ -2,8 +2,8 @@ import backend.BackendAbi;
 import backend.plugin.BackendPluginManifestKind;
 import backend.plugin.BackendPluginManifestParser;
 import hxhx.BackendPluginManifestResolver;
-import hxhx.CompilerJsonParser;
 
+/** Checks typed plugin metadata and the resolver's provider/native boundaries. */
 class M14BackendPluginManifestIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -55,12 +55,7 @@ class M14BackendPluginManifestIntegrationTest {
 	}
 
 	static function main():Void {
-		final numbers:haxe.DynamicAccess<Dynamic> = cast CompilerJsonParser.parse('{"int":7,"float":1.5,"exponent":2e3}');
-		assertTrue(Std.isOfType(numbers.get("int"), Int) && numbers.get("int") == 7, "integer JSON token lost its Int payload");
-		assertTrue(Std.isOfType(numbers.get("float"), Float)
-			&& numbers.get("float") == 1.5, "fractional JSON token lost its Float payload");
-		assertTrue(Std.isOfType(numbers.get("exponent"), Float)
-			&& numbers.get("exponent") == 2000.0, "exponent JSON token lost its Float payload");
+		M14CompilerJsonValueIntegrationTest.run();
 
 		final parsed = BackendPluginManifestParser.parse(manifestJson("linked-provider", "M14ResolverFixtureProvider"), "fixture://valid-haxe");
 		assertTrue(parsed.schemaVersion == BackendPluginManifestParser.SCHEMA_VERSION, "unexpected schema version");

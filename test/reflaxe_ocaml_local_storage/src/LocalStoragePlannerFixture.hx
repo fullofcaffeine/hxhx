@@ -802,6 +802,40 @@ class LocalStoragePlannerFixture {
 				&& requirement.subject.id == "LocalDynamicEnum",
 				"the runtime requirement should trace HxEnum back to the exact sealed source conversion");
 		}
+		final boolArrayInput = Context.typeExpr(macro {
+			final flag = false;
+			final factory = () -> true;
+			final nullable:Null<Bool> = null;
+			final exact:Array<Bool> = [false, true];
+			final payload:{items:Array<Dynamic>} = {items: [false, flag, factory(), 0, null, nullable]};
+			payload;
+		});
+		final boolArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|bool-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:bool-array-v1",
+			pipelineRevision: "ocaml-function-plans-v65"
+		};
+		final boolArrayPlan = OcamlContainerElementPlanner.planExpression(boolArrayInput, boolArrayBinding);
+		final boolConversions = boolArrayPlan.decisions();
+		assertTrue(boolConversions.length == 3, "Bool literals, local reads, and calls need boxes; nullable values and Array<Bool> do not use this proof");
+		OcamlContainerElementPlanner.requireCompleteness(boolArrayInput, boolArrayBinding, boolArrayPlan);
+		for (conversion in boolConversions) {
+			assertTrue(conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+				&& conversion.inputCarrierTypeId == "bool",
+				"Boolean array storage must retain its exact conversion");
+			final requirement = reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.requirement(conversion);
+			assertTrue(requirement.rootModules.join(",") == "HxRuntime" && requirement.decisionId == conversion.id,
+				"Boolean boxing must retain its source-owned runtime dependency");
+		}
+		expectFailure("missing Boolean array conversion", "missing-required-conversion",
+			() -> new OcamlContainerElementPlan([], boolArrayPlan.requiredConversionIds()));
+		final wrongBoolCarrier = haxe.Json.parse(haxe.Json.stringify(boolConversions[0]));
+		wrongBoolCarrier.inputCarrierTypeId = "int";
+		expectFailure("wrong Boolean array carrier", "invalid-proof", () -> new OcamlContainerElementPlan([cast wrongBoolCarrier]));
+		final wrongBoolProof = haxe.Json.parse(haxe.Json.stringify(boolConversions[0]));
+		wrongBoolProof.proofId = "dynamic-array-element-box-exact-enum-v1";
+		expectFailure("wrong Boolean array proof", "invalid-proof", () -> new OcamlContainerElementPlan([cast wrongBoolProof]));
 		final dynamicArrayInput = Context.typeExpr(macro {
 			final values:Array<Dynamic> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
 			values;

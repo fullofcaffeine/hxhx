@@ -23,6 +23,33 @@ What this does:
 - `guard:hx-format:changed` checks only changed `.hx` files.
 - Both commands still call `haxelib run formatter`; they do not define a repo-specific style.
 
+Each invocation starts the formatter once. Formatter output appears as it arrives,
+with stdout and stderr kept separate. Wrapper progress messages use stderr.
+The command returns the formatter's exit code, including a failed check.
+
+The formatter has a 240-second deadline. Set `HX_FORMAT_TIMEOUT_SECONDS` to a
+positive integer to change it. A timeout returns 124; Ctrl-C returns 130;
+SIGTERM returns 143. On Linux and macOS, these exits stop the owned formatter
+process group, including the Neko launcher and JavaScript formatter.
+
+When an automation tool returns a running-session handle, continue that session
+until it exits. A tool's initial yield is not a formatter timeout. Starting
+another command creates another formatter invocation.
+
+To check process cleanup and compare formatted bytes with the official formatter:
+
+```bash
+npm run test:hxhx:hx-format-guard
+```
+
+This test requires the formatter haxelib. It covers success, failed checks,
+streaming output, delayed completion, timeout, SIGINT, and SIGTERM on POSIX hosts.
+
+The [measured formatter workload](../00-project/CHANGED_HAXE_FORMATTER_MEASUREMENT.md)
+records startup, processing, memory, and report-only latency budgets. Four small
+files took 0.26–0.28 seconds through the wrapper. A historical 21-file change
+still took about 115 seconds; large-file processing remains the dominant cost.
+
 Full guard:
 
 ```bash

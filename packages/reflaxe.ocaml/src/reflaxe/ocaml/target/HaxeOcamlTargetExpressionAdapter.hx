@@ -36,6 +36,9 @@ class HaxeOcamlTargetExpressionAdapter {
 
 	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
 		return switch (expression.expr) {
+			case TParenthesis(inner):
+				// Match native grouping without inventing a target-owned binding path.
+				TypeTools.toString(inner.t) == TypeTools.toString(expression.t) ? copyExpression(inner, path) : null;
 			case TCall(callee, []) if (TypeTools.toString(expression.t) == "Void"):
 				copyCall(callee, path);
 			case TConst(constant): final literal = HaxeOcamlTargetLiteralAdapter.fromConstant(constant,

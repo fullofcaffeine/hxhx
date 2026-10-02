@@ -315,6 +315,19 @@ class OcamlAnonymousStructureContract {
 	/** Fails when one operation does not exactly match its sealed structure. */
 	public static function requireOperation(operation:OcamlAnonymousStructureOperationDecision, structure:OcamlAnonymousStructureDecision):Void {
 		requireStructure(structure);
+		requireOperationForValidatedStructure(operation, structure);
+	}
+
+	/**
+		Checks every operation fact against a structure already validated by its owner.
+
+		Only plan construction can call this directly. Its synchronous constructor
+		owns deep copies of the structures and validates them before operations.
+		It must not expose or mutate those copies between these checks. Public
+		validation and later plan lookups still use `requireOperation` above.
+	**/
+	@:allow(reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan)
+	static function requireOperationForValidatedStructure(operation:OcamlAnonymousStructureOperationDecision, structure:OcamlAnonymousStructureDecision):Void {
 		if (operation == null)
 			throw "reflaxe.ocaml [ocaml-anonymous:missing-operation]: anonymous operation is missing";
 		if (operation.structureId != structure.id
@@ -356,7 +369,9 @@ class OcamlAnonymousStructureContract {
 				case Create:
 			}
 		}
-		if (operation.id != operationId(copyOperation(operation, "")))
+		// The fingerprint excludes the operation ID and derived runtime records.
+		// Validate those records below without rebuilding them for this hash.
+		if (operation.id != operationId(operation))
 			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: anonymous operation "${operation.id}" does not match its canonical facts';
 		final expectedRuntimeRequirements = runtimeRequirementIdsFor(operation);
 		if (operation.runtimeRequirementIds.join("\n") != expectedRuntimeRequirements.join("\n")) {

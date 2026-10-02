@@ -1,0 +1,9 @@
+-cp test
+-cp test/compiler_metadata_native
+-cp packages/hxhx-core/src
+-main CompilerMetadataNativeTest
+--no-output
+-lib reflaxe.ocaml
+-D ocaml_output=.tmp/compiler-metadata-native/out
+-D ocaml_build=native
+-D reflaxe_ocaml_disable_expression_preprocessors

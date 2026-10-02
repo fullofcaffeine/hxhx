@@ -24,6 +24,16 @@ class M14HihExprTextParserIntegrationTest {
 	}
 
 	static function main() {
+		final rawUntypedTry = switch (HxParser.parseExprText('try { untyped probe(); } catch (error:String) { error; }')) {
+			case ETryCatchRaw(raw): raw;
+			case _: throw "try expression did not retain its bootstrap text";
+		};
+		switch (TypedBodyBuilder.recoveredStructuralExpression(rawUntypedTry)) {
+			case ECall(EIdent("__hxhx_try"), [ELambda([], EUntyped(ECall(EIdent("probe"), []))), _, _]):
+			case _:
+				throw "try expression merged the untyped keyword into the called identifier";
+		}
+
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
@@ -53,7 +63,9 @@ class M14HihExprTextParserIntegrationTest {
 
 		final returnMacroArgument = HxParser.parseFunctionBodyText("shouldFail(return (null : Null<String>));");
 		switch (returnMacroArgument) {
-			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(ECast(ENull, "Null<String>"))]), _)]:
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EReturn(EParenthesized(ECast(ENull, "Null<String>"), _))]), _)
+			]:
 			case [SExpr(EUnsupported(raw), _)]:
 				fail("return macro argument stayed opaque: " + raw);
 			case _:
@@ -61,7 +73,7 @@ class M14HihExprTextParserIntegrationTest {
 		}
 		final standaloneTypedNullReturn = HxParser.parseFunctionBodyText("return (null : Null<String>);");
 		switch (standaloneTypedNullReturn) {
-			case [SReturn(ECast(ENull, "Null<String>"), _)]:
+			case [SReturn(EParenthesized(ECast(ENull, "Null<String>"), _), _)]:
 			case _:
 				fail("standalone typed-null return no longer parses as a return statement");
 		}
@@ -666,7 +678,8 @@ class M14HihExprTextParserIntegrationTest {
 		switch (typedLocalFunctionBlockStmts[0]) {
 			case SReturn(ETryCatchRaw(raw), _):
 				fail("typed local function block expression should not stay opaque: " + raw);
-			case SReturn(ECall(ELambda(_, _), _), _):
+			case SReturn(ECall(ECast(ELambda(["helper"], _), signature), _), _):
+				assertTrue(signature == "(()->String)->Dynamic", "local function continuation lost its written callable type");
 			case other:
 				fail("expected typed local function block expression to lower through lambda continuations, got " + Type.enumConstructor(other));
 		}
@@ -973,8 +986,8 @@ class M14HihExprTextParserIntegrationTest {
 			case STry(_, catches, _):
 				assertTrue(catches.length == 1, "expected one inline neko/else throw catch");
 				switch (catches[0].body) {
-					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
-					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SThrow(EParenthesized(EIdent("e"), _), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EParenthesized(EIdent("e"), _), _)], _), null, _)], _):
 					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), null, _)], _):
 						fail("inline neko/else throw parsed as unsupported expression: " + raw);
 					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), null, _)], _):
@@ -1013,8 +1026,8 @@ class M14HihExprTextParserIntegrationTest {
 			case [SVar("s", _, _, _), STry(_, catches, _), SReturn(EIdent("s"), _)]:
 				assertTrue(catches.length == 1, "expected module inline neko/else catch");
 				switch (catches[0].body) {
-					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
-					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SThrow(EParenthesized(EIdent("e"), _), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EParenthesized(EIdent("e"), _), _)], _), null, _)], _):
 					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), _, _)], _):
 						fail("module inline neko/else throw parsed as unsupported expression: " + raw);
 					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), _, _)], _):
@@ -1064,7 +1077,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected null coalescing assignment expression");
 		}
 		switch (nullCoalescingStmts[2]) {
-			case SVar("notNull", _, EBinop("??", ECast(EIdent("one"), "Null<Float>"), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
+			case SVar("notNull", _, EBinop("??", EParenthesized(ECast(EIdent("one"), "Null<Float>"), _), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
 			case SVar(_, _, EUnsupported(raw), _):
 				fail("null coalescing throw fallback parsed as unsupported: " + raw);
 			case _:
@@ -1124,7 +1137,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (numericSuffixStmts[3]) {
 			case SExpr(ECall(EIdent("eq"), [
 				ECall(EIdent("__hxhx_int_literal"), [EString("0xFFFFFFFF"), EString("u32")]),
-				ECast(EInt(-1), "UInt")
+				EParenthesized(ECast(EInt(-1), "UInt"), _)
 			]), _):
 			case _:
 				fail("expected u32 hex suffix and UInt cast to preserve numeric intent");
@@ -1417,7 +1430,7 @@ class M14HihExprTextParserIntegrationTest {
 		final objectPatternReturnStmts = HxParser.parseFunctionBodyText("return switch (payload.expr) { case Wrap(Text(s)): s; case Group({ value : Wrap(Text(s)) }) | Raw({ value : Wrap(Text(s)) }): s; case Pick(_, name): name; case At(_, { value : Wrap(IntText(i) | FloatText(i)) }): Std.string(i); case InOp(In, _, { value : inner, pos : _ }): Std.string(inner); case _: \"none\"; };");
 		assertTrue(objectPatternReturnStmts.length == 1, "expected object-pattern switch return statement");
 		switch (objectPatternReturnStmts[0]) {
-			case SReturn(ESwitch(EField(EIdent(receiver), field), patterns, exprs), _):
+			case SReturn(ESwitch(EParenthesized(EField(EIdent(receiver), field), _), patterns, exprs), _):
 				assertTrue(receiver == "payload" && field == "expr", "expected expression switch scrutinee field access");
 				assertTrue(patterns.length == 6, "expected expression switch cases");
 				assertTrue(exprs.length == 6, "expected expression switch branch expressions");
@@ -1472,9 +1485,9 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(EIdent("values"), patterns, _):
 				assertTrue(patterns.length == 2, "expected guarded switch cases");
 				switch (patterns[0]) {
-					case PLengthGuard(PBind("rest"), "rest", 3):
+					case PLengthGuard(PCapture("rest", PWildcard), "rest", 3):
 					case _:
-						fail("expected guarded bind pattern with length comparison");
+						fail("expected explicit wildcard capture with length comparison");
 				}
 			case EUnsupported(raw):
 				fail("guarded switch expression parsed as unsupported: " + raw);
@@ -1495,6 +1508,11 @@ class M14HihExprTextParserIntegrationTest {
 					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
+				}
+				switch (patterns[2]) {
+					case PCapture("x", PWildcard):
+					case _:
+						fail("expected explicit var to retain its wildcard capture");
 				}
 				final comparePatternExpr = HxParser.parseExprText('switch v { case One(x) if (x <= 1): "<=1"; case One(x) if (x > 1): ">1"; case _: "_"; }');
 				switch (comparePatternExpr) {
@@ -1659,7 +1677,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro class follow-up field push to parse");
 		}
 		switch (macroClassVars[2]) {
-			case SExpr(EField(EAnon(names, _), "fields"), _):
+			case SExpr(EField(EParenthesized(EAnon(names, _), _), "fields"), _):
 				assertTrue(names.indexOf("fields") >= 0, "expected parenthesized macro class quote to expose fields");
 			case SExpr(EUnsupported(raw), _):
 				fail("parenthesized macro class field access parsed as unsupported: " + raw);
@@ -1681,7 +1699,7 @@ class M14HihExprTextParserIntegrationTest {
 		final conditionalClassSwitchStmts = HxParser.parseFunctionBodyText('switch (#if (neko || cs || python) Type.getClassName(c) #else c #end) { case #if (neko || cs || python) "Array" #else cast Array #end: value = 1; }');
 		assertTrue(conditionalClassSwitchStmts.length == 1, "expected conditional class switch to parse");
 		switch (conditionalClassSwitchStmts[0]) {
-			case SSwitch(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), [PString("Array")],
+			case SSwitch(EParenthesized(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), _), [PString("Array")],
 				[SBlock([SExpr(EBinop("=", EIdent("value"), EInt(1)), _)], _)], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("conditional class switch parsed as unsupported: " + raw);
@@ -1692,7 +1710,7 @@ class M14HihExprTextParserIntegrationTest {
 		final denseConditionalClassSwitchStmts = HxParser.parseFunctionBodyText('switch(#if(neko||cs||python)Type.getClassName(c)#else c #end){case #if(neko||cs||python)"Array"#else cast Array #end:value=1;}');
 		assertTrue(denseConditionalClassSwitchStmts.length == 1, "expected dense conditional class switch to parse");
 		switch (denseConditionalClassSwitchStmts[0]) {
-			case SSwitch(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), [PString("Array")], _):
+			case SSwitch(EParenthesized(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), _), [PString("Array")], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("dense conditional class switch parsed as unsupported: " + raw);
 			case _:
@@ -1702,7 +1720,7 @@ class M14HihExprTextParserIntegrationTest {
 		final castClassSwitchStmts = HxParser.parseFunctionBodyText('switch (c) { case cast Array: value = 1; case cast haxe.ds.StringMap: value = 2; }');
 		assertTrue(castClassSwitchStmts.length == 1, "expected cast class switch to parse");
 		switch (castClassSwitchStmts[0]) {
-			case SSwitch(EIdent("c"), [PEnumValue("Array"), PEnumValue("haxe.ds.StringMap")], _):
+			case SSwitch(EParenthesized(EIdent("c"), _), [PEnumValue("Array"), PEnumValue("haxe.ds.StringMap")], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("cast class switch parsed as unsupported: " + raw);
 			case _:
@@ -1788,7 +1806,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (exprMetaCalls[0]) {
 			case SExpr(ECall(EIdent("eq"), [
 				EField(ECall(EIdent("readMeta"), [
-					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString(""), EString("value")])
+					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString(""), EParenthesized(EString("value"), _)])
 				]), "name"),
 				EString("tag")
 			]), _):

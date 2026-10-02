@@ -4,6 +4,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Compile mixed arithmetic and verify emitted OCaml plus native output. */
 class M14MetalNumericLoweringIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -69,8 +70,8 @@ class M14MetalNumericLoweringIntegrationTest {
 
 		var failure:Null<String> = null;
 		try {
-			final parsed = ParserStage.parse(source, "MetalNumericMain.hx");
-			final typed = TyperStage.typeModule(parsed);
+			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final program = MacroStage.expandProgram([typed], []);
 			final context = new BackendContext(outDir, null, "Main", true, true, HxDefineMap.fromRawDefines(["ocaml_profile=metal"]));
 			final result = new OcamlTargetCore().emit(program, context);

@@ -62,6 +62,7 @@ class CatchRuntimeUseFixture {
 			source: {file: "src/Main.hx", min: 20, max: 32},
 			order: 0,
 			variableName: "error",
+			localId: "lexical-local-v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			semanticTypeId: "Dynamic",
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: "Obj.t",
@@ -117,6 +118,7 @@ class CatchRuntimeUseFixture {
 			source: {file: "src/Main.hx", min: 20, max: 32},
 			order: 0,
 			variableName: "value",
+			localId: "lexical-local-v1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 			semanticTypeId: "Int",
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: "int",
@@ -170,6 +172,7 @@ class CatchRuntimeUseFixture {
 			source: {file: "src/Main.hx", min: 33, max: 48},
 			order: 1,
 			variableName: "error",
+			localId: "lexical-local-v1:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 			semanticTypeId: "haxe.ValueException",
 			signalCarrierTypeId: "Obj.t",
 			outputCarrierTypeId: "Haxe_ValueException.t",
@@ -296,9 +299,9 @@ class CatchRuntimeUseFixture {
 		finalOutput.finishProgram();
 
 		final rendered = new OcamlASTPrinter().printExpr(expression);
-		assertTrue(rendered.contains("HxRuntime.Hx_return returned -> raise (HxRuntime.Hx_return returned)"),
+		assertTrue(rendered.contains("HxRuntime.Hx_return returned -> Stdlib.raise (HxRuntime.Hx_return returned)"),
 			"The checked catch chain must preserve a value-bearing return signal.");
-		assertTrue(rendered.contains("HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)"),
+		assertTrue(rendered.contains("HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)"),
 			"The checked catch chain must preserve a Void return signal.");
 		assertTrue(rendered.contains("HxRuntime.Hx_exception (value, tags)"), "The checked pattern must print the exact runtime constructor.");
 		assertTrue(rendered.contains("HxRuntime.hx_throw_typed value tags"), "The checked rethrow must print the exact runtime helper.");

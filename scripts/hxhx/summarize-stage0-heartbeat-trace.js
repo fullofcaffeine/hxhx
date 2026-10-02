@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Summarize sampled bootstrap resources while preserving the attached client
+// and verified server identities. Sampling is diagnostic evidence; client exit
+// status and the caller's watchdog remain authoritative for build completion.
 const fs = require('fs');
 const path = require('path');
 
@@ -71,15 +74,21 @@ function toNumber(value) {
 }
 
 function sampleFromRaw(raw, index) {
+  const serverPids = typeof raw.owned_server_pids === 'string' && raw.owned_server_pids.trim()
+    ? raw.owned_server_pids.trim().split(/\s+/).map(Number) : [];
+  if (serverPids.some(pid => !Number.isSafeInteger(pid) || pid <= 0)) throw new Error('Invalid owned server PID');
   return {
     index,
     elapsed_s: toNumber(raw.elapsed_s ?? raw.elapsed_sec),
     pid: toNumber(raw.pid),
     focus_pid: toNumber(raw.focus_pid),
+    focus_role: raw.focus_role === 'server-worker' || raw.focus_role === 'client-tree' ? raw.focus_role : '',
+    owned_server_pids: [...new Set(serverPids)],
     child_pid: toNumber(raw.child_pid),
     rss_mb: toNumber(raw.rss_mb),
     tree_rss_mb: toNumber(raw.tree_rss_mb),
     cpu_pct: toNumber(raw.cpu_pct),
+    tree_cpu_pct: toNumber(raw.tree_cpu_pct),
     state: typeof raw.state === 'string' ? raw.state : '',
     log_bytes: toNumber(raw.log_bytes),
   };
@@ -92,10 +101,13 @@ function snapshotSample(sample) {
     elapsed_s: sample.elapsed_s,
     pid: sample.pid,
     focus_pid: sample.focus_pid,
+    focus_role: sample.focus_role,
+    owned_server_pids: sample.owned_server_pids,
     child_pid: sample.child_pid,
     rss_mb: sample.rss_mb,
     tree_rss_mb: sample.tree_rss_mb,
     cpu_pct: sample.cpu_pct,
+    tree_cpu_pct: sample.tree_cpu_pct,
     state: sample.state,
     log_bytes: sample.log_bytes,
   };
@@ -117,9 +129,13 @@ function formatSample(row) {
     `at=${formatValue(row.elapsed_s, 's')}`,
     `rss=${formatValue(row.rss_mb, 'MB')}`,
     `tree_rss=${formatValue(row.tree_rss_mb, 'MB')}`,
+    `client_pid=${formatValue(row.pid)}`,
+    `server_pids=${row.owned_server_pids.join(',') || 'none'}`,
     `focus_pid=${formatValue(row.focus_pid)}`,
+    `focus_role=${row.focus_role || 'na'}`,
     `child_pid=${formatValue(row.child_pid)}`,
     `cpu=${formatValue(row.cpu_pct)}`,
+    `tree_cpu=${formatValue(row.tree_cpu_pct)}`,
     `state=${row.state || 'na'}`,
     `log_bytes=${formatValue(row.log_bytes)}`,
   ].join(' ');
@@ -147,6 +163,7 @@ const summary = {
   },
   peak_rss_mb: null,
   peak_tree_rss_mb: null,
+  peak_tree_cpu_pct: null,
   top_tree_rss_samples: [],
 };
 
@@ -185,6 +202,8 @@ if (samples.length > 0) {
     .sort((a, b) => b.rss_mb - a.rss_mb || a.index - b.index);
   const byTreeRss = samples.filter((s) => sampleSortValue(s) >= 0)
     .sort((a, b) => sampleSortValue(b) - sampleSortValue(a) || a.index - b.index);
+  const byTreeCpu = samples.filter((s) => s.tree_cpu_pct !== null)
+    .sort((a, b) => b.tree_cpu_pct - a.tree_cpu_pct || a.index - b.index);
 
   if (elapsed.length > 0) {
     summary.elapsed_seconds.first = elapsed[0];
@@ -198,6 +217,7 @@ if (samples.length > 0) {
   }
   summary.peak_rss_mb = snapshotSample(byRss[0]);
   summary.peak_tree_rss_mb = snapshotSample(byTreeRss[0]);
+  summary.peak_tree_cpu_pct = snapshotSample(byTreeCpu[0]);
   summary.top_tree_rss_samples = byTreeRss.slice(0, topN).map(snapshotSample);
 }
 
@@ -222,6 +242,8 @@ if (summary.missing_input) {
       `  peak_rss_mb=${formatValue(summary.peak_rss_mb.rss_mb)}`,
       `at=${formatValue(summary.peak_rss_mb.elapsed_s, 's')}`,
       `focus_pid=${formatValue(summary.peak_rss_mb.focus_pid)}`,
+      `client_pid=${formatValue(summary.peak_rss_mb.pid)}`,
+      `server_pids=${summary.peak_rss_mb.owned_server_pids.join(',') || 'none'}`,
       `child_pid=${formatValue(summary.peak_rss_mb.child_pid)}`,
       `tree_rss_mb=${formatValue(summary.peak_rss_mb.tree_rss_mb)}`,
     ].join(' '));
@@ -234,11 +256,17 @@ if (summary.missing_input) {
       `  peak_tree_rss_mb=${formatValue(summary.peak_tree_rss_mb.tree_rss_mb)}`,
       `at=${formatValue(summary.peak_tree_rss_mb.elapsed_s, 's')}`,
       `focus_pid=${formatValue(summary.peak_tree_rss_mb.focus_pid)}`,
+      `client_pid=${formatValue(summary.peak_tree_rss_mb.pid)}`,
+      `server_pids=${summary.peak_tree_rss_mb.owned_server_pids.join(',') || 'none'}`,
       `child_pid=${formatValue(summary.peak_tree_rss_mb.child_pid)}`,
       `rss_mb=${formatValue(summary.peak_tree_rss_mb.rss_mb)}`,
     ].join(' '));
   } else {
     outLines.push('  peak_tree_rss_mb=na');
+  }
+
+  if (summary.peak_tree_cpu_pct) {
+    outLines.push(`  peak_tree_cpu_pct=${summary.peak_tree_cpu_pct.tree_cpu_pct} ${formatSample(summary.peak_tree_cpu_pct)}`);
   }
 
   outLines.push('heartbeat_top_tree_rss_samples:');

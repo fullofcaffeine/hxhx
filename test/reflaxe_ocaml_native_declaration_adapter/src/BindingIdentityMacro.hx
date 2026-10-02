@@ -34,6 +34,17 @@ class BindingIdentityMacro {
 		return macro $v{fact == null};
 	}
 
+	/** Parentheses must not change the target's declaration paths or selected storage. */
+	public static macro function stockGroupedExpression():Expr {
+		final fact = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("unit.BindingFixture.run", Context.typeExpr(macro({
+			var value:Int = ((7));
+			((value));
+		})));
+		if (fact == null)
+			Context.error("stock Haxe adapter rejected grouped local expressions", Context.currentPos());
+		return macro $v{fact.getCanonicalIdentity()};
+	}
+
 	public static macro function stockFunction():Expr {
 		final signature = functionSignature();
 		final body = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing(OcamlTargetFunctionFact.identityFor(signature), Context.typeExpr(macro {

@@ -163,7 +163,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(call.getTag() == TypedExprTag.Call, "shouldFail call was not kept as a structural typed call");
 		final returnExpression = call.getExpressions()[1];
 		assertTrue(returnExpression.getTag() == TypedExprTag.ReturnExpr, "return macro argument lost its typed return node");
-		final typedCast = returnExpression.getExpressions()[0];
+		final grouping = returnExpression.getExpressions()[0];
+		assertTrue(grouping.getTag() == TypedExprTag.Parenthesized && grouping.getExpressions().length == 1,
+			"return macro argument lost its authored grouping");
+		final typedCast = grouping.getExpressions()[0];
 		assertTrue(typedCast.getTag() == TypedExprTag.Cast && typedCast.getType().getDisplay() == "Null<String>",
 			"return macro argument lost its Null<String> cast");
 		assertTrue(typedCast.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return cast lost its null child");
@@ -262,7 +265,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.LocalRead && loop.getExpressions()[0].getTexts()[0] == "a",
 			"typed while macro condition was not resolved as the function parameter");
 		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
-		switch (TypedBodySource.statements(body)[0]) {
+		switch (ordinaryStatements(body)[0]) {
 			case SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position)]), _):
 				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
 			case _:
@@ -315,7 +318,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(continueInitializer.getType().getSemanticKey() == "primitive:String"
 			&& breakInitializer.getType().getSemanticKey() == "primitive:String",
 			"loop control changed the value type of the non-null branch");
-		switch (TypedBodySource.statements(body)[0]) {
+		switch (ordinaryStatements(body)[0]) {
 			case SForIn(_, _, SBlock([
 				SVar("value", "String", EBinop("??", _, EContinue(continuePosition)), _, _),
 				SVar("other", "String", EBinop("??", _, EBreak(breakPosition)), _, _)
@@ -572,6 +575,43 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertFunction(startup);
 	}
 
+	/** Assignment operands must expose their try body and catch fallback to typed traversal. */
+	static function assertAssignmentTryExpressions():Void {
+		final parsed = ParserStage.parse([
+			"class Main {",
+			"  static var saved:Bool = false;",
+			"  static function load():Bool return true;",
+			"  static function assigned():Bool {",
+			"    var result = false;",
+			"    result = try load() catch (error:Dynamic) false;",
+			"    Main.saved = try load() catch (error:Dynamic) false;",
+			"    return result;",
+			"  }",
+			"}",
+		].join("\n"), "AssignmentTry.hx");
+		final method = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "assigned");
+		var assignments = 0;
+		for (statement in method.getBody().getStatements()) {
+			if (statement.getTag() != TypedStmtTag.Expression)
+				continue;
+			final expression = statement.getExpressions()[0];
+			if (expression.getTag() != TypedExprTag.Assign)
+				continue;
+			final value = expression.getExpressions()[1];
+			assertTrue(containsCallNamed(value, "__hxhx_try"), "assignment lost its structural try expression");
+			assertTrue(containsCallNamed(value, "load"), "assignment lost the call inside its try expression");
+			assertTrue(!containsTag(value, TypedExprTag.Opaque), "assignment retains opaque executable syntax");
+			assertTrue(value.getType().getSemanticKey() == "primitive:Bool", "assignment try result lost its Boolean type");
+			assertTrue(statement.getPosition() != null && statement.getPosition().getLine() == 6 + assignments,
+				"assignment try expression lost its source line");
+			assignments++;
+		}
+		assertTrue(assignments == 2, "local or field assignment disappeared");
+		final statements = method.getBody().getStatements();
+		assertTrue(statements[statements.length - 1].getTag() == TypedStmtTag.Return, "try parsing consumed the following return");
+		TypedBodyInvariant.assertFunction(method);
+	}
+
 	static function assertStructuralTerminalReturnBlock():Void {
 		final position = new HxPos(0, 1, 1);
 		final raw = [
@@ -620,7 +660,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "untyped statement block hid its indexed read");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Untyped), "untyped statement block lost its explicit typing escape hatch");
 		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "untyped statement block retained an opaque source payload");
-		final projected = TypedBodySource.statements(body);
+		final projected = ordinaryStatements(body);
 		final projectedStatements = switch (projected[0]) {
 			case SBlock(statements, _): statements;
 			case _: [];
@@ -751,7 +791,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"    var scalar = identity(7);",
 			"    var nested = wrap([\"x\"]);",
 			"    var conflict = same(1, \"x\");",
-			"    var unsupportedConstraint = constrained(1);",
+			"    var constrainedResult = constrained(1);",
 			"    var unresolved = unbound({});",
 			"  }",
 			"}",
@@ -777,10 +817,11 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(conflict.getType().isUnknown(), "conflicting method-generic arguments produced a false common result");
 		assertTrue(conflict.getDeclaration() == null, "conflicting method-generic arguments selected an inapplicable declaration");
 
-		final unsupportedConstraint = variableInitializer(body, "unsupportedConstraint");
-		assertTrue(unsupportedConstraint.getType().isUnknown(), "unsupported constrained generic inference produced a false concrete result");
-		assertTrue(unsupportedConstraint.getDeclaration() == null,
-			"unsupported constrained generic inference selected a declaration without proving its constraint");
+		final constrainedResult = variableInitializer(body, "constrainedResult");
+		assertTrue(constrainedResult.getType().getSemanticKey() == "primitive:Int", "valid Int-constrained call lost its concrete result");
+		assertTrue(constrainedResult.getDeclaration() != null
+			&& constrainedResult.getDeclaration().getSignature().getName() == "constrained",
+			"valid Int-constrained call lost its exact selected declaration");
 
 		final unresolved = variableInitializer(body, "unresolved");
 		assertTrue(unresolved.getType().isUnknown(), "unbound method-generic result escaped as a caller-visible nominal type");
@@ -822,6 +863,14 @@ class M14TypedBodyBoundaryIntegrationTest {
 			case _:
 				throw "nominal field value was rewritten as its TreeNode type";
 		}
+	}
+
+	/** Syntax checks unwrap transport metadata while separate assertions verify its exact declaration facts. */
+	static function ordinaryStatements(body:TypedFunctionBody):Array<HxStmt> {
+		return backend.source.SourceFunctionBodyRewriter.body(TypedBodySource.statements(body), expression -> {
+			final call = TypedExactStaticCallSource.decode(expression);
+			return call == null ? expression : TypedExactStaticCallSource.ordinaryCall(call);
+		});
 	}
 
 	static function main():Void {
@@ -872,8 +921,17 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& operand.getTexts()[0] == "value", "postfix operand was not a typed local read");
 		expectCompoundAssignment(mainFunction.getBody());
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
-		assertTrue(TypedBodyFingerprint.forStatements(TypedBodySource.statements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
-			"typed-body source projection changed ordinary syntax before backend cutover");
+		assertTrue(TypedBodyFingerprint.forStatements(ordinaryStatements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
+			"unwrapping static-call metadata changed the function's ordinary source syntax");
+		final projectedCall = TypedExactStaticCallSource.decode(TypedBodySource.expression(call));
+		assertTrue(projectedCall != null
+			&& projectedCall.owner == "demo.TypedBodyMain.Helper"
+			&& projectedCall.declaration == declaration.getIdentity().getCanonicalKey()
+			&& projectedCall.resultType == "Int",
+			"static-call projection lost its selected owner, declaration, or result");
+		assertTrue(TypedExactStaticCallSource.ordinaryCall(projectedCall)
+			.match(ECall(EField(EIdent("Helper"), "bump"), [EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("value"))])),
+			"unwrapping the static-call record changed its ordinary callee or postfix argument");
 		assertLoweringNodeSet();
 		assertNullableSourceProjection();
 		assertInferredConstructorSourceProjection();
@@ -883,6 +941,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
 		assertNekoStartupTryCatchExpression();
+		assertAssignmentTryExpressions();
 		assertStructuralTerminalReturnBlock();
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();

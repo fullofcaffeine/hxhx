@@ -238,11 +238,12 @@ class ReturnRuntimeUseFixture {
 
 		final printer = new OcamlASTPrinter();
 		final valueSyntax = printer.printExpr(valueExpression);
-		assertTrue(valueSyntax.contains("raise (HxRuntime.Hx_return payload)")
+		assertTrue(valueSyntax.contains("Stdlib.raise (HxRuntime.Hx_return payload)")
 			&& valueSyntax.contains("| HxRuntime.Hx_return returned -> returned"),
 			"The checked value signal and boundary must preserve their existing OCaml syntax.");
 		final voidSyntax = printer.printExpr(voidExpression);
-		assertTrue(voidSyntax.contains("raise (HxRuntime.Hx_return_void)") && voidSyntax.contains("| HxRuntime.Hx_return_void -> ()"),
+		assertTrue(voidSyntax.contains("Stdlib.raise (HxRuntime.Hx_return_void)")
+			&& voidSyntax.contains("| HxRuntime.Hx_return_void -> ()"),
 			"The checked payloadless signal and boundary must preserve their existing OCaml syntax.");
 	}
 

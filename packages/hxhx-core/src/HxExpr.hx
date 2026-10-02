@@ -18,6 +18,9 @@
 	  designed to keep the example runnable in CI while we expand coverage.
 **/
 enum HxExpr {
+	/** Authored grouping evaluates its child without adding a call or scope. */
+	EParenthesized(inner:HxExpr, position:HxPos);
+
 	ENull;
 	EBool(value:Bool);
 	EString(value:String);

@@ -41,11 +41,6 @@ global metal checks. The removed `@:haxeMetal` annotation is not an authority or
 
 ### Permanent boundary allowlist
 
-- Compiler-owned metadata JSON parsing boundaries:
-  - `packages/hxhx-core/src/hxhx/CompilerJsonParser.hx`
-  - `packages/hxhx-core/src/hxhx/CompilerJsonArray.hx`
-  - `packages/hxhx-core/src/backend/plugin/BackendPluginManifestParser.hx`
-  - `packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleReceipt.hx`
 - Backend dispatch boundaries:
   - `packages/hxhx-core/src/backend/BackendDispatchBoundary.hx`
   - `packages/hxhx-core/src/backend/GenIrBoundary.hx`
@@ -58,6 +53,18 @@ global metal checks. The removed `@:haxeMetal` annotation is not an authority or
 
 There is currently no temporary migration allowlist entry in `scripts/ci/no-dynamic-check.js`.
 Previously-allowlisted emitter seams were moved to typed map/context helpers.
+
+### Compiler metadata JSON
+
+`CompilerJsonParser` returns the closed `CompilerJsonValue` enum. Object fields
+and array elements retain their JSON kinds. Plugin manifests and native macro
+receipts validate these kinds before returning schema-specific structures.
+These modules follow the ordinary no-`Dynamic` guard and need no exemption.
+
+Native macro receipts require strings for identifiers, expressions, paths, and
+digests, plus integer-valued JSON numbers for versions. For example, `1e0` is
+an integer-valued number. A fractional value such as `1.5` or a string such as
+`"1suffix"` is rejected instead of being coerced to version `1`.
 
 ## Contributor guidance
 

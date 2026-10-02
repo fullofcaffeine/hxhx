@@ -463,7 +463,13 @@ class Stage3Compiler {
 		}
 		requestContext.registerCleanup("macro-session", closeMacroSession);
 
-		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
+		final classPaths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: Stage1Args.getExplicitClassPaths(parsed),
+			libraries: libsResolved,
+			cwd: cwd,
+			standardRoot: Stage1Args.getStandardLibraryRoot(parsed),
+			targetDefine: backendTargetDefine
+		});
 
 		// Defines available for conditional compilation filtering.
 		//

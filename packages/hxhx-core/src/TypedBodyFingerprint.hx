@@ -184,6 +184,10 @@ class TypedBodyFingerprint {
 				addString(state, "expr-call");
 				addExpression(state, callee);
 				addExpressions(state, arguments);
+			case EParenthesized(inner, position):
+				addString(state, "expr-parenthesized");
+				addPosition(state, position);
+				addExpression(state, inner);
 			case EReturn(value):
 				addString(state, "expr-return");
 				addInt(state, value == null ? 0 : 1);

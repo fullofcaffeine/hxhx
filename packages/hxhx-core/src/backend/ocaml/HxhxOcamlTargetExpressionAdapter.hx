@@ -75,6 +75,10 @@ class HxhxOcamlTargetExpressionAdapter {
 		if (literal != null)
 			return isDirectLiteral(literal) ? OcamlTargetExpressionFact.literalExpression(path, literal) : null;
 		return switch (expression.getTag()) {
+			case Parenthesized: // Grouping adds no binding or runtime operation to the shared target facts.
+				final children = expression.getExpressions(); children.length == 1 && children[0].getType()
+					.getSemanticKey() == expression.getType()
+					.getSemanticKey() ? copyExpression(children[0], path) : null;
 			case Call:
 				copyCall(expression, path);
 			case LocalRead:

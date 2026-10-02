@@ -4,8 +4,8 @@ import sys.FileSystem;
 import sys.io.File;
 
 /**
-	Proves that a primitive-backed abstract declared as a module's main type owns
-	its public static functions in generated OCaml.
+	Proves that ordinary abstracts and enum abstracts own their public static
+	functions in generated OCaml, including methods with branching bodies.
 
 	The caller uses the normalized target names. The provider module must define
 	the same names from the Haxe declaration, without a library-specific shim.
@@ -65,6 +65,15 @@ class M14Stage3AbstractStaticFunctionIntegrationTest {
 			"  public static function Empty():Ticket return new Ticket(null);",
 			"  public static function Label():String return \"abstract-static-ok\";",
 			"}",
+			"enum abstract Choice(Int) from Int to Int {",
+			"  var First = 1;",
+			"  public static function Describe(value:Int):String {",
+			"    if (value == 1) return \"enum-abstract-first\";",
+			"    return \"enum-abstract-other\";",
+			"  }",
+			"  var Second = 2;",
+			"  public static function main():Void Sys.println(\"unexpected-helper-main\");",
+			"}",
 		].join("\n");
 		File.saveContent(ticketPath, ticketSource);
 
@@ -74,16 +83,19 @@ class M14Stage3AbstractStaticFunctionIntegrationTest {
 			"  static function main():Void {",
 			"    demo.Ticket.Empty();",
 			"    Sys.println(demo.Ticket.Label());",
+			"    Sys.println(demo.Ticket.Choice.Describe(1));",
+			"    Sys.println(demo.Ticket.Choice.Describe(2));",
 			"  }",
 			"}",
 		].join("\n");
 		File.saveContent(mainPath, mainSource);
+		final expected = "abstract-static-ok\nenum-abstract-first\nenum-abstract-other\n";
 
 		var thrown:Dynamic = null;
 		try {
 			final baseline = commandOutput("haxe", ["-cp", sourceRoot, "--run", "Main"]);
 			assertTrue(baseline.code == 0, "Haxe 4.3.7 rejected the focused abstract-static program: " + baseline.stderr);
-			assertTrue(baseline.stdout == "abstract-static-ok\n", "unexpected Haxe 4.3.7 abstract-static output:\n" + baseline.stdout);
+			assertTrue(baseline.stdout == expected, "unexpected Haxe 4.3.7 abstract-static output:\n" + baseline.stdout);
 
 			final modules = [
 				new ResolvedModule("Main", mainPath, ParserStage.parse(mainSource, mainPath)),
@@ -91,7 +103,13 @@ class M14Stage3AbstractStaticFunctionIntegrationTest {
 			];
 			final executable = EmitterStage.emitToDir(program(sourceRoot, modules), outDir, true);
 			final generatedTicket = File.getContent(Path.join([outDir, "Demo_Ticket.ml"]));
+			final generatedChoice = File.getContent(Path.join([outDir, "Demo_Ticket_Choice.ml"]));
 			final generatedMain = File.getContent(Path.join([outDir, "Main.ml"]));
+			assertTrue(generatedChoice.indexOf("let rec describe") >= 0
+				&& generatedChoice.indexOf("enum-abstract-first") >= 0
+				&& generatedChoice.indexOf("enum-abstract-other") >= 0,
+				"the helper provider lost its branching method body");
+			assertTrue(generatedChoice.indexOf("let () = ignore (main ())") < 0, "a helper class gained a second program entry point");
 			assertTrue(generatedTicket.indexOf("let rec empty") >= 0 || generatedTicket.indexOf("let empty") >= 0,
 				"the primary abstract module did not define its normalized Empty function");
 			assertTrue(generatedTicket.indexOf("let rec label") >= 0 || generatedTicket.indexOf("let label") >= 0,
@@ -101,7 +119,7 @@ class M14Stage3AbstractStaticFunctionIntegrationTest {
 
 			final executed = commandOutput(executable);
 			assertTrue(executed.code == 0, "focused abstract-static executable failed: " + executed.stderr);
-			assertTrue(executed.stdout == "abstract-static-ok\n", "unexpected focused abstract-static output:\n" + executed.stdout);
+			assertTrue(executed.stdout == expected, "unexpected focused abstract-static output:\n" + executed.stdout);
 		} catch (error:Dynamic) {
 			thrown = error;
 		}

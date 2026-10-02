@@ -64,10 +64,10 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 		assertNotContains(localTryJs, "function:try", "local try helper should not leak unsupported marker");
 
 		final superWriter = new JsWriter();
-		final superScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		final superScope = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, "Base");
 		JsStmtEmitter.emitFunctionBody(superWriter, [SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous")]), pos)], superScope);
 		final superJs = superWriter.toString();
-		assertContains(superJs, "base constructor call omitted", "function-style constructors should lower super calls to valid JS");
+		assertContains(superJs, "Base.call(this, message, previous)", "super calls must retain receiver and operands");
 		assertNotContains(superJs, "super(", "function-style constructors cannot emit raw JS super syntax");
 	}
 }

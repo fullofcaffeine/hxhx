@@ -115,7 +115,8 @@ class ExprMacroExpander {
 			}
 
 			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields, HxClassDecl.getExtendsPath(cls),
-				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls));
+				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls),
+				HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls));
 			final newClasses = new Array<HxClassDecl>();
 			for (c in HxModuleDecl.getClasses(decl)) {
 				if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {
@@ -234,6 +235,9 @@ class ExprMacroExpander {
 			return e; // prevent runaway recursion in bring-up
 
 		return switch (e) {
+			case EParenthesized(inner, position):
+				final rewritten = rewriteExpr(inner, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				rewritten != inner ? EParenthesized(rewritten, position) : e;
 			case EReturn(value):
 				if (value == null) {
 					e;
@@ -399,6 +403,7 @@ class ExprMacroExpander {
 			case EMacroExpr(_, _): "MacroExpr";
 			case EMacroType(_): "MacroType";
 			case ELambda(_, _): "Lambda";
+			case EParenthesized(_, _): "Parenthesized";
 			case ETryCatchRaw(_): "TryCatch";
 			case ESwitchRaw(_): "Switch";
 			case ESwitch(_, _, _): "Switch";

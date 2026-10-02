@@ -3,7 +3,9 @@
 
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
 const { spawnSync } = require('child_process')
+const { runCommandWithTimeout } = require('./hx-format-guard.js')
 
 /**
  * Formats or checks only changed Haxe files with the official haxelib formatter.
@@ -31,7 +33,11 @@ Examples:
   npm run format:hx:changed
   npm run guard:hx-format:changed
   node scripts/lint/hx-format-changed.js --check --staged
-  node scripts/lint/hx-format-changed.js --write packages/foo/Bar.hx`)
+  node scripts/lint/hx-format-changed.js --write packages/foo/Bar.hx
+
+HX_FORMAT_TIMEOUT_SECONDS bounds the formatter process tree (default: 240).
+Timeout returns 124; interruption returns 130 or 143.
+On POSIX, timeout and interruption stop the complete formatter process group.`)
 }
 
 function commandOutput(command, args, options = {}) {
@@ -120,48 +126,59 @@ function changedFiles(root, options) {
   return uniqueSorted(tracked.concat(untracked).map(file => normalizeFile(root, file)).filter(isEligibleHaxeFile))
 }
 
-function formatterAvailable(root) {
-  const result = spawnSync('haxelib', ['run', 'formatter', '--help'], {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 4 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
-  if (result.error) fail(`haxelib is required: ${result.error.message}`)
-  if (result.status !== 0) fail('formatter haxelib is not installed; run: haxelib install formatter')
-}
-
-function runFormatter(root, files, check) {
+/** Keep one formatter tree attached until it exits or cancellation stops it. */
+async function runFormatter(root, files, check) {
+  const timeoutSeconds = Number(process.env.HX_FORMAT_TIMEOUT_SECONDS || '240')
+  if (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0) fail('HX_FORMAT_TIMEOUT_SECONDS must be a positive integer')
   const args = ['run', 'formatter']
   for (const file of files) args.push('-s', path.join(root, file))
   if (check) args.push('--check')
-  const started = Date.now()
-  const result = spawnSync('haxelib', args, {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
-  const elapsed = ((Date.now() - started) / 1000).toFixed(3)
-  const output = `${result.stdout || ''}${result.stderr || ''}`.trim()
-  if (output) console.error(output)
-  if (result.error) fail(`formatter failed: ${result.error.message}`)
-  if (result.status !== 0) fail(`formatter ${check ? 'check' : 'write'} failed after ${elapsed}s`)
-  console.log(`[hx-format-changed] ${check ? 'checked' : 'formatted'} files=${files.length} elapsed=${elapsed}s`)
+  const controller = new AbortController()
+  let interruptedCode = 0
+  const stop = code => {
+    if (interruptedCode === 0) interruptedCode = code
+    controller.abort()
+  }
+  const interrupt = () => stop(130)
+  const terminate = () => stop(143)
+  process.on('SIGINT', interrupt)
+  process.on('SIGTERM', terminate)
+  let result
+  try {
+    result = await runCommandWithTimeout('haxelib', args, {
+      cwd: root,
+      timeoutMs: timeoutSeconds * 1000,
+      signal: controller.signal,
+      captureOutput: false,
+      onStdout: text => process.stdout.write(text),
+      onStderr: text => process.stderr.write(text)
+    })
+  } finally {
+    process.removeListener('SIGINT', interrupt)
+    process.removeListener('SIGTERM', terminate)
+  }
+  const elapsed = (result.elapsedMs / 1000).toFixed(3)
+  let code = result.code
+  if (interruptedCode) code = interruptedCode
+  else if (result.timedOut) code = 124
+  else if (result.error) code = 127
+  else if (code === null) code = os.constants.signals[result.signal] ? 128 + os.constants.signals[result.signal] : 1
+  if (result.error) console.error(`[hx-format-changed] formatter failed: ${result.error.message}`)
+  console.error(`[hx-format-changed] ${code === 0 ? (check ? 'checked' : 'formatted') : 'stopped'} files=${files.length} elapsed=${elapsed}s exit=${code}`)
+  process.exitCode = code
 }
 
-function main() {
+async function main() {
   const root = repoRoot()
   process.chdir(root)
   const options = parseArgs(process.argv.slice(2))
   const files = changedFiles(root, options).filter(file => fs.existsSync(path.join(root, file)))
   if (files.length === 0) {
-    console.log('[hx-format-changed] no changed Haxe files')
+    console.error('[hx-format-changed] no changed Haxe files')
     return
   }
-  formatterAvailable(root)
-  console.log(`[hx-format-changed] ${options.check ? 'checking' : 'formatting'} changed Haxe files=${files.length}`)
-  runFormatter(root, files, options.check)
+  console.error(`[hx-format-changed] ${options.check ? 'checking' : 'formatting'} changed Haxe files=${files.length}`)
+  await runFormatter(root, files, options.check)
 }
 
-main()
+main().catch(error => fail(error.message))

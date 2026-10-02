@@ -17,8 +17,8 @@
 	How:
 		- The lexer maintains a cursor (index, line, column) and exposes next()
 		  to advance one token at a time.
-		- Strings are parsed as '\"'-delimited. Escape handling is minimal (enough for
-		  simple acceptance fixtures) and will be expanded later.
+		- Both quote forms share escape decoding through HxStringEscape. Single quotes
+		  preserve interpolation payloads for the expression parser.
 **/
 class HxLexer {
 	final src:String;
@@ -28,6 +28,31 @@ class HxLexer {
 
 	public function new(src:String) {
 		this.src = src;
+	}
+
+	/**
+		Replace comments between tokens with spaces for source-based dependency discovery.
+
+		The normal lexer owns comment boundaries, including the distinction between comments
+		and comment-looking text inside strings or regular expressions. Copy token text exactly;
+		preserve whitespace and source length so removal cannot join separate identifiers.
+		String interpolation remains part of its original string token.
+	**/
+	public static function maskComments(source:String):String {
+		final lexer = new HxLexer(source);
+		final out = new StringBuf();
+		var copied = 0;
+		while (true) {
+			final token = lexer.next();
+			for (i in copied...token.pos.index) {
+				final character = source.charAt(i);
+				out.add(character == "\n" || character == "\r" || character == "\t" ? character : " ");
+			}
+			out.add(source.substring(token.pos.index, lexer.index));
+			copied = lexer.index;
+			if (token.kind == TEof)
+				return out.toString();
+		}
 	}
 
 	inline function eof():Bool {
@@ -323,72 +348,16 @@ class HxLexer {
 		bump();
 		final buf = new StringBuf();
 
-		function hexVal(c:Int):Int {
-			return if (c >= "0".code && c <= "9".code) {
-				c - "0".code;
-			} else if (c >= "a".code && c <= "f".code) {
-				10 + (c - "a".code);
-			} else if (c >= "A".code && c <= "F".code) {
-				10 + (c - "A".code);
-			} else {
-				-1;
-			};
-		}
-
-		function readHexDigits(count:Int):Int {
-			var acc = 0;
-			for (_ in 0...count) {
-				final c = peek(0);
-				if (c == -1)
-					return -1;
-				final v = hexVal(c);
-				if (v < 0)
-					return -1;
-				acc = (acc << 4) | v;
-				bump();
-			}
-			return acc;
-		}
-
 		while (!eof()) {
 			final c = bump();
 			if (c == 34) { // "
 				return new HxToken(TString(buf.toString(), false), startPos);
 			}
 			if (c == 92) { // backslash
-				if (eof())
-					break;
-				final esc = bump();
-				switch (esc) {
-					case 34:
-						buf.addChar(34);
-					case 92:
-						buf.addChar(92);
-					case 110:
-						buf.addChar(10); // \n
-					case 114:
-						buf.addChar(13); // \r
-					case 116:
-						buf.addChar(9); // \t
-					case "x".code:
-						// Hex byte escape: \xNN
-						final v = readHexDigits(2);
-						if (v < 0) {
-							buf.addChar("x".code);
-						} else {
-							buf.addChar(v);
-						}
-					case "u".code:
-						// Unicode escape: \uNNNN
-						final v = readHexDigits(4);
-						if (v < 0) {
-							buf.addChar("u".code);
-						} else {
-							buf.addChar(v);
-						}
-					case _:
-						buf.addChar(esc); // best-effort
-				}
+				final decoded = HxStringEscape.read({source: src, offset: index, position: pos()});
+				while (index < decoded.nextIndex)
+					bump();
+				buf.add(decoded.value);
 				continue;
 			}
 			buf.addChar(c);
@@ -400,33 +369,6 @@ class HxLexer {
 		// Opening quote
 		bump();
 		final buf = new StringBuf();
-
-		function hexVal(c:Int):Int {
-			return if (c >= "0".code && c <= "9".code) {
-				c - "0".code;
-			} else if (c >= "a".code && c <= "f".code) {
-				10 + (c - "a".code);
-			} else if (c >= "A".code && c <= "F".code) {
-				10 + (c - "A".code);
-			} else {
-				-1;
-			};
-		}
-
-		function readHexDigits(count:Int):Int {
-			var acc = 0;
-			for (_ in 0...count) {
-				final c = peek(0);
-				if (c == -1)
-					return -1;
-				final v = hexVal(c);
-				if (v < 0)
-					return -1;
-				acc = (acc << 4) | v;
-				bump();
-			}
-			return acc;
-		}
 
 		while (!eof()) {
 			final c = bump();
@@ -440,37 +382,10 @@ class HxLexer {
 				return new HxToken(TString(buf.toString(), true), startPos);
 			}
 			if (c == 92) { // backslash
-				if (eof())
-					break;
-				final esc = bump();
-				switch (esc) {
-					case "'".code:
-						buf.addChar("'".code);
-					case 92:
-						buf.addChar(92);
-					case 110:
-						buf.addChar(10); // \n
-					case 114:
-						buf.addChar(13); // \r
-					case 116:
-						buf.addChar(9); // \t
-					case "x".code:
-						final v = readHexDigits(2);
-						if (v < 0) {
-							buf.addChar("x".code);
-						} else {
-							buf.addChar(v);
-						}
-					case "u".code:
-						final v = readHexDigits(4);
-						if (v < 0) {
-							buf.addChar("u".code);
-						} else {
-							buf.addChar(v);
-						}
-					case _:
-						buf.addChar(esc); // best-effort
-				}
+				final decoded = HxStringEscape.read({source: src, offset: index, position: pos()});
+				while (index < decoded.nextIndex)
+					bump();
+				buf.add(decoded.value);
 				continue;
 			}
 			buf.addChar(c);

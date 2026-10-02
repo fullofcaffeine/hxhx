@@ -42,10 +42,11 @@ class TypedStmt {
 	final catchTypeHints:Array<String>;
 	final metadata:Array<String>;
 	final localBindings:Array<TyLocalBinding>;
+	final catchUses:Array<TypedCatchUse>;
 
 	function new(tag:TypedStmtTag, position:Null<HxPos>, ?names:Array<String>, ?expressions:Array<TypedExpr>, ?statements:Array<TypedStmt>,
 			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>, ?metadata:Array<String>,
-			?localBindings:Array<TyLocalBinding>) {
+			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>) {
 		this.tag = tag;
 		this.position = position;
 		this.names = names == null ? [] : names.copy();
@@ -56,6 +57,7 @@ class TypedStmt {
 		this.catchTypeHints = catchTypeHints == null ? [] : catchTypeHints.copy();
 		this.metadata = metadata == null ? [] : metadata.copy();
 		this.localBindings = localBindings == null ? [] : localBindings.copy();
+		this.catchUses = catchUses == null ? [] : catchUses.copy();
 		if (tag == Try && (this.statements.length != this.catchNames.length + 1 || this.catchNames.length != this.catchTypeHints.length))
 			throw "typed try statement has inconsistent catch payloads";
 	}
@@ -146,7 +148,14 @@ class TypedStmt {
 	public function getLocalBindings():Array<TyLocalBinding>
 		return localBindings.copy();
 
+	/** Source-ordered implicit runtime uses owned by this try statement's catch declarations. */
+	public function getCatchUses():Array<TypedCatchUse>
+		return catchUses.copy();
+
+	public function withCatchUses(uses:Array<TypedCatchUse>):TypedStmt
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, uses);
+
 	/** Rebuild this immutable statement after a shared recursive expression pass. **/
 	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
-		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings);
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses);
 }

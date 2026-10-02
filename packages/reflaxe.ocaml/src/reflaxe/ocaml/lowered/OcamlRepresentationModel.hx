@@ -127,6 +127,13 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 	final DirectNominalValueCarrier = "direct-nominal-value-carrier";
 
 	/**
+		An ordinary non-null Haxe enum uses its declared OCaml variant directly.
+		This family preserves constructor identity without a Dynamic or null box.
+		Every admitted value still requires an independent producer proof.
+	**/
+	final DirectNativeEnumCarrier = "direct-native-enum-carrier";
+
+	/**
 		Primitive values are boxed only when they enter this nullable carrier.
 
 		The carrier itself is `Obj.t`: it preserves the shared Haxe null sentinel
@@ -210,13 +217,13 @@ typedef OcamlRepresentationSelection = {
 	final proof:OcamlRepresentationProof;
 	final profileEligibility:Array<String>;
 
-	/** Canonical OCaml module that owns an admitted nominal record carrier. */
+	/** Canonical OCaml module that owns an admitted record or variant carrier. */
 	final ?nominalTargetModuleName:String;
 
-	/** Unqualified record type inside the canonical target module. */
+	/** Unqualified nominal type inside the canonical target module. */
 	final ?nominalTargetTypeName:String;
 
-	/** Revision of the exact field layout represented by the nominal carrier. */
+	/** Revision of the selected record layout or native variant identity. */
 	final ?nominalLayoutRevision:String;
 
 	/** Program-owned array shape used by this representation, when it is an array. */

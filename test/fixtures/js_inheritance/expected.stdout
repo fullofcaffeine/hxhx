@@ -1,0 +1,14 @@
+arg-one
+arg-two
+pre
+base:one:two
+post
+one:two:child
+arg-three
+arg-four
+base:three:four
+three:four:implicit
+arg-five
+base:five:default
+five:default:implicit:grand
+generic

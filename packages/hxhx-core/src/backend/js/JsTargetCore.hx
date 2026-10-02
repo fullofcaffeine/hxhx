@@ -10,6 +10,11 @@ import haxe.io.Path;
 
 private typedef JsClassUnit = {
 	final fullName:String;
+	final identity:String;
+	final superIdentity:Null<String>;
+	final declarationRank:Int;
+	final interfaceRefs:Array<String>;
+	final runtimeTypes:JsRuntimeTypePlan;
 	final jsRef:String;
 	final decl:HxClassDecl;
 	final projection:TypedBackendClassProjection;
@@ -60,6 +65,8 @@ class JsTargetCore implements ITargetCore {
 	static function collectClassUnits(program:GenIrProgram):{units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>} {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
+		final inheritance = new JsClassInheritancePlan(program);
+		final runtimeTypes = new JsRuntimeTypePlan(program, inheritance);
 		var units = new Array<JsClassUnit>();
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
@@ -72,22 +79,29 @@ class JsTargetCore implements ITargetCore {
 			final hasToplevelMain = HxModuleDecl.getHasToplevelMain(decl);
 			for (classProjection in moduleProjection.getClasses()) {
 				final cls = classProjection.getDeclaration();
+				final plan = inheritance.requireClass(classProjection);
 				final className = HxClassDecl.getName(cls);
-				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-				if (byFullName.exists(fullName))
-					continue;
-				final jsRef = JsNameMangler.classVarName(fullName);
+				final fullName = plan.fullName;
+				final jsRef = plan.reference;
 				byFullName.set(fullName, jsRef);
 				if (!bySimpleName.exists(className))
 					bySimpleName.set(className, jsRef);
 				units.push({
 					fullName: fullName,
+					identity: plan.identity,
+					superIdentity: plan.superIdentity,
+					declarationRank: inheritance.declarationRank(classProjection),
+					interfaceRefs: inheritance.interfaceReferences(classProjection),
+					runtimeTypes: runtimeTypes,
 					jsRef: jsRef,
 					decl: cls,
 					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
 			}
 		}
+		// Source spellings remain presentation aliases; inheritance uses exact identities.
+		for (unit in units)
+			byFullName.set(unit.identity, unit.jsRef);
 		units = orderClassUnitsByStaticInitDeps(units, byFullName);
 
 		return {
@@ -119,6 +133,7 @@ class JsTargetCore implements ITargetCore {
 				if (staticInitDepsReady(unit, emitted, byFullName, bySimpleFullName)) {
 					ordered.push(unit);
 					emitted.set(unit.fullName, true);
+					emitted.set(unit.identity, true);
 					remaining.splice(index, 1);
 					progressed = true;
 				} else {
@@ -126,6 +141,7 @@ class JsTargetCore implements ITargetCore {
 				}
 			}
 			if (!progressed) {
+				remaining.sort((left, right) -> left.declarationRank - right.declarationRank);
 				for (unit in remaining)
 					ordered.push(unit);
 				break;
@@ -137,7 +153,7 @@ class JsTargetCore implements ITargetCore {
 	static function staticInitDepsReady(unit:JsClassUnit, emitted:haxe.ds.StringMap<Bool>, byFullName:haxe.ds.StringMap<String>,
 			bySimpleFullName:haxe.ds.StringMap<String>):Bool {
 		final deps = staticInitClassDeps(unit, byFullName, bySimpleFullName);
-		final superDep = resolveStaticInitTypePath(HxClassDecl.getExtendsPath(unit.decl), byFullName, bySimpleFullName);
+		final superDep = unit.superIdentity;
 		if (superDep != null)
 			deps.push(superDep);
 		for (dep in deps) {
@@ -231,7 +247,7 @@ class JsTargetCore implements ITargetCore {
 			case ERange(start, end):
 				collectStaticInitClassDeps(start, deps, byFullName, bySimpleFullName);
 				collectStaticInitClassDeps(end, deps, byFullName, bySimpleFullName);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
 			case _:
 		}
@@ -581,16 +597,25 @@ class JsTargetCore implements ITargetCore {
 		if (nodeRequireRef != null || browserRef != null || isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
+		writer.writeln(unit.jsRef + ".prototype.__class__ = " + unit.jsRef + ";");
 		if (unit.fullName == "EReg")
 			emitERegPrototypeRuntime(writer, unit.jsRef);
 		final staticRefs = staticMemberRefs(unit);
 
 		emitStaticFunctions(writer, unit, classRefs, staticRefs);
-		emitStaticFields(writer, unit, classRefs, staticRefs);
-		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
 
 		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
 			emitPlainClassPrototypeMethods(writer, unit, classRefs);
+	}
+
+	/** Run values only after every class and method exists; retain target runtime setup after its fields. */
+	static function emitClassInitialization(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+		if (nativeJsNodeRequireExternRef(unit.fullName) != null
+			|| nativeJsBrowserExternRef(unit.fullName) != null
+			|| isNativeJsGlobalExtern(unit.fullName))
+			return;
+		emitStaticFields(writer, unit, classRefs, staticMemberRefs(unit));
+		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
 	}
 
 	static function emitStaticFields(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
@@ -612,7 +637,7 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init, staticScope.exprScope());
+					JsExprEmitter.emit(init, staticScope.exprScope(unit.runtimeTypes.forInitializer(field)));
 				} catch (e:String) {
 					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
 						"null";
@@ -651,7 +676,8 @@ class JsTargetCore implements ITargetCore {
 			if (!HxFunctionDecl.getIsStatic(fn))
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog());
+			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
+				unit.runtimeTypes.forFunction(functionProjection));
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 
@@ -695,25 +721,29 @@ class JsTargetCore implements ITargetCore {
 		final ctor = constructorProjection == null ? null : constructorProjection.getDeclaration();
 		final instanceFields = instanceFieldRefs(unit.decl);
 		final superRef = resolveSuperClassRef(unit, classRefs);
-		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog());
+		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog(),
+			constructorProjection == null ? null : constructorProjection.getFieldReadCatalog(),
+			constructorProjection == null ? null : unit.runtimeTypes.forFunction(constructorProjection));
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
 
 		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
 		writer.pushIndent();
-		writer.writeln("this.__class__ = " + unit.jsRef + ";");
+		// Parent construction must preserve the most-derived prototype class identity.
 		emitDefaultArgGuards(writer, args, params, scope);
 		emitInstanceFieldInitializers(writer, unit, scope);
 		if (ctor != null && emitKnownConstructorBody(writer, unit.fullName, params)) {
 			// Known constructor body emitted above.
 		} else if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
 			emitConstructorStatements(writer, split.beforeSuper, scope, unit.fullName);
-			if (superRef != null)
+			if (split.superCall != null)
+				emitConstructorStatements(writer, [split.superCall], scope, unit.fullName);
+			else if (superRef != null)
 				writer.writeln(superRef + ".call(this);");
 			emitConstructorStatements(writer, split.afterSuper, scope, unit.fullName);
 		} else if (superRef != null) {
-			writer.writeln(superRef + ".call(this);");
+			writer.writeln(superRef + (ctor == null ? ".apply(this, arguments);" : ".call(this);"));
 		}
 		writer.popIndent();
 		writer.writeln("};");
@@ -733,23 +763,28 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function resolveSuperClassRef(unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Null<String> {
-		final path = HxClassDecl.getExtendsPath(unit.decl);
-		if (path == null || path.length == 0)
+		if (unit.superIdentity == null)
 			return null;
-		final direct = classRefs.get(path);
-		if (direct != null)
-			return direct;
-		final parts = path.split(".");
-		return classRefs.get(parts[parts.length - 1]);
+		final reference = classRefs.get(unit.superIdentity);
+		if (reference == null)
+			throw "JavaScript superclass has no emitted provider: " + unit.superIdentity;
+		return reference;
 	}
 
-	static function splitConstructorBody(body:Array<HxStmt>):{beforeSuper:Array<HxStmt>, afterSuper:Array<HxStmt>, sawSuper:Bool} {
+	static function splitConstructorBody(body:Array<HxStmt>):{
+		beforeSuper:Array<HxStmt>,
+		afterSuper:Array<HxStmt>,
+		sawSuper:Bool,
+		superCall:Null<HxStmt>
+	} {
 		final before = new Array<HxStmt>();
 		final after = new Array<HxStmt>();
 		var sawSuper = false;
+		var superCall:Null<HxStmt> = null;
 		for (stmt in body) {
 			if (!sawSuper && isSuperConstructorCall(stmt)) {
 				sawSuper = true;
+				superCall = stmt;
 				continue;
 			}
 			if (sawSuper)
@@ -757,7 +792,12 @@ class JsTargetCore implements ITargetCore {
 			else
 				before.push(stmt);
 		}
-		return {beforeSuper: before, afterSuper: after, sawSuper: sawSuper};
+		return {
+			beforeSuper: before,
+			afterSuper: after,
+			sawSuper: sawSuper,
+			superCall: superCall
+		};
 	}
 
 	static function isSuperConstructorCall(stmt:HxStmt):Bool {
@@ -895,7 +935,8 @@ class JsTargetCore implements ITargetCore {
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog());
+			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog(),
+				functionProjection.getFieldReadCatalog(), unit.runtimeTypes.forFunction(functionProjection));
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
@@ -985,7 +1026,7 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init, scope.exprScope());
+					JsExprEmitter.emit(init, scope.exprScope(unit.runtimeTypes.forInitializer(field)));
 				} catch (e:String) {
 					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				} catch (error:haxe.Exception) {
@@ -3623,15 +3664,26 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		emitRuntimePrelude(writer);
+		JsRuntimeTypeSupport.emitDefinition(writer);
 		final classRefs = buildClassRefs(classes.bySimpleName, classes.byFullName);
 
+		final declarationOrder = classes.units.copy();
+		declarationOrder.sort((left, right) -> left.declarationRank - right.declarationRank);
 		for (emitNative in [true, false]) {
-			for (unit in classes.units) {
+			for (unit in declarationOrder) {
 				if (isNativeJsLibExtern(unit.fullName) != emitNative)
 					continue;
 				emitClass(writer, unit, classRefs, classes.bySimpleName);
 			}
 		}
+
+		// All interface values exist before membership metadata or user initializers run.
+		for (unit in classes.units)
+			if (unit.interfaceRefs.length > 0)
+				writer.writeln(unit.jsRef + ".__hx_interfaces = [" + unit.interfaceRefs.join(", ") + "];");
+
+		for (unit in classes.units)
+			emitClassInitialization(writer, unit, classRefs);
 
 		final mainRef = resolveMainRef(context.mainModule, classes.bySimpleName, classes.byFullName);
 		if (mainRef != null) {

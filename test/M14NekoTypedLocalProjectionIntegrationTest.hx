@@ -55,7 +55,11 @@ class M14NekoTypedLocalProjectionIntegrationTest {
 			"  }",
 			"}"
 		].join("\n");
-		return MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(source, "Main.hx"))], []);
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		return MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader)], []);
 	}
 
 	static function assertReadableCollisionAvoidance():Void {

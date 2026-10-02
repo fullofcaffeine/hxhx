@@ -92,7 +92,7 @@ class CppLocalTypeInference {
 
 	static function qualifiedEnumCarrierCppTypeImpl(expr:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				qualifiedEnumCarrierCppTypeImpl(inner, scope, api);
 			case ECall(EField(receiver, constructorName), args) if (args != null && args.length > 0):
 				final owner = api.staticReceiverClassName(receiver, scope);
@@ -211,7 +211,7 @@ class CppLocalTypeInference {
 				if (guardExpr != null)
 					collectErasedDynamicArgUsageNamesFromExpr(guardExpr, dynamicArgs, used);
 				collectErasedDynamicArgUsageNamesFromExpr(yieldExpr, dynamicArgs, used);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectErasedDynamicArgUsageNamesFromExpr(inner, dynamicArgs, used);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
@@ -412,7 +412,7 @@ class CppLocalTypeInference {
 				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(thenExpr, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(elseExpr, scope, candidates, pushedValues, callArgTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorEvidenceFromExpr(inner, scope, candidates, pushedValues, callArgTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -519,7 +519,7 @@ class CppLocalTypeInference {
 				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(thenExpr, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(elseExpr, scope, candidates, callArgTypes, pushedTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorPushedTypesFromExpr(inner, scope, candidates, callArgTypes, pushedTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -695,6 +695,11 @@ class CppLocalTypeInference {
 	}
 
 	function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<String>):Void {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null) {
+			collectStringMapLocalTypeOverridesFromExpr(TypedExactStaticCallSource.ordinaryCall(staticCall), scope, candidates);
+			return;
+		}
 		final exact = TypedExactCallSource.decodeInstance(expr);
 		if (exact != null) {
 			collectStringMapLocalTypeOverridesFromExpr(TypedExactCallSource.ordinaryInstanceCall(exact), scope, candidates);
@@ -731,7 +736,7 @@ class CppLocalTypeInference {
 						collectStringMapLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
 					collectStringMapLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectStringMapLocalTypeOverridesFromExpr(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
