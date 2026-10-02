@@ -407,8 +407,10 @@ class TyperStage {
 				semanticDeclarations.push(semanticDeclaration);
 				functionIdentities.push(functionIdentity);
 				functionEnvironments.push(functionEnvironment);
+				// A function with no value-returning statement still has its finalized
+				// Void result; expression-only evidence would leave callers unresolved.
 				if (semanticDeclaration != null && semanticDeclaration.getSignature().getReturnType().isUnknown())
-					context.recordInferredReturnType(semanticDeclaration, functionEnvironment.getReturnExprType());
+					context.recordInferredReturnType(semanticDeclaration, functionEnvironment.getReturnType());
 			}
 
 			// The declaration index is built before bodies are typed, so an unannotated
@@ -429,7 +431,7 @@ class TyperStage {
 					final functionEnvironment = typeFunction(sourceFunctions[functionIndex], context, functionIdentities[functionIndex],
 						semanticDeclarations[functionIndex]);
 					functionEnvironments[functionIndex] = functionEnvironment;
-					if (context.recordInferredReturnType(semanticDeclarations[functionIndex], functionEnvironment.getReturnExprType())) {
+					if (context.recordInferredReturnType(semanticDeclarations[functionIndex], functionEnvironment.getReturnType())) {
 						progress = true;
 					} else if (functionEnvironment.getReturnExprType().isUnknown()
 						|| functionEnvironment.getReturnExprType().isDynamic()) {
