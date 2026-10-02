@@ -20,17 +20,23 @@ class M14NekoStdIsOfTypeIntegrationTest {
 
 	static function main():Void {
 		assertFixture("test/neko_std_is_of_type", "NEKO_STD_IS_OF_TYPE");
-		assertFixture("test/neko_primitive_runtime_types", "NEKO_PRIMITIVE_RUNTIME_TYPES");
+		assertFixture("test/neko_primitive_runtime_types", "NEKO_PRIMITIVE_RUNTIME_TYPES", ["expected.linux-x86_64.stdout"]);
 	}
 
 	/** Exercise a standard-library consumer with ordinary roots and both generated layouts. */
-	static function assertFixture(fixture:String, marker:String):Void {
+	static function assertFixture(fixture:String, marker:String, ?runtimeVariants:Array<String>):Void {
 		final root = ".tmp/" + fixture.split("/").pop() + "_" + Date.now().getTime();
 		FileSystem.createDirectory(root);
-		final expected = File.getContent(fixture + "/expected.stdout");
+		final snapshots = [File.getContent(fixture + "/expected.stdout")];
+		if (runtimeVariants != null)
+			for (variant in runtimeVariants)
+				snapshots.push(File.getContent(fixture + "/" + variant));
 		run("haxe", ["-cp", fixture, "-main", "Main", "-neko", root + "/upstream.n"]);
-		if (run("neko", [root + "/upstream.n"]) != expected)
-			throw "upstream fixture result changed: " + fixture;
+		final expected = run("neko", [root + "/upstream.n"]);
+		File.saveContent(root + "/upstream.stdout", expected);
+		// Admit only recorded upstream results, then require this runtime's exact result in both generated layouts.
+		if (!snapshots.contains(expected))
+			throw "upstream fixture result changed: " + fixture + "; saved in " + root + "/upstream.stdout\n" + expected;
 
 		final arguments = Stage1Args.parse(["-cp", fixture, "-main", "Main"], true);
 		if (arguments == null)
