@@ -94,6 +94,7 @@
     "test:m13:dune-lib": "compiler-packaging",
     "test:m13:dune-plugin": "compiler-packaging",
     "test:m14:compiler-metadata-native": "compiler-packaging",
+    "test:reflaxe-ocaml:enum-local-result": "compiler-packaging",
     "test:m13:dune-exes": "compiler-packaging",
     "test:m13:sourcemap": "compiler-packaging",
     "test:m14:hih-forin": "compiler-focused",

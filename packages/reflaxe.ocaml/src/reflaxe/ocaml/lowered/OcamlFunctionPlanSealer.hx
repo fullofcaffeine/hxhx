@@ -171,7 +171,7 @@ class OcamlFunctionPlanSealer {
 		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		registry.registerRootIdentityPlan(binding, localIdentities);
-		final callPlanner = new OcamlCallPlanner(representations, binding);
+		final callPlanner = new OcamlCallPlanner(representations, binding, null, null, null, registry.hasCallableDeclaration);
 		final callableBoundary = callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		telemetryCheckpoint("binding");
@@ -246,7 +246,21 @@ class OcamlFunctionPlanSealer {
 		// call occurrence must consume from this same program revision.
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations, localStorage);
 		telemetryCheckpoint("nested");
-		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr, callPlanner);
+		final nestedFunctionResults = representedNestedFunctionResults(data.expr);
+		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities, (callee, semanticTypeId) -> {
+			final local = switch (unwrapTransparent(callee).expr) {
+				case TLocal(value): value;
+				case _: null;
+			};
+			if (local == null)
+				return false;
+			// A later write can replace the literal, including through a closure.
+			// The complete storage plan already records both forms of mutation.
+			if (localStorage.decisionFor(localIdentities.requireHostId(local.id).id) != null)
+				return false;
+			final result = nestedFunctionResults.get(local.id);
+			return result != null && result.outputSemanticTypeId == semanticTypeId;
+		}, registry.hasCallableDeclaration).plan(data.expr, callPlanner);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		for (decision in reflectCompare.decisions())
 			context.recordReflectCompareRuntimeRequirements(decision);
@@ -501,7 +515,8 @@ class OcamlFunctionPlanSealer {
 					// this function still uses the older result or control syntax. The
 					// optional behavior plan does not own the lexical parent relationship.
 					final childParentBinding = nestedBinding;
-					var boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
+					var boundary = new OcamlCallPlanner(representations, nestedBinding, null, null, null,
+						registry.hasCallableDeclaration).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null)
 						boundary = OcamlFunctionResultBoundary.selectNestedNullableEnumCallable(tfunc, representations, nestedBinding, context);
 					final functionResultBoundary = boundary == null ? null : (boundary.result != null
@@ -581,6 +596,43 @@ class OcamlFunctionPlanSealer {
 			}
 		}
 		visit(body, parentBinding);
+	}
+
+	/** Maps a local function value to the exact nested result sealed for its literal. */
+	function representedNestedFunctionResults(body:TypedExpr):Map<Int, OcamlCallValuePlan> {
+		final results:Map<Int, OcamlCallValuePlan> = [];
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, initializer) if (initializer != null):
+					final literal = functionLiteral(initializer);
+					if (literal != null) {
+						final result = registry.representedNestedFunctionResultFor(literal);
+						if (result != null)
+							results.set(local.id, result);
+					}
+				case _:
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(body);
+		return results;
+	}
+
+	/** Unwraps only source-transparent nodes around a nested function literal. */
+	static function functionLiteral(expression:TypedExpr):Null<TypedExpr> {
+		return switch (expression.expr) {
+			case TFunction(_): expression;
+			case TParenthesis(child), TMeta(_, child), TCast(child, null): functionLiteral(child);
+			case _: null;
+		};
+	}
+
+	/** Unwraps source-transparent nodes around a function-value callee. */
+	static function unwrapTransparent(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TParenthesis(child), TMeta(_, child), TCast(child, null): unwrapTransparent(child);
+			case _: expression;
+		};
 	}
 
 	/**

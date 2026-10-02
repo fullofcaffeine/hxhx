@@ -499,58 +499,6 @@ class OcamlLocalRepresentationPlanner {
 			return preservesNullableBoolArgument != null && preservesNullableBoolArgument(callExpression, argumentIndex);
 		}
 
-		/**
-			Collects only identity-preserving enum locals owned by nested functions.
-
-			Nested functions get their own conversion binding, so this root plan must
-			not adopt their nullable or Dynamic occurrence conversions. Native enum
-			locals have identity-only reads and writes, however, and syntax consumes
-			their stable lexical identity from the enclosing whole-body plan.
-		**/
-		function visitNestedNativeEnumLocals(current:TypedExpr):Void {
-			switch (current.expr) {
-				case TVar(local, initializer):
-					record(local.id, local.t);
-					declaredLocalIds.set(local.id, true);
-					final semanticTypeId = nativeEnumSemanticTypeId(local.t);
-					if (semanticTypeId != null) {
-						enumSemanticTypeByLocalId.set(local.id, semanticTypeId);
-						final input = initializer == null ? null : exactNativeEnumCarrierInput(initializer, declaredLocalIds, enumSemanticTypeByLocalId,
-							representations, producesExactNativeEnum);
-						identityEnumInitializerByLocalId.set(local.id, input != null && input.semanticTypeId == semanticTypeId);
-						if (input != null && input.sourceLocalId != null)
-							enumSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
-					}
-					if (initializer != null)
-						visitNestedNativeEnumLocals(initializer);
-				case TBinop(OpAssign | OpAssignOp(_), left, right):
-					switch (left.expr) {
-						case TLocal(local) if (enumSemanticTypeByLocalId.exists(local.id)):
-							unsupportedEnumLocalIds.set(local.id, true);
-						case _:
-					}
-					visitNestedNativeEnumLocals(left);
-					visitNestedNativeEnumLocals(right);
-				case TUnop(OpIncrement | OpDecrement, _, operand):
-					switch (operand.expr) {
-						case TLocal(local) if (enumSemanticTypeByLocalId.exists(local.id)):
-							unsupportedEnumLocalIds.set(local.id, true);
-						case _:
-					}
-					visitNestedNativeEnumLocals(operand);
-				case TLocal(local):
-					record(local.id, local.t);
-				case TFunction(tfunc):
-					for (argument in tfunc.args) {
-						record(argument.v.id, argument.v.t);
-						declaredLocalIds.set(argument.v.id, true);
-					}
-					visitNestedNativeEnumLocals(tfunc.expr);
-				case _:
-					TypedExprTools.iter(current, visitNestedNativeEnumLocals);
-			}
-		}
-
 		var visit:TypedExpr->Void = null;
 
 		function visitCheckedInt(current:TypedExpr):Void {
@@ -578,13 +526,6 @@ class OcamlLocalRepresentationPlanner {
 		visit = function(current:TypedExpr):Void {
 			var visitChildren = true;
 			switch (current.expr) {
-				case TFunction(tfunc):
-					for (argument in tfunc.args) {
-						record(argument.v.id, argument.v.t);
-						declaredLocalIds.set(argument.v.id, true);
-					}
-					visitNestedNativeEnumLocals(tfunc.expr);
-					visitChildren = false;
 				case TVar(local, initializer):
 					record(local.id, local.t);
 					declaredLocalIds.set(local.id, true);

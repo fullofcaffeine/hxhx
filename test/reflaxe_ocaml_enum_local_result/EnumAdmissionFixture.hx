@@ -47,7 +47,9 @@ class EnumAdmissionFixture {
 				final id = OcamlCallPlanner.calleeId(owner, field);
 				final expected = [
 					"direct",
+					"conditionalConstructor",
 					"forwarded",
+					"retainedDirect",
 					"alternateForwarded",
 					"freshReceiverForwarded",
 					"retained",
@@ -84,11 +86,27 @@ class EnumAdmissionFixture {
 					corrupted.setExpr(Context.typeExpr(macro(cast "wrong" : Payload)));
 					expectRejected(() -> catalog.requireFinal(corrupted, context), "an unsupported final producer retained early enum approval");
 					if (field.name == "forwarded") {
+						final retained = ClassFieldHelper.findFuncData(fields.filter(item -> item.name == "retainedDirect")[0], owner, false);
+						if (retained == null || retained.expr == null)
+							throw "expected the retained direct-call body";
+						final retainedFinal = original.clone();
+						retainedFinal.bindProgramRevision("enum-admission-fixture");
+						retainedFinal.setExpr(retained.expr);
+						catalog.requireFinal(retainedFinal, context);
 						final alternate = ClassFieldHelper.findFuncData(fields.filter(item -> item.name == "alternateForwarded")[0], owner, false);
 						if (alternate == null || alternate.expr == null)
 							throw "expected the independent alternate call body";
 						corrupted.setExpr(alternate.expr);
 						expectRejected(() -> catalog.requireFinal(corrupted, context), "a different exact callee retained early enum approval");
+					}
+					if (field.name == "direct") {
+						final retained = ClassFieldHelper.findFuncData(fields.filter(item -> item.name == "constructedLocal")[0], owner, false);
+						if (retained == null || retained.expr == null)
+							throw "expected the retained direct-constructor body";
+						final retainedFinal = original.clone();
+						retainedFinal.bindProgramRevision("enum-admission-fixture");
+						retainedFinal.setExpr(retained.expr);
+						catalog.requireFinal(retainedFinal, context);
 					}
 				}
 			}

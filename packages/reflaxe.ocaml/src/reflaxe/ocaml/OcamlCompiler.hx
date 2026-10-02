@@ -506,6 +506,22 @@ class OcamlCompiler extends DirectToStringCompiler {
 		callable boundary before the target command succeeds.
 	**/
 	function planCallableDeclarations(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>, programRevision:String):Void {
+		// A shared enum carrier describes a type. Only the exact method's producer
+		// evidence can authorize exporting that carrier as its function result.
+		function registerMethod(classType:ClassType, field:ClassField, isStatic:Bool):Void {
+			final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
+			if (candidate != null)
+				representationRegistry.selectNativeEnum(candidate.descriptor);
+			final declaration = OcamlCallPlanner.declarationFor(classType, field, isStatic, representationRegistry, programRevision,
+				OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+			if (declaration == null)
+				return;
+			if (declaration.result != null
+				&& representationRegistry.nativeEnumValue(declaration.result.outputSemanticTypeId) != null
+				&& candidate == null)
+				return;
+			functionPlanRegistry.registerCallableDeclaration(declaration);
+		}
 		final observedEnumCallees:Map<String, Bool> = [];
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
@@ -540,24 +556,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 					if (declaration != null)
 						functionPlanRegistry.registerCallableDeclaration(declaration);
 				}
-				for (field in classType.statics.get()) {
-					final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
-					if (candidate != null)
-						representationRegistry.selectNativeEnum(candidate.descriptor);
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
-						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-					if (declaration != null)
-						functionPlanRegistry.registerCallableDeclaration(declaration);
-				}
-				for (field in classType.fields.get()) {
-					final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
-					if (candidate != null)
-						representationRegistry.selectNativeEnum(candidate.descriptor);
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, false, representationRegistry, programRevision,
-						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-					if (declaration != null)
-						functionPlanRegistry.registerCallableDeclaration(declaration);
-				}
+				for (field in classType.statics.get())
+					registerMethod(classType, field, true);
+				for (field in classType.fields.get())
+					registerMethod(classType, field, false);
 			}
 		}
 	}

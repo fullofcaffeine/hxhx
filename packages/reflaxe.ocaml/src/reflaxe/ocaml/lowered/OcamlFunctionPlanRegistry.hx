@@ -734,6 +734,23 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/**
+		Returns the represented result sealed for one exact nested function literal.
+
+		Call planning uses this request-local lookup only after every nested function
+		in the ordinary root has a final represented or deferred disposition. A
+		deferred literal returns no producer evidence, even when another function in
+		the program registered the same enum carrier.
+	**/
+	public function representedNestedFunctionResultFor(expression:TypedExpr):Null<OcamlCallValuePlan> {
+		final record = nestedFunctionsByExpression.get(expression);
+		if (record == null || record.plan == null || record.plan.callableBoundary.result == null)
+			return null;
+		if (currentProgramRevision == null || record.binding.programRevision != currentProgramRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-result-producer]: nested function "${record.binding.functionId}" belongs to another program';
+		return OcamlCallPlan.copyValue(record.plan.callableBoundary.result);
+	}
+
+	/**
 		Returns the parent identity and behavior choice for one exact function literal.
 
 		The caller supplies the ordinary-root binding that `functionSyntaxInputFor`

@@ -229,8 +229,20 @@ class OcamlNativeEnumResultAdmission {
 		if (descriptor == null || descriptor.revision != source.descriptor.revision || data.expr == null)
 			throw "enum result final body lost its declared variant: " + id;
 		final selected = classify(data.expr, data.classType, data.isStatic, descriptor, context);
-		if (selected == null || selected.shape != source.shape || selected.dependencies.join("|") != source.dependencies.join("|"))
+		if (selected == null
+			|| !sameCompletionShape(selected.shape, source.shape)
+			|| selected.dependencies.join("|") != source.dependencies.join("|"))
 			throw "enum result final body changed its source completion: " + id;
+	}
+
+	/** Accepts preprocessor reshaping when reclassification keeps the exact dependency set. */
+	static function sameCompletionShape(left:OcamlEnumResultShape, right:OcamlEnumResultShape):Bool {
+		return switch ([left, right]) {
+			case [Constructor | RetainedConstructor, Constructor | RetainedConstructor]: true;
+			case [Call | RetainedCall, Call | RetainedCall]: true;
+			case [Control, _] | [_, Control]: true;
+			case _: false;
+		};
 	}
 
 	/** Preserve casts and control flow as boundaries; only harmless source wrappers disappear. */

@@ -5,8 +5,16 @@ class EnumAdmissionCases {
 	public function direct():Payload
 		return Text("direct");
 
+	public function conditionalConstructor(value:Null<String>):Payload
+		return Text(value == null ? "" : value);
+
 	public function forwarded():Payload
 		return direct();
+
+	public function retainedDirect():Payload {
+		final value = direct();
+		return value;
+	}
 
 	public function alternateForwarded():Payload
 		return constructedLocal();

@@ -38,4 +38,13 @@ if grep -Eq 'let value = Obj[.](magic|obj)' "$output/out/Reader.ml"; then
   echo 'The retained enum local still uses an unsafe representation conversion.' >&2
   exit 1
 fi
+"$haxe_bin" -cp "$fixture" --run EnumProducerMutationProbe > "$output/mutation-upstream.stdout"
+diff -u "$fixture/mutation.expected.stdout" "$output/mutation-upstream.stdout"
+node scripts/dev/run-with-timeout-heartbeat.js \
+  --timeout 300 --heartbeat 30 --label enum-producer-mutation \
+  --log "$output/mutation-build.log" -- "$haxe_bin" -cp "$fixture" \
+  -main EnumProducerMutationProbe --no-output -lib reflaxe.ocaml \
+  -D ocaml_output="$output/mutation-out" -D ocaml_build=native
+"$output/mutation-out/_build/default/mutation_out.exe" > "$output/mutation-native.stdout"
+diff -u "$fixture/mutation.expected.stdout" "$output/mutation-native.stdout"
 echo 'REFLAXE_OCAML_ENUM_LOCAL_RESULT:PASS'

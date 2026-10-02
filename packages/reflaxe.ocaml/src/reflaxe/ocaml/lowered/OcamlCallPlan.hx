@@ -1650,6 +1650,8 @@ class OcamlCallPlanner {
 	final binding:OcamlFunctionPlanBinding;
 	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
 	final localIdentities:Null<LexicalLocalIdentityPlan>;
+	final provesFunctionValueResult:Null<(TypedExpr, String) -> Bool>;
+	final hasCallableDeclaration:Null<String->Bool>;
 	final preliminaryDecisionsByExpression:ObjectMap<TypedExpr, OcamlCallDecision> = new ObjectMap();
 	final observedPreliminaryExpressions:ObjectMap<TypedExpr, Bool> = new ObjectMap();
 	#if reflaxe_lifecycle_test
@@ -1657,11 +1659,13 @@ class OcamlCallPlanner {
 	#end
 
 	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan,
-			?localIdentities:LexicalLocalIdentityPlan) {
+			?localIdentities:LexicalLocalIdentityPlan, ?provesFunctionValueResult:(TypedExpr, String) -> Bool, ?hasCallableDeclaration:String->Bool) {
 		this.representations = representations;
 		this.binding = binding;
 		this.localRepresentations = localRepresentations;
 		this.localIdentities = localIdentities;
+		this.provesFunctionValueResult = provesFunctionValueResult;
+		this.hasCallableDeclaration = hasCallableDeclaration;
 	}
 
 	/**
@@ -1720,7 +1724,7 @@ class OcamlCallPlanner {
 	/** Selects the callable boundary exported by this function, if admitted. */
 	public function boundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
 		final declaration = declarationFor(data.classType, data.field, data.isStatic, representations, binding.programRevision, binding.pipelineRevision);
-		if (declaration == null)
+		if (!isPublishedDeclaration(declaration))
 			return null;
 		var result = OcamlCallPlan.copyOptionalValue(declaration.result);
 		var resultReason = "";
@@ -1856,7 +1860,7 @@ class OcamlCallPlanner {
 		if (data.field.name != "new" || data.isStatic)
 			return null;
 		final declaration = constructorDeclarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
-		if (declaration == null)
+		if (!isPublishedDeclaration(declaration))
 			return null;
 		return {
 			id: "construction-boundary:" + Sha256.encode(declaration.calleeId).substr(0, 24),
@@ -2139,7 +2143,7 @@ class OcamlCallPlanner {
 				final declaration = parameters.length == 0
 					&& constructor != null ? constructorDeclarationFor(classType, constructor, representations, binding.programRevision,
 						binding.pipelineRevision) : null;
-				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final plannedArguments = !isPublishedDeclaration(declaration) ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| plannedArguments == null
 					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
@@ -2184,8 +2188,8 @@ class OcamlCallPlanner {
 				if (genericIdentity != null)
 					return genericIdentity;
 				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
-				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
-				final resultMaterialization = declaration == null ? null : directStaticResultMaterialization(expression.t, declaration);
+				final plannedArguments = !isPublishedDeclaration(declaration) ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final resultMaterialization = plannedArguments == null ? null : directStaticResultMaterialization(expression.t, declaration);
 				if (declaration == null
 					|| plannedArguments == null
 					|| (!sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)
@@ -2238,8 +2242,8 @@ class OcamlCallPlanner {
 					return standardIMapCallDecision(expression, classType, field, standardIMapTarget);
 				final declaration = parameters.length == 0 ? declarationFor(classType, field, false, representations, binding.programRevision,
 					binding.pipelineRevision) : null;
-				final receiver = declaration == null ? null : instanceReceiverValue(receiverExpression, declaration);
-				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final receiver = !isPublishedDeclaration(declaration) ? null : instanceReceiverValue(receiverExpression, declaration);
+				final plannedArguments = receiver == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| receiver == null
 					|| plannedArguments == null
@@ -2284,7 +2288,14 @@ class OcamlCallPlanner {
 				final target = OcamlStructuralIteratorCallContract.select(receiverExpression, field, arguments, expression.t);
 				target == null ? null : structuralIteratorCallDecision(expression, field, target);
 			case TCall(callee, arguments):
-				final signature = functionValueSignature(callee, arguments, expression.t, representations);
+				var signature = functionValueSignature(callee, arguments, expression.t, representations);
+				if (signature != null
+					&& requiresFunctionValueResultProducer(signature, representations)
+					&& (signature.resultSemanticTypeId == null
+						|| provesFunctionValueResult == null
+						|| !provesFunctionValueResult(callee, signature.resultSemanticTypeId))) {
+					signature = null;
+				}
 				final plannedArguments = signature == null ? null : functionValueArguments(signature, arguments, representations);
 				final plannedResult = signature == null ? null : functionValueResult(signature, representations);
 				if (signature == null
@@ -2698,16 +2709,37 @@ class OcamlCallPlanner {
 	}
 
 	/**
-		Returns whether one callee and argument list fit a sealed function-value
-		family.
+		Returns whether one callee and argument list fit a builder-owned
+		function-value family.
 
-		The check is intentionally shape-only so planning and the builder's
-		fail-closed guard agree without sharing mutable compiler state. Instance
-		methods and arbitrary field expressions stay with their existing owners.
+		Enum result carriers require request-local producer evidence, which this
+		static builder guard cannot supply. Those calls are admitted only by the
+		final planner and consumed through their sealed occurrence decisions.
 	**/
 	public static function isAdmittedFunctionValueCall(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
 			?representations:OcamlRepresentationRegistry):Bool {
-		return functionValueSignature(callee, arguments, resultType, representations) != null;
+		final signature = functionValueSignature(callee, arguments, resultType, representations);
+		return signature != null && (representations == null || !requiresFunctionValueResultProducer(signature, representations));
+	}
+
+	/** Returns whether the complete request catalog published this declaration. */
+	function isPublishedDeclaration(declaration:Null<OcamlCallableDeclarationPlan>):Bool {
+		return declaration != null && (hasCallableDeclaration == null || hasCallableDeclaration(declaration.calleeId));
+	}
+
+	/**
+		Reports whether a function-value result needs proof from its exact producer.
+
+		A registry entry identifies an enum carrier for the program. It does not prove
+		that an arbitrary local or call-produced function returns that carrier. The
+		final planner therefore admits these results only through its producer callback;
+		the builder consumes a sealed occurrence and never repeats this global check.
+	**/
+	static function requiresFunctionValueResultProducer(signature:OcamlAdmittedCallSignature, representations:OcamlRepresentationRegistry):Bool {
+		final semanticTypeId = signature.resultSemanticTypeId;
+		return semanticTypeId != null
+			&& (representations.nativeEnumValue(semanticTypeId) != null
+				|| representations.nullableNativeEnumValue(semanticTypeId) != null);
 	}
 
 	/**
@@ -2968,7 +3000,7 @@ class OcamlCallPlanner {
 			case TNew(classRef, parameters, _): parameters.length == 0 && representations.monomorphicClassForType(unwrapped.t) != null;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final producer = declarationFor(classRef.get(), fieldRef.get(), true, representations, binding.programRevision, binding.pipelineRevision);
-				producer != null
+				isPublishedDeclaration(producer)
 				&& producer.result != null
 				&& arguments.length == producer.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length
 				&& producer.result.outputRepresentationId == boundary.inputRepresentationId;
