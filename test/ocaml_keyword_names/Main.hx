@@ -8,6 +8,9 @@ class Main {
 	public function effect_():Int
 		return 22;
 
+	public function hx_effect():Int
+		return 55;
+
 	static function main():Void {
 		final instance = new Main();
 		Sys.println(instance.effect());
@@ -16,5 +19,8 @@ class Main {
 		final effect_ = 44;
 		Sys.println(effect);
 		Sys.println(effect_);
+		Sys.println(instance.hx_effect());
+		final hx_effect = 66;
+		Sys.println(hx_effect);
 	}
 }

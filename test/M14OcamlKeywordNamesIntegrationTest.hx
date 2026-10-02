@@ -2,7 +2,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
-/** Builds native OCaml and compares keyword-like method and local names with upstream Haxe. */
+/** Compares keyword-like names with upstream Haxe through both OCaml generators. */
 class M14OcamlKeywordNamesIntegrationTest {
 	static function run(command:String, arguments:Array<String>):String {
 		final process = new sys.io.Process(command, arguments);
@@ -39,6 +39,27 @@ class M14OcamlKeywordNamesIntegrationTest {
 		File.saveContent(root + "/actual.stdout", actual);
 		if (actual != expected)
 			throw "native OCaml keyword names output mismatch; artifacts: " + root;
+		final standalone = root + "/standalone";
+		// Nested compiler processes must expand this checkout's Lix library pins.
+		// The upstream executable can otherwise read a global dev registration
+		// that points at a different worktree and an incompatible Reflaxe version.
+		run(Path.normalize("node_modules/.bin/haxe"), [
+			"-cp",
+			fixture,
+			"-main",
+			"Main",
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"ocaml_output=" + standalone,
+			"-D",
+			"ocaml_build=native",
+			"--no-output"
+		]);
+		final standaloneActual = run(standalone + "/_build/default/standalone.exe", []);
+		File.saveContent(root + "/standalone.stdout", standaloneActual);
+		if (standaloneActual != expected)
+			throw "standalone OCaml keyword names output mismatch; artifacts: " + root;
 		removeTree(root);
 		Sys.println("OCAML_KEYWORD_NAMES:PASS");
 	}
