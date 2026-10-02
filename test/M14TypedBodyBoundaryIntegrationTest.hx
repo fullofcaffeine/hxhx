@@ -788,7 +788,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"    var scalar = identity(7);",
 			"    var nested = wrap([\"x\"]);",
 			"    var conflict = same(1, \"x\");",
-			"    var unsupportedConstraint = constrained(1);",
+			"    var constrainedResult = constrained(1);",
 			"    var unresolved = unbound({});",
 			"  }",
 			"}",
@@ -814,10 +814,11 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(conflict.getType().isUnknown(), "conflicting method-generic arguments produced a false common result");
 		assertTrue(conflict.getDeclaration() == null, "conflicting method-generic arguments selected an inapplicable declaration");
 
-		final unsupportedConstraint = variableInitializer(body, "unsupportedConstraint");
-		assertTrue(unsupportedConstraint.getType().isUnknown(), "unsupported constrained generic inference produced a false concrete result");
-		assertTrue(unsupportedConstraint.getDeclaration() == null,
-			"unsupported constrained generic inference selected a declaration without proving its constraint");
+		final constrainedResult = variableInitializer(body, "constrainedResult");
+		assertTrue(constrainedResult.getType().getSemanticKey() == "primitive:Int", "valid Int-constrained call lost its concrete result");
+		assertTrue(constrainedResult.getDeclaration() != null
+			&& constrainedResult.getDeclaration().getSignature().getName() == "constrained",
+			"valid Int-constrained call lost its exact selected declaration");
 
 		final unresolved = variableInitializer(body, "unresolved");
 		assertTrue(unresolved.getType().isUnknown(), "unbound method-generic result escaped as a caller-visible nominal type");
