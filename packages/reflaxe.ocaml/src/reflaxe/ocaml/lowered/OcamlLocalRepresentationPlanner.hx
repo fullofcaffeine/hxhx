@@ -209,8 +209,32 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
+	/**
+		Keeps declared nullable and user-abstract locals out of concrete enum storage.
+
+		A constant-folded initializer can produce an exact enum while its local still
+		declares Null<Enum>. Following through that abstract would skip the required
+		carrier conversion and make later nullable arguments fail native checking.
+	**/
 	static function nativeEnumSemanticTypeId(type:Type):Null<String> {
-		return switch (TypeTools.follow(type)) {
+		var current = type;
+		for (_ in 0...32) {
+			switch (current) {
+				case TLazy(resolve):
+					current = resolve();
+				case TMono(reference):
+					final resolved = reference.get();
+					if (resolved == null)
+						return null;
+					current = resolved;
+				case TType(reference, parameters):
+					final declaration = reference.get();
+					current = TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters);
+				case _:
+					break;
+			}
+		}
+		return switch (current) {
 			case TEnum(reference, parameters) if (parameters.length == 0):
 				final declaration = reference.get();
 				if (declaration.params.length != 0
