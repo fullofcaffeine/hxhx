@@ -13,6 +13,8 @@ private typedef JsClassUnit = {
 	final identity:String;
 	final superIdentity:Null<String>;
 	final declarationRank:Int;
+	final interfaceRefs:Array<String>;
+	final runtimeTypes:JsRuntimeTypePlan;
 	final jsRef:String;
 	final decl:HxClassDecl;
 	final projection:TypedBackendClassProjection;
@@ -64,12 +66,12 @@ class JsTargetCore implements ITargetCore {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
 		final inheritance = new JsClassInheritancePlan(program);
+		final runtimeTypes = new JsRuntimeTypePlan(program, inheritance);
 		var units = new Array<JsClassUnit>();
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
 		for (typed in typedModules) {
 			final moduleProjection = typed.getBackendProjection();
-			moduleProjection.assertRuntimeTypeOperandsAbsent("JavaScript backend");
 			final decl = moduleProjection.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final mainClass = HxModuleDecl.getMainClass(decl);
@@ -89,6 +91,8 @@ class JsTargetCore implements ITargetCore {
 					identity: plan.identity,
 					superIdentity: plan.superIdentity,
 					declarationRank: inheritance.declarationRank(classProjection),
+					interfaceRefs: inheritance.interfaceReferences(classProjection),
+					runtimeTypes: runtimeTypes,
 					jsRef: jsRef,
 					decl: cls,
 					projection: classProjection,
@@ -633,7 +637,7 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init, staticScope.exprScope());
+					JsExprEmitter.emit(init, staticScope.exprScope(unit.runtimeTypes.forInitializer(field)));
 				} catch (e:String) {
 					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
 						"null";
@@ -672,7 +676,8 @@ class JsTargetCore implements ITargetCore {
 			if (!HxFunctionDecl.getIsStatic(fn))
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog());
+			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
+				unit.runtimeTypes.forFunction(functionProjection));
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 
@@ -717,7 +722,8 @@ class JsTargetCore implements ITargetCore {
 		final instanceFields = instanceFieldRefs(unit.decl);
 		final superRef = resolveSuperClassRef(unit, classRefs);
 		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog(),
-			constructorProjection == null ? null : constructorProjection.getFieldReadCatalog());
+			constructorProjection == null ? null : constructorProjection.getFieldReadCatalog(),
+			constructorProjection == null ? null : unit.runtimeTypes.forFunction(constructorProjection));
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
@@ -930,7 +936,7 @@ class JsTargetCore implements ITargetCore {
 				continue;
 
 			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog(),
-				functionProjection.getFieldReadCatalog());
+				functionProjection.getFieldReadCatalog(), unit.runtimeTypes.forFunction(functionProjection));
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
@@ -1020,7 +1026,7 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init, scope.exprScope());
+					JsExprEmitter.emit(init, scope.exprScope(unit.runtimeTypes.forInitializer(field)));
 				} catch (e:String) {
 					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				} catch (error:haxe.Exception) {
@@ -3658,6 +3664,7 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		emitRuntimePrelude(writer);
+		JsRuntimeTypeSupport.emitDefinition(writer);
 		final classRefs = buildClassRefs(classes.bySimpleName, classes.byFullName);
 
 		final declarationOrder = classes.units.copy();
@@ -3669,6 +3676,11 @@ class JsTargetCore implements ITargetCore {
 				emitClass(writer, unit, classRefs, classes.bySimpleName);
 			}
 		}
+
+		// All interface values exist before membership metadata or user initializers run.
+		for (unit in classes.units)
+			if (unit.interfaceRefs.length > 0)
+				writer.writeln(unit.jsRef + ".__hx_interfaces = [" + unit.interfaceRefs.join(", ") + "];");
 
 		for (unit in classes.units)
 			emitClassInitialization(writer, unit, classRefs);

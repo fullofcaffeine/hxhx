@@ -28,11 +28,14 @@ class JsExprEmitter {
 			},
 			resolveSuperClassRef: function():Null<String> {
 				return parent == null ? null : parent.resolveSuperClassRef();
-			}
+			},
+			runtimeTypes: parent == null ? null : parent.runtimeTypes
 		};
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		if (TypedRuntimeTypeSource.isMarker(expr))
+			return JsRuntimeTypeSupport.emit(expr, scope);
 		final staticCall = TypedExactStaticCallSource.decode(expr);
 		if (staticCall != null)
 			return emit(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);

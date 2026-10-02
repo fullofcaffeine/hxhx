@@ -19,10 +19,12 @@ class JsClassInheritancePlan {
 	final nodes = new haxe.ds.ObjectMap<TypedBackendClassProjection, JsClassInheritanceNode>();
 	final declarationRanks = new haxe.ds.StringMap<Int>();
 	final byIdentity = new haxe.ds.StringMap<JsClassInheritanceNode>();
+	final graph:TypedBackendClassGraph;
 
 	public function new(program:MacroExpandedProgram) {
 		program.assertTypedBodyRevisionsCurrent();
 		this.program = program;
+		final classFacts = new Array<TypedBackendClassSemanticFacts>();
 		final byReference = new haxe.ds.StringMap<String>();
 		final sourceOrder = new Array<JsClassInheritanceNode>();
 		for (module in program.getTypedModules()) {
@@ -30,6 +32,7 @@ class JsClassInheritancePlan {
 			final packagePath = HxModuleDecl.getPackagePath(projection.getDeclaration());
 			for (owner in projection.getClasses()) {
 				final facts = owner.requireSemanticFacts();
+				classFacts.push(facts);
 				final name = HxClassDecl.getName(owner.getDeclaration());
 				final fullName = packagePath.length == 0 ? name : packagePath + "." + name;
 				final reference = JsNameMangler.classVarName(fullName);
@@ -71,6 +74,8 @@ class JsClassInheritancePlan {
 		}
 		for (node in sourceOrder)
 			visit(node);
+		// Preserve superclass diagnostics before admitting the shared interface graph.
+		graph = new TypedBackendClassGraph(program.getTypedProgramRevision().getCanonicalIdentity(), classFacts);
 	}
 
 	/** A type plan cannot borrow emitted references from another program or stale revision. */
@@ -91,5 +96,28 @@ class JsClassInheritancePlan {
 	/** Parent declarations must exist before a child installs its prototype link. */
 	public function declarationRank(owner:TypedBackendClassProjection):Int {
 		return declarationRanks.get(requireClass(owner).identity);
+	}
+
+	/** Runtime class values must name an admitted class, never an enum or abstract carrier. */
+	public function requireRuntimeClass(identity:String):JsClassInheritanceNode {
+		final node = byIdentity.get(identity);
+		final facts = graph.findClassFacts(identity);
+		if (node == null || facts == null || !facts.getNominalKind().match(ClassInstance))
+			throw "JavaScript runtime type has no exact class provider: " + identity;
+		if (facts.getIsExtern() && facts.getIsInterface())
+			throw "JavaScript extern interface runtime type is unsupported: " + identity;
+		return node;
+	}
+
+	/** The shared graph owns interface closure; JavaScript only chooses emitted references. */
+	public function interfaceReferences(owner:TypedBackendClassProjection):Array<String> {
+		final identity = requireClass(owner).identity;
+		final facts = graph.findClassFacts(identity);
+		if (!facts.getNominalKind().match(ClassInstance) || (facts.getIsExtern() && facts.getIsInterface()))
+			return [];
+		return [
+			for (node in graph.requireAssignableTypes(identity, fact -> !(fact.getIsExtern() && fact.getIsInterface())))
+				if (node.isInterface) requireRuntimeClass(node.classIdentity).reference
+		];
 	}
 }

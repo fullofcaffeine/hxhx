@@ -1,10 +1,13 @@
 import backend.BackendContext;
 import backend.cpp.CppTargetCore;
-import backend.js.JsTargetCore;
 import backend.source.SourceTargetCommon;
 import backend.vm.NekoTargetCore;
 
-/** Unsupported runtime type operations must not replace or partially publish target files. */
+/**
+	Unsupported runtime type operations must not replace or partially publish target files.
+	JavaScript's admitted nominal operations and rejected core objects are exercised
+	together by M14JsRuntimeTypeOperandsTest in the same required package command.
+ */
 class M14RuntimeTypeUnsupportedBackendIntegrationTest {
 	static function main():Void {
 		assertRejected('class Parent {}
@@ -29,12 +32,6 @@ class Main {
 		final root = ".tmp/runtime-type-unsupported-" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final checks:Array<{name:String, emit:BackendContext->Void}> = [
-			{
-				name: "js",
-				emit: context -> {
-					new JsTargetCore().emit(program, context);
-				}
-			},
 			{
 				name: "cpp",
 				emit: context -> {
