@@ -921,6 +921,9 @@ class JsExprEmitter {
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
+			case ESuper:
+				final operands = ["this"].concat(args.map(argument -> emitCallArg(argument, scope)));
+				return resolveSuperRef(scope) + ".call(" + operands.join(", ") + ")";
 			case EField(ESuper, field):
 				return emitSuperMethodCall(field, args, scope);
 			case EField(subject, "match") if (args != null && args.length == 1):

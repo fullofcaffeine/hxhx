@@ -23,6 +23,8 @@ function haxeFiles(entry) {
 const files = roots.flatMap(haxeFiles);
 const failures = [];
 const typedClassFactPlanCuts = new Set([
+  // JavaScript resolves exact superclass providers before rendering.
+  "packages/hxhx-core/src/backend/js/JsClassInheritancePlan.hx",
   "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
   // Neko joins exact calls to their indexed class and function before rendering.

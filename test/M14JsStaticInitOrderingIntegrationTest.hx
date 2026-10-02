@@ -30,9 +30,10 @@ class M14JsStaticInitOrderingIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function typedModule(packagePath:String, cls:HxClassDecl, filePath:String):TypedModule {
+	static function resolvedModule(packagePath:String, cls:HxClassDecl, filePath:String):ResolvedModule {
 		final decl = new HxModuleDecl(packagePath, [], cls, [cls], false, false);
-		return TyperStage.typeModule(new ParsedModule("", decl, filePath));
+		final name = packagePath.length == 0 ? HxClassDecl.getName(cls) : packagePath + "." + HxClassDecl.getName(cls);
+		return new ResolvedModule(name, filePath, new ParsedModule("", decl, filePath));
 	}
 
 	static function sysToolsClass():HxClassDecl {
@@ -43,8 +44,8 @@ class M14JsStaticInitOrderingIntegrationTest {
 		]);
 	}
 
-	static function sysToolsModule():TypedModule {
-		return typedModule("haxe", sysToolsClass(), "haxe/SysTools.hx");
+	static function sysToolsModule():ResolvedModule {
+		return resolvedModule("haxe", sysToolsClass(), "haxe/SysTools.hx");
 	}
 
 	static function stringToolsClass(collapsedPath:Bool):HxClassDecl {
@@ -59,8 +60,8 @@ class M14JsStaticInitOrderingIntegrationTest {
 		]);
 	}
 
-	static function stringToolsModule():TypedModule {
-		return typedModule("", stringToolsClass(false), "StringTools.hx");
+	static function stringToolsModule():ResolvedModule {
+		return resolvedModule("", stringToolsClass(false), "StringTools.hx");
 	}
 
 	static function main():Void {
@@ -95,7 +96,9 @@ class M14JsStaticInitOrderingIntegrationTest {
 			assertTrue(stringToolsDependencies.indexOf("haxe.SysTools") >= 0, "a qualified static-field identifier should depend on its owning class");
 
 			// Keep the dependent class first so the backend must reorder it.
-			final program = new MacroExpandedProgram([stringToolsModule(), sysToolsModule()], false);
+			final resolved = [stringToolsModule(), sysToolsModule()];
+			final index = TyperIndex.build(resolved);
+			final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index)], false);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 			final js = File.getContent(artifactPath);
