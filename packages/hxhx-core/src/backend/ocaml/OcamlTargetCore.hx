@@ -41,7 +41,7 @@ class OcamlTargetCore implements ITargetCore {
 		final profile = context.ensureOcamlProfileDefine();
 		if (traceEnabled())
 			Sys.println("stage3_driver=ocaml_target_core_before_require_program");
-		final typedProgram = GenIrBoundary.requireProgram(program);
+		final typedProgram = OcamlEntryPointSelection.rootFirst(GenIrBoundary.requireProgram(program), context.mainModule);
 		if (traceEnabled())
 			Sys.println("stage3_driver=ocaml_target_core_after_require_program");
 		if (profile == OcamlProfile.Metal) {
