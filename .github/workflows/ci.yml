@@ -576,6 +576,26 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Expose the Neko compiler for focused tests
+        if: ${{ matrix.shard == 'compiler-focused' }}
+        run: |
+          set -euo pipefail
+          # Lix 16.0.2 downloads Neko 2.4.0, but npm exposes only its VM shim.
+          # This job uses ubuntu-latest (x64); keep the compiler and VM together.
+          neko -version
+          neko_root="$HOME/haxe/neko/versions/2.4.0-linux64"
+          test -x "$neko_root/nekoc"
+          echo "$neko_root" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$neko_root${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          echo "NEKOPATH=$neko_root" >> "$GITHUB_ENV"
+          export PATH="$neko_root:$PATH"
+          export LD_LIBRARY_PATH="$neko_root${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export NEKOPATH="$neko_root"
+          smoke_dir="$(mktemp -d)"
+          trap 'rm -rf "$smoke_dir"' EXIT
+          printf '$print("NEKO_TOOLCHAIN:PASS")\n' > "$smoke_dir/main.neko"
+          nekoc "$smoke_dir/main.neko"
+          test "$(neko "$smoke_dir/main.n")" = "NEKO_TOOLCHAIN:PASS"
       - name: Run test shard
         env:
           HXHX_FORCE_STAGE0: "0"
