@@ -425,31 +425,7 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
-		if (source == null || source.length == 0)
-			return [];
-
-		final candidates = new haxe.ds.StringMap<Bool>();
-		for (line in source.split("\n")) {
-			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:"))
-				continue;
-
-			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
-			var pos = 0;
-			while (re.matchSub(line, pos, -1)) {
-				final dep = re.matched(1);
-				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
-					candidates.set(dep, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
-		}
-
-		final out = new Array<String>();
-		for (dep in candidates.keys())
-			out.push(dep);
-		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
-		return out;
+		return HxImplicitDependencies.qualifiedTypePaths(source, defines);
 	}
 
 	function depsForParsedModule(filteredSource:String, decl:HxModuleDecl, ?defines:haxe.ds.StringMap<String>):Array<String> {

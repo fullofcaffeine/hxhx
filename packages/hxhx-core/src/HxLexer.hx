@@ -30,6 +30,31 @@ class HxLexer {
 		this.src = src;
 	}
 
+	/**
+		Replace comments between tokens with spaces for source-based dependency discovery.
+
+		The normal lexer owns comment boundaries, including the distinction between comments
+		and comment-looking text inside strings or regular expressions. Copy token text exactly;
+		preserve whitespace and source length so removal cannot join separate identifiers.
+		String interpolation remains part of its original string token.
+	**/
+	public static function maskComments(source:String):String {
+		final lexer = new HxLexer(source);
+		final out = new StringBuf();
+		var copied = 0;
+		while (true) {
+			final token = lexer.next();
+			for (i in copied...token.pos.index) {
+				final character = source.charAt(i);
+				out.add(character == "\n" || character == "\r" || character == "\t" ? character : " ");
+			}
+			out.add(source.substring(token.pos.index, lexer.index));
+			copied = lexer.index;
+			if (token.kind == TEof)
+				return out.toString();
+		}
+	}
+
 	inline function eof():Bool {
 		return index >= src.length;
 	}
