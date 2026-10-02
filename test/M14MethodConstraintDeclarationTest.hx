@@ -16,6 +16,12 @@ class M14MethodConstraintDeclarationTest {
 		final nested = TyType.fromHintText("{callback:(Int,String)->Bool, child:{value:Int}}");
 		require(nested.isAnonymous() && nested.getAnonymousFieldTypes().length == 2, "nested record delimiters were split");
 		require(nested.getAnonymousFieldTypes()[0].getFunctionArguments().length == 2, "callback arguments were split as fields");
+		final appliedRecord = TyType.fromHintText("Pair<{left:Int,right:String}>");
+		require(appliedRecord.getTypeArguments().length == 1, "record fields were split as generic arguments");
+		require(appliedRecord.getTypeArguments()[0].getAnonymousFieldNames().join(",") == "left,right", "generic record fields were lost");
+		final appliedCallback = TyType.fromHintText("Pair<(Int,String)->Bool>");
+		require(appliedCallback.getTypeArguments().length == 1 && appliedCallback.getTypeArguments()[0].getFunctionArguments().length == 2,
+			"callback inputs were split as generic arguments");
 		final index = TyperIndex.build([
 			module("foreign.Bound", "package foreign; class Bound {}"),
 			module("caller.Bound", "package caller; class Bound {}"),

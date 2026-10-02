@@ -316,25 +316,7 @@ class TyType {
 	}
 
 	static function splitTypeArguments(text:String):Array<String> {
-		final out = new Array<String>();
-		var depth = 0;
-		var start = 0;
-		for (i in 0...text.length) {
-			final ch = text.charAt(i);
-			if (ch == "<") {
-				depth++;
-			} else if (ch == ">") {
-				if (depth > 0)
-					depth--;
-			} else if (ch == "," && depth == 0) {
-				out.push(StringTools.trim(text.substring(start, i)));
-				start = i + 1;
-			}
-		}
-		final tail = StringTools.trim(text.substr(start));
-		if (tail.length > 0)
-			out.push(tail);
-		return out;
+		return splitTopLevel(text, ",");
 	}
 
 	static function hasWrappingParentheses(text:String):Bool {
