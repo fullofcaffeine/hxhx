@@ -1025,6 +1025,10 @@ class TyperStage {
 		final implicitConversion = TyImplicitConversionPlan.select(semanticIndex, expected, actual);
 		if (implicitConversion != null && implicitConversion.isRepresentationPreservingAbstractConversion())
 			return implicitConversion.getScore();
+		// Declared parameters compare by identity, never by a coincidentally equal
+		// class or binder spelling. Preserve the existing incomplete-input policy.
+		if (expected.isTypeParameter() || actual.isTypeParameter())
+			return expected.isUnknown() || actual.isUnknown() || expected.isDynamic() || actual.isDynamic() ? 0 : -1;
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
 		return functionOverloadTypeScore(exp, act);
@@ -1121,16 +1125,19 @@ class TyperStage {
 			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
 			if (declaration != null && candidate.acceptsArity(args.length)) {
 				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, argTypes,
-					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound), (expected, supplied) -> {
-						if (expected.isAnonymous() && expected.getAnonymousFieldNames().length == 0)
-							return TyEmptyObjectConstraint.accepts(supplied, ctx.getIndex());
-						final expectedOwner = expected.getNominalIdentity();
-						if (expectedOwner != null && supplied.getNominalIdentity() != null) {
-							final ancestor = TyNominalAncestor.view(ctx.getIndex(), supplied, expectedOwner);
-							return ancestor != null && ancestor.getSemanticKey() == expected.getSemanticKey();
-						}
-						return overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0;
-					});
+					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound),
+					(expected,
+							supplied) -> TyCallerConstraintProof.accepts(expected, supplied,
+							TyCallerConstraintProof.boundsForFunction(ctx.currentClass(), scope.getOwnerIdentity()), (expected, supplied) -> {
+								if (expected.isAnonymous() && expected.getAnonymousFieldNames().length == 0)
+									return TyEmptyObjectConstraint.accepts(supplied, ctx.getIndex());
+								final expectedOwner = expected.getNominalIdentity();
+								if (expectedOwner != null && supplied.getNominalIdentity() != null) {
+									final ancestor = TyNominalAncestor.view(ctx.getIndex(), supplied, expectedOwner);
+									return ancestor != null && ancestor.getSemanticKey() == expected.getSemanticKey();
+								}
+								return overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0;
+							}));
 				if (failure != null) {
 					rejectedMethodConstraint = failure;
 					continue;

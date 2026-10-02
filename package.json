@@ -237,7 +237,7 @@
     "test:m14:hih-uppercase-static-helper-call": "haxe test/m14_hxhx_stage3_uppercase_static_helper_call_integration_test.hxml",
     "test:m14:conditional-compilation": "haxe test/m14_conditional_compilation_integration_test.hxml",
     "test:m14:hih-new-generic-ctor": "haxe test/m14_hih_new_generic_ctor_integration_test.hxml",
-    "test:m14:hih-generic-function-decl": "haxe test/m14_hih_generic_function_decl_integration_test.hxml && haxe test/m14_method_constraint_declaration_test.hxml && haxe test/m14_nominal_ancestor_test.hxml && haxe test/m14_direct_method_constraint_test.hxml && haxe test/m14_empty_object_constraint_test.hxml && haxe test/m14_inference_solver_test.hxml && haxe test/m14_generic_abstract_conversion_test.hxml && haxe test/m14_generic_body_result_inference_test.hxml",
+    "test:m14:hih-generic-function-decl": "haxe test/m14_hih_generic_function_decl_integration_test.hxml && haxe test/m14_method_constraint_declaration_test.hxml && haxe test/m14_nominal_ancestor_test.hxml && haxe test/m14_direct_method_constraint_test.hxml && haxe test/m14_empty_object_constraint_test.hxml && haxe test/m14_inference_solver_test.hxml && haxe test/m14_generic_abstract_conversion_test.hxml && haxe test/m14_generic_body_result_inference_test.hxml && haxe test/m14_generic_forwarding_constraint_test.hxml",
     "test:m14:hih-generic-function-arity": "haxe test/m14_hxhx_stage3_generic_function_arity_integration_test.hxml",
     "test:m14:heavy": "npm run test:m14:hih-generic-function-arity && npm run test:m14:hih-complete-numeric-literals",
     "test:m14:hih-type-create-instance": "haxe test/m14_hxhx_stage3_type_create_instance_integration_test.hxml",
