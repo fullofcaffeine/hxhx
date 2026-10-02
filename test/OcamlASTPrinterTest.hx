@@ -40,6 +40,20 @@ class OcamlASTPrinterTest {
 		}
 	}
 
+	/** A field separator must stay outside the preceding expression's body. */
+	static function verifyRecordValueGrouping(printer:OcamlASTPrinter):Void {
+		final value = OcamlExpr.ELet("items", OcamlExpr.EList([]), OcamlExpr.EIdent("items"), false);
+		assertEq("{ first = (let items = [] in items); second = []; count = 7 }", printer.printExpr(OcamlExpr.ERecord([
+			{name: "first", value: value},
+			{name: "second", value: OcamlExpr.EList([])},
+			{name: "count", value: OcamlExpr.EConst(OcamlConst.CInt(7))}
+		])), "record let body cannot consume the next field");
+		assertEq("{ first = (if ready then 1 else 2); count = 7 }", printer.printExpr(OcamlExpr.ERecord([
+			{name: "first", value: OcamlExpr.EIf(OcamlExpr.EIdent("ready"), OcamlExpr.EConst(OcamlConst.CInt(1)), OcamlExpr.EConst(OcamlConst.CInt(2)))},
+			{name: "count", value: OcamlExpr.EConst(OcamlConst.CInt(7))}
+		])), "record conditional cannot consume the next field");
+	}
+
 	/** Proves that a raw template cannot discard or duplicate one typed expression. */
 	static function verifyRawInterpolationPlan():Void {
 		switch (OcamlRawInjection.plan("before {0} middle {1} after", 2)) {
@@ -155,6 +169,7 @@ class OcamlASTPrinterTest {
 		verifyModuleChunks();
 		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
+		verifyRecordValueGrouping(p);
 		verifyDeepExpressionPrintingIsStackSafe(p);
 		verifyRawInterpolationPlan();
 		assertEq("Stdlib.raise (problem)", p.printExpr(OcamlExpr.ERaise(OcamlExpr.EIdent("problem"))),
