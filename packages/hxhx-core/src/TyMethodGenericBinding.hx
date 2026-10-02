@@ -8,9 +8,9 @@
 	produces `Unknown` instead of escaping into a caller-local type hint where a
 	backend could mistake it for an unrelated class.
 
-	Constrained method parameters remain deliberately outside this helper until
-	the shared typer can validate their constraints. Target carriers and rendered
-	type names are never binding evidence.
+	Constrained parameters use declaration-resolved semantic bounds. Call selection
+	must validate those bounds before accepting a candidate. Target carriers and
+	rendered type names are never binding evidence.
 **/
 class TyMethodGenericBinding {
 	static function parameterIdentity(type:TyType, methodTypeParameters:Array<TyTypeParameterId>):Null<TyTypeParameterId> {
@@ -25,15 +25,65 @@ class TyMethodGenericBinding {
 		return null;
 	}
 
-	/** Return the method parameters whose constraints need no further proof. **/
+	/** Return parameters with representable bounds; candidate selection still proves their constraints. **/
 	public static function inferableTypeParameters(declaration:Null<TyDeclarationInfo>):Array<TyTypeParameterId> {
 		if (declaration == null)
 			return [];
-		final constraints = declaration.getTypeParameterConstraints();
-		return [
-			for (parameter in declaration.getTypeParameterIds())
-				if (!constraints.exists(parameter.getName())) parameter
-		];
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		return declaration.getTypeParameterIds().filter(parameter -> {
+			final bounds = constraints.get(parameter.getCanonicalKey());
+			if (bounds != null)
+				for (bound in bounds)
+					if (bound.hasUnknownComponent() || bound.isUnresolved())
+						return false;
+			return true;
+		});
+	}
+
+	/** Validate inferred direct-call arguments against bounds resolved at their declaration, never caller spellings. */
+	public static function constraintFailure(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>, applyBound:TyType->TyType,
+			accepts:(TyType, TyType) -> Bool):Null<String> {
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration));
+		for (parameter in declaration.getTypeParameterIds()) {
+			final key = parameter.getCanonicalKey();
+			if (!constraints.exists(key))
+				continue;
+			final supplied = inferred == null ? null : inferred.get(key);
+			for (constraint in constraints.get(key)) {
+				final bound = applyBound(constraint);
+				if (bound.hasUnknownComponent()
+					|| bound.isUnresolved()
+					|| (supplied == null ? !hasOnlyNullEvidence(signature, actual,
+						parameter) : !accepts(substitute(bound, declaration.getTypeParameterIds(), inferred), supplied)))
+					return "Constraint check failure for " + signature.getName() + "." + parameter.getName();
+			}
+		}
+		return null;
+	}
+
+	/** Null leaves its method variable open; unknown non-null arguments are not evidence for this rule. */
+	static function hasOnlyNullEvidence(signature:TyFunSig, actual:Array<TyType>, parameter:TyTypeParameterId):Bool {
+		function contains(type:TyType):Bool {
+			final identity = type.getTypeParameterIdentity();
+			if (identity != null && identity.equals(parameter))
+				return true;
+			if (type.isNullable())
+				return contains(type.unwrapNull());
+			for (child in type.getTypeArguments().concat(type.getFunctionArguments()))
+				if (contains(child))
+					return true;
+			return type.isFunction() && contains(type.getFunctionReturn());
+		}
+		var found = false;
+		final expected = signature.getArgs();
+		for (index in 0...actual.length)
+			if (index < expected.length && contains(expected[index])) {
+				if (!actual[index].isNullLiteral())
+					return false;
+				found = true;
+			}
+		return found;
 	}
 
 	/** Whether this exact semantic type is one of the inferable method parameters. **/
@@ -56,6 +106,8 @@ class TyMethodGenericBinding {
 
 	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>):Bool {
 		if (expected == null || actual == null)
+			return true;
+		if (actual.isNullLiteral())
 			return true;
 		final parameter = parameterIdentity(expected, methodTypeParameters);
 		if (parameter != null) {

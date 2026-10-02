@@ -177,6 +177,20 @@ class TyType {
 	public function isUnknown():Bool
 		return kind == KIND_UNKNOWN;
 
+	/** An incomplete structural type cannot serve as a fully selected backend contract. */
+	public function hasUnknownComponent():Bool {
+		if (isUnknown())
+			return true;
+		if (nullableInner != null && nullableInner.hasUnknownComponent())
+			return true;
+		if (functionReturn != null && functionReturn.hasUnknownComponent())
+			return true;
+		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+			if (component.hasUnknownComponent())
+				return true;
+		return false;
+	}
+
 	public function isNoNormalCompletion():Bool
 		return kind == KIND_NO_NORMAL_COMPLETION;
 

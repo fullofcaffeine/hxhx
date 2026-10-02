@@ -88,14 +88,15 @@ class TyperContext {
 		Return the type that declares the first indexed instance-method group.
 
 		Bare calls search the current type, including abstracts, before imports.
+		Explicit receivers start at their resolved nominal owner.
 		Classes also search each exact superclass. Returning the declaring type keeps
 		overload selection and call projection tied to the method's actual owner.
 	**/
-	public function instanceMethodOwner(name:String):Null<TyNominalInfo> {
+	public function instanceMethodOwner(name:String, ?receiverOwner:TyNominalInfo):Null<TyNominalInfo> {
 		if (name == null || name.length == 0)
 			return null;
 		final seen = new haxe.ds.StringMap<Bool>();
-		var current = currentClass();
+		var current = receiverOwner == null ? currentClass() : receiverOwner;
 		while (current != null) {
 			final fullName = current.getFullName();
 			if (seen.exists(fullName))

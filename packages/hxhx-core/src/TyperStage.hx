@@ -1049,11 +1049,12 @@ class TyperStage {
 		return TyMethodGenericBinding.argumentsAreConsistent(sig, argTypes, suppliedArity, methodTypeParameters) ? score : -1;
 	}
 
-	static function selectedMethodCallResolution(owner:TyNominalInfo, signature:TyFunSig, argTypes:Array<TyType>, ctx:TyperContext):TyMethodCallResolution {
+	static function selectedMethodCallResolution(owner:TyNominalInfo, signature:TyFunSig, argTypes:Array<TyType>, ctx:TyperContext,
+			?applied:TyFunSig):TyMethodCallResolution {
 		final declaration = owner.declarationForSignature(signature);
 		if (declaration == null)
 			return {type: signature.getReturnType(), declaration: null};
-		final indexedResult = TyMethodGenericBinding.specializeResult(declaration, signature, argTypes);
+		final indexedResult = TyMethodGenericBinding.specializeResult(declaration, applied == null ? signature : applied, argTypes);
 		return {type: ctx.refinedMethodReturnType(declaration, indexedResult), declaration: declaration};
 	}
 
@@ -1093,7 +1094,13 @@ class TyperStage {
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
-			?admittedCandidates:Array<TyFunSig>):TyMethodCallResolution {
+			?admittedCandidates:Array<TyFunSig>, ?receiverType:TyType):TyMethodCallResolution {
+		if (!isStatic && admittedCandidates == null && field != "new") {
+			final declaring = ctx.instanceMethodOwner(field, c);
+			if (declaring != null)
+				c = declaring;
+		}
+		final boundReceiver = receiverType == null ? (isStatic ? null : currentThisType(ctx)) : receiverType;
 		final argTypes = new Array<TyType>();
 		for (a in args)
 			argTypes.push(inferExprType(a, scope, ctx, pos));
@@ -1105,10 +1112,29 @@ class TyperStage {
 		final arityMatches = new Array<TyFunSig>();
 		var bestScore = -1;
 		final bestMatches = new Array<TyFunSig>();
+		var rejectedMethodConstraint:Null<String> = null;
 		for (candidate in candidates) {
 			final declaration = c.declarationForSignature(candidate);
+			final applied = TyNominalApplication.signature(ctx.getIndex(), c, boundReceiver, candidate);
 			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
-			final score = overloadCandidateScore(candidate, argTypes, args.length, methodTypeParameters, ctx.getIndex());
+			if (declaration != null && candidate.acceptsArity(args.length)) {
+				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, argTypes,
+					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound), (expected, supplied) -> {
+						if (expected.isAnonymous() && expected.getAnonymousFieldNames().length == 0)
+							return TyEmptyObjectConstraint.accepts(supplied, ctx.getIndex());
+						final expectedOwner = expected.getNominalIdentity();
+						if (expectedOwner != null && supplied.getNominalIdentity() != null) {
+							final ancestor = TyNominalAncestor.view(ctx.getIndex(), supplied, expectedOwner);
+							return ancestor != null && ancestor.getSemanticKey() == expected.getSemanticKey();
+						}
+						return overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0;
+					});
+				if (failure != null) {
+					rejectedMethodConstraint = failure;
+					continue;
+				}
+			}
+			final score = overloadCandidateScore(applied, argTypes, args.length, methodTypeParameters, ctx.getIndex());
 			if (score >= 0) {
 				arityMatches.push(candidate);
 				if (score > bestScore) {
@@ -1122,11 +1148,11 @@ class TyperStage {
 		}
 		if (bestMatches.length == 1 && bestScore > 0) {
 			final selected = bestMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes, ctx);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx, TyNominalApplication.signature(ctx.getIndex(), c, boundReceiver, selected));
 		}
 		if (bestMatches.length == 1 && arityMatches.length == 1) {
 			final selected = bestMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes, ctx);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx, TyNominalApplication.signature(ctx.getIndex(), c, boundReceiver, selected));
 		}
 		if (arityMatches.length > 1) {
 			final range = callRange(ctx.getFilePath(), pos);
@@ -1144,9 +1170,11 @@ class TyperStage {
 		}
 		if (arityMatches.length == 1) {
 			final selected = arityMatches[0];
-			return selectedMethodCallResolution(c, selected, argTypes, ctx);
+			return selectedMethodCallResolution(c, selected, argTypes, ctx, TyNominalApplication.signature(ctx.getIndex(), c, boundReceiver, selected));
 		}
 
+		if (rejectedMethodConstraint != null)
+			throw new TyperError(ctx.getFilePath(), pos, rejectedMethodConstraint);
 		return {type: TyType.unknown(), declaration: null};
 	}
 
@@ -1191,8 +1219,8 @@ class TyperStage {
 		instead of replacing the call with an unbound-expression fallback.
 	**/
 	static function resolveCallDeclarationCandidate(owner:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv,
-			ctx:TyperContext, pos:HxPos, ?admittedCandidates:Array<TyFunSig>):Null<TyDeclarationInfo> {
-		final resolved = resolveMethodCall(owner, field, isStatic, args, scope, ctx, pos, admittedCandidates).declaration;
+			ctx:TyperContext, pos:HxPos, ?admittedCandidates:Array<TyFunSig>, ?receiverType:TyType):Null<TyDeclarationInfo> {
+		final resolved = resolveMethodCall(owner, field, isStatic, args, scope, ctx, pos, admittedCandidates, receiverType).declaration;
 		if (resolved != null)
 			return resolved;
 		final candidates = admittedCandidates == null ? (isStatic ? owner.staticMethodCandidates(field) : owner.instanceMethodCandidates(field)) : admittedCandidates;
@@ -1260,7 +1288,7 @@ class TyperStage {
 				final receiverType = inferExprType(object, scope, ctx, pos);
 				final index = ctx.getIndex();
 				final owner = nominalInfoForType(index, receiverType);
-				return owner == null ? null : resolveCallDeclarationCandidate(owner, field, false, args, scope, ctx, pos);
+				return owner == null ? null : resolveCallDeclarationCandidate(owner, field, false, args, scope, ctx, pos, null, receiverType);
 			case _:
 		}
 		return null;
@@ -1696,8 +1724,8 @@ class TyperStage {
 									final objTy = inferExprType(obj, scope, ctx, pos);
 									final idx = ctx.getIndex();
 									final c2 = nominalInfoForType(idx, objTy);
-									if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
-										resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
+									if (c2 != null && ctx.instanceMethodOwner(field, c2) != null) {
+										resolveMethodCall(c2, field, false, args, scope, ctx, pos, null, objTy).type;
 									} else {
 										for (a in args)
 											inferExprType(a, scope, ctx, pos);
@@ -1744,8 +1772,8 @@ class TyperStage {
 								final objTy = inferExprType(obj, scope, ctx, pos);
 								final idx = ctx.getIndex();
 								final c2 = nominalInfoForType(idx, objTy);
-								if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
-									resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
+								if (c2 != null && ctx.instanceMethodOwner(field, c2) != null) {
+									resolveMethodCall(c2, field, false, args, scope, ctx, pos, null, objTy).type;
 								} else {
 									for (a in args)
 										inferExprType(a, scope, ctx, pos);
