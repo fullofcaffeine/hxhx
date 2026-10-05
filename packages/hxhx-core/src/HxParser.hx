@@ -5027,7 +5027,8 @@ class HxParser {
 		}
 	}
 
-	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
+	/** Extern members default to public; authored modifiers still override the owning class default. */
+	function parseClassMembers(defaultVisibility:HxVisibility):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		final funcs = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
 		while (true) {
@@ -5039,7 +5040,7 @@ class HxParser {
 					fail("Unexpected end of input in class body");
 				case _:
 					final memberStart = cur.getPos();
-					var visibility:HxVisibility = Private;
+					var visibility:HxVisibility = defaultVisibility;
 					var isStatic = false;
 					var sawFinal = false;
 					final metadata = new Array<String>();
@@ -5464,7 +5465,7 @@ class HxParser {
 						break;
 					expect(TLBrace, "'{'");
 
-					final members = parseClassMembers();
+					final members = parseClassMembers(typeIsExtern ? Public : Private);
 					final functions = members.functions == null ? [] : members.functions;
 					final fields = members.fields == null ? [] : members.fields;
 					var hasStaticMain = false;
