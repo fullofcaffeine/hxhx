@@ -20,6 +20,10 @@ typedef CppControlRegionServices = {
 
 	final forLoop:(binding:HxForBinding, iterable:HxExpr, indent:String, renderBody:String->Array<String>) -> Array<String>;
 	final switchArms:(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, indent:String, renderBody:(Int, String) -> Array<String>) -> Array<String>;
+
+	/** Handler emission stays in this lexical function and loop; callbacks generate source, not native lambdas. */
+	final tryRegion:(source:CppManagedCatchRegion.CppManagedTrySource, indent:String, renderBody:String->Array<String>,
+		renderHandler:(Int, String) -> Array<String>) -> Array<String>;
 }
 
 /** Identify an actual lowered function body before selecting an expression renderer. */
@@ -107,6 +111,13 @@ private function renderRootStatements(projection:TypedBackendFunctionProjection,
 			case SExpr(value, _): renderEntries([value], target, result, indent, scope, services, loop);
 			case SVar(_, _, _, _, _): services.statement(statement, indent);
 			case SThrow(_, _): services.statement(statement, indent);
+			case STry(body, clauses, _):
+				services.tryRegion(Statement(statement), indent,
+					bodyIndent -> CppLocalScope.isolate(scope,
+						() -> renderRootStatements(projection, [body], target, result, bodyIndent, scope, services, loop)),
+					(index,
+							bodyIndent) -> CppLocalScope.isolate(scope,
+							() -> renderRootStatements(projection, [clauses[index].body], target, result, bodyIndent, scope, services, loop)));
 			case SBlock(children, _):
 				[indent + "{"].concat(CppLocalScope.isolate(scope,
 					() -> renderRootStatements(projection, children, target, result, indent + "  ", scope, services, loop)))
@@ -174,8 +185,15 @@ private function renderEntries(entries:Array<HxExpr>, target:String, result:CppC
 	final lines = new Array<String>();
 	for (entry in entries) {
 		switch entry {
-			case ELoweredControl(Try(_), _, _, _):
-				throw "C++ try regions require ordered typed catch emission (haxe_ocaml-qrk0u)";
+			case ELoweredControl(Try(clauses), destination, children, _):
+				if (destination.length != 0 || children.length != clauses.length + 1)
+					throw "C++ try differs from its shared handler layout";
+				for (line in services.tryRegion(Expression(entry), indent,
+					bodyIndent -> CppLocalScope.isolate(scope, () -> renderEntries([children[0]], target, result, bodyIndent, scope, services, loop)),
+					(index,
+							bodyIndent) -> CppLocalScope.isolate(scope,
+							() -> renderEntries([children[index + 1]], target, result, bodyIndent, scope, services, loop))))
+					lines.push(line);
 			case ELoweredControl(Switch(patterns), destination, children, _):
 				if (destination.length != 0 || children.length != patterns.length + 1)
 					throw "C++ switch differs from its shared arm layout";

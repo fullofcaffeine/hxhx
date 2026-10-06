@@ -21529,6 +21529,7 @@ class CppTargetCore {
 					returnValue: (value, selectedType) -> valueExprForExpectedType(value, selectedType, scope),
 					directReturn: (value, selectedType, indent) -> [indent + "return " + valueExprForExpectedType(value, selectedType, scope) + ";"],
 					rootedValue: (_, _, _) -> throw "ordinary C++ body services cannot publish a managed result",
+					tryRegion: (_, _, _, _) -> throw "ordinary C++ body services cannot emit managed catch regions",
 					switchArms: (scrutinee, patterns, indent,
 						renderBody) -> renderSwitchBodies(scrutinee, patterns, patterns.length, indent, scope, renderBody),
 					forLoop: (binding, iterable, indent, renderBody) -> switch binding {

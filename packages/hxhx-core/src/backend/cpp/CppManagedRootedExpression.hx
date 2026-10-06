@@ -192,6 +192,21 @@ class CppManagedRootedExpression {
 		}, indent);
 	}
 
+	/** Emit a handler in its enclosing native function, using this owner's exact catch storage. */
+	public function renderTry(source:CppManagedCatchRegion.CppManagedTrySource, indent:String, renderBody:String->Array<String>,
+			renderHandler:(Int, String) -> Array<String>):Array<String> {
+		return CppManagedCatchRegion.render({
+			owner: input.owner,
+			source: source,
+			locals: locals,
+			heap: input.heap,
+			prefix: input.temporaryPrefix + "try_",
+			indent: indent,
+			body: renderBody,
+			handler: renderHandler
+		});
+	}
+
 	/** Retain one iterable and create each binding at its exact loop-iteration event. */
 	public function renderFor(binding:HxForBinding, iterable:HxExpr, indent:String, renderBody:String->Array<String>):Array<String> {
 		switch iterable {

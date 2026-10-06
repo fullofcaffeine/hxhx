@@ -55,7 +55,8 @@ function render(input:CppManagedFunctionEmissionInput, application:CppManagedIni
 		},
 		rootedValue: (value, destination, indent) -> emitter.renderTransfer(value, CppManagedInstanceField.transportType(member), destination, indent),
 		forLoop: emitter.renderFor,
-		switchArms: emitter.renderSwitch
+		switchArms: emitter.renderSwitch,
+		tryRegion: emitter.renderTry
 	}))
 		lines.push(line);
 	lines.push("    "

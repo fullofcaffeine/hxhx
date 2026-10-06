@@ -336,6 +336,16 @@ class CppManagedLocalAccess {
 		return local.getBinding();
 	}
 
+	/** Catch views come from the exact typed local, never from the source annotation spelling. */
+	public function requireCatchUse(name:String):TypedCatchUse {
+		final selected = binding(name);
+		final catalog = projection == null ? initializer.getLocalCatalog() : projection.getLocalCatalog();
+		final use = catalog.findCatchUse(selected.getIdentity().getCanonicalKey());
+		if (selected.getKind() != CatchVariable || use == null || use.binding != selected)
+			throw "managed catch requires its exact typed implicit use";
+		return use;
+	}
+
 	/** Receiver forwarding retains the same binding cell as the current environment. */
 	public function receiverReference():String {
 		plan.requireFunction(owner);
