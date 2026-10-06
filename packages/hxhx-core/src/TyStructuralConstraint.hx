@@ -22,6 +22,33 @@ function constrainExact(index:TyperIndex, solver:TyInferenceSolver, actual:TyInf
 	return constrainTerms(index, solver, actual, TyInferenceSolver.fromType(expected));
 }
 
+/**
+	Accept an inferred Box<Array<T>> at Box<Dynamic> without erasing its Array shape.
+	A fresh variable for each Dynamic destination receives the original argument shape. Its Dynamic
+	fallback applies only to remaining solver-owned holes at seal, so later concrete
+	evidence still wins. Other arguments keep exact unification, including numeric
+	arguments and reverse Dynamic assignments. Failed assignments discard every
+	new variable and fallback together with their speculative bindings.
+ */
+function constrainNominalAssignment(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType):Bool {
+	if (expected.getNominalIdentity() == null)
+		return constrainExact(index, solver, actual, expected);
+	final candidate = solver.fork();
+	function context(type:TyType):TyInferenceTerm {
+		if (type.isDynamic()) {
+			final destination = candidate.fresh();
+			candidate.observeDynamicUse(destination);
+			return destination;
+		}
+		final identity = type.getNominalIdentity();
+		return identity == null ? TyInferenceSolver.fromType(type) : Nominal(identity, type.getTypeArguments().map(context));
+	}
+	if (!constrainTerms(index, candidate, actual, context(expected)))
+		return false;
+	solver.commit(candidate);
+	return true;
+}
+
 /** Link existing inference terms while checking any nominal member requirements against their declarations. */
 function constrainTerms(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyInferenceTerm):Bool {
 	return solver.constrain(actual, expected, (receiver, name) -> inferredMember(index, receiver, name));

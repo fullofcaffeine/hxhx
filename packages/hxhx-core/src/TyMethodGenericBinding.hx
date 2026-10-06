@@ -265,6 +265,15 @@ class TyMethodGenericBinding {
 		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
 		if (inferred == null)
 			throw "selected generic call has inconsistent arguments";
+		// A preview such as Array<Unknown> is not a concrete binding. Preserve
+		// this method binder so direct-call inference links it to the argument's
+		// existing variables instead of freezing Unknown inside a copied type.
+		for (parameter in parameters) {
+			final key = parameter.getCanonicalKey();
+			final type = inferred.get(key);
+			if (type != null && (type.hasUnknownComponent() || type.isUnresolved()))
+				inferred.remove(key);
+		}
 		final callable = TyCallableSignature.fromDeclaration(declaration, signature).getFunctionType();
 		return callable.withFunctionTypes([
 			for (type in callable.getFunctionArguments())

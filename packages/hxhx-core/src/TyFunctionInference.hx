@@ -464,7 +464,8 @@ class TyFunctionInference {
 				};
 				final projected = TyInferenceNominalContext.view(semanticIndex, value, context);
 				final direct = context.isAnonymous() ? TyStructuralConstraint.constrain(semanticIndex, candidate, value,
-					context) : projected != null && TyStructuralConstraint.constrainExact(semanticIndex, candidate, projected, context);
+					context) : projected != null
+					&& TyStructuralConstraint.constrainNominalAssignment(semanticIndex, candidate, projected, context);
 				if (!direct && TyAbstractMethodConversion.constrain(semanticIndex, candidate, value, context) == null)
 					return false;
 			}
