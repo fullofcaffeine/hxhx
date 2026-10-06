@@ -6,9 +6,10 @@ const path = require('path')
 const os = require('os')
 const { spawnSync } = require('child_process')
 const { runCommandWithTimeout } = require('./hx-format-guard.js')
+const { formatterCommand } = require('./formatter-toolchain.js')
 
 /**
- * Formats or checks only changed Haxe files with the official haxelib formatter.
+ * Formats or checks only changed Haxe files with the pinned official formatter.
  *
  * Why this exists:
  * - `npm run guard:hx-format` is the full repo guard and remains the CI/release
@@ -130,7 +131,8 @@ function changedFiles(root, options) {
 async function runFormatter(root, files, check) {
   const timeoutSeconds = Number(process.env.HX_FORMAT_TIMEOUT_SECONDS || '240')
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0) fail('HX_FORMAT_TIMEOUT_SECONDS must be a positive integer')
-  const args = ['run', 'formatter']
+  const formatter = formatterCommand()
+  const args = [...formatter.args]
   for (const file of files) args.push('-s', path.join(root, file))
   if (check) args.push('--check')
   const controller = new AbortController()
@@ -145,7 +147,7 @@ async function runFormatter(root, files, check) {
   process.on('SIGTERM', terminate)
   let result
   try {
-    result = await runCommandWithTimeout('haxelib', args, {
+    result = await runCommandWithTimeout(formatter.command, args, {
       cwd: root,
       timeoutMs: timeoutSeconds * 1000,
       signal: controller.signal,

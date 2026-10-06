@@ -18,10 +18,13 @@ class HxClassDecl {
 	public final implementsPaths:Array<String>;
 	public final interfaceExtendsPaths:Array<String>;
 	public final visibility:HxVisibility;
+	public final enumDeclaration:Null<HxEnumDeclaration>;
+
+	final typeParameters:Array<HxTypeSyntax.HxTypeSyntaxParameter>;
 
 	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
 			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>, ?visibility:HxVisibility, ?interfaceExtendsPaths:Array<String>,
-			isExtern:Bool = false) {
+			isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration, ?typeParameters:Array<HxTypeSyntax.HxTypeSyntaxParameter>) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
@@ -30,6 +33,8 @@ class HxClassDecl {
 		this.metadata = metadata == null ? [] : metadata;
 		this.isInterface = isInterface == null ? false : isInterface;
 		this.isExtern = isExtern;
+		this.enumDeclaration = enumDeclaration;
+		this.typeParameters = typeParameters == null ? [] : HxTypeSyntax.copyParameters(typeParameters);
 		this.implementsPaths = implementsPaths == null ? [] : implementsPaths;
 		this.interfaceExtendsPaths = interfaceExtendsPaths == null ? [] : interfaceExtendsPaths.copy();
 		if (this.isInterface && this.extendsPath.length > 0)
@@ -48,6 +53,10 @@ class HxClassDecl {
 	public static function getName(c:HxClassDecl):String {
 		return c.name;
 	}
+
+	/** Preserve authored class bounds as syntax; typing resolves them in the declaring module. */
+	public static function getTypeParameters(c:HxClassDecl):Array<HxTypeSyntax.HxTypeSyntaxParameter>
+		return HxTypeSyntax.copyParameters(c.typeParameters);
 
 	/**
 		Non-inline getter for `hasStaticMain`.
@@ -89,6 +98,10 @@ class HxClassDecl {
 	/** Extern declarations describe target-owned values rather than generated definitions. */
 	public static function getIsExtern(c:HxClassDecl):Bool
 		return c.isExtern;
+
+	/** Only parsed enum syntax supplies this inventory; class members cannot imitate it. */
+	public static function getEnumDeclaration(c:HxClassDecl):Null<HxEnumDeclaration>
+		return c.enumDeclaration;
 
 	public static function getIsInterface(c:HxClassDecl):Bool {
 		return c.isInterface;

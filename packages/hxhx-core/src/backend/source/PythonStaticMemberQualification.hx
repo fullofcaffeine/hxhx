@@ -57,8 +57,7 @@ function qualify(program:MacroExpandedProgram):MacroExpandedProgram {
 						for (initializer in cls.getFieldInitializers())
 							new TypedFieldInitializer(initializer.getField(), expression(initializer.getExpression()))
 					];
-					new TypedClass(cls.getSourceDeclaration(), cls.getSemanticInfo(), functions, initializers, cls.getResolvedExtends(),
-						cls.getResolvedImplements());
+					cls.withMembers({functions: functions, fields: cls.getFields(), initializers: initializers});
 				}
 			];
 			module.withTypedClasses(classes);

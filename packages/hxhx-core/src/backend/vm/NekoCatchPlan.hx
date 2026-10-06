@@ -111,6 +111,18 @@ class NekoCatchPlan {
 
 	public function assertExpression(node:HxExpr):Void {
 		switch (node) {
+			case ELoweredControl(Try(clauses), "", children, _):
+				if (clauses.length != cases.length || children.length != clauses.length + 1)
+					throw "Neko catch occurrence changed after preparation";
+				for (index in 0...clauses.length) {
+					final expected = cases[index];
+					if (clauses[index].getName() != expected.local.getProjectedName())
+						throw "Neko catch occurrence changed after preparation";
+					switch expected.body {
+						case Expression(body) if (body == children[index + 1]):
+						case _: throw "Neko catch occurrence changed after preparation";
+					}
+				}
 			case ECall(EIdent("__hxhx_try"), [ELambda([], _), EArrayDecl(entries), _]):
 				if (entries.length != cases.length)
 					throw "Neko catch occurrence changed after preparation";
@@ -128,6 +140,18 @@ class NekoCatchPlan {
 			case _:
 				throw "Neko catch occurrence is not an expression try";
 		}
+	}
+
+	/** Lowered handler names locate exact typed catch locals; body objects retain source provenance. */
+	@:allow(backend.vm.NekoCatchCatalog)
+	static function prepareLowered(program:NekoTypedProgramProjection, selected:NekoExecutableProjection, clauses:Array<HxSourceCatch>,
+			children:Array<HxExpr>, ordinal:Int):NekoCatchPlan {
+		if (children.length != clauses.length + 1)
+			throw "Neko catch planning received a malformed lowered try";
+		return new NekoCatchPlan(program, selected, [
+			for (index in 0...clauses.length)
+				{name: clauses[index].getName(), body: Expression(children[index + 1])}
+		], ordinal);
 	}
 
 	/** Returns handlers in source order without exposing the owned array. */

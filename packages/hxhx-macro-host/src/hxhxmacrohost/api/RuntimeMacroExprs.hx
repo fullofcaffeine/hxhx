@@ -23,7 +23,7 @@ import haxe.macro.Expr;
 	  - identifiers / bare enum-like values / `this` / `super`
 	  - ordinary and null-safe field access and call chains
 	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
-	  - `while` syntax passed to a macro, including its structured condition and block
+	  - `while` and `do/while` syntax, including the original loop kind and structured body
 	  - expression-position `break` and `continue` control syntax
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
@@ -216,9 +216,12 @@ class RuntimeMacroExprs {
 		final calleeText = StringTools.trim(expr.substr(0, open));
 		if (calleeText.length == 0)
 			return null;
+		// A trailing parenthesized condition is not a call. Let the source parser
+		// prove that the preceding text is complete before splitting inline arguments.
+		final callee = try HxParser.parseCompleteExprText(calleeText) catch (_:HxParseError) return null;
 		final argTexts = splitTopLevelArgs(expr.substr(open + 1, close - open - 2));
 		return {
-			expr: ECall(parse(calleeText, pos), [for (arg in argTexts) parseInlineString(arg, pos)]),
+			expr: ECall(convert(callee, pos), [for (arg in argTexts) parseInlineString(arg, pos)]),
 			pos: pos
 		};
 	}
@@ -596,7 +599,14 @@ class RuntimeMacroExprs {
 
 	static function convertDef(expr:HxExpr, pos:Position):ExprDef {
 		return switch (expr) {
-			case EParenthesized(inner, _): EParenthesis(convert(inner, pos));
+			case EPrivateAccess(_, _) | EParenthesized(_, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) |
+				ESourceFor(_, _, _, _) | HxExpr.EThrow(_, _) | HxExpr.EWhile(_, _, _, _, _):
+				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType);
+				if (definition == null)
+					throw "source macro mapper did not handle authored control syntax";
+				definition;
+			case EDiscardThen(_, _) | ELoweredControl(_, _, _, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case ENull:
 				EConst(CIdent("null"));
 			case EBool(value):
@@ -684,21 +694,12 @@ class RuntimeMacroExprs {
 				]);
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw "runtime macro parse: variable declaration must be nested inside EVars";
-			case EWhile(condition, body, bodyIsBlock, _position):
-				final usePos = pos == null ? defaultPos() : pos;
-				final convertedBody:Expr = if (bodyIsBlock) {
-					{expr: EBlock([for (entry in body) convert(entry, usePos)]), pos: usePos};
-				} else {
-					if (body.length != 1)
-						throw "runtime macro parse: non-block while body must contain exactly one expression";
-					convert(body[0], usePos);
-				}
-				EWhile(convert(condition, usePos), convertedBody, true);
 			case EBreak(_):
 				EBreak;
 			case EContinue(_):
 				EContinue;
-			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | EUnsupported(_):
+			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESourceTry(_, _, _) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) |
+				EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";
 		};
 	}

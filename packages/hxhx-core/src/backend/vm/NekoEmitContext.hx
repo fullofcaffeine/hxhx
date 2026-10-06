@@ -18,6 +18,9 @@ typedef NekoEmitContext = {
 	/** Exact function or initializer; child expression scopes retain the same owner. */
 	var currentExecutable:Null<NekoExecutableProjection>;
 
+	/** Storage selected by exact binding identity in the current declared function. */
+	var captureStorage:Null<NekoCaptureStorage>;
+
 	var abstractHelpers:Array<NekoProjectedFunction>;
 	var abstractHelperIds:StringMap<Bool>;
 	var directAbstractReceiver:Bool;

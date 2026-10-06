@@ -164,12 +164,13 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			final reversedParameters = collide.getParameterBindingIdentities();
 			reversedParameters.reverse();
 			assertRejected(() -> {
-				new TypedBackendFunctionProjection(collide.getStableIdentity(), collide.getBodyRevision(), collide.getDeclaration(),
+				new TypedBackendFunctionProjection((@:privateAccess collide.source), (@:privateAccess collide.lowered), collide.getDeclaration(),
 					collide.getLocalCatalog(), collide.getReturnType(), collide.getFieldReadCatalog(), reversedParameters).getParameters();
 			}, "parameter name mismatch");
 			assertRejected(() -> {
-				new TypedBackendFunctionProjection("another-function", collide.getBodyRevision(), collide.getDeclaration(), collide.getLocalCatalog(),
-					collide.getReturnType());
+				final other = new TypedFunction("Another", 0, collide.getDeclaration(), null, null,
+					new TypedFunctionBody([], TypedBodyFingerprint.forStatements(collide.getBody())));
+				new TypedBackendFunctionProjection(other, other, collide.getDeclaration(), collide.getLocalCatalog(), collide.getReturnType());
 			}, "local from another function");
 			final originalBinding = collide.getParameters()[0].getBinding();
 			assertRejected(() -> {
@@ -185,11 +186,13 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			];
 			assertTrue(targetNames.join(",") == "match_,match__1,method_,method__1",
 				"OCaml normalization collapsed exact keyword-colliding parameters: " + targetNames.join(","));
-			final caseOwner = "Main.caseCollision#fixture";
+			final caseDeclaration = new HxFunctionDecl("caseCollision", Public, true, [], "Void", [], "");
+			final caseSource = new TypedFunction("Main", 0, caseDeclaration, null, null, new TypedFunctionBody([], TypedBodyFingerprint.forStatements([])));
+			final caseOwner = caseSource.getStableIdentity();
 			final upper = new TyLocalBinding(TyLocalId.forSourceDeclaration(caseOwner, 0, Variable, "Value"), "Value", TyType.fromHintText("Int"), Variable);
 			final lower = new TyLocalBinding(TyLocalId.forSourceDeclaration(caseOwner, 1, Variable, "value"), "value", TyType.fromHintText("Int"), Variable);
-			final caseProjection = new TypedBackendFunctionProjection(caseOwner, "case-collision-revision",
-				new HxFunctionDecl("caseCollision", Public, true, [], "Void", [], ""), new TypedBackendLocalCatalog([upper, lower]), TyType.unknown());
+			final caseProjection = new TypedBackendFunctionProjection(caseSource, caseSource, caseDeclaration, new TypedBackendLocalCatalog([upper, lower]),
+				TyType.unknown());
 			final caseNames = new Stage3OcamlLocalNames(caseProjection.getLocalCatalog(), false, name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
 			assertTrue(caseNames.targetName("Value") == "value" && caseNames.targetName("value") == "value_1",
 				"OCaml case normalization collapsed two exact typed bindings");
@@ -228,7 +231,7 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
-			failure = error.message;
+			failure = error.message + "\n" + haxe.CallStack.toString(error.stack);
 		}
 		deleteRecursive(root);
 		if (failure != null)

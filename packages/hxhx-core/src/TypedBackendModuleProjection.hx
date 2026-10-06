@@ -6,12 +6,6 @@
 	migrated targets.
 **/
 class TypedBackendModuleProjection {
-	/** Check the complete input before a backend starts publishing separate modules. */
-	public static function assertProgramRuntimeTypeOperandsAbsent(modules:Array<TypedModule>, consumer:String):Void {
-		for (module in modules)
-			module.getBackendProjection().assertRuntimeTypeOperandsAbsent(consumer);
-	}
-
 	final declaration:HxModuleDecl;
 	final classes:Array<TypedBackendClassProjection>;
 

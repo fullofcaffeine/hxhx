@@ -11,14 +11,18 @@ class TypedBackendRuntimeTypeOccurrence {
 	final target:TypedRuntimeTypeTarget;
 	final expression:HxExpr;
 	final value:Null<HxExpr>;
+	final valueType:Null<TyType>;
 
-	public function new(ownerIdentity:String, bodyRevision:String, target:TypedRuntimeTypeTarget, ?value:HxExpr) {
+	public function new(ownerIdentity:String, bodyRevision:String, target:TypedRuntimeTypeTarget, ?value:HxExpr, ?valueType:TyType) {
 		if (ownerIdentity == null || ownerIdentity.length == 0 || bodyRevision == null || bodyRevision.length == 0 || target == null)
 			throw "runtime type occurrence requires exact owner, revision, and target";
+		if ((value == null) != (valueType == null))
+			throw "runtime type test requires its evaluated value and exact source type together";
 		this.ownerIdentity = ownerIdentity;
 		this.bodyRevision = bodyRevision;
 		this.target = target;
 		this.value = value;
+		this.valueType = valueType;
 		this.expression = value == null ? ECall(EIdent(TypedRuntimeTypeSource.VALUE), []) : ECall(EIdent(TypedRuntimeTypeSource.TEST), [value]);
 	}
 
@@ -31,6 +35,10 @@ class TypedBackendRuntimeTypeOccurrence {
 	/** Null denotes a class value; a type test has exactly one evaluated operand. */
 	public function getValue():Null<HxExpr>
 		return value;
+
+	/** Preserve the typed operand before target erasure; class values have no evaluated operand type. */
+	public function getValueType():Null<TyType>
+		return valueType;
 
 	public function assertOwner(owner:String, revision:String):Void {
 		if (ownerIdentity != owner || bodyRevision != revision)

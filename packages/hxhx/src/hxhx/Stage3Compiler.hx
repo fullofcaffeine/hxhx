@@ -551,7 +551,7 @@ class Stage3Compiler {
 			#end
 		}
 
-		final typerIndex = TyperIndex.build(resolvedForTyping);
+		final typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
 			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
 		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);

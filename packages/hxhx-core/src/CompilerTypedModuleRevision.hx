@@ -102,7 +102,7 @@ class CompilerTypedModuleRevision {
 			addPublicClassFacts(publicFacts, typedClass);
 		final publicRevision = CompilerCacheIdentity.encode(publicFacts);
 		final implementationFacts = new Array<Null<String>>();
-		implementationFacts.push("typed-module-implementation-v9");
+		implementationFacts.push("typed-module-implementation-v10");
 		implementationFacts.push(modulePath);
 		implementationFacts.push(publicRevision);
 		addDirectives(implementationFacts, directives);
@@ -111,6 +111,11 @@ class CompilerTypedModuleRevision {
 		for (typedClass in module.getTypedClasses()) {
 			implementationFacts.push("typed-class");
 			implementationFacts.push(HxClassDecl.getName(typedClass.getSourceDeclaration()));
+			for (field in typedClass.getFields()) {
+				implementationFacts.push("typed-field-declaration");
+				implementationFacts.push(HxFieldDecl.getName(field));
+				implementationFacts.push(HxFieldDecl.getIsStatic(field) ? "static" : "instance");
+			}
 			for (fieldInitializer in typedClass.getFieldInitializers()) {
 				implementationFacts.push("typed-field-initializer");
 				implementationFacts.push(fieldInitializer.getField().getCanonicalKey());
@@ -203,6 +208,8 @@ class CompilerTypedModuleRevision {
 		out.push(HxClassDecl.getName(sourceClass));
 		out.push(HxClassDecl.getIsInterface(sourceClass) ? "interface" : "class");
 		out.push(HxClassDecl.getIsExtern(sourceClass) ? "extern" : "generated");
+		final enumDeclaration = HxClassDecl.getEnumDeclaration(sourceClass);
+		out.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		out.push(HxClassDecl.getVisibility(sourceClass) == HxVisibility.Public ? "public" : "private");
 		addResolvedHeaderType(out, "extends", typedClass.getResolvedExtends());
 		for (implemented in typedClass.getResolvedImplements())
@@ -223,7 +230,7 @@ class CompilerTypedModuleRevision {
 			}
 		}
 
-		for (field in HxClassDecl.getFields(sourceClass)) {
+		for (field in typedClass.getFields()) {
 			if (HxFieldDecl.getVisibility(field) != HxVisibility.Public)
 				continue;
 			out.push("public-field");
@@ -264,6 +271,13 @@ class CompilerTypedModuleRevision {
 				addBools(out, signature.getArgOptional());
 				addBools(out, signature.getArgRest());
 				out.push(signature.getReturnType().getSemanticKey());
+				final constraints = declaration.getResolvedTypeParameterConstraints();
+				for (parameter in declaration.getTypeParameterIds())
+					if (constraints.exists(parameter.getCanonicalKey())) {
+						out.push("method-constraint");
+						out.push(parameter.getCanonicalKey());
+						addTypes(out, constraints.get(parameter.getCanonicalKey()));
+					}
 				out.push(declaration.getIsInline() ? "inline" : "ordinary");
 			} else {
 				out.push(HxFunctionDecl.getReturnTypeHint(sourceFunction));

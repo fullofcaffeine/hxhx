@@ -72,10 +72,18 @@ class TypedRuntimeTypeResolver {
 				return new TypedRuntimeTypeTarget(FloatCore, name);
 			case "Bool" | "StdTypes.Bool":
 				return new TypedRuntimeTypeTarget(BoolCore, name);
+			case "Dynamic" | "StdTypes.Dynamic":
+				return new TypedRuntimeTypeTarget(DynamicCore, name);
+			case "Class":
+				return new TypedRuntimeTypeTarget(ClassCore, name);
+			case "Enum":
+				return new TypedRuntimeTypeTarget(EnumCore, name);
 			case _:
 		}
 		if (selected == null)
 			return null;
+		if (selected.getIsEnum())
+			return new TypedRuntimeTypeTarget(EnumDeclaration(selected.getIdentity()), name);
 		if (!Std.isOfType(selected, TyClassInfo) || selected.getIsEnum()) {
 			if (namespace == TypeOperand)
 				throw "unsupported runtime type target: " + selected.getFullName();

@@ -1,0 +1,5 @@
+-cp packages/hxhx-core/src
+-cp test
+-D enum_coverage_ocaml
+-main M14EnumSwitchCoverageTest
+--interp

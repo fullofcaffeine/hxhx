@@ -5,18 +5,36 @@
 	for argument checking and result typing.
  */
 function signature(index:TyperIndex, owner:TyNominalInfo, receiver:TyType, member:TyFunSig):TyFunSig {
+	final declaration = owner.declarationForSignature(member);
+	final effective = declaration == null || index == null ? member : index.getMethodBodyResults().signature(declaration);
 	final bindings = receiverBindings(index, owner, receiver);
 	if (bindings == null)
-		return member;
-	return new TyFunSig(member.getName(), member.getIsStatic(), member.getArgNames(),
-		[for (argument in member.getArgs()) TyTypeSubstitution.apply(argument, bindings)], member.getArgOptional(), member.getArgRest(),
-		TyTypeSubstitution.apply(member.getReturnType(), bindings), member.getPos());
+		return effective;
+	return new TyFunSig(effective.getName(), effective.getIsStatic(), effective.getArgNames(), [
+		for (argument in effective.getArgs())
+			TyTypeSubstitution.apply(argument, bindings)
+	],
+		effective.getArgOptional(), effective.getArgRest(), TyTypeSubstitution.apply(effective.getReturnType(), bindings), effective.getPos());
 }
 
 /** Bounds and signatures must substitute the same exact receiver and ancestor application. */
 function applyType(index:TyperIndex, owner:TyNominalInfo, receiver:TyType, type:TyType):TyType {
 	final bindings = receiverBindings(index, owner, receiver);
 	return bindings == null ? type : TyTypeSubstitution.apply(type, bindings);
+}
+
+/**
+	Apply an instance field through its declaring owner, preserving the shared declaration.
+	A Child<String> may inherit Parent<Int, String>.right: the parent's binder
+	must become String even when lookup began at the child. Static storage has
+	no instance application and keeps its declaration type.
+ */
+function fieldType(index:TyperIndex, field:TyFieldInfo, receiver:TyType):TyType {
+	final effective = index == null ? field.getType() : index.getFieldInitializerTypes().result(field);
+	if (field.getIsStatic() || index == null)
+		return effective;
+	final owner = index.getByFullName(field.getOwner().getCanonicalName());
+	return owner == null ? effective : applyType(index, owner, receiver, effective);
 }
 
 private function receiverBindings(index:TyperIndex, owner:TyNominalInfo, receiver:TyType):Null<haxe.ds.StringMap<TyType>> {

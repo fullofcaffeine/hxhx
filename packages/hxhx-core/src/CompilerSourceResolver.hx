@@ -77,6 +77,8 @@ class CompilerSourceResolver {
 	static function normalizePath(path:String):String {
 		if (path == null || path.length == 0)
 			return "";
+		if (CompilerBundledSources.owns(path))
+			return path;
 		return Path.normalize(sys.FileSystem.absolutePath(path));
 	}
 

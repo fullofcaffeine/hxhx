@@ -5,6 +5,18 @@ enum TypedBackendNominalKind {
 	AbstractValue(underlyingType:TyType);
 }
 
+/** A constructor is either a singleton field or a callable with an exact typed signature. */
+enum TypedBackendEnumConstructorMember {
+	Singleton(field:TypedBackendClassFieldFact);
+	Callable(method:TypedBackendClassMethodFact);
+}
+
+typedef TypedBackendEnumConstructorFact = {
+	final index:Int;
+	final name:String;
+	final member:TypedBackendEnumConstructorMember;
+};
+
 typedef TypedBackendClassFieldFact = {
 	final canonicalIdentity:String;
 	final constantIdentity:String;
@@ -19,6 +31,7 @@ typedef TypedBackendClassFieldFact = {
 	final hasInitializer:Bool;
 	final propertyGet:String;
 	final propertySet:String;
+	final hasStorage:Bool;
 	final noImportGlobal:Bool;
 };
 
@@ -65,6 +78,8 @@ typedef TypedBackendClassMethodFact = {
 **/
 class TypedBackendClassSemanticFacts {
 	final classIdentity:String;
+	final declarationOwner:TyNominalInfo;
+	final declaredFieldTypes:Null<TypedDeclaredFieldTypes>;
 	final nominalKind:TypedBackendNominalKind;
 	final moduleIdentity:String;
 	final typeParameters:Array<TyTypeParameterId>;
@@ -80,8 +95,14 @@ class TypedBackendClassSemanticFacts {
 	final fieldIndex:haxe.ds.StringMap<TypedBackendClassFieldFact>;
 	final methodIndex:haxe.ds.StringMap<TypedBackendClassMethodFact>;
 	final canonicalIdentity:String;
+	final enumConstructors:Array<TypedBackendEnumConstructorFact> = [];
 
-	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>, ?resolvedInterfaces:Array<TyType>) {
+	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>, ?resolvedInterfaces:Array<TyType>,
+			?enumDeclaration:HxEnumDeclaration, ?declaredFieldTypes:TypedDeclaredFieldTypes) {
+		this.declarationOwner = info;
+		this.declaredFieldTypes = declaredFieldTypes;
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertOwner(info);
 		if (info == null)
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
@@ -160,13 +181,14 @@ class TypedBackendClassSemanticFacts {
 				throw "typed backend class semantic facts contain a null field for " + classIdentity;
 			if (field.getOwner().getCanonicalName() != classIdentity || field.getModulePath() != moduleIdentity)
 				throw "typed backend class semantic facts contain foreign field " + field.getCanonicalKey() + " in " + classIdentity;
+			final fieldType = declaredFieldTypes == null ? field.getType() : declaredFieldTypes.typeFor(field);
 			final fact:TypedBackendClassFieldFact = {
 				canonicalIdentity: normalize(field.getCanonicalKey()),
 				constantIdentity: field.getConstant().getCanonicalIdentity(),
 				name: normalize(field.getName()),
-				semanticType: field.getType(),
-				typeIdentity: field.getType().getSemanticKey(),
-				typeDisplay: field.getType().getCanonicalDisplay(),
+				semanticType: fieldType,
+				typeIdentity: fieldType.getSemanticKey(),
+				typeDisplay: fieldType.getCanonicalDisplay(),
 				isStatic: field.getIsStatic(),
 				isPublic: field.getIsPublic(),
 				isFinal: field.getIsFinal(),
@@ -174,6 +196,7 @@ class TypedBackendClassSemanticFacts {
 				hasInitializer: field.getHasInitializer(),
 				propertyGet: field.getPropertyGet(),
 				propertySet: field.getPropertySet(),
+				hasStorage: field.getHasStorage(),
 				noImportGlobal: field.getNoImportGlobal()
 			};
 			if (fact.typeIdentity.length == 0 || fact.typeDisplay.length == 0)
@@ -275,11 +298,34 @@ class TypedBackendClassSemanticFacts {
 		final methodIdentities = [for (identity in methodIndex.keys()) identity];
 		methodIdentities.sort((left, right) -> Reflect.compare(left, right));
 		methods = [for (identity in methodIdentities) copyMethod(methodIndex.get(identity))];
+		if (info.getIsEnum() != (enumDeclaration != null))
+			throw "typed enum identity disagrees with its parsed declaration";
+		if (enumDeclaration != null)
+			for (constructor in enumDeclaration.getConstructors()) {
+				final member:TypedBackendEnumConstructorMember = if (constructor.arity == 0) {
+					final candidates = fields.filter(field -> field.name == constructor.name && field.isStatic);
+					if (candidates.length != 1
+						|| candidates[0].semanticType.getNominalIdentity() == null
+						|| candidates[0].semanticType.getNominalIdentity().getCanonicalName() != classIdentity)
+						throw "enum singleton lacks its exact nominal field";
+					Singleton(candidates[0]);
+				} else {
+					final candidates = methods.filter(method -> method.name == constructor.name && method.isEnumConstructor && method.isStatic);
+					if (candidates.length != 1
+						|| candidates[0].arguments.length != constructor.arity
+						|| candidates[0].returnSemanticType.getNominalIdentity() == null
+						|| candidates[0].returnSemanticType.getNominalIdentity().getCanonicalName() != classIdentity)
+						throw "enum constructor lacks its exact typed signature";
+					Callable(candidates[0]);
+				};
+				enumConstructors.push({index: enumConstructors.length, name: constructor.name, member: member});
+			}
 
 		final identityFacts = new Array<Null<String>>();
 		identityFacts.push(getSchemaRevision());
 		identityFacts.push(classIdentity);
 		identityFacts.push(moduleIdentity);
+		identityFacts.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		switch (nominalKind) {
 			case ClassInstance:
 				identityFacts.push("class-instance");
@@ -319,6 +365,7 @@ class TypedBackendClassSemanticFacts {
 			identityFacts.push(boolText(field.hasInitializer));
 			identityFacts.push(field.propertyGet);
 			identityFacts.push(field.propertySet);
+			identityFacts.push(field.hasStorage ? "stored" : "virtual");
 			identityFacts.push(boolText(field.noImportGlobal));
 		}
 		identityFacts.push("methods");
@@ -412,7 +459,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v9";
+		return "typed-backend-class-semantic-facts-v11";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected
@@ -434,16 +481,49 @@ class TypedBackendClassSemanticFacts {
 		return bodyResult;
 	}
 
-	public function getCanonicalIdentity():String
+	public function getCanonicalIdentity():String {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		return canonicalIdentity;
+	}
 
-	public function copyFields():Array<TypedBackendClassFieldFact>
+	public function copyFields():Array<TypedBackendClassFieldFact> {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		return [for (field in fields) copyField(field)];
+	}
+
+	/** An equal spelling from another request cannot borrow this completed type. */
+	public function requireField(field:TyFieldInfo):TypedBackendClassFieldFact {
+		if (field == null || declarationOwner.fieldInfo(field.getName()) != field)
+			throw "backend field facts require their exact declaration";
+		final fact = findField(field.getCanonicalKey());
+		if (fact == null)
+			throw "backend field declaration has no published facts";
+		return fact;
+	}
 
 	public function copyMethods():Array<TypedBackendClassMethodFact>
 		return [for (method in methods) copyMethod(method)];
 
+	/** Preserve source tag order while isolating callers from the retained member inventories. */
+	public function copyEnumConstructors():Array<TypedBackendEnumConstructorFact> {
+		return [
+			for (constructor in enumConstructors)
+				{
+					index: constructor.index,
+					name: constructor.name,
+					member: switch constructor.member {
+						case Singleton(field): Singleton(copyField(field));
+						case Callable(method): Callable(copyMethod(method));
+					}
+				}
+		];
+	}
+
 	public function findField(canonicalFieldIdentity:String):Null<TypedBackendClassFieldFact> {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		final fact = fieldIndex.get(canonicalFieldIdentity);
 		return fact == null ? null : copyField(fact);
 	}
@@ -487,6 +567,7 @@ class TypedBackendClassSemanticFacts {
 			&& left.hasInitializer == right.hasInitializer
 			&& left.propertyGet == right.propertyGet
 			&& left.propertySet == right.propertySet
+			&& left.hasStorage == right.hasStorage
 			&& left.noImportGlobal == right.noImportGlobal;
 
 	static function sameMethod(left:TypedBackendClassMethodFact, right:TypedBackendClassMethodFact):Bool {
@@ -534,6 +615,7 @@ class TypedBackendClassSemanticFacts {
 			hasInitializer: fact.hasInitializer,
 			propertyGet: fact.propertyGet,
 			propertySet: fact.propertySet,
+			hasStorage: fact.hasStorage,
 			noImportGlobal: fact.noImportGlobal
 		};
 

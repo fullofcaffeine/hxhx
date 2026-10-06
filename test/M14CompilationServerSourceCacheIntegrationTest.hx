@@ -143,6 +143,9 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		failed-request isolation, reset, parser-input changes, and cancellation.
 	**/
 	static function verifyRequestLifecycle(root:String):Void {
+		// Production loads Main plus the real StdTypes and Class declarations.
+		// These shared modules must participate in reuse and reset just like Main.
+		final sourceCount = 3;
 		final srcDir = haxe.io.Path.join([root, "lifecycle"]);
 		ensureDirectory(srcDir);
 		final mainPath = haxe.io.Path.join([srcDir, "Main.hx"]);
@@ -164,15 +167,15 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		assertTrue(!cold.isError, "cold source-cache request should compile");
 		assertTrue(coldWire.indexOf("hxhx_server_report.semantic_cache=source-resolution-parser") >= 0,
 			"source-cache request should identify each enabled layer");
-		assertTrue(reportInt(coldWire, "hxhx_server_report.source_misses") == 1, "cold request should read a new source revision");
-		assertTrue(reportInt(coldWire, "hxhx_server_report.parser_misses") == 1, "cold request should parse once");
+		assertTrue(reportInt(coldWire, "hxhx_server_report.source_misses") == sourceCount, "cold request should read Main, StdTypes, and Class");
+		assertTrue(reportInt(coldWire, "hxhx_server_report.parser_misses") == sourceCount, "cold request should parse all three source modules");
 		assertTrue(reportInt(coldWire, "hxhx_server_report.resolution_misses") > 0, "cold request should record its module lookup observations");
 
 		final warm = compile(cache, args);
 		final warmWire = wire(warm);
 		assertTrue(!warm.isError, "warm source-cache request should compile");
-		assertTrue(reportInt(warmWire, "hxhx_server_report.source_hits") == 1, "warm request should reuse exact source text");
-		assertTrue(reportInt(warmWire, "hxhx_server_report.parser_hits") == 1, "warm request should reuse its parsed module");
+		assertTrue(reportInt(warmWire, "hxhx_server_report.source_hits") == sourceCount, "warm request should reuse exact source text");
+		assertTrue(reportInt(warmWire, "hxhx_server_report.parser_hits") == sourceCount, "warm request should reuse all parsed modules");
 		assertTrue(reportInt(warmWire, "hxhx_server_report.resolution_hits") > 0, "warm request should reuse module lookup results");
 		assertTrue(reportInt(warmWire, "hxhx_server_report.resolution_misses") == 0, "unchanged module lookup observations should not miss");
 		assertTrue(reportInt(warmWire, "hxhx_server_report.semantic_cache_entries") >= 3, "warm request should retain source, parser, and lookup entries");
@@ -180,8 +183,8 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		// Equal bytes with new filesystem metadata are still the same compiler input.
 		File.saveContent(mainPath, sourceA);
 		final sameBytes = wire(compile(cache, args));
-		assertTrue(reportInt(sameBytes, "hxhx_server_report.source_hits") == 1, "same-byte rewrite should reuse exact source content");
-		assertTrue(reportInt(sameBytes, "hxhx_server_report.parser_hits") == 1, "same-byte rewrite should reuse the parsed module");
+		assertTrue(reportInt(sameBytes, "hxhx_server_report.source_hits") == sourceCount, "same-byte rewrite should reuse exact source content");
+		assertTrue(reportInt(sameBytes, "hxhx_server_report.parser_hits") == sourceCount, "same-byte rewrite should reuse all parsed modules");
 
 		final sourceB = "class Main { static function main():Void {} } // revision B\n";
 		File.saveContent(mainPath, sourceB);
@@ -190,12 +193,15 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		assertTrue(!changed.isError, "changed source should compile");
 		assertTrue(reportInt(changedWire, "hxhx_server_report.source_misses") == 1, "changed bytes should miss the source cache");
 		assertTrue(reportInt(changedWire, "hxhx_server_report.parser_misses") == 1, "changed filtered source should be parsed again");
+		assertTrue(reportInt(changedWire, "hxhx_server_report.source_hits") == sourceCount - 1, "editing Main should retain standard-library source hits");
+		assertTrue(reportInt(changedWire, "hxhx_server_report.parser_hits") == sourceCount - 1, "editing Main should retain standard-library parser hits");
 		assertTrue(changedWire.indexOf(".name=source-changed") >= 0, "changed source should explain why it missed");
 
 		File.saveContent(mainPath, sourceA);
 		final restored = wire(compile(cache, args));
-		assertTrue(reportInt(restored, "hxhx_server_report.source_hits") == 1, "returning to revision A should reuse A source");
-		assertTrue(reportInt(restored, "hxhx_server_report.parser_hits") == 1, "returning to revision A should reuse A parser output");
+		assertTrue(reportInt(restored, "hxhx_server_report.source_hits") == sourceCount, "returning to revision A should reuse A and standard-library source");
+		assertTrue(reportInt(restored, "hxhx_server_report.parser_hits") == sourceCount,
+			"returning to revision A should reuse A and standard-library parser output");
 
 		final invalidSource = "class Main { static function main():Void { trace(\"unterminated); } }\n";
 		File.saveContent(mainPath, invalidSource);
@@ -207,13 +213,14 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		File.saveContent(mainPath, sourceA);
 		final afterFailure = compile(cache, args);
 		assertTrue(!afterFailure.isError, "last known good source should compile after failed requests");
-		assertTrue(reportInt(wire(afterFailure), "hxhx_server_report.parser_hits") == 1, "failed parser work must not replace the last known good entry");
+		assertTrue(reportInt(wire(afterFailure), "hxhx_server_report.parser_hits") == sourceCount,
+			"failed parser work must not replace the last known good entries");
 
 		final reset = compile(cache, [], ["--hxhx-server-control", "reset"]);
 		assertTrue(!reset.isError && wire(reset).indexOf("hxhx_server_control.reset=ok") >= 0, "cache reset should confirm completion");
 		final afterReset = wire(compile(cache, args));
-		assertTrue(reportInt(afterReset, "hxhx_server_report.source_misses") == 1, "reset should make source content cold again");
-		assertTrue(reportInt(afterReset, "hxhx_server_report.parser_misses") == 1, "reset should make parser output cold again");
+		assertTrue(reportInt(afterReset, "hxhx_server_report.source_misses") == sourceCount, "reset should make all source content cold again");
+		assertTrue(reportInt(afterReset, "hxhx_server_report.parser_misses") == sourceCount, "reset should make all parser output cold again");
 
 		// Module directives are retained as immutable compiler input. A caller may
 		// change the returned array, but that copy must not alter the parsed module.
@@ -273,14 +280,14 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final changedDefine = compile(defineCache, args.concat(["-D", "CACHE_FLAG"]));
 		final changedDefineWire = wire(changedDefine);
 		assertTrue(!changedDefine.isError, "conditional source should compile with the define");
-		assertTrue(reportInt(changedDefineWire, "hxhx_server_report.source_hits") == 1, "define change should reuse equal on-disk source bytes");
+		assertTrue(reportInt(changedDefineWire, "hxhx_server_report.source_hits") == sourceCount, "define change should reuse equal on-disk source bytes");
 		assertTrue(reportInt(changedDefineWire, "hxhx_server_report.parser_misses") == 1, "define change that changes filtered source should parse again");
 
 		File.saveContent(mainPath, sourceA);
 		final cancelledCache = new CompilationServerSourceCache();
 		assertTrue(compile(cancelledCache, args, [CompilationServerProtocol.REQUEST_TIMEOUT_FLAG, "0"]).isError, "cancelled cache request should fail");
 		final afterCancellation = wire(compile(cancelledCache, args));
-		assertTrue(reportInt(afterCancellation, "hxhx_server_report.source_misses") == 1, "cancelled request must not publish a source entry");
+		assertTrue(reportInt(afterCancellation, "hxhx_server_report.source_misses") == sourceCount, "cancelled request must not publish source entries");
 	}
 
 	/** Verify that generated-output publication must succeed before cache publication. **/
@@ -325,9 +332,10 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final lowMain = haxe.io.Path.join([low, "Main.hx"]);
 		File.saveContent(lowMain, "class Main { static function main():Void { trace(\"lower\"); } }\n");
 		final artifact = haxe.io.Path.join([shadowRoot, "out", "main.js"]);
+		// Haxe gives the last CLI -cp the highest lookup priority.
 		final args = [
 			"--hxhx-no-run", "--hxhx-server-report", "--hxhx-backend", "js-native",  "--js", artifact,
-			          "-cp",                   high,            "-cp",         low, "-main",   "Main"
+			          "-cp",                    low,            "-cp",        high, "-main",   "Main"
 		];
 		final cache = new CompilationServerSourceCache();
 		assertTrue(!compile(cache, args).isError, "lower-priority module should compile while the earlier class path is empty");

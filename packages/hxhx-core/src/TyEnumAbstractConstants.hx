@@ -79,7 +79,7 @@ class TyEnumAbstractConstants {
 			case EInt(value): new TyFieldConstant(IntValue(value));
 			case EString(value): new TyFieldConstant(StringValue(value));
 			case EBool(value): new TyFieldConstant(BoolValue(value));
-			case EIdent(reference): resolve(reference);
+			case EIdent(reference) | EEnumValue(reference): resolve(reference);
 			case EUnop(Negate, Prefix, inner):
 				switch (evaluate(name, inner).getKind()) {
 					case IntValue(value): new TyFieldConstant(IntValue(-value));

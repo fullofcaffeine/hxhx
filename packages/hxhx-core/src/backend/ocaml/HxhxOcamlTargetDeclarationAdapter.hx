@@ -9,10 +9,12 @@ import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetMethodInput
 /**
 	Copies sealed native `hxhx` class facts into a target-owned declaration request.
 
-	This is the only production OCaml boundary allowed to read the observation-only
+	This is the shared target declaration boundary for reading the observation-only
 	class catalog. It copies every admitted value into `OcamlTargetDeclarationRequest`,
 	so downstream target code cannot retain native compiler objects. The adapter
 	selects no OCaml behavior and fails when typing did not provide exact facts.
+	Stage3 enum emission uses its separate `Stage3OcamlEnumPlan` until the shared
+	program request can represent enum construction and payload matching.
 **/
 class HxhxOcamlTargetDeclarationAdapter {
 	public static function fromModules(hostProgramRevision:String, modules:Array<TypedBackendModuleProjection>):OcamlTargetDeclarationRequest {

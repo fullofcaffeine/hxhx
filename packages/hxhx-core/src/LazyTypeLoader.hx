@@ -25,6 +25,10 @@ class LazyTypeLoader {
 	public function hasDefine(_name:String):Bool
 		return false;
 
+	/** Make a source declaration available without promising that it denotes a class. */
+	public function ensureDeclarationAvailable(_path:String, _context:TyTypeDeclaration.TyTypeResolutionContext):Null<TyTypeDeclaration>
+		return null;
+
 	public function ensureTypeAvailable(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
 			?resolvedDirectives:Array<TyModuleDirective>):Null<TyNominalInfo> {
 		// Default no-op implementation.

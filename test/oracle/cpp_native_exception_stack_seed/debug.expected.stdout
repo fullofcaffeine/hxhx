@@ -1,0 +1,9 @@
+initial-empty=true
+first-origin=true
+nested-secondary=true
+snapshot-stable=true
+after-nested-secondary=true
+rethrow-origin=false
+rethrow-secondary=false
+rethrow-site=true
+after-catch-empty=false

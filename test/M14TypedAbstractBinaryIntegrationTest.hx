@@ -131,7 +131,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
 			"shadowing helper local lost its exact temporary binding");
 		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
-		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v1") >= 0
+		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v2") >= 0
 			&& implementationRevision.indexOf(argumentBindings[0].getCanonicalIdentity()) >= 0,
 			"typed-module implementation revision omitted the binary pass or generated binding identity");
 		final innerReadBindings = expressions[2].getLocalBindings();

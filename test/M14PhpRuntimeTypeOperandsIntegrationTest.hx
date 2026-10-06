@@ -1,3 +1,5 @@
+import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.Stage3SetupSupport;
 import backend.BackendContext;
 import backend.BackendRegistry;
 import backend.GenIrProgram;
@@ -21,10 +23,32 @@ class M14PhpRuntimeTypeOperandsIntegrationTest {
 		return StringTools.replace(stdout, "\r\n", "\n");
 	}
 
+	/** Load real PHP declaration dependencies while keeping this observer focused on its authored module. */
 	static function program(name:String):GenIrProgram {
-		final path = "test/php_runtime_type_operands/src/" + name + ".hx";
-		final module = new ResolvedModule(name, path, ParserStage.parse(File.getContent(path), path));
-		return MacroStage.expandProgram([TyperStage.typeResolvedModule(module, TyperIndex.build([module]))], []);
+		final sourceRoot = "test/php_runtime_type_operands/src";
+		final arguments = Stage1Args.parse(["-cp", sourceRoot, "-main", name], true);
+		if (arguments == null)
+			throw "PHP runtime-type fixture arguments did not parse";
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: Stage1Args.getExplicitClassPaths(arguments),
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "php"
+		});
+		final defines = Stage3SetupSupport.buildDefinesMap([], "php", "php-native");
+		final modules = ResolverStage.parseProjectRoots(paths, [name], defines);
+		final index = TyperIndex.buildHeaders(modules);
+		final loader = new ModuleLoader(paths, defines, index);
+		loader.markResolvedAlready(modules);
+		final selected = modules.filter(module -> ResolvedModule.getModulePath(module) == name);
+		if (selected.length != 1)
+			throw "PHP runtime-type fixture lost its exact source module";
+		final typed = TyperStage.typeResolvedModule(selected[0], index, loader, true);
+		final provider = index.getByFullName("Class");
+		if (provider == null || provider.getModulePath() != "Class")
+			throw "PHP runtime-type fixture did not load its real Class declaration";
+		return MacroStage.expandProgram([typed], []);
 	}
 
 	static function reject(action:Void->Void, expected:String):Void {

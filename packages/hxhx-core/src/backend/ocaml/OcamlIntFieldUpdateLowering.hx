@@ -74,8 +74,7 @@ private function lowerClasses(classes:Array<TypedClass>):Array<TypedClass> {
 					new TypedFieldInitializer(field, lowerExpression(initializer.getExpression(), allocator));
 				}
 			];
-			new TypedClass(typedClass.getSourceDeclaration(), typedClass.getSemanticInfo(), functions, initializers, typedClass.getResolvedExtends(),
-				typedClass.getResolvedImplements(), typedClass.getResolvedInterfaceExtends());
+			typedClass.withMembers({functions: functions, fields: typedClass.getFields(), initializers: initializers});
 		}
 	];
 }

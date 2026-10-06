@@ -361,6 +361,16 @@ class TypedAbstractBinaryLowering {
 		return switch (expression.getTag()) {
 			case ThisValue:
 				place.read(expression.getType());
+			case Call if (expression.getDeclaration() != null
+				&& !expression.getDeclaration().getIsStatic()
+				&& children[0].getTag() == NameRead):
+				final declaration = expression.getDeclaration();
+				final receiver = place.read(TyType.nominal(declaration.getOwner(), [], declaration.getOwner().getCanonicalName()));
+				final callee = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), children[0].getType(), expression.getPosition());
+				expression.withExpressions([callee].concat([
+					for (child in children.slice(1))
+						substituteExpression(child, place, parameters, renamedLocals)
+				]));
 			case LocalRead:
 				final sourceBindings = expression.getLocalBindings();
 				if (sourceBindings.length != 1)
@@ -569,6 +579,8 @@ class TypedAbstractBinaryLowering {
 		for (typedClass in classes)
 			for (typedFunction in typedClass.getFunctions()) {
 				final owner = typedFunction.getStableIdentity();
+				for (value in typedFunction.getDefaults())
+					assertNoAbstractBinaryExpression(value.getExpression(), index, owner);
 				for (statement in typedFunction.getBody().getStatements()) {
 					for (expression in statement.getExpressions())
 						assertNoAbstractBinaryExpression(expression, index, owner);
@@ -596,13 +608,16 @@ class TypedAbstractBinaryLowering {
 				typedClass.withFunctions([
 					for (typedFunction in typedClass.getFunctions()) {
 						final body = typedFunction.getBody();
-						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-binary-v1",
+						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-binary-v2",
 							"__hxhx_abstract_binary_");
 						final statements = [
 							for (statement in body.getStatements())
 								lowerStatement(statement, helpers, index, filePath, allocator)
 						];
-						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()));
+						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()), [
+							for (value in typedFunction.getDefaults())
+								new TypedFunctionDefault(value.getParameterIndex(), lowerExpression(value.getExpression(), helpers, index, filePath, allocator))
+						]);
 					}
 				])
 		];

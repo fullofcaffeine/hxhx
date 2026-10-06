@@ -54,7 +54,7 @@ class Stage3DiagnosticsSupport {
 					count += countUnsupportedExprsInExpr(HxExprVarDecl.getInitializer(declaration));
 				count;
 			case EVariableDeclaration(_, _, initializer, _, _, _): countUnsupportedExprsInExpr(initializer);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				var count = countUnsupportedExprsInExpr(condition);
 				for (entry in body)
 					count += countUnsupportedExprsInExpr(entry);
@@ -70,7 +70,7 @@ class Stage3DiagnosticsSupport {
 					count += countUnsupportedExprsInExpr(arg);
 				count;
 			case EUnop(_op, _fixity, inner): countUnsupportedExprsInExpr(inner);
-			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
+			case EBinop(_, left, right) | EDiscardThen(left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
 			case ETernary(cond, thenExpr, elseExpr):
 				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInExpr(thenExpr) + countUnsupportedExprsInExpr(elseExpr);
 			case EAnon(_names, values):
@@ -78,9 +78,14 @@ class Stage3DiagnosticsSupport {
 				for (value in values)
 					count += countUnsupportedExprsInExpr(value);
 				count;
-			case EArrayDecl(values):
+			case EArrayDecl(values) | ESourceGroup(values, _) | ELoweredControl(_, _, values, _):
 				var count = 0;
 				for (value in values)
+					count += countUnsupportedExprsInExpr(value);
+				count;
+			case ESourceFunction(_, body, defaults, _):
+				var count = countUnsupportedExprsInExpr(body);
+				for (value in defaults)
 					count += countUnsupportedExprsInExpr(value);
 				count;
 			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
@@ -90,7 +95,7 @@ class Stage3DiagnosticsSupport {
 				countUnsupportedExprsInExpr(arrayExpr) + countUnsupportedExprsInExpr(indexExpr);
 			case ECast(inner, _hint):
 				countUnsupportedExprsInExpr(inner);
-			case EUntyped(inner):
+			case EUntyped(inner) | EPrivateAccess(inner, _):
 				countUnsupportedExprsInExpr(inner);
 			case _:
 				0;
@@ -115,7 +120,7 @@ class Stage3DiagnosticsSupport {
 					collectUnsupportedExprRawInExpr(HxExprVarDecl.getInitializer(declaration), out, max);
 			case EVariableDeclaration(_, _, initializer, _, _, _):
 				collectUnsupportedExprRawInExpr(initializer, out, max);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				collectUnsupportedExprRawInExpr(condition, out, max);
 				for (entry in body)
 					collectUnsupportedExprRawInExpr(entry, out, max);
@@ -128,7 +133,7 @@ class Stage3DiagnosticsSupport {
 					collectUnsupportedExprRawInExpr(arg, out, max);
 			case EUnop(_op, _fixity, inner):
 				collectUnsupportedExprRawInExpr(inner, out, max);
-			case EBinop(_op, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectUnsupportedExprRawInExpr(left, out, max);
 				collectUnsupportedExprRawInExpr(right, out, max);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -138,8 +143,12 @@ class Stage3DiagnosticsSupport {
 			case EAnon(_names, values):
 				for (value in values)
 					collectUnsupportedExprRawInExpr(value, out, max);
-			case EArrayDecl(values):
+			case EArrayDecl(values) | ESourceGroup(values, _) | ELoweredControl(_, _, values, _):
 				for (value in values)
+					collectUnsupportedExprRawInExpr(value, out, max);
+			case ESourceFunction(_, body, defaults, _):
+				collectUnsupportedExprRawInExpr(body, out, max);
+				for (value in defaults)
 					collectUnsupportedExprRawInExpr(value, out, max);
 			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
 				collectUnsupportedExprRawInExpr(iterable, out, max);
@@ -151,7 +160,7 @@ class Stage3DiagnosticsSupport {
 				collectUnsupportedExprRawInExpr(indexExpr, out, max);
 			case ECast(inner, _hint):
 				collectUnsupportedExprRawInExpr(inner, out, max);
-			case EUntyped(inner):
+			case EUntyped(inner) | EPrivateAccess(inner, _):
 				collectUnsupportedExprRawInExpr(inner, out, max);
 			case _:
 		}

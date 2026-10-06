@@ -2,6 +2,7 @@ import backend.BackendContext;
 import backend.cpp.CppTargetCore;
 import backend.source.SourceTargetCommon;
 import backend.vm.NekoTargetCore;
+import hxhx.Stage1Compiler.Stage1Args;
 
 /**
 	Unsupported runtime type operations must not replace or partially publish target files.
@@ -17,6 +18,10 @@ class Main {
 }', "does not support runtime type operands");
 		for (primitive in ["Int", "Float", "Bool"])
 			assertRejected("class Main { static function main():Void { var selected = " + primitive + "; } }", null);
+		// Discarding a type object must not hide an unsupported operand from the
+		// publication guard. Its exact occurrence survives in either sequence child.
+		for (body in ["Parent; 1;", "1; Parent;"])
+			assertRejected("class Parent {} class Main { static function main():Void { var selected = { " + body + " }; } }", null);
 		Sys.println("RUNTIME_TYPE_UNSUPPORTED_BACKENDS:PASS");
 	}
 
@@ -24,11 +29,30 @@ class Main {
 	static function assertRejected(source:String, nekoDiagnostic:Null<String>):Void {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
+		final arguments = Stage1Args.parse(["-main", "Main"], true);
+		if (arguments == null)
+			throw "rejection fixture could not discover the standard library";
+		final defines = new haxe.ds.StringMap<String>();
+		final paths = [Stage1Args.getStandardLibraryRoot(arguments)];
+		// Load actual core declarations: incomplete Class<T> storage is not evidence
+		// that a backend rejected the intended runtime-type operation.
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready([resolved]);
-		final module = TyperStage.typeResolvedModule(resolved, index, loader);
-		final program = new MacroExpandedProgram([module], false);
+		final pending = [resolved];
+		final modules = new Array<TypedModule>();
+		var cursor = 0;
+		while (cursor < pending.length) {
+			modules.push(TyperStage.typeResolvedModule(pending[cursor++], index, loader, true));
+			for (loaded in loader.drainNewModules())
+				pending.push(loaded);
+		}
+		final module = modules[0];
+		for (owner in module.getBackendProjection().getClasses())
+			for (initializer in owner.getFieldInitializers())
+				if (initializer.getField().getType().hasUnknownComponent() || initializer.getField().getType().isUnresolved())
+					throw "rejection fixture requires complete field types";
+		final program = new MacroExpandedProgram(modules, false);
 		final root = ".tmp/runtime-type-unsupported-" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final checks:Array<{name:String, emit:BackendContext->Void}> = [

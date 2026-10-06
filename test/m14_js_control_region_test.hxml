@@ -1,0 +1,64 @@
+-cp packages/hxhx-core/src
+-cp test
+-main M14JsControlRegionTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14ControlAssignmentTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedCallControlTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14EnumSwitchCoverageProofTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedFunctionBodySyntaxTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedRangeInferenceTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedNominalFieldTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14NestedGenericCallInferenceTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14CapturedCallbackPublicationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14CallableFieldResultTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14EnumImportConstraintTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedLocalDestinationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14RecursiveThrowResultTest
+--interp

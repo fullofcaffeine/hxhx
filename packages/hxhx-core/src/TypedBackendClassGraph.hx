@@ -168,6 +168,40 @@ class TypedBackendClassGraph {
 	}
 
 	/**
+		Return every nominal view of an applied type, preserving generic arguments.
+		For Child<Int> implementing Source<T> through a parent, the result contains
+		Source<Int>. Each edge substitutes the declaring owner's exact binders.
+		Diamond paths share equal applications; distinct applications remain distinct.
+		This relation grants assignment and dispatch views, never object allocation.
+	 */
+	public function requireAppliedAssignableTypes(type:TyType):Array<TyType> {
+		if (type == null)
+			throw "typed backend class graph cannot trace a null applied type";
+		final pending = [type];
+		final seen = new haxe.ds.StringMap<Bool>();
+		final result = new Array<TyType>();
+		while (pending.length > 0) {
+			final current = pending.pop();
+			final identity = current.getNominalIdentity();
+			if (identity == null)
+				throw "typed backend class graph cannot identify applied ancestor " + current.getSemanticKey();
+			if (seen.exists(current.getSemanticKey()))
+				continue;
+			final facts = factsByClass.get(identity.getCanonicalName());
+			if (facts == null)
+				throw "typed backend class graph is missing applied ancestor " + identity.getCanonicalName();
+			final bindings = TyTypeSubstitution.bind(facts.getTypeParameterIds(), current.getTypeArguments(), current.getSemanticKey());
+			seen.set(current.getSemanticKey(), true);
+			result.push(current);
+			if (facts.getSuperType() != null)
+				pending.push(TyTypeSubstitution.apply(facts.getSuperType(), bindings));
+			for (parent in facts.getInterfaceTypes())
+				pending.push(TyTypeSubstitution.apply(parent, bindings));
+		}
+		return result;
+	}
+
+	/**
 		Trace one child-to-root chain without hiding an absent projected parent.
 
 		An unknown starting class is a caller error. An absent parent reached from
@@ -431,6 +465,7 @@ class TypedBackendClassGraph {
 			hasInitializer: field.hasInitializer,
 			propertyGet: field.propertyGet,
 			propertySet: field.propertySet,
+			hasStorage: field.hasStorage,
 			noImportGlobal: field.noImportGlobal
 		};
 	}
@@ -501,6 +536,7 @@ class TypedBackendClassGraph {
 			hasInitializer: field.hasInitializer,
 			propertyGet: field.propertyGet,
 			propertySet: field.propertySet,
+			hasStorage: field.hasStorage,
 			noImportGlobal: field.noImportGlobal
 		};
 

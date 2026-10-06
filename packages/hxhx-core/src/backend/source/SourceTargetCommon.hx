@@ -10,6 +10,7 @@ import backend.GenIrProgram;
 import backend.TargetCoreBackend;
 import backend.TargetDescriptor;
 import backend.source.PhpFunctionLoweringPlan.PhpFunctionPlanEnumConstructorFact;
+import backend.source.PhpExecutableLowering.PhpClosureOperation;
 import backend.source.PhpLexicalRenderScope.PhpLexicalScopeKind;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumAbstractValueFact;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumConstructorFact;
@@ -347,7 +348,7 @@ class SourceTargetCommon {
 			program = PythonStaticMemberQualification.qualify(program);
 		if (target == Php)
 			return emitPhpTarget(program, context);
-		TypedBackendModuleProjection.assertProgramRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
+		TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		final maybeMain = findMainModule(program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
@@ -400,10 +401,11 @@ class SourceTargetCommon {
 		PhpRuntimeTypeLowering.validateProgram(projections, programRenderer.getProgramFacts());
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(Php, className)]);
+		// Rendering validates exact closure and local facts. Reject before creating or replacing output.
+		final contents = renderPhpProgram(program, context, declaration, className, strictProjection.main.getBody(), strictProjection.module,
+			strictProjection.main, projections, programRenderer);
 		ensureParentDirectory(outputPath);
-		sys.io.File.saveContent(outputPath,
-			renderPhpProgram(program, context, declaration, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
-				projections, programRenderer));
+		sys.io.File.saveContent(outputPath, contents);
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(Php), outputPath)], false);
 	}
 
@@ -1175,11 +1177,31 @@ class SourceTargetCommon {
 	}
 
 	static function renderExprWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):String {
+		switch expr {
+			case ELoweredControl(_, _, _, _):
+				throw "source target requires executable statement-region support before rendering control";
+			case _:
+		}
 		final staticCall = TypedExactStaticCallSource.decode(expr);
 		if (staticCall != null)
 			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		final phpRuntimeType = PhpRuntimeTypeLowering.decode(expr);
+		final phpClosure = PhpExecutableLowering.decodeClosure(expr);
+		if (phpClosure != null) {
+			if (target != Php)
+				throw "PHP closure operation reached a different target";
+			final parameters = phpClosure.signature == null ? [] : phpClosure.signature.getParameters();
+			final optional = new Array<String>();
+			var rest = -1;
+			for (index in 0...parameters.length) {
+				if (parameters[index].isOptional)
+					optional.push(phpClosure.arguments[index]);
+				if (parameters[index].isRest)
+					rest = index;
+			}
+			return phpLambdaExprWithFrame(frame, phpClosure.arguments, phpClosure.body, [], [], optional, rest, null, phpClosure);
+		}
 		if (phpRuntimeType != null) {
 			if (target != Php)
 				throw "PHP runtime type operation reached a different target";
@@ -1442,7 +1464,20 @@ class SourceTargetCommon {
 				}
 			case EReturn(_):
 				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
-			case EWhile(_, _, _, _):
+			case EDiscardThen(effect, continuation):
+				switch (target) {
+					case Python:
+						"(" + renderExprWithFrame(frame, effect) + ", " + renderExprWithFrame(frame, continuation) + ")[1]";
+					case Java:
+						"((java.util.function.Supplier<Object>)(" + javaLambdaExpr("", expr) + ")).get()";
+					case Cs:
+						"((System.Func<object>)(" + csLambdaExpr("", expr) + "))()";
+					case Lua:
+						"(" + luaLambdaExpr("", expr) + ")()";
+					case Php:
+						"(" + phpLambdaExprWithFrame(frame, [], expr, [], [], []) + ")()";
+				}
+			case EWhile(_, _, _, _, loopKind):
 				throw targetLabel(target) + " source backend: expression-position while must be consumed by macro expansion before emission";
 			case EBreak(_):
 				throw targetLabel(target) + " source backend: expression-position break needs shared loop-control lowering before emission";
@@ -1471,6 +1506,13 @@ class SourceTargetCommon {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case ESourceGroup(_, _): "ESourceGroup";
+			case ESourceIf(_, _, _, _): "ESourceIf";
+			case ESourceFor(_, _, _, _): "ESourceFor";
+			case ESourceTry(_, _, _): "ESourceTry";
+			case EThrow(_, _): "EThrow";
+			case ELoweredControl(_, _, _, _): "ELoweredControl";
+			case ESourceFunction(_, _, _, _): "ESourceFunction";
 			case ENull: "ENull";
 			case EBool(_): "EBool";
 			case EString(_): "EString";
@@ -1484,9 +1526,10 @@ class SourceTargetCommon {
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
-			case EWhile(_, _, _, _): "EWhile";
+			case EWhile(_, _, _, _, loopKind): "EWhile";
 			case EBreak(_): "EBreak";
 			case EContinue(_): "EContinue";
+			case EDiscardThen(_, _): "EDiscardThen";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
@@ -1506,6 +1549,7 @@ class SourceTargetCommon {
 			case ERange(_, _): "ERange";
 			case ECast(_, _): "ECast";
 			case EParenthesized(_, _): "EParenthesized";
+			case EPrivateAccess(_, _): "EPrivateAccess";
 			case EUntyped(_): "EUntyped";
 			case EUnsupported(raw): "EUnsupported(" + summarizeRaw(raw) + ")";
 		};
@@ -3907,6 +3951,7 @@ class SourceTargetCommon {
 
 	static function luaStringFieldReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): luaStringFieldReceiver(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
@@ -4072,6 +4117,7 @@ class SourceTargetCommon {
 
 	static function phpStringLikeReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): phpStringLikeReceiver(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): phpStringLikeReceiver(left) || phpStringLikeReceiver(right);
@@ -4084,6 +4130,7 @@ class SourceTargetCommon {
 
 	static function phpArrayResultReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): phpArrayResultReceiver(continuation);
 			case ECall(EField(base, "split"), args): args.length == 1 && phpStringMethodReceiver(base, "split");
 			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayResultReceiver(inner);
@@ -4103,6 +4150,7 @@ class SourceTargetCommon {
 
 	static function javaStringLikeOperand(expr:HxExpr):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): javaStringLikeOperand(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): javaStringLikeOperand(left) || javaStringLikeOperand(right);
@@ -4115,6 +4163,7 @@ class SourceTargetCommon {
 
 	static function luaStringLikeOperand(expr:HxExpr):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): luaStringLikeOperand(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
@@ -4316,8 +4365,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return nil"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = luaExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = luaExprAsStatements(effect, indent, false);
 				for (line in luaExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4430,8 +4479,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return null;"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = csExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = csExprAsStatements(effect, indent, false);
 				for (line in csExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4509,25 +4558,14 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function isLambdaSeqTemp(name:String):Bool {
-		return name != null && StringTools.startsWith(name, "__hxhx_lambda_seq_");
-	}
-
 	/**
-		Activate an exact PHP lexical binding or the one projection-only binder.
-
-		Normal parameters and declarations must exist in the typed function plan.
-		`TypedBodySource` adds `__hxhx_lambda_seq_*` continuation binders while
-		projecting a typed block into nested expressions, after that plan is
-		sealed. They have no source-level identity, so the request-owned scope
-		records them explicitly as synthetic instead of guessing an identity.
+		Activate a parameter or declaration selected by the typed function plan.
+		Discarded effects introduce no binding and cannot authorize an unplanned name.
 	**/
 	static function phpActivateLexicalLocal(scope:PhpLexicalRenderScope, targetName:String, ?targetTypeHint:String):PhpLexicalRenderScope {
 		final cleanName = PhpName.valueIdentifier(targetName);
 		if (scope.getPlan().findLocalByTargetName(cleanName) != null)
 			return scope.withPlannedLocal(cleanName);
-		if (isLambdaSeqTemp(cleanName))
-			return scope.withSyntheticLocal(cleanName, targetTypeHint);
 		throw "PHP lexical scope cannot activate unplanned local " + cleanName + " in " + scope.getPlan().getFunctionIdentity();
 	}
 
@@ -4535,8 +4573,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return null;"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = javaExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = javaExprAsStatements(effect, indent, false);
 				for (line in javaExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4689,7 +4727,7 @@ class SourceTargetCommon {
 				phpSetInferredLocalTypeIfUnknown(lambdaLocalTypes, clean, "");
 			}
 		}
-		final renderedBody = renderExpr(Php, body);
+		final renderedBody = phpReturnBody(body, value -> renderExpr(Php, value));
 		final refNames = phpLambdaAssignedCaptures(body, args);
 		final valueCaptures = new Array<String>();
 		if (valueNames != null) {
@@ -4718,13 +4756,14 @@ class SourceTargetCommon {
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
-		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + renderedBody + " }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
 	}
 
 	static function phpLambdaExprWithFrame(frame:SourceFunctionRenderFrame, args:Array<String>, body:HxExpr, valueNames:Array<String>,
-			extraRefNames:Array<String>, optionalArgNames:Array<String>, restIndex:Int = -1, ?refArgIndexes:Array<Int>):String {
+			extraRefNames:Array<String>, optionalArgNames:Array<String>, restIndex:Int = -1, ?refArgIndexes:Array<Int>,
+			?exactClosure:PhpClosureOperation):String {
 		final parentScope = SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		var lambdaScope = parentScope.derive(Lambda);
 		for (i in 0...args.length) {
@@ -4744,10 +4783,26 @@ class SourceTargetCommon {
 				if (i == restIndex) "..." + name; else refPrefix + name + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
 			}
 		].join(", ");
-		final thisCaptureName = parentScope.usesThisValueSlot() && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
+		final thisCaptureName = parentScope.usesThisValueSlot()
+			&& (exactClosure == null ? phpExprTouchesThis(body) : exactClosure.capturesReceiver) ? "__hxhx_this_value" : null;
 		if (thisCaptureName != null)
 			lambdaScope = lambdaScope.withThisCapture(thisCaptureName);
-		final renderedBody = renderExprWithFrame(SourceFunctionRenderFrameTools.withPhpScope(frame, lambdaScope), body);
+		if (exactClosure != null)
+			for (capture in exactClosure.captures)
+				lambdaScope = lambdaScope.withPlannedLocal(capture);
+		final bodyFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, lambdaScope);
+		if (exactClosure != null) {
+			final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
+			final statements = phpRewriteSameClassMembersInStmts(TypedControlStatements.functionBody(body), renderer.copyCurrentInstanceMethodTargetNames(),
+				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
+				args.concat(exactClosure.captures));
+			final rendered = renderStmtsWithFrame(bodyFrame, statements, "  ", renderer.copyLocalTypeHints()).join("\n");
+			final uses = phpLambdaUseClause(thisCaptureName == null ? [] : [thisCaptureName], exactClosure.captures);
+			final lambda = "function(" + renderedArgs + ")" + uses + " {\n" + phpLambdaArgPrologue(args, rendered) + rendered + "\n}";
+			return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
+				+ "; })(__hxhx_copy_value($this->__hx_value))";
+		}
+		final renderedBody = phpReturnBody(body, value -> renderExprWithFrame(bodyFrame, value));
 		final refNames = phpLambdaAssignedCapturesWithFrame(frame, body, args);
 		final valueCaptures = new Array<String>();
 		if (valueNames != null) {
@@ -4777,13 +4832,21 @@ class SourceTargetCommon {
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
-		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + renderedBody + " }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
 	}
 
 	static function phpLambdaArgIsRefLike(refArgIndexes:Null<Array<Int>>, index:Int):Bool {
 		return refArgIndexes != null && refArgIndexes.indexOf(index) >= 0;
+	}
+
+	/** Emit discarded effects as statements within the existing lexical closure. */
+	static function phpReturnBody(body:HxExpr, render:HxExpr->String):String {
+		return switch (body) {
+			case EDiscardThen(effect, continuation): render(effect) + "; " + phpReturnBody(continuation, render);
+			case _: "return " + render(body) + ";";
+		};
 	}
 
 	static function phpLambdaArgCanUsePhpDefault(args:Array<String>, optionalArgNames:Array<String>, index:Int):Bool {
@@ -5134,7 +5197,7 @@ class SourceTargetCommon {
 				phpCollectUsedListWithFrame(frame, args, names, bound);
 			case EUnop(_, _, inner):
 				phpCollectUsedIdentsWithFrame(frame, inner, names, bound);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectUsedIdentsWithFrame(frame, left, names, bound);
 				phpCollectUsedIdentsWithFrame(frame, right, names, bound);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5201,7 +5264,7 @@ class SourceTargetCommon {
 				phpCollectUsedList(args, names);
 			case EUnop(_, _, inner):
 				phpCollectUsedIdents(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectUsedIdents(left, names);
 				phpCollectUsedIdents(right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5317,7 +5380,7 @@ class SourceTargetCommon {
 				phpCollectAssignedList(args, names);
 			case EUnop(_, _, inner):
 				phpCollectAssignedIdents(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectAssignedIdents(left, names);
 				phpCollectAssignedIdents(right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5401,7 +5464,7 @@ class SourceTargetCommon {
 						phpCollectAssignedIdentsWithFrame(frame, arg, names);
 			case EUnop(_, _, inner):
 				phpCollectAssignedIdentsWithFrame(frame, inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectAssignedIdentsWithFrame(frame, left, names);
 				phpCollectAssignedIdentsWithFrame(frame, right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -6716,6 +6779,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpTypeStringExprHintWithFrame(frame, continuation, seen);
 			case EIdent(name):
 				final targetName = PhpName.valueIdentifier(name);
 				final local = SourceFunctionRenderFrameTools.requirePhpScope(frame).findLocal(targetName);
@@ -6759,6 +6823,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpTypeStringExprHint(continuation, seen);
 			case EIdent(name):
 				final clean = sanitizeTypeName(name);
 				if (seen.indexOf(clean) >= 0) {
@@ -6823,6 +6888,11 @@ class SourceTargetCommon {
 	}
 
 	static function helperExprNullableStateWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr, seen:Array<String>):String {
+		switch (expr) {
+			case EDiscardThen(_, continuation):
+				return helperExprNullableStateWithFrame(frame, continuation, seen);
+			case _:
+		}
 		final scope = SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		switch (expr) {
@@ -6912,6 +6982,8 @@ class SourceTargetCommon {
 
 	static function helperExprNullableState(expr:HxExpr, seen:Array<String>):String {
 		switch (expr) {
+			case EDiscardThen(_, continuation):
+				return helperExprNullableState(continuation, seen);
 			case EIdent(name):
 				final localHint = phpLocalTypeHint(name);
 				if (StringTools.trim(localHint).length > 0)
@@ -7467,6 +7539,8 @@ class SourceTargetCommon {
 
 	static function pythonMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case EString(value):
 				pythonMacroEnum("EConst", [
 					pythonMacroEnum("CString", [quoteString(value), pythonMacroEnum("DoubleQuotes", [])])
@@ -7881,6 +7955,8 @@ class SourceTargetCommon {
 
 	static function phpMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case EString(value):
 				phpMacroEnum("EConst", [
 					phpMacroEnum("CString", [PhpSyntax.quoteString(value), phpMacroEnum("DoubleQuotes", [])])
@@ -8847,6 +8923,8 @@ class SourceTargetCommon {
 				EUnop(op, fixity, javaExprWithStmtTraceLine(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(op, javaExprWithStmtTraceLine(left, pos), javaExprWithStmtTraceLine(right, pos));
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(javaExprWithStmtTraceLine(effect, pos), javaExprWithStmtTraceLine(continuation, pos));
 			case ETernary(cond, thenExpr, elseExpr):
 				ETernary(javaExprWithStmtTraceLine(cond, pos), javaExprWithStmtTraceLine(thenExpr, pos), javaExprWithStmtTraceLine(elseExpr, pos));
 			case EAnon(fieldNames, fieldValues):
@@ -8868,8 +8946,8 @@ class SourceTargetCommon {
 				EUntyped(javaExprWithStmtTraceLine(inner, pos));
 			case EParenthesized(inner, position):
 				EParenthesized(javaExprWithStmtTraceLine(inner, pos), position);
-			case ELambda(args, body):
-				ELambda(args, javaExprWithStmtTraceLine(body, pos));
+			case ELambda(args, body, signature):
+				ELambda(args, javaExprWithStmtTraceLine(body, pos), signature);
 			case _:
 				expr;
 		};
@@ -8986,7 +9064,11 @@ class SourceTargetCommon {
 			case SVar(name, _typeHint, init, pos):
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExprWithFrame(frame, value);
-					[indent + varDecl(target, sanitizeTypeName(name), rhs, _typeHint, value)];
+				final renewal = target == Php ? SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(name, indent) : [];
+				renewal.concat([indent + varDecl(target, sanitizeTypeName(name), rhs, _typeHint, value)]);
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderIfWithFrame(frame, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
@@ -10093,6 +10175,11 @@ class SourceTargetCommon {
 			.hasStaticCallableField(phpInstanceMemberLookupCandidates(typePath), sanitizeTypeName(field));
 
 	static function inferLocalTypeHint(typeHint:Null<String>, init:Null<HxExpr>):String {
+		switch (init) {
+			case EDiscardThen(_, continuation):
+				return inferLocalTypeHint(typeHint, continuation);
+			case _:
+		}
 		if (typeHint != null && StringTools.trim(typeHint).length > 0) {
 			return switch (init) {
 				case ENew(typePath, _):
@@ -10141,6 +10228,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprTypeHint(continuation);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -10299,6 +10387,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return false;
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprReturnsInt64(continuation);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
 			case ECall(callee, args): phpInt64StaticCall(callee, args.length) || phpInt64InstanceMethodReturnsInt64Call(callee, args);
@@ -10349,6 +10438,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return false;
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprReturnsInt64WithFrame(frame, continuation);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
 			case ECall(callee, args): phpInt64StaticCallWithFrame(frame, callee,
@@ -10545,7 +10635,16 @@ class SourceTargetCommon {
 						phpRegisterOptionalLambdaLocal(cleanName, init);
 					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 					final rhs = value == null ? defaultValue(target) : assignedValueExprWithFrame(frame, value, typeHint);
-					return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
+					final renewal = target == Php ? SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+						.getPlan()
+						.getCaptureStorage()
+						.renewal(cleanName, indent) : [];
+					return renewal.concat([indent + varDecl(target, cleanName, rhs, typeHint, value)]);
+				case SExpr(expr, _) if (target == Php && expr.match(ELoweredControl(_, _, _, _))):
+					return renderStmtWithLocalsWithFrame(frame,
+						TypedControlStatements.methodStatement(expr,
+							SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().requireRootControlIdentity()),
+						indent, localTypes);
 				case SExpr(EBinop("??=", left, right), _) if (target == Python):
 					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
 				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
@@ -10666,14 +10765,19 @@ class SourceTargetCommon {
 		so nested lambdas already carry collision-free transport names. Recursive
 		rendering still requires an explicit frame because lambda capture and
 		receiver decisions must not fall back to process-wide state.
+		Same-class members use the initializer's declaration facts before capture
+		analysis, so a static method or field cannot become a captured PHP local.
 	**/
 	public static function renderPhpFieldInitializer(renderer:PhpFunctionBodyRenderer, expression:HxExpr, context:String):String {
 		if (renderer == null || expression == null)
 			throw "PHP field initializer rendering requires a request-owned renderer and expression";
 		final frame = SourceFunctionRenderFrameTools.forPhpRenderer(renderer);
 		return try {
-			final lowered = PhpRuntimeTypeLowering.expression(renderer, expression);
-			final renamed = phpRenameScopedLocalExpr(lowered, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
+			final lowered = PhpExecutableLowering.expression(renderer, expression);
+			final rewritten = phpRewriteSameClassMemberExpr(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
+				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
+				[]);
+			final renamed = phpRenameScopedLocalExpr(rewritten, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
 			renderExprWithFrame(frame, renamed);
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -10687,7 +10791,7 @@ class SourceTargetCommon {
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		return try {
-			final lowered = PhpRuntimeTypeLowering.body(renderer, body);
+			final lowered = PhpExecutableLowering.body(renderer, body);
 			final rewrittenBody = phpRewriteSameClassMembersInStmts(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
 				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
 				renderer.copyParameterTargetNames());
@@ -10826,7 +10930,13 @@ class SourceTargetCommon {
 		var loopScope = SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Loop);
 		loopScope = loopScope.withPlannedLocal(cleanName);
 		final loopFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, loopScope);
-		final out = [indent + "foreach (__hxhx_iter(" + source + ") as " + value + ") {"];
+		final storage = SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage();
+		final carrier = valueName(Php, storage.iterationCarrier(cleanName));
+		final out = [indent + "foreach (__hxhx_iter(" + source + ") as " + carrier + ") {"];
+		for (line in storage.renewal(cleanName, childIndent))
+			out.push(line);
+		if (carrier != value)
+			out.push(childIndent + value + " = " + carrier + ";");
 		for (line in renderPhpLoopBodyWithFrame(loopFrame, body, childIndent, knownPhpLocals))
 			out.push(line);
 		out.push(indent + "}");
@@ -10877,6 +10987,11 @@ class SourceTargetCommon {
 		loopScope = loopScope.withPlannedLocal(cleanKey).withPlannedLocal(cleanItem);
 		final loopFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, loopScope);
 		final out = [indent + "foreach (__hxhx_key_value_iter(" + source + ") as " + pairName + ") {"];
+		final storage = SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage();
+		for (line in storage.renewal(cleanKey, childIndent))
+			out.push(line);
+		for (line in storage.renewal(cleanItem, childIndent))
+			out.push(line);
 		out.push(childIndent + keyValue + " = " + pairName + "[0];");
 		out.push(childIndent + itemValue + " = " + pairName + "[1];");
 		for (line in renderPhpLoopBodyWithFrame(loopFrame, body, childIndent, knownPhpLocals))
@@ -10899,6 +11014,8 @@ class SourceTargetCommon {
 
 	static function renderPhpLoopBodyWithFrame(frame:SourceFunctionRenderFrame, body:HxStmt, indent:String,
 			knownPhpLocals:Null<haxe.ds.StringMap<String>>):Array<String> {
+		if (SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage().hasClosures())
+			return renderStmtWithFrame(frame, body, indent);
 		if (!phpLoopNeedsIterationScope(body, knownPhpLocals))
 			return renderStmtWithFrame(frame, body, indent);
 		final useClause = phpLoopIterationUseClause(body, knownPhpLocals);
@@ -11047,6 +11164,11 @@ class SourceTargetCommon {
 			for (binding in lowered.bindings) {
 				final bindName = PhpName.valueIdentifier(binding.name);
 				caseScope = caseScope.withPlannedLocal(bindName);
+				for (line in SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(bindName, childIndent))
+					out.push(line);
 				out.push(childIndent + varDecl(Php, bindName, binding.expr));
 			}
 			final caseFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, caseScope);
@@ -11665,6 +11787,11 @@ class SourceTargetCommon {
 				final catchName = PhpName.valueIdentifier(c.name);
 				final catchScope = SourceFunctionRenderFrameTools.requirePhpScope(parentFrame).derive(Catch).withPlannedLocal(catchName);
 				final catchFrame = SourceFunctionRenderFrameTools.withPhpScope(parentFrame, catchScope);
+				for (line in SourceFunctionRenderFrameTools.requirePhpRenderer(parentFrame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(catchName, bodyIndent))
+					out.push(line);
 				for (line in phpCatchBindLines(c, "$" + caughtName, bodyIndent))
 					out.push(line);
 				for (line in renderStmtWithFrame(catchFrame, c.body, bodyIndent))
@@ -13572,7 +13699,7 @@ class SourceTargetCommon {
 					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
 			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectJavaEntryBodyFunctionRefsInExpr(left, out, false);
 				collectJavaEntryBodyFunctionRefsInExpr(right, out, false);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -13819,7 +13946,7 @@ class SourceTargetCommon {
 					collectJavaEntryBodyDirectCallsInExpr(arg, out);
 			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectJavaEntryBodyDirectCallsInExpr(left, out);
 				collectJavaEntryBodyDirectCallsInExpr(right, out);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -14520,6 +14647,14 @@ class SourceTargetCommon {
 				names.set(clean, true);
 		}
 		switch (expr) {
+			case ESourceGroup(children, _) | ELoweredControl(_, _, children, _):
+				for (child in children)
+					phpRecordReferencedMemberExpr(child, names);
+			case ESourceFunction(facts, body, defaults, _):
+				facts.assertDefaultCount(defaults.length);
+				phpRecordReferencedMemberExpr(body, names);
+				for (value in defaults)
+					phpRecordReferencedMemberExpr(value, names);
 			case EIdent(name) | EEnumValue(name):
 				record(name);
 			case EField(obj, field) | ENullSafeField(obj, field):
@@ -14529,10 +14664,10 @@ class SourceTargetCommon {
 				phpRecordReferencedMemberExpr(callee, names);
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EReturn(value):
+			case EReturn(value) | EThrow(value, _):
 				if (value != null)
 					phpRecordReferencedMemberExpr(value, names);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				phpRecordReferencedMemberExpr(condition, names);
 				for (entry in body)
 					phpRecordReferencedMemberExpr(entry, names);
@@ -14557,12 +14692,15 @@ class SourceTargetCommon {
 			case ENew(_, args) | EArrayDecl(args):
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				phpRecordReferencedMemberExpr(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right) | ESourceFor(_, left, right, _):
 				phpRecordReferencedMemberExpr(left, names);
 				phpRecordReferencedMemberExpr(right, names);
-			case ETernary(cond, thenExpr, elseExpr):
+			case ESourceTry(_, bodies, _):
+				for (body in bodies)
+					phpRecordReferencedMemberExpr(body, names);
+			case ETernary(cond, thenExpr, elseExpr) | ESourceIf(cond, thenExpr, elseExpr, _):
 				phpRecordReferencedMemberExpr(cond, names);
 				phpRecordReferencedMemberExpr(thenExpr, names);
 				phpRecordReferencedMemberExpr(elseExpr, names);
@@ -16397,6 +16535,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpGenericTypeHintFromExpr(continuation, localTypes);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -16640,6 +16779,7 @@ class SourceTargetCommon {
 
 	static function phpGenericSpecializationSuffixFromExpr(expr:HxExpr, localTypes:haxe.ds.StringMap<String>):Null<String> {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpGenericSpecializationSuffixFromExpr(continuation, localTypes);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -17047,7 +17187,7 @@ class SourceTargetCommon {
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EUnop(_, _, inner):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
-			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right):
+			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right) | EDiscardThen(left, right):
 				phpCollectGenericStaticSpecializationsFromExpr(left, className, genericFns, localTypes, specializations, allowDirectCalls);
 				phpCollectGenericStaticSpecializationsFromExpr(right, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -17860,7 +18000,7 @@ class SourceTargetCommon {
 				phpExprListTouchesThis(args);
 			case EUnop(_, _, inner):
 				phpExprTouchesThis(inner);
-			case EBinop(_, left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
+			case EBinop(_, left, right) | EDiscardThen(left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
 			case ETernary(cond, thenExpr, elseExpr): phpExprTouchesThis(cond) || phpExprTouchesThis(thenExpr) || phpExprTouchesThis(elseExpr);
 			case EAnon(_, fieldValues):
 				phpExprListTouchesThis(fieldValues);
@@ -18090,7 +18230,7 @@ class SourceTargetCommon {
 				phpExprListHasRefCaptureOfNames(args, names);
 			case EUnop(_, _, inner):
 				phpExprHasRefCaptureOfNames(inner, names);
-			case EBinop(_, left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
+			case EBinop(_, left, right) | EDiscardThen(left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
 			case ETernary(cond, thenExpr, elseExpr): phpExprHasRefCaptureOfNames(cond,
 					names) || phpExprHasRefCaptureOfNames(thenExpr, names) || phpExprHasRefCaptureOfNames(elseExpr, names);
 			case EAnon(_, fieldValues):
@@ -18360,6 +18500,9 @@ class SourceTargetCommon {
 
 	static function phpRenameScopedLocalExpr(expr:HxExpr, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>, rewriteRawText:Bool):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(phpRenameScopedLocalExpr(effect, env, counters, rewriteRawText),
+					phpRenameScopedLocalExpr(continuation, env, counters, rewriteRawText));
 			case EIdent(name):
 				env.exists(name) ? EIdent(env.get(name)) : expr;
 			case ETryCatchRaw(raw):
@@ -18371,11 +18514,11 @@ class SourceTargetCommon {
 					[for (arg in args) phpRenameScopedLocalExpr(arg, env, counters, rewriteRawText)]);
 			case EMacroExpr(inner, wrappers):
 				EMacroExpr(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), wrappers);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final lambdaEnv = copyStringMap(env);
 				for (arg in args)
 					lambdaEnv.set(arg, arg);
-				ELambda(args, phpRenameScopedLocalExpr(body, lambdaEnv, counters, rewriteRawText));
+				ELambda(args, phpRenameScopedLocalExpr(body, lambdaEnv, counters, rewriteRawText), signature);
 			case ESwitch(scrutinee, patterns, exprs):
 				final renamedPatterns = new Array<HxSwitchPattern>();
 				final renamedExprs = new Array<HxExpr>();
@@ -18596,6 +18739,9 @@ class SourceTargetCommon {
 
 	static function pythonRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(pythonRewriteSameClassMemberExpr(effect, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(continuation, methodNames, fieldNames, locals));
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
 				ECall(EField(EThis, name), [
 					for (arg in args)
@@ -18646,12 +18792,12 @@ class SourceTargetCommon {
 					rewrittenGuard = pythonRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals);
 				EArrayComprehension(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals), rewrittenGuard,
 					pythonRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, bodyLocals));
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, pythonRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals));
+				ELambda(args, pythonRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)
@@ -18900,6 +19046,9 @@ class SourceTargetCommon {
 
 	static function csRewriteSameClassStaticMemberExpr(expr:HxExpr, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(csRewriteSameClassStaticMemberExpr(effect, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(continuation, staticMemberNames, className, locals));
 			case ECall(EIdent(name), args) if (staticMemberNames.exists(name) && locals.indexOf(name) < 0):
 				ECall(EField(EIdent(className), name), [
 					for (arg in args)
@@ -18953,12 +19102,12 @@ class SourceTargetCommon {
 					for (expr in exprs)
 						csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals)
 				]);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, csRewriteSameClassStaticMemberExpr(body, staticMemberNames, className, bodyLocals));
+				ELambda(args, csRewriteSameClassStaticMemberExpr(body, staticMemberNames, className, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)
@@ -19061,6 +19210,9 @@ class SourceTargetCommon {
 	static function phpRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(phpRewriteSameClassMemberExpr(effect, methodNames, fieldNames, staticFieldNames, className, locals),
+					phpRewriteSameClassMemberExpr(continuation, methodNames, fieldNames, staticFieldNames, className, locals));
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
 				final rewrittenArgs = [
 					for (arg in args)
@@ -19129,12 +19281,12 @@ class SourceTargetCommon {
 					rewrittenExprs.push(phpRewriteSameClassMemberExpr(exprs[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
 				}
 				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenExprs);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, phpRewriteSameClassMemberExpr(body, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
+				ELambda(args, phpRewriteSameClassMemberExpr(body, methodNames, fieldNames, staticFieldNames, className, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)

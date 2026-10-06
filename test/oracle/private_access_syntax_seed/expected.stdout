@@ -1,0 +1,7 @@
+@:privateAccess a = b + c	meta(:privateAccess,OpAssign(a,OpAdd(b,c)))
+@:privateAccess a + b	OpAdd(meta(:privateAccess,a),b)
+@:privateAccess @:privateAccess a = b ? c : d	meta(:privateAccess,meta(:privateAccess,OpAssign(a,ternary(b,c,d))))
+@:privateAccess a = b ? c : d	meta(:privateAccess,OpAssign(a,ternary(b,c,d)))
+++@:privateAccess a	OpIncrement(false,meta(:privateAccess,a))
+@:privateAccess a++	meta(:privateAccess,OpIncrement(true,a))
+(@:privateAccess a) = b	OpAssign(paren(meta(:privateAccess,a)),b)

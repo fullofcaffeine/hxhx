@@ -252,6 +252,17 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(generated.indexOf("not (read)") < 0 && generated.indexOf("-(read)") < 0 && generated.indexOf("HxInt.lognot (read)") < 0,
 			"The ExprTools-shaped Dynamic local still reached a raw OCaml operator.");
 
+		// Observe the operator program before a separate standard-library check can
+		// stop this runner. Both checks remain required for whole-test success.
+		final result = new sys.io.Process(executable, []);
+		final stdout = result.stdout.readAll().toString();
+		final stderr = result.stderr.readAll().toString();
+		final code = result.exitCode();
+		result.close();
+		assertTrue(code == 0, "Dynamic unary executable failed: " + stderr);
+		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
+		Sys.println("M14_STAGE3_DYNAMIC_OPERATOR_RUNTIME:PASS");
+
 		// DateTools projects this inferred local as an untyped temporary. Lack of a
 		// temporary type is not evidence that the source value uses Dynamic.
 		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
@@ -264,14 +275,6 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
 			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
 		assertTrue(generatedDateTools.indexOf("(hour) = (0)") >= 0, "An inferred Date.getHours() Int local did not keep primitive integer equality.");
-
-		final result = new sys.io.Process(executable, []);
-		final stdout = result.stdout.readAll().toString();
-		final stderr = result.stderr.readAll().toString();
-		final code = result.exitCode();
-		result.close();
-		assertTrue(code == 0, "Dynamic unary executable failed: " + stderr);
-		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
 
 		// Keep rejection evidence independent from Stage3 try/catch support. The
 		// failing program prints its operand before the checked runtime call, which

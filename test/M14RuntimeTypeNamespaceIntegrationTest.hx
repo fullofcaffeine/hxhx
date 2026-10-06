@@ -1,3 +1,6 @@
+import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.Stage3SetupSupport;
+
 /** Checks the actual shared typed tree before its backend projection is built. */
 class M14RuntimeTypeNamespaceIntegrationTest {
 	static function returned(classes:Array<TypedClass>, owner:String, name:String):TypedExpr {
@@ -40,9 +43,22 @@ class M14RuntimeTypeNamespaceIntegrationTest {
 				new ResolvedModule(name, path, ParserStage.parse(sys.io.File.getContent(path), path));
 			}
 		];
-		final index = TyperIndex.build(modules);
-		final loader = new ModuleLoader([root], new haxe.ds.StringMap<String>(), index, function(_):Bool return false);
+		final arguments = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
+		if (arguments == null)
+			throw "runtime namespace fixture arguments did not parse";
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: Stage1Args.getExplicitClassPaths(arguments),
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "neko"
+		});
+		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
+		final index = TyperIndex.buildHeaders(modules);
+		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready(modules);
+		if (index.getByFullName("Class") == null)
+			throw "runtime namespace fixture did not load the real Class provider";
 		// Inspect the production typing boundary before TypedModule eagerly creates
 		// backend declarations. The separate module test covers that next boundary.
 		final built = @:privateAccess TyperStage.buildTypedClasses(ResolvedModule.getParsed(modules[0]), index, loader, "Main");
@@ -101,8 +117,15 @@ class M14RuntimeTypeNamespaceIntegrationTest {
 			throw "an enum constructor was reinterpreted as a class value";
 		final enumBuilt = @:privateAccess TyperStage.buildTypedClasses(ResolvedModule.getParsed(modules[3]), index, loader, "EnumValues");
 		final enumValue = returned(enumBuilt.classes, "EnumValues", "read");
-		if (enumValue.getRuntimeTypeTarget() != null || !enumValue.getTag().match(EnumValue))
-			throw "a same-spelled enum constructor must win over the imported class value";
+		// Nullary constructors retain their exact enum field, rather than an unowned enum-name tag.
+		final constructor = enumValue.getFieldInfo();
+		if (enumValue.getRuntimeTypeTarget() != null
+			|| !enumValue.getTag().match(NameRead)
+			|| constructor == null
+			|| constructor.getOwner().getCanonicalName() != "EnumValues.Token"
+			|| constructor.getName() != "Parent"
+			|| enumValue.getType().getSemanticKey() != "nominal:EnumValues.Token")
+			throw "a same-spelled enum constructor must retain its exact field instead of the imported class value";
 		Sys.println("RUNTIME_TYPE_NAMESPACE:PASS");
 	}
 }

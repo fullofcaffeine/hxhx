@@ -476,6 +476,8 @@ let getClass (o : Obj.t) : Obj.t =
     HxRuntime.hx_null
   else if Obj.is_int o then
     HxRuntime.hx_null
+  else if HxArray.is_value o then
+    class_ "Array"
   else if Obj.tag o <> 0 then
     (* Avoid treating arbitrary OCaml blocks (strings, floats, closures, etc.) as
        our "class instance record" representation. *)

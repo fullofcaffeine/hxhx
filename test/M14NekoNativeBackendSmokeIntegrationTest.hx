@@ -187,9 +187,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var value = try { throw "boom"; "never"; } catch (e:Dynamic) e; Sys.println(value); } }'), context);
 		final structuralTry = File.getContent(sourcePath);
-		assertContains(structuralTry, 'try { return', "a typed value catch must retain its expression-level try body");
-		assertContains(structuralTry, '$' + 'throw("boom")', "a typed value catch must retain the original thrown value");
-		assertContains(structuralTry, 'return e;', "a typed value catch must return its resolved catch binding");
+		assertTypedCatch(structuralTry, '$' + 'throw("boom");', '(result = e)');
+		assertContains(structuralTry, 'var value = result;', "the completed catch must supply the authored initializer value");
 
 		final splitContext = new BackendContext(outDir, outputHint, "Main", true, false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Helper { public static function value() return 40; } class Main { static function main() { Sys.println(Helper.value() + 2); } }'),
@@ -270,6 +269,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			classes: null,
 			typedProgram: null,
 			currentExecutable: null,
+			captureStorage: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap<Bool>(),
 			directAbstractReceiver: false,
@@ -458,6 +458,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			classes: null,
 			typedProgram: null,
 			currentExecutable: null,
+			captureStorage: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap<Bool>(),
 			directAbstractReceiver: false,
@@ -494,8 +495,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class BaseProp { public function new() {} public var prop(get,set):Int; function get_prop() return 1; function set_prop(v:Int) return v; } class ChildSuperProp extends BaseProp { public function new() { super(); } override function set_prop(v:Int) return (super.prop = v) + 1; } class Main { static function main() { var child = new ChildSuperProp(); Sys.println(child.set_prop(4)); } }'),
 			context);
 		final superPropAssignSource = File.getContent(sourcePath);
-		assertContains(superPropAssignSource, "return (__hxhx_parenthesized(v) + 1);",
-			"expected Neko super property assignment MVP to preserve expression value");
+		assertContains(superPropAssignSource, "return ((v) + 1);", "expected Neko super property assignment MVP to preserve expression value");
 		assertNotContains(superPropAssignSource, "(null = v)", "super property assignment must not emit an invalid null lvalue");
 
 		deleteRecursive(outDir);

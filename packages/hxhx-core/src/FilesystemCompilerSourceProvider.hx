@@ -1,5 +1,6 @@
 /**
-	Uncached filesystem/parser provider used by direct builds and as the cache miss path.
+	Uncached source reader used by direct builds and as the server cache miss path.
+	Compiler-bundled target providers share this boundary with filesystem sources.
 
 	Filesystem observations are taken when requested. A macro or another compiler
 	step may create a source directory or file during the same request, so this
@@ -13,13 +14,21 @@ class FilesystemCompilerSourceProvider {
 	}
 
 	public function readSource(filePath:String):Null<String> {
+		final bytes = readBytes(filePath);
+		return bytes == null ? null : bytes.getString(0, bytes.length);
+	}
+
+	/** Read the exact selected bytes for both direct parsing and server content identity. */
+	public function readBytes(filePath:String):Null<haxe.io.Bytes> {
 		if (filePath == null || filePath.length == 0)
 			return null;
+		if (CompilerBundledSources.owns(filePath))
+			return CompilerBundledSources.readBytes(filePath);
 		return try {
 			if (!sys.FileSystem.exists(filePath) || sys.FileSystem.isDirectory(filePath))
 				null;
 			else
-				sys.io.File.getContent(filePath);
+				sys.io.File.getBytes(filePath);
 		} catch (_:haxe.io.Error) {
 			null;
 		} catch (_:String) {
@@ -34,6 +43,8 @@ class FilesystemCompilerSourceProvider {
 	public function readDirectory(path:String):Array<String> {
 		if (path == null || path.length == 0)
 			return [];
+		if (CompilerBundledSources.owns(path))
+			return CompilerBundledSources.readDirectory(path);
 		final entries = try {
 			if (!sys.FileSystem.exists(path) || !sys.FileSystem.isDirectory(path))
 				[];
@@ -51,6 +62,8 @@ class FilesystemCompilerSourceProvider {
 	public function isFile(path:String):Bool {
 		if (path == null || path.length == 0)
 			return false;
+		if (CompilerBundledSources.owns(path))
+			return CompilerBundledSources.isFile(path);
 		return try {
 			sys.FileSystem.exists(path) && !sys.FileSystem.isDirectory(path);
 		} catch (_:haxe.io.Error) {

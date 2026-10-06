@@ -97,6 +97,8 @@ class PhpFunctionLoweringPlan {
 	final fieldReads:Array<PhpFunctionPlanFieldReadFact>;
 	final enumConstructors:PhpFunctionPlanEnumConstructorCatalog;
 	final runtimeTypes:TypedBackendRuntimeTypeCatalog;
+	final captureStorage:PhpCaptureStorage;
+	final rootControl:Null<Void->String>;
 	final selectRuntimeType:HxExpr->TypedBackendRuntimeTypeOccurrence;
 	final canonicalIdentity:String;
 
@@ -114,6 +116,8 @@ class PhpFunctionLoweringPlan {
 		classIdentity = normalize(classFacts.getClassIdentity());
 		classFactsIdentity = normalize(classFacts.getCanonicalIdentity());
 		final initializerMode = fieldInitializerProjection != null;
+		rootControl = initializerMode ? null : functionProjection.requireRootControlIdentity;
+		captureStorage = initializerMode ? PhpCaptureStorage.forInitializer(fieldInitializerProjection) : PhpCaptureStorage.forFunction(functionProjection);
 		functionIdentity = normalize(initializerMode ? fieldInitializerProjection.getStableIdentity() : functionProjection.getStableIdentity());
 		bodyRevision = normalize(initializerMode ? fieldInitializerProjection.getBodyRevision() : functionProjection.getBodyRevision());
 		runtimeTypes = initializerMode ? fieldInitializerProjection.getRuntimeTypeCatalog() : functionProjection.getRuntimeTypeCatalog();
@@ -334,7 +338,16 @@ class PhpFunctionLoweringPlan {
 	}
 
 	public function getSchemaRevision():String
-		return "php-function-lowering-plan-v6";
+		return "php-function-lowering-plan-v7";
+
+	public function getCaptureStorage():PhpCaptureStorage
+		return captureStorage;
+
+	public function requireRootControlIdentity():String {
+		if (rootControl == null)
+			throw "PHP initializer has no method return destination";
+		return rootControl();
+	}
 
 	/** Reject copied, foreign, or changed operands before PHP-specific syntax rewrites. */
 	public function requireRuntimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence
@@ -1024,6 +1037,7 @@ class PhpFunctionLoweringPlan {
 			hasInitializer: field.hasInitializer,
 			propertyGet: field.propertyGet,
 			propertySet: field.propertySet,
+			hasStorage: field.hasStorage,
 			noImportGlobal: field.noImportGlobal
 		};
 

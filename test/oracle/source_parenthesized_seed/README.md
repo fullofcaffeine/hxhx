@@ -17,8 +17,7 @@ Its function named `__hxhx_parenthesized` is an ordinary user declaration.
 
 Grouping an entire assignment is valid. Grouping its destination is invalid:
 `(value = 3)` succeeds, but `(value) = 3` must fail with `Invalid assign`.
-The rejected fixture preserves the latter case. The syntax test also rejects grouped compound assignments, including `??=`, and increment destinations.
-`RejectedNullCoalescingMain` preserves the nullable `??=` reproduction, which upstream rejects with `Invalid assign`.
+The rejected fixture preserves the latter case. The syntax test also rejects grouped compound assignments and increment destinations.
 
 Run the compiler checks:
 
@@ -26,11 +25,8 @@ Run the compiler checks:
 haxe test/m14_source_parenthesized_syntax_test.hxml
 haxe test/m14_source_parenthesized_native_test.hxml
 haxe test/m14_source_parenthesized_macro_test.hxml
+haxe test/m14_source_local_assignment_control_test.hxml
 ```
-
-These checks also run through `test:m14:typed-body-boundary` and `test:m14:typed-local-identity` in CI.
-Complete task acceptance still requires the original local-assignment/control workload under `haxe_ocaml-xq2ke`.
-Preserving authored comprehension syntax remains required under `haxe_ocaml-20jan`.
 
 The macro adapter check now preserves the assignment inside the group.
 Binary operators use a shared typed mapping, including nested `OpAssignOp` values for compound assignments.

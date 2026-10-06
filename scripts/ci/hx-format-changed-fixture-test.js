@@ -7,6 +7,8 @@ const os = require('node:os')
 const path = require('node:path')
 const { spawn, spawnSync } = require('node:child_process')
 const { runCommandWithTimeout } = require('../lint/hx-format-guard.js')
+const { formatterCommand } = require('../lint/formatter-toolchain.js')
+const crypto = require('node:crypto')
 
 /** Prove CLI output, process ownership, and optional real formatter parity. */
 const wrapper = path.resolve(__dirname, '../lint/hx-format-changed.js')
@@ -23,9 +25,10 @@ async function checkOfficialFormatter() {
     const normalize = text => text.replace(/((?:Checked|Formatted) \d+(?:\/\d+)? files in )\d+(?:\.\d+)? s\./g, '$1<time> s.')
     const wrapperErrors = text => text.split('\n').filter(line => !line.startsWith('[hx-format-changed]')).join('\n')
     const run = async (wrapped, check) => {
+      const formatter = formatterCommand()
       const args = wrapped ? [wrapper, check ? '--check' : '--write', file]
-        : ['run', 'formatter', '-s', file, ...(check ? ['--check'] : [])]
-      const result = await runCommandWithTimeout(wrapped ? process.execPath : 'haxelib', args, { cwd: root, timeoutMs: 15000 })
+        : [...formatter.args, '-s', file, ...(check ? ['--check'] : [])]
+      const result = await runCommandWithTimeout(wrapped ? process.execPath : formatter.command, args, { cwd: root, timeoutMs: 15000 })
       assert.equal(result.timedOut, false, 'real formatter fixture must finish within its deadline')
       assert.equal(result.error, undefined, 'the official formatter must be installed')
       return result
@@ -50,6 +53,29 @@ async function checkOfficialFormatter() {
     assert.equal(wrappedSuccess.code, 0)
     assert.equal(normalize(wrappedSuccess.stdout), normalize(directSuccess.stdout))
     assert.equal(wrapperErrors(wrappedSuccess.stderr), directSuccess.stderr)
+    // Exercise the full CLI with the same real artifact, including both final
+    // determinism passes, rather than inferring success from queue unit tests.
+    const scripts = path.join(root, 'scripts/lint')
+    fs.mkdirSync(scripts, { recursive: true })
+    for (const name of ['hx-format-guard.js', 'formatter-toolchain.js', 'formatter-toolchain.lock.json']) {
+      fs.copyFileSync(path.join(path.dirname(wrapper), name), path.join(scripts, name))
+    }
+    const realArtifact = formatterCommand().args[0]
+    const installed = path.join(root, '.tmp/formatter-toolchain', path.basename(path.dirname(realArtifact)), 'run.js')
+    fs.mkdirSync(path.dirname(installed), { recursive: true })
+    fs.copyFileSync(realArtifact, installed)
+    const sentinel = path.join(root, 'packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx')
+    fs.mkdirSync(path.dirname(sentinel), { recursive: true })
+    fs.copyFileSync(file, sentinel)
+    assert.equal(spawnSync('git', ['add', 'Example.hx'], { cwd: root }).status, 0)
+    const guard = () => runCommandWithTimeout(process.execPath, [path.join(scripts, 'hx-format-guard.js')], { cwd: root, timeoutMs: 15000 })
+    const clean = await guard()
+    assert.equal(clean.code, 0, clean.stdout + clean.stderr)
+    assert.ok(clean.stdout.includes('OK: Haxe formatting is clean.'))
+    fs.writeFileSync(file, original)
+    const dirty = await guard()
+    assert.equal(dirty.code, 1, dirty.stdout + dirty.stderr)
+    assert.equal(fs.readFileSync(file, 'utf8'), original, 'the full guard must not rewrite unformatted source')
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
@@ -77,10 +103,13 @@ async function checkCase(mode, signal) {
   const ownedPids = []
   try {
     assert.equal(spawnSync('git', ['init', '-q', root]).status, 0)
-    const bin = path.join(root, 'bin')
-    fs.mkdirSync(bin)
+    const scripts = path.join(root, 'scripts/lint')
+    fs.mkdirSync(scripts, { recursive: true })
+    for (const name of ['hx-format-changed.js', 'hx-format-guard.js', 'formatter-toolchain.js']) {
+      fs.copyFileSync(path.join(path.dirname(wrapper), name), path.join(scripts, name))
+    }
     fs.writeFileSync(path.join(root, 'Example.hx'), 'class Example {}\n')
-    fs.writeFileSync(path.join(bin, 'haxelib'), `#!/usr/bin/env node
+    const fakeFormatter = `#!/usr/bin/env node
 const fs = require('node:fs')
 const { spawn } = require('node:child_process')
 fs.appendFileSync(process.env.FORMAT_CALLS, JSON.stringify(process.argv.slice(2)) + '\\n')
@@ -103,16 +132,31 @@ if (process.env.FORMAT_MODE === 'exit') {
     }
   }, 20)
 }
-`, { mode: 0o755 })
+`
+    const artifactSha256 = crypto.createHash('sha256').update(fakeFormatter).digest('hex')
+    fs.writeFileSync(path.join(scripts, 'formatter-toolchain.lock.json'), JSON.stringify({ artifactSha256 }))
+    const artifact = path.join(root, '.tmp/formatter-toolchain', artifactSha256, 'run.js')
+    fs.mkdirSync(path.dirname(artifact), { recursive: true })
+    fs.writeFileSync(artifact, fakeFormatter)
+    if (mode === 'exit') {
+      const inspect = () => spawnSync(process.execPath, [
+        '-e', 'require(process.argv[1]).formatterCommand()', path.join(scripts, 'formatter-toolchain.js')
+      ], { encoding: 'utf8' })
+      assert.equal(inspect().status, 0, 'the recorded artifact must resolve')
+      fs.appendFileSync(artifact, '\n// changed artifact\n')
+      assert.notEqual(inspect().status, 0, 'changed bytes must not fall back to an ambient formatter')
+      fs.unlinkSync(artifact)
+      assert.notEqual(inspect().status, 0, 'a missing artifact must fail before starting a formatter')
+      fs.writeFileSync(artifact, fakeFormatter)
+    }
     const calls = path.join(root, 'calls.jsonl')
     const pidFile = path.join(root, 'pids.json')
     const release = path.join(root, 'release')
-    child = spawn(process.execPath, [wrapper, '--check', 'Example.hx'], {
+    child = spawn(process.execPath, [path.join(scripts, 'hx-format-changed.js'), '--check', 'Example.hx'], {
       cwd: root,
       detached: process.platform !== 'win32',
       env: {
         ...process.env,
-        PATH: bin + path.delimiter + process.env.PATH,
         FORMAT_CALLS: calls,
         FORMAT_PIDS: pidFile,
         FORMAT_RELEASE: release,

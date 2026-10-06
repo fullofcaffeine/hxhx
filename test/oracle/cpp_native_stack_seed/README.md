@@ -26,11 +26,15 @@ These executable names were verified on macOS. Use the corresponding native
 executable names on other hosts. Apply the repository's background scheduling
 wrapper to native builds on an interactive host.
 
-This is upstream reference evidence for `haxe_ocaml-k9scs`, not a passing test of
-the candidate compiler. The candidate's unchanged exception-construction test
-still rejects the missing `haxe.NativeStackTrace.callStack` native binding.
+This is upstream reference evidence for `haxe_ocaml-k9scs`. The candidate's
+separate raw-capture fixtures exercise `callStack` and `exceptionStack` through
+generated C++, but they do not prove this complete Haxe exception workload.
 An always-empty replacement could pass the release observations while failing
 the debug contract, so it is not an implementation of stack capture.
+
+The sibling `cpp_native_exception_stack_seed` fixture observes nested throws
+and rethrow of a caught String. Its native last-exception state is separate
+from the stored exception-object origin checked here.
 
 Further acceptance must cover implicit thrown-value stacks, derived-constructor
 frame adjustment, populated frame contents, collection safety, and the complete

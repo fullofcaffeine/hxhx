@@ -1,6 +1,7 @@
 import haxe.ds.StringMap;
 import haxe.ds.ObjectMap;
 import haxe.io.Path;
+import TyTypeDeclaration.TyTypeResolutionContext;
 
 private typedef TyParsedAbstractOperatorMetadata = {
 	final unaryOperator:Null<HxUnaryOperator>;
@@ -16,8 +17,9 @@ private typedef TyParsedAbstractOperatorMetadata = {
 	subset, and parses `@:op` metadata once. Eager and lazy loading both use
 	`addResolvedModules`, preventing identity/catalog drift between paths.
 
-	This class catalogs declarations only. It does not select an overload for an
-	expression, inline a body, decide mutation, or expose target carriers.
+	This class owns declaration lookup and the request lifetime of checked method
+	results. The shared typer computes those results. This index does not select
+	an overload, inline a body, decide mutation, or expose target carriers.
 **/
 class TyperIndex {
 	final byFullName:StringMap<TyNominalInfo>;
@@ -26,6 +28,27 @@ class TyperIndex {
 	final identitiesByModulePath:StringMap<Array<TyNominalTypeId>>;
 	final visibilityByFullName:StringMap<HxVisibility>;
 	final bySourceClass:ObjectMap<HxClassDecl, TyNominalInfo>;
+	final typeDeclarations:TyTypeDeclarationCatalog;
+	final typeUseResolver:TyTypeUseResolver;
+	final registeredModules = new StringMap<ResolvedModule>();
+	final publishedModules = new StringMap<Bool>();
+	final methodBodyResults = new TyMethodBodyResults();
+	final fieldInitializerTypes = new TyFieldInitializerTypes();
+	final parameterBounds = new StringMap<Array<TyType>>();
+
+	/** Bounds belong to exact declared binders and cannot be changed through a caller's returned array. */
+	public function getParameterBounds(parameter:TyTypeParameterId):Array<TyType> {
+		final found = parameterBounds.get(parameter.getCanonicalKey());
+		return found == null ? [] : found.copy();
+	}
+
+	/** Initializer facts belong to this typing request, not to mutable declaration headers. */
+	public function getFieldInitializerTypes():TyFieldInitializerTypes
+		return fieldInitializerTypes;
+
+	/** Checked body facts share this request lifetime without changing indexed declarations. */
+	public function getMethodBodyResults():TyMethodBodyResults
+		return methodBodyResults;
 
 	public function new() {
 		byFullName = new StringMap();
@@ -34,7 +57,24 @@ class TyperIndex {
 		identitiesByModulePath = new StringMap();
 		visibilityByFullName = new StringMap();
 		bySourceClass = new ObjectMap();
+		typeDeclarations = new TyTypeDeclarationCatalog();
+		typeUseResolver = new TyTypeUseResolver(typeDeclarations);
 	}
+
+	/** Resolve a source type without requiring its declaration to be a class. */
+	public function resolveTypeUse(type:TyType, context:TyTypeResolutionContext):TyResolvedTypeUse
+		return typeUseResolver.resolve(type, context);
+
+	/** Declaration lookup does not promise that a nominal signature is ready. */
+	public function resolveTypeDeclaration(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration>
+		return typeDeclarations.resolve(path, context);
+
+	/** A registered source module supplies headers without promising ready signatures. */
+	public function getRegisteredModule(modulePath:String):Null<ResolvedModule>
+		return registeredModules.get(modulePath);
+
+	public function isModulePublished(modulePath:String):Bool
+		return publishedModules.exists(modulePath);
 
 	public function getByFullName(fullName:String):Null<TyNominalInfo> {
 		return byFullName.exists(fullName) ? byFullName.get(fullName) : null;
@@ -213,11 +253,29 @@ class TyperIndex {
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
 		final modulePath = canonicalModulePath(packagePath, moduleName);
+		final previous = registeredModules.get(modulePath);
+		if (previous != null && ResolvedModule.getParsed(previous) != ResolvedModule.getParsed(module))
+			throw "type index cannot replace a registered source module: " + modulePath;
+		registeredModules.set(modulePath, module);
+		final context:TyTypeResolutionContext = {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: HxModuleDecl.getDirectives(declaration),
+			filePath: ResolvedModule.getFilePath(module),
+			position: HxPos.unknown(),
+			parameters: []
+		};
 		for (classDeclaration in HxModuleDecl.getClasses(declaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
 			if (shortName == null || shortName.length == 0)
 				continue;
 			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName));
+			typeDeclarations.add(new TyTypeDeclaration({
+				canonicalName: identity.getCanonicalName(),
+				visibility: HxClassDecl.getVisibility(classDeclaration),
+				kind: Nominal(identity),
+				context: context
+			}));
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
 			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
 			var alreadyRegistered = false;
@@ -230,6 +288,13 @@ class TyperIndex {
 				moduleIdentities.push(identity);
 			identitiesByModulePath.set(modulePath, moduleIdentities);
 		}
+		for (alias in HxModuleDecl.getTypedefs(declaration))
+			typeDeclarations.add(new TyTypeDeclaration({
+				canonicalName: classFullNameInModule(packagePath, moduleName, alias.getName()),
+				visibility: alias.getVisibility(),
+				kind: Alias(alias),
+				context: context
+			}));
 	}
 
 	function identityFromModuleByShortName(modulePath:String, shortName:String, publicOnly:Bool = false):Null<TyNominalTypeId> {
@@ -250,144 +315,67 @@ class TyperIndex {
 			&& visibilityByFullName.exists(identity.getCanonicalName())
 			&& visibilityByFullName.get(identity.getCanonicalName()) == HxVisibility.Public;
 
-	function identityVisibleFromModule(identity:Null<TyNominalTypeId>, modulePath:String):Bool {
-		if (identity == null)
+	/**
+		Whether an alias import deliberately withholds a provider's original short
+		name from this module. For example, `import model.User as Account` introduces
+		`Account`, not `User`. This prevents the compiler's temporary global
+		unique-name fallback from silently making `User` visible anyway.
+	**/
+	static function hidesOriginalNameBehindAlias(raw:String, directives:Array<HxModuleDirective>):Bool {
+		if (raw == null || raw.indexOf(".") >= 0 || directives == null)
 			return false;
-		if (identityIsPublic(identity))
-			return true;
-		if (modulePath == null || modulePath.length == 0 || !identitiesByModulePath.exists(modulePath))
-			return false;
-		for (candidate in identitiesByModulePath.get(modulePath))
-			if (candidate.equals(identity))
-				return true;
+		for (directive in directives) {
+			switch (HxModuleDirective.getKind(directive)) {
+				case ImportAlias(alias):
+					final path = HxModuleDirective.getPath(directive);
+					final dot = path.lastIndexOf(".");
+					final originalName = dot < 0 ? path : path.substr(dot + 1);
+					if (originalName == raw && alias != raw)
+						return true;
+				case ImportNormal | ImportAll | Using:
+			}
+		}
 		return false;
 	}
 
-	/** Resolve a nominal path through local declarations, imports, packages, and implicit standard declarations. **/
-	function resolveIdentity(typePath:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>):Null<TyNominalTypeId> {
-		final raw = typePath == null ? "" : StringTools.trim(typePath);
-		if (raw.length == 0)
-			return null;
-		final currentModulePath = canonicalModulePath(packagePath, moduleName);
-		if (raw.indexOf(".") >= 0 && identityByFullName.exists(raw)) {
-			final direct = identityByFullName.get(raw);
-			if (identityVisibleFromModule(direct, currentModulePath))
-				return direct;
-		}
-
-		final inModule = classFullNameInModule(packagePath, moduleName, raw);
-		if (identityByFullName.exists(inModule))
-			return identityByFullName.get(inModule);
-		if (directives != null) {
-			for (offset in 0...directives.length) {
-				final directive = directives[directives.length - 1 - offset];
-				final importPath = HxModuleDirective.getPath(directive);
-				switch (HxModuleDirective.getKind(directive)) {
-					case ImportNormal:
-						if (HxModuleDirective.getImportedLocalName(directive) == raw && identityByFullName.exists(importPath)) {
-							final imported = identityByFullName.get(importPath);
-							if (identityIsPublic(imported))
-								return imported;
-						}
-						// A plain import of a module's main type also exposes the
-						// other public types declared by that module. Class statics
-						// are a different namespace and are not exposed here.
-						final moduleType = identityFromModuleByShortName(importPath, raw, true);
-						if (moduleType != null)
-							return moduleType;
-					case ImportAlias(_):
-						if (HxModuleDirective.getImportedLocalName(directive) == raw && identityByFullName.exists(importPath)) {
-							final imported = identityByFullName.get(importPath);
-							if (identityIsPublic(imported))
-								return imported;
-						}
-					case ImportAll:
-						// `import Type.*` exposes the type's static members, not
-						// secondary types declared in the same module. Only a path
-						// that is not an exact known type is a package wildcard here.
-						if (!identityByFullName.exists(importPath)) {
-							final wildcardCandidate = importPath + "." + raw;
-							if (identityByFullName.exists(wildcardCandidate)) {
-								final imported = identityByFullName.get(wildcardCandidate);
-								if (identityIsPublic(imported))
-									return imported;
-							}
-						}
-					case Using:
-				}
+	/** Prevent the temporary unique-name fallback from widening a type wildcard. **/
+	function rawStaticWildcardHidesType(raw:String, directives:Array<HxModuleDirective>):Bool {
+		if (raw == null || directives == null)
+			return false;
+		for (directive in directives)
+			if (HxModuleDirective.getKind(directive).match(ImportAll)) {
+				final providerPath = HxModuleDirective.getPath(directive);
+				if (identityByFullName.exists(providerPath) && identityFromModuleByShortName(providerPath, raw) != null)
+					return true;
 			}
-		}
-
-		var currentPackage = packagePath == null ? "" : StringTools.trim(packagePath);
-		while (currentPackage.length > 0) {
-			final inPackage = currentPackage + "." + raw;
-			if (identityByFullName.exists(inPackage)) {
-				final packageIdentity = identityByFullName.get(inPackage);
-				if (identityVisibleFromModule(packageIdentity, currentModulePath))
-					return packageIdentity;
-			}
-			final dot = currentPackage.lastIndexOf(".");
-			currentPackage = dot < 0 ? "" : currentPackage.substr(0, dot);
-		}
-		if (identityByFullName.exists(raw)) {
-			final rootIdentity = identityByFullName.get(raw);
-			if (identityVisibleFromModule(rootIdentity, currentModulePath))
-				return rootIdentity;
-		}
-		final standardIdentity = identityFromModuleByShortName("StdTypes", raw, true);
-		if (standardIdentity != null)
-			return standardIdentity;
-
-		// A namesake in an unrelated package is not in scope. Keep the hint
-		// unresolved so dependency loading can select its actual source module.
-		return null;
+		return false;
 	}
 
-	/**
-		Replace unresolved type-hint nodes with type parameters or registered nominal
-		identities while preserving nested arguments and nullable structure.
-	**/
-	function resolveSemanticType(type:TyType, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
-			parameters:StringMap<TyTypeParameterId>):TyType {
-		if (type == null)
-			return TyType.unknown();
-		if (type.isNullable()) {
-			final inner = type.getNullableInner();
-			return TyType.nullable(resolveSemanticType(inner, packagePath, moduleName, directives, parameters), type.getDisplay());
-		}
-		if (type.isFunction()) {
-			final result = type.getFunctionReturn();
-			return TyType.functionType([
-				for (argument in type.getFunctionArguments())
-					resolveSemanticType(argument, packagePath, moduleName, directives, parameters)
-			],
-				result == null ? TyType.unknown() : resolveSemanticType(result, packagePath, moduleName, directives, parameters), type.getDisplay());
-		}
-		if (type.isAnonymous())
-			return TyType.anonymous(type.getAnonymousFieldNames(), [
-				for (fieldType in type.getAnonymousFieldTypes())
-					resolveSemanticType(fieldType, packagePath, moduleName, directives, parameters)
-			]);
-		if (!type.isUnresolved())
-			return type;
-
-		final rawPath = type.getUnresolvedPath();
-		final args = [
-			for (arg in type.getTypeArguments())
-				resolveSemanticType(arg, packagePath, moduleName, directives, parameters)
-		];
-		if (args.length == 0 && parameters.exists(rawPath))
-			return TyType.typeParameter(parameters.get(rawPath));
-		final identity = resolveIdentity(rawPath, packagePath, moduleName, directives);
-		return identity == null ? TyType.unresolved(rawPath, args, type.getDisplay()) : TyType.nominal(identity, args, type.getDisplay());
+	function resolvedStaticWildcardHidesType(raw:String, directives:Array<TyModuleDirective>):Bool {
+		if (raw == null || directives == null)
+			return false;
+		for (directive in directives)
+			if (directive.getKind().match(StaticWildcardImport)) {
+				final provider = directive.getSingleProvider();
+				final providerInfo = provider == null ? null : getByFullName(provider.getCanonicalName());
+				if (providerInfo != null)
+					for (moduleType in getByModulePath(providerInfo.getModulePath()))
+						if (moduleType.getShortName() == raw)
+							return true;
+			}
+		return false;
 	}
 
 	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
 			typeParams:Array<TyTypeParameterId>):TyType {
-		final parameters = new StringMap<TyTypeParameterId>();
-		for (parameter in typeParams)
-			parameters.set(parameter.getName(), parameter);
-		return resolveSemanticType(TyType.fromHintText(hint), packagePath, moduleName, directives, parameters);
+		return resolveTypeUse(TyType.fromHintText(hint), {
+			packagePath: packagePath,
+			modulePath: canonicalModulePath(packagePath, moduleName),
+			directives: directives,
+			filePath: "<signature>",
+			position: HxPos.unknown(),
+			parameters: typeParams
+		}).getType();
 	}
 
 	static function addMethod(primary:StringMap<TyFunSig>, all:StringMap<Array<TyFunSig>>, signature:TyFunSig):Void {
@@ -584,6 +572,7 @@ class TyperIndex {
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
 		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
+		final completed = new Array<{source:HxClassDecl, info:TyNominalInfo}>();
 
 		for (classDeclaration in HxModuleDecl.getClasses(moduleDeclaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
@@ -597,12 +586,25 @@ class TyperIndex {
 				for (index in 0...params.length)
 					TyTypeParameterId.nominal(identity, index, params[index])
 			];
-			var isEnum = false;
-			for (sourceField in HxClassDecl.getFields(classDeclaration))
-				if (HxFieldDecl.getName(sourceField) == "__hx_is_enum") {
-					isEnum = true;
-					break;
-				}
+			final isEnum = HxClassDecl.getEnumDeclaration(classDeclaration) != null;
+			final sourceParameters = HxClassDecl.getTypeParameters(classDeclaration);
+			for (ordinal in 0...sourceParameters.length) {
+				final parameter = sourceParameters[ordinal];
+				if (ordinal >= parameterIds.length || parameterIds[ordinal].getName() != parameter.name)
+					throw "parsed class parameters differ from indexed binder identities";
+				final key = parameterIds[ordinal].getCanonicalKey();
+				parameterBounds.set(key, [
+					for (bound in parameter.constraints)
+						typeUseResolver.resolveParsed(bound, {
+							packagePath: packagePath,
+							modulePath: semanticModulePath,
+							directives: directives,
+							filePath: ResolvedModule.getFilePath(module),
+							position: bound.getPos(),
+							parameters: parameterIds
+						}, key).getType()
+				]);
+			}
 
 			final fields = new StringMap<TyFieldInfo>();
 			final enumMembers = new Array<TyEnumAbstractDomain.TyEnumAbstractMember>();
@@ -627,7 +629,8 @@ class TyperIndex {
 						hasMetadata(HxFieldDecl.getMetadata(field), "inline"), HxFieldDecl.getInit(field) != null || StringTools.trim(HxFieldDecl.getInitText(field))
 						.length > 0,
 						hasMetadata(HxFieldDecl.getMetadata(field), "noImportGlobal"), HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field),
-						isEnumValue ? enumConstants.resolve(fieldName) : null));
+						isEnumValue ? enumConstants.resolve(fieldName) : null, hasMetadata(HxFieldDecl.getMetadata(field), "isVar")));
+				fieldInitializerTypes.register(fields.get(fieldName), field);
 				if (isEnumValue)
 					enumMembers.push({field: fields.get(fieldName), position: HxFieldDecl.getPos(field)});
 				final getter = HxFieldDecl.getPropertyGet(field);
@@ -657,6 +660,7 @@ class TyperIndex {
 						TyTypeParameterId.method(identity, isStatic, functionName, methodOccurrence, index, methodParameterNames[index])
 				];
 				final functionParams = parameterIds.concat(methodParameterIds);
+				final isEnumConstructor = isEnum && isStatic && !StringTools.startsWith(functionName, "__hx_");
 				final writtenConstraints = HxFunctionTypeParamMetadata.constraints(functionMetadata);
 				final resolvedConstraints = new StringMap<Array<TyType>>();
 				for (parameter in methodParameterIds)
@@ -665,14 +669,29 @@ class TyperIndex {
 							for (hint in HxFunctionTypeParamMetadata.constraintHints(writtenConstraints.get(parameter.getName())))
 								semanticType(hint, packagePath, moduleName, directives, functionParams)
 						]);
+				// Enum payload constructors instantiate their owning enum's binders
+				// per call. They retain those exact identities and declared bounds.
+				if (isEnumConstructor)
+					for (parameter in parameterIds) {
+						final key = parameter.getCanonicalKey();
+						if (parameterBounds.exists(key))
+							resolvedConstraints.set(key, parameterBounds.get(key).copy());
+					}
 				final args = new Array<TyType>();
+				for (key => bounds in resolvedConstraints)
+					parameterBounds.set(key, bounds.copy());
 				final argNames = new Array<String>();
 				final argOptional = new Array<Bool>();
 				final argRest = new Array<Bool>();
 				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
 					argNames.push(HxFunctionArg.getName(argument));
 					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams));
-					argOptional.push(HxFunctionArg.getIsOptional(argument));
+					// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
+					final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
+						case Default(_): true;
+						case NoDefault: false;
+					};
+					argOptional.push(HxFunctionArg.getIsOptional(argument) || hasDefault);
 					argRest.push(HxFunctionArg.getIsRest(argument));
 				}
 
@@ -692,8 +711,8 @@ class TyperIndex {
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);
 				declarations.push(new TyDeclarationInfo(declarationId, identity, signature, functionMetadata, functionDeclaration,
 					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline"),
-					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public, semanticModulePath,
-					resolvedConstraints, isEnum && isStatic && !StringTools.startsWith(functionName, "__hx_"), methodParameterIds));
+					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public, semanticModulePath, resolvedConstraints, isEnumConstructor,
+					isEnumConstructor ? functionParams : methodParameterIds));
 			}
 
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {
@@ -711,8 +730,7 @@ class TyperIndex {
 					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration),
 					enumConstants == null ? null : new TyEnumAbstractDomain(identity, enumMembers));
 				catalogOperators(info, ResolvedModule.getFilePath(module));
-				addNominal(info);
-				bySourceClass.set(classDeclaration, info);
+				completed.push({source: classDeclaration, info: info});
 			} else {
 				final extendsPath = HxClassDecl.getExtendsPath(classDeclaration);
 				final superType = extendsPath == null
@@ -727,16 +745,42 @@ class TyperIndex {
 					declarations, HxClassDecl.getVisibility(classDeclaration), isEnum, superType, parameterIds, {
 						isInterface: isInterface,
 						types: interfaceTypes
-					}, HxClassDecl.getIsExtern(classDeclaration));
-				addNominal(info);
-				bySourceClass.set(classDeclaration, info);
+					}, HxClassDecl.getIsExtern(classDeclaration),
+					HxClassDecl.getEnumDeclaration(classDeclaration));
+				completed.push({source: classDeclaration, info: info});
 			}
+		}
+		for (entry in completed) {
+			addNominal(entry.info);
+			bySourceClass.set(entry.source, entry.info);
 		}
 	}
 
-	/** Add one module through the same two-pass identity/surface path as eager builds. **/
+	/** Register and publish one complete module. Loaders register dependency headers first. */
 	public function addResolvedModule(module:ResolvedModule):Void {
 		addResolvedModules([module]);
+	}
+
+	/** Register all declaration headers before any dependent signature is constructed. */
+	public function registerResolvedModules(modules:Array<ResolvedModule>):Void {
+		for (module in modules)
+			registerModuleIdentities(module);
+	}
+
+	/** Publish signatures once, after the loader has prepared declaration dependencies. */
+	public function publishResolvedModule(module:ResolvedModule):Void {
+		final modulePath = canonicalModulePath(HxModuleDecl.getPackagePath(module.parsed.getDecl()), expectedModuleNameFromFile(module.filePath));
+		if (publishedModules.exists(modulePath))
+			return;
+		if (!registeredModules.exists(modulePath))
+			throw "signature publication requires registered module headers: " + modulePath;
+		for (alias in HxModuleDecl.getTypedefs(module.parsed.getDecl())) {
+			final declaration = typeDeclarations.get(classFullNameInModule(HxModuleDecl.getPackagePath(module.parsed.getDecl()),
+				expectedModuleNameFromFile(module.filePath), alias.getName()));
+			typeUseResolver.validateDeclaration(declaration);
+		}
+		indexModule(module);
+		publishedModules.set(modulePath, true);
 	}
 
 	/**
@@ -746,10 +790,16 @@ class TyperIndex {
 	public function addResolvedModules(modules:Array<ResolvedModule>):Void {
 		if (modules == null)
 			return;
+		registerResolvedModules(modules);
 		for (module in modules)
-			registerModuleIdentities(module);
-		for (module in modules)
-			indexModule(module);
+			publishResolvedModule(module);
+	}
+
+	/** Start a loader-owned request without exposing provisional signature records. */
+	public static function buildHeaders(resolved:Array<ResolvedModule>):TyperIndex {
+		final index = new TyperIndex();
+		index.registerResolvedModules(resolved);
+		return index;
 	}
 
 	public static function build(resolved:Array<ResolvedModule>):TyperIndex {

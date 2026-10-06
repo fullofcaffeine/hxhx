@@ -37,15 +37,8 @@ private function validateCatalog(catalog:TypedBackendRuntimeTypeCatalog, facts:P
 	}
 }
 
-/** Consume original occurrence identities before subsequent PHP rewrites copy syntax nodes. */
-function body(renderer:PhpFunctionBodyRenderer, statements:Array<HxStmt>):Array<HxStmt>
-	return SourceFunctionBodyRewriter.bodyWithOriginal(statements, (original, rebuilt) -> lower(renderer, original, rebuilt));
-
-/** Field initializers share the function plan's exact occurrence and revision checks. */
-function expression(renderer:PhpFunctionBodyRenderer, value:HxExpr):HxExpr
-	return SourceFunctionBodyRewriter.expressionWithOriginal(value, (original, rebuilt) -> lower(renderer, original, rebuilt));
-
-private function lower(renderer:PhpFunctionBodyRenderer, original:HxExpr, rebuilt:HxExpr):HxExpr {
+/** Called in the executable-unit traversal while original occurrence identities remain available. */
+function lower(renderer:PhpFunctionBodyRenderer, original:HxExpr, rebuilt:HxExpr):HxExpr {
 	if (!TypedRuntimeTypeSource.isMarker(original))
 		return rebuilt;
 	final occurrence = renderer.getPlan().requireRuntimeType(original);
@@ -66,6 +59,8 @@ private function targetName(target:TypedRuntimeTypeTarget, facts:PhpProgramRende
 		case IntCore: "Int";
 		case FloatCore: "Float";
 		case BoolCore: "Bool";
+		case DynamicCore | ClassCore | EnumCore | EnumDeclaration(_):
+			throw "PHP runtime meta-type representation is unsupported: " + target.getSemanticKey();
 		case Nominal(identity):
 			final emitted = facts.findEmittedTypeName(identity.getCanonicalName());
 			if (emitted == null || emitted.length == 0)

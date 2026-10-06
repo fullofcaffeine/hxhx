@@ -20,6 +20,15 @@ typedef NekoProjectedFunction = {
 	during reachability or emission. Missing semantic facts fail at construction.
 **/
 class NekoTypedProgramProjection {
+	/** Select factory representation from the exact typed owner, before construction rendering. */
+	public function constructorReturnsBackingValue(identity:String):Bool {
+		return switch requireClass(identity).requireSemanticFacts().getNominalKind() {
+			case AbstractValue(_): true;
+			case ClassInstance: false;
+			case EnumValue: throw "Neko class construction cannot allocate an enum declaration";
+		};
+	}
+
 	public final classGraph:TypedBackendClassGraph;
 
 	final classes = new StringMap<TypedBackendClassProjection>();

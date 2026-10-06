@@ -28,6 +28,27 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			case _:
 				throw "a structured static body must not require a final return statement";
 		}
+		for (scrutinee in ["items", "({values: items}).values"]) {
+			final text = "class SwitchBody { static function run(items:Array<Int>):Void switch "
+				+ scrutinee
+				+ " { case [0, x] | [x, 0]: Sys.println(x); case _: Sys.println(-1); } static function after():Int return 9; }";
+			final scanned = ParserStageScanHelpers.scanModuleLocalHelperClasses(text, null)[0];
+			final parsed = HxModuleDecl.getMainClass(ParserStage.parse(text, "SwitchBody.hx").getDecl());
+			for (cls in [scanned, parsed]) {
+				final functions = HxClassDecl.getFunctions(cls);
+				assertTrue(functions.length == 2, "switch body consumed the following function");
+				assertTrue(HxFunctionDecl.getReturnTypeHint(functions[0]) == "Void", "switch text entered the return type");
+				assertTrue(StringTools.startsWith(HxFunctionDecl.getBodyText(functions[0]), "switch "), "switch prefix disappeared");
+				switch HxFunctionDecl.getBody(functions[0]) {
+					case [HxStmt.SSwitch(_, patterns, bodies, position)]:
+						assertTrue(patterns.length == 2 && bodies.length == 2, "switch cases disappeared");
+						assertTrue(position.getIndex() == text.indexOf("switch "), "switch source position changed");
+					case _:
+						throw "unbraced switch did not remain a complete statement";
+				}
+			}
+		}
+
 		final typeCases = [
 			{hint: "Void", body: '/* body boundary */ Sys.println("ok");'},
 			{hint: "Array<Array<Int>>", body: "return [[1]];"},

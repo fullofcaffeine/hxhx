@@ -82,6 +82,10 @@ class M14EnumAbstractSwitchDiagnosticTest {
 	}
 
 	static function main():Void {
+		final alias = "enum abstract Original(Int) { var Red=10; var Blue=20; } typedef Signal=Original;";
+		check("typedef_complete", alias, "case Red: 1; case Blue: 2;", null);
+		check("typedef_default", alias, "case Red: 1; default: 2;", null);
+		check("typedef_missing", alias, "case Red: 1;", "Unmatched patterns: Blue");
 		Sys.putEnv("HXHX_TYPER_STRICT", "1");
 		final signal = "enum abstract Signal(Int) { var Red = 10; var Blue = 20; }";
 		check("missing", signal, "case Red: 1;", "Unmatched patterns: Blue");

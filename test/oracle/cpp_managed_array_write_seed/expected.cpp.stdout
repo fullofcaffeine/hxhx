@@ -1,0 +1,7 @@
+vri:7:3:1,0,7:9
+discarded:vri
+negative:vn:7:3:1,0,7
+bool:true,false,false,true
+string:3:true
+dynamic:4:false:false:true
+dynamic-gap:true:false:false

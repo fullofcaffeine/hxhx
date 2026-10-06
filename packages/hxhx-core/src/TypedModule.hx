@@ -16,8 +16,7 @@ class TypedModule {
 	final sourceOrigin:CompilerModuleOrigin;
 	final conditionalCompilation:CompilerConditionalCompilationObservation;
 	final generatedDeclarations:CompilerGeneratedDeclarationObservation;
-	final backendDeclarationCatalog:TypedBackendDeclarationCatalog;
-	final backendDeclaration:HxModuleDecl;
+	var backendDeclarationCatalog:Null<TypedBackendDeclarationCatalog>;
 	var backendProjection:Null<TypedBackendModuleProjection>;
 
 	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin,
@@ -30,8 +29,7 @@ class TypedModule {
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
 		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
 		TypedBodyInvariant.assertClasses(this.typedClasses);
-		this.backendDeclarationCatalog = TypedBodySource.moduleDeclarationCatalog(parsed, this.typedClasses);
-		this.backendDeclaration = backendDeclarationCatalog.getDeclaration();
+		this.backendDeclarationCatalog = null;
 		this.backendProjection = null;
 	}
 
@@ -79,8 +77,22 @@ class TypedModule {
 		structural typed body.
 	**/
 	public function getBackendDeclaration():HxModuleDecl {
-		backendDeclarationCatalog.assertRuntimeTypeOperandsAbsent();
-		return backendDeclaration;
+		final catalog = requireBackendDeclarationCatalog();
+		catalog.assertRuntimeTypeOperandsAbsent();
+		return catalog.getDeclaration();
+	}
+
+	/**
+		Project executable bodies only when a backend requests them.
+		Typing and shared control lowering must first retain authored source functions.
+		The cached catalog still owns the exact declaration objects used by legacy callers.
+	 */
+	function requireBackendDeclarationCatalog():TypedBackendDeclarationCatalog {
+		if (backendDeclarationCatalog == null) {
+			assertBodyRevisionCurrent();
+			backendDeclarationCatalog = TypedBodySource.moduleDeclarationCatalog(parsed, typedClasses);
+		}
+		return backendDeclarationCatalog;
 	}
 
 	/**
@@ -113,7 +125,7 @@ class TypedModule {
 		classProjection:TypedBackendClassProjection,
 		functionProjection:TypedBackendFunctionProjection
 	}> {
-		final stableIdentity = backendDeclarationCatalog.findFunctionIdentity(backendClass, backendFunction);
+		final stableIdentity = requireBackendDeclarationCatalog().findFunctionIdentity(backendClass, backendFunction);
 		if (stableIdentity == null)
 			return null;
 		final moduleProjection = getBackendProjection();

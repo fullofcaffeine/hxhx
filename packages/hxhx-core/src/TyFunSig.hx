@@ -49,6 +49,7 @@ class TyFunSig {
 	public function getArgs():Array<TyType>
 		return args;
 
+	/** Omission is allowed by ? or a source default; these flags do not make the stored value types nullable. */
 	public function getArgOptional():Array<Bool>
 		return argOptional;
 

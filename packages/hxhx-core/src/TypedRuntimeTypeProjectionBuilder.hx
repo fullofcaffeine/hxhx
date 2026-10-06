@@ -15,10 +15,10 @@ class TypedRuntimeTypeProjectionBuilder {
 		this.bodyRevision = bodyRevision;
 	}
 
-	public function project(target:TypedRuntimeTypeTarget, ?value:HxExpr):HxExpr {
+	public function project(target:TypedRuntimeTypeTarget, ?value:HxExpr, ?valueType:TyType):HxExpr {
 		if (sealed)
 			throw "cannot add a runtime type operand to a sealed projection";
-		final entry = new TypedBackendRuntimeTypeOccurrence(ownerIdentity, bodyRevision, target, value);
+		final entry = new TypedBackendRuntimeTypeOccurrence(ownerIdentity, bodyRevision, target, value, valueType);
 		entries.push(entry);
 		return entry.getExpression();
 	}

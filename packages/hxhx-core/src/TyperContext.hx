@@ -74,10 +74,26 @@ class TyperContext {
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
-		final hit = index.resolveTypePath(typePath, packagePath, directives, resolvedDirectives, modulePath);
-		if (hit != null)
-			return hit;
-		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, directives, resolvedDirectives);
+		final type = resolveTypeUse(TyType.unresolved(typePath, [])).getType();
+		final identity = type.getNominalIdentity();
+		return identity == null ? null : index.getByFullName(identity.getCanonicalName());
+	}
+
+	/** Resolve a value type separately from operations that require a nominal provider. */
+	public function resolveTypeUse(type:TyType, ?parameters:Array<TyTypeParameterId>, ?position:HxPos):TyResolvedTypeUse {
+		final context:TyTypeDeclaration.TyTypeResolutionContext = {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: directives,
+			filePath: filePath,
+			position: position == null ? HxPos.unknown() : position,
+			parameters: parameters == null ? [] : parameters
+		};
+		if (index == null)
+			return new TyResolvedTypeUse(type, [], context.position);
+		if (loader != null && type.isUnresolved())
+			loader.ensureDeclarationAvailable(type.getUnresolvedPath(), context);
+		return index.resolveTypeUse(type, context);
 	}
 
 	public function currentClass():Null<TyNominalInfo> {
@@ -88,7 +104,7 @@ class TyperContext {
 		Return the type that declares the first indexed instance-method group.
 
 		Bare calls search the current type, including abstracts, before imports.
-		Explicit receivers start at their resolved nominal owner.
+		Explicit receiver selections can start from their resolved nominal owner.
 		Classes also search each exact superclass. Returning the declaring type keeps
 		overload selection and call projection tied to the method's actual owner.
 	**/
@@ -104,6 +120,23 @@ class TyperContext {
 			seen.set(fullName, true);
 			if (current.instanceMethodCandidates(name).length > 0)
 				return current;
+			current = superclass(current);
+		}
+		return null;
+	}
+
+	/** Resolve inherited storage at its declaring class so bare reads retain the receiver and exact field identity. */
+	public function instanceField(name:String, receiverOwner:TyNominalInfo):Null<TyFieldInfo> {
+		final seen = new haxe.ds.StringMap<Bool>();
+		var current = receiverOwner;
+		while (current != null) {
+			final key = current.getIdentity().getCanonicalName();
+			if (seen.exists(key))
+				return null;
+			seen.set(key, true);
+			final field = current.fieldInfo(name);
+			if (field != null)
+				return field.getIsStatic() ? null : field;
 			current = superclass(current);
 		}
 		return null;
@@ -133,12 +166,12 @@ class TyperContext {
 		return true;
 	}
 
-	/** Return the body-inferred result for one exact method, or its indexed result. **/
+	/** Preserve an applied result; otherwise use local inference or the declaring owner's checked body. **/
 	public function refinedMethodReturnType(declaration:TyDeclarationInfo, indexedType:TyType):TyType {
-		if (declaration == null)
+		if (declaration == null || !indexedType.isUnknown())
 			return indexedType;
 		final inferred = inferredReturnTypes.get(declaration.getIdentity().getCanonicalKey());
-		return inferred == null ? indexedType : inferred;
+		return inferred == null ? index.getMethodBodyResults().result(declaration) : inferred;
 	}
 
 	/**
@@ -170,6 +203,37 @@ class TyperContext {
 			selectedCandidates = eligible;
 		}
 		return selectedProvider == null ? null : new TyImportedStaticMethod(selectedProvider, name, selectedCandidates);
+	}
+
+	/** A nullary constructor is an exact enum-valued field, not a string literal. */
+	public function moduleEnumConstructorField(name:String):Null<TyFieldInfo> {
+		if (index == null || name == null || name.length == 0)
+			return null;
+		var selected:Null<TyFieldInfo> = null;
+		for (provider in index.getDeclaredByModulePath(modulePath)) {
+			if (!provider.getIsEnum())
+				continue;
+			final field = provider.fieldInfo(name);
+			if (field == null || !field.getIsStatic() || !field.getIsPublic())
+				continue;
+			if (selected != null)
+				return null;
+			selected = field;
+		}
+		return selected;
+	}
+
+	/** A type or module import exposes constructors only from its selected enum declarations. */
+	function importedEnums(directive:TyModuleDirective):Array<TyNominalInfo> {
+		if (!directive.getKind().match(TypeImport))
+			return [];
+		final enums = new Array<TyNominalInfo>();
+		for (identity in directive.getProviders()) {
+			final provider = index.getByFullName(identity.getCanonicalName());
+			if (provider != null && provider.getIsEnum())
+				enums.push(provider);
+		}
+		return enums;
 	}
 
 	function resolvedProvider(directive:TyModuleDirective):Null<TyNominalInfo> {
@@ -224,36 +288,45 @@ class TyperContext {
 		Later `using` directives and later types from a used module have priority.
 		Each result keeps the named using provider separate from the class that
 		actually declares an inherited static method. Argument compatibility is
-		checked later by the ordinary overload selector.
+		checked later by the ordinary overload selector. Standard enum helpers are
+		loaded for enum receivers and follow all explicit using providers.
 	**/
-	public function extensionMethods(name:String):Array<TyExtensionMethod> {
+	public function extensionMethods(name:String, ?receiver:TyType):Array<TyExtensionMethod> {
 		final out = new Array<TyExtensionMethod>();
 		if (index == null || name == null || name.length == 0)
 			return out;
 		final current = currentClass();
+		final orderedProviders = new Array<TyNominalTypeId>();
 		for (directiveOffset in 0...resolvedDirectives.length) {
 			final directive = resolvedDirectives[resolvedDirectives.length - 1 - directiveOffset];
 			if (!directive.getKind().match(UsingType))
 				continue;
 			final providers = directive.getProviders();
-			for (providerOffset in 0...providers.length) {
-				final usingIdentity = providers[providers.length - 1 - providerOffset];
-				var declaring = index.getByFullName(usingIdentity.getCanonicalName());
-				final seen = new haxe.ds.StringMap<Bool>();
-				while (declaring != null && !seen.exists(declaring.getFullName())) {
-					seen.set(declaring.getFullName(), true);
-					final eligible = new Array<TyFunSig>();
-					for (candidate in declaring.staticMethodCandidates(name)) {
-						final declaration = declaring.declarationForSignature(candidate);
-						if (declaration == null || candidate.getArgs().length == 0)
-							continue;
-						if (declaration.getIsPublic() || classIsOrExtends(current, declaring))
-							eligible.push(candidate);
-					}
-					if (eligible.length > 0)
-						out.push(new TyExtensionMethod(usingIdentity, declaring, name, eligible));
-					declaring = superclass(declaring);
+			for (providerOffset in 0...providers.length)
+				orderedProviders.push(providers[providers.length - 1 - providerOffset]);
+		}
+		final defaultPath = TyDefaultEnumExtensions.providerPath(index, receiver);
+		if (defaultPath != null) {
+			final provider = resolveType(defaultPath);
+			if (provider != null && orderedProviders.filter(value -> value.getCanonicalName() == provider.getFullName()).length == 0)
+				orderedProviders.push(provider.getIdentity());
+		}
+		for (usingIdentity in orderedProviders) {
+			var declaring = index.getByFullName(usingIdentity.getCanonicalName());
+			final seen = new haxe.ds.StringMap<Bool>();
+			while (declaring != null && !seen.exists(declaring.getFullName())) {
+				seen.set(declaring.getFullName(), true);
+				final eligible = new Array<TyFunSig>();
+				for (candidate in declaring.staticMethodCandidates(name)) {
+					final declaration = declaring.declarationForSignature(candidate);
+					if (declaration == null || candidate.getArgs().length == 0)
+						continue;
+					if (declaration.getIsPublic() || classIsOrExtends(current, declaring))
+						eligible.push(candidate);
 				}
+				if (eligible.length > 0)
+					out.push(new TyExtensionMethod(usingIdentity, declaring, name, eligible));
+				declaring = superclass(declaring);
 			}
 		}
 		return out;
@@ -263,6 +336,11 @@ class TyperContext {
 	public function importedStaticField(name:String):Null<TyFieldInfo> {
 		for (offset in 0...resolvedDirectives.length) {
 			final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+			for (provider in importedEnums(directive)) {
+				final field = provider.fieldInfo(name);
+				if (field != null && field.getIsStatic() && field.getIsPublic())
+					return field;
+			}
 			final provider = resolvedProvider(directive);
 			if (provider == null)
 				continue;
@@ -288,6 +366,16 @@ class TyperContext {
 	public function importedStaticMethod(name:String):Null<TyImportedStaticMethod> {
 		for (offset in 0...resolvedDirectives.length) {
 			final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+			for (provider in importedEnums(directive)) {
+				final candidates = [
+					for (candidate in provider.staticMethodCandidates(name))
+						if (provider.declarationForSignature(candidate) != null
+							&& provider.declarationForSignature(candidate).getIsEnumConstructor()
+							&& provider.declarationForSignature(candidate).getIsPublic()) candidate
+				];
+				if (candidates.length > 0)
+					return new TyImportedStaticMethod(provider, name, candidates);
+			}
 			final provider = resolvedProvider(directive);
 			if (provider == null)
 				continue;

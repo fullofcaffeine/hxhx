@@ -12,7 +12,9 @@ enum TypedCatchView {
 	A catch can use standard-library declarations even when its local is never
 	read. These facts keep those uses visible to dependency tracking and later
 	backend preparation. They do not emit code or choose executable reachability.
-	Only the Neko typing policy currently requests this conversion contract.
+	Neko and standalone C++ request this conversion contract during typing, while
+	the loader can still discover the real providers. Runtime matching remains
+	target-owned; these facts do not impose one target's numeric policy on another.
 **/
 class TypedCatchUse {
 	public final binding:TyLocalBinding;

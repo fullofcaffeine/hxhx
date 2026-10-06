@@ -25,7 +25,8 @@ class HxhxOcamlTargetLiteralAdapter {
 			case FloatValue | EnumValue | RuntimeTypeValue | RuntimeTypeTest | LocalRead | NameRead | FieldRead | NullSafeFieldRead | Call | MacroExpr |
 				MacroType | Lambda | SwitchExpr | NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl |
 				ArrayAccess | Range | Cast | Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr |
-				BreakExpr | ContinueExpr:
+				BreakExpr | ContinueExpr | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | ThrowExpr | ControlBranch | ControlWhile |
+				ControlFor | ControlSwitch | FixedRange | SourceTry | ControlTry:
 				null;
 		};
 	}

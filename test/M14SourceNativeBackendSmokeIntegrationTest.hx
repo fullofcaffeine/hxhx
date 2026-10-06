@@ -243,7 +243,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(nullableCallback.getCanonicalDisplay() == "Null<(model.Api<String>)->Bool>",
 			"canonical semantic type display should preserve nullability, function shape, and resolved nominal arguments");
 		final anonymous = TyType.anonymous(["label", "service"], [TyType.fromHintText("String"), resolvedService]);
-		assertTrue(anonymous.getCanonicalDisplay() == "{label:String,service:model.Api<String>}",
+		assertTrue(anonymous.getCanonicalDisplay() == "{var label:String; var service:model.Api<String>;}",
 			"anonymous semantic type display should keep a deterministic field shape and canonical nested identities");
 
 		final mainFunction = new HxFunctionDecl("main", Public, true, [], "Void", [], "");
@@ -251,7 +251,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new TypedFunctionBody([], TypedBodyFingerprint.forStatements(HxFunctionDecl.getBody(mainFunction))));
 		final mainIdentity = typedMainFunction.getStableIdentity();
 		final localBinding = new TyLocalBinding(TyLocalId.forSourceDeclaration(mainIdentity, 0, Variable, "service"), "service", resolvedService, Variable);
-		final localProjection = new TypedBackendFunctionProjection(mainIdentity, CompilerTypedTreeRevision.functionBody(typedMainFunction), mainFunction,
+		final localProjection = new TypedBackendFunctionProjection(typedMainFunction, typedMainFunction, mainFunction,
 			new TypedBackendLocalCatalog([localBinding]), TyType.unknown());
 		final localFacts = new backend.source.PhpFunctionLocalFacts(localProjection, value -> value);
 		final firstTypeHints = localFacts.copyTypeHints();
@@ -353,7 +353,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			[]);
 		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
 			[]);
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v9",
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v11",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
@@ -469,7 +469,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			TyType.unresolved("Future", [genericBaseParameterType]),
 			TyType.nullable(TyType.functionType([genericBaseParameterType], TyType.nominal(new TyNominalTypeId("Array"), [genericBaseParameterType])))
 		]), structuralSubstitution);
-		assertTrue(specializedStructuralType.getCanonicalDisplay() == "{callback:Null<(String)->Array<String>>,pending:Future<String>}"
+		assertTrue(specializedStructuralType.getCanonicalDisplay() == "{var callback:Null<(String)->Array<String>>; var pending:Future<String>;}"
 			&& TyTypeSubstitution.parameterIdentities(specializedStructuralType).length == 0,
 			"structural substitution should cover anonymous fields, nullable functions, nominal results, and unresolved applications");
 		final genericBaseFields = new StringMap<TyFieldInfo>();
@@ -714,7 +714,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(runDeclaration != null && runProjection != null && planChildFacts != null,
 			"the typed PHP fixture should expose the exact PlanChild.run projection and class facts");
 		final functionPlan = planProjection.requireFunctionLoweringPlan(runDeclaration);
-		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v6",
+		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v7",
 			"the PHP function plan should version target-specific selection separately");
 		assertTrue(functionPlan.getProgramRevision() == planProgram.getTypedProgramRevision().getCanonicalIdentity()
 			&& functionPlan.getModuleIdentity() == "unit.PlanChild"
@@ -11568,7 +11568,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
 		assertContains(content, "Sys::println(__hxhx_add_string([\"x\"]));", "PHP Std.string on array literals should use Haxe stringification");
 		assertContains(content, "function() use (&$s)", "PHP local functions that mutate outer locals should capture by reference");
-		assertContains(content, "function($__hxhx_lambda_seq_0) use (&$s)", "PHP local function statement continuations should see call-argument mutations");
+		assertContains(content, "$s = __hxhx_add($s, \"b\"); return $s;",
+			"PHP local functions should perform their mutation before returning the captured value");
 		assertContains(content, "$s = __hxhx_add($s, \"b\")", "PHP string-like add-assign should use Haxe plus semantics");
 		deleteRecursive(tmpRoot);
 	}

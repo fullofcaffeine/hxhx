@@ -16,16 +16,47 @@ class JsFunctionScope {
 	final localCatalog:Null<TypedBackendLocalCatalog>;
 	final fieldCatalog:Null<TypedBackendFieldReadCatalog>;
 	final runtimeTypes:Null<JsRuntimeTypeScope>;
+	final methodUses:Null<HxExpr->Null<TypedBackendMethodOccurrence>>;
 	var tempCounter:Int = 0;
+	var parentScope:Null<JsEmitScope> = null;
+	var abstractReceiver:Bool = false;
+	var controlProjection:Null<TypedBackendFunctionProjection> = null;
+
+	/** Retain the exact method owner; validate it only when emitting shared control. */
+	public function setControlProjection(projection:TypedBackendFunctionProjection):Void {
+		controlProjection = projection;
+	}
+
+	public function requireControlIdentity():String {
+		if (controlProjection == null)
+			throw "JavaScript method control requires its exact function projection";
+		return controlProjection.requireRootControlIdentity();
+	}
+
+	/** Consume the receiver storage already selected during exact class admission. */
+	public function setReceiverPlan(plan:JsClassInheritancePlan.JsClassInheritanceNode):Void {
+		abstractReceiver = plan.abstractReceiver;
+	}
+
+	/** Create a closure scope before emission, retaining outer locals and exact expression facts. */
+	public static function nested(parent:JsEmitScope):JsFunctionScope {
+		final child = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, null, null, null, parent == null ? null : parent.runtimeTypes,
+			parent == null ? null : parent.methodUses);
+		child.parentScope = parent;
+		child.abstractReceiver = parent != null && parent.abstractReceiver == true;
+		return child;
+	}
 
 	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>, ?superClassRef:String,
-			?localCatalog:TypedBackendLocalCatalog, ?fieldCatalog:TypedBackendFieldReadCatalog, ?runtimeTypes:JsRuntimeTypeScope) {
+			?localCatalog:TypedBackendLocalCatalog, ?fieldCatalog:TypedBackendFieldReadCatalog, ?runtimeTypes:JsRuntimeTypeScope,
+			?methodUses:HxExpr->Null<TypedBackendMethodOccurrence>) {
 		this.classRefs = classRefs == null ? new haxe.ds.StringMap<String>() : classRefs;
 		this.instanceFields = instanceFields == null ? new haxe.ds.StringMap<String>() : instanceFields;
 		this.superClassRef = superClassRef;
 		this.localCatalog = localCatalog;
 		this.fieldCatalog = fieldCatalog;
 		this.runtimeTypes = runtimeTypes;
+		this.methodUses = methodUses;
 	}
 
 	function reserve(name:String):String {
@@ -55,6 +86,7 @@ class JsFunctionScope {
 		return safe;
 	}
 
+	/** Resolve lexical locals first, then the exact field selected by shared typing. */
 	public function resolveLocal(raw:String):Null<String> {
 		final local = locals.get(raw);
 		if (local != null)
@@ -69,7 +101,8 @@ class JsFunctionScope {
 				throw "JavaScript bare field has no exact emitted owner: " + field.getCanonicalKey();
 			return receiver + JsNameMangler.propertySuffix(field.getName());
 		}
-		return instanceFields.get(raw);
+		final instanceField = instanceFields == null ? null : instanceFields.get(raw);
+		return instanceField != null ? instanceField : parentScope == null ? null : parentScope.resolveLocal(raw);
 	}
 
 	/** Return the exact semantic local selected for one projected transport name. **/
@@ -81,11 +114,12 @@ class JsFunctionScope {
 	}
 
 	public function resolveClassRef(raw:String):Null<String> {
-		return classRefs.get(raw);
+		final local = classRefs.get(raw);
+		return local != null ? local : parentScope == null ? null : parentScope.resolveClassRef(raw);
 	}
 
 	public function resolveSuperClassRef():Null<String> {
-		return superClassRef;
+		return superClassRef != null ? superClassRef : parentScope == null ? null : parentScope.resolveSuperClassRef();
 	}
 
 	public function freshTemp(prefix:String):String {
@@ -100,13 +134,15 @@ class JsFunctionScope {
 	}
 
 	/** Initializers select their own executable catalog even when emitted inside a constructor. */
-	public function exprScope(?initializerTypes:JsRuntimeTypeScope):JsEmitScope {
+	public function exprScope(?initializerTypes:JsRuntimeTypeScope, ?initializerMethods:HxExpr->Null<TypedBackendMethodOccurrence>):JsEmitScope {
 		final self = this;
 		return {
 			resolveLocal: function(name:String):Null<String> return self.resolveLocal(name),
 			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name),
 			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef(),
-			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes
+			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes,
+			methodUses: initializerMethods == null ? methodUses : initializerMethods,
+			abstractReceiver: abstractReceiver
 		};
 	}
 }

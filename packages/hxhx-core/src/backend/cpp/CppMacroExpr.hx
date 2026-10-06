@@ -195,6 +195,10 @@ class CppMacroExpr {
 
 	static function macroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EPrivateAccess(_, _):
+				throw "C++ macro metadata requires the source quotation contract (haxe_ocaml-o25kr)";
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [macroString(value), macroEnum("DoubleQuotes", [])])]);
 			case EInt(value):
@@ -273,6 +277,14 @@ class CppMacroExpr {
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
 			case EParenthesized(_, _): "EParenthesized";
+			case EPrivateAccess(_, _): "EPrivateAccess";
+			case ESourceGroup(_, _): "ESourceGroup";
+			case ESourceIf(_, _, _, _): "ESourceIf";
+			case ESourceFor(_, _, _, _): "ESourceFor";
+			case ESourceTry(_, _, _): "ESourceTry";
+			case EThrow(_, _): "EThrow";
+			case ELoweredControl(_, _, _, _): "ELoweredControl";
+			case ESourceFunction(_, _, _, _): "ESourceFunction";
 			case ENull: "ENull";
 			case EBool(_): "EBool";
 			case EString(_): "EString";
@@ -286,9 +298,10 @@ class CppMacroExpr {
 			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
-			case EWhile(_, _, _, _): "EWhile";
+			case EWhile(_, _, _, _, loopKind): "EWhile";
 			case EBreak(_): "EBreak";
 			case EContinue(_): "EContinue";
+			case EDiscardThen(_, _): "EDiscardThen";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

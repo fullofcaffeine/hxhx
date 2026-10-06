@@ -28,6 +28,7 @@ class M14RuntimeTypeProjectionIntegrationTest {
 class Main {
  static var selected:Class<Parent> = Parent;
  static var other:Class<Parent> = Parent;
+ static var grouped:Class<Parent> = { var chosen:Class<Parent> = Parent; chosen; };
  static function first():Class<Parent> { return Parent; }
  static function second():Class<Parent> { return Parent; }
  static function check(value:Parent):Bool { return value is Parent; }
@@ -72,10 +73,13 @@ class Main {
 		final firstMarker = returned(first);
 		final firstOccurrence = first.requireRuntimeType(firstMarker);
 		if (firstOccurrence.getTarget().requireDeclarationIdentity().getCanonicalName() != "Main.Parent"
-			|| firstOccurrence.getValue() != null)
+			|| firstOccurrence.getValue() != null
+			|| firstOccurrence.getValueType() != null)
 			throw "class value projection lost its exact target";
 		final testMarker = returned(check);
 		final testOccurrence = check.requireRuntimeType(testMarker);
+		if (testOccurrence.getValueType() == null || testOccurrence.getValueType() != check.getParameters()[0].getBinding().getType())
+			throw "runtime test projection lost the exact typed operand before target erasure";
 		if (testOccurrence.getValue() == null
 			|| testOccurrence.getTarget().requireDeclarationIdentity().getCanonicalName() != "Main.Parent")
 			throw "type-test projection lost its value or exact target";
@@ -99,7 +103,7 @@ class Main {
 				if (fn.getStableIdentity() == first.getStableIdentity())
 					reject(() -> fn.requireRuntimeType(firstMarker), "another projection of the same body");
 		final initializers = owner.getFieldInitializers();
-		if (initializers.length != 2)
+		if (initializers.length != 3)
 			throw "missing field initializer projections";
 		final fieldMarker = initializers[0].getExpression();
 		final fieldOccurrence = initializers[0].requireRuntimeType(fieldMarker);
@@ -108,6 +112,17 @@ class Main {
 		reject(() -> initializers[1].requireRuntimeType(fieldMarker), "another initializer");
 		reject(() -> initializers[0].requireRuntimeType(firstMarker), "function marker in initializer");
 		reject(() -> first.requireRuntimeType(fieldMarker), "initializer marker in function");
+		final grouped = initializers[2];
+		final groupedMarkers = TypedRuntimeTypeSource.inExpression(grouped.getExpression());
+		if (groupedMarkers.length != 1 || grouped.getRuntimeTypeCatalog().getEntries().length != 1)
+			throw "initializer statement lost its runtime type occurrence";
+		if (grouped.requireRuntimeType(groupedMarkers[0])
+			.getTarget()
+			.requireDeclarationIdentity()
+			.getCanonicalName() != "Main.Parent")
+			throw "initializer statement changed its selected runtime type";
+		reject(() -> initializers[0].requireRuntimeType(groupedMarkers[0]), "statement marker in another initializer");
+		reject(() -> grouped.requireRuntimeType(fieldMarker), "value marker from another initializer");
 		reject(() -> module.getBackendDeclaration(), "declaration-only consumer");
 		reject(() -> projection.assertRuntimeTypeOperandsAbsent("test backend"), "unsupported target");
 		// Source-shaped arrays remain mutable during backend migration. Ownership

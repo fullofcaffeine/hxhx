@@ -1,7 +1,7 @@
 package backend.vm;
 
 /**
-	Lowers the explicit Neko primitive boundary for native string creation, slicing, and byte reads.
+	Lowers the explicit Neko primitive boundary for string creation, slicing, search, and byte reads.
 
 	This target represents Haxe strings with native Neko strings. Core String
 	construction therefore uses the native conversion primitive; it must not
@@ -23,6 +23,7 @@ class NekoStringIntrinsics {
 			case EIdent("__dollar__string"): renderPrimitive("$string", 1, arguments);
 			case EIdent("__dollar__ssub"): renderPrimitive("$ssub", 3, arguments);
 			case EIdent("__dollar__sget"): renderPrimitive("$sget", 2, arguments);
+			case EIdent("__dollar__sfind"): renderPrimitive("$sfind", 3, arguments);
 			case _: null;
 		};
 	}

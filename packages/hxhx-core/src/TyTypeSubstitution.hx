@@ -104,11 +104,11 @@ class TyTypeSubstitution {
 			return TyType.nullable(apply(type.unwrapNull(), bindings));
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
-			return TyType.functionType([for (argument in type.getFunctionArguments()) apply(argument, bindings)],
+			return type.withFunctionTypes([for (argument in type.getFunctionArguments()) apply(argument, bindings)],
 				result == null ? TyType.unknown() : apply(result, bindings));
 		}
 		if (type.isAnonymous())
-			return TyType.anonymous(type.getAnonymousFieldNames(), [for (fieldType in type.getAnonymousFieldTypes()) apply(fieldType, bindings)]);
+			return type.withAnonymousTypes([for (fieldType in type.getAnonymousFieldTypes()) apply(fieldType, bindings)]);
 
 		final arguments = type.getTypeArguments();
 		if (arguments.length == 0)

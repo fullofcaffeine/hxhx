@@ -11,9 +11,9 @@
 	- `Public` and `Private` only (for now).
 
 	How:
-	- Class fields default to `Private` when no visibility modifier is present.
-	  This matches Haxe class member visibility and lets using-extension checks
-	  distinguish explicit public helpers from private implementation helpers.
+	- Ordinary class members default to `Private`; extern members default to
+	  `Public`. Written modifiers override that default. Extension lookup uses
+	  this effective visibility without reconstructing the source modifiers.
 **/
 enum HxVisibility {
 	Public;

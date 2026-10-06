@@ -29,16 +29,30 @@ class JsExprEmitter {
 			resolveSuperClassRef: function():Null<String> {
 				return parent == null ? null : parent.resolveSuperClassRef();
 			},
-			runtimeTypes: parent == null ? null : parent.runtimeTypes
-		};
+			runtimeTypes: parent == null ? null : parent.runtimeTypes,
+			methodUses: parent == null ? null : parent.methodUses,
+			abstractReceiver: parent != null && parent.abstractReceiver == true};
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		final methodValue = JsMethodValueSupport.emitValue(expr, scope);
+		if (methodValue != null)
+			return methodValue;
 		if (TypedRuntimeTypeSource.isMarker(expr))
 			return JsRuntimeTypeSupport.emit(expr, scope);
 		final staticCall = TypedExactStaticCallSource.decode(expr);
-		if (staticCall != null)
+		if (staticCall != null) {
+			// A bare static call inside an instance body is not a local function.
+			// Its selected owner also disambiguates imported aliases and shadowed names.
+			if (staticCall.callee.match(EIdent(_))) {
+				final parts = staticCall.owner.split('.');
+				var owner:HxExpr = EIdent(parts[0]);
+				for (part in parts.slice(1))
+					owner = EField(owner, part);
+				return emit(ECall(EField(owner, staticCall.method), staticCall.arguments), scope);
+			}
 			return emit(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);
+		}
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
@@ -46,6 +60,11 @@ class JsExprEmitter {
 		if (exactEnumConstructor != null)
 			return emitExactEnumConstructor(exactEnumConstructor, scope);
 		return switch (expr) {
+			case EPrivateAccess(_, _):
+				throw "source access permission must be consumed before JavaScript emission";
+			case ESourceTry(_, _, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) | ESourceFor(_, _, _, _) | EThrow(_, _) |
+				ELoweredControl(_, _, _, _):
+				throw "source control must be lowered before JavaScript emission (haxe_ocaml-o25kr)";
 			case ENull:
 				"null";
 			case EBool(v):
@@ -59,8 +78,7 @@ class JsExprEmitter {
 			case EEnumValue(name):
 				final cls = scope == null ? null : scope.resolveClassRef(name);
 				cls == null ? JsNameMangler.quoteString(name) : cls;
-			case EThis:
-				"this";
+			case EThis: scope != null && scope.abstractReceiver == true ? "this.__hx_value" : "this";
 			case ESuper:
 				"super";
 			case EIdent(name):
@@ -71,9 +89,11 @@ class JsExprEmitter {
 				emitNullSafeField(obj, field, scope);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
+			case EDiscardThen(effect, continuation):
+				"(" + emit(effect, scope) + ", " + emit(continuation, scope) + ")";
 			case EReturn(_):
 				unsupported("EReturn", "expression-position return must be consumed by macro expansion before JS emission");
-			case EWhile(_, _, _, _):
+			case EWhile(_, _, _, _, loopKind):
 				unsupported("EWhile", "expression-position while must be consumed by macro expansion before JS emission");
 			case EBreak(_):
 				unsupported("EBreak", "expression-position break needs shared loop-control lowering before JS emission");
@@ -1765,6 +1785,8 @@ class JsExprEmitter {
 
 	static function macroExprDef(expr:HxExpr, scope:JsEmitScope):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case EString(v):
 				macroEnum("EConst", [macroEnum("CString", [JsNameMangler.quoteString(v)])]);
 			case EInt(v):
@@ -2095,6 +2117,16 @@ class JsExprEmitter {
 	}
 
 	static function emitLambda(args:Array<String>, body:HxExpr, scope:JsEmitScope):String {
+		switch body {
+			case ELoweredControl(FunctionBody, _, _, _):
+				final nested = JsFunctionScope.nested(scope);
+				final parameters = [for (argument in args) nested.declareLocal(argument)];
+				final writer = new JsWriter();
+				JsStmtEmitter.emitFunctionBody(writer, TypedControlStatements.functionBody(body), nested);
+				// Haxe closures retain the enclosing instance even when invoked as plain callbacks.
+				return "(function(" + parameters.join(", ") + ") {\n" + writer.toString() + "\n}).bind(this)";
+			case _:
+		}
 		final lambdaLocals = new haxe.ds.StringMap<String>();
 		final params = new Array<String>();
 		for (a in args) {
@@ -2103,7 +2135,8 @@ class JsExprEmitter {
 			params.push(safe);
 		}
 		final nested = nestedScope(scope, lambdaLocals);
-		return "function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }";
+		// Expression-bodied closures have the same lexical receiver as block-bodied closures.
+		return "(function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }).bind(this)";
 	}
 
 	static function emitRangeExpr(startExpr:HxExpr, endExpr:HxExpr, scope:JsEmitScope):String {

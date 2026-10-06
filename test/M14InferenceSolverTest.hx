@@ -17,7 +17,266 @@ class M14InferenceSolverTest {
 		check(rejected, "missing inference rejection: " + message);
 	}
 
+	/** Nested record variables participate in ownership, rollback, occurs checks, and exact field contracts. */
+	static function structuralContracts():Void {
+		final solver = new TyInferenceSolver("Main.structural");
+		final value = solver.fresh();
+		final template = TyType.anonymous(["item"], [TyType.fromHintText("String")]);
+		final record = Structure([value], template);
+		check(solver.constrain(record, TyInferenceSolver.fromType(template)), "record context did not solve its field");
+		check(solver.requireSolved(value).getSemanticKey() == "primitive:String", "record field solution differs");
+		check(solver.requireSolved(record).getSemanticKey() == template.getSemanticKey(), "record rebuild lost its field contract");
+		final recursive = solver.fresh();
+		check(!solver.constrain(recursive, Structure([recursive], template)), "recursive record was accepted");
+		final foreign = new TyInferenceSolver("Other.structural");
+		rejects(() -> solver.preview(Structure([foreign.fresh()], template)), "another owner");
+		final optional = TyType.declaredAnonymous([
+			{
+				name: "item",
+				type: TyType.fromHintText("String"),
+				kind: Variable(false, "", ""),
+				isOptional: true,
+				visibility: Public,
+				metadata: [],
+				position: HxPos.unknown()
+			}
+		]);
+		check(!solver.constrain(TyInferenceSolver.fromType(template), TyInferenceSolver.fromType(optional)), "exact record unification erased optionality");
+		final pair = TyType.anonymous(["first", "second"], [TyType.fromHintText("String"), TyType.fromHintText("Int")]);
+		final pending = solver.fresh();
+		check(!solver.constrain(Structure([pending, Known(TyType.fromHintText("String"))], pair), TyInferenceSolver.fromType(pair)),
+			"conflicting record fields were accepted");
+		check(solver.preview(pending).isUnknown(), "failed record constraint leaked its first field solution");
+		check(solver.constrain(pending, Known(TyType.fromHintText("Int"))), "failed record constraint froze its variable");
+		final publication = new TyInferenceSolver("Main.structuralPublication");
+		final required = publication.fresh();
+		final binder = TyTypeParameterId.method(new TyNominalTypeId("Example"), false, "record", 0, 0, "T");
+		final open = publication.freshMethodParameter(binder);
+		check(publication.constrain(required, Structure([open], template)), "nested required record setup failed");
+		rejects(() -> publication.seal(), "remains unsolved");
+		check(publication.constrain(open, Known(TyType.fromHintText("String"))), "failed record publication mutated the solver");
+		publication.seal();
+		check(publication.requireSolved(required).getSemanticKey() == template.getSemanticKey(), "record publication lost its concrete field");
+		final callable = TyType.functionType([], TyType.fromHintText("String"));
+		final method = TyType.declaredAnonymous([
+			{
+				name: "get",
+				type: callable,
+				kind: Method([]),
+				isOptional: false,
+				visibility: Public,
+				metadata: [],
+				position: HxPos.unknown()
+			}
+		]);
+		check(solver.constrain(TyInferenceSolver.fromType(method), TyInferenceSolver.fromType(method)), "structural method identity was rejected");
+		check(!solver.constrain(TyInferenceSolver.fromType(method), TyInferenceSolver.fromType(TyType.anonymous(["get"], [callable]))),
+			"structural method became a writable function field");
+		Sys.println("STRUCTURAL_INFERENCE:PASS");
+	}
+
+	/** Nominal field evidence is transactional, owner-checked, and shares the receiver's generic variables. */
+	static function nominalMemberContracts():Void {
+		final solver = new TyInferenceSolver("Main.nominalMembers");
+		final receiver = solver.freshUntypedResult();
+		final count = solver.field(receiver, "count");
+		final label = solver.field(receiver, "label");
+		final intType = TyType.fromHintText("Int");
+		final stringType = TyType.fromHintText("String");
+		check(solver.constrain(label, Known(stringType)), "label setup failed");
+		final nominal = Nominal(new TyNominalTypeId("Box"), []);
+		check(!solver.constrain(receiver, nominal), "nominal fields were invented without declaration evidence");
+		check(!solver.constrain(receiver, nominal, (_, _) -> Known(intType)), "conflicting nominal label was accepted");
+		check(solver.preview(count).isUnknown(), "failed nominal member check leaked the earlier count binding");
+		check(!solver.constrain(receiver, nominal, (_, _) -> null), "missing nominal members were accepted");
+		final foreign = new TyInferenceSolver("Other.nominalMembers");
+		final foreignTerm = foreign.fresh();
+		rejects(() -> solver.constrain(receiver, nominal, (_, _) -> foreignTerm), "another owner");
+		check(solver.constrain(receiver, nominal, (_, name) -> Known(name == "count" ? intType : stringType)), "valid nominal members were rejected");
+		solver.seal();
+		check(solver.published(receiver).getNominalIdentity().getCanonicalName() == "Box", "nominal binding became a structural record");
+		check(solver.published(count).getSemanticKey() == intType.getSemanticKey(), "nominal member solution was lost");
+		final generic = new TyInferenceSolver("Main.genericMember");
+		final value = generic.freshUntypedResult();
+		final item = generic.field(value, "item");
+		final parameter = generic.fresh();
+		check(generic.constrain(item, Known(intType)), "generic member setup failed");
+		check(generic.constrain(value, Nominal(new TyNominalTypeId("GenericBox"), [parameter]), (owner, name) -> switch owner {
+			case Nominal(_, [argument]) if (name == "item"): argument;
+			case _: null;
+		}), "member constraint did not reach the owner's generic variable");
+		generic.seal();
+		check(generic.published(parameter).getSemanticKey() == intType.getSemanticKey(), "generic argument was copied instead of shared");
+		Sys.println("NOMINAL_MEMBER_INFERENCE:PASS");
+	}
+
+	/** A later operand can reject a candidate after an earlier operand has bound its result variable. */
+	static function directCallConstraints():Void {
+		dynamicDirectCalls();
+		final solver = new TyInferenceSolver("Main.directCall");
+		final parameter = solver.fresh();
+		final unknown = TyType.unknown();
+		final callable = Function([parameter, parameter], parameter, TyType.functionType([unknown, unknown], unknown));
+		final signature = new TyFunSig("choose", true, ["first", "second"], [unknown, unknown], [false, false], [false, false], unknown, HxPos.unknown());
+		final intType = TyType.fromHintText("Int");
+		final stringType = TyType.fromHintText("String");
+		final index = TyperIndex.build([]);
+		final rejected = solver.fork();
+		check(!TyDirectGenericCallConstraints.constrain({
+			solver: rejected,
+			callable: callable,
+			signature: signature,
+			order: TyMethodArgumentOrder.select(signature, [EInt(1), EString("bad")], (_, _, _) -> Compatible),
+			arguments: [EInt(1), EString("bad")],
+			terms: [Known(intType), Known(stringType)],
+			index: index,
+			accepts: (expected, actual) -> expected.getSemanticKey() == actual.getSemanticKey()
+		}), "conflicting direct operands were accepted after solving an earlier parameter");
+		check(solver.preview(parameter).isUnknown(), "rejected direct-call candidate changed its parent");
+		final accepted = solver.fork();
+		check(TyDirectGenericCallConstraints.constrain({
+			solver: accepted,
+			callable: callable,
+			signature: signature,
+			order: TyMethodArgumentOrder.select(signature, [EInt(1), EInt(2)], (_, _, _) -> Compatible),
+			arguments: [EInt(1), EInt(2)],
+			terms: [Known(intType), Known(intType)],
+			index: index,
+			accepts: (expected, actual) -> expected.getSemanticKey() == actual.getSemanticKey()
+		}), "matching direct operands were rejected");
+		solver.commit(accepted);
+		solver.seal();
+		check(solver.requireSolved(callable)
+			.getFunctionReturn()
+			.getSemanticKey() == intType.getSemanticKey(), "direct-call result lost its argument equation");
+		Sys.println("DIRECT_CALL_CONSTRAINTS:PASS");
+		final spread = new TyInferenceSolver("Main.spreadCall");
+		final element = spread.fresh();
+		final array = new TyNominalTypeId("Array");
+		final restSignature = new TyFunSig("spread", true, ["items"], [TyType.nominal(array, [unknown])], [false], [true], unknown, HxPos.unknown());
+		final restCallable = Function([element], element, TyType.functionSignature([
+			{
+				name: "items",
+				type: unknown,
+				isOptional: false,
+				isRest: true,
+				metadata: []
+			}
+		], unknown));
+		check(TyDirectGenericCallConstraints.constrain({
+			solver: spread,
+			callable: restCallable,
+			signature: restSignature,
+			order: TyMethodArgumentOrder.select(restSignature, [ECall(EIdent("__hxhx_spread"), [EIdent("values")])], (_, _, _) -> Compatible),
+			arguments: [ECall(EIdent("__hxhx_spread"), [EIdent("values")])],
+			terms: [Nominal(array, [Known(intType)])],
+			index: index,
+			accepts: (expected, actual) -> expected.getSemanticKey() == actual.getSemanticKey()
+		}), "spread container did not contribute its element constraint");
+		spread.seal();
+		check(spread.requireSolved(element).getSemanticKey() == intType.getSemanticKey(), "spread element identity was lost");
+		Sys.println("DIRECT_CALL_SPREAD_CONSTRAINT:PASS");
+	}
+
+	/** Dynamic consumers supply a publication fallback, never an early alias-unification result. */
+	static function dynamicDirectCalls():Void {
+		final integer = TyType.fromHintText("Int");
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final unknown = TyType.unknown();
+		for (concreteLater in [false, true]) {
+			final solver = new TyInferenceSolver("Main.dynamicDirect");
+			final parameter = solver.fresh();
+			final signature = new TyFunSig("fixed", true, ["value"], [unknown], [false], [false], integer, HxPos.unknown());
+			final callable = Function([parameter], Known(integer), TyType.functionType([unknown], integer));
+			check(TyDirectGenericCallConstraints.constrain({
+				solver: solver,
+				callable: callable,
+				signature: signature,
+				order: TyMethodArgumentOrder.select(signature, [EIdent("value")], (_, _, _) -> Compatible),
+				arguments: [EIdent("value")],
+				terms: [Known(dynamicType)],
+				index: TyperIndex.build([]),
+				accepts: (expected, actual) -> expected.getSemanticKey() == actual.getSemanticKey()
+			}), "explicit Dynamic call was rejected");
+			check(solver.preview(parameter).isUnknown(), "Dynamic input solved a generic parameter too early");
+			if (concreteLater)
+				check(solver.constrain(parameter, Known(integer)), "later concrete type lost to Dynamic evidence");
+			solver.seal();
+			check(solver.requireSolved(parameter).getSemanticKey() == (concreteLater ? integer : dynamicType).getSemanticKey(),
+				"generic input fallback lost later constraints or explicit Dynamic evidence");
+		}
+		Sys.println("DIRECT_CALL_DYNAMIC_EVIDENCE:PASS");
+	}
+
+	/** Dynamic consumers supply a publication fallback, never an early alias-unification result. */
+	static function dynamicUseContracts():Void {
+		final solver = new TyInferenceSolver("Main.dynamicUse");
+		final pending = solver.freshUntypedResult();
+		solver.observeDynamicUse(pending);
+		check(solver.preview(pending).isUnknown(), "Dynamic use solved inference before later uses");
+		check(solver.constrain(pending, Known(TyType.fromHintText("Int"))), "later concrete context was lost");
+		check(!solver.constrain(pending, Known(TyType.fromHintText("String"))), "Dynamic consumer erased an alias conflict");
+		solver.seal();
+		check(solver.published(pending).getSemanticKey() == "primitive:Int", "Dynamic fallback replaced a concrete solution");
+		rejects(() -> solver.observeDynamicUse(pending), "already sealed");
+
+		final aliases = new TyInferenceSolver("Main.dynamicAliases");
+		final first = aliases.freshUntypedResult();
+		final second = aliases.freshUntypedResult();
+		aliases.observeDynamicUse(first);
+		check(aliases.constrain(first, second), "alias setup failed");
+		aliases.seal();
+		check(aliases.published(first).isDynamic() && aliases.published(second).isDynamic(), "fallback lost its final alias root");
+
+		final rollback = new TyInferenceSolver("Main.dynamicRollback");
+		final untouched = rollback.freshUntypedResult();
+		final discarded = rollback.fork();
+		discarded.observeDynamicUse(untouched);
+		rollback.seal();
+		check(rollback.published(untouched).isUnknown(), "discarded candidate leaked Dynamic publication");
+
+		final record = new TyInferenceSolver("Main.dynamicFields");
+		final object = record.freshUntypedResult();
+		record.observeDynamicUse(object);
+		final count = record.field(object, "count");
+		final label = record.field(object, "label");
+		check(record.constrain(count, Known(TyType.fromHintText("Int"))), "field setup failed");
+		record.seal();
+		check(record.published(object).isAnonymous(), "Dynamic fallback erased required fields");
+		check(record.published(count).getSemanticKey() == "primitive:Int"
+			&& record.published(label).isDynamic(), "field fallback replaced concrete evidence");
+
+		final foreign = new TyInferenceSolver("Other.dynamicUse");
+		final local = new TyInferenceSolver("Main.dynamicOwnership");
+		rejects(() -> local.observeDynamicUse(foreign.freshUntypedResult()), "another owner");
+		final required = local.fresh();
+		local.observeDynamicUse(Known(TyType.unknown()));
+		rejects(() -> local.seal(), "remains unsolved");
+		Sys.println("DYNAMIC_CONTEXT_INFERENCE:PASS");
+	}
+
+	/** Empty literals defer their fallback; later concrete evidence and independent arrays remain distinct. */
+	static function emptyArrayContracts():Void {
+		final solver = new TyInferenceSolver("Main.emptyArrays");
+		final pending = solver.freshEmptyArrayElement();
+		final unused = solver.freshEmptyArrayElement();
+		check(solver.preview(pending).isUnknown(), "empty array chose Dynamic before later uses");
+		final rejected = solver.fork();
+		check(rejected.constrain(pending, Known(TyType.fromHintText("String"))), "candidate could not constrain empty array");
+		check(solver.constrain(pending, Known(TyType.fromHintText("Int"))), "discarded candidate changed empty array");
+		solver.seal();
+		check(solver.published(pending).getSemanticKey() == "primitive:Int", "empty fallback replaced later Int evidence");
+		check(solver.published(unused).isDynamic(), "independent unused array lost its default element type");
+		Sys.println("EMPTY_ARRAY_SOLVER:PASS");
+	}
+
 	static function main():Void {
+		emptyArrayContracts();
+		dynamicUseContracts();
+		directCallConstraints();
+		nominalMemberContracts();
+		structuralContracts();
+		callableContracts();
 		final binder = TyTypeParameterId.method(new TyNominalTypeId("Example"), false, "echo", 0, 0, "T");
 		final open = new TyInferenceSolver("Main.open");
 		final firstOpen = open.freshMethodParameter(binder);
@@ -152,7 +411,7 @@ class M14InferenceSolverTest {
 		check(!structural.constrain(Nominal(new TyNominalTypeId("other.Box"), [stringTerm]), Nominal(box, [stringTerm])),
 			"same short name substituted a foreign nominal declaration");
 		final result = structural.fresh();
-		check(structural.constrain(Function([intTerm], Nullable(result)),
+		check(structural.constrain(Function([intTerm], Nullable(result), TyType.functionType([intType], TyType.unknown())),
 			TyInferenceSolver.fromType(TyType.functionType([intType], TyType.nullable(stringType)))),
 			"function result constraint failed");
 		check(structural.requireSolved(result).getSemanticKey() == "primitive:String", "nullable function result was not solved");
@@ -163,5 +422,18 @@ class M14InferenceSolverTest {
 			"incomplete structural constraint setup failed");
 		rejects(() -> incomplete.seal(), "incomplete concrete type");
 		Sys.println("INFERENCE_SOLVER:PASS");
+	}
+
+	/** Inference can solve child types without changing which arguments a caller may omit or spread. */
+	static function callableContracts():Void {
+		final solver = new TyInferenceSolver("Main.callableContracts");
+		for (hint in ["(?item:Int)->Int", "(...items:Int)->Int"]) {
+			final source = TyType.fromHintText(hint);
+			final restored = solver.requireSolved(TyInferenceSolver.fromType(source));
+			check(restored.getSemanticKey() == source.getSemanticKey(), "inference erased callable contract: " + hint);
+			check(restored.getFunctionParameters()[0].name == source.getFunctionParameters()[0].name, "inference erased a callable parameter name");
+			check(!solver.constrain(TyInferenceSolver.fromType(source), TyInferenceSolver.fromType(TyType.fromHintText("Int->Int"))),
+				"exact unification accepted different callable omission or rest rules");
+		}
 	}
 }

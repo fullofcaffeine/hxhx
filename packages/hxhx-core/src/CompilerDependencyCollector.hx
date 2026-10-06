@@ -71,14 +71,20 @@ class CompilerDependencyCollector {
 						collectType(edgeByKey, consumerModule, index, argument, "signature:" + declaration.getIdentity().getCanonicalKey());
 					collectType(edgeByKey, consumerModule, index, declaration.getSignature().getReturnType(),
 						"signature:" + declaration.getIdentity().getCanonicalKey());
+					for (key => constraints in declaration.getResolvedTypeParameterConstraints())
+						for (constraint in constraints)
+							collectType(edgeByKey, consumerModule, index, constraint, "method-constraint:" + key);
 				}
 			for (fieldInitializer in typedClass.getFieldInitializers()) {
 				final field = fieldInitializer.getField();
 				collectExpression(edgeByKey, consumerModule, index, semanticInfo, fieldInitializer.getExpression(), field.getIsStatic() ? field : null);
 			}
-			for (typedFunction in typedClass.getFunctions())
+			for (typedFunction in typedClass.getFunctions()) {
+				for (value in typedFunction.getDefaults())
+					collectExpression(edgeByKey, consumerModule, index, semanticInfo, value.getExpression());
 				for (statement in typedFunction.getBody().getStatements())
 					collectStatement(edgeByKey, consumerModule, index, semanticInfo, statement);
+			}
 		}
 	}
 
@@ -138,7 +144,6 @@ class CompilerDependencyCollector {
 			return selectedField;
 		final texts = expression.getTexts();
 		return switch (expression.getTag()) {
-			case Parenthesized: null;
 			case NameRead: texts.length == 0 || currentOwner == null ? null : currentOwner.fieldInfo(texts[0]);
 			case FieldRead:
 				final children = expression.getExpressions();
@@ -171,7 +176,7 @@ class CompilerDependencyCollector {
 				null;
 			case NullSafeFieldRead:
 				null;
-			case Call:
+			case Call | FeatureDefinition | FeatureSelection:
 				null;
 			case MacroExpr:
 				null;
@@ -179,7 +184,7 @@ class CompilerDependencyCollector {
 				null;
 			case Lambda:
 				null;
-			case SwitchExpr:
+			case SwitchExpr | ControlSwitch:
 				null;
 			case NewValue:
 				null;
@@ -197,11 +202,11 @@ class CompilerDependencyCollector {
 				null;
 			case ArrayComprehension:
 				null;
-			case ArrayDecl:
+			case ArrayDecl | ArrayAppend | MapInsert:
 				null;
 			case ArrayAccess:
 				null;
-			case Range:
+			case Range | FixedRange:
 				null;
 			case Cast:
 				null;
@@ -209,7 +214,8 @@ class CompilerDependencyCollector {
 				null;
 			case Opaque:
 				null;
-			case Block:
+			case PrivateAccess | Parenthesized | Block | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | SourceTry | ControlTry |
+				ThrowExpr | ControlBranch | ControlWhile | ControlFor:
 				null;
 			case Temporary:
 				null;
@@ -289,6 +295,9 @@ class CompilerDependencyCollector {
 				collectType(edgeByKey, consumerModule, index, argument, factIdentity, staticInitializer);
 			collectType(edgeByKey, consumerModule, index, type.getFunctionReturn(), factIdentity, staticInitializer);
 		}
+		// Record fields can contain nominal types or callbacks that consume other modules.
+		for (fieldType in type.getAnonymousFieldTypes())
+			collectType(edgeByKey, consumerModule, index, fieldType, factIdentity, staticInitializer);
 	}
 
 	/**

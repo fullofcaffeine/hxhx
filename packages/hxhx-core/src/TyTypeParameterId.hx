@@ -53,6 +53,13 @@ class TyTypeParameterId {
 	public function getScopeIdentity():String
 		return scopeIdentity;
 
+	/** Keep a local generic binder owned by its exact nested function occurrence. */
+	public static function nestedFunction(owner:TyNestedFunctionId, ordinal:Int, name:String):TyTypeParameterId {
+		if (owner == null)
+			throw "nested type parameter identity requires a function owner";
+		return new TyTypeParameterId("nested-function:" + owner.getCanonicalKey(), ordinal, name);
+	}
+
 	public function getOrdinal():Int
 		return ordinal;
 

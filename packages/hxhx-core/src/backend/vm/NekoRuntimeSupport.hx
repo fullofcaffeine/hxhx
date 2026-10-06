@@ -40,6 +40,7 @@ class NekoRuntimeSupport {
 		if (symbolTable == null || symbolTable.length == 0)
 			throw "Neko runtime support requires the shared symbol object";
 		NekoStringRuntimeSource.render(out);
+		NekoStringMethodRuntimeSource.render(out);
 		out.push("var __hxhx_array_indexOf = function(a, value) {");
 		out.push("  var i = 0;");
 		out.push("  var len = $asize(a);");
@@ -268,10 +269,11 @@ class NekoRuntimeSupport {
 		out.push("  }");
 		// The Neko stdlib reads String.__s before calling native primitives.
 		// Our strings already use that native representation; ordinary objects still use field lookup below.
-		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else if (field == \"__s\") o else null;");
+		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else if (field == \"__s\") o else __hxhx_string_method(o, field);");
 		out.push("  if ($typeof(o) != $tobject) return null;");
 		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
-		out.push("  if ($typeof(getter) == $tfunction) return getter();");
+		// Prototype getters read this; preserve the instance selected by the property access.
+		out.push("  if ($typeof(getter) == $tfunction) return $call(getter, o, $array());");
 		out.push("  return $objget(o, $hash(field));");
 		out.push("}");
 		out.push("");

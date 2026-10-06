@@ -13,6 +13,45 @@ class M14RuntimeTypedLambdaIntegrationTest {
 			fail(message);
 	}
 
+	/** An identity macro must see every authored group and return the same syntax object. */
+	static function identitySourceFunction(value:Expr):Expr {
+		switch value.expr {
+			case EFunction(FAnonymous, fn):
+				assertTrue(fn.args.length == 1 && fn.args[0].name == "item" && !fn.args[0].opt && fn.args[0].value == null,
+					"source function changed its required parameter or fabricated a default");
+				assertTrue(switch [fn.args[0].type, fn.ret] {
+					case [TPath({pack: [], name: "String"}), TPath({pack: [], name: "Dynamic"})]: true;
+					case _: false;
+				}, "source function changed its written signature");
+				assertTrue(switch fn.expr.expr {
+					case EBlock([
+						{
+							expr: EVars([
+								{
+									name: "result",
+									type: null,
+									expr: {
+										expr: EBlock([
+											{expr: EBlock([{expr: EReturn({expr: EConst(CIdent("item"))})}])},
+											{expr: EConst(CString("wrong", _))}
+										])
+									}
+								}
+							])
+						},
+						{
+							expr: EBinop(OpAssignOp(OpAdd), {expr: EField({expr: EConst(CIdent("State"))}, "events", _)}, {expr: EConst(CString("after", _))})
+						},
+						{expr: EReturn({expr: EConst(CIdent("result"))})}
+					]): true;
+					case _: false;
+				}, "source function changed nested braces, explicit returns, or later syntax");
+			case _:
+				fail("source function changed its anonymous function kind");
+		}
+		return value;
+	}
+
 	static function main():Void {
 		final pos:Position = cast {
 			file: "RuntimeTypedLambdaIntegrationTest.hx",
@@ -53,6 +92,12 @@ class M14RuntimeTypedLambdaIntegrationTest {
 				fail("expected typed prefix decrement round-trip to preserve its operator and postFix=false");
 		}
 		final emptyWhile = RuntimeMacroExprs.parseInlineString("while (ready) {}", pos);
+		switch RuntimeMacroExprs.parseInlineString("do { ping(); } while (ready)", pos).expr {
+			case EWhile({expr: EConst(CIdent("ready"))}, {expr: EBlock([{expr: ECall({expr: EConst(CIdent("ping"))}, [])}])}, false):
+			case _:
+				fail("expected do/while to preserve the public macro loop kind");
+		}
+
 		switch (emptyWhile.expr) {
 			case EWhile({expr: EConst(CIdent("ready"))}, {expr: EBlock(body)}, true):
 				assertTrue(body.length == 0, "expected the macro while body to remain an empty block");
@@ -76,6 +121,53 @@ class M14RuntimeTypedLambdaIntegrationTest {
 				fail("expected expression-position continue to reach the macro API as EContinue");
 		}
 		final parsed = RuntimeMacroExprs.parseInlineString("(item) -> item.name", pos);
+		for (source in ["(item:Int = 5) -> item", "function(item:Int = 5) return item"])
+			switch RuntimeMacroExprs.parseInlineString(source, pos).expr {
+				case EFunction(kind, fn):
+					assertTrue(fn.args.length == 1 && fn.args[0].opt == (kind == FArrow),
+						"defaulted arrow and full function lost their distinct upstream optional flags");
+					assertTrue(switch fn.args[0].value.expr {
+						case EConst(CInt("5", _)): true;
+						case _: false;
+					}, "macro arrow lost its default expression");
+				case _:
+					fail("defaulted source function lost its macro function form");
+			}
+		final annotated = RuntimeMacroExprs.parseInlineString("function(item:String):Dynamic return item", pos);
+		final grouped = RuntimeMacroExprs.parseInlineString('function(item:String):Dynamic {'
+			+ 'var result = { { return item; } "wrong"; }; State.events += "after"; return result; }', pos);
+		assertTrue(identitySourceFunction(grouped) == grouped, "identity macro replaced the original syntax object");
+		switch (annotated.expr) {
+			case EFunction(FAnonymous, fn):
+				assertTrue(fn.args.length == 1 && fn.args[0].name == "item", "annotated function lost its parameter");
+				assertTrue(switch (fn.args[0].type) {
+					case TPath({pack: [], name: "String"}): true;
+					case _: false;
+				}, "annotated function lost its written String parameter");
+				assertTrue(switch (fn.ret) {
+					case TPath({pack: [], name: "Dynamic"}): true;
+					case _: false;
+				}, "annotated function lost its written Dynamic result");
+				assertTrue(switch (fn.expr.expr) {
+					case EReturn({expr: EConst(CIdent("item"))}): true;
+					case _: false;
+				}, "annotated function lost its authored return expression");
+			case _:
+				fail("full function syntax became an arrow function in the macro AST");
+		}
+		final sequence = RuntimeMacroExprs.parseInlineString("function() { ping(); return 7; }", pos);
+		switch (sequence.expr) {
+			case EFunction(_, {
+				expr: {
+					expr: EBlock([
+						{expr: ECall({expr: EConst(CIdent("ping"))}, [])},
+						{expr: EReturn({expr: EConst(CInt("7", _))})}
+					])
+				}
+			}):
+			case _:
+				fail("expected the macro function body to preserve the call before its result");
+		}
 		switch (parsed.expr) {
 			case EFunction(FArrow, fn):
 				assertTrue(fn.args != null && fn.args.length == 1, "expected one arrow arg");

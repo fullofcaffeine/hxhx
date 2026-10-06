@@ -214,13 +214,8 @@ jobs:
           echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
           export PATH="$(pwd)/node_modules/.bin:$PATH"
           haxe -version
-      - name: Install formatter haxelib
-        run: |
-          set -euo pipefail
-          export PATH="$(pwd)/node_modules/.bin:$PATH"
-          if ! haxelib run formatter --help >/dev/null 2>&1; then
-            haxelib install formatter --quiet
-          fi
+      - name: Build pinned formatter
+        run: npm run setup:formatter
       - name: Run guardrails
         run: npm run ci:guards
       - name: Prove standalone reflaxe.ocaml package install
@@ -576,6 +571,15 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Ensure PHP is available for focused runtime tests
+        if: ${{ matrix.shard == 'compiler-focused' }}
+        run: |
+          set -euo pipefail
+          if ! command -v php >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y php-cli
+          fi
+          php --version
       - name: Expose the Neko compiler for focused tests
         if: ${{ matrix.shard == 'compiler-focused' }}
         run: |

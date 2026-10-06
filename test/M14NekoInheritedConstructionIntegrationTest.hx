@@ -47,7 +47,7 @@ class M14NekoInheritedConstructionIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final resolved = ResolverStage.parseProjectRoots(paths, ["Main"], defines);
-		final index = TyperIndex.build(resolved);
+		final index = TyperIndex.buildHeaders(resolved);
 		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready(resolved);
 		final pending = resolved.copy();

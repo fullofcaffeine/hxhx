@@ -13,12 +13,27 @@ class M14DeclarationOnlyModuleProjectionIntegrationTest {
 
 	static function main():Void {
 		final record = project("typedef Record = { final count:Int; }", "Record");
-		if (record.index.getByFullName("Record") == null)
+		final context:TyTypeDeclaration.TyTypeResolutionContext = {
+			packagePath: "",
+			modulePath: "Record",
+			directives: [],
+			filePath: "Record.hx",
+			position: HxPos.unknown(),
+			parameters: []
+		};
+		final declaration = record.index.resolveTypeDeclaration("Record", context);
+		if (declaration == null || !declaration.getKind().match(Alias(_)))
 			throw "the typedef lost its semantic declaration";
-		if (record.module.getClasses().length != 1 || HxClassDecl.getName(record.module.getClasses()[0].getDeclaration()) != "Record")
+		if (record.index.getByFullName("Record") != null || record.module.getClasses().length != 0)
 			throw "the typedef catalog contains an invented class";
-		new NekoTypedProgramProjection("neko-projection-test", [record.module]).requireClass("Record");
-		if (record.module.getClasses()[0].requireSemanticFacts().findField("Record#instance#count") == null)
+		new NekoTypedProgramProjection("neko-projection-test", [record.module]);
+		final structure = record.index.resolveTypeUse(TyType.fromHintText("Record"), context).getType();
+		final fields = structure.getAnonymousFields();
+		if (!structure.isAnonymous()
+			|| fields.length != 1
+			|| fields[0].name != "count"
+			|| fields[0].type.getSemanticKey() != TyType.fromHintText("Int").getSemanticKey()
+			|| !fields[0].kind.match(Variable(true, "", "")))
 			throw "the typedef lost its structural field facts";
 		for (result in [project("", "Empty"), project("import haxe.Json;", "Imports")]) {
 			if (result.module.getClasses().length != 0)

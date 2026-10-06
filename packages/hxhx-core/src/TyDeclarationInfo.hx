@@ -106,11 +106,11 @@ class TyDeclarationInfo {
 	public function getHasBody():Bool
 		return HxFunctionDecl.getHasBody(sourceDeclaration);
 
-	/** Method-level generic parameters retained for overload diagnostics/binding. **/
+	/** Call-inferred parameters: method binders, or enum binders instantiated by a constructor. **/
 	public function getTypeParameters():Array<String>
 		return [for (parameter in typeParameters) parameter.getName()];
 
-	/** Exact method-level generic binder identities in declared order. **/
+	/** Exact call-inferred binder identities in declared order; enum constructors retain their owner binders. **/
 	public function getTypeParameterIds():Array<TyTypeParameterId>
 		return typeParameters.copy();
 

@@ -30,6 +30,15 @@ class HxLexer {
 		this.src = src;
 	}
 
+	/** Lookahead shares immutable source bytes but advances its own token cursor. */
+	public function fork():HxLexer {
+		final copy = new HxLexer(src);
+		copy.index = index;
+		copy.line = line;
+		copy.column = column;
+		return copy;
+	}
+
 	/**
 		Replace comments between tokens with spaces for source-based dependency discovery.
 

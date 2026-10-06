@@ -22,6 +22,21 @@ class M14RuntimeTypeOccurrenceIdentityTest {
 		}
 		if (!rejected)
 			throw "structurally equal marker bypassed occurrence identity";
+		final erased = TyType.fromHintText("Dynamic");
+		final value:HxExpr = EIdent("value");
+		final test = new TypedBackendRuntimeTypeOccurrence("owner", "revision", target, value, erased);
+		if (test.getValue() != value || test.getValueType() != erased)
+			throw "runtime operand type lost its exact source identity";
+		for (input in [{value: value, type: null}, {value: null, type: erased}]) {
+			var invalidRejected = false;
+			try {
+				new TypedBackendRuntimeTypeOccurrence("owner", "revision", target, input.value, input.type);
+			} catch (_:haxe.Exception) {
+				invalidRejected = true;
+			}
+			if (!invalidRejected)
+				throw "runtime occurrence accepted an incomplete value/type pair";
+		}
 		Sys.println("RUNTIME_TYPE_OCCURRENCE_IDENTITY:PASS");
 	}
 }

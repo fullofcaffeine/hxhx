@@ -406,7 +406,10 @@ much more and is usually the wrong tradeoff without dedicated benchmarks.
 
 ## Formatting Haxe code
 
-Use the official Haxe formatter through `haxelib`.
+Use the pinned Haxe Formatter build. After installing npm dependencies and
+Haxe 4.3.7 through Lix, run `npm run setup:formatter`.
+The [local validation guide](FAST_LOCAL_VALIDATION.md#haxe-formatting) explains
+the source pin, lexer performance repair, and artifact verification.
 
 For files you just changed:
 
@@ -426,7 +429,7 @@ script is only the stable npm/CI entrypoint: it moves to the repo root and calls
 `scripts/lint/hx-format-guard.js`.
 
 The Node helper does not define its own style rules. It still delegates to
-`haxelib run formatter --check`. It isolates files large enough to dominate one
+the pinned formatter with `--check`. It isolates files large enough to dominate one
 formatter process, line-balances the remaining files, and feeds those deterministic
 tasks to a bounded worker queue because Haxe Formatter does not provide a built-in
 jobs flag. A free worker can start the next task without waiting for the slowest

@@ -18,12 +18,13 @@ class TyFieldInfo {
 	final hasInitializer:Bool;
 	final propertyGet:String;
 	final propertySet:String;
+	final hasStorage:Bool;
 	final noImportGlobal:Bool;
 	final canonicalKey:String;
 	final constant:TyFieldConstant;
 
 	public function new(owner:TyNominalTypeId, modulePath:String, name:String, type:TyType, isStatic:Bool, isPublic:Bool, isFinal:Bool, isInline:Bool,
-			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "", ?constant:TyFieldConstant) {
+			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "", ?constant:TyFieldConstant, isVar:Bool = false) {
 		this.owner = owner;
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.name = name == null ? "" : StringTools.trim(name);
@@ -35,6 +36,9 @@ class TyFieldInfo {
 		this.hasInitializer = hasInitializer;
 		this.propertyGet = propertyGet == null ? "" : StringTools.trim(propertyGet);
 		this.propertySet = propertySet == null ? "" : StringTools.trim(propertySet);
+		// Accessor-only properties have no physical value. Either direct access
+		// mode, or explicit @:isVar, gives the declaration real backing storage.
+		this.hasStorage = isVar || directMode(this.propertyGet) || directMode(this.propertySet);
 		this.noImportGlobal = noImportGlobal;
 		this.constant = constant == null ? new TyFieldConstant(Ordinary) : constant;
 		final ownerName = owner == null ? "" : owner.getCanonicalName();
@@ -84,6 +88,13 @@ class TyFieldInfo {
 	/** Return the exact Haxe write-access mode, such as `set` or `never`. **/
 	public function getPropertySet():String
 		return propertySet;
+
+	/** Whether this declaration owns a stored value in addition to any accessor calls. */
+	public function getHasStorage():Bool
+		return hasStorage;
+
+	static function directMode(mode:String):Bool
+		return mode == "" || mode == "default" || mode == "null";
 
 	/** Whether `import Owner.*` must withhold this field from bare-name lookup. **/
 	public function getNoImportGlobal():Bool

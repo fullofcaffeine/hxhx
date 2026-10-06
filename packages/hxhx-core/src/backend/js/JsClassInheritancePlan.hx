@@ -6,6 +6,9 @@ typedef JsClassInheritanceNode = {
 	final superIdentity:Null<String>;
 	final fullName:String;
 	final reference:String;
+
+	/** The admitted abstract wrapper stores the source-level receiver in its backing slot. */
+	final abstractReceiver:Bool;
 };
 
 /**
@@ -47,7 +50,11 @@ class JsClassInheritancePlan {
 					identity: identity,
 					superIdentity: facts.getSuperClassIdentity(),
 					fullName: fullName,
-					reference: reference
+					reference: reference,
+					abstractReceiver: switch (facts.getNominalKind()) {
+						case AbstractValue(_): true;
+						case _: false;
+					}
 				};
 				byReference.set(reference, identity);
 				byIdentity.set(identity, node);

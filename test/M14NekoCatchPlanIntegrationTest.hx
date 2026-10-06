@@ -46,11 +46,8 @@ var result = try 7 catch (number:Int) number;
 		];
 		if (types.join(",") != "primitive:String,primitive:Int")
 			throw "catch plan changed source order or exact types: " + types.join(",");
-		final expression = switch (body.getBody()[1]) {
-			case SVar(_, _, node, _): node;
-			case other: throw "fixture lost its expression try: " + Std.string(other);
-		};
-		final expressionPlan = NekoCatchPlan.forExpression(program, selected, expression);
+		final expressionStatement = body.getBody()[2];
+		final expressionPlan = NekoCatchPlan.forStatement(program, selected, expressionStatement);
 		final expressionBinding = expressionPlan.getCases()[0].local;
 		if (expressionBinding.getBinding().getType().getSemanticKey() != "primitive:Int"
 			|| expressionBinding.getProjectedName() == plan.getCases()[1].local.getProjectedName())
@@ -74,11 +71,59 @@ var result = try 7 catch (number:Int) number;
 		final foreign = FunctionBody(foreignProgram.requireDeclaredFunction(foreignProgram.requireClass("Main").getFunctions()[0].getDeclaration()));
 		expectFailure("cannot identify projected function", () -> NekoCatchPlan.forStatement(program, foreign, statement));
 		final initializer = owner.getFieldInitializers()[0];
-		final initializerPlan = NekoCatchPlan.forExpression(program, FieldInitializer(initializer), initializer.getExpression());
+		final initializerTries = new Array<HxExpr>();
+		TypedBackendSourceWalk.expression(initializer.getExpression(), node -> {
+			if (node.match(ELoweredControl(Try(_), _, _, _)))
+				initializerTries.push(node);
+		});
+		if (initializerTries.length != 1)
+			throw "fixture lost its initializer try";
+		final initializerPlan = NekoCatchPlan.forExpression(program, FieldInitializer(initializer), initializerTries[0]);
 		if (initializerPlan.executableIdentity != initializer.getStableIdentity()
 			|| initializerPlan.bodyRevision != initializer.getBodyRevision()
 			|| initializerPlan.getCases()[0].local.getBinding().getType().getSemanticKey() != "primitive:String")
 			throw "initializer catch lost its exact owner or binding type";
+		final catalog = program.requireCatchCatalog(FieldInitializer(initializer));
+		final adapted = new Array<HxStmt>();
+		TypedControlStatements.initializerBody(initializer.getExpression(), initializer.getStableIdentity(), (source, statement) -> {
+			@:privateAccess catalog.recordAdaptation(source, statement);
+			adapted.push(statement);
+		});
+		if (adapted.length != 1)
+			throw "adapter lost exact catch provenance";
+		final adaptedPlan = catalog.forStatement(adapted[0]);
+		if (adaptedPlan.occurrenceIdentity != initializerPlan.occurrenceIdentity
+			|| adaptedPlan.getCases()[0].local != initializerPlan.getCases()[0].local)
+			throw "adaptation replaced the catch owner or binding";
+		switch adapted[0] {
+			case STry(tryBody, catches, position):
+				expectFailure("owned statement occurrence", () -> catalog.forStatement(STry(tryBody, catches.copy(), position)));
+				switch catches[0].body {
+					case SBlock(nodes, _):
+						nodes.push(SExpr(ENull, HxPos.unknown()));
+						expectFailure("changed after preparation", () -> catalog.forStatement(adapted[0]));
+						nodes.pop();
+					case _: throw "adapted handler lost its lexical scope";
+				}
+			case _:
+				throw "adapter did not produce an exact try statement";
+		}
+		switch initializerTries[0] {
+			case ELoweredControl(kind, owner, entries, position):
+				expectFailure("owned expression occurrence", () -> catalog.forExpression(ELoweredControl(kind, owner, entries.copy(), position)));
+				switch entries[1] {
+					case ELoweredControl(Scope, _, nodes, _):
+						nodes.push(ENull);
+						expectFailure("changed after preparation", () -> catalog.forStatement(adapted[0]));
+						nodes.pop();
+					case _: throw "lowered handler lost its lexical scope";
+				}
+				entries.push(ENull);
+				expectFailure("changed after preparation", () -> catalog.forStatement(adapted[0]));
+				entries.pop();
+			case _:
+				throw "missing lowered try";
+		}
 		final foreignInitializer = foreignProgram.requireClass("Main").getFieldInitializers()[0];
 		expectFailure("initializer", () -> NekoCatchPlan.forExpression(program, FieldInitializer(foreignInitializer), initializer.getExpression()));
 		final duplicateModule = @:privateAccess M14NekoTypedProgramProjectionIntegrationTest.project(source);

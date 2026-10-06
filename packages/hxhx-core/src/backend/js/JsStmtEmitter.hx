@@ -81,12 +81,18 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+
 			case SBreak(_):
 				writer.writeln("break;");
 			case SContinue(_):
 				writer.writeln("continue;");
 			case SExpr(expr, _):
-				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				switch expr {
+					case ELoweredControl(_, _, _, _):
+						emitStmt(writer, TypedControlStatements.methodStatement(expr, scope.requireControlIdentity()), scope);
+					case _:
+						writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				}
 		}
 	}
 

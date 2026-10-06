@@ -20,7 +20,10 @@ class M14NekoStackPrimitivesIntegrationTest {
 		for (name in ["__dollar__callstack", "__dollar__excstack", "__dollar__asize"]) {
 			var rejected = false;
 			try {
-				backend.vm.NekoStackPrimitives.renderCall(EIdent(name), ["first", "second"]);
+				if (name == "__dollar__asize")
+					backend.vm.NekoArrayPrimitives.renderCall(EIdent(name), ["first", "second"]);
+				else
+					backend.vm.NekoStackPrimitives.renderCall(EIdent(name), ["first", "second"]);
 			} catch (error:String) {
 				rejected = error.indexOf("requires") >= 0;
 			}
@@ -74,8 +77,14 @@ class M14NekoStackPrimitivesIntegrationTest {
 		if (run("neko", [directory + "/upstream.n"]) != expected)
 			throw "upstream stack contract differs";
 		final resolved = new ResolvedModule("Main", directory + "/Main.hx", ParserStage.parse(source, directory + "/Main.hx"));
-		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
-		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, new haxe.ds.StringMap<String>());
+		// The target request selects implicit catch facts during shared typing.
+		// This fixture catches Dynamic, so it needs no exception-provider declarations.
+		final defines = HxDefineMap.fromRawDefines(["neko=1"]);
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([directory], defines, index);
+		loader.markResolvedAlready([resolved]);
+		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader)], []);
+		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, defines);
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
 		File.saveContent(split.entryPath, split.entrySource);
 		for (part in split.support)

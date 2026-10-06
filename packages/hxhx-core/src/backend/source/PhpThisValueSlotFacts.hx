@@ -82,7 +82,7 @@ class PhpThisValueSlotFacts {
 				expressionListNeedsValueSlot(arguments);
 			case EUnop(_, _, inner):
 				expressionNeedsValueSlot(inner);
-			case EBinop(_, left, right): expressionNeedsValueSlot(left) || expressionNeedsValueSlot(right);
+			case EBinop(_, left, right) | EDiscardThen(left, right): expressionNeedsValueSlot(left) || expressionNeedsValueSlot(right);
 			case ETernary(condition, thenExpression, elseExpression): expressionNeedsValueSlot(condition) || expressionNeedsValueSlot(thenExpression) || expressionNeedsValueSlot(elseExpression);
 			case EAnon(_, fieldValues):
 				expressionListNeedsValueSlot(fieldValues);

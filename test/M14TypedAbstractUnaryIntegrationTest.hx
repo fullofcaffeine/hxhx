@@ -152,7 +152,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
 			"inner helper local lost its exact temporary binding");
 		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
-		assertTrue(implementationRevision.indexOf("typed-abstract-unary-v1") >= 0
+		assertTrue(implementationRevision.indexOf("typed-abstract-unary-v2") >= 0
 			&& implementationRevision.indexOf(outerBindings[0].getCanonicalIdentity()) >= 0,
 			"typed-module implementation revision omitted the unary pass or generated binding identity");
 		assertTrue(!outerBindings[0].getIdentity().equals(innerBindings[0].getIdentity()), "shadowed helper locals received the same temporary identity");

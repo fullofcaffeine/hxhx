@@ -81,13 +81,13 @@ class M14GenericForwardingConstraintTest {
 		final integer = TyType.fromHintText("Int");
 		function same(expected:TyType, supplied:TyType):Bool
 			return expected.getSemanticKey() == supplied.getSemanticKey();
-		if (TyCallerConstraintProof.accepts(integer, TyType.typeParameter(first), bounds, same))
+		if (TyCallerConstraintProof.accepts(integer, TyType.typeParameter(first), parameter -> bounds.get(parameter.getCanonicalKey()), same))
 			throw "cyclic bounds proved an unrelated constraint";
 		bounds.set(second.getCanonicalKey(), [TyType.typeParameter(first), integer]);
-		if (!TyCallerConstraintProof.accepts(integer, TyType.typeParameter(first), bounds, same))
+		if (!TyCallerConstraintProof.accepts(integer, TyType.typeParameter(first), parameter -> bounds.get(parameter.getCanonicalKey()), same))
 			throw "a cyclic path hid independent valid bound evidence";
 		final foreign = new TyTypeParameterId("another-forwarder", 0, "T");
-		if (TyCallerConstraintProof.accepts(integer, TyType.typeParameter(foreign), bounds, same))
+		if (TyCallerConstraintProof.accepts(integer, TyType.typeParameter(foreign), parameter -> bounds.get(parameter.getCanonicalKey()), same))
 			throw "same-spelled foreign parameter borrowed a caller bound";
 	}
 }

@@ -9,14 +9,18 @@ typedef NekoConstructionMethod = {
 };
 
 /**
-	Selects inherited object members from the exact typed superclass graph.
+	Selects construction representation and inherited members from exact typed owners.
 
 	The allocator installs the most-derived method implementations before any
 	constructor executes. Each class initializer then runs on that same receiver.
 	The child-to-root order preserves override selection without copying closures
-	from a separately allocated base object. Missing ancestors are errors.
+	from a separately allocated base object. Abstract factories instead return their
+	backing value. Missing ancestors are errors.
 **/
 class NekoClassConstructionPlan {
+	/** An abstract factory returns its backing value rather than a class instance. */
+	public final returnsBackingValue:Bool;
+
 	public final lineage:Array<TypedBackendClassProjection>;
 	public final methods:Array<NekoConstructionMethod>;
 
@@ -24,6 +28,7 @@ class NekoClassConstructionPlan {
 	final instanceMethods = new StringMap<Bool>();
 
 	public function new(graph:TypedBackendClassGraph, program:NekoTypedProgramProjection, identity:String) {
+		returnsBackingValue = program.constructorReturnsBackingValue(identity);
 		final nodes = graph.requireLineage(identity);
 		lineage = [for (node in nodes) program.requireClass(node.classIdentity)];
 		for (node in nodes) {
@@ -51,10 +56,10 @@ class NekoClassConstructionPlan {
 		}
 	}
 
-	/** Only the selected zero-argument String method can supply the VM conversion hook. */
-	public function hasStringConversion():Bool {
+	/** Inherited conversion hooks use dynamic receiver lookup; only an own method needs a new hook. */
+	public function hasOwnStringConversion():Bool {
 		for (method in methods)
-			if (HxFunctionDecl.getName(method.body.getDeclaration()) == "toString") {
+			if (method.owner == lineage[0] && HxFunctionDecl.getName(method.body.getDeclaration()) == "toString") {
 				final result = method.body.getReturnType().getSemanticKey();
 				return method.body.getParameters().length == 0 && (result == "primitive:String" || result == "nominal:String");
 			}

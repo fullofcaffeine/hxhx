@@ -8,7 +8,16 @@ the broader guard before committing or closing the bead.
 
 ## Haxe Formatting
 
-Yes, this repo uses the official Haxe formatter from haxelib.
+The repo builds Haxe Formatter 1.18.0 with a reviewed lexer performance repair.
+Run `npm run setup:formatter` after `npm ci` and the Lix Haxe 4.3.7 installation.
+CI uses the same setup command. It downloads pinned sources, builds them, and
+accepts only the recorded output digest. It does not change the global formatter.
+
+The source revisions, patch digest, and output digest are recorded in
+`scripts/lint/formatter-toolchain.lock.json`. The lexer repair avoids repeated
+searches for markup delimiters when source contains many generic types.
+Formatting rules and the existing 240-second deadline stay unchanged.
+If the installed artifact is missing or changed, run setup again.
 
 Fast path for files changed in your worktree:
 
@@ -21,7 +30,7 @@ What this does:
 
 - `format:hx:changed` formats only changed `.hx` files.
 - `guard:hx-format:changed` checks only changed `.hx` files.
-- Both commands still call `haxelib run formatter`; they do not define a repo-specific style.
+- Both commands call the same verified formatter build and use `hxformat.json`.
 
 Each invocation starts the formatter once. Formatter output appears as it arrives,
 with stdout and stderr kept separate. Wrapper progress messages use stderr.
@@ -30,7 +39,7 @@ The command returns the formatter's exit code, including a failed check.
 The formatter has a 240-second deadline. Set `HX_FORMAT_TIMEOUT_SECONDS` to a
 positive integer to change it. A timeout returns 124; Ctrl-C returns 130;
 SIGTERM returns 143. On Linux and macOS, these exits stop the owned formatter
-process group, including the Neko launcher and JavaScript formatter.
+process group, including formatter children.
 
 When an automation tool returns a running-session handle, continue that session
 until it exits. A tool's initial yield is not a formatter timeout. Starting
@@ -42,7 +51,7 @@ To check process cleanup and compare formatted bytes with the official formatter
 npm run test:hxhx:hx-format-guard
 ```
 
-This test requires the formatter haxelib. It covers success, failed checks,
+This test requires the pinned formatter setup. It covers success, failed checks,
 streaming output, delayed completion, timeout, SIGINT, and SIGTERM on POSIX hosts.
 
 The [measured formatter workload](../00-project/CHANGED_HAXE_FORMATTER_MEASUREMENT.md)
@@ -60,11 +69,21 @@ npm run guard:hx-format
 only a stable npm/CI entrypoint. It moves to the repo root and calls
 `scripts/lint/hx-format-guard.js`.
 
-`hx-format-guard.js` still delegates to `haxelib run formatter --check`. It is
+`hx-format-guard.js` delegates to the pinned formatter with `--check`. It is
 faster than one huge formatter process because it isolates oversized files,
 line-balances the remainder, and feeds those deterministic tasks to a bounded
 worker queue. A worker that finishes a quick task can continue immediately, and
 the official formatter still checks every tracked Haxe file exactly once.
+
+With more than one worker, ordinary batches contain at most 10,000 counted lines.
+The isolation threshold never exceeds that limit, so repository growth cannot
+put a large file back into a shared batch. Each large file remains one task.
+The explicit one-worker diagnostic mode keeps its single serial invocation.
+
+On POSIX hosts, Ctrl-C or SIGTERM stops the full guard's active formatter groups
+and prevents queued jobs from starting. The guard waits for its children to close,
+then returns 130 or 143. The initial help check and final determinism checks use
+the same cancellation path and formatter deadline.
 
 Useful knobs:
 

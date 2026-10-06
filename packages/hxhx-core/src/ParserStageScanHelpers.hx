@@ -467,9 +467,15 @@ class ParserStageScanHelpers {
 
 			final enumName = nameTok.text;
 			i = nameTok.nextPos;
-			final abstractTypeParams = isEnumAbstract ? scanTypeParameterNames(source, i) : {params: [], nextPos: i};
+			final enumTypeParams = scanTypeParameterNames(source, i);
+			// Keep constraints in the shared type grammar. Names alone cannot tell
+			// constructor inference which payload types the enum permits.
+			final enumParameters = enumTypeParams.nextPos == i ? [] : HxTypedefParser.parseParametersAt(source, i, enumTypeParams.nextPos);
+			final enumParameterNames = [for (parameter in enumParameters) parameter.name];
+			final enumValueType = enumName + (enumParameterNames.length == 0 ? "" : "<" + enumParameterNames.join(",") + ">");
 			final abstractUnderlying = isEnumAbstract ? scanAbstractUnderlyingType(source, i) : "";
 			final abstractConversions = isEnumAbstract ? scanAbstractHeaderConversions(source, i) : {fromTypes: [], toTypes: []};
+			i = enumTypeParams.nextPos;
 
 			if (enumName == null || enumName.length == 0)
 				continue;
@@ -500,6 +506,7 @@ class ParserStageScanHelpers {
 
 			final fields = isEnumAbstract ? [] : [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
 			final functions = new Array<HxFunctionDecl>();
+			var enumDeclaration:Null<HxEnumDeclaration> = null;
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
 				i = scanned.nextPos;
@@ -512,6 +519,10 @@ class ParserStageScanHelpers {
 					functions.push(fn);
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
+				enumDeclaration = new HxEnumDeclaration([
+					for (ctor in scanned.ctors)
+						{name: ctor.name, arity: ctor.args == null ? 0 : ctor.args.length}
+				]);
 				i = scanned.nextPos;
 				fields.push(new HxFieldDecl("__hx_enum_ctors", HxVisibility.Public, true, "Dynamic",
 					EArrayDecl([for (ctor in scanned.ctors) EString(ctor.name)])));
@@ -524,7 +535,7 @@ class ParserStageScanHelpers {
 						continue;
 					final ctorArgs = ctor.args == null ? [] : ctor.args;
 					if (ctorArgs.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, []),
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, enumValueType, enumRuntimeValue(enumName, ctorName, ctorIndex, []),
 							ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
@@ -533,9 +544,9 @@ class ParserStageScanHelpers {
 							args.push(new HxFunctionArg(a.name, a.typeHint, HxDefaultValue.NoDefault, a.isOptional, false));
 						for (a in ctorArgs)
 							values.push(EIdent(a.name));
-						// Constructors conceptually return an enum value; during bring-up we keep the
-						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
-						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
+						// Target storage may differ, but constructor results retain the source
+						// enum and its binders before any backend chooses a representation.
+						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, enumValueType, [
 							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
 						], "", ctor.metadata));
 					}
@@ -543,7 +554,7 @@ class ParserStageScanHelpers {
 			}
 
 			final classMetadata = if (isEnumAbstract) {
-				final metadata = enumMetadata.concat(["__hxhx_abstract", "__hxhx_enum_abstract"]).concat(typeParamsMetadata(abstractTypeParams.params));
+				final metadata = enumMetadata.concat(["__hxhx_abstract", "__hxhx_enum_abstract"]).concat(typeParamsMetadata(enumParameterNames));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
 				for (fromType in abstractConversions.fromTypes)
@@ -552,9 +563,10 @@ class ParserStageScanHelpers {
 					metadata.push("__hxhx_abstract_to=" + toType);
 				metadata;
 			} else {
-				enumMetadata;
+				enumMetadata.concat(typeParamsMetadata(enumParameterNames));
 			};
-			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility, [], false, enumDeclaration,
+				enumParameters));
 		}
 
 		return out;
@@ -2270,114 +2282,31 @@ class ParserStageScanHelpers {
 		}
 	}
 
+	/** Declaration recovery delegates unbraced body boundaries to the statement parser. */
 	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{
 		body:Array<HxStmt>,
 		bodyText:String,
 		nextPos:Int,
 		hasBody:Bool
 	} {
-		var i = start;
-		var bodyStart = -1;
-		var returnExprStartsWithBrace = false;
-		var tok = scanNextToken(source, i);
-		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
-			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
-				bodyStart = tok.nextPos - tok.text.length;
-				returnExprStartsWithBrace = true;
-			} else if (bodyStart < 0 && expressionBodyKeywordStartsWithoutReturn(tok.text)) {
-				bodyStart = tok.nextPos - tok.text.length;
-			} else if (bodyStart >= 0) {
-				returnExprStartsWithBrace = false;
-			}
-			i = tok.nextPos;
-			tok = scanNextToken(source, i);
-		}
-		if (tok.text == ";") {
-			final rawStart = bodyStart >= 0 ? bodyStart : start;
-			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
-			final leading = leadingWhitespaceLength(rawExpr);
-			final exprText = StringTools.trim(rawExpr);
-			if (!capture)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: tok.nextPos,
-					hasBody: exprText.length > 0
-				};
-			if (exprText.length == 0)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: tok.nextPos,
-					hasBody: false
-				};
-			final bodyText = exprText + ";";
-			var body = new Array<HxStmt>();
-			try {
-				body = HxParser.parseFunctionBodyTextAt(bodyText, source, rawStart + leading);
-				if (hasUnsupportedStmtList(body))
-					body = [];
-			} catch (_:HxParseError) {
-				body = [];
-			} catch (_:String) {
-				body = [];
-			}
-			return {
-				body: body,
-				bodyText: bodyText,
-				nextPos: tok.nextPos,
-				hasBody: true
-			};
-		}
-		if (tok.text != "{")
+		final token = scanNextToken(source, start);
+		if (token.text == ";" || token.text.length == 0)
 			return {
 				body: [],
 				bodyText: "",
-				nextPos: tok.nextPos,
+				nextPos: token.nextPos,
 				hasBody: false
 			};
-
-		final block = scanBalancedBlock(source, tok.nextPos);
-		if (block.nextPos <= tok.nextPos)
-			return {
+		if (token.text != "{") {
+			final parsed = HxParser.parseUnbracedFunctionBodyAt(source, start);
+			return capture ? parsed : {
 				body: [],
 				bodyText: "",
-				nextPos: tok.nextPos,
-				hasBody: true
-			};
-		// `return { ... }` is an expression body, not a braced function body. Keep
-		// the return token and exact source text so a later native-protocol merge can
-		// replace its whitespace-free summary with this structural body.
-		if (returnExprStartsWithBrace && bodyStart >= 0) {
-			final next = scanNextToken(source, block.nextPos);
-			final nextPos = next.text == ";" ? next.nextPos : block.nextPos;
-			if (!capture)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: nextPos,
-					hasBody: true
-				};
-			final rawExpr = source.substring(bodyStart, block.nextPos);
-			final leading = leadingWhitespaceLength(rawExpr);
-			final bodyText = StringTools.trim(rawExpr) + ";";
-			var body = new Array<HxStmt>();
-			try {
-				body = HxParser.parseFunctionBodyTextAt(bodyText, source, bodyStart + leading);
-				if (hasUnsupportedStmtList(body))
-					body = [];
-			} catch (_:HxParseError) {
-				body = [];
-			} catch (_:String) {
-				body = [];
-			}
-			return {
-				body: body,
-				bodyText: bodyText,
-				nextPos: nextPos,
+				nextPos: parsed.nextPos,
 				hasBody: true
 			};
 		}
+		final block = scanBalancedBlock(source, token.nextPos);
 		if (!capture)
 			return {
 				body: [],
@@ -2385,11 +2314,10 @@ class ParserStageScanHelpers {
 				nextPos: block.nextPos,
 				hasBody: true
 			};
-
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
 			try {
-				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, tok.nextPos);
+				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, token.nextPos);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -2408,7 +2336,7 @@ class ParserStageScanHelpers {
 
 	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {
 		return switch (text) {
-			case "for" | "this":
+			case "for" | "this" | "switch" | "if" | "while" | "do" | "try":
 				true;
 			case _:
 				false;
@@ -2474,7 +2402,8 @@ class ParserStageScanHelpers {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj), EReturn(obj):
+			case EPrivateAccess(obj, _), EParenthesized(obj, _), EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj),
+				EReturn(obj), EThrow(obj, _):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {
@@ -2490,7 +2419,7 @@ class ParserStageScanHelpers {
 						return true;
 				false;
 			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				if (hasUnsupportedExpr(condition)) true; else {
 					var found = false;
 					for (entry in body)
@@ -2499,8 +2428,16 @@ class ParserStageScanHelpers {
 					found;
 				}
 			case EBreak(_) | EContinue(_): false;
-			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
-			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
+			case ESourceTry(_, bodies, _):
+				var unsupported = false;
+				for (body in bodies)
+					unsupported = unsupported || hasUnsupportedExpr(body);
+				unsupported;
+			case ESourceFor(_, iterable, body, _): hasUnsupportedExpr(iterable) || hasUnsupportedExpr(body);
+			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right),
+				EDiscardThen(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
+			case ETernary(cond, thenExpr, elseExpr),
+				ESourceIf(cond, thenExpr, elseExpr, _): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):
 				for (value in values)
 					if (hasUnsupportedExpr(value))

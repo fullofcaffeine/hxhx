@@ -1,7 +1,10 @@
 import TyInferenceTerm.TyInferenceVariable;
 
+/** A read-only declaration lookup projects existing owner terms; it must not allocate inference variables. */
+typedef TyInferenceMemberResolver = (TyInferenceTerm, String) -> Null<TyInferenceTerm>;
+
 /**
-	Solve temporary generic constraints without mutating published semantic types.
+	Solve generic and omitted-input constraints without mutating published semantic types.
 	Each candidate gets a fork. Successful unification is atomic, and committing a
 	stale or unrelated candidate fails instead of discarding another constraint.
 	Exact unification does not decide implicit conversions or overload preference.
@@ -10,6 +13,8 @@ class TyInferenceSolver {
 	final owner:String;
 	var variables:Array<TyInferenceVariable> = [];
 	var solutions:Array<Null<TyInferenceTerm>> = [];
+	var dynamicUses:Array<Bool> = [];
+	var fieldRequirements:Array<Array<{final name:String; final term:TyInferenceTerm;}>> = [];
 	var parent:Null<TyInferenceSolver> = null;
 	var baseRevision:Int = 0;
 	var revision:Int = 0;
@@ -34,16 +39,37 @@ class TyInferenceSolver {
 		return allocate(null);
 	}
 
+	/** Empty array elements accept later constraints and default only still-unconstrained elements at seal. */
+	public function freshEmptyArrayElement():TyInferenceTerm {
+		final term = allocate(null);
+		// The empty literal supplies no element evidence. Reuse the deferred
+		// fallback mechanism so an unused array can still have a concrete carrier.
+		visitDynamicUse(term, false);
+		return term;
+	}
+
 	/** Only a known method binder may remain open; constructors and ordinary solver variables require concrete solutions. */
 	public function freshMethodParameter(parameter:TyTypeParameterId):TyInferenceTerm {
 		return allocate(new TyOpenMethodParameterId(owner, variables.length, parameter));
 	}
 
-	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>):TyInferenceTerm {
+	/** An omitted input may stay unknown; this is missing evidence, never an inferred Dynamic value. */
+	public function freshOmittedParameter():TyInferenceTerm {
+		return allocate(null, true);
+	}
+
+	/** An explicitly untyped result accepts later constraints; unused results retain Unknown rather than guessed Dynamic. */
+	public function freshUntypedResult():TyInferenceTerm {
+		return allocate(null, true);
+	}
+
+	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>, allowsUnknown:Bool = false):TyInferenceTerm {
 		requireMutable();
-		final identity = new TyInferenceVariable(owner, variables.length, openMethodParameter);
+		final identity = new TyInferenceVariable(owner, variables.length, openMethodParameter, allowsUnknown);
 		variables.push(identity);
 		solutions.push(null);
+		dynamicUses.push(false);
+		fieldRequirements.push([]);
 		revision++;
 		return Variable(identity);
 	}
@@ -53,7 +79,9 @@ class TyInferenceSolver {
 		if (type.isNullable())
 			return Nullable(fromType(type.unwrapNull()));
 		if (type.isFunction())
-			return Function(type.getFunctionArguments().map(fromType), fromType(type.getFunctionReturn()));
+			return Function(type.getFunctionArguments().map(fromType), fromType(type.getFunctionReturn()), type);
+		if (type.isAnonymous())
+			return Structure(type.getAnonymousFieldTypes().map(fromType), type);
 		final identity = type.getNominalIdentity();
 		return identity == null ? Known(type) : Nominal(identity, type.getTypeArguments().map(fromType));
 	}
@@ -63,7 +91,9 @@ class TyInferenceSolver {
 		requireMutable();
 		final candidate = new TyInferenceSolver(owner);
 		candidate.variables = variables.copy();
+		candidate.dynamicUses = dynamicUses.copy();
 		candidate.solutions = [for (solution in solutions) solution == null ? null : copyTerm(solution)];
+		candidate.fieldRequirements = [for (fields in fieldRequirements) fields.copy()];
 		candidate.parent = this;
 		candidate.baseRevision = revision;
 		return candidate;
@@ -77,23 +107,97 @@ class TyInferenceSolver {
 		if (candidate.sealed)
 			throw "sealed inference candidate cannot replace mutable state";
 		variables = candidate.variables.copy();
+		dynamicUses = candidate.dynamicUses.copy();
 		solutions = [
 			for (solution in candidate.solutions)
 				solution == null ? null : copyTerm(solution)
 		];
+		fieldRequirements = [for (fields in candidate.fieldRequirements) fields.copy()];
 		revision++;
 	}
 
+	/**
+		A field read on an unsolved input adds a requirement to that variable.
+		Aliases follow the same variable; forks own independent requirement lists.
+		Closed records expose only their existing fields and never grow on reads.
+	 */
+	public function field(term:TyInferenceTerm, name:String, ?resolveMember:TyInferenceMemberResolver):Null<TyInferenceTerm> {
+		assertOwned(term);
+		return switch follow(term) {
+			case Variable(identity):
+				final fields = fieldRequirements[identity.ordinal];
+				for (entry in fields)
+					if (entry.name == name)
+						return entry.term;
+				if (sealed)
+					throw "field requirement is absent from sealed inference";
+				final child = allocate(null, identity.allowsUnknown);
+				fields.push({name: name, term: child});
+				child;
+			case Structure(fields, signature):
+				final ordinal = signature.getAnonymousFieldNames().indexOf(name);
+				ordinal < 0 ? null : fields[ordinal];
+			case Nullable(inner): field(inner, name, resolveMember);
+			case Nominal(_, _) if (resolveMember != null):
+				final projected = resolveMember(follow(term), name);
+				if (projected != null)
+					assertOwned(projected);
+				projected;
+			case _: null;
+		};
+	}
+
 	/** Failure never retains a binding made while checking an earlier component. */
-	public function constrain(left:TyInferenceTerm, right:TyInferenceTerm):Bool {
+	public function constrain(left:TyInferenceTerm, right:TyInferenceTerm, ?resolveMember:TyInferenceMemberResolver):Bool {
 		requireMutable();
 		assertOwned(left);
 		assertOwned(right);
 		final candidate = fork();
-		if (!candidate.unify(copyTerm(left), copyTerm(right)))
+		if (!candidate.unify(copyTerm(left), copyTerm(right), resolveMember))
 			return false;
 		commit(candidate);
 		return true;
+	}
+
+	/**
+		Record explicit Dynamic input or destination evidence without solving shared variables.
+		A later typed use can still constrain an alias or report a conflict. Only
+		seal applies this fallback to remaining holes owned by this solver.
+	 */
+	public function observeDynamicUse(term:TyInferenceTerm):Void {
+		requireMutable();
+		assertOwned(term);
+		visitDynamicUse(term, false);
+		revision++;
+	}
+
+	/** Follow final alias solutions and preserve nominal, callable, and required-field structure. */
+	function visitDynamicUse(term:TyInferenceTerm, publish:Bool):Void {
+		switch follow(term) {
+			case Variable(identity):
+				if (!publish) {
+					dynamicUses[identity.ordinal] = true;
+				} else if (fieldRequirements[identity.ordinal].length > 0) {
+					for (field in fieldRequirements[identity.ordinal])
+						visitDynamicUse(field.term, true);
+				} else {
+					solutions[identity.ordinal] = Known(TyType.fromHintText("Dynamic"));
+				}
+			case Nominal(_, arguments):
+				for (argument in arguments)
+					visitDynamicUse(argument, publish);
+			case Nullable(inner):
+				visitDynamicUse(inner, publish);
+			case Function(arguments, result, _):
+				for (argument in arguments)
+					visitDynamicUse(argument, publish);
+				visitDynamicUse(result, publish);
+			case Structure(fields, _):
+				for (field in fields)
+					visitDynamicUse(field, publish);
+			case Known(_):
+				// Missing concrete type facts are not solver variables and gain no fallback.
+		}
 	}
 
 	function assertOwned(term:TyInferenceTerm):Void {
@@ -106,10 +210,17 @@ class TyInferenceSolver {
 					assertOwned(argument);
 			case Nullable(inner):
 				assertOwned(inner);
-			case Function(arguments, result):
+			case Function(arguments, result, signature):
+				if (!signature.isFunction() || signature.getFunctionArguments().length != arguments.length)
+					throw "inference callable arguments differ from their signature";
 				for (argument in arguments)
 					assertOwned(argument);
 				assertOwned(result);
+			case Structure(fields, signature):
+				if (!signature.isAnonymous() || signature.getAnonymousFieldTypes().length != fields.length)
+					throw "inference structural fields differ from their signature";
+				for (field in fields)
+					assertOwned(field);
 			case Known(_):
 		}
 	}
@@ -118,7 +229,8 @@ class TyInferenceSolver {
 		return switch term {
 			case Nominal(identity, arguments): Nominal(identity, arguments.map(copyTerm));
 			case Nullable(inner): Nullable(copyTerm(inner));
-			case Function(arguments, result): Function(arguments.map(copyTerm), copyTerm(result));
+			case Function(arguments, result, signature): Function(arguments.map(copyTerm), copyTerm(result), signature);
+			case Structure(fields, signature): Structure(fields.map(copyTerm), signature);
 			case Known(_) | Variable(_): term;
 		};
 	}
@@ -132,39 +244,87 @@ class TyInferenceSolver {
 
 	function occurs(identity:TyInferenceVariable, term:TyInferenceTerm):Bool {
 		return switch follow(term) {
-			case Variable(other): identity == other;
+			case Variable(other): identity == other || fieldRequirements[other.ordinal].filter(entry -> occurs(identity, entry.term)).length > 0;
 			case Nominal(_, arguments): arguments.filter(argument -> occurs(identity, argument)).length > 0;
 			case Nullable(inner): occurs(identity, inner);
-			case Function(arguments, result): occurs(identity, result) || arguments.filter(argument -> occurs(identity, argument)).length > 0;
+			case Function(arguments, result, signature): occurs(identity, result) || arguments.filter(argument -> occurs(identity, argument)).length > 0;
+			case Structure(fields, _): fields.filter(field -> occurs(identity, field)).length > 0;
 			case Known(_): false;
 		};
 	}
 
-	function unify(left:TyInferenceTerm, right:TyInferenceTerm):Bool {
+	function unify(left:TyInferenceTerm, right:TyInferenceTerm, ?resolveMember:TyInferenceMemberResolver):Bool {
 		final a = follow(left);
 		final b = follow(right);
 		return switch [a, b] {
 			case [Variable(first), Variable(second)] if (first == second): true;
+			case [Variable(first), Variable(second)]:
+				if (occurs(first, b) || occurs(second, a)) false; else {
+					for (entry in fieldRequirements[first.ordinal]) {
+						final target = field(b, entry.name, resolveMember);
+						if (!unify(entry.term, target, resolveMember))
+							return false;
+					}
+					solutions[first.ordinal] = b;
+					fieldRequirements[first.ordinal] = [];
+					true;
+				}
 			case [Variable(identity), value]:
 				if (occurs(identity, value)) false; else {
+					for (entry in fieldRequirements[identity.ordinal]) {
+						final target = field(value, entry.name, resolveMember);
+						if (target == null || !unify(entry.term, target, resolveMember))
+							return false;
+					}
 					solutions[identity.ordinal] = copyTerm(value);
 					true;
 				}
-			case [_, Variable(_)]: unify(b, a);
+			case [_, Variable(_)]: unify(b, a, resolveMember);
 			case [Known(first), Known(second)]: first.getSemanticKey() == second.getSemanticKey();
-			case [Nominal(first, firstArguments), Nominal(second, secondArguments)]: first.equals(second) && unifyArguments(firstArguments, secondArguments);
-			case [Nullable(first), Nullable(second)]: unify(first, second);
-			case [Function(firstArguments, firstResult), Function(secondArguments, secondResult)]: unifyArguments(firstArguments,
-					secondArguments) && unify(firstResult, secondResult);
+			case [Nominal(first, firstArguments), Nominal(second, secondArguments)]: first.equals(second) && unifyArguments(firstArguments, secondArguments,
+					resolveMember);
+			case [Nullable(first), Nullable(second)]: unify(first, second, resolveMember);
+			case [
+				Function(firstArguments, firstResult, firstSignature),
+				Function(secondArguments, secondResult, secondSignature)
+			]: matchingCallableRules(firstSignature,
+				secondSignature) && unifyArguments(firstArguments, secondArguments, resolveMember) && unify(firstResult, secondResult, resolveMember);
+			case [Structure(first, firstSignature), Structure(second, secondSignature)]: matchingStructuralRules(firstSignature,
+					secondSignature) && unifyArguments(first, second, resolveMember);
 			case _: false;
 		};
 	}
 
-	function unifyArguments(left:Array<TyInferenceTerm>, right:Array<TyInferenceTerm>):Bool {
+	/** Exact unification preserves calling rules; assignment variance belongs to call compatibility. */
+	static function matchingCallableRules(left:TyType, right:TyType):Bool {
+		final first = left.getFunctionParameters();
+		final second = right.getFunctionParameters();
+		if (first.length != second.length)
+			return false;
+		for (index in 0...first.length)
+			if (first[index].isOptional != second[index].isOptional || first[index].isRest != second[index].isRest)
+				return false;
+		return true;
+	}
+
+	/** Compare field contracts independently of the child types being solved. Assignment remains a separate relation. */
+	static function matchingStructuralRules(left:TyType, right:TyType):Bool {
+		final first = left.getAnonymousFields();
+		final second = right.getAnonymousFields();
+		if (first.length != second.length)
+			return false;
+		for (index in 0...first.length)
+			if (TyAnonymousField.semanticKey(TyAnonymousField.withType(first[index],
+				TyType.unknown())) != TyAnonymousField.semanticKey(TyAnonymousField.withType(second[index], TyType.unknown())))
+				return false;
+		return true;
+	}
+
+	function unifyArguments(left:Array<TyInferenceTerm>, right:Array<TyInferenceTerm>, ?resolveMember:TyInferenceMemberResolver):Bool {
 		if (left.length != right.length)
 			return false;
 		for (index in 0...left.length)
-			if (!unify(left[index], right[index]))
+			if (!unify(left[index], right[index], resolveMember))
 				return false;
 		return true;
 	}
@@ -181,19 +341,33 @@ class TyInferenceSolver {
 		return materialize(term, false);
 	}
 
-	function materialize(term:TyInferenceTerm, complete:Bool):TyType {
+	/** Sealed omitted inputs retain explicit Unknown leaves; ordinary required variables still need complete evidence. */
+	public function published(term:TyInferenceTerm):TyType {
+		if (!sealed)
+			throw "inference publication requires a sealed owner";
+		assertOwned(term);
+		return materialize(term, true, true);
+	}
+
+	function materialize(term:TyInferenceTerm, complete:Bool, permitOmitted:Bool = false):TyType {
 		return switch follow(term) {
 			case Variable(identity):
-				if (complete)
+				final fields = fieldRequirements[identity.ordinal];
+				if (fields.length > 0)
+					return TyType.anonymous(fields.map(entry -> entry.name), fields.map(entry -> materialize(entry.term, complete, permitOmitted)));
+				if (complete && !(permitOmitted && identity.allowsUnknown))
 					throw "inference variable remains unsolved: " + identity.owner + "#" + identity.ordinal;
 				TyType.unknown();
 			case Known(type):
 				if (complete && !isComplete(type))
 					throw "inference cannot publish an incomplete concrete type";
 				type;
-			case Nominal(identity, arguments): TyType.nominal(identity, arguments.map(argument -> materialize(argument, complete)));
-			case Nullable(inner): TyType.nullable(materialize(inner, complete));
-			case Function(arguments, result): TyType.functionType(arguments.map(argument -> materialize(argument, complete)), materialize(result, complete));
+			case Nominal(identity, arguments): TyType.nominal(identity, arguments.map(argument -> materialize(argument, complete, permitOmitted)));
+			case Nullable(inner): TyType.nullable(materialize(inner, complete, permitOmitted));
+			case Function(arguments, result,
+				signature): signature.withFunctionTypes(arguments.map(argument -> materialize(argument, complete, permitOmitted)),
+					materialize(result, complete, permitOmitted));
+			case Structure(fields, signature): signature.withAnonymousTypes(fields.map(field -> materialize(field, complete, permitOmitted)));
 		};
 	}
 
@@ -218,22 +392,27 @@ class TyInferenceSolver {
 			switch follow(term) {
 				case Variable(identity):
 					required.set(identity.ordinal, true);
+					for (entry in fieldRequirements[identity.ordinal])
+						requireConcrete(entry.term);
 				case Nominal(_, arguments):
 					for (argument in arguments)
 						requireConcrete(argument);
 				case Nullable(inner):
 					requireConcrete(inner);
-				case Function(arguments, result):
+				case Function(arguments, result, signature):
 					for (argument in arguments)
 						requireConcrete(argument);
 					requireConcrete(result);
+				case Structure(fields, _):
+					for (field in fields)
+						requireConcrete(field);
 				case Known(type):
 					if (type.hasOpenMethodParameter())
 						throw "required inference cannot publish an open method parameter";
 			}
 		}
 		for (variable in variables)
-			if (variable.openMethodParameter == null)
+			if (variable.openMethodParameter == null && !variable.allowsUnknown)
 				requireConcrete(Variable(variable));
 		// Choose the earliest admitted identity in an alias group independently
 		// of which direction unification used to link the variables.
@@ -249,13 +428,16 @@ class TyInferenceSolver {
 			solutions[ordinal] = Known(TyType.openMethodParameter(identity));
 	}
 
-	/** Required variables must be concrete; valid unconstrained method parameters become immutable open types atomically. */
+	/** Apply Dynamic-use and empty-array defaults after constraints, then publish open methods and admitted unknown inputs. */
 	public function seal():Void {
 		requireMutable();
 		final candidate = fork();
+		for (index in 0...candidate.dynamicUses.length)
+			if (candidate.dynamicUses[index])
+				candidate.visitDynamicUse(Variable(candidate.variables[index]), true);
 		candidate.publishOpenMethods();
 		for (variable in candidate.variables)
-			candidate.requireSolved(Variable(variable));
+			candidate.materialize(Variable(variable), true, variable.allowsUnknown);
 		commit(candidate);
 		sealed = true;
 		revision++;

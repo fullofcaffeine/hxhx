@@ -9,6 +9,45 @@
 	location of the complete construct.
 **/
 class TypedBodyBuilder {
+	/**
+		Publish executable conversions inside their original argument positions.
+		Each wrapper retains its operand once, so targets observe source evaluation
+		order. Rest declarations expose an array to their body but accept elements
+		at the call boundary. Extension receivers are excluded from this argument list.
+	**/
+	static function convertCallValues(arguments:Array<TypedExpr>, resolution:TypedCallResolution, typeResolver:Null<TypedExprTypeResolver>):Array<TypedExpr> {
+		final declaration = resolution.getDeclaration();
+		if (declaration == null || typeResolver == null)
+			return arguments;
+		final expected = resolution.getExpectedArguments();
+		if (resolution.getNamedArguments() != null) {
+			if (expected.length != arguments.length)
+				throw "named call contexts do not cover authored operands";
+			return [
+				for (index in 0...arguments.length)
+					expected[index].isUnknown() ? arguments[index] : typeResolver.convertValue(arguments[index], expected[index])
+			];
+		}
+		final rest = declaration.getSignature().getArgRest();
+		final offset = resolution.getExtensionProvider() == null ? 0 : 1;
+		final last = expected.length - 1;
+		final hasRest = last >= 0 && last + offset < rest.length && rest[last + offset];
+		return [
+			for (index in 0...arguments.length) {
+				final slot = index < expected.length ? index : hasRest ? last : -1;
+				var target = slot < 0 ? null : expected[slot];
+				if (target != null && hasRest && slot == last && !target.isUnknown()) {
+					final elements = target.getTypeArguments();
+					if (elements.length != 1)
+						throw "rest conversion requires its applied array element type";
+					target = elements[0];
+				}
+				target == null
+			|| target.isUnknown() ? arguments[index] : typeResolver.convertValue(arguments[index], target);
+			}
+		];
+	}
+
 	/** Apply exact call conversions after every argument has its source type. **/
 	static function applyCallArgumentConversions(arguments:Array<TypedExpr>, conversions:Array<Null<TyImplicitConversionPlan>>):Array<TypedExpr> {
 		if (conversions.length == 0)
@@ -51,8 +90,8 @@ class TypedBodyBuilder {
 				continue;
 			}
 			final convertedBody = TypedExpr.castValue(handlerExpressions[0], resultType.getCanonicalDisplay(), resultType, handlerExpressions[0].getPosition());
-			final handlerType = TyType.functionType(handler.getType().getFunctionArguments(), resultType);
-			final convertedHandler = TypedExpr.lambda(handler.getTexts(), convertedBody, handlerType, handler.getPosition(), handler.getLocalBindings());
+			final handlerType = handler.getType().withFunctionTypes(handler.getType().getFunctionArguments(), resultType);
+			final convertedHandler = handler.withExpressions([convertedBody]).withType(handlerType);
 			alignedCatches.push(TypedExpr.arrayDecl([children[0], children[1], convertedHandler], entry.getType(), entry.getPosition()));
 		}
 
@@ -69,6 +108,7 @@ class TypedBodyBuilder {
 
 	static function fallbackType(expression:HxExpr, environment:Null<TyFunctionEnv>):TyType {
 		return switch (expression) {
+			case EParenthesized(inner, _) | EPrivateAccess(inner, _): fallbackType(inner, environment);
 			case ENull: TyType.fromHintText("Null");
 			case EBool(_): TyType.fromHintText("Bool");
 			case EString(_): TyType.fromHintText("String");
@@ -83,16 +123,20 @@ class TypedBodyBuilder {
 			case EMacroType(_): TyType.fromHintText("haxe.macro.ComplexType");
 			case EReturn(_): TyType.fromHintText("Void");
 			case EVars(_): TyType.fromHintText("Void");
-			case EWhile(_, _, _, _): TyType.fromHintText("Void");
+			case EWhile(_, _, _, _, loopKind): TyType.fromHintText("Void");
 			case EBreak(_) | EContinue(_): TyType.noNormalCompletion();
+			case EDiscardThen(effect, continuation):
+				final effectType = fallbackType(effect, environment);
+				effectType.isNoNormalCompletion() ? effectType : fallbackType(continuation, environment);
 			case _: TyType.unknown();
 		};
 	}
 
-	static function expressionType(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, resolver:Null<TypedExprTypeResolver>):TyType {
+	static function expressionType(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, resolver:Null<TypedExprTypeResolver>,
+			?expected:TyType):TyType {
 		if (resolver == null || environment == null)
 			return fallbackType(expression, environment);
-		final resolved = resolver.expressionType(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment);
+		final resolved = resolver.expressionType(expression, diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment, expected);
 		return resolved == null ? TyType.unknown() : resolved;
 	}
 
@@ -240,7 +284,7 @@ class TypedBodyBuilder {
 			var resolvedType:Null<TyType> = null;
 			try {
 				resolvedType = typeResolver.expressionType(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition,
-					environment.copyForInference());
+					environment.copyForInference(), null);
 				failed = false;
 			} catch (_:TyperError) {
 				failed = true;
@@ -448,7 +492,7 @@ class TypedBodyBuilder {
 	**/
 	static function structuralOpaqueBlock(raw:String, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<TypedExpr> {
+			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
 		final statements = parsedOpaqueBlockStatements(raw);
 		if (statements == null)
 			return null;
@@ -485,12 +529,12 @@ class TypedBodyBuilder {
 					};
 					final typedInitializer = initializer == null ? TypedExpr.nullValue(localType,
 						storedPosition) : buildExpr(initializer, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver,
-							fieldResolver);
+							memberResolver);
 					final binding = lexicalEnvironment == null ? null : lexicalEnvironment.declareLocal(name, localType, Variable).toBinding();
 					expressions.push(TypedExpr.temporary(name, cleanHint, typedInitializer, TyType.fromHintText("Void"), storedPosition, binding));
 				case SExpr(expression, _):
 					expressions.push(buildExpr(expression, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver,
-						fieldResolver));
+						memberResolver));
 				case _:
 			}
 		}
@@ -502,10 +546,10 @@ class TypedBodyBuilder {
 
 	static function structuralTryCatch(raw:String, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<TypedExpr> {
+			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
 		return switch (recoveredStructuralExpression(raw)) {
 			case null: null;
-			case expression: buildExpr(expression, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+			case expression: buildExpr(expression, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 		};
 	}
 
@@ -533,34 +577,43 @@ class TypedBodyBuilder {
 	}
 
 	static function buildExpressions(expressions:Array<HxExpr>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):Array<TypedExpr> {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>,
+			?expected:Array<TyType>):Array<TypedExpr> {
 		if (expressions == null)
 			return [];
 		return [
-			for (expression in expressions)
-				buildExpr(expression, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver)
+			for (index in 0...expressions.length)
+				buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver,
+					memberResolver, expected == null || index >= expected.length || expected[index].isUnknown() ? null : expected[index])
 		];
 	}
 
-	static function declarePatternBindings(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType):Array<TyLocalBinding> {
-		return TySwitchPatternBindings.declare(environment, pattern, baseType);
+	static function declarePatternBindings(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType, resolver:Null<TypedExprTypeResolver>,
+			position:HxPos):Array<TyLocalBinding> {
+		return TySwitchPatternBindings.declare(environment, pattern, baseType,
+			resolver == null ? null : (input, name, arity) -> resolver.enumPatternArguments(input, name, arity, position));
 	}
 
 	/** Seal lambda bindings with their selected parameter types before typing captured reads. */
 	static function buildLambda(arguments:Array<String>, body:HxExpr, parameterTypes:Array<TyType>, position:Null<HxPos>, diagnosticPosition:HxPos,
 			environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
+			memberResolver:Null<TypedMemberDeclarationResolver>, ?signature:HxLambdaSignature, ?selectedType:TyType):TypedExpr {
+		final callableType = selectedType != null ? selectedType : typeResolver == null
+			|| environment == null ? null : typeResolver.lambdaType(arguments, body, parameterTypes, signature, diagnosticPosition, environment);
+		final selectedParameters = callableType == null ? parameterTypes : callableType.getFunctionArguments();
 		final bindings = new Array<TyLocalBinding>();
 		if (environment != null) {
 			environment.enterLexicalScope();
 			for (index in 0...arguments.length)
-				bindings.push(environment.declareLocal(arguments[index], parameterTypes[index], LambdaParameter).toBinding());
+				bindings.push(environment.declareLocal(arguments[index], selectedParameters[index], LambdaParameter).toBinding());
 		}
-		final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		final builtBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+		final typedBody = typeResolver != null
+			&& TyEmptySourceGroup.isEmpty(body) ? TyEmptySourceGroup.functionBody(builtBody) : builtBody;
 		if (environment != null)
 			environment.exitLexicalScope();
-		return TypedExpr.lambda(arguments.copy(), typedBody, TyType.functionType(parameterTypes, typedBody.getType()), position, bindings);
+		return TypedExpr.lambda(arguments.copy(), typedBody, callableType == null ? TyType.functionType(parameterTypes, typedBody.getType()) : callableType,
+			position, bindings, signature);
 	}
 
 	/**
@@ -571,7 +624,7 @@ class TypedBodyBuilder {
 	**/
 	static function buildStructuralTryArguments(arguments:Array<HxExpr>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<Array<TypedExpr>> {
+			memberResolver:Null<TypedMemberDeclarationResolver>):Null<Array<TypedExpr>> {
 		final entries = switch (arguments) {
 			case [ELambda([], _), EArrayDecl(entries), _]: entries;
 			case _: return null;
@@ -582,13 +635,13 @@ class TypedBodyBuilder {
 				case _:
 					return null;
 			}
-		final tryBody = buildExpr(arguments[0], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		final tryBody = buildExpr(arguments[0], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 		final typedEntries = new Array<TypedExpr>();
 		for (entry in entries)
 			switch (entry) {
 				case EArrayDecl([nameExpression, EString(hint), ELambda([name], body)]):
-					final typedName = buildExpr(nameExpression, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-					final typedHint = buildExpr(EString(hint), null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedName = buildExpr(nameExpression, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+					final typedHint = buildExpr(EString(hint), null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 					final bindings = new Array<TyLocalBinding>();
 					var argumentType = TyType.fromHintText(StringTools.trim(hint).length == 0 ? "haxe.Exception" : hint);
 					if (environment != null) {
@@ -597,7 +650,7 @@ class TypedBodyBuilder {
 						bindings.push(binding);
 						argumentType = binding.getType();
 					}
-					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedBody = buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 					if (environment != null)
 						environment.exitLexicalScope();
 					var handler = TypedExpr.lambda([name], typedBody, TyType.functionType([argumentType], typedBody.getType()), null, bindings);
@@ -612,7 +665,7 @@ class TypedBodyBuilder {
 					throw "validated structural catch changed during typed-body construction";
 			}
 		final typedCatches = TypedExpr.arrayDecl(typedEntries, expressionType(arguments[1], diagnosticPosition, environment, typeResolver), null);
-		final continuation = buildExpr(arguments[2], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+		final continuation = buildExpr(arguments[2], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 		return [tryBody, typedCatches, continuation];
 	}
 
@@ -628,20 +681,149 @@ class TypedBodyBuilder {
 		this also keeps a shadowing parameter out of its own argument expressions.
 	**/
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
-			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
-		final nodeType = expressionType(expression, diagnosticPosition, environment, typeResolver);
-		if (typeResolver != null && environment != null && !expression.match(EParenthesized(_, _))) {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>,
+			?expected:TyType, ?selectedCallType:TyType):TypedExpr {
+		final nodeType = selectedCallType == null ? expressionType(expression, diagnosticPosition, environment, typeResolver, expected) : selectedCallType;
+		// Quoted syntax has no semantic resolver and must preserve literal field access.
+		// Only the executable typing route may replace it with its constant value.
+		if (typeResolver != null)
+			switch HxLiteralCharacterCode.resolve(expression) {
+				case Character(value):
+					return TypedExpr.intLiteral(value, TyType.fromHintText("Int"), position);
+				case InvalidLiteral:
+					throw new TyperError("<typed-body>", diagnosticPosition, "String must be a single UTF8 char");
+				case NotApplicable:
+			}
+		if (typeResolver != null
+			&& environment != null
+			&& !expression.match(EParenthesized(_, _))
+			&& !expression.match(EPrivateAccess(_, _))) {
 			final target = typeResolver.runtimeTypeTarget(expression, environment, ValueExpression);
 			if (target != null)
 				return TypedExpr.runtimeTypeValue(target, position);
 		}
 		return switch (expression) {
-			case EParenthesized(inner, sourcePosition):
-				TypedExpr.parenthesized(buildExpr(inner, null, sourcePosition, environment, typeResolver, callResolver, fieldResolver),
-					exactPosition(sourcePosition));
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
+			case EPrivateAccess(inner, sourcePosition):
+				TypedExpr.privateAccess(buildExpr(inner, null, sourcePosition, environment, typeResolver, callResolver, memberResolver, expected,
+					selectedCallType),
+					exactPosition(sourcePosition));
+			case EParenthesized(inner, sourcePosition):
+				TypedExpr.parenthesized(buildExpr(inner, null, sourcePosition, environment, typeResolver, callResolver, memberResolver, expected,
+					selectedCallType),
+					exactPosition(sourcePosition));
+			case ELoweredControl(_, _, _, _):
+				throw "executable control cannot re-enter typed source construction";
+			case ESourceTry(catches, bodies, sourcePosition):
+				if (catches.length == 0 || bodies.length != catches.length + 1)
+					throw "source try replay requires its ordered handler bodies";
+				if (environment != null)
+					environment.enterLexicalScope();
+				final typedBodies = [
+					buildExpr(bodies[0], null, sourcePosition, environment, typeResolver, callResolver, memberResolver)
+				];
+				if (environment != null)
+					environment.exitLexicalScope();
+				final bindings = new Array<TyLocalBinding>();
+				for (index in 0...catches.length) {
+					final entry = catches[index];
+					if (environment != null) {
+						environment.enterLexicalScope();
+						final hint = StringTools.trim(entry.getTypeHint());
+						// Replay consumes the exact declaration selected by typing, including its resolved type.
+						bindings.push(environment.declareLocal(entry.getName(), TyType.fromHintText(hint.length == 0 ? "haxe.Exception" : hint), CatchVariable)
+							.toBinding());
+					}
+					typedBodies.push(buildExpr(bodies[index + 1], null, entry.getPosition(), environment, typeResolver, callResolver, memberResolver));
+					if (environment != null)
+						environment.exitLexicalScope();
+				}
+				final uses = new Array<TypedCatchUse>();
+				if (typeResolver != null)
+					for (binding in bindings) {
+						final use = typeResolver.catchUse(binding);
+						if (use != null)
+							uses.push(use);
+					}
+				TypedExpr.sourceTry(catches, typedBodies, nodeType, exactPosition(sourcePosition), bindings).withCatchUses(uses);
+			case ESourceFor(binding, iterable, body, sourcePosition):
+				final typedIterable = buildExpr(iterable, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				// Quoted syntax has no executing environment and must not select runtime iterator declarations.
+				final types = environment == null ? [] : TySourceFor.bindingTypes(binding, iterable, typedIterable.getType());
+				if (types == null)
+					throw "source for replay requires a resolved iterable protocol";
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forExpression(expression));
+				final bindings = new Array<TyLocalBinding>();
+				if (environment != null) {
+					environment.enterLexicalScope();
+					final names = HxForBinding.names(binding);
+					for (index in 0...names.length)
+						bindings.push(environment.declareLocal(names[index], types[index], LoopVariable).toBinding());
+				}
+				final typedBody = buildExpr(body, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				if (environment != null)
+					environment.exitLexicalScope();
+				if (controls != null)
+					controls.exit(target);
+				TypedExpr.sourceFor(binding, typedIterable, typedBody, nodeType, exactPosition(sourcePosition), bindings, target);
+			case ESourceIf(condition, whenTrue, whenFalse, sourcePosition):
+				final typedCondition = buildExpr(condition, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				if (environment != null)
+					environment.enterLexicalScope();
+				final typedTrue = buildExpr(whenTrue, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				if (environment != null)
+					environment.exitLexicalScope();
+				var typedFalse:Null<TypedExpr> = null;
+				if (whenFalse != null) {
+					if (environment != null)
+						environment.enterLexicalScope();
+					typedFalse = buildExpr(whenFalse, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+					if (environment != null)
+						environment.exitLexicalScope();
+				}
+				TypedExpr.sourceIf(typedCondition, typedTrue, typedFalse, nodeType, exactPosition(sourcePosition));
+			case EThrow(value, sourcePosition):
+				final typedValue = buildExpr(value, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				TypedExpr.throwExpr(typedValue, exactPosition(sourcePosition));
+			case ESourceGroup(children, sourcePosition):
+				if (environment != null)
+					environment.enterLexicalScope();
+				final typedChildren = buildExpressions(children, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				if (environment != null)
+					environment.exitLexicalScope();
+				TypedExpr.sourceGroup(typedChildren, nodeType, exactPosition(sourcePosition));
+			case ESourceFunction(facts, body, defaults, sourcePosition):
+				facts.assertDefaultCount(defaults.length);
+				final bindings = new Array<TyLocalBinding>();
+				final declaredName = facts.getDeclaredName();
+				if (environment != null && declaredName != null)
+					bindings.push(environment.declareLocal(declaredName, nodeType, NamedFunction).toBinding());
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Function, TypedBodyFingerprint.forExpression(expression));
+				final names = facts.getArguments();
+				if (environment != null) {
+					environment.enterLexicalScope();
+					if (!nodeType.isFunction())
+						throw "source function replay requires its selected callable type";
+					final arguments = nodeType.getFunctionArguments();
+					for (index in 0...names.length)
+						bindings.push(environment.declareLocal(names[index], arguments[index], LambdaParameter).toBinding());
+				}
+				final typedDefaults = buildExpressions(defaults, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				if (controls != null)
+					controls.beginReturns(target, nodeType.getFunctionReturn());
+				final builtBody = buildExpr(body, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				final typedBody = typeResolver != null
+					&& TyEmptySourceGroup.isEmpty(body) ? TyEmptySourceGroup.functionBody(builtBody) : builtBody;
+				if (controls != null) {
+					controls.finishReturns(target);
+					environment.exitLexicalScope();
+					controls.exit(target);
+				}
+				final functionNode = TypedExpr.sourceFunctionExpr(facts, typedBody, typedDefaults, nodeType, exactPosition(sourcePosition), bindings);
+				target == null ? functionNode : functionNode.withControlTarget(target);
 			case EBool(value):
 				TypedExpr.boolLiteral(value, nodeType, position);
 			case EString(value):
@@ -655,10 +837,9 @@ class TypedBodyBuilder {
 				if (local != null) {
 					TypedExpr.localRead(name, nodeType, position, local.toBinding());
 				} else {
-					final fieldResolution = fieldResolver == null
-						|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
-					fieldResolution == null ? TypedExpr.enumValue(name, nodeType,
-						position) : TypedExpr.nameRead(name, nodeType, position, fieldResolution.getField(), fieldResolution.getRequiresOwnerQualification());
+					final memberResolution = memberResolver == null
+						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+					memberResolution == null ? TypedExpr.enumValue(name, nodeType, position) : memberResolution.nameRead(name, nodeType, position);
 				}
 			case EThis:
 				TypedExpr.thisValue(nodeType, position);
@@ -669,25 +850,31 @@ class TypedBodyBuilder {
 				if (local != null) {
 					TypedExpr.localRead(name, nodeType, position, local.toBinding());
 				} else {
-					final fieldResolution = fieldResolver == null
-						|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
-					TypedExpr.nameRead(name, nodeType, position,
-						fieldResolution == null ? null : fieldResolution.getField(), fieldResolution != null && fieldResolution.getRequiresOwnerQualification());
+					final memberResolution = memberResolver == null
+						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+					memberResolution == null ? TypedExpr.nameRead(name, nodeType, position) : memberResolution.nameRead(name, nodeType, position);
 				}
 			case EField(object, field):
-				final fieldResolution = fieldResolver == null
-					|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
-				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field, nodeType,
-					position, fieldResolution == null ? null : fieldResolution.getField());
+				final memberResolution = memberResolver == null
+					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+				final receiver = buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				memberResolution == null ? TypedExpr.fieldRead(receiver, field, nodeType,
+					position) : memberResolution.fieldRead(receiver, field, nodeType, position);
 			case ENullSafeField(object, field):
-				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field,
+				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), field,
 					nodeType, position);
 			case ECall(callee, arguments):
 				switch (callee) {
-					case ELambda(names, body) if (names.length == arguments.length):
-						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					case ESuper:
+						final receiver = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+						final application = typeResolver == null ? null : typeResolver.constructorApplication(receiver.getType(),
+							[for (argument in typedArguments) argument.getType()], arguments);
+						return TypedExpr.superConstructorCall(receiver, typedArguments, position, application);
+					case ELambda(names, body, signature) if (names.length == arguments.length):
+						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 						final typedLambda = buildLambda(names, body, [for (argument in typedArguments) argument.getType()], null, diagnosticPosition,
-							environment, typeResolver, callResolver, fieldResolver);
+							environment, typeResolver, callResolver, memberResolver, signature);
 						return TypedExpr.call(typedLambda, typedArguments, null, typedLambda.getType().getFunctionReturn(), position);
 					case _:
 				}
@@ -696,31 +883,60 @@ class TypedBodyBuilder {
 					loweredProbe;
 				} else {
 					final resolution = callResolver == null
-						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
-					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment, expression);
+					// A declaration-selected generic call owns its applied signature. Replaying
+					// its callee must not allocate an unrelated stored-method capture.
+					final selected = resolution.getDeclaration();
+					final callable = selected != null
+						&& selected.getTypeParameterIds()
+							.length > 0 ? TyType.functionType(resolution.getExpectedArguments(),
+							nodeType) : typeResolver == null
+								|| environment == null ? null : typeResolver.callTargetType(callee, diagnosticPosition, environment);
+					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, null, callable);
 					var typedArguments = callee.match(EIdent("__hxhx_try")) ? buildStructuralTryArguments(arguments, diagnosticPosition, environment,
-						typeResolver, callResolver, fieldResolver) : null;
+						typeResolver, callResolver, memberResolver) : null;
 					if (typedArguments == null)
-						typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+						typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+							resolution.getExpectedArguments());
 					typedArguments = applyCallArgumentConversions(typedArguments, resolution.getArgumentConversions());
+					typedArguments = convertCallValues(typedArguments, resolution, typeResolver);
 					if (callee.match(EIdent("__hxhx_try")))
 						typedArguments = alignStructuralTryCatchResults(typedArguments, nodeType);
-					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
-						resolution.getExtensionProvider());
+					// A method read can retain its declaration even when no call candidate
+					// applies. Its open generic signature is not a function-value binding.
+					if (resolution.getDeclaration() == null && typedCallee.getDeclaration() == null && typedCallee.getType().isFunction())
+						TypedExpr.functionValueCall(typedCallee, typedArguments, nodeType, position,
+							environment == null ? null : environment.getInference().callbackBinding(callee));
+					else {
+						final call = TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position,
+							resolution.getRequiresOwnerQualification(), resolution.getExtensionProvider());
+						final named = resolution.getNamedArguments();
+						named == null ? call : call.withNamedArguments(named.publish(typedArguments, nodeType));
+					}
 				}
 			case EReturn(inner):
-				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver,
-					fieldResolver), nodeType,
+				final returned = TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver,
+					callResolver, memberResolver), nodeType,
 					position);
+				final state = environment == null ? null : environment.currentSourceReturns();
+				state == null ? returned : returned.withControlTarget(state.target);
 			case EVars(declarations):
 				final typedDeclarations = new Array<TypedExpr>();
 				for (declaration in declarations) {
 					final declarationPosition = exactPosition(HxExprVarDecl.getPosition(declaration));
 					final initializer = HxExprVarDecl.getInitializer(declaration);
-					final typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
-						typeResolver, callResolver, fieldResolver);
+					var typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
+						typeResolver, callResolver, memberResolver);
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
-					final declarationType = writtenType.length > 0 ? TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
+					final declarationType = writtenType.length > 0 ? typeResolver != null
+						&& environment != null ? typeResolver.declaredType(writtenType,
+							environment) : TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
+					if (writtenType.length > 0
+						&& environment != null
+						&& environment.isUntypedContext()
+						&& typedInitializer != null
+						&& typedInitializer.getType().getSemanticKey() != declarationType.getSemanticKey())
+						typedInitializer = TypedExpr.untypedValue(typedInitializer, declarationType, declarationPosition);
 					final binding = environment == null ? null : environment.declareLocal(HxExprVarDecl.getName(declaration), declarationType, Variable)
 						.toBinding();
 					typedDeclarations.push(TypedExpr.variableDeclaration(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
@@ -730,38 +946,61 @@ class TypedBodyBuilder {
 				TypedExpr.variableDeclarations(typedDeclarations, nodeType, position);
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw "expression-level variable declaration must be nested inside EVars";
-			case EWhile(condition, body, bodyIsBlock, loopPosition):
-				final typedCondition = buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver, fieldResolver);
+			case EWhile(condition, body, bodyIsBlock, loopPosition, loopKind):
+				final typedCondition = buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver, memberResolver);
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forExpression(expression));
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedBody = buildExpressions(body, loopPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedBody = buildExpressions(body, loopPosition, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
-				TypedExpr.whileExpr(typedCondition, typedBody, bodyIsBlock, nodeType, exactPosition(loopPosition));
+				if (controls != null)
+					controls.exit(target);
+				TypedExpr.whileExpr(typedCondition, typedBody, bodyIsBlock, nodeType, exactPosition(loopPosition), loopKind).withControlTarget(target);
 			case EBreak(controlPosition):
-				TypedExpr.breakExpr(exactPosition(controlPosition));
+				TypedExpr.breakExpr(exactPosition(controlPosition))
+					.withControlTarget(environment == null ? null : environment.requireControlScope().loopTarget());
 			case EContinue(controlPosition):
-				TypedExpr.continueExpr(exactPosition(controlPosition));
+				TypedExpr.continueExpr(exactPosition(controlPosition))
+					.withControlTarget(environment == null ? null : environment.requireControlScope().loopTarget());
+			case EDiscardThen(effect, continuation):
+				final typedEffect = buildExpr(effect, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedContinuation = buildExpr(continuation, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				TypedExpr.block([typedEffect, typedContinuation], nodeType, position);
 			case EMacroExpr(inner, wrappers):
-				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					wrappers == null ? [] : wrappers.copy(), nodeType, position);
+				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, null, null, null, null), wrappers == null ? [] : wrappers.copy(), nodeType,
+					position);
 			case EMacroType(typeText):
 				TypedExpr.macroType(typeText, nodeType, position);
-			case ELambda(arguments, body):
+			case ELambda(arguments, body, signature):
 				buildLambda(arguments, body, [for (_ in arguments) TyType.fromHintText("Dynamic")], position, diagnosticPosition, environment, typeResolver,
-					callResolver, fieldResolver);
+					callResolver, memberResolver, signature, nodeType.isFunction() ? nodeType : null);
 			case ETryCatchRaw(raw):
-				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				if (block != null) {
 					block;
 				} else {
-					final tryCatch = structuralTryCatch(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final tryCatch = structuralTryCatch(raw, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 					tryCatch == null ? TypedExpr.opaque(TypedOpaqueExprKind.TryCatch, raw, nodeType, position) : tryCatch;
 				}
 			case ESwitchRaw(raw):
 				TypedExpr.opaque(TypedOpaqueExprKind.Switch, raw, nodeType, position);
 			case ESwitch(scrutinee, patterns, expressions):
-				final typedScrutinee = buildExpr(scrutinee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedScrutinee = buildExpr(scrutinee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				// Resolve names before declaring pattern locals: a same-spelled static
+				// constant is a test, not proof that every input is captured.
+				function isCapture(name:String):Bool {
+					return environment != null
+						&& memberResolver != null
+						&& environment.resolveSymbol(name) == null
+						&& memberResolver(EIdent(name), diagnosticPosition, environment) == null;
+				}
+				final irrefutable = patterns != null
+					&& patterns.filter(pattern -> TySwitchIrrefutable.proves(pattern, typedScrutinee.getType(), isCapture)).length > 0;
+				final exhaustive = irrefutable
+					|| (typeResolver != null
+						&& typeResolver.enumSwitchCoverage(typedScrutinee.getType(), patterns, diagnosticPosition, isCapture));
 				final typedBranches = new Array<TypedExpr>();
 				final patternBindings = new Array<TyLocalBinding>();
 				final count = patterns == null
@@ -769,47 +1008,58 @@ class TypedBodyBuilder {
 				for (index in 0...count) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType()))
+					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
 						patternBindings.push(binding);
-					typedBranches.push(buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver));
+					typedBranches.push(buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver));
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings);
+				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings, exhaustive);
 			case ENew(typePath, arguments):
-				TypedExpr.newValue(typePath, buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					nodeType, position);
+				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final constructor = typeResolver == null ? null : typeResolver.constructorApplication(nodeType,
+					[for (argument in typedArguments) argument.getType()], arguments);
+				TypedExpr.newValue(typePath, typedArguments, nodeType, position, constructor);
 			case EUnop(op, fixity, inner):
-				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType,
+				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), nodeType,
 					position);
 			case EBinop("is", value, operand):
 				final target = typeResolver == null
 					|| environment == null ? null : typeResolver.runtimeTypeTarget(operand, environment, TypeOperand);
 				if (target == null)
 					throw "runtime type test requires a resolved target";
-				TypedExpr.runtimeTypeTest(buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), target, position);
+				TypedExpr.runtimeTypeTest(buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), target,
+					position);
 			case EBinop("=", left, right):
-				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				TypedExpr.assign(typedLeft, typedRight, nodeType, position);
+				final destination = TypedCastExpectation.isUnchecked(right)
+					|| TypedArrayLiteral.isLiteral(right) ? expressionType(left, diagnosticPosition, environment, typeResolver) : null;
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, destination);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				// A declared conversion is executable behavior, including effects.
+				// Keep the selected field type and materialize the conversion once.
+				final converted = typedLeft.getFieldInfo() == null
+					|| typeResolver == null
+					|| (environment != null && environment.isUntypedContext())
+					|| TyFieldAssignment.explicitlyUntyped(right) ? typedRight : typeResolver.convertValue(typedRight, typedLeft.getType());
+				TypedExpr.assign(typedLeft, converted, nodeType, position);
 			case EBinop(op, left, right) if (isCompoundAssignment(op)):
-				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.compoundAssign(op, typedLeft, typedRight, nodeType, position);
 			case EBinop(op, left, right):
-				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.binary(op, typedLeft, typedRight, nodeType, position);
 			case ETernary(condition, whenTrue, whenFalse):
-				final typedCondition = buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedWhenTrue = buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedWhenFalse = buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedCondition = buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedWhenTrue = buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
+				final typedWhenFalse = buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
 				TypedExpr.ternary(typedCondition, typedWhenTrue, typedWhenFalse, nodeType, position);
 			case EAnon(fieldNames, fieldValues):
 				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(),
-					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), nodeType, position);
 			case EArrayComprehension(name, iterable, guard, value):
-				final typedIterable = buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedIterable = buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final elementType = switch (typedIterable.getType().getTypeArguments()) {
 					case [element]: element;
 					case _: TyType.fromHintText("Dynamic");
@@ -817,31 +1067,40 @@ class TypedBodyBuilder {
 				if (environment != null)
 					environment.enterLexicalScope();
 				final binding = environment == null ? null : environment.declareLocal(name, elementType, ComprehensionVariable).toBinding();
-				final typedGuard = guard == null ? null : buildExpr(guard, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedValue = buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedGuard = guard == null ? null : buildExpr(guard, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedValue = buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
 				TypedExpr.arrayComprehension(name, typedIterable, typedGuard, typedValue, nodeType, position, binding);
 			case EArrayDecl(values):
-				TypedExpr.arrayDecl(buildExpressions(values, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final element = TypedArrayLiteral.elementType(nodeType);
+				// A comprehension's loop still has Void type. Its yield owns element
+				// conversions; treating the loop as an element demands a false return.
+				final comprehension = values.length == 1 && values[0].match(ESourceFor(_, _, _, _));
+				TypedExpr.arrayDecl(buildExpressions(values, diagnosticPosition, environment, typeResolver, callResolver,
+					memberResolver, element == null || comprehension ? null : [for (_ in values) element]),
+					nodeType, position);
 			case EArrayAccess(array, index):
-				final typedArray = buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedIndex = buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedArray = buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedIndex = buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.arrayAccess(typedArray, typedIndex, nodeType, position);
 			case ERange(start, end):
-				final typedStart = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
-				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedStart = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.range(typedStart, typedEnd, nodeType, position);
 			case ECast(inner, typeHint):
 				final typedInner = switch (inner) {
-					case ELambda(names, body) if (nodeType.isFunction() && nodeType.getFunctionArguments().length == names.length):
+					case ELambda(names, body, signature) if (nodeType.isFunction()
+						&& nodeType.getFunctionArguments().length == names.length):
 						buildLambda(names, body, nodeType.getFunctionArguments(), null, diagnosticPosition, environment, typeResolver, callResolver,
-							fieldResolver);
-					case _: buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+							memberResolver, signature);
+					case _: buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				};
 				TypedExpr.castValue(typedInner, typeHint, nodeType, position);
 			case EUntyped(inner):
-				TypedExpr.untypedValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final buildInner = () -> buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedInner = environment == null ? buildInner() : environment.withUntyped(buildInner);
+				TypedExpr.untypedValue(typeResolver == null ? typedInner : TypedFeatureIntrinsic.capture(typedInner), nodeType, position);
 			case EUnsupported(raw):
 				TypedExpr.opaque(TypedOpaqueExprKind.Unsupported, raw, nodeType, position);
 		};
@@ -854,15 +1113,15 @@ class TypedBodyBuilder {
 		the same semantic resolvers as methods in the owning class.
 	**/
 	public static function buildExpression(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver,
-			?callResolver:TypedCallDeclarationResolver, ?fieldResolver:TypedFieldDeclarationResolver):TypedExpr {
+			?callResolver:TypedCallDeclarationResolver, ?memberResolver:TypedMemberDeclarationResolver, ?expected:TyType):TypedExpr {
 		if (expression == null)
 			throw "cannot build a null typed expression";
 		final position = diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition;
-		return buildExpr(expression, exactPosition(position), position, environment, typeResolver, callResolver, fieldResolver);
+		return buildExpr(expression, exactPosition(position), position, environment, typeResolver, callResolver, memberResolver, expected);
 	}
 
 	static function buildStmt(statement:HxStmt, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
-			callResolver:Null<TypedCallDeclarationResolver>, fieldResolver:Null<TypedFieldDeclarationResolver>):TypedStmt {
+			callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>):TypedStmt {
 		final sourcePosition = switch (statement) {
 			case SBlock(_, position) | SVar(_, _, _, position) | SIf(_, _, _, position) | SForIn(_, _, _, position) | SForKeyValue(_, _, _, _, position) |
 				SWhile(_, _, position) | SDoWhile(_, _, position) | SSwitch(_, _, _, position) | STry(_, _, position) | SBreak(position) |
@@ -874,81 +1133,111 @@ class TypedBodyBuilder {
 			case SBlock(statements, _):
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedStatements = buildStatements(statements, environment, typeResolver, callResolver, fieldResolver);
+				final typedStatements = buildStatements(statements, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
 				TypedStmt.block(typedStatements, storedPosition);
 			case SVar(name, typeHint, initializer, _, metadata):
-				final typedInitializer = initializer == null ? null : buildExpr(initializer, storedPosition, diagnosticPosition, environment, typeResolver,
-					callResolver, fieldResolver);
+				final expected = typeResolver == null
+					|| environment == null
+					|| typeHint == null
+					|| StringTools.trim(typeHint).length == 0 ? null : typeResolver.declaredType(typeHint, environment);
+				final unchecked = expected != null && environment != null && environment.isUntypedContext();
+				var typedInitializer = initializer == null ? null : buildExpr(initializer, storedPosition, diagnosticPosition, environment, typeResolver,
+					callResolver, memberResolver, unchecked ? null : expected);
+				if (typedInitializer != null && expected != null && typeResolver != null) {
+					if (unchecked && typedInitializer.getType().getSemanticKey() != expected.getSemanticKey())
+						// Preserve both the known operand and the authored unchecked destination.
+						typedInitializer = TypedExpr.untypedValue(typedInitializer, expected, storedPosition);
+					else
+						typedInitializer = typeResolver.convertValue(typedInitializer, expected);
+				}
 				final writtenType = StringTools.trim(typeHint == null ? "" : typeHint);
 				final localType = writtenType.length > 0 ? TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
 				final binding = environment == null ? null : environment.declareLocal(name, localType, Variable).toBinding();
 				TypedStmt.variable(name, typeHint, typedInitializer, storedPosition, metadata == null ? [] : metadata, binding);
 			case SIf(condition, whenTrue, whenFalse, _):
-				final typedCondition = buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedCondition = buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedWhenTrue = buildStmt(whenTrue, environment, typeResolver, callResolver, fieldResolver);
+				final typedWhenTrue = buildStmt(whenTrue, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
 				var typedWhenFalse:Null<TypedStmt> = null;
 				if (whenFalse != null) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					typedWhenFalse = buildStmt(whenFalse, environment, typeResolver, callResolver, fieldResolver);
+					typedWhenFalse = buildStmt(whenFalse, environment, typeResolver, callResolver, memberResolver);
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
 				TypedStmt.ifStmt(typedCondition, typedWhenTrue, typedWhenFalse, storedPosition);
 			case SForIn(name, iterable, body, _):
-				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
 					environment.enterLexicalScope();
 				final binding = environment == null ? null : environment.declareLocal(name, TyType.fromHintText("Dynamic"), LoopVariable).toBinding();
-				final typedBody = buildStmt(body, environment, typeResolver, callResolver, fieldResolver);
+				final typedBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
-				TypedStmt.forIn(name, typedIterable, typedBody, storedPosition, binding);
+				if (controls != null)
+					controls.exit(target);
+				TypedStmt.forIn(name, typedIterable, typedBody, storedPosition, binding).withControlTarget(target);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
-				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType());
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
 					environment.enterLexicalScope();
 				final bindings = environment == null ? [] : [
-					environment.declareLocal(keyName, TyType.fromHintText("String"), LoopVariable).toBinding(),
-					environment.declareLocal(valueName, TyType.fromHintText("Dynamic"), LoopVariable).toBinding()
+					environment.declareLocal(keyName, bindingTypes == null ? TyType.fromHintText("String") : bindingTypes[0], LoopVariable).toBinding(),
+					environment.declareLocal(valueName, bindingTypes == null ? TyType.fromHintText("Dynamic") : bindingTypes[1], LoopVariable).toBinding()
 				];
-				final typedBody = buildStmt(body, environment, typeResolver, callResolver, fieldResolver);
+				final typedBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
-				TypedStmt.forKeyValue(keyName, valueName, typedIterable, typedBody, storedPosition, bindings);
+				if (controls != null)
+					controls.exit(target);
+				TypedStmt.forKeyValue(keyName, valueName, typedIterable, typedBody, storedPosition, bindings).withControlTarget(target);
 			case SWhile(condition, body, _):
-				final typedCondition = buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedCondition = buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedBody = buildStmt(body, environment, typeResolver, callResolver, fieldResolver);
+				final typedBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
-				TypedStmt.whileStmt(typedCondition, typedBody, storedPosition);
+				if (controls != null)
+					controls.exit(target);
+				TypedStmt.whileStmt(typedCondition, typedBody, storedPosition).withControlTarget(target);
 			case SDoWhile(body, condition, _):
+				final controls = environment == null ? null : environment.requireControlScope();
+				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedBody = buildStmt(body, environment, typeResolver, callResolver, fieldResolver);
+				final typedBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
-				TypedStmt.doWhile(typedBody, buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					storedPosition);
+				if (controls != null)
+					controls.exit(target);
+				TypedStmt.doWhile(typedBody,
+					buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), storedPosition)
+					.withControlTarget(target);
 			case SSwitch(scrutinee, patterns, bodies, _):
-				final typedScrutinee = buildExpr(scrutinee, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedScrutinee = buildExpr(scrutinee, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedBodies = new Array<TypedStmt>();
 				final bindings = new Array<TyLocalBinding>();
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 				for (index in 0...count) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType()))
+					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
 						bindings.push(binding);
-					typedBodies.push(buildStmt(bodies[index], environment, typeResolver, callResolver, fieldResolver));
+					typedBodies.push(buildStmt(bodies[index], environment, typeResolver, callResolver, memberResolver));
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
@@ -960,7 +1249,7 @@ class TypedBodyBuilder {
 				final catchBindings = new Array<TyLocalBinding>();
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedTryBody = buildStmt(body, environment, typeResolver, callResolver, fieldResolver);
+				final typedTryBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
 				if (catches != null)
@@ -971,7 +1260,7 @@ class TypedBodyBuilder {
 							environment.enterLexicalScope();
 							catchBindings.push(environment.declareLocal(entry.name, TyType.fromHintText("Dynamic"), CatchVariable).toBinding());
 						}
-						catchBodies.push(buildStmt(entry.body, environment, typeResolver, callResolver, fieldResolver));
+						catchBodies.push(buildStmt(entry.body, environment, typeResolver, callResolver, memberResolver));
 						if (environment != null)
 							environment.exitLexicalScope();
 					}
@@ -984,44 +1273,66 @@ class TypedBodyBuilder {
 					}
 				TypedStmt.tryStmt(typedTryBody, catchNames, catchTypeHints, catchBodies, storedPosition, catchBindings).withCatchUses(uses);
 			case SBreak(_):
-				TypedStmt.breakStmt(storedPosition);
+				TypedStmt.breakStmt(storedPosition).withControlTarget(environment == null ? null : environment.requireControlScope().loopTarget());
 			case SContinue(_):
-				TypedStmt.continueStmt(storedPosition);
+				TypedStmt.continueStmt(storedPosition).withControlTarget(environment == null ? null : environment.requireControlScope().loopTarget());
 			case SThrow(expression, _):
-				TypedStmt.throwStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+				TypedStmt.throwStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
 					storedPosition);
 			case SReturnVoid(_):
 				TypedStmt.returnVoid(storedPosition);
 			case SReturn(expression, _):
-				TypedStmt.returnValue(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					storedPosition);
+				final expected = environment == null || environment.getReturnType().isUnknown() ? null : environment.getReturnType();
+				final value = buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
+				TypedStmt.returnValue(typeResolver == null
+					|| expected == null ? value : typeResolver.convertValue(value, expected), storedPosition);
 			case SExpr(expression, _):
-				TypedStmt.expressionStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+				TypedStmt.expressionStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
 					storedPosition);
 		};
 	}
 
 	static function buildStatements(statements:Array<HxStmt>, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
-			callResolver:Null<TypedCallDeclarationResolver>, fieldResolver:Null<TypedFieldDeclarationResolver>):Array<TypedStmt> {
+			callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>):Array<TypedStmt> {
 		if (statements == null)
 			return [];
 		return [
 			for (statement in statements)
-				buildStmt(statement, environment, typeResolver, callResolver, fieldResolver)
+				buildStmt(statement, environment, typeResolver, callResolver, memberResolver)
 		];
 	}
 
 	public static function buildFunction(ownerName:String, sourceOrdinal:Int, declaration:HxFunctionDecl, semanticDeclaration:Null<TyDeclarationInfo>,
 			environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver, ?callResolver:TypedCallDeclarationResolver,
-			?fieldResolver:TypedFieldDeclarationResolver):TypedFunction {
+			?memberResolver:TypedMemberDeclarationResolver):TypedFunction {
 		final sourceBody = HxFunctionDecl.getBody(declaration);
 		final semanticBody = expandStructuralStatements(sourceBody);
 		final lexicalReplay = environment == null ? null : environment.createBodyReplay();
-		final typedStatements = buildStatements(semanticBody, lexicalReplay, typeResolver, callResolver, fieldResolver);
+		final defaults = new Array<TypedFunctionDefault>();
+		final arguments = HxFunctionDecl.getArgs(declaration);
+		for (index in 0...arguments.length) {
+			switch HxFunctionArg.getDefaultValue(arguments[index]) {
+				case NoDefault:
+				case Default(expression):
+					final expected = environment == null ? null : environment.getParams()[index].getType();
+					var value = buildExpression(expression, HxFunctionDecl.getPos(declaration), lexicalReplay, typeResolver, callResolver, memberResolver,
+						expected);
+					if (typeResolver != null && expected != null)
+						value = typeResolver.convertValue(value, expected);
+					defaults.push(new TypedFunctionDefault(index, value));
+			}
+		}
+		final controls = lexicalReplay == null
+			|| lexicalReplay.getRootControlTarget() == null ? null : lexicalReplay.requireControlScope();
+		if (controls != null)
+			controls.beginReturns(controls.getRoot(), environment.getReturnType());
+		final typedStatements = buildStatements(semanticBody, lexicalReplay, typeResolver, callResolver, memberResolver);
+		if (controls != null)
+			controls.finishReturns(controls.getRoot());
 		if (lexicalReplay != null)
 			lexicalReplay.assertReplayComplete();
 		final typedBody = new TypedFunctionBody(typedStatements, TypedBodyFingerprint.forStatements(sourceBody));
-		return new TypedFunction(ownerName, sourceOrdinal, declaration, semanticDeclaration, environment, typedBody);
+		return new TypedFunction(ownerName, sourceOrdinal, declaration, semanticDeclaration, environment, typedBody, defaults);
 	}
 
 	/** Build conservative structural bodies for synthetic modules that bypass TyperStage. **/

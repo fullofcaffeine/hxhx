@@ -157,7 +157,16 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(switchBodyJs, "var __sw = kind", "block-body function switch should lower to expression switch");
 		assertContains(switchBodyJs, 'if (__sw === "a")', "block-body function switch should preserve string case");
 		assertContains(switchBodyJs, 'out = "A"', "block-body function switch should preserve case body side effect");
-		assertContains(switchBodyJs, "return out;", "block-body function switch should run the continuation after the switch");
+		final switchProcess = new sys.io.Process("node", [
+			"-e",
+			"const run = " + switchBodyJs + "; console.log(run('a')); console.log(run('other'));"
+		]);
+		final switchOutput = switchProcess.stdout.readAll().toString();
+		final switchErrors = switchProcess.stderr.readAll().toString();
+		final switchExit = switchProcess.exitCode();
+		switchProcess.close();
+		assertEquals(Std.string(switchExit), "0", "switch continuation must execute in JavaScript: " + switchErrors);
+		assertEquals(switchOutput, "A\nX\n", "each switch branch must run its side effect before the continuation");
 
 		final castPostfixJs = JsExprEmitter.emit(HxParser.parseExprText("cast(c, Cov1).covariant()"), exprScope);
 		assertContains(castPostfixJs, "c.covariant()", "cast expression should accept field/call postfix suffixes");

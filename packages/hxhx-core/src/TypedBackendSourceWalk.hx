@@ -1,41 +1,68 @@
 /** Visits projected source nodes in deterministic preorder without interpreting transport names or raw source. */
 class TypedBackendSourceWalk {
+	/** Visit conditional defaults and then the body without making defaults body statements. */
+	public static function functionDeclaration(declaration:HxFunctionDecl, onExpression:HxExpr->Void, onStatement:HxStmt->Void):Void {
+		for (argument in HxFunctionDecl.getArgs(declaration))
+			switch HxFunctionArg.getDefaultValue(argument) {
+				case NoDefault:
+				case Default(value):
+					expression(value, onExpression);
+			}
+		for (value in HxFunctionDecl.getBody(declaration))
+			statement(value, onExpression, onStatement);
+	}
+
 	public static function expression(node:Null<HxExpr>, onExpression:HxExpr->Void):Void {
 		if (node == null)
 			return;
 		onExpression(node);
+		expressionChildren(node, child -> expression(child, onExpression));
+	}
+
+	/** Visit direct children so execution-aware consumers can own quotation and closure boundaries. */
+	public static function expressionChildren(node:HxExpr, onChild:HxExpr->Void):Void {
+		function visit(child:Null<HxExpr>):Void {
+			if (child != null)
+				onChild(child);
+		}
 		switch (node) {
-			case EParenthesized(value, _) | EField(value, _) | ENullSafeField(value, _) | EMacroExpr(value, _) | ELambda(_, value) | EUnop(_, _, value) |
-				ECast(value, _) | EUntyped(value) | EReturn(value):
-				expression(value, onExpression);
+			case ESourceFunction(facts, body, defaults, _):
+				facts.assertDefaultCount(defaults.length);
+				visit(body);
+				for (value in defaults)
+					visit(value);
+			case EPrivateAccess(value, _) | EParenthesized(value, _) | EField(value, _) | ENullSafeField(value, _) | EMacroExpr(value, _) |
+				ELambda(_, value) | EUnop(_, _, value) | ECast(value, _) | EUntyped(value) | EReturn(value) | EThrow(value, _):
+				visit(value);
 			case ECall(callee, arguments):
-				expression(callee, onExpression);
+				visit(callee);
 				for (argument in arguments)
-					expression(argument, onExpression);
+					visit(argument);
 			case ESwitch(value, _, branches):
-				expression(value, onExpression);
+				visit(value);
 				for (branch in branches)
-					expression(branch, onExpression);
-			case ENew(_, values) | EAnon(_, values) | EArrayDecl(values) | EVars(values):
+					visit(branch);
+			case ESourceTry(_, values, _) | ENew(_, values) | EAnon(_, values) | EArrayDecl(values) | EVars(values) | ESourceGroup(values, _) |
+				ELoweredControl(_, _, values, _):
 				for (value in values)
-					expression(value, onExpression);
-			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right):
-				expression(left, onExpression);
-				expression(right, onExpression);
-			case ETernary(condition, yes, no):
-				expression(condition, onExpression);
-				expression(yes, onExpression);
-				expression(no, onExpression);
+					visit(value);
+			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right) | EDiscardThen(left, right) | ESourceFor(_, left, right, _):
+				visit(left);
+				visit(right);
+			case ETernary(condition, yes, no) | ESourceIf(condition, yes, no, _):
+				visit(condition);
+				visit(yes);
+				visit(no);
 			case EArrayComprehension(_, iterable, guard, value):
-				expression(iterable, onExpression);
-				expression(guard, onExpression);
-				expression(value, onExpression);
+				visit(iterable);
+				visit(guard);
+				visit(value);
 			case EVariableDeclaration(_, _, value, _, _, _):
-				expression(value, onExpression);
-			case EWhile(condition, body, _, _):
-				expression(condition, onExpression);
+				visit(value);
+			case EWhile(condition, body, _, _, loopKind):
+				visit(condition);
 				for (value in body)
-					expression(value, onExpression);
+					visit(value);
 			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EEnumValue(_) | EThis | ESuper | EIdent(_) | EMacroType(_) | ETryCatchRaw(_) |
 				ESwitchRaw(_) | EUnsupported(_) | EBreak(_) | EContinue(_):
 		}
@@ -43,28 +70,37 @@ class TypedBackendSourceWalk {
 
 	public static function statement(node:HxStmt, onExpression:HxExpr->Void, onStatement:HxStmt->Void):Void {
 		onStatement(node);
+		statementChildren(node, value -> expression(value, onExpression), child -> statement(child, onExpression, onStatement));
+	}
+
+	/** Preserve direct-child order without choosing whether a consumer descends into each child. */
+	public static function statementChildren(node:HxStmt, onExpression:HxExpr->Void, onStatement:HxStmt->Void):Void {
+		function visit(value:Null<HxExpr>):Void {
+			if (value != null)
+				onExpression(value);
+		}
 		switch (node) {
 			case SBlock(body, _):
 				for (child in body)
-					statement(child, onExpression, onStatement);
+					onStatement(child);
 			case SVar(_, _, value, _, _) | SThrow(value, _) | SReturn(value, _) | SExpr(value, _):
-				expression(value, onExpression);
+				visit(value);
 			case SIf(condition, yes, no, _):
-				expression(condition, onExpression);
-				statement(yes, onExpression, onStatement);
+				visit(condition);
+				onStatement(yes);
 				if (no != null)
-					statement(no, onExpression, onStatement);
+					onStatement(no);
 			case SForIn(_, value, body, _) | SForKeyValue(_, _, value, body, _) | SWhile(value, body, _) | SDoWhile(body, value, _):
-				expression(value, onExpression);
-				statement(body, onExpression, onStatement);
+				visit(value);
+				onStatement(body);
 			case SSwitch(value, _, bodies, _):
-				expression(value, onExpression);
+				visit(value);
 				for (body in bodies)
-					statement(body, onExpression, onStatement);
+					onStatement(body);
 			case STry(body, catches, _):
-				statement(body, onExpression, onStatement);
+				onStatement(body);
 				for (clause in catches)
-					statement(clause.body, onExpression, onStatement);
+					onStatement(clause.body);
 			case SBreak(_) | SContinue(_) | SReturnVoid(_):
 		}
 	}

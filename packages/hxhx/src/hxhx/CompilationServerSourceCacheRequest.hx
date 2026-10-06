@@ -98,15 +98,9 @@ class CompilationServerSourceCacheRequest {
 		ensureOpen();
 		if (filePath == null || filePath.length == 0)
 			return null;
-		if (!filesystem.isFile(filePath))
+		final bytes = filesystem.readBytes(filePath);
+		if (bytes == null)
 			return null;
-		final bytes = try {
-			sys.io.File.getBytes(filePath);
-		} catch (_:haxe.io.Error) {
-			return null;
-		} catch (_:String) {
-			return null;
-		}
 		providerReport.recordSourceBytesRead(bytes.length);
 		final logicalPath = normalizePath(filePath);
 		final source = bytes.getString(0, bytes.length);
@@ -268,6 +262,8 @@ class CompilationServerSourceCacheRequest {
 	}
 
 	static function normalizePath(path:String):String {
+		if (CompilerBundledSources.owns(path))
+			return path;
 		return Path.normalize(sys.FileSystem.absolutePath(path));
 	}
 }

@@ -72,6 +72,20 @@ class SourceFunctionBodyRewriter {
 
 	static function expressionNode(value:HxExpr, transform:(HxExpr, HxExpr) -> HxExpr):HxExpr {
 		final rebuilt:HxExpr = switch (value) {
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				ESourceIf(expressionNode(condition, transform), expressionNode(whenTrue, transform), nullableExpression(whenFalse, transform), position);
+			case ESourceTry(catches, bodies, position):
+				ESourceTry(catches.copy(), [for (body in bodies) expressionNode(body, transform)], position);
+			case ESourceFor(binding, iterable, body, position):
+				ESourceFor(binding, expressionNode(iterable, transform), expressionNode(body, transform), position);
+			case EThrow(thrown, position):
+				EThrow(expressionNode(thrown, transform), position);
+			case ESourceGroup(children, position):
+				ESourceGroup([for (child in children) expressionNode(child, transform)], position);
+			case ESourceFunction(facts, body, defaults, position):
+				ESourceFunction(facts, expressionNode(body, transform), [for (entry in defaults) expressionNode(entry, transform)], position);
+			case ELoweredControl(kind, target, children, position):
+				ELoweredControl(kind, target, [for (child in children) expressionNode(child, transform)], position);
 			case EField(receiver, field):
 				EField(expressionNode(receiver, transform), field);
 			case ENullSafeField(receiver, field):
@@ -80,8 +94,8 @@ class SourceFunctionBodyRewriter {
 				ECall(expressionNode(callee, transform), [for (argument in arguments) expressionNode(argument, transform)]);
 			case EMacroExpr(inner, wrappers):
 				EMacroExpr(expressionNode(inner, transform), wrappers == null ? [] : wrappers.copy());
-			case ELambda(arguments, lambdaBody):
-				ELambda(arguments == null ? [] : arguments.copy(), expressionNode(lambdaBody, transform));
+			case ELambda(arguments, lambdaBody, signature):
+				ELambda(arguments == null ? [] : arguments.copy(), expressionNode(lambdaBody, transform), signature);
 			case ESwitch(scrutinee, patterns, expressions):
 				ESwitch(expressionNode(scrutinee, transform), patterns == null ? [] : patterns.copy(),
 					expressions == null ? [] : [for (item in expressions) expressionNode(item, transform)]);
@@ -105,6 +119,8 @@ class SourceFunctionBodyRewriter {
 				EArrayAccess(expressionNode(array, transform), expressionNode(index, transform));
 			case ERange(start, end):
 				ERange(expressionNode(start, transform), expressionNode(end, transform));
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(expressionNode(effect, transform), expressionNode(continuation, transform));
 			case ECast(inner, typeHint):
 				ECast(expressionNode(inner, transform), typeHint);
 			case EUntyped(inner):
@@ -117,8 +133,8 @@ class SourceFunctionBodyRewriter {
 				EVars([for (declaration in declarations) expressionNode(declaration, transform)]);
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				EVariableDeclaration(name, typeHint, nullableExpression(initializer, transform), position, isFinal, isStatic);
-			case EWhile(condition, body, bodyIsBlock, position):
-				EWhile(expressionNode(condition, transform), [for (item in body) expressionNode(item, transform)], bodyIsBlock, position);
+			case EWhile(condition, body, bodyIsBlock, position, loopKind):
+				EWhile(expressionNode(condition, transform), [for (item in body) expressionNode(item, transform)], bodyIsBlock, position, loopKind);
 			case _:
 				value;
 		};

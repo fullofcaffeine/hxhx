@@ -10,3 +10,9 @@ must run once, from left to right. A namespaced user method keeps its behavior.
 Both generated layouts must match the independent upstream output. This covers
 nominal classes, Array, String, and null checks. Numeric type values and typed
 exception conversion remain separate requirements.
+
+The same source and expected output are also consumed by
+`haxe test/m14_cpp_runtime_class_value_test.hxml`. That runner loads real C++
+providers and requires native execution. Its separate class-lookup fixture checks
+canonical names, repeated identity, and missing-class lookup. The C++ contracts
+remain unfinished under `haxe_ocaml-sp2zl`; Neko success does not prove C++ support.

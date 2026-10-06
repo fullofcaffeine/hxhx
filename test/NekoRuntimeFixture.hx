@@ -19,6 +19,13 @@ private function run(command:String, arguments:Array<String>):String {
 
 /** Loads authored source through production target selection and retains both runtime outcomes. */
 function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bool = true, ?roots:Array<String>, ?runtimeVariants:Array<String>):Void {
+	// Report phase boundaries so a slow full-provider check identifies its active work.
+	var phaseStarted = haxe.Timer.stamp();
+	function completed(phase:String):Void {
+		final now = haxe.Timer.stamp();
+		Sys.println("NEKO_FIXTURE_PHASE fixture=" + fixture + " completed=" + phase + " elapsedSeconds=" + (now - phaseStarted));
+		phaseStarted = now;
+	}
 	final root = ".tmp/neko_runtime_fixture_" + fixture.split("/").pop() + "_" + Date.now().getTime();
 	FileSystem.createDirectory(root);
 	final snapshots = [File.getContent(fixture + "/expected.stdout")];
@@ -36,6 +43,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 	if (!snapshots.contains(upstream))
 		throw "upstream fixture output changed: " + root + "\n" + upstream;
 	Sys.println("UPSTREAM_NEKO_FIXTURE:PASS fixture=" + fixture + " artifacts=" + root);
+	completed("upstream;next=resolve");
 
 	final arguments = Stage1Args.parse(["-cp", fixture, "-main", "Main"], true);
 	if (arguments == null)
@@ -49,7 +57,10 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 	});
 	final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 	final resolved = ResolverStage.parseProjectRoots(paths, roots == null ? ["Main"] : roots, defines);
-	final index = TyperIndex.build(resolved);
+	completed("resolve;next=type");
+	// Match production: publish signatures only after the loader discovers their
+	// declaration dependencies, including implicit exception carrier types.
+	final index = TyperIndex.buildHeaders(resolved);
 	final loader = new ModuleLoader(paths, defines, index);
 	loader.markResolvedAlready(resolved);
 	final pending = resolved.copy();
@@ -70,19 +81,24 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 	}
 	if (requireExceptionProvider && !foundExceptionProvider)
 		throw "real Neko exception provider was not loaded";
+	completed("type;next=lower");
 	final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false);
+	completed("lower;next=render-split");
 	final context = new BackendContext(root, root + "/main.n", "Main", true, false, defines);
 	final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
 	File.saveContent(split.entryPath, split.entrySource);
 	for (part in split.support)
 		File.saveContent(part.path, part.source);
+	completed("render-split;next=render-single");
 	File.saveContent(root + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
+	completed("render-single;next=compile-native");
 	for (file in FileSystem.readDirectory(root))
 		if (StringTools.endsWith(file, ".neko")) {
 			if (File.getContent(root + "/" + file).indexOf("must-stay-unused") >= 0)
 				throw "unused abstract helper became reachable in " + root + "/" + file;
 			run("nekoc", [root + "/" + file]);
 		}
+	completed("compile-native;next=execute");
 	var failed = false;
 	for (layout in ["main", "single"]) {
 		final process = new sys.io.Process("neko", [root + "/" + layout + ".n"]);
@@ -99,6 +115,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 			Sys.println("NEKO_RUNTIME_FIXTURE:PASS fixture=" + fixture + " layout=" + layout);
 		}
 	}
+	completed("execute");
 	if (failed)
 		throw "Neko fixture output differs: " + root;
 }

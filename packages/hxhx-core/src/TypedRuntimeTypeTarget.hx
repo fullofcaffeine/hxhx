@@ -13,16 +13,19 @@ class TypedRuntimeTypeTarget {
 		if (kind == null)
 			throw "runtime type target requires an admitted kind";
 		switch (kind) {
-			case Nominal(identity):
+			case Nominal(identity) | EnumDeclaration(identity):
 				if (identity == null || identity.getCanonicalName().length == 0)
 					throw "runtime type target requires an exact nominal identity";
-			case ArrayCore | StringCore | IntCore | FloatCore | BoolCore:
+			case ArrayCore | StringCore | IntCore | FloatCore | BoolCore | DynamicCore | ClassCore | EnumCore:
 		}
 		this.kind = kind;
 		this.sourceSpelling = sourceSpelling == null || sourceSpelling.length == 0 ? switch (kind) {
 			case IntCore: "Int";
 			case FloatCore: "Float";
 			case BoolCore: "Bool";
+			case DynamicCore: "Dynamic";
+			case ClassCore: "Class";
+			case EnumCore: "Enum";
 			case _: requireDeclarationIdentity().getCanonicalName();
 		} : sourceSpelling;
 	}
@@ -33,10 +36,10 @@ class TypedRuntimeTypeTarget {
 	/** Primitive type objects have no class declaration; Array and String retain their real providers. */
 	public function getDeclarationIdentity():Null<TyNominalTypeId>
 		return switch (kind) {
-			case Nominal(identity): identity;
+			case Nominal(identity) | EnumDeclaration(identity): identity;
 			case ArrayCore: new TyNominalTypeId("Array");
 			case StringCore: new TyNominalTypeId("String");
-			case IntCore | FloatCore | BoolCore: null;
+			case IntCore | FloatCore | BoolCore | DynamicCore | ClassCore | EnumCore: null;
 		};
 
 	/** Require a real declaration at operations that cannot handle a primitive type object. */
@@ -53,29 +56,37 @@ class TypedRuntimeTypeTarget {
 
 	public function getInstanceType():TyType
 		return switch (kind) {
-			case Nominal(identity): TyType.nominal(identity, []);
+			case Nominal(identity) | EnumDeclaration(identity): TyType.nominal(identity, []);
 			// A runtime Array class object erases its element type, as Class<Array<Dynamic>> does in Haxe.
 			case ArrayCore: TyType.nominal(requireDeclarationIdentity(), [TyType.fromHintText("Dynamic")]);
 			case StringCore: TyType.fromHintText("String");
 			case IntCore: TyType.fromHintText("Int");
 			case FloatCore: TyType.fromHintText("Float");
 			case BoolCore: TyType.fromHintText("Bool");
+			case DynamicCore: TyType.fromHintText("Dynamic");
+			case ClassCore: TyType.nominal(new TyNominalTypeId("Class"), []);
+			case EnumCore: TyType.nominal(new TyNominalTypeId("Enum"), []);
 		};
 
-	/** Runtime primitive abstract values have Abstract<T>; class and interface values have Class<T>. */
+	/** Core meta values have Abstract<T>; ordinary enum descriptors have Enum<T>, distinct from Class<T>. */
 	public function getValueType():TyType
 		return switch (kind) {
-			case IntCore | FloatCore | BoolCore: TyType.abstractMeta(getInstanceType());
+			case IntCore | FloatCore | BoolCore | DynamicCore | ClassCore | EnumCore: TyType.abstractMeta(getInstanceType());
+			case EnumDeclaration(_): TyType.nominal(new TyNominalTypeId("Enum"), [getInstanceType()]);
 			case _: TyType.nominal(new TyNominalTypeId("Class"), [getInstanceType()]);
 		};
 
 	public function getSemanticKey():String
 		return switch (kind) {
 			case Nominal(identity): "runtime-nominal:" + identity.getCanonicalName();
+			case EnumDeclaration(identity): "runtime-enum:" + identity.getCanonicalName();
 			case ArrayCore: "runtime-core:Array";
 			case StringCore: "runtime-core:String";
 			case IntCore: "runtime-core:Int";
 			case FloatCore: "runtime-core:Float";
 			case BoolCore: "runtime-core:Bool";
+			case DynamicCore: "runtime-core:Dynamic";
+			case ClassCore: "runtime-core:Class";
+			case EnumCore: "runtime-core:Enum";
 		};
 }

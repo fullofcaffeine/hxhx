@@ -43,11 +43,22 @@ class TypedStmt {
 	final metadata:Array<String>;
 	final localBindings:Array<TyLocalBinding>;
 	final catchUses:Array<TypedCatchUse>;
+	final controlTarget:Null<TyControlTarget>;
 
 	function new(tag:TypedStmtTag, position:Null<HxPos>, ?names:Array<String>, ?expressions:Array<TypedExpr>, ?statements:Array<TypedStmt>,
 			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>, ?metadata:Array<String>,
-			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>) {
+			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>, ?controlTarget:TyControlTarget) {
+		if (controlTarget != null) {
+			switch tag {
+				case While | DoWhile | ForIn | ForKeyValue | Break | Continue:
+					if (controlTarget.getKind() != Loop)
+						throw "typed loop statement requires a loop target";
+				case _:
+					throw "ordinary typed statement cannot carry a control target";
+			}
+		}
 		this.tag = tag;
+		this.controlTarget = controlTarget;
 		this.position = position;
 		this.names = names == null ? [] : names.copy();
 		this.expressions = expressions == null ? [] : expressions.copy();
@@ -153,9 +164,18 @@ class TypedStmt {
 		return catchUses.copy();
 
 	public function withCatchUses(uses:Array<TypedCatchUse>):TypedStmt
-		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, uses);
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, uses, controlTarget);
+
+	/** The exact loop introduced here, or selected by this break or continue statement. */
+	public function getControlTarget():Null<TyControlTarget>
+		return controlTarget;
+
+	/** Attach the immutable destination selected during typing; recursive rebuilds preserve it. */
+	public function withControlTarget(target:TyControlTarget):TypedStmt
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses, target);
 
 	/** Rebuild this immutable statement after a shared recursive expression pass. **/
 	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
-		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses);
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses,
+			controlTarget);
 }

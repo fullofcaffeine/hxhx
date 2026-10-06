@@ -4,15 +4,64 @@ import backend.vm.NekoEmitContext;
 import backend.vm.NekoEmitContext.NekoClassInfo;
 
 /**
-	Allocates one object and runs inherited initialization on that receiver.
+	Constructs a class instance or returns an abstract's initialized backing value.
 
-	Class selection belongs to NekoClassConstructionPlan. This renderer installs
-	the selected method closures before invoking class initializers in source
-	order. The shared emitter retains ordinary expression and statement rendering.
+	Class selection belongs to NekoClassConstructionPlan. Shared prototypes hold
+	methods and uninitialized field defaults; each new instance links to its class
+	prototype before its initializers run. Methods save their receiver for nested
+	closures. Explicit field initializers create instance-owned values in source order.
+	The shared emitter retains ordinary expression and statement rendering.
 **/
 @:access(backend.vm.NekoTargetCore)
 class NekoConstructionEmitter {
 	public static function render(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
+		final plan = NekoTargetCore.constructionPlan(context, info);
+		if (plan.returnsBackingValue) {
+			renderAbstract(out, context, info, plan);
+			return;
+		}
+		renderBody(out, context, info);
+		out.push(context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
+			+ "("
+			+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, info.cls))
+			+ ")."
+			+ context.typedProgram.runtimeHelperName("__hxhx_constructor")
+			+ " = "
+			+ NekoTargetCore.renderDeclaredConstructorRef(context, info.fullName)
+			+ ";");
+	}
+
+	/**
+		A private initialization cell lets an early constructor return finish normally
+		without returning from the factory. Only the final backing value escapes as
+		the constructed result. No abstract descriptor or instance methods are added.
+		Captured constructor expressions retain the same cell through ordinary scope
+		capture; a constructor throw propagates before the factory can return a value.
+	 */
+	static function renderAbstract(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, plan:NekoClassConstructionPlan):Void {
+		final ctor = plan.effectiveConstructor();
+		if (ctor == null)
+			throw "Neko abstract construction requires its declared constructor";
+		final args = [for (arg in HxFunctionDecl.getArgs(ctor)) NekoTargetCore.safeIdent(arg.name)];
+		final useVarArgs = NekoTargetCore.shouldUseVarArgs(context, args, ctor);
+		final selfName = context.typedProgram.constructionReceiverName();
+		out.push(NekoTargetCore.renderConstructorDefinitionPrefix(context, info.fullName) + NekoTargetCore.renderFunctionStart(args, useVarArgs));
+		if (useVarArgs) {
+			final arrayName = NekoFunctionParameters.arrayName(args);
+			for (index in 0...args.length)
+				out.push("  var " + args[index] + " = " + arrayName + "[" + index + "];");
+		}
+		out.push("  var " + selfName + " = $new(null);");
+		out.push("  " + selfName + ".__hx_value = null;");
+		out.push("  " + NekoTargetCore.renderInitializerRef(context, info) + "(" + [selfName].concat(args).join(", ") + ");");
+		out.push("  return " + selfName + ".__hx_value;");
+		out.push(NekoTargetCore.renderFunctionEnd(useVarArgs));
+		out.push("");
+		renderClassInitializer(out, context, info, plan, ctor);
+	}
+
+	/** Retain the original descriptor on instances even if source later replaces the class binding. */
+	static function renderBody(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
 		if (NekoTargetCore.isListTypePath(info.fullName)) {
 			out.push(NekoTargetCore.renderConstructorDefinitionPrefix(context, info.fullName) + "function() {");
 			out.push("  return __hxhx_list_new();");
@@ -34,6 +83,25 @@ class NekoConstructionEmitter {
 		if (NekoTargetCore.needsTestLocalStaticBasicSlot(info))
 			out.push("var " + NekoTargetCore.testLocalStaticBasicSlotName() + " = null;");
 		final selfName = context.typedProgram.constructionReceiverName();
+		final prototype = context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
+			+ "("
+			+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, info.cls))
+			+ ").prototype";
+		if (plan.lineage.length > 1) {
+			final parent = context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
+				+ "("
+				+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, plan.lineage[1].getDeclaration()))
+				+ ").prototype";
+			out.push("$objsetproto(" + prototype + ", " + parent + ");");
+		}
+		for (field in HxClassDecl.getFields(info.cls))
+			if (!HxFieldDecl.getIsStatic(field))
+				out.push(prototype + "." + NekoTargetCore.safeIdent(HxFieldDecl.getName(field)) + " = null;");
+		for (method in plan.methods)
+			if (method.owner == plan.lineage[0])
+				NekoTargetCore.renderPrototypeMethod(out, NekoTargetCore.withSelf(context, selfName, info), prototype, selfName, method.body.getDeclaration());
+		if (plan.hasOwnStringConversion())
+			out.push(prototype + ".__string = function() { return this.toString(); };");
 		final useVarArgs = NekoTargetCore.shouldUseVarArgs(context, args, ctor);
 		out.push(NekoTargetCore.renderConstructorDefinitionPrefix(context, info.fullName) + NekoTargetCore.renderFunctionStart(args, useVarArgs));
 		if (useVarArgs) {
@@ -42,31 +110,20 @@ class NekoConstructionEmitter {
 				out.push("  var " + args[index] + " = " + arrayName + "[" + index + "];");
 		}
 		out.push("  var " + selfName + " = $new(null);");
+		out.push("  $objsetproto(" + selfName + ", " + prototype + ");");
 		final typeSlot = context.typedProgram.runtimeHelperName("__hxhx_runtime_type");
 		out.push("  "
 			+ selfName
 			+ "."
 			+ typeSlot
 			+ " = "
-			+ typeSlot
+			+ context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
 			+ "("
-			+ NekoTargetCore.quote("nominal:" + context.typedProgram.requireClassIdentity(info.cls))
+			+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, info.cls))
 			+ ");");
 		out.push("  " + selfName + ".__hx_ctor = " + NekoTargetCore.quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
 		out.push("  " + selfName + ".__hx_value = " + (args.length > 0 ? args[0] : "null") + ";");
-		for (owner in plan.lineage)
-			for (field in HxClassDecl.getFields(owner.getDeclaration()))
-				if (!HxFieldDecl.getIsStatic(field))
-					out.push("  " + selfName + "." + NekoTargetCore.safeIdent(HxFieldDecl.getName(field)) + " = null;");
-		for (method in plan.methods) {
-			final owner = NekoTargetCore.exactClassInfo(context, method.owner);
-			NekoTargetCore.renderInstanceMethod(out, NekoTargetCore.withSelf(context, selfName, owner), selfName, method.body.getDeclaration());
-		}
-		// The VM string primitive calls __string. Select the Haxe method through
-		// the construction plan, then read its receiver slot at conversion time.
-		if (plan.hasStringConversion())
-			out.push("  " + selfName + ".__string = function() { return " + selfName + ".toString(); };");
 		out.push("  " + NekoTargetCore.renderInitializerRef(context, info) + "(" + [selfName].concat(args).join(", ") + ");");
 		out.push("  return " + selfName + ";");
 		out.push(NekoTargetCore.renderFunctionEnd(useVarArgs));
@@ -90,16 +147,21 @@ class NekoConstructionEmitter {
 			if (ctor != null)
 				NekoTargetCore.renderVarArgBindings(out, initializerContext, HxFunctionDecl.getArgs(ctor), "  ", arrayName, 1);
 		}
+		if (ctor != null)
+			NekoTargetCore.renderCaptureParameters(out, initializerContext, [for (arg in HxFunctionDecl.getArgs(ctor)) arg.name], "  ");
 		for (field in HxClassDecl.getFields(info.cls)) {
 			final init = HxFieldDecl.getInit(field);
-			if (!HxFieldDecl.getIsStatic(field) && init != null)
-				out.push("  "
-					+ selfName
-					+ "."
-					+ NekoTargetCore.safeIdent(HxFieldDecl.getName(field))
-					+ " = "
-					+ NekoTargetCore.renderExpr(NekoTargetCore.withFieldInitializer(instanceContext, field), init)
-					+ ";");
+			if (!HxFieldDecl.getIsStatic(field) && init != null) {
+				final fieldContext = NekoTargetCore.withFieldInitializer(instanceContext, field);
+				final selected = context.typedProgram.requireDeclaredInitializer(field);
+				selected.requireExpression(init);
+				final body = NekoControlStatements.initializerBody(init, selected.getStableIdentity(), fieldContext);
+				for (statement in body.statements)
+					NekoTargetCore.renderStmt(out, fieldContext, statement, "  ");
+				if (body.value != null)
+					out.push("  " + selfName + "." + NekoTargetCore.safeIdent(HxFieldDecl.getName(field)) + " = "
+						+ NekoTargetCore.renderExpr(fieldContext, body.value) + ";");
+			}
 		}
 		final declared = NekoTargetCore.findFunction(info.cls, "new", false);
 		if (declared != null && !NekoTargetCore.isMacroFunction(declared)) {

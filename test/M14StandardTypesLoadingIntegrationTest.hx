@@ -69,7 +69,7 @@ class M14StandardTypesLoadingIntegrationTest {
 				+ " class "
 				+ shortName
 				+
-				" { static var target:ArrayAccess<Int>; static var classTarget:Class<ArrayAccess<Int>>; static function main() { Sys.println(Type.getClassName(ArrayAccess)); } }");
+				" { static var target:ArrayAccess<Int>; static var classTarget:Class<ArrayAccess<Int>>; static var restCallback:haxe.Rest<Int>->Int; static function main() { Sys.println(Type.getClassName(ArrayAccess)); } }");
 			final binary = root + "/" + shortName + ".n";
 			run("haxe", ["-cp", root, "-main", scenario.name, "-neko", binary]);
 			check(run("neko", [binary]) == scenario.expected + "\n", "upstream namespace contract changed: " + scenario.name);
@@ -94,7 +94,7 @@ class M14StandardTypesLoadingIntegrationTest {
 					if (ResolvedModule.getModulePath(module) == "StdTypes") module
 			];
 			check(standardModules.length == 1, "project must load StdTypes once before indexing; shallow=" + shallow);
-			final index = TyperIndex.build(modules);
+			final index = TyperIndex.buildHeaders(modules);
 			final loader = new ModuleLoader(paths, defines, index, null, false);
 			loader.markResolvedAlready(modules);
 			final seenModules = new haxe.ds.StringMap<Bool>();
@@ -117,6 +117,13 @@ class M14StandardTypesLoadingIntegrationTest {
 				check(selected != null
 					&& selected.getFullName() == scenario.identity, "wrong default/import/local type: " + scenario.name);
 				final owner = index.getByFullName(scenario.name);
+				final restFields = [
+					for (field in owner.getFieldInfos())
+						if (field.getName() == "restCallback") field
+				];
+				check(restFields.length == 1
+					&& restFields[0].getType().getSemanticKey() == TyType.fromHintText("(...values:Int)->Int").getSemanticKey(),
+					"standard Rest callable was not normalized during initial signature loading: " + scenario.name);
 				final resolvedDirectives = @:privateAccess TyperStage.resolveModuleDirectives(directives, HxModuleDecl.getPackagePath(declaration),
 					scenario.name, index, loader);
 				final resolved = index.resolveTypePath("ArrayAccess", HxModuleDecl.getPackagePath(declaration), directives, resolvedDirectives, scenario.name);

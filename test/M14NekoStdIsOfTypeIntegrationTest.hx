@@ -50,7 +50,9 @@ class M14NekoStdIsOfTypeIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final resolved = ResolverStage.parseProjectRoots(paths, ["Main"], defines);
-		final index = TyperIndex.build(resolved);
+		// Match production: load signature dependencies before retaining method types.
+		// Otherwise a root method can retain an unresolved alias such as Map.
+		final index = TyperIndex.buildHeaders(resolved);
 		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready(resolved);
 		final pending = resolved.copy();

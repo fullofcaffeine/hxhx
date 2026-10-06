@@ -1,0 +1,13 @@
+{
+  "haxe": "4.3.7",
+  "formatter": {
+    "url": "https://github.com/HaxeCheckstyle/haxe-formatter.git",
+    "revision": "93ba289893d515614298f4ce7cee8619c31b420c"
+  },
+  "lexer": {
+    "url": "https://github.com/HaxeCheckstyle/haxeparser.git",
+    "revision": "a5fce2ecf5fb3bdfebfd7efd8b05329d456ec0d2"
+  },
+  "patchSha256": "a4c05e098711ee7ecab68321553623a22f037e9ca9781be5af89160bc895a6bb",
+  "artifactSha256": "43df1c4d3176c508bd32727a2df14badd3d84ba6d5f830cd2a38ba6d15aeda20"
+}

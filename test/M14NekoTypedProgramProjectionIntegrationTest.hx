@@ -112,6 +112,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			classes: new haxe.ds.StringMap(),
 			typedProgram: program,
 			currentExecutable: null,
+			captureStorage: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap(),
 			directAbstractReceiver: false,

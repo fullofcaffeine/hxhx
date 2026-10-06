@@ -3,7 +3,9 @@
 	call typing can currently prove.
 
 	Method parameters are bound from semantic argument types, including nested
-	nominal and function shapes. A conflicting binding makes the candidate
+	nominal and function shapes. Indexed superclass and interface substitutions
+	let a derived argument constrain the corresponding base-type parameters
+	without changing the argument's own type. A conflicting binding makes the candidate
 	inapplicable. A parameter that is still open in the selected return type
 	produces `Unknown` instead of escaping into a caller-local type hint where a
 	backend could mistake it for an unrelated class.
@@ -42,9 +44,9 @@ class TyMethodGenericBinding {
 
 	/** Validate inferred direct-call arguments against bounds resolved at their declaration, never caller spellings. */
 	public static function constraintFailure(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>, applyBound:TyType->TyType,
-			accepts:(TyType, TyType) -> Bool):Null<String> {
+			accepts:(TyType, TyType) -> Bool, index:TyperIndex):Null<String> {
 		final constraints = declaration.getResolvedTypeParameterConstraints();
-		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration));
+		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
 		for (parameter in declaration.getTypeParameterIds()) {
 			final key = parameter.getCanonicalKey();
 			if (!constraints.exists(key))
@@ -54,7 +56,7 @@ class TyMethodGenericBinding {
 				final bound = applyBound(constraint);
 				if (bound.hasUnknownComponent()
 					|| bound.isUnresolved()
-					|| (supplied == null ? !hasOnlyNullEvidence(signature, actual,
+					|| (supplied == null ? !hasOnlyUnconstrainingEvidence(signature, actual,
 						parameter) : !accepts(substitute(bound, declaration.getTypeParameterIds(), inferred), supplied)))
 					return "Constraint check failure for " + signature.getName() + "." + parameter.getName();
 			}
@@ -62,8 +64,8 @@ class TyMethodGenericBinding {
 		return null;
 	}
 
-	/** Null leaves its method variable open; unknown non-null arguments are not evidence for this rule. */
-	static function hasOnlyNullEvidence(signature:TyFunSig, actual:Array<TyType>, parameter:TyTypeParameterId):Bool {
+	/** Null and explicit Dynamic leave method variables open; unresolved types do not authorize a bound. */
+	static function hasOnlyUnconstrainingEvidence(signature:TyFunSig, actual:Array<TyType>, parameter:TyTypeParameterId):Bool {
 		function contains(type:TyType):Bool {
 			final identity = type.getTypeParameterIdentity();
 			if (identity != null && identity.equals(parameter))
@@ -79,7 +81,7 @@ class TyMethodGenericBinding {
 		final expected = signature.getArgs();
 		for (index in 0...actual.length)
 			if (index < expected.length && contains(expected[index])) {
-				if (!actual[index].isNullLiteral())
+				if (!actual[index].isNullLiteral() && !actual[index].isDynamic())
 					return false;
 				found = true;
 			}
@@ -104,9 +106,12 @@ class TyMethodGenericBinding {
 		return left.isUnresolved() && right.isUnresolved() && left.getUnresolvedPath() == right.getUnresolvedPath();
 	}
 
-	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>):Bool {
+	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>,
+			index:TyperIndex):Bool {
 		if (expected == null || actual == null)
 			return true;
+		// Null carries no concrete type evidence, even for a bare T parameter.
+		// Candidate legality is checked separately by overload selection.
 		if (actual.isNullLiteral())
 			return true;
 		final parameter = parameterIdentity(expected, methodTypeParameters);
@@ -125,11 +130,8 @@ class TyMethodGenericBinding {
 			bindings.set(parameterKey, unified);
 			return true;
 		}
-		// Null does not determine T when the parameter accepts Null<T>.
-		if (expected.isNullable() && actual.isNullLiteral())
-			return true;
 		if (expected.isNullable() || actual.isNullable())
-			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings);
+			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings, index);
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return true;
@@ -137,44 +139,51 @@ class TyMethodGenericBinding {
 			final actualArguments = actual.getFunctionArguments();
 			if (expectedArguments.length != actualArguments.length)
 				return true;
-			for (index in 0...expectedArguments.length)
-				if (!collect(expectedArguments[index], actualArguments[index], methodTypeParameters, bindings))
+			for (argumentIndex in 0...expectedArguments.length)
+				if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index))
 					return false;
 			final expectedReturn = expected.getFunctionReturn();
 			final actualReturn = actual.getFunctionReturn();
-			return expectedReturn == null || actualReturn == null || collect(expectedReturn, actualReturn, methodTypeParameters, bindings);
+			return expectedReturn == null
+				|| actualReturn == null
+				|| collect(expectedReturn, actualReturn, methodTypeParameters, bindings, index);
 		}
 		final expectedArguments = expected.getTypeArguments();
-		final actualArguments = actual.getTypeArguments();
-		if (!sameTypeConstructor(expected, actual) || expectedArguments.length != actualArguments.length)
+		// Inherited arguments are evidence from the declared edge, not a change
+		// to the operand's concrete type or the shared method signature.
+		final owner = expected.getNominalIdentity();
+		final ancestor = owner == null || sameTypeConstructor(expected, actual) ? null : TyNominalAncestor.view(index, actual, owner);
+		final selected = ancestor == null ? actual : ancestor;
+		final actualArguments = selected.getTypeArguments();
+		if (!sameTypeConstructor(expected, selected) || expectedArguments.length != actualArguments.length)
 			return true;
-		for (index in 0...expectedArguments.length)
-			if (!collect(expectedArguments[index], actualArguments[index], methodTypeParameters, bindings))
+		for (argumentIndex in 0...expectedArguments.length)
+			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index))
 				return false;
 		return true;
 	}
 
-	static function bindings(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int,
-			methodTypeParameters:Array<TyTypeParameterId>):Null<haxe.ds.StringMap<TyType>> {
+	static function bindings(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,
+			index:TyperIndex):Null<haxe.ds.StringMap<TyType>> {
 		final result = new haxe.ds.StringMap<TyType>();
-		final expected = sig.getArgs();
-		final optional = sig.getArgOptional();
-		for (index in 0...suppliedArity) {
-			if (index >= expected.length || index >= argTypes.length)
+		for (argumentIndex in 0...suppliedArity) {
+			final parameter = TyCallableSignature.argumentParameter(sig, argumentIndex);
+			if (parameter == null || argumentIndex >= argTypes.length)
 				continue;
 			// An optional null argument requests the default; it must not bind a
 			// method type parameter to the null-literal type.
-			if (index < optional.length && optional[index] && argTypes[index].isNullLiteral())
+			if (parameter.isOptional && argTypes[argumentIndex].isNullLiteral())
 				continue;
-			if (!collect(expected[index], argTypes[index], methodTypeParameters, result))
+			if (!collect(parameter.type, argTypes[argumentIndex], methodTypeParameters, result, index))
 				return null;
 		}
 		return result;
 	}
 
 	/** Reject a candidate when repeated method parameters infer incompatible types. **/
-	public static function argumentsAreConsistent(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>):Bool {
-		return bindings(sig, argTypes, suppliedArity, methodTypeParameters) != null;
+	public static function argumentsAreConsistent(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,
+			index:TyperIndex):Bool {
+		return bindings(sig, argTypes, suppliedArity, methodTypeParameters, index) != null;
 	}
 
 	static function hasUnbound(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>):Bool {
@@ -183,6 +192,8 @@ class TyMethodGenericBinding {
 		final parameter = parameterIdentity(type, methodTypeParameters);
 		if (parameter != null)
 			return !inferred.exists(parameter.getCanonicalKey());
+		if (type.isTypeParameter())
+			return false;
 		if (type.isNullable())
 			return hasUnbound(type.unwrapNull(), methodTypeParameters, inferred);
 		if (type.isFunction()) {
@@ -192,7 +203,7 @@ class TyMethodGenericBinding {
 			final result = type.getFunctionReturn();
 			return result != null && hasUnbound(result, methodTypeParameters, inferred);
 		}
-		for (argument in type.getTypeArguments())
+		for (argument in type.getTypeArguments().concat(type.getAnonymousFieldTypes()))
 			if (hasUnbound(argument, methodTypeParameters, inferred))
 				return true;
 		return false;
@@ -206,28 +217,38 @@ class TyMethodGenericBinding {
 		return base.length == 0 ? "" : base + "<" + [for (argument in arguments) argument.getDisplay()].join(",") + ">";
 	}
 
-	static function substitute(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>):TyType {
+	static function substitute(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>, retainOpen:Bool = false):TyType {
 		if (type == null)
 			return TyType.unknown();
 		final parameter = parameterIdentity(type, methodTypeParameters);
 		if (parameter != null) {
 			final bound = inferred.get(parameter.getCanonicalKey());
-			return bound == null ? TyType.unknown() : bound;
+			return bound == null ? (retainOpen ? type : TyType.unknown()) : bound;
 		}
 		if (type.isNullable())
-			return TyType.nullable(substitute(type.unwrapNull(), methodTypeParameters, inferred));
+			return TyType.nullable(substitute(type.unwrapNull(), methodTypeParameters, inferred, retainOpen));
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
-			return TyType.functionType([
+			// Replacing T must keep whether callers may omit or spread each
+			// parameter, along with its name and metadata.
+			return type.withFunctionTypes([
 				for (argument in type.getFunctionArguments())
-					substitute(argument, methodTypeParameters, inferred)
+					substitute(argument, methodTypeParameters, inferred, retainOpen)
 			],
-				result == null ? TyType.unknown() : substitute(result, methodTypeParameters, inferred));
+				result == null ? TyType.unknown() : substitute(result, methodTypeParameters, inferred, retainOpen));
 		}
+		if (type.isAnonymous())
+			return type.withAnonymousTypes([
+				for (field in type.getAnonymousFieldTypes())
+					substitute(field, methodTypeParameters, inferred, retainOpen)
+			]);
 		final arguments = type.getTypeArguments();
 		if (arguments.length == 0)
 			return type;
-		final substituted = [for (argument in arguments) substitute(argument, methodTypeParameters, inferred)];
+		final substituted = [
+			for (argument in arguments)
+				substitute(argument, methodTypeParameters, inferred, retainOpen)
+		];
 		if (type.isAbstractMeta())
 			return TyType.abstractMeta(substituted[0]);
 		final identity = type.getNominalIdentity();
@@ -238,17 +259,45 @@ class TyMethodGenericBinding {
 		return type;
 	}
 
+	/** Keep unsolved method binders for the owning call's inference variables, while retaining concrete argument evidence. */
+	public static function inferenceCallable(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>, index:TyperIndex):TyType {
+		final parameters = declaration.getTypeParameterIds();
+		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
+		if (inferred == null)
+			throw "selected generic call has inconsistent arguments";
+		final callable = TyCallableSignature.fromDeclaration(declaration, signature).getFunctionType();
+		return callable.withFunctionTypes([
+			for (type in callable.getFunctionArguments())
+				substitute(type, parameters, inferred, true)
+		], substitute(callable.getFunctionReturn(), parameters, inferred, true));
+	}
+
 	/**
 		Specialize a selected declaration's return type, or return `Unknown` when
 		argument evidence cannot close every method parameter used by that result.
 	**/
-	public static function specializeResult(declaration:TyDeclarationInfo, signature:TyFunSig, argTypes:Array<TyType>):TyType {
+	public static function specializeResult(declaration:TyDeclarationInfo, signature:TyFunSig, argTypes:Array<TyType>, index:TyperIndex):TyType {
 		final methodTypeParameters = declaration.getTypeParameterIds();
 		if (methodTypeParameters.length == 0)
 			return signature.getReturnType();
-		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration));
+		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration), index);
 		if (inferred == null || hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
 			return TyType.unknown();
 		return substitute(signature.getReturnType(), methodTypeParameters, inferred);
+	}
+
+	/**
+		Close method parameters from the same evidence used for result specialization.
+		The caller has already applied receiver arguments. Keep any remaining owner
+		parameter identity: a method inside Box<T> can consume that exact T without
+		turning it into an unconstrained Unknown context.
+	 */
+	public static function specializeParameters(declaration:TyDeclarationInfo, signature:TyFunSig, argTypes:Array<TyType>, index:TyperIndex):Array<TyType> {
+		final parameters = declaration.getTypeParameterIds();
+		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration), index);
+		return [
+			for (type in signature.getArgs())
+				inferred == null || hasUnbound(type, parameters, inferred) ? TyType.unknown() : substitute(type, parameters, inferred)
+		];
 	}
 }

@@ -15,6 +15,9 @@ typedef CppClassLookup = {
 	var names:haxe.ds.StringMap<Bool>;
 	var byName:haxe.ds.StringMap<HxClassDecl>;
 
+	/** Exact declaration owner for production emission; absent in class-only syntax probes. */
+	var ?typedProgram:CppTypedProgramProjection;
+
 	/**
 		Request-owned declared-type results shared by scopes for this program.
 

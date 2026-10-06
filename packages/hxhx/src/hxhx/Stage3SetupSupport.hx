@@ -261,8 +261,9 @@ class Stage3SetupSupport {
 	}
 
 	/**
-		Selects project sources before standard-library providers. Neko uses its concrete
-		_std implementation before common declarations; modules without an override fall
+		Selects project sources before standard-library providers. C++ uses the authored
+		providers embedded in this compiler. Neko and JavaScript use
+		their target _std implementations before common declarations; missing overrides fall
 		through to the common root. Explicit user roots retain their original priority,
 		including an explicitly supplied common standard-library directory. Macro-host
 		classpath construction remains separate because it compiles for the host target.
@@ -298,11 +299,14 @@ class Stage3SetupSupport {
 					return;
 			withCwd.push(normalized);
 		}
+		final bundledRoot = CompilerBundledSources.targetRoot(input.targetDefine);
+		if (bundledRoot != null)
+			appendUnique(bundledRoot);
 		if (input.standardRoot.length > 0) {
 			final common = Stage3PathSupport.absFromCwd(cwd, input.standardRoot);
 			// Other targets retain their existing providers until their own promotion proof.
-			if (input.targetDefine == "neko") {
-				final target = Path.join([common, "neko", "_std"]);
+			if (input.targetDefine == "neko" || input.targetDefine == "js") {
+				final target = Path.join([common, input.targetDefine, "_std"]);
 				if (sys.FileSystem.exists(target) && sys.FileSystem.isDirectory(target))
 					appendUnique(target);
 			}

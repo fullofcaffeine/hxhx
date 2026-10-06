@@ -49,7 +49,7 @@ class M14RuntimeTypeProviderFactsIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final modules = ResolverStage.parseProjectRoots(paths, ["haxe.Exception"], defines);
-		final index = TyperIndex.build(modules);
+		final index = TyperIndex.buildHeaders(modules);
 		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready(modules);
 		var found = false;

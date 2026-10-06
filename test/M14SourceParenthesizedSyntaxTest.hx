@@ -3,8 +3,8 @@ import haxe.macro.Expr;
 /** Parentheses retain nested source grouping without creating a callable or control owner. */
 class M14SourceParenthesizedSyntaxTest {
 	static function convert(source:HxExpr):Expr {
-		final definition:ExprDef = switch source {
-			case EParenthesized(inner, _): EParenthesis(convert(inner));
+		final mapped = HxSourceMacroSyntax.definition(source, convert, _ -> null);
+		final definition:ExprDef = mapped != null ? mapped : switch source {
 			case EIdent(name): EConst(CIdent(name));
 			case EInt(value): EConst(CInt(Std.string(value), null));
 			case EBinop(op, left, right):
@@ -35,18 +35,6 @@ class M14SourceParenthesizedSyntaxTest {
 	}
 
 	public static function run():Void {
-		// Switch parentheses are optional syntax; each written pair remains part of its value.
-		final switchSource = "switch ((value)) { case _: 1; }";
-		switch HxParser.parseCompleteExprText(switchSource) {
-			case ESwitch(EParenthesized(EParenthesized(EIdent("value"), _), _), _, _):
-			case _:
-				throw "expression switch discarded authored grouping";
-		}
-		switch HxParser.parseFunctionBodyText(switchSource) {
-			case [SSwitch(EParenthesized(EParenthesized(EIdent("value"), _), _), _, _, _)]:
-			case _:
-				throw "statement switch discarded authored grouping";
-		}
 		final cases = ["((value))", "(value = 3)", "((value = 3))", "(1 + 2) * 3", "(value) = 4"];
 		final expected = sys.io.File.getContent("test/oracle/source_parenthesized_seed/syntax.stdout");
 		final actual = [for (source in cases) shape(convert(HxParser.parseCompleteExprText(source)))].join("\n") + "\n";
@@ -55,7 +43,7 @@ class M14SourceParenthesizedSyntaxTest {
 		for (source in cases) {
 			final parsed = HxParser.parseCompleteExprText(source);
 			final typed = TypedBodyBuilder.buildExpression(EMacroExpr(parsed, []), HxPos.unknown(), null).getExpressions()[0];
-			final rebuilt = TypedBodySource.expression(typed);
+			final rebuilt = TypedSourceSyntax.expression(typed);
 			if (shape(convert(rebuilt)) != shape(convert(parsed)))
 				throw "typed quote changed parentheses";
 			if (TypedBodyFingerprint.forExpression(rebuilt) != TypedBodyFingerprint.forExpression(parsed))

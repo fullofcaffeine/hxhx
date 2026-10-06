@@ -1,6 +1,16 @@
 import haxe.ds.StringMap;
 import TyLocalDeclarationKind.TyLocalDeclarationKindTools;
 
+/** Resolved signature inputs; the environment allocates each binding under the supplied function identity. */
+typedef TyNestedFunctionEnvInput = {
+	final identity:TyNestedFunctionId;
+	final name:String;
+	final parameters:Array<{final name:String; final type:TyType;}>;
+	final typeParameterNames:Array<String>;
+	final returnType:TyType;
+	final returnExprType:TyType;
+}
+
 /**
 	Function-local inference environment with deterministic lexical identities.
 
@@ -23,11 +33,37 @@ class TyFunctionEnv {
 	final returnType:TyType;
 	final returnExprType:TyType;
 	final staticContext:Bool;
+	final typeParameters:Array<TyTypeParameterId>;
+	final enclosingSymbols:Array<TySymbol> = [];
 	final replayMode:Bool;
 	var replayCursor:Int;
+	final controlScope:Null<TyControlScope>;
+	final inference:TyFunctionInference;
+	var untypedContext:Bool = false;
+
+	/** Untyped permission belongs to the current expression traversal, not the whole function. */
+	public function isUntypedContext():Bool
+		return untypedContext;
+
+	/** Restore lexical permission on success and on every compiler diagnostic. */
+	public function withUntyped<T>(action:() -> T):T {
+		final previous = untypedContext;
+		untypedContext = true;
+		try {
+			final result = action();
+			untypedContext = previous;
+			return result;
+		} catch (error:Dynamic) {
+			// Haxe can throw values of any type. This cleanup boundary does not
+			// inspect or convert the payload; it restores state and rethrows it.
+			untypedContext = previous;
+			throw error;
+		}
+	}
 
 	public function new(name:String, params:Array<TySymbol>, locals:Array<TySymbol>, returnType:TyType, returnExprType:TyType, ?ownerIdentity:String,
-			?activeScopes:Array<Array<TySymbol>>, replayMode:Bool = false, replayCursor:Int = 0, staticContext:Bool = false) {
+			?activeScopes:Array<Array<TySymbol>>, replayMode:Bool = false, replayCursor:Int = 0, staticContext:Bool = false, ?controlScope:TyControlScope,
+			?inference:TyFunctionInference, ?typeParameters:Array<TyTypeParameterId>) {
 		this.name = name == null ? "" : name;
 		this.ownerIdentity = ownerIdentity == null || ownerIdentity.length == 0 ? this.name : ownerIdentity;
 		this.params = params == null ? [] : params.copy();
@@ -35,8 +71,11 @@ class TyFunctionEnv {
 		this.returnType = returnType == null ? TyType.unknown() : returnType;
 		this.returnExprType = returnExprType == null ? TyType.unknown() : returnExprType;
 		this.staticContext = staticContext;
+		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
 		this.replayMode = replayMode;
 		this.replayCursor = replayCursor;
+		this.controlScope = controlScope;
+		this.inference = inference == null ? new TyFunctionInference(this.ownerIdentity) : inference;
 		this.scopes = new Array<Array<TySymbol>>();
 		if (activeScopes == null) {
 			this.scopes.push(this.locals.copy());
@@ -53,6 +92,12 @@ class TyFunctionEnv {
 
 	public function getOwnerIdentity():String
 		return ownerIdentity;
+
+	public function getInference():TyFunctionInference
+		return inference;
+
+	public function sealInference():Void
+		inference.seal(params.concat(locals));
 
 	public function getParams():Array<TySymbol>
 		return params.copy();
@@ -71,9 +116,72 @@ class TyFunctionEnv {
 	public function isStaticContext():Bool
 		return staticContext;
 
+	/** Generic declarations visible to local annotations, with nearer method parameters last. */
+	public function getTypeParameters():Array<TyTypeParameterId>
+		return typeParameters.copy();
+
+	/**
+		Start a separate function at the current lexical declaration point.
+
+		Copy visibility, not inference slots: later outer declarations stay hidden,
+		but refinements to an already visible symbol remain shared. Parameters and
+		locals belong to the new function and shadow enclosing bindings. The visible
+		set is not a capture-use list; typed body construction must record actual reads.
+		A permitted recursive self declaration must already exist in the outer scope.
+	**/
+	public function createNestedFunction(input:TyNestedFunctionEnvInput):TyFunctionEnv {
+		if (input.identity == null || input.identity.getOwnerIdentity() != ownerIdentity)
+			throw "nested function identity does not belong to the enclosing function";
+		final nestedOwner = input.identity.getCanonicalKey();
+		final nestedParams = new Array<TySymbol>();
+		for (index in 0...input.parameters.length) {
+			final parameter = input.parameters[index];
+			nestedParams.push(new TySymbol(parameter.name, parameter.type, TyLocalId.forSourceDeclaration(nestedOwner, index, Parameter, parameter.name),
+				Parameter));
+		}
+		final generics = typeParameters.copy();
+		for (index in 0...input.typeParameterNames.length)
+			generics.push(TyTypeParameterId.nestedFunction(input.identity, index, input.typeParameterNames[index]));
+		final nested = new TyFunctionEnv(input.name, nestedParams, [], input.returnType, input.returnExprType, nestedOwner, null, false, 0, staticContext,
+			null, null, generics);
+		nested.untypedContext = untypedContext;
+		for (symbol in enclosingSymbols)
+			nested.enclosingSymbols.push(symbol);
+		for (parameter in params)
+			nested.enclosingSymbols.push(parameter);
+		for (scope in scopes)
+			for (symbol in scope)
+				nested.enclosingSymbols.push(symbol);
+		return nested;
+	}
+
+	/** Preserve definition-time visibility when deriving a replay or sealed return environment. */
+	function withEnclosingSymbolsFrom(source:TyFunctionEnv):TyFunctionEnv {
+		untypedContext = source.untypedContext;
+		for (symbol in source.enclosingSymbols)
+			enclosingSymbols.push(symbol);
+		return this;
+	}
+
 	/** Preserve the exact symbol catalog and active scopes while sealing return facts. **/
 	public function withReturnTypes(finalReturnType:TyType, finalReturnExprType:TyType):TyFunctionEnv
-		return new TyFunctionEnv(name, params, locals, finalReturnType, finalReturnExprType, ownerIdentity, scopes, replayMode, replayCursor, staticContext);
+		return new TyFunctionEnv(name, params, locals, finalReturnType, finalReturnExprType, ownerIdentity, scopes, replayMode, replayCursor, staticContext,
+			controlScope == null ? null : controlScope.copy(), inference, typeParameters).withEnclosingSymbolsFrom(this);
+
+	/** Source control requires a catalog tied to the current owning function revision. */
+	public function requireControlScope():TyControlScope {
+		if (controlScope == null)
+			throw "source control requires a revision-owned function environment";
+		return controlScope;
+	}
+
+	/** Synthetic declaration-only environments do not establish an executing source function. */
+	public function getRootControlTarget():Null<TyControlTarget>
+		return controlScope == null ? null : controlScope.getRoot();
+
+	/** Expression-syntax probes can lack an executing source function. */
+	public function currentSourceReturns():Null<TyFunctionReturnState>
+		return controlScope == null ? null : controlScope.currentReturns();
 
 	/** Begin a nested source scope. **/
 	public function enterLexicalScope():Void
@@ -121,7 +229,7 @@ class TyFunctionEnv {
 		return symbol;
 	}
 
-	/** Resolve the nearest active local, falling back to function parameters. **/
+	/** Resolve locals, then parameters, then the enclosing bindings visible at definition time. **/
 	public function resolveSymbol(name:String):Null<TySymbol> {
 		var scopeIndex = scopes.length;
 		while (scopeIndex > 0) {
@@ -142,6 +250,12 @@ class TyFunctionEnv {
 			if (parameter.getName() == name)
 				return parameter;
 		}
+		var enclosingIndex = enclosingSymbols.length;
+		while (enclosingIndex > 0) {
+			final symbol = enclosingSymbols[--enclosingIndex];
+			if (symbol.getName() == name)
+				return symbol;
+		}
 		return null;
 	}
 
@@ -157,7 +271,8 @@ class TyFunctionEnv {
 		source declaration is encountered during the second traversal.
 	**/
 	public function createBodyReplay():TyFunctionEnv
-		return new TyFunctionEnv(name, params, locals, returnType, returnExprType, ownerIdentity, [[]], true, 0, staticContext);
+		return new TyFunctionEnv(name, params, locals, returnType, returnExprType, ownerIdentity, [[]], true, 0, staticContext,
+			controlScope == null ? null : controlScope.createReplay(), inference, typeParameters).withEnclosingSymbolsFrom(this);
 
 	/** Reject a builder traversal that silently skipped typed declarations. **/
 	public function assertReplayComplete():Void {
@@ -172,6 +287,8 @@ class TyFunctionEnv {
 				+ ownerIdentity;
 		if (scopes.length != 1)
 			throw "typed local declaration replay left nested scopes open for " + ownerIdentity;
+		if (controlScope != null)
+			controlScope.assertReplayComplete();
 	}
 
 	/**
@@ -197,6 +314,11 @@ class TyFunctionEnv {
 		// Speculative resolvers may introduce desugared lambda temporaries that are
 		// not declarations in the sealed source traversal. They must allocate only
 		// inside this copy instead of consuming the typed-body replay catalog.
-		return new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext);
+		final copied = new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext,
+			controlScope == null ? null : controlScope.copyForInference(), inference.fork(), typeParameters);
+		copied.untypedContext = untypedContext;
+		for (symbol in enclosingSymbols)
+			copied.enclosingSymbols.push(copySymbol(symbol));
+		return copied;
 	}
 }

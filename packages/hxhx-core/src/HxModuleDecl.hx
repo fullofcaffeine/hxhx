@@ -14,14 +14,16 @@
 
 	Note
 	- The class-shaped catalog contains real declarations, including parser-modeled
-	  abstracts, structural typedef fields, and module-level functions.
-	- `mainClass` can hold parser fallback metadata when this catalog is empty.
-	  That fallback is not a runtime class and must not enter typed class catalogs.
+	  abstracts and module-level functions. Typedefs have a separate catalog.
+	- `mainClass` can hold parser fallback metadata or a removed primary header.
+	  The exact `classes` array decides which declarations belong to the module.
+	  A header outside that array is not a runtime class.
 **/
 class HxModuleDecl {
 	public final packagePath:String;
 
 	final directives:Array<HxModuleDirective>;
+	final typedefs:Array<HxTypedefDecl>;
 
 	public final mainClass:HxClassDecl;
 	public final classes:Array<HxClassDecl>;
@@ -29,24 +31,14 @@ class HxModuleDecl {
 	public final hasToplevelMain:Bool;
 
 	public function new(packagePath:String, directives:Array<HxModuleDirective>, mainClass:HxClassDecl, classes:Array<HxClassDecl>, headerOnly:Bool,
-			hasToplevelMain:Bool) {
+			hasToplevelMain:Bool, ?typedefs:Array<HxTypedefDecl>) {
 		this.packagePath = packagePath;
 		this.directives = directives == null ? [] : directives.copy();
+		this.typedefs = typedefs == null ? [] : typedefs.copy();
 		this.mainClass = mainClass;
-		// A type-only or empty module has no runtime class, even when mainClass
-		// supplies fallback metadata for callers that inspect the module header.
-		if (classes == null || classes.length == 0) {
-			this.classes = [];
-		} else {
-			var hasMain = false;
-			for (c in classes) {
-				if (c == mainClass) {
-					hasMain = true;
-					break;
-				}
-			}
-			this.classes = hasMain ? classes : ([mainClass].concat(classes));
-		}
+		// The caller owns this exact inventory. A primary header can survive
+		// removal of its class when an emitted secondary type still needs its name.
+		this.classes = classes == null ? [] : classes.copy();
 		this.headerOnly = headerOnly;
 		this.hasToplevelMain = hasToplevelMain;
 	}
@@ -87,6 +79,11 @@ class HxModuleDecl {
 	**/
 	public static function getClasses(m:HxModuleDecl):Array<HxClassDecl> {
 		return m.classes;
+	}
+
+	/** Source aliases retain their target syntax and never enter the runtime class catalog. */
+	public static function getTypedefs(m:HxModuleDecl):Array<HxTypedefDecl> {
+		return m.typedefs.copy();
 	}
 
 	/**

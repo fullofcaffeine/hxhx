@@ -1,10 +1,12 @@
 import haxe.io.Path;
 import hxhx.ExprMacroExpander;
 import hxhx.Stage3MacroHostSupport;
+import hxhx.Stage3DiagnosticsSupport;
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroState;
 import sys.io.File;
 
+@:access(hxhx.Stage3DiagnosticsSupport)
 class M14MacroRuntimeModeSwitchIntegrationTest {
 	static function fail(message:String):Void {
 		throw message;
@@ -125,6 +127,25 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		MacroState.setGeneratedHxDir(".tmp/m14_macro_runtime_generated_entrypoints");
 
 		final generated = MacroRuntimeMode.openSession(MacroRuntimeMode.INPROC);
+		final unsupportedSequence = HxExpr.ESequence(EUnsupported("first"), ESequence(EInt(0), EUnsupported("last")));
+		assertIntEq("sequence unsupported count", Stage3DiagnosticsSupport.countUnsupportedExprsInExpr(unsupportedSequence), 2);
+		final unsupportedRaw = new Array<String>();
+		Stage3DiagnosticsSupport.collectUnsupportedExprRawInExpr(unsupportedSequence, unsupportedRaw, 2);
+		assertEq("sequence unsupported order", unsupportedRaw.join(","), "first,last");
+		final limitedRaw = new Array<String>();
+		Stage3DiagnosticsSupport.collectUnsupportedExprRawInExpr(unsupportedSequence, limitedRaw, 1);
+		assertEq("sequence unsupported limit", limitedRaw.join(","), "first");
+		final sequenceParsed = ParserStage.parse("class SequenceMacroArgument { static function run():String { return { hxhxmacros.ExprMacroShim.hello(); hxhxmacros.ExprMacroShim.hello(); }; } }",
+			"SequenceMacroArgument.hx");
+		final sequenceResolved = new ResolvedModule("SequenceMacroArgument", "SequenceMacroArgument.hx", sequenceParsed);
+		final sequenceExpansion = ExprMacroExpander.expandResolvedModules([sequenceResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("sequence macro expansion count", sequenceExpansion.expandedCount, 2);
+		final sequenceClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(sequenceExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(sequenceClass)[0])) {
+			case [SReturn(ESequence(EString("HELLO"), EString("HELLO")), _)]:
+			case body:
+				fail("sequence macro expansion lost ordered children: " + Std.string(body));
+		}
 		assertEq("expr macro expansion", generated.expandExpr("hxhxmacros.ExprMacroShim.hello()"), "\"HELLO\"");
 		final nestedReturnSource = [
 			"import hxhxmacros.ExprMacroShim as ExpansionSource;",
@@ -203,10 +224,31 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		final nestedWhileClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedWhileExpansion.modules[0]).getDecl());
 		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedWhileClass)[0])) {
 			case [
-				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("ready"), [EString("HELLO")], true, _)]), _)
+				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("ready"), [EString("HELLO")], true, _, loopKind)]), _)
 			]:
 			case body:
 				fail("expression macro expansion lost the while loop around its expanded body: " + Std.string(body));
+		}
+		final conditionalSource = [
+			"class ConditionalMacroArgument {",
+			"  function run(ready:Bool):Void {",
+			"    shouldFail(if (ready) hxhxmacros.ExprMacroShim.hello() else throw hxhxmacros.ExprMacroShim.hello());",
+			"    shouldFail(if (ready) hxhxmacros.ExprMacroShim.hello());",
+			"  }",
+			"}"
+		].join("\n");
+		final conditionalParsed = ParserStage.parse(conditionalSource, "ConditionalMacroArgument.hx");
+		final conditionalResolved = new ResolvedModule("ConditionalMacroArgument", "ConditionalMacroArgument.hx", conditionalParsed);
+		final conditionalExpansion = ExprMacroExpander.expandResolvedModules([conditionalResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("conditional and throw macro expansion count", conditionalExpansion.expandedCount, 3);
+		final conditionalClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(conditionalExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(conditionalClass)[0])) {
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [ESourceIf(EIdent("ready"), EString("HELLO"), EThrow(EString("HELLO"), _), _)]), _),
+				SExpr(ECall(EIdent("shouldFail"), [ESourceIf(EIdent("ready"), EString("HELLO"), null, _)]), _)
+			]:
+			case body:
+				fail("macro expansion changed the conditional, missing else, or throw wrapper: " + Std.string(body));
 		}
 		final annotatedLocalSource = [
 			"class AnnotatedLocalMacroInitializer {",

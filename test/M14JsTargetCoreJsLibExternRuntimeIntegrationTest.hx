@@ -27,10 +27,19 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
-		final parsed = ParserStage.parse(source, filePath);
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+	/** Load the real JS library closure instead of emitting unresolved type names. */
+	static function makeProgram(source:String):MacroExpandedProgram {
+		return JsSourceProgramFixture.build({
+			sources: [{path: "Main.hx", source: source}],
+			requiredModules: [
+				"Math",
+				"Std",
+				"haxe.io.FPHelper",
+				"js.lib.ArrayBuffer",
+				"js.lib.DataView",
+				"js.lib.intl.NumberFormat"
+			]
+		});
 	}
 
 	static function runNodeScript(jsPath:String):String {
@@ -54,12 +63,12 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 			final source = [
 				"class Main {",
 				"  static function main() {",
-				'    Sys.println("fp=" + haxe.io.FPHelper.i32ToFloat(1065353216));',
-				'    Sys.println("intl=" + Std.string(new js.lib.intl.NumberFormat("en-US") != null));',
+				'    trace("fp=" + haxe.io.FPHelper.i32ToFloat(1065353216));',
+				'    trace("intl=" + Std.string(new js.lib.intl.NumberFormat("en-US") != null));',
 				"  }",
 				"}"
 			].join("\n");
-			final program = makeProgram(source, "JsLibExternRuntimeMain.hx");
+			final program = makeProgram(source);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
@@ -92,7 +101,7 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 		}
 
 		if (failure != null) {
-			Sys.println("debug_out=" + tmpRoot);
+			trace("debug_out=" + tmpRoot);
 			throw failure;
 		}
 		deleteRecursive(tmpRoot);

@@ -32,32 +32,28 @@ class TyType {
 	final typeArguments:Array<TyType>;
 	final nullableInner:Null<TyType>;
 	final unresolvedPath:String;
-	final functionArguments:Array<TyType>;
+	final functionParameters:Array<TyFunctionParameter>;
 	final functionReturn:Null<TyType>;
-	final anonymousFieldNames:Array<String>;
-	final anonymousFieldTypes:Array<TyType>;
+	final anonymousFields:Array<TyAnonymousField>;
 	final typeParameterIdentity:Null<TyTypeParameterId>;
 	final openMethodParameterIdentity:Null<TyOpenMethodParameterId>;
 
-	function new(display:String, kind:String, nominalIdentity:Null<TyNominalTypeId>, typeArguments:Array<TyType>, nullableInner:Null<TyType>,
-			unresolvedPath:String, ?functionArguments:Array<TyType>, ?functionReturn:TyType, ?anonymousFieldNames:Array<String>,
-			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId, ?openMethodParameterIdentity:TyOpenMethodParameterId) {
-		this.display = display;
-		this.kind = kind;
-		this.nominalIdentity = nominalIdentity;
-		this.typeArguments = typeArguments == null ? [] : typeArguments.copy();
-		this.nullableInner = nullableInner;
-		this.unresolvedPath = unresolvedPath == null ? "" : unresolvedPath;
-		this.functionArguments = functionArguments == null ? [] : functionArguments.copy();
-		this.functionReturn = functionReturn;
-		this.anonymousFieldNames = anonymousFieldNames == null ? [] : anonymousFieldNames.copy();
-		this.anonymousFieldTypes = anonymousFieldTypes == null ? [] : anonymousFieldTypes.copy();
-		this.typeParameterIdentity = typeParameterIdentity;
-		this.openMethodParameterIdentity = openMethodParameterIdentity;
+	function new(input:TyTypeStorage) {
+		display = input.display;
+		kind = input.kind;
+		nominalIdentity = input.nominalIdentity;
+		typeArguments = input.typeArguments == null ? [] : input.typeArguments.copy();
+		nullableInner = input.nullableInner;
+		unresolvedPath = input.unresolvedPath == null ? "" : input.unresolvedPath;
+		functionParameters = input.functionParameters == null ? [] : [for (parameter in input.functionParameters) TyFunctionParameter.copy(parameter)];
+		functionReturn = input.functionReturn;
+		anonymousFields = input.anonymousFields == null ? [] : [for (field in input.anonymousFields) TyAnonymousField.copy(field)];
+		typeParameterIdentity = input.typeParameterIdentity;
+		openMethodParameterIdentity = input.openMethodParameterIdentity;
 	}
 
 	public static function unknown():TyType {
-		return new TyType("Unknown", KIND_UNKNOWN, null, [], null, "");
+		return new TyType({display: "Unknown", kind: KIND_UNKNOWN});
 	}
 
 	/**
@@ -69,25 +65,25 @@ class TyType {
 		remain the result of the surrounding expression.
 	**/
 	public static function noNormalCompletion():TyType {
-		return new TyType("NoNormalCompletion", KIND_NO_NORMAL_COMPLETION, null, [], null, "");
+		return new TyType({display: "NoNormalCompletion", kind: KIND_NO_NORMAL_COMPLETION});
 	}
 
 	static function primitive(name:String):TyType {
-		return new TyType(name, KIND_PRIMITIVE, null, [], null, "");
+		return new TyType({display: name, kind: KIND_PRIMITIVE});
 	}
 
 	static function dynamicType():TyType {
-		return new TyType("Dynamic", KIND_DYNAMIC, null, [], null, "");
+		return new TyType({display: "Dynamic", kind: KIND_DYNAMIC});
 	}
 
 	static function nullType():TyType {
-		return new TyType("Null", KIND_NULL, null, [], null, "");
+		return new TyType({display: "Null", kind: KIND_NULL});
 	}
 
 	public static function nullable(inner:TyType, ?display:String):TyType {
 		final actualInner = inner == null ? dynamicType() : inner;
 		final shown = display == null || display.length == 0 ? "Null<" + actualInner.getDisplay() + ">" : display;
-		return new TyType(shown, KIND_NULLABLE, null, [], actualInner, "");
+		return new TyType({display: shown, kind: KIND_NULLABLE, nullableInner: actualInner});
 	}
 
 	public static function nominal(identity:TyNominalTypeId, args:Array<TyType>, ?display:String):TyType {
@@ -98,7 +94,12 @@ class TyType {
 			if (actualArgs.length > 0)
 				shown += "<" + [for (arg in actualArgs) arg.getDisplay()].join(",") + ">";
 		}
-		return new TyType(shown, KIND_NOMINAL, identity, actualArgs, null, "");
+		return new TyType({
+			display: shown,
+			kind: KIND_NOMINAL,
+			nominalIdentity: identity,
+			typeArguments: actualArgs
+		});
 	}
 
 	/**
@@ -111,7 +112,7 @@ class TyType {
 	public static function abstractMeta(instance:TyType):TyType {
 		if (instance == null)
 			throw "abstract meta-type requires an instance type";
-		return new TyType("Abstract<" + instance.getDisplay() + ">", KIND_ABSTRACT_META, null, [instance], null, "");
+		return new TyType({display: "Abstract<" + instance.getDisplay() + ">", kind: KIND_ABSTRACT_META, typeArguments: [instance]});
 	}
 
 	public function isAbstractMeta():Bool
@@ -124,9 +125,49 @@ class TyType {
 		var shown = display == null ? "" : StringTools.trim(display);
 		if (shown.length == 0) {
 			final argumentText = actualArguments.length == 0 ? "()" : "(" + [for (argument in actualArguments) argument.getDisplay()].join(", ") + ")";
-			shown = argumentText + "->" + actualResult.getDisplay();
+			shown = argumentText + "->" + (actualResult.isFunction() ? "(" + actualResult.getDisplay() + ")" : actualResult.getDisplay());
 		}
-		return new TyType(shown, KIND_FUNCTION, null, [], null, "", actualArguments, actualResult);
+		return new TyType({
+			display: shown,
+			kind: KIND_FUNCTION,
+			functionReturn: actualResult,
+			functionParameters: [
+				for (type in actualArguments)
+					TyFunctionParameter.normalizeRest({
+						name: null,
+						type: type,
+						isOptional: false,
+						isRest: false,
+						metadata: []
+					})
+			]
+		});
+	}
+
+	/** Retain named and optional arguments in a declaration-grade function type. */
+	public static function functionSignature(parameters:Array<TyFunctionParameter>, result:TyType):TyType {
+		final normalized = [for (parameter in parameters) TyFunctionParameter.normalizeRest(parameter)];
+		final shown = "(" + [
+			for (parameter in normalized)
+				(parameter.isRest ? "..." : parameter.isOptional ? "?" : "") + (parameter.name == null ? "" : parameter.name + ":") +
+				parameter.type.getCanonicalDisplay()
+		].join(",") + ")->" + (result.isFunction() ? "(" + result.getCanonicalDisplay() + ")" : result.getCanonicalDisplay());
+		return new TyType({
+			display: shown,
+			kind: KIND_FUNCTION,
+			functionReturn: result,
+			functionParameters: normalized
+		});
+	}
+
+	/** Rebuild child types while preserving argument names, optionality, and metadata. */
+	public function withFunctionTypes(arguments:Array<TyType>, result:TyType):TyType {
+		if (!isFunction() || arguments.length != functionParameters.length)
+			throw "function type rebuild requires the original argument count";
+		return functionSignature([
+			for (index in 0...arguments.length)
+				TyFunctionParameter.withType(functionParameters[index], arguments[index])
+		], result);
 	}
 
 	/**
@@ -156,20 +197,48 @@ class TyType {
 			for (index in 0...names.length)
 				names[index] + ":" + types[index].getCanonicalDisplay()
 		].join(",") + "}";
-		return new TyType(shown, KIND_ANONYMOUS, null, [], null, "", null, null, names, types);
+		return new TyType({
+			display: shown,
+			kind: KIND_ANONYMOUS,
+			anonymousFields: [
+				for (index in 0...names.length)
+					TyAnonymousField.inferred(names[index], types[index])
+			]
+		});
+	}
+
+	/** Build a structural declaration after duplicate and extension validation. */
+	public static function declaredAnonymous(fields:Array<TyAnonymousField>):TyType {
+		final sorted = [for (field in fields) TyAnonymousField.copy(field)];
+		sorted.sort((left, right) -> left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+		for (index in 1...sorted.length)
+			if (sorted[index - 1].name == sorted[index].name)
+				throw "structural type contains duplicate field " + sorted[index].name;
+		final shown = "{" + [for (field in sorted) TyAnonymousField.display(field)].join(" ") + "}";
+		return new TyType({display: shown, kind: KIND_ANONYMOUS, anonymousFields: sorted});
+	}
+
+	/** Rebuild nested types without erasing structural access or method facts. */
+	public function withAnonymousTypes(types:Array<TyType>):TyType {
+		if (!isAnonymous() || types.length != anonymousFields.length)
+			throw "structural type rebuild requires the original field count";
+		return declaredAnonymous([
+			for (index in 0...types.length)
+				TyAnonymousField.withType(anonymousFields[index], types[index])
+		]);
 	}
 
 	public static function typeParameter(identity:TyTypeParameterId):TyType {
 		if (identity == null)
 			throw "semantic type parameter requires an exact binder identity";
-		return new TyType(identity.getName(), KIND_TYPE_PARAMETER, null, [], null, "", null, null, null, null, identity);
+		return new TyType({display: identity.getName(), kind: KIND_TYPE_PARAMETER, typeParameterIdentity: identity});
 	}
 
 	/** A sealed open method instance is a valid type fact, distinct from failed lookup, Unknown, or Dynamic. */
 	public static function openMethodParameter(identity:TyOpenMethodParameterId):TyType {
 		if (identity == null)
 			throw "open method type requires its immutable instance identity";
-		return new TyType("Open<" + identity.getName() + ">", KIND_OPEN_METHOD_PARAMETER, null, [], null, "", null, null, null, null, null, identity);
+		return new TyType({display: "Open<" + identity.getName() + ">", kind: KIND_OPEN_METHOD_PARAMETER, openMethodParameterIdentity: identity});
 	}
 
 	public function isOpenMethodParameter():Bool
@@ -183,7 +252,7 @@ class TyType {
 			return true;
 		if (functionReturn != null && functionReturn.hasOpenMethodParameter())
 			return true;
-		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+		for (component in typeArguments.concat(getFunctionArguments()).concat(getAnonymousFieldTypes()))
 			if (component.hasOpenMethodParameter())
 				return true;
 		return false;
@@ -198,7 +267,12 @@ class TyType {
 			if (actualArgs.length > 0)
 				shown += "<" + [for (arg in actualArgs) arg.getDisplay()].join(",") + ">";
 		}
-		return new TyType(shown, KIND_UNRESOLVED, null, actualArgs, null, cleanPath);
+		return new TyType({
+			display: shown,
+			kind: KIND_UNRESOLVED,
+			typeArguments: actualArgs,
+			unresolvedPath: cleanPath
+		});
 	}
 
 	public function isUnknown():Bool
@@ -212,7 +286,7 @@ class TyType {
 			return true;
 		if (functionReturn != null && functionReturn.hasUnknownComponent())
 			return true;
-		for (component in typeArguments.concat(functionArguments).concat(anonymousFieldTypes))
+		for (component in typeArguments.concat(getFunctionArguments()).concat(getAnonymousFieldTypes()))
 			if (component.hasUnknownComponent())
 				return true;
 		return false;
@@ -223,6 +297,10 @@ class TyType {
 
 	public function isVoid():Bool
 		return kind == KIND_PRIMITIVE && display == "Void";
+
+	/** Distinguish language primitives from nominal types that merely have similar display text. */
+	public function isPrimitive():Bool
+		return kind == KIND_PRIMITIVE;
 
 	public function isNumeric():Bool
 		return kind == KIND_PRIMITIVE && (display == "Int" || display == "Float");
@@ -269,16 +347,22 @@ class TyType {
 		return unresolvedPath;
 
 	public function getFunctionArguments():Array<TyType>
-		return functionArguments.copy();
+		return [for (parameter in functionParameters) parameter.type];
+
+	public function getFunctionParameters():Array<TyFunctionParameter>
+		return [for (parameter in functionParameters) TyFunctionParameter.copy(parameter)];
 
 	public function getFunctionReturn():Null<TyType>
 		return functionReturn;
 
 	public function getAnonymousFieldNames():Array<String>
-		return anonymousFieldNames.copy();
+		return [for (field in anonymousFields) field.name];
 
 	public function getAnonymousFieldTypes():Array<TyType>
-		return anonymousFieldTypes.copy();
+		return [for (field in anonymousFields) field.type];
+
+	public function getAnonymousFields():Array<TyAnonymousField>
+		return [for (field in anonymousFields) TyAnonymousField.copy(field)];
 
 	/** Return the declared parameter name carried by this exact type parameter. **/
 	public function getTypeParameterName():Null<String>
@@ -288,7 +372,15 @@ class TyType {
 	public function getTypeParameterIdentity():Null<TyTypeParameterId>
 		return typeParameterIdentity;
 
-	public function getSemanticKey():String {
+	public function getSemanticKey():String
+		return semanticKeyInScopes([]);
+
+	/**
+		Internal structural comparison entry: method-local parameters use their
+		scope depth and ordinal. Ordinary callers use getSemanticKey(). Free
+		parameters retain exact identities, so no caller or outer binding is captured.
+	 */
+	public function semanticKeyInScopes(scopes:Array<Array<TyTypeParameterId>>):String {
 		if (kind == KIND_OPEN_METHOD_PARAMETER)
 			return "open-method-parameter:" + openMethodParameterIdentity.getCanonicalKey();
 		if (kind == KIND_PRIMITIVE)
@@ -301,20 +393,28 @@ class TyType {
 			return "unknown";
 		if (kind == KIND_NO_NORMAL_COMPLETION)
 			return "no-normal-completion";
-		if (kind == KIND_TYPE_PARAMETER)
+		if (kind == KIND_TYPE_PARAMETER) {
+			if (typeParameterIdentity != null)
+				for (depth in 0...scopes.length) {
+					final parameters = scopes[scopes.length - 1 - depth];
+					for (index in 0...parameters.length)
+						if (typeParameterIdentity.equals(parameters[index]))
+							return "bound-parameter:" + depth + ":" + index;
+				}
 			return "type-parameter:" + (typeParameterIdentity == null ? "<missing>" : typeParameterIdentity.getCanonicalKey());
+		}
 		if (kind == KIND_NULLABLE)
-			return "nullable:" + (nullableInner == null ? "dynamic" : nullableInner.getSemanticKey());
+			return "nullable:" + (nullableInner == null ? "dynamic" : nullableInner.semanticKeyInScopes(scopes));
 		if (kind == KIND_FUNCTION) {
-			final arguments = [for (argument in functionArguments) argument.getSemanticKey()].join(",");
-			return "function:(" + arguments + ")->" + (functionReturn == null ? "unknown" : functionReturn.getSemanticKey());
+			final arguments = [
+				for (parameter in functionParameters)
+					(parameter.isRest ? "..." : parameter.isOptional ? "?" : "") + parameter.type.semanticKeyInScopes(scopes)
+			].join(",");
+			return "function:(" + arguments + ")->" + (functionReturn == null ? "unknown" : functionReturn.semanticKeyInScopes(scopes));
 		}
 		if (kind == KIND_ANONYMOUS)
-			return "anonymous:{" + [
-				for (index in 0...anonymousFieldNames.length)
-					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getSemanticKey()
-			].join(",") + "}";
-		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.getSemanticKey()].join(",") + ">";
+			return "anonymous:{" + [for (field in anonymousFields) TyAnonymousField.semanticKey(field, scopes)].join(",") + "}";
+		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.semanticKeyInScopes(scopes)].join(",") + ">";
 		if (kind == KIND_ABSTRACT_META)
 			return "abstract-meta" + args;
 		if (kind == KIND_NOMINAL)
@@ -338,14 +438,19 @@ class TyType {
 		if (kind == KIND_NULLABLE)
 			return "Null<" + (nullableInner == null ? "Dynamic" : nullableInner.getCanonicalDisplay()) + ">";
 		if (kind == KIND_FUNCTION) {
-			final arguments = [for (argument in functionArguments) argument.getCanonicalDisplay()];
-			return "(" + arguments.join(",") + ")->" + (functionReturn == null ? "Dynamic" : functionReturn.getCanonicalDisplay());
+			final arguments = [
+				for (parameter in functionParameters)
+					(parameter.isRest ? "..." : parameter.isOptional ? "?" : "") + (parameter.name == null ? "" : parameter.name + ":") +
+					parameter.type.getCanonicalDisplay()
+			];
+			final result = functionReturn == null ? "Dynamic" : functionReturn.getCanonicalDisplay();
+			return "("
+				+ arguments.join(",")
+				+ ")->"
+				+ (functionReturn != null && functionReturn.isFunction() ? "(" + result + ")" : result);
 		}
 		if (kind == KIND_ANONYMOUS)
-			return "{" + [
-				for (index in 0...anonymousFieldNames.length)
-					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getCanonicalDisplay()
-			].join(",") + "}";
+			return "{" + [for (field in anonymousFields) TyAnonymousField.display(field)].join(" ") + "}";
 		final arguments = typeArguments.length == 0 ? "" : "<" + [for (argument in typeArguments) argument.getCanonicalDisplay()].join(",") + ">";
 		if (kind == KIND_ABSTRACT_META)
 			return "Abstract" + arguments;
@@ -402,7 +507,7 @@ class TyType {
 				case "<":
 					angleDepth++;
 				case ">":
-					if (angleDepth > 0)
+					if (angleDepth > 0 && (i == 0 || text.charAt(i - 1) != "-"))
 						angleDepth--;
 				case "[":
 					bracketDepth++;
@@ -444,7 +549,7 @@ class TyType {
 				case "<":
 					angleDepth++;
 				case ">":
-					if (angleDepth > 0)
+					if (angleDepth > 0 && (index == 0 || text.charAt(index - 1) != "-"))
 						angleDepth--;
 				case "[":
 					bracketDepth++;
@@ -476,8 +581,11 @@ class TyType {
 		return out;
 	}
 
-	static function functionArgumentTypeText(text:String):String {
-		final trimmed = StringTools.trim(text);
+	/** Preserve optional parameters in both named hints and the unnamed hints produced for local functions. */
+	static function functionParameterFromHint(text:String):TyFunctionParameter {
+		final raw = StringTools.trim(text);
+		final rest = StringTools.startsWith(raw, "...");
+		final trimmed = rest ? StringTools.trim(raw.substr(3)) : raw;
 		var parenDepth = 0;
 		var angleDepth = 0;
 		var bracketDepth = 0;
@@ -493,7 +601,7 @@ class TyType {
 				case "<":
 					angleDepth++;
 				case ">":
-					if (angleDepth > 0)
+					if (angleDepth > 0 && (i == 0 || trimmed.charAt(i - 1) != "-"))
 						angleDepth--;
 				case "[":
 					bracketDepth++;
@@ -507,28 +615,47 @@ class TyType {
 						braceDepth--;
 				case _:
 			}
-			if (ch == ":" && parenDepth == 0 && angleDepth == 0 && bracketDepth == 0 && braceDepth == 0)
-				return StringTools.trim(trimmed.substr(i + 1));
+			if (ch == ":" && parenDepth == 0 && angleDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+				final label = StringTools.trim(trimmed.substr(0, i));
+				final optional = StringTools.startsWith(label, "?");
+				return {
+					name: optional ? label.substr(1) : label,
+					type: fromHintText(StringTools.trim(trimmed.substr(i + 1))),
+					isOptional: optional,
+					isRest: rest,
+					metadata: []
+				};
+			}
 		}
-		return trimmed;
+		final optional = StringTools.startsWith(trimmed, "?");
+		return {
+			name: null,
+			type: fromHintText(optional ? StringTools.trim(trimmed.substr(1)) : trimmed),
+			isOptional: optional,
+			isRest: rest,
+			metadata: []
+		};
 	}
 
 	static function parseFunctionType(text:String):Null<TyType> {
 		final segments = splitFunctionSegments(text);
 		if (segments.length < 2)
 			return null;
-		final arguments = new Array<TyType>();
+		final arguments = new Array<TyFunctionParameter>();
 		for (index in 0...segments.length - 1) {
 			var argumentGroup = StringTools.trim(segments[index]);
+			// The legacy bare Void marker means no inputs only when it is the
+			// entire argument list. Explicit (Void) retains a real Void argument.
+			if (segments.length == 2 && argumentGroup == "Void")
+				continue;
 			if (hasWrappingParentheses(argumentGroup))
 				argumentGroup = StringTools.trim(argumentGroup.substr(1, argumentGroup.length - 2));
 			if (argumentGroup.length == 0)
 				continue;
 			for (argument in splitTopLevel(argumentGroup, ",")) {
-				final typeText = functionArgumentTypeText(argument);
-				if (typeText.length == 0)
+				if (StringTools.trim(argument).length == 0)
 					return null;
-				arguments.push(fromHintText(typeText));
+				arguments.push(functionParameterFromHint(argument));
 			}
 		}
 		var resultText = StringTools.trim(segments[segments.length - 1]);
@@ -536,7 +663,7 @@ class TyType {
 			resultText = StringTools.trim(resultText.substr(1, resultText.length - 2));
 		if (resultText.length == 0)
 			return null;
-		return functionType(arguments, fromHintText(resultText), text);
+		return functionSignature(arguments, fromHintText(resultText));
 	}
 
 	/**
@@ -630,6 +757,8 @@ class TyType {
 				return null;
 			final arguments = new Array<TyType>();
 			for (index in 0...aArguments.length) {
+				if (a.functionParameters[index].isRest != b.functionParameters[index].isRest)
+					return null;
 				final left = aArguments[index];
 				final right = bArguments[index];
 				final argument = left.isUnknown()
@@ -644,7 +773,16 @@ class TyType {
 				return null;
 			final result = aReturn.isUnknown()
 				|| aReturn.isDynamic() ? bReturn : bReturn.isUnknown() || bReturn.isDynamic() ? aReturn : unify(aReturn, bReturn);
-			return result == null ? null : functionType(arguments, result, a.getDisplay());
+			return result == null ? null : functionSignature([
+				for (index in 0...arguments.length)
+					{
+						name: a.functionParameters[index].name,
+						type: arguments[index],
+						isOptional: a.functionParameters[index].isOptional && b.functionParameters[index].isOptional,
+						isRest: a.functionParameters[index].isRest,
+						metadata: a.functionParameters[index].metadata
+					}
+			], result);
 		}
 		if (a.display == "Null")
 			return b;
@@ -678,3 +816,18 @@ class TyType {
 	public function getDisplay():String
 		return display;
 }
+
+/** Named internal storage input; public factories establish each type constructor's invariants. */
+private typedef TyTypeStorage = {
+	final display:String;
+	final kind:String;
+	final ?nominalIdentity:TyNominalTypeId;
+	final ?typeArguments:Array<TyType>;
+	final ?nullableInner:TyType;
+	final ?unresolvedPath:String;
+	final ?functionParameters:Array<TyFunctionParameter>;
+	final ?functionReturn:TyType;
+	final ?anonymousFields:Array<TyAnonymousField>;
+	final ?typeParameterIdentity:TyTypeParameterId;
+	final ?openMethodParameterIdentity:TyOpenMethodParameterId;
+};

@@ -59,6 +59,8 @@ class NekoMacroExprBuilder {
 
 	public function macroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [quote(value), macroEnum("DoubleQuotes", [])])]);
 			case EInt(value):

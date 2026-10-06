@@ -9,14 +9,23 @@ class M14SignatureDependencyLoadingIntegrationTest {
 		final root = ".tmp/signature_dependencies_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final sources = [
-			{name: "Main", source: 'class Main { static function main():Void Sys.println(Api.accept("text")); }'},
+			{
+				name: "Main",
+				source: 'class Main { static function main():Void Sys.println(Api.accept("text"));' +
+				' static function consume(value:ApiAlias):ApiAlias return value;' + ' static function defaulted(value:Defaults):Defaults return value; }'
+			},
 			{name: "Api",
 				source: 'class Api { public static function accept(value:Box):Bool return true;'
 				+ ' public static function nested(value:Envelope<Box>):Envelope<Box> return value;'
 				+ ' public static function callback(value:Box->Box):Box->Box return value;'
+				+ ' public static function alias(value:ApiAlias):ApiAlias return value;'
 				+ ' public static function cycle(value:Left):Right return null; }'},
 			{name: "Box", source: 'abstract Box(Dynamic) from Dynamic {}'},
 			{name: "Other", source: 'class Other {} class Box {}'},
+			{name: "ApiAlias", source: 'typedef ApiAlias = Alias;'},
+			{name: "Alias", source: 'typedef Alias = Box;'},
+			{name: "Defaults", source: 'typedef Defaults<DefaultTarget=DefaultTarget> = DefaultTarget;'},
+			{name: "DefaultTarget", source: 'class DefaultTarget {}'},
 			{name: "Envelope", source: 'class Envelope<T> { public var value:T; }'},
 			{name: "Left", source: 'class Left { public var right:Right; }'},
 			{name: "Right", source: 'class Right { public var left:Left; }'},
@@ -29,7 +38,7 @@ class M14SignatureDependencyLoadingIntegrationTest {
 		for (shallow in [false, true]) {
 			final resolved = shallow ? ResolverStage.parseProjectRootsShallow([root],
 				["Main", "Other"]) : ResolverStage.parseProjectRoots([root], ["Main", "Other"]);
-			final index = TyperIndex.build(resolved);
+			final index = TyperIndex.buildHeaders(resolved);
 			check(index.resolveTypePath("Box", "", []) == null, "an unrelated module's secondary type must not capture an unloaded root type");
 			check(index.resolveTypePath("missing.Box", "", []) == null, "a missing qualified type must not resolve by its final name");
 			final prepared = new Array<String>();
@@ -40,12 +49,24 @@ class M14SignatureDependencyLoadingIntegrationTest {
 				return module;
 			});
 			loader.markResolvedAlready(resolved);
+			final rootProvider = index.getByFullName("Main");
+			final rootMethod = rootProvider.staticMethod("consume");
+			check(rootMethod.getArgs()[0].getSemanticKey() == "nominal:Box", "root signature was published before alias targets loaded");
+			check(rootProvider.staticMethod("defaulted").getArgs()[0].getSemanticKey() == "nominal:DefaultTarget",
+				"default type argument was hidden by a same-name alias parameter during dependency discovery");
+			final rootSelected = rootProvider.declarationForSignature(rootMethod);
 			final provider = loader.ensureTypeAvailable("Api", "", []);
 			check(provider != null, "Api did not load");
 			final method = provider.staticMethod("accept");
 			check(method != null
 				&& method.getArgs()[0].getSemanticKey() == "nominal:Box", "signature-only Box dependency remained unresolved");
 			final selected = provider.declarationForSignature(method);
+			check(provider.staticMethod("alias").getArgs()[0].getSemanticKey() == "nominal:Box"
+				&& provider.staticMethod("alias").getReturnType().getSemanticKey() == "nominal:Box",
+				"signature-only typedef chain remained unresolved");
+			check(index.getByFullName("ApiAlias") == null && index.getByFullName("Alias") == null,
+				"loading an alias-only module manufactured a nominal provider");
+			check(loader.ensureTypeAvailable("ApiAlias", "", []) == index.getByFullName("Box"), "nominal-provider lookup did not select the alias target");
 			check(selected != null
 				&& selected.getIdentity().getCanonicalKey() == "Api#static:accept(required:nominal:Box)->primitive:Bool#0",
 				"signature dependency lost the exact method identity");
@@ -68,6 +89,8 @@ class M14SignatureDependencyLoadingIntegrationTest {
 			for (module in resolved.concat(added))
 				TyperStage.typeResolvedModule(module, index, loader);
 			check(index.getByFullName("Api").declarationForSignature(method) == selected, "typing replaced a prepared declaration");
+			check(index.getByFullName("Main") == rootProvider && rootProvider.declarationForSignature(rootMethod) == rootSelected,
+				"typing replaced a root signature after publication");
 		}
 		for (entry in sources)
 			sys.FileSystem.deleteFile(root + "/" + entry.name + ".hx");

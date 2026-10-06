@@ -41,8 +41,9 @@ class M14Stage3UniqueReturnExceptionIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 
 		final pos = HxPos.unknown();
-		final first = new HxFunctionDecl("moduleTest", Public, true, [], "String", [SReturn(EString("one"), pos)], "");
-		final second = new HxFunctionDecl("moduleTest", Public, true, [], "String", [SReturn(EString("two"), pos)], "");
+		// Distinct source names can still collide after OCaml identifier escaping.
+		final first = new HxFunctionDecl("module-test", Public, true, [], "String", [SReturn(EString("one"), pos)], "");
+		final second = new HxFunctionDecl("module_test", Public, true, [], "String", [SReturn(EString("two"), pos)], "");
 		final mainClass = new HxClassDecl("Main", false, [first, second], []);
 		final decl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final parsed = new ParsedModule("", decl, "Main.hx");
@@ -56,13 +57,13 @@ class M14Stage3UniqueReturnExceptionIntegrationTest {
 			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
 			final ocaml = File.getContent(mainMl);
-			assertTrue(countOccurrences(ocaml, 'exception HxReturn_moduleTest of Obj.t') == 1,
-				'Expected the first duplicate return exception to keep the base name.');
-			assertTrue(countOccurrences(ocaml, 'exception HxReturn_moduleTest_1 of Obj.t') == 1,
-				'Expected the second duplicate return exception to receive a deterministic suffix.');
-			assertTrue(ocaml.indexOf('with HxReturn_moduleTest v -> (Obj.magic v)') >= 0,
+			assertTrue(countOccurrences(ocaml, 'exception HxReturn_module_test of Obj.t') == 1,
+				'Expected the first escaped-name collision to keep the base exception name.');
+			assertTrue(countOccurrences(ocaml, 'exception HxReturn_module_test_1 of Obj.t') == 1,
+				'Expected the second escaped-name collision to receive a deterministic suffix.');
+			assertTrue(ocaml.indexOf('with HxReturn_module_test v -> (Obj.magic v)') >= 0,
 				'Expected the first function body to catch its base return exception.');
-			assertTrue(ocaml.indexOf('with HxReturn_moduleTest_1 v -> (Obj.magic v)') >= 0,
+			assertTrue(ocaml.indexOf('with HxReturn_module_test_1 v -> (Obj.magic v)') >= 0,
 				'Expected the second function body to catch its suffixed return exception.');
 		} catch (e:Dynamic) {
 			thrown = e;

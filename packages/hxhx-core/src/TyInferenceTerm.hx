@@ -7,7 +7,12 @@ enum TyInferenceTerm {
 	Variable(identity:TyInferenceVariable);
 	Nominal(identity:TyNominalTypeId, arguments:Array<TyInferenceTerm>);
 	Nullable(inner:TyInferenceTerm);
-	Function(arguments:Array<TyInferenceTerm>, result:TyInferenceTerm);
+
+	/** The immutable source type retains parameter names and omission/rest rules while child terms are solved. */
+	Function(arguments:Array<TyInferenceTerm>, result:TyInferenceTerm, signature:TyType);
+
+	/** Sorted field terms retain the original access, optionality, and method-binder contracts. */
+	Structure(fields:Array<TyInferenceTerm>, signature:TyType);
 }
 
 /** Identity is object-owned, so unrelated solvers cannot forge equal variables by name. */
@@ -17,9 +22,13 @@ class TyInferenceVariable {
 	public final ordinal:Int;
 	public final openMethodParameter:Null<TyOpenMethodParameterId>;
 
-	function new(owner:String, ordinal:Int, ?openMethodParameter:TyOpenMethodParameterId) {
+	/** Omitted inputs, explicitly untyped results, and their projections may retain missing evidence. */
+	public final allowsUnknown:Bool;
+
+	function new(owner:String, ordinal:Int, ?openMethodParameter:TyOpenMethodParameterId, allowsUnknown:Bool = false) {
 		this.owner = owner;
 		this.ordinal = ordinal;
 		this.openMethodParameter = openMethodParameter;
+		this.allowsUnknown = allowsUnknown;
 	}
 }

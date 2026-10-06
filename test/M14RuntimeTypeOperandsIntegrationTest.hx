@@ -59,6 +59,37 @@ class Main {
 				throw "core is operand lost its type namespace: " + name;
 		if (!returned(core, "stringLocal").getTag().match(LocalRead))
 			throw "core class fallback replaced an ordinary local";
+		final meta = typeSource('enum Choice { Empty; Value(number:Int); }
+class Main {
+ static function dynamicValue() { return Dynamic; }
+ static function classCategory() { return Class; }
+ static function enumCategory() { return Enum; }
+ static function enumDeclaration() { return Choice; }
+ static function localMeta(Class:Int):Int { return Class; }
+ static function dynamicCheck(value:Dynamic):Bool { return value is Dynamic; }
+ static function enumCheck(value:Choice):Bool { return value is Choice; }
+}');
+		for (entry in [
+			{name: "dynamicValue", key: "runtime-core:Dynamic", type: TyType.abstractMeta(TyType.fromHintText("Dynamic"))},
+			{name: "classCategory", key: "runtime-core:Class", type: TyType.abstractMeta(TyType.nominal(new TyNominalTypeId("Class"), []))},
+			{name: "enumCategory", key: "runtime-core:Enum", type: TyType.abstractMeta(TyType.nominal(new TyNominalTypeId("Enum"), []))},
+			{
+				name: "enumDeclaration",
+				key: "runtime-enum:Main.Choice",
+				type: TyType.nominal(new TyNominalTypeId("Enum"), [TyType.nominal(new TyNominalTypeId("Main.Choice"), [])])
+			}
+		]) {
+			final value = returned(meta, entry.name);
+			if (!value.getTag().match(RuntimeTypeValue)
+				|| value.getRuntimeTypeTarget().getSemanticKey() != entry.key
+				|| value.getType().getSemanticKey() != entry.type.getSemanticKey())
+				throw "meta value lost its exact target or semantic type: " + entry.name;
+		}
+		if (!returned(meta, "localMeta").getTag().match(LocalRead))
+			throw "meta category replaced a lexical binding";
+		for (name in ["dynamicCheck", "enumCheck"])
+			if (!returned(meta, name).getTag().match(RuntimeTypeTest))
+				throw "meta operand lost its type namespace: " + name;
 		Sys.println("RUNTIME_TYPE_OPERANDS:PASS");
 	}
 }

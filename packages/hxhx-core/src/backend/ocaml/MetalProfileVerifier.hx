@@ -167,7 +167,28 @@ class MetalProfileVerifier {
 
 	static function verifyExpr(filePath:String, className:String, fnName:String, stmtPos:Null<HxPos>, expr:HxExpr, violations:Array<MetalViolation>):Void {
 		switch (expr) {
-			case EParenthesized(inner, position):
+			case ESourceTry(_, bodies, position):
+				for (body in bodies)
+					verifyExpr(filePath, className, fnName, position, body, violations);
+			case ESourceFor(_, iterable, body, position):
+				verifyExpr(filePath, className, fnName, position, iterable, violations);
+				verifyExpr(filePath, className, fnName, position, body, violations);
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				verifyExpr(filePath, className, fnName, position, condition, violations);
+				verifyExpr(filePath, className, fnName, position, whenTrue, violations);
+				if (whenFalse != null)
+					verifyExpr(filePath, className, fnName, position, whenFalse, violations);
+			case EThrow(value, position):
+				verifyExpr(filePath, className, fnName, position, value, violations);
+			case ESourceGroup(children, position) | ELoweredControl(_, _, children, position):
+				for (child in children)
+					verifyExpr(filePath, className, fnName, position, child, violations);
+			case ESourceFunction(facts, body, defaults, position):
+				facts.assertDefaultCount(defaults.length);
+				verifyExpr(filePath, className, fnName, position, body, violations);
+				for (value in defaults)
+					verifyExpr(filePath, className, fnName, position, value, violations);
+			case EParenthesized(inner, position) | EPrivateAccess(inner, position):
 				verifyExpr(filePath, className, fnName, position, inner, violations);
 			case EUntyped(inner):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNTYPED, "`untyped` expression",
@@ -198,7 +219,7 @@ class MetalProfileVerifier {
 					"expand the macro or move the return to statement position before selecting metal profile");
 				if (value != null)
 					verifyExpr(filePath, className, fnName, stmtPos, value, violations);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position while",
 					"a while loop nested inside another expression must be handled by macro expansion before metal emission",
 					"expand the macro or move the loop to statement position before selecting metal profile");
@@ -235,7 +256,7 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, obj, violations);
 			case EUnop(_, _, inner):
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				verifyExpr(filePath, className, fnName, stmtPos, left, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, right, violations);
 			case ETernary(cond, thenExpr, elseExpr):

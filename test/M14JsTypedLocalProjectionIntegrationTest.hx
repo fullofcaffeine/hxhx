@@ -33,7 +33,8 @@ class M14JsTypedLocalProjectionIntegrationTest {
 
 	static function makeProgram(source:String):MacroExpandedProgram {
 		final parsed = ParserStage.parse(source, "Main.hx");
-		return MacroStage.expandProgram([TyperStage.typeModule(parsed)], []);
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		return MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
 	}
 
 	static function functionProjection(program:MacroExpandedProgram, name:String):TypedBackendFunctionProjection {

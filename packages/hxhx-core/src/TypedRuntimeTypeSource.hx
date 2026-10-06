@@ -35,4 +35,14 @@ class TypedRuntimeTypeSource {
 			}, _ -> {});
 		return out;
 	}
+
+	/** Defaults share the declaration's checked runtime type catalog. */
+	public static function inFunction(declaration:HxFunctionDecl):Array<HxExpr> {
+		final out = new Array<HxExpr>();
+		TypedBackendSourceWalk.functionDeclaration(declaration, node -> {
+			if (isMarker(node))
+				out.push(node);
+		}, _ -> {});
+		return out;
+	}
 }
