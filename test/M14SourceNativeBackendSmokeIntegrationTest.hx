@@ -9070,8 +9070,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final enumContent = File.getContent(aSourcePath);
 			assertContains(enumContent, "new global::hxhx.__HxEnumValue(\"A\", \"A2\"", "C# enum constructor support should return a runtime enum value");
 			assertContains(entryContent, "global::A.A2(global::B.BB(12))", "C# entry wrapper should qualify enum constructor calls");
-			assertContains(entryContent, "new System.Func<object>(() => {", "C# binding switch expressions should lower to an expression lambda");
-			assertContains(entryContent, "var v = ((global::hxhx.__HxEnumValue)__hxhx_switch).__hx_params[0];",
+			assertNotContains(entryContent, "new System.Func<object>(() => {", "C# value switches should use shared result storage without an extra callable");
+			assertContains(entryContent, "object result", "C# enum switch results should use the existing enum constructor ABI");
+			assertContains(entryContent, "object v = (object)(((global::hxhx.__HxEnumValue)(v1)).__hx_params[0]);",
 				"C# enum-extract switch expressions should declare extracted bindings before rendering the branch");
 			assertContains(entryContent, "global::A.A2(global::B.BB(__hxhx_postUpdateVar(ref v_1",
 				"C# nested enum switch branch should keep postfix old-value semantics on the exact typed binding");

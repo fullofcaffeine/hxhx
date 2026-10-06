@@ -64,8 +64,8 @@ private function statement(expression:HxExpr, target:String, loop:String, onTry:
 			SBreak(position);
 		case ELoweredControl(Continue, destination, [], position) if (loop.length > 0 && destination == loop):
 			SContinue(position);
-		case ELoweredControl(Switch(patterns), "", children, position) if (children.length == patterns.length + 1):
-			SSwitch(children[0], patterns, [for (index in 1...children.length) block(children[index], target, loop, onTry)], position);
+		case ELoweredControl(Switch(patterns, exhaustive), "", children, position) if (children.length == patterns.length + 1):
+			SSwitch(children[0], patterns, [for (index in 1...children.length) block(children[index], target, loop, onTry)], position, exhaustive);
 		case ELoweredControl(Try(catches), "", children, position) if (children.length == catches.length + 1):
 			STry(block(children[0], target, loop, onTry), [
 				for (index in 0...catches.length)

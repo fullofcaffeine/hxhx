@@ -17,7 +17,10 @@ enum HxLoweredControlKind {
 	Throw;
 	While(kind:HxWhileKind);
 	For(binding:HxForBinding);
-	Switch(patterns:Array<HxSwitchPattern>);
+
+	/** Retain shared coverage through function and initializer statement adaptation. */
+	Switch(patterns:Array<HxSwitchPattern>, ?exhaustive:Bool);
+
 	Try(catches:Array<HxSourceCatch>);
 	Break;
 	Continue;

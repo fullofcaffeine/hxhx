@@ -385,11 +385,11 @@ class HxParser {
 				SWhile(cond, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SDoWhile(body, cond, pos):
 				SDoWhile(rebaseFunctionBodyStmt(body, base, bodyStartIndex), cond, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final shiftedBodies = new Array<HxStmt>();
 				for (body in bodies)
 					shiftedBodies.push(rebaseFunctionBodyStmt(body, base, bodyStartIndex));
-				SSwitch(scrutinee, patterns, shiftedBodies, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SSwitch(scrutinee, patterns, shiftedBodies, rebaseFunctionBodyPos(pos, base, bodyStartIndex), exhaustive);
 			case STry(tryBody, catches, pos):
 				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches)
@@ -629,11 +629,11 @@ class HxParser {
 				SWhile(offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SDoWhile(body, cond, pos):
 				SDoWhile(offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyPosColumn(pos, delta));
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final shiftedBodies = new Array<HxStmt>();
 				for (body in bodies)
 					shiftedBodies.push(offsetFunctionBodyStmtColumns(body, delta));
-				SSwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta));
+				SSwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta), exhaustive);
 			case STry(tryBody, catches, pos):
 				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches)
@@ -3350,11 +3350,11 @@ class HxParser {
 					final lastInner = rewrittenInner.length - 1;
 					rewrittenInner[lastInner] = markTailValue(rewrittenInner[lastInner]);
 					SBlock(rewrittenInner, pos);
-				case SSwitch(scrutinee, patterns, bodies, pos):
+				case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 					final rewrittenBodies = new Array<HxStmt>();
 					for (body in bodies)
 						rewrittenBodies.push(markTailValue(body));
-					SSwitch(scrutinee, patterns, rewrittenBodies, pos);
+					SSwitch(scrutinee, patterns, rewrittenBodies, pos, exhaustive);
 				case other:
 					other;
 			}

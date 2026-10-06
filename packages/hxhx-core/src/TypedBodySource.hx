@@ -541,8 +541,9 @@ class TypedBodySource {
 					projectionFacts == null ? operand : projectionFacts.projectThrownValue(expressions[0], operand)
 				], sourcePosition(typedExpression.getPosition()));
 			case ControlSwitch:
-				ELoweredControl(Switch(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog)), "",
-					[for (child in expressions) expression(child, catalog, projectionFacts)], typedExpression.getPosition());
+				ELoweredControl(Switch(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+					typedExpression.getSwitchHasExhaustiveCoverage()),
+					"", [for (child in expressions) expression(child, catalog, projectionFacts)], typedExpression.getPosition());
 			case ControlFor:
 				final target = typedExpression.getControlTarget();
 				if (target == null)
@@ -804,7 +805,7 @@ class TypedBodySource {
 			case Switch:
 				SSwitch(expression(expressions[0], catalog, projectionFacts),
 					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
-					[for (body in statements) statement(body, catalog, projectionFacts)], position);
+					[for (body in statements) statement(body, catalog, projectionFacts)], position, typedStatement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = typedStatement.getCatchNames();
 				final catchTypeHints = typedStatement.getCatchTypeHints();

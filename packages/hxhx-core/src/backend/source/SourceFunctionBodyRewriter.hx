@@ -47,9 +47,9 @@ class SourceFunctionBodyRewriter {
 				SWhile(expressionNode(condition, transform), statementNode(loopBody, transform), position);
 			case SDoWhile(loopBody, condition, position):
 				SDoWhile(statementNode(loopBody, transform), expressionNode(condition, transform), position);
-			case SSwitch(scrutinee, patterns, bodies, position):
+			case SSwitch(scrutinee, patterns, bodies, position, exhaustive):
 				SSwitch(expressionNode(scrutinee, transform), patterns == null ? [] : patterns.copy(),
-					bodies == null ? [] : [for (body in bodies) statementNode(body, transform)], position);
+					bodies == null ? [] : [for (body in bodies) statementNode(body, transform)], position, exhaustive);
 			case STry(tryBody, catches, position):
 				STry(statementNode(tryBody, transform), [
 					for (item in catches)

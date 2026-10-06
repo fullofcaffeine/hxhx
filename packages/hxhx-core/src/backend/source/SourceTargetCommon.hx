@@ -9086,8 +9086,8 @@ class SourceTargetCommon {
 				renderForKeyValueWithFrame(frame, keyName, valueName, iterable, body, indent);
 			case SWhile(cond, body, _):
 				renderWhileWithFrame(frame, cond, body, indent);
-			case SSwitch(scrutinee, patterns, bodies, _):
-				renderSwitchStmtWithFrame(frame, scrutinee, patterns, bodies, indent);
+			case SSwitch(scrutinee, patterns, bodies, _, exhaustive):
+				renderSwitchStmtWithFrame(frame, scrutinee, patterns, bodies, indent, exhaustive == true);
 			case STry(tryBody, catches, _):
 				renderTryWithFrame(frame, tryBody, catches, indent);
 			case SBreak(_):
@@ -11137,7 +11137,7 @@ class SourceTargetCommon {
 	}
 
 	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
-			?functionFrame:SourceFunctionRenderFrame):Array<String> {
+			?functionFrame:SourceFunctionRenderFrame, exhaustive:Bool = false):Array<String> {
 		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final scrutineeExpr = renderExpr(target, scrutinee);
 		final childIndent = indent + indentStep(target);
@@ -11182,9 +11182,9 @@ class SourceTargetCommon {
 				}
 				out.push(indent + "}");
 			case Java:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame, exhaustive);
 			case Cs:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame, exhaustive);
 			case Lua:
 				if (count == 0)
 					return out;
@@ -11207,10 +11207,10 @@ class SourceTargetCommon {
 	}
 
 	static function renderSwitchStmtWithFrame(frame:SourceFunctionRenderFrame, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			indent:String):Array<String> {
+			indent:String, exhaustive:Bool = false):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent, frame);
+			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent, frame, exhaustive);
 		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 		if (count == 0)
 			return [];
@@ -11242,7 +11242,7 @@ class SourceTargetCommon {
 	}
 
 	static function renderCStyleSwitchStmtInto(target:SourceNativeTarget, scrutineeExpr:String, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			count:Int, indent:String, childIndent:String, out:Array<String>, ?functionFrame:SourceFunctionRenderFrame):Void {
+			count:Int, indent:String, childIndent:String, out:Array<String>, ?functionFrame:SourceFunctionRenderFrame, exhaustive:Bool = false):Void {
 		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		if (count == 0)
 			return;
@@ -11254,10 +11254,20 @@ class SourceTargetCommon {
 			out.push(indent + keyword + " (" + lowered.cond + ") {");
 			for (binding in lowered.bindings) {
 				final bindName = sanitizeTypeName(binding.name);
-				out.push(childIndent + varDecl(target, bindName, binding.expr));
+				final declaration = switch frame {
+					case NativeFunction(locals) if (target == Cs): locals.patternDeclaration(binding.name, binding.expr);
+					case _: varDecl(target, bindName, binding.expr);
+				};
+				out.push(childIndent + declaration);
 			}
 			for (line in renderStmtWithFrame(frame, bodies[i], childIndent))
 				out.push(line);
+		}
+		// Exhaustive value switches cannot fall through without assigning their result.
+		// Keep null abrupt, as upstream does, instead of inventing a default value.
+		if (exhaustive && target == Cs && !patterns[count - 1].match(PWildcard)) {
+			out.push(indent + "} else {");
+			out.push(childIndent + "throw new System.InvalidOperationException(\"Exhaustive switch did not match\");");
 		}
 		out.push(indent + "}");
 	}
@@ -18531,7 +18541,7 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(phpRenameScopedLocalStmt(body, copyStringMap(env), counters, rewriteRawText),
 					phpRenameScopedLocalExpr(cond, env, counters, rewriteRawText), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final renamedPatterns = new Array<HxSwitchPattern>();
 				final renamedBodies = new Array<HxStmt>();
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
@@ -18540,7 +18550,7 @@ class SourceTargetCommon {
 					renamedPatterns.push(phpRenameScopedPattern(patterns[i], caseEnv, counters, rewriteRawText));
 					renamedBodies.push(phpRenameScopedLocalStmt(bodies[i], caseEnv, counters, rewriteRawText));
 				}
-				SSwitch(phpRenameScopedLocalExpr(scrutinee, env, counters, rewriteRawText), renamedPatterns, renamedBodies, pos);
+				SSwitch(phpRenameScopedLocalExpr(scrutinee, env, counters, rewriteRawText), renamedPatterns, renamedBodies, pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(phpRenameScopedLocalStmt(tryBody, copyStringMap(env), counters, rewriteRawText), [
 					for (c in catches) {
@@ -18775,11 +18785,11 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)),
 					pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				SSwitch(pythonRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, locals), patterns, [
 					for (body in bodies)
 						pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals))
-				], pos);
+				], pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(pythonRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, copyStringArray(locals)), [
 					for (c in catches) {
@@ -19082,11 +19092,11 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals)),
 					csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				SSwitch(csRewriteSameClassStaticMemberExpr(scrutinee, staticMemberNames, className, locals), patterns, [
 					for (body in bodies)
 						csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals))
-				], pos);
+				], pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(csRewriteSameClassStaticMembersInStmt(tryBody, staticMemberNames, className, copyStringArray(locals)), [
 					for (c in catches) {
@@ -19237,7 +19247,7 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)),
 					phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, staticFieldNames, className, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 				final rewrittenBodies = new Array<HxStmt>();
 				for (i in 0...count) {
@@ -19245,7 +19255,8 @@ class SourceTargetCommon {
 					phpCollectDeclaredLocalsInPattern(patterns[i], caseLocals);
 					rewrittenBodies.push(phpRewriteSameClassMembersInStmt(bodies[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
 				}
-				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenBodies, pos);
+				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenBodies,
+					pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(phpRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), [
 					for (c in catches) {

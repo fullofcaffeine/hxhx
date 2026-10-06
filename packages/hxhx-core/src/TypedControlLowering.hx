@@ -200,7 +200,8 @@ class TypedControlLowering {
 					}
 				];
 				[
-					TypedStmt.switchStmt(children[0], step.getPatterns(), bodies, step.getPosition(), step.getLocalBindings())
+					TypedStmt.switchStmt(children[0], step.getPatterns(), bodies, step.getPosition(), step.getLocalBindings(),
+						step.getSwitchHasExhaustiveCoverage())
 				];
 			case ControlFor | ControlWhile:
 				// Keep the selected loop destination through backend projection. Rebuilding
@@ -399,7 +400,7 @@ class TypedControlLowering {
 					children[index + 1].getPosition())
 		];
 		scrutinee.steps.push(TypedExpr.controlSwitch(scrutinee.value, patterns, regions, completionType, expression.getPosition(),
-			expression.getLocalBindings()));
+			expression.getLocalBindings(), coversInput));
 		return {steps: scrutinee.steps, value: result, completes: completes};
 	}
 

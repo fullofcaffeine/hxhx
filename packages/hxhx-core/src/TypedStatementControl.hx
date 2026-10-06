@@ -46,7 +46,9 @@ class TypedStatementControl {
 					throw "statement return requires its selected function destination";
 				TypedExpr.returnExpr(values.length == 0 ? null : values[0], TyType.noNormalCompletion(), position).withControlTarget(root);
 			case Throw: TypedExpr.throwExpr(values[0], position);
-			case Switch: TypedExpr.controlSwitch(values[0], statement.getPatterns(), [for (child in children) body(child)], voidType, position, bindings);
+			case Switch:
+				TypedExpr.controlSwitch(values[0], statement.getPatterns(), [for (child in children) body(child)], voidType, position, bindings,
+					statement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = statement.getCatchNames();
 				final hints = statement.getCatchTypeHints();

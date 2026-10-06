@@ -403,8 +403,8 @@ class TypedBodyBuilder {
 				SWhile(untypedExpression(condition), untypedStatement(body), position);
 			case SDoWhile(body, condition, position):
 				SDoWhile(untypedStatement(body), untypedExpression(condition), position);
-			case SSwitch(scrutinee, patterns, bodies, position):
-				SSwitch(untypedExpression(scrutinee), patterns, [for (body in bodies) untypedStatement(body)], position);
+			case SSwitch(scrutinee, patterns, bodies, position, exhaustive):
+				SSwitch(untypedExpression(scrutinee), patterns, [for (body in bodies) untypedStatement(body)], position, exhaustive);
 			case STry(body, catches, position):
 				STry(untypedStatement(body), [
 					for (entry in catches)
@@ -438,8 +438,8 @@ class TypedBodyBuilder {
 				SWhile(condition, expandStatement(body), position);
 			case SDoWhile(body, condition, position):
 				SDoWhile(expandStatement(body), condition, position);
-			case SSwitch(scrutinee, patterns, bodies, position):
-				SSwitch(scrutinee, patterns, [for (body in bodies) expandStatement(body)], position);
+			case SSwitch(scrutinee, patterns, bodies, position, exhaustive):
+				SSwitch(scrutinee, patterns, [for (body in bodies) expandStatement(body)], position, exhaustive);
 			case STry(body, catches, position):
 				STry(expandStatement(body), [
 					for (entry in catches)

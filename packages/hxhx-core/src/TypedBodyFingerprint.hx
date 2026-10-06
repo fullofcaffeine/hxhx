@@ -18,7 +18,7 @@ class TypedBodyFingerprint {
 			case Throw: "throw";
 			case While(kind): kind == DoWhile ? "do-while" : "while";
 			case For(binding): CompilerCacheIdentity.encode(["for"].concat(HxForBinding.names(binding)));
-			case Switch(patterns): "switch:" + forExpression(ESwitch(ENull, patterns, []));
+			case Switch(patterns, exhaustive): "switch:" + (exhaustive == true ? "complete:" : "partial:") + forExpression(ESwitch(ENull, patterns, []));
 			case Try(catches): CompilerCacheIdentity.encode(["try"].concat([for (entry in catches) entry.getCanonicalIdentity()]));
 			case Break: "break";
 			case Continue: "continue";
@@ -430,8 +430,9 @@ class TypedBodyFingerprint {
 				addStatement(state, body);
 				addExpression(state, condition);
 				addPosition(state, position);
-			case SSwitch(scrutinee, patterns, bodies, position):
+			case SSwitch(scrutinee, patterns, bodies, position, exhaustive):
 				addString(state, "stmt-switch");
+				addString(state, exhaustive == true ? "complete" : "partial");
 				addExpression(state, scrutinee);
 				addPatterns(state, patterns);
 				addStatements(state, bodies);

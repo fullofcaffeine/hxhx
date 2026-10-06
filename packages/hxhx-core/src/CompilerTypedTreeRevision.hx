@@ -22,7 +22,7 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v25");
+		facts.push("typed-function-body-v26");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
@@ -59,6 +59,7 @@ class CompilerTypedTreeRevision {
 			return;
 		}
 		out.push("statement:" + statementTagName(statement.getTag()));
+		out.push(statement.getSwitchHasExhaustiveCoverage() ? "exhaustive" : "partial");
 		final controlTarget = statement.getControlTarget();
 		out.push(controlTarget == null ? null : controlTarget.getCanonicalIdentity());
 		addStrings(out, statement.getNames());

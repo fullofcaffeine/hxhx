@@ -44,10 +44,10 @@ private function statements(entries:Array<HxExpr>):Array<HxStmt> {
 					throw "OCaml initializer branch requires its shared condition and scopes";
 				result.push(SIf(children[0], SBlock(statements([children[1]]), position),
 					children.length == 3 ? SBlock(statements([children[2]]), position) : null, position));
-			case ELoweredControl(Switch(patterns), "", children, position):
+			case ELoweredControl(Switch(patterns, exhaustive), "", children, position):
 				if (children.length != patterns.length + 1)
 					throw "OCaml initializer switch requires aligned cases";
-				result.push(SSwitch(children[0], patterns, [for (child in children.slice(1)) SBlock(statements([child]), position)], position));
+				result.push(SSwitch(children[0], patterns, [for (child in children.slice(1)) SBlock(statements([child]), position)], position, exhaustive));
 			case ELoweredControl(_, _, _, _):
 				throw "OCaml initializer requires an executable adapter for this shared control instruction";
 			case _:

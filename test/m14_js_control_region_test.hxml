@@ -25,6 +25,11 @@
 --next
 -cp packages/hxhx-core/src
 -cp test
+-main M14CsEnumSwitchResultTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
 -main M14UntypedFunctionBodySyntaxTest
 --interp
 --next

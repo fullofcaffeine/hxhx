@@ -550,8 +550,8 @@ class TypedExpr {
 
 	/** Selected switch arms remain lexical regions; pattern bindings retain their typed identities. */
 	public static function controlSwitch(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, branches:Array<TypedExpr>, type:TyType, position:Null<HxPos>,
-			bindings:Array<TyLocalBinding>):TypedExpr
-		return new TypedExpr(ControlSwitch, type, position, null, [scrutinee].concat(branches), patterns, false, 0, 0.0, null, null, null, null, null,
+			bindings:Array<TyLocalBinding>, exhaustive:Bool = false):TypedExpr
+		return new TypedExpr(ControlSwitch, type, position, null, [scrutinee].concat(branches), patterns, exhaustive, 0, 0.0, null, null, null, null, null,
 			bindings);
 
 	/** Only a selected abstract conversion may certify unchanged value storage; authored casts use false. */
@@ -596,7 +596,7 @@ class TypedExpr {
 
 	/** A recorded proof permits result storage without an artificial default branch. */
 	public function getSwitchHasExhaustiveCoverage():Bool {
-		if (tag != SwitchExpr)
+		if (tag != SwitchExpr && tag != ControlSwitch)
 			throw "switch coverage requires a typed switch expression";
 		return boolValue;
 	}
@@ -676,15 +676,20 @@ class TypedExpr {
 			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, uses, lambdaSignature, sourceFunction, controlTarget, sourceCatches,
 			constructorApplication, argumentBinding, namedArguments);
 
-	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
-	public function withExpressions(children:Array<TypedExpr>):TypedExpr
-		return new TypedExpr(tag, type, position, texts, children, patterns,
-			tag != Cast ? boolValue : boolValue
-			&& children.length == 1
-			&& expressions.length == 1
-			&& children[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey(),
-			intValue, floatValue, declaration, unaryOperator, unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget,
-			catchUses, lambdaSignature, sourceFunction, controlTarget, sourceCatches, constructorApplication, argumentBinding, namedArguments);
+	/** Preserve semantic facts on copies; changing the input type invalidates switch coverage and representation-preserving casts. **/
+	public function withExpressions(children:Array<TypedExpr>):TypedExpr {
+		final sameInputType = children.length > 0
+			&& expressions.length > 0
+			&& children[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey();
+		final retainedFact = switch tag {
+			case SwitchExpr | ControlSwitch: boolValue && sameInputType;
+			case Cast: boolValue && sameInputType && children.length == 1 && expressions.length == 1;
+			case _: boolValue;
+		};
+		return new TypedExpr(tag, type, position, texts, children, patterns, retainedFact, intValue, floatValue, declaration, unaryOperator, unaryFixity,
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses, lambdaSignature, sourceFunction, controlTarget,
+			sourceCatches, constructorApplication, argumentBinding, namedArguments);
+	}
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr

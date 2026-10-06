@@ -68,12 +68,40 @@ class SourceNativeFunctionLocals {
 		};
 	}
 
+	/**
+		Restore a typed pattern local from the C# enum runtime's object payload.
+		The catalog owns the type; rendered field text supplies only the value.
+		A Float payload can contain a boxed Int because the constructor ABI erases
+		arguments. Numeric conversion preserves that permitted Int-to-Float widening.
+	**/
+	public function patternDeclaration(name:String, value:String):String {
+		if (target != Cs)
+			throw "typed enum payload extraction requires C#";
+		final local = projection.getLocalCatalog().findByProjectedName(name);
+		if (local == null)
+			throw "pattern local is absent from its typed catalog: " + name;
+		if (local.getBinding().getKind() != PatternVariable)
+			throw "pattern extraction requires an exact pattern binding: " + name;
+		final type = local.getBinding().getType();
+		final nativeType = typeName(type);
+		final converted = type.getSemanticKey() == "primitive:Float" ? "System.Convert.ToDouble(" + value + ")" : "("
+			+ nativeType
+			+ ")("
+			+ value
+			+ ")";
+		return nativeType + " " + SourceTargetCommon.sanitizeCsIdentifier(name) + " = " + converted + ";";
+	}
+
 	/** Select the emitted class by semantic identity, including secondary types and import aliases. */
 	function nominalName(identity:TyNominalTypeId):String {
 		for (module in program.getTypedModules())
 			for (owner in module.getTypedClasses()) {
 				final info = owner.getSemanticInfo();
 				if (info != null && info.getIdentity().equals(identity)) {
+					// The C# enum constructor ABI returns object containing __HxEnumValue.
+					// Select it only after resolving the exact semantic enum provider.
+					if (target == Cs && info.getIsEnum())
+						return "object";
 					if (!Std.isOfType(info, TyClassInfo) || info.getIsEnum())
 						throw "native local declaration requires the target representation of " + identity.getCanonicalName();
 					final packagePath = module.getEnv().getPackagePath();
