@@ -15,6 +15,12 @@ identity and expose mutation through an alias; an empty array stays empty.
 The exported parameter and return types use checked array runtime identities.
 Arrays with unsupported elements, such as Dynamic or Iterator, remain rejected.
 
+Instance methods preserve the receiver, nullable class and string results, and
+array argument/result types. For example, after `a.setLinked(b)`, `a.getLinked()`
+returns `b` while `b.getLinked()` remains null. Zero-argument getters still use
+the existing generated calling convention. Scalar null and subtype-dispatch
+declarations remain outside this signature projection.
+
 Run from the repository root:
 
 ```sh

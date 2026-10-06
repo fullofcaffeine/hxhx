@@ -19,5 +19,22 @@ class Main {
 		returned[0].push(new Token(5));
 		Sys.println(groups[0].length);
 		Sys.println(First.scopes(source, []).length);
+		final receiver = new Token(3);
+		final other = new Token(4);
+		if (receiver.getLinked() != null || receiver.label() != null || receiver.label("alone") != "alone")
+			throw "initial nullable method result changed";
+		receiver.setLinked(other);
+		if (receiver.getLinked() != other || other.getLinked() != null || receiver.label() != "linked")
+			throw "method receiver state was not isolated";
+		receiver.setLinked(null);
+		if (receiver.getLinked() != null || receiver.label(null) != null)
+			throw "explicit null method argument changed";
+		final values = receiver.getValues();
+		if (values != receiver.values)
+			throw "method array result lost its identity";
+		receiver.append([9]);
+		if (values.length != 2 || values[1] != 9 || other.getValues().length != 1)
+			throw "array method parameter or receiver mutation changed";
+		Sys.println("methods-ok");
 	}
 }

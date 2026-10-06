@@ -21,7 +21,8 @@ typedef OcamlDeclarationSignature = {
 	access and coercion. Its OCaml type is therefore Obj.t, not a guessed record.
 	Iterators, key/value pairs, and FileStat use other representations and remain
 	unavailable here. Arrays of supported elements use the existing checked
-	container mapping, including the same storage for optional arrays. Other
+	container mapping. Supported class, String, and Array references retain their
+	existing storage when nullable. Other
 	private runtime carriers, unresolved types, and generic or extern declarations
 	remain unavailable; their signatures need their own representation proof.
 	Class declarations can also use a direct record after the whole program's
@@ -64,12 +65,13 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				case "Void": TIdent("unit");
 				case _: null;
 			}
-		case TAbstract(reference, [inner]) if (reference.get().pack.length == 0
-			&& reference.get().name == "Null"
-			&& isStandardArray(TypeTools.follow(inner))):
-			// Null<Array<T>> uses the array carrier and the existing null sentinel.
-			// This is not permission to erase arbitrary nullable scalar boundaries.
-			declarationCarrier(TypeTools.follow(inner), representations, nominalType, context);
+		case TAbstract(reference, [inner]) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
+			// Supported references retain their carrier and existing null sentinel.
+			// Scalars and enums can change storage when nullable and remain separate.
+			switch (TypeTools.follow(inner)) {
+				case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context);
+				case _: null;
+			}
 		case TInst(_, [element]) if (isStandardArray(type)):
 			if (declarationCarrier(element, representations, nominalType, context) == null) {
 				null;

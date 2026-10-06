@@ -23,6 +23,8 @@ class CheckSignatures {
 				"Null<Array<Dynamic>>",
 				"Array<Iterator<Int>>",
 				"Array<haxe.io.Bytes>",
+				"Null<Int>",
+				"Null<Bool>",
 				"Dynamic",
 				"sys.FileStat",
 				"haxe.io.Input"
@@ -52,6 +54,11 @@ class CheckSignatures {
 		});
 		Context.onAfterGenerate(() -> {
 			check("Token", "create", "int -> t");
+			check("Token", "getLinked", "t -> unit -> t");
+			check("Token", "setLinked", "t -> t -> unit");
+			check("Token", "label", "t -> string -> string");
+			check("Token", "getValues", "t -> unit -> int HxArray.t");
+			check("Token", "append", "t -> int HxArray.t -> unit");
 			check("First", "copy", "Obj.t -> Obj.t");
 			check("First", "make", "int -> Obj.t");
 			check("First", "change", "Obj.t -> int -> unit");

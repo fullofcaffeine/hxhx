@@ -2793,6 +2793,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				});
 			}
 
+			final preserveInstanceSignature = !isOcamlNativeSurface
+				&& ctx.virtualTypesComputed
+				&& OcamlMonomorphicClassPlanner.hasDirectRecordLayout(classType, ctx);
 			for (f in instanceMethods) {
 				#if macro
 				if (profileVerbose && profClassMatch && profileDetail) {
@@ -2801,6 +2804,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}
 				}
 				#end
+				var methodSignature:Null<OcamlTypeExpr> = null;
 				final compiled = {
 					final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (TypeTools.follow(f.field.type)) {
 						case TFun(fargs, _): fargs;
@@ -2822,8 +2826,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case _: f.expr.t;
 					};
 					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)
-						.expression) {
+					final builtMethod = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
+						preserveInstanceSignature);
+					// Instance calls pass the selected record before the source arguments.
+					// Keep the builder's unit parameter for a zero-argument Haxe method.
+					if (preserveInstanceSignature && builtMethod.signature != null)
+						methodSignature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName), builtMethod.signature);
+					switch (builtMethod.expression) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2879,7 +2888,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					compiled;
 				}
-				lets.push({name: methodName, expr: adjusted});
+				lets.push(methodSignature == null ? {name: methodName, expr: adjusted} : {
+					name: methodName,
+					expr: adjusted,
+					signature: methodSignature
+				});
 			}
 		}
 
