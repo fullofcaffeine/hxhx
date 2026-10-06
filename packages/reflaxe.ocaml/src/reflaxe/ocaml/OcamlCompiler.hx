@@ -1848,6 +1848,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
 		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
+		for (call in plan.calls.decisions()) {
+			final runtimeUsePlan = plan.calls.runtimeUsePlanFor(call.id);
+			if (runtimeUsePlan != null)
+				ctx.recordCallRuntimeRequirements(call, runtimeUsePlan);
+			if (call.standardIMapTarget != null)
+				ctx.recordStandardIMapRuntimeRequirements(call);
+			if (call.structuralIteratorTarget != null)
+				ctx.recordStructuralIteratorRuntimeRequirements(call);
+		}
 		for (conversion in plan.containerElements.decisions())
 			ctx.recordContainerRuntimeRequirement(conversion);
 		for (decision in plan.anonymousStructures.operations())

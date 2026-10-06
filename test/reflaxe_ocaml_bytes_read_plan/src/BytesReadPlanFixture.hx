@@ -226,6 +226,7 @@ class BytesReadPlanFixture {
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
 			controls: firstStandalone.controls,
+			calls: firstStandalone.calls,
 			containerElements: firstStandalone.containerElements,
 			anonymousStructures: firstStandalone.anonymousStructures,
 			structuralFields: firstStandalone.structuralFields,

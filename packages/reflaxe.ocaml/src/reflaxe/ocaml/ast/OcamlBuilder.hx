@@ -8911,6 +8911,7 @@ class OcamlBuilder {
 		**/
 	public function buildStandaloneExpr(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
+		final previousCallPlan = currentCallPlan;
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
@@ -8941,6 +8942,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
@@ -8967,6 +8969,7 @@ class OcamlBuilder {
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
+		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -9005,6 +9008,7 @@ class OcamlBuilder {
 		**/
 	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
+		final previousCallPlan = currentCallPlan;
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
@@ -9035,6 +9039,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
@@ -9061,6 +9066,7 @@ class OcamlBuilder {
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
+		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;

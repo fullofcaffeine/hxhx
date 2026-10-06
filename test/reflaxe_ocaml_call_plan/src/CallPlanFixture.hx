@@ -2885,6 +2885,7 @@ class CallPlanFixture {
 		expectThrows("missing-callable", () -> missingBoundaryRegistry.validateCallGraph());
 		expectPreWriteValidation(caller, selectedCall);
 
+		StandaloneCallPlanChecks.run();
 		Sys.println("REFLAXE_OCAML_CALL_PLAN_FIXTURE:PASS");
 		return macro null;
 	}

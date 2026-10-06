@@ -246,6 +246,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final calls:OcamlCallPlan;
 	final controls:OcamlControlPlan;
 	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
@@ -339,7 +340,7 @@ private typedef OcamlRootIdentityRecord = {
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v114";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v17";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -378,6 +379,7 @@ class OcamlFunctionPlanRegistry {
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 	final standaloneStructuralFieldsById:StringMap<OcamlStructuralFieldDecision> = new StringMap();
 	final standaloneReflectCompareById:StringMap<OcamlReflectCompareDecision> = new StringMap();
+	final standaloneCallsByRoot:StringMap<OcamlCallPlan> = new StringMap();
 	final standaloneStdIsOfTypeById:StringMap<OcamlStdIsOfTypeDecision> = new StringMap();
 	final standaloneIntUnaryById:StringMap<OcamlIntUnaryDecision> = new StringMap();
 	final standaloneStringFromCharCodeById:StringMap<OcamlStringFromCharCodeDecision> = new StringMap();
@@ -409,6 +411,7 @@ class OcamlFunctionPlanRegistry {
 		standaloneAnonymousOperationsById.clear();
 		standaloneStructuralFieldsById.clear();
 		standaloneReflectCompareById.clear();
+		standaloneCallsByRoot.clear();
 		standaloneStdIsOfTypeById.clear();
 		standaloneIntUnaryById.clear();
 		standaloneStringFromCharCodeById.clear();
@@ -875,7 +878,9 @@ class OcamlFunctionPlanRegistry {
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, expression);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]),
+		final calls = new OcamlCallPlanner(representations, binding, null, localIdentities, null, hasCallableDeclaration).plan(expression);
+		requireStandaloneCalls(calls, binding);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls,
 			new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap()), anonymousStructures, representations,
 			localIdentities).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
@@ -937,8 +942,10 @@ class OcamlFunctionPlanRegistry {
 		recordStandaloneIntUnary(intUnary);
 		recordStandaloneStringFromCharCode(stringFromCharCode);
 		standaloneControlsByFunctionId.set(binding.functionId, controls);
+		standaloneCallsByRoot.set(binding.functionId, calls);
 		return {
 			binding: binding,
+			calls: calls,
 			controls: controls,
 			containerElements: containerElements,
 			anonymousStructures: anonymousStructures,
@@ -1073,6 +1080,10 @@ class OcamlFunctionPlanRegistry {
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		final sealedCalls = standaloneCallsByRoot.get(expected.functionId);
+		if (plan.calls == null || sealedCalls == null || plan.calls.revision != sealedCalls.revision)
+			throw 'reflaxe.ocaml [ocaml-call:missing-standalone-inventory]: standalone root "${expected.functionId}" lost its sealed call inventory';
+		requireStandaloneCalls(plan.calls, expected);
 		plan.containerElements.requirePlanBinding(expected);
 		OcamlContainerElementPlanner.requireCompleteness(expression, expected, plan.containerElements);
 		plan.anonymousStructures.requirePlanBinding(expected);
@@ -1507,6 +1518,9 @@ class OcamlFunctionPlanRegistry {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
 		final calls:Array<OcamlCallDecision> = [];
+		for (plan in standaloneCallsByRoot)
+			for (call in plan.decisions())
+				calls.push(call);
 		for (functionId in functionIds) {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed != null) {
@@ -1959,6 +1973,16 @@ class OcamlFunctionPlanRegistry {
 		}
 		operations.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return operations;
+	}
+
+	/** Initializer calls use the same declaration and revision checks as function calls. */
+	function requireStandaloneCalls(calls:OcamlCallPlan, binding:OcamlFunctionPlanBinding):Void {
+		for (call in calls.decisions()) {
+			OcamlCallPlan.requireCall(call);
+			requireCallBinding(call, binding);
+			if (requiresDeclaredCallable(call))
+				requireCallableDeclaration(call);
+		}
 	}
 
 	static function requireCallBinding(call:OcamlCallDecision, binding:OcamlFunctionPlanBinding):Void {
