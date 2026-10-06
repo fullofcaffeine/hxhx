@@ -988,13 +988,14 @@ class TypedBodyBuilder {
 				TypedExpr.opaque(TypedOpaqueExprKind.Switch, raw, nodeType, position);
 			case ESwitch(scrutinee, patterns, expressions):
 				final typedScrutinee = buildExpr(scrutinee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
-				// Resolve names before declaring pattern locals: a same-spelled static
-				// constant is a test, not proof that every input is captured.
+				// A pattern capture shadows an existing lexical local, including a
+				// payload captured by an outer switch. Without that local, resolve
+				// members first: a static constant restricts the matched values.
 				function isCapture(name:String):Bool {
 					return environment != null
 						&& memberResolver != null
-						&& environment.resolveSymbol(name) == null
-						&& memberResolver(EIdent(name), diagnosticPosition, environment) == null;
+						&& (environment.resolveSymbol(name) != null
+							|| memberResolver(EIdent(name), diagnosticPosition, environment) == null);
 				}
 				final irrefutable = patterns != null
 					&& patterns.filter(pattern -> TySwitchIrrefutable.proves(pattern, typedScrutinee.getType(), isCapture)).length > 0;
