@@ -44,14 +44,14 @@ class M14SourceSequenceObserver {
 		checkWalkers();
 		final parsed = ParserStage.parse("class Main { static function run(step:()->Void):Int return { step(); step(); 7; }; }", "Main.hx");
 		final module = new ResolvedModule("Main", "Main.hx", parsed);
-		final body = TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getTypedClasses()[0].getFunctions()[0];
-		final projection = TypedBodySource.functionProjection(body);
-		observe(projection, HxFunctionArg.getName(HxFunctionDecl.getArgs(projection.getDeclaration())[0]));
+		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final projection = typed.getBackendProjection().getClasses()[0].getFunctions()[0];
+		observe(new MacroExpandedProgram([typed], false), projection, HxFunctionArg.getName(HxFunctionDecl.getArgs(projection.getDeclaration())[0]));
 		Sys.println("SOURCE_SEQUENCE:PASS");
 	}
 
 	/** Render the complete lowered body so result locals and discarded calls share their real scope. */
-	public static function observe(projection:TypedBackendFunctionProjection, parameter:String):Void {
+	public static function observe(program:MacroExpandedProgram, projection:TypedBackendFunctionProjection, parameter:String):Void {
 		final root = ".tmp/sequence_source_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final quoteSource = HxExpr.ESourceGroup([EInt(1), EInt(2)], HxPos.unknown());
@@ -89,7 +89,12 @@ class M14SourceSequenceObserver {
 			+ lua
 			+ "\nend\nlocal result=run()\nprint(result..':'..n)\nn=0;stop=true;local ok,err=pcall(run)"
 			+ "\nif ok then error('unexpected') end\nprint(err..':'..n)\n");
-		final javaBody = @:privateAccess SourceTargetCommon.renderStmts(Java, projection.getBody(), "").join("\n");
+		final javaBody = SourceTargetCommon.renderNativeFunctionBody(new backend.source.SourceNativeFunctionLocals({
+			target: Java,
+			program: program,
+			projection: projection,
+			noRoot: false
+		}), projection.getBody(), "").join("\n");
 		sys.io.File.saveContent(root
 			+ "/Sequence.java",
 			"class Sequence { static int n=0; static boolean stop=false; static void "
@@ -100,7 +105,12 @@ class M14SourceSequenceObserver {
 			+ "catch(RuntimeException e){System.out.println(e.getMessage()+\":\"+n);}}}\n");
 		run("javac", [root + "/Sequence.java"]);
 		requireOutput(run("java", ["-cp", root, "Sequence"]));
-		final csBody = @:privateAccess SourceTargetCommon.renderStmts(Cs, projection.getBody(), "").join("\n");
+		final csBody = SourceTargetCommon.renderNativeFunctionBody(new backend.source.SourceNativeFunctionLocals({
+			target: Cs,
+			program: program,
+			projection: projection,
+			noRoot: false
+		}), projection.getBody(), "").join("\n");
 		sys.io.File.saveContent(root
 			+ "/Sequence.cs",
 			"class Sequence { static int n=0; static bool stop=false; static void "

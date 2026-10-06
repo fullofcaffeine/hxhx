@@ -770,7 +770,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		switch (backend.source.SourceFunctionRenderFrame.SourceFunctionRenderFrameTools.forPhpRenderer(valueSlotRenderer)) {
 			case PhpFunction(_, scope):
 				assertTrue(scope.usesThisValueSlot(), "the request-owned renderer should activate the sealed class-wide this-value representation");
-			case Program(_):
+			case Program(_) | NativeFunction(_):
 				throw "the PHP function renderer should create a function frame";
 		}
 		var mismatchedPlanMessage = "";

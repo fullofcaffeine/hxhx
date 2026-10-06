@@ -362,11 +362,12 @@ class SourceTargetCommon {
 		}
 		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
-		final strictProjection = target == Lua || target == Cs ? strictTypedMainProjection(program, main) : null;
+		final strictProjection = target == Lua || target == Cs || target == Java ? strictTypedMainProjection(program, main) : null;
 		final csEnumConstructors = target == Cs ? new CsEnumConstructorCallLowering(program, context.hasDefine("no_root")) : null;
 		final mainBody = switch (target) {
 			case Lua: LuaStringLocalCallLowering.body(strictProjection.main);
 			case Cs: csEnumConstructors.body(strictProjection.main);
+			case Java: strictProjection.main.getBody();
 			case Php: throw "PHP source target must use its request-owned program renderer";
 			case _: HxFunctionDecl.getBody(main.fn);
 		};
@@ -5852,6 +5853,7 @@ class SourceTargetCommon {
 				switch (frame) {
 					case PhpFunction(_, _): renderPhpTryExprWithFrame(frame, tryStatement, catches);
 					case Program(_): renderPhpTryExpr(tryStatement, catches);
+					case NativeFunction(_): throw "native function scope cannot render a PHP try expression";
 				}
 			case Java: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
 			case Cs: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
@@ -9047,7 +9049,7 @@ class SourceTargetCommon {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		return switch (stmt) {
 			case SBlock(stmts, _) if (target == Cs):
-				renderCStyleScopedBlock(target, stmts, indent);
+				renderCStyleScopedBlockWithFrame(frame, stmts, indent);
 			case SBlock(stmts, _):
 				final childFrame = target == Php ? SourceFunctionRenderFrameTools.withPhpScope(frame,
 					SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Block)) : frame;
@@ -9066,6 +9068,9 @@ class SourceTargetCommon {
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + exprStmt(target, renderExprWithFrame(frame, rendered))];
 			case SVar(name, _typeHint, init, pos):
+				final exactDeclaration = nativeLocalDeclaration(frame, name, init);
+				if (exactDeclaration != null)
+					return [indent + exactDeclaration];
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExprWithFrame(frame, value);
 				final renewal = target == Php ? SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
@@ -9138,7 +9143,7 @@ class SourceTargetCommon {
 				return renderPhpStmtsWithFrame(frame, stmts, indent, initialLocalTypes);
 			case Program(Php):
 				throw "PHP function bodies require PhpFunctionBodyRenderer";
-			case Program(_):
+			case Program(_) | NativeFunction(_):
 		}
 		final out = new Array<String>();
 		final localTypes = (target == Php || target == Cs)
@@ -9399,7 +9404,7 @@ class SourceTargetCommon {
 					constructorName: legacy.ctorName,
 					hasArguments: legacy.hasArgs
 				};
-			case Program(_):
+			case Program(_) | NativeFunction(_):
 				null;
 		};
 	}
@@ -9408,14 +9413,14 @@ class SourceTargetCommon {
 		return switch (frame) {
 			case PhpFunction(renderer, _): renderer.hasCurrentInstanceMethod(name);
 			case Program(Php): phpCurrentInstanceMethodValue(name);
-			case Program(_): false;
+			case Program(_) | NativeFunction(_): false;
 		};
 
 	static function phpFrameHasLocal(frame:SourceFunctionRenderFrame, name:String):Bool
 		return switch (frame) {
 			case PhpFunction(_, scope): scope.findLocal(PhpName.valueIdentifier(name)) != null;
 			case Program(Php): phpLocalExists(name);
-			case Program(_): false;
+			case Program(_) | NativeFunction(_): false;
 		};
 
 	static function phpEnumCtorValueExprWithFrame(frame:SourceFunctionRenderFrame, name:String):Null<String> {
@@ -9481,7 +9486,7 @@ class SourceTargetCommon {
 					withPhpPreferredEnum(enumRef.enumName, function() {
 						return callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 					});
-				case Program(_):
+				case Program(_) | NativeFunction(_):
 					callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 			};
 		return enumRef.enumName + "::$" + enumRef.constructorName;
@@ -10627,6 +10632,9 @@ class SourceTargetCommon {
 		final render = function():Array<String> {
 			return switch (stmt) {
 				case SVar(name, typeHint, init, pos):
+					final exactDeclaration = nativeLocalDeclaration(frame, name, init);
+					if (exactDeclaration != null)
+						return [indent + exactDeclaration];
 					final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
 					final inferredType = inferLocalTypeHint(typeHint, init);
 					if (target == Php) {
@@ -10670,7 +10678,7 @@ class SourceTargetCommon {
 					phpSetInferredLocalTypeIfUnknown(phpLocals, cleanValueName, "");
 					return renderForKeyValueWithFrame(frame, keyName, valueName, iterable, body, indent, phpLocals);
 				case SBlock(stmts, _) if (target == Cs):
-					return renderCStyleScopedBlock(target, stmts, indent, localTypes);
+					return renderCStyleScopedBlockWithFrame(frame, stmts, indent, localTypes);
 				case SBlock(stmts, _) if (target == Php):
 					final childFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Block));
 					return renderStmtsWithFrame(childFrame, stmts, indent, localTypes);
@@ -10701,8 +10709,14 @@ class SourceTargetCommon {
 	**/
 	static function renderCStyleScopedBlock(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String,
 			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
+		return renderCStyleScopedBlockWithFrame(Program(target), stmts, indent, initialLocalTypes);
+	}
+
+	static function renderCStyleScopedBlockWithFrame(frame:SourceFunctionRenderFrame, stmts:Array<HxStmt>, indent:String,
+			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
+		final target = SourceFunctionRenderFrameTools.target(frame);
 		final out = [indent + "{"];
-		for (line in renderStmts(target, stmts, indent + indentStep(target), initialLocalTypes))
+		for (line in renderStmtsWithFrame(frame, stmts, indent + indentStep(target), initialLocalTypes))
 			out.push(line);
 		out.push(indent + "}");
 		return out;
@@ -10747,6 +10761,47 @@ class SourceTargetCommon {
 		} catch (e:String) {
 			throw e + " while emitting " + context;
 		}
+	}
+
+	/** Render Java/C# declarations with the same exact local catalog throughout the function. */
+	public static function renderNativeFunctionBody(locals:SourceNativeFunctionLocals, body:Array<HxStmt>, indent:String):Array<String> {
+		if (locals == null)
+			throw "native function rendering requires typed local ownership";
+		return renderStmtsWithFrame(NativeFunction(locals), body, indent);
+	}
+
+	/** Resolve a legacy declaration through its typed owner before entering Java rendering. */
+	static function javaFunctionProjection(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl):TypedBackendFunctionProjection {
+		for (module in program.getTypedModules())
+			if (module.getBackendDeclaration() == decl) {
+				final found = module.findBackendFunctionProjection(cls, fn);
+				if (found == null)
+					throw "Java function declaration has no exact typed function owner";
+				return found.functionProjection;
+			}
+		throw "Java function declaration has no exact typed module owner";
+	}
+
+	/** Keep one exact function catalog while target-specific rewrites preserve projected local names. */
+	static function renderProjectedNativeFunction(target:SourceNativeTarget, program:GenIrProgram, projection:TypedBackendFunctionProjection,
+			body:Array<HxStmt>, indent:String, noRoot:Bool):Array<String> {
+		return renderNativeFunctionBody(new SourceNativeFunctionLocals({
+			target: target,
+			program: program,
+			projection: projection,
+			noRoot: noRoot
+		}), body, indent);
+	}
+
+	static function nativeLocalDeclaration(frame:SourceFunctionRenderFrame, name:String, initializer:Null<HxExpr>):Null<String> {
+		final needsType = initializer == null || initializer.match(ENull);
+		if (!needsType)
+			return null;
+		return switch (frame) {
+			case NativeFunction(locals): locals.declaration(name, initializer != null);
+			case Program(Java) | Program(Cs): throw "native local declaration requires its typed function scope: " + name;
+			case _: null;
+		};
 	}
 
 	/**
@@ -10887,7 +10942,8 @@ class SourceTargetCommon {
 	}
 
 	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String,
-			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
+			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final cleanName = sanitizeTypeName(name);
 		final value = valueName(target, cleanName);
 		final source = renderExpr(target, iterable);
@@ -10900,12 +10956,12 @@ class SourceTargetCommon {
 					out.push(line);
 			case Java:
 				out.push(indent + "for (var " + sanitizeJavaIdentifier(name) + " : " + source + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Cs:
 				out.push(indent + "foreach (var " + cleanName + " in " + source + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Php:
@@ -10926,7 +10982,7 @@ class SourceTargetCommon {
 			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderForIn(target, name, iterable, body, indent, knownPhpLocals);
+			return renderForIn(target, name, iterable, body, indent, knownPhpLocals, frame);
 		final cleanName = PhpName.valueIdentifier(name);
 		final value = valueName(Php, cleanName);
 		final source = renderExprWithFrame(frame, iterable);
@@ -11031,7 +11087,8 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
+	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final renderedCond = renderExpr(target, cond);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
@@ -11042,12 +11099,12 @@ class SourceTargetCommon {
 					out.push(line);
 			case Java:
 				out.push(indent + "while (" + renderedCond + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Cs:
 				out.push(indent + "while (" + renderedCond + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Php:
@@ -11067,7 +11124,7 @@ class SourceTargetCommon {
 	static function renderWhileWithFrame(frame:SourceFunctionRenderFrame, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderWhile(target, cond, body, indent);
+			return renderWhile(target, cond, body, indent, frame);
 		final renderedCond = renderExprWithFrame(frame, cond);
 		final childIndent = indent + indentStep(Php);
 		final loopScope = SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Loop);
@@ -11079,8 +11136,9 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			indent:String):Array<String> {
+	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
+			?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final scrutineeExpr = renderExpr(target, scrutinee);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
@@ -11124,9 +11182,9 @@ class SourceTargetCommon {
 				}
 				out.push(indent + "}");
 			case Java:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame);
 			case Cs:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame);
 			case Lua:
 				if (count == 0)
 					return out;
@@ -11152,7 +11210,7 @@ class SourceTargetCommon {
 			indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent);
+			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent, frame);
 		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 		if (count == 0)
 			return [];
@@ -11184,7 +11242,8 @@ class SourceTargetCommon {
 	}
 
 	static function renderCStyleSwitchStmtInto(target:SourceNativeTarget, scrutineeExpr:String, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			count:Int, indent:String, childIndent:String, out:Array<String>):Void {
+			count:Int, indent:String, childIndent:String, out:Array<String>, ?functionFrame:SourceFunctionRenderFrame):Void {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		if (count == 0)
 			return;
 		for (i in 0...count) {
@@ -11197,7 +11256,7 @@ class SourceTargetCommon {
 				final bindName = sanitizeTypeName(binding.name);
 				out.push(childIndent + varDecl(target, bindName, binding.expr));
 			}
-			for (line in renderStmt(target, bodies[i], childIndent))
+			for (line in renderStmtWithFrame(frame, bodies[i], childIndent))
 				out.push(line);
 		}
 		out.push(indent + "}");
@@ -12566,7 +12625,7 @@ class SourceTargetCommon {
 					for (line in javaOperationDispatchBody(operationCall, returnType, "    "))
 						out.push(line);
 				} else if (HxFunctionDecl.getIsStatic(fn) && javaCreateReturnsNewOwner(fn, className)) {
-					for (line in javaMainHelperBody(fn, returnType, className, methodName))
+					for (line in javaMainHelperBody(program, javaFunctionProjection(program, decl, cls, fn), returnType, className, methodName))
 						out.push(line);
 				} else {
 					out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
@@ -12860,7 +12919,7 @@ class SourceTargetCommon {
 					if (canRenderBody) {
 						for (line in csMissingDefaultArgDecls(args, count, bodyIndent + "    "))
 							out.push(line);
-						for (line in renderFunctionStmts(Cs, projectedBody, bodyIndent + "    ", className + ".new"))
+						for (line in renderProjectedNativeFunction(Cs, program, functionProjection, projectedBody, bodyIndent + "    ", noRoot))
 							out.push(line);
 					}
 					out.push(bodyIndent + "  }");
@@ -12891,8 +12950,8 @@ class SourceTargetCommon {
 						throw "C# support method is missing its strict projection: " + className + "." + methodName;
 					if (enumConstructors == null)
 						throw "C# support method is missing its request-owned enum-constructor catalog";
-					final bodyLines = csSupportMethodBodyLines(fn, enumConstructors.body(functionProjection), count, bodyIndent + "    ",
-						className + "." + methodName);
+					final bodyLines = csSupportMethodBodyLines(program, functionProjection, enumConstructors.body(functionProjection), count,
+						bodyIndent + "    ", noRoot);
 					if (bodyLines == null)
 						out.push(bodyIndent + "    return null;");
 					else
@@ -13205,8 +13264,8 @@ class SourceTargetCommon {
 		return out.join("\n");
 	}
 
-	static function appendCsMainSupportMembers(out:Array<String>, decl:HxModuleDecl, projection:TypedBackendClassProjection, indent:String, className:String,
-			classRef:String, enumConstructors:CsEnumConstructorCallLowering):Void {
+	static function appendCsMainSupportMembers(out:Array<String>, program:GenIrProgram, decl:HxModuleDecl, projection:TypedBackendClassProjection,
+			indent:String, className:String, classRef:String, enumConstructors:CsEnumConstructorCallLowering, noRoot:Bool):Void {
 		if (enumConstructors == null)
 			throw "C# main helpers require the request-owned enum-constructor catalog";
 		final emitted = new Map<String, Bool>();
@@ -13244,7 +13303,7 @@ class SourceTargetCommon {
 			if (functionProjection == null)
 				throw "C# main helper is missing its strict projection: " + className + "." + methodName;
 			final rewrittenBody = csRewriteSameClassStaticMembersInStmts(enumConstructors.body(functionProjection), staticMemberNames, classRef, argLocals);
-			final body = renderFunctionStmts(Cs, rewrittenBody, indent + "  ", className + "." + methodName);
+			final body = renderProjectedNativeFunction(Cs, program, functionProjection, rewrittenBody, indent + "  ", noRoot);
 			var hasReturn = false;
 			for (line in body) {
 				if (StringTools.startsWith(StringTools.trim(line), "return "))
@@ -13511,16 +13570,13 @@ class SourceTargetCommon {
 		return true;
 	}
 
-	static function csSupportMethodBodyLines(fn:HxFunctionDecl, body:Array<HxStmt>, count:Int, indent:String, context:String):Null<Array<String>> {
-		if (count != HxFunctionDecl.getArgs(fn).length)
+	static function csSupportMethodBodyLines(program:GenIrProgram, projection:TypedBackendFunctionProjection, body:Array<HxStmt>, count:Int, indent:String,
+			noRoot:Bool):Null<Array<String>> {
+		if (count != HxFunctionDecl.getArgs(projection.getDeclaration()).length)
 			return null;
 		if (body == null || body.length == 0)
 			return null;
-		return try {
-			renderFunctionStmts(Cs, body, indent, context);
-		} catch (e:String) {
-			null;
-		}
+		return renderProjectedNativeFunction(Cs, program, projection, body, indent, noRoot);
 	}
 
 	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
@@ -13618,7 +13674,7 @@ class SourceTargetCommon {
 		appendSourceNativeTemplateLines(out, indent, "java/support-class-members", "ArraySupport.java");
 	}
 
-	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
+	static function appendJavaMainSupportMembers(out:Array<String>, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
 		final emittedMethods = new Map<String, Bool>();
 		final functionRefs = new Map<String, Bool>();
 		for (stmt in body)
@@ -13635,7 +13691,8 @@ class SourceTargetCommon {
 				emittedMethods.set(key, true);
 				out.push("  public static Object " + methodName + "(" + javaFunctionArgs(args) + ") {");
 				if (functionRefs.exists(methodName)) {
-					for (line in javaMainHelperBody(fn, "Object", className, methodName))
+					for (line in javaMainHelperBody(program, javaFunctionProjection(program, decl, HxModuleDecl.getMainClass(decl), fn), "Object", className,
+						methodName))
 						out.push(line);
 				} else {
 					out.push("    return null;");
@@ -13866,8 +13923,9 @@ class SourceTargetCommon {
 		return returnType == "Object" ? callbackExpr : javaSupportDefaultReturn(returnType);
 	}
 
-	static function javaMainHelperBody(fn:HxFunctionDecl, returnType:String, className:String, methodName:String):Array<String> {
-		final lines = renderFunctionStmts(Java, HxFunctionDecl.getBody(fn), "    ", className + "." + methodName);
+	static function javaMainHelperBody(program:GenIrProgram, projection:TypedBackendFunctionProjection, returnType:String, className:String,
+			methodName:String):Array<String> {
+		final lines = renderProjectedNativeFunction(Java, program, projection, projection.getBody(), "    ", false);
 		var hasReturn = false;
 		for (line in lines) {
 			if (StringTools.startsWith(StringTools.trim(line), "return ")) {
@@ -19776,13 +19834,14 @@ class SourceTargetCommon {
 				if (lines.length > 1)
 					lines.push("");
 				lines.push("public class " + className + " {");
-				appendJavaMainSupportMembers(lines, decl, className, body);
+				appendJavaMainSupportMembers(lines, program, decl, className, body);
 				lines.push("  public static void main(String[] __hxhx_cli_args) {");
 				lines.push("    Sys.__hxhx_args = __hxhx_cli_args == null ? new String[0] : __hxhx_cli_args;");
 				if (className == "UtilityProcess") {
 					appendJavaUtilityProcessRuntime(lines, className);
 				} else {
-					for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					for (line in renderProjectedNativeFunction(Java, program, mainProjection, body, "    ", false))
 						lines.push(line);
 					lines.push("  }");
 				}
@@ -19807,7 +19866,7 @@ class SourceTargetCommon {
 				final classRef = csGlobalClassRef(packagePath, className, noRoot);
 				appendCsNamespaceOpen(lines, outputPackagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
-				appendCsMainSupportMembers(lines, decl, strictMainClass, bodyIndent + "  ", className, classRef, csEnumConstructors);
+				appendCsMainSupportMembers(lines, program, decl, strictMainClass, bodyIndent + "  ", className, classRef, csEnumConstructors, noRoot);
 				appendCsPostUpdateVarSupport(lines, bodyIndent + "  ");
 				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
 				if (className == "UtilityProcess") {
@@ -19815,7 +19874,8 @@ class SourceTargetCommon {
 				} else {
 					final entryBody = csRewriteSameClassStaticMembersInStmts(body, csCurrentClassStaticMemberNames(HxModuleDecl.getMainClass(decl)), classRef,
 						[]);
-					for (line in renderFunctionStmts(target, entryBody, "    ", entryClassName + ".Main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					for (line in renderProjectedNativeFunction(Cs, program, mainProjection, entryBody, "    ", noRoot))
 						lines.push(bodyIndent + line);
 					lines.push(bodyIndent + "  }");
 				}
