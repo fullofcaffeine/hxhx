@@ -14,7 +14,7 @@ class M14SourceDoWhileTest {
 				throw "repeated do/while lowering changed control or local identities";
 		}
 		final context = new BackendContext(".tmp/source-do-while", null, "Main", true, true, fixture.defines);
-		final result = CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false), context);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "do/while fixture requires a native executable";
 		for (i in 0...functions.length)

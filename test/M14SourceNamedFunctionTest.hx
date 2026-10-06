@@ -13,7 +13,7 @@ class M14SourceNamedFunctionTest {
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		final context = new BackendContext(".tmp/source-named-function", null, "Main", true, true, new haxe.ds.StringMap<String>());
-		final result = CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false), context);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "named function requires a native executable";
 		for (index in 0...functions.length)
@@ -24,10 +24,21 @@ class M14SourceNamedFunctionTest {
 			for (artifact in result.artifacts)
 				if (artifact.kind == "entry_cpp_source") artifact.path
 		];
-		if (sources.length != 1 || [
+		final headers = [
 			for (artifact in result.artifacts)
-				if (artifact.kind == "cpp_managed_runtime_header") artifact
-		].length != 4)
+				if (artifact.kind == "cpp_managed_runtime_header") haxe.io.Path.withoutDirectory(artifact.path)
+		];
+		headers.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+		final requiredHeaders = [
+			"ManagedCallable.hpp",
+			"ManagedHeap.hpp",
+			"ManagedMap.hpp",
+			"ManagedOutput.hpp",
+			"ManagedStack.hpp",
+			"ManagedThrow.hpp",
+			"ManagedValue.hpp"
+		];
+		if (sources.length != 1 || headers.join(",") != requiredHeaders.join(","))
 			throw "normal C++ target lost its source or managed runtime publication";
 		final source = sys.io.File.getContent(sources[0]);
 		if (source.indexOf("std::function") >= 0 || source.indexOf("std::shared_ptr") >= 0)

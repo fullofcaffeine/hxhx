@@ -10,6 +10,17 @@ typedef CppResolvedFixtureProgram = {
 }
 
 /**
+	Prepare the real typed dependency closure through the production shared passes.
+	For example, source privateAccess permission must select a field or accessor
+	before a backend sees executable code. Keep the original modules available for
+	immutability assertions; preparation returns derived modules rather than
+	discarding provider bodies or letting a target interpret source permissions.
+ */
+function prepare(fixture:CppResolvedFixtureProgram):MacroExpandedProgram {
+	return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+}
+
+/**
 	Use production classpath and lazy-loading rules for native C++ regression programs.
 	Required modules must be present in the typed closure. A fixture cannot substitute
 	unresolved type names or synthetic standard-library classes for these providers.

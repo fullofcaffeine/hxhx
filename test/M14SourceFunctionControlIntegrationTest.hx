@@ -13,7 +13,7 @@ class M14SourceFunctionControlIntegrationTest {
 		final typed = fixture.main;
 		final main = typed.getTypedClasses()[0].getFunctions()[0];
 		final revision = CompilerTypedTreeRevision.functionBody(main);
-		final program = new MacroExpandedProgram(fixture.modules, false);
+		final program = CppResolvedFixture.prepare(fixture);
 		final context = new BackendContext(".tmp/source-function-control", null, "Main", true, true, fixture.defines);
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)

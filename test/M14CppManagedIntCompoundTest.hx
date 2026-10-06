@@ -22,7 +22,7 @@ class M14CppManagedIntCompoundTest {
 				throw "repeated integer compound assignment lowering changed control or local identities";
 		}
 		final context = new BackendContext(".tmp/managed-int-compound", null, "Main", true, true, fixture.defines);
-		final result = CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false), context);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "integer compound assignment fixture requires a native executable";
 		for (i in 0...functions.length)
