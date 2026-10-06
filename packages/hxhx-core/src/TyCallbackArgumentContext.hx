@@ -13,6 +13,13 @@ private function compatible(index:TyperIndex, expression:HxExpr, expected:TyType
 	final basic = TyAssignmentCompatibility.classify(expected, actual, Unchecked);
 	if (basic != Unknown || expected.hasUnknownComponent() || actual.hasUnknownComponent())
 		return basic;
+	// Selection can prove a caller's declared bound without erasing its type
+	// parameter. Publication must retain that proof for the original operand.
+	if (index != null
+		&& actual.unwrapNull().isTypeParameter()
+		&& TyCallerConstraintProof.accepts(expected, actual, index.getParameterBounds,
+			(target, bound) -> compatible(index, expression, target, bound, false) == Compatible))
+		return Compatible;
 	if (TyEnumValueCompatibility.accepts(index, expected, actual))
 		return Compatible;
 	final target = expected.unwrapNull();

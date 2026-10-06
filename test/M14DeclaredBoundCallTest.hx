@@ -66,6 +66,15 @@ class M14DeclaredBoundCallTest {
 				accepted: true
 			},
 			{
+				name: 'callback',
+				parameters: 'K:{}',
+				argument: 'K',
+				target: '{}',
+				methodParameters: '',
+				applied: 'Item',
+				accepted: true
+			},
+			{
 				name: 'unbounded',
 				parameters: 'K',
 				argument: 'K',
@@ -105,7 +114,9 @@ class M14DeclaredBoundCallTest {
 				+ entry.methodParameters
 				+ '(value:'
 				+ entry.argument
-				+ '):Void {take(value);}}'
+				+ '):Void {'
+				+ (entry.name == 'callback' ? 'var callback=take;callback(value);' : 'take(value);')
+				+ '}}'
 				+ 'class Main{static function main(){var box=new Box<'
 				+ entry.applied
 				+ '>();box.run(new Item());}}';
@@ -144,9 +155,14 @@ class M14DeclaredBoundCallTest {
 					throw 'accepted bounded program has no typed result';
 				if (!index.getByFullName('Main.Box').instanceMethodCandidates('run')[0].getArgs()[0].isTypeParameter())
 					throw 'call checking replaced the declared parameter';
+				for (owner in typed.getTypedClasses())
+					for (fn in owner.getFunctions())
+						if (HxFunctionDecl.getName(fn.getSourceDeclaration()) == 'run')
+							assertForwardedParameter(fn);
 				JsRuntimeFixture.assertRuntime(typed, 'Main', 'construct\nok\n');
 				#if declared_bound_native
 				if (entry.name == 'object') {
+					@:privateAccess M14NekoClosureControlTest.assertSource('declared_bound_call', source, 'construct\nok\n');
 					final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/native', true);
 					final native = new sys.io.Process('gtimeout', ['30', executable]);
 					final actual = native.stdout.readAll().toString();
@@ -162,5 +178,32 @@ class M14DeclaredBoundCallTest {
 			Sys.println('LOCAL_DECLARED_BOUND:PASS ' + entry.name);
 		}
 		Sys.println('DECLARED_BOUND_CALL:PASS');
+	}
+
+	/** A bound proves assignment; it must not replace the source operand with its supertype. */
+	static function assertForwardedParameter(fn:TypedFunction):Void {
+		final expected = fn.getEnvironment().getParams()[0].getType().getSemanticKey();
+		var calls = 0;
+		function expression(value:TypedExpr):Void {
+			if (value.getTag() == Call) {
+				final operands = value.getExpressions();
+				if (operands.length != 2 || operands[1].getType().getSemanticKey() != expected)
+					throw 'published call erased the forwarded parameter identity';
+				value.assertArgumentBinding();
+				calls++;
+			}
+			for (child in value.getExpressions())
+				expression(child);
+		}
+		function statement(value:TypedStmt):Void {
+			for (child in value.getExpressions())
+				expression(child);
+			for (child in value.getStatements())
+				statement(child);
+		}
+		for (body in fn.getBody().getStatements())
+			statement(body);
+		if (calls != 1)
+			throw 'bound forwarding test lost its selected call';
 	}
 }
