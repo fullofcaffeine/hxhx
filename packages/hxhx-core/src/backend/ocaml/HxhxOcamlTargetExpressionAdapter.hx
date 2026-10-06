@@ -100,13 +100,18 @@ class HxhxOcamlTargetExpressionAdapter {
 				copyVariable(expression, path);
 			case VariableDeclarations:
 				copyBlock(expression, expression.getExpressions(), path);
-			case Block:
+			case Block | SourceGroup:
 				copyNativeBlock(expression, path);
 			case _:
 				null;
 		};
 	}
 
+	/**
+		Copy authored braces and rebuilt blocks without flattening nested scopes.
+		Only declaration lists expand within their existing scope; the target facts
+		still validate each local read against its visible declaration.
+	**/
 	function copyNativeBlock(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
 		final flattened = new Array<TypedExpr>();
 		for (child in expression.getExpressions()) {

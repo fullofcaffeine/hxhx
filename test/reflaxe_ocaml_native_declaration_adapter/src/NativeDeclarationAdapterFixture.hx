@@ -65,10 +65,28 @@ class NativeDeclarationAdapterFixture {
 			throw "structured native binding access changed the existing local key";
 		assertCompilerTemporaryRejected();
 		assertRecursiveExpression(binding);
+		assertAuthoredGroupScope(binding);
 		assertRecursiveFunction();
 		assertProgramCore(nativeInt);
+		assertAuthoredFieldInitializer();
 		assertUnsupportedExpressionFallsBack();
 		Sys.println("HXHX_OCAML_TARGET_DECLARATION_ADAPTER:PASS");
+	}
+
+	/** Compare real parser and typer output with upstream Haxe on the same source file. **/
+	static function assertAuthoredFieldInitializer():Void {
+		final path = "test/reflaxe_ocaml_shared_expression/src/Main.hx";
+		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final modules = TypedAbstractOperatorLowering.lowerModules([typed], index);
+		final request = backend.ocaml.HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram(modules, false), "Main");
+		final fields = request.copyFieldInitializers();
+		if (fields.length != 1 || fields[0].getCanonicalIdentity() != StockFieldInitializerMacro.expectedIdentity())
+			throw "stock and native hosts disagree on the authored initializer facts";
+		final source = OcamlTargetProgramCore.lower(request).copyFiles().filter(file -> file.path == "Main.ml");
+		if (source.length != 1 || source[0].contents != "let value = let inner = 7 in inner\n\nlet main = fun () -> Stdlib.ignore ()\n")
+			throw "authored initializer changed its scoped local or result value";
 	}
 
 	/** Proves that native facts consume the same checked runtime-use contract as stock Haxe. **/
@@ -260,6 +278,35 @@ class NativeDeclarationAdapterFixture {
 			if (HxhxOcamlTargetLiteralAdapter.fromExpression(expression) != null
 				|| HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", expression) != null)
 				throw "grouping admitted an unsupported child or inconsistent type";
+	}
+
+	/** Authored braces retain nested scopes and reject invalid result types or children. */
+	static function assertAuthoredGroupScope(binding:TyLocalBinding):Void {
+		final integer = TyType.fromHintText("Int");
+		final position = HxPos.unknown();
+		final declaration = TypedExpr.variableDeclaration("value", "Int", TypedExpr.intLiteral(7, integer, position), false, false, integer, position, binding);
+		final read = TypedExpr.localRead("value", integer, position, binding);
+		final nested = TypedExpr.sourceGroup([declaration, read], integer, position);
+		final valid = HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", TypedExpr.sourceGroup([nested], integer, position));
+		if (valid == null || valid.copyChildren().length != 1 || valid.copyChildren()[0].copyChildren().length != 2)
+			throw "authored braces lost their nested declaration scope";
+		for (invalid in [
+			TypedExpr.sourceGroup([TypedExpr.intLiteral(7, integer, position)], TyType.fromHintText("String"), position),
+			TypedExpr.sourceGroup([], integer, position),
+			TypedExpr.sourceGroup([TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), position)], TyType.fromHintText("Float"), position)
+		])
+			if (HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", invalid) != null)
+				throw "authored braces admitted an unsupported child or inconsistent result type";
+		var rejected = false;
+		try {
+			HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.run", TypedExpr.sourceGroup([nested, read], integer, position));
+		} catch (error:String) {
+			if (error.indexOf("without a visible source binding") < 0)
+				throw error;
+			rejected = true;
+		}
+		if (!rejected)
+			throw "authored braces let a nested local escape its declaration scope";
 	}
 
 	static function assertDanglingReadRejected(valid:OcamlTargetExpressionFact):Void {
