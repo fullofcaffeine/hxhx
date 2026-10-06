@@ -520,6 +520,12 @@ class NekoTargetCore {
 		throw "Neko construction lost exact class " + context.typedProgram.requireClassIdentity(owner.getDeclaration());
 	}
 
+	/** Source spellings cannot select a generic or aliased constructor. */
+	static function constructionClass(context:NekoEmitContext, expression:HxExpr):Null<NekoClassInfo> {
+		final owner = NekoClassConstructionPlan.fromExpression(context, expression);
+		return owner == null ? null : exactClassInfo(context, owner);
+	}
+
 	static function collectReachable(context:NekoEmitContext, mainInfo:NekoClassInfo, startup:NekoStaticInitializationPlan):NekoReachable {
 		final reserved = new Array<String>();
 		for (info in context.classes) {
@@ -698,7 +704,7 @@ class NekoTargetCore {
 		switch (expr) {
 			case ENew(typePath, args):
 				if (!NekoStringIntrinsics.ownsConstructor(typePath)) {
-					final info = lookupClass(context, typePath);
+					final info = constructionClass(context, expr);
 					if (info != null)
 						addConstructor(info);
 				}
@@ -1226,8 +1232,8 @@ class NekoTargetCore {
 
 	static function shouldSplitStatementAssignmentRhs(context:NekoEmitContext, expr:HxExpr):Bool {
 		return switch (expr) {
-			case ENew(typePath, args): (isListTypePath(typePath) && args.length == 0) || mapKindForTypePath(typePath) != null || lookupClass(context,
-					typePath) != null;
+			case ENew(typePath, args): (isListTypePath(typePath) && args.length == 0) || mapKindForTypePath(typePath) != null || constructionClass(context,
+					expr) != null;
 			case _:
 				false;
 		}
@@ -1550,7 +1556,7 @@ class NekoTargetCore {
 			case EMacroType(typeText):
 				NekoMacroTypeLowering.render(typeText);
 			case ENew(typePath, args):
-				renderNew(context, typePath, args);
+				renderNew(context, expr, typePath, args);
 			case ELambda(args, body):
 				if (context.captureStorage != null)
 					context.captureStorage.requireClosure(expr);
@@ -1874,7 +1880,7 @@ class NekoTargetCore {
 		return false;
 	}
 
-	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+	static function renderNew(context:NekoEmitContext, expression:HxExpr, typePath:String, args:Array<HxExpr>):String {
 		if (NekoStringIntrinsics.ownsConstructor(typePath))
 			return NekoStringIntrinsics.renderConstructor([for (arg in args) renderExpr(context, arg)]);
 		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
@@ -1886,7 +1892,7 @@ class NekoTargetCore {
 			return "__hxhx_map_new(" + quote(mapKind) + ")";
 		if (typePath == "sys.io.Process")
 			return "__hxhx_process_new(" + renderProcessConstructorArgs(context, args).join(", ") + ")";
-		final info = lookupClass(context, typePath);
+		final info = constructionClass(context, expression);
 		if (info != null)
 			return renderConstructorRef(context, info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
 		final tmp = "__hxhx_o";
@@ -2707,7 +2713,7 @@ class NekoTargetCore {
 		}
 		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
 		if (NekoStaticFieldPlan.fromExpression(context, callee) != null)
-			return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
+			return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), renderedArgs);
 		if (NekoRuntimeTypeRegistry.ownsPredicate(selectedStatic)) {
 			if (renderedArgs.length != 2)
 				throw "Neko standard type predicate requires exactly two arguments";
@@ -2816,13 +2822,14 @@ class NekoTargetCore {
 				final fullClassName = info == null ? className : info.fullName;
 				return renderFunctionRef(context, fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
 			case ELambda(_, _):
-				// Neko needs parentheses to call the function value rather than
-				// attach the following expression to the function syntax.
-				return "(" + renderExpr(context, callee) + ")(" + renderedArgs.join(", ") + ")";
+				return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), renderedArgs);
 			case EField(receiver, field):
 				return NekoFieldCall.render(context.typedProgram, renderExpr(context, receiver), field, renderedArgs);
-			case _:
+			case EIdent(name) if (context.selfName != null && !isLocalName(context, name) && isCurrentInstanceMethod(context, name)):
+				// An implicit instance method still needs Neko's invocation receiver.
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
+			case _:
+				return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), renderedArgs);
 		}
 	}
 

@@ -1940,6 +1940,10 @@ class TyperStage {
 				(expected, supplied) -> overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0);
 		if (captured != null)
 			return captured;
+		// A call through an explicitly Dynamic value also has a Dynamic result.
+		// Unknown callees remain unproved; this permission must not fill missing facts.
+		if (calleeType.isDynamic())
+			return calleeType;
 		if (!calleeType.isFunction())
 			return TyType.unknown();
 		final signature = TyCallableSignature.fromFunctionValue(calleeType);
@@ -2009,6 +2013,11 @@ class TyperStage {
 				parameterSymbols[parameterIndex].setType(selected);
 			}
 		}
+		// Omitted source-function inputs must share the same inference variables
+		// as calls in their body, including generic results constrained later.
+		for (parameter in parameterSymbols)
+			if (parameter.getType().unwrapNull().isUnknown())
+				scope.getInference().registerOmittedParameter(parameter);
 		controls.beginReturns(target, expected);
 		final bodyType = TyEmptySourceGroup.isEmpty(body) ? TyType.fromHintText("Void") : inferExprType(body, scope, ctx, pos,
 			facts.getKind() == Arrow ? expected : null);
@@ -2042,7 +2051,7 @@ class TyperStage {
 		final callableType = TyCallableSignature.sourceFunctionType(names, signature, argumentTypes, selected);
 		if (declared != null)
 			declared.setType(callableType);
-		scope.getInference().recordSourceFunction(source, callableType);
+		scope.getInference().recordSourceFunction(source, callableType, parameterSymbols);
 		return callableType;
 	}
 
@@ -2774,7 +2783,7 @@ class TyperStage {
 						// Resolve speculatively, then type the selected read once in this scope.
 						if (resolveFieldDeclaration(callee, scope, ctx, pos) != null) {
 							final candidate = inferExprType(callee, scope.copyForInference(), ctx, pos);
-							if (candidate.isFunction()) {
+							if (candidate.isFunction() || candidate.isDynamic()) {
 								final callable = inferExprType(callee, scope, ctx, pos);
 								return inferFunctionValueCall(sourceCallee, args, scope, ctx, pos, expectedResult, callable);
 							}
@@ -2790,7 +2799,7 @@ class TyperStage {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
 									final structural = TyStructuralFieldRead.resolve(objTy, field);
-									if (structural != null && structural.isFunction())
+									if (structural != null && (structural.isFunction() || structural.isDynamic()))
 										return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
 									final idx = ctx.getIndex();
 									final c2 = nominalInfoForType(idx, objTy);
@@ -2828,7 +2837,7 @@ class TyperStage {
 								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
 								final structural = TyStructuralFieldRead.resolve(objTy, field);
-								if (structural != null && structural.isFunction())
+								if (structural != null && (structural.isFunction() || structural.isDynamic()))
 									return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
 								final idx = ctx.getIndex();
 								final c2 = nominalInfoForType(idx, objTy);

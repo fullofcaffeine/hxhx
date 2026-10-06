@@ -23,6 +23,7 @@ private typedef InferredCapturedCall = {
 	final terms:Array<Null<TyInferenceTerm>>;
 	final types:Array<TyType>;
 	final index:TyperIndex;
+	final ?selectedSlots:Array<TyCallAlignment.TyCallArgumentSlot>;
 }
 
 /**
@@ -39,7 +40,12 @@ class TyFunctionInference {
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
 	var callbackArguments:Array<{final callee:HxExpr; final binding:TyCallArgumentBinding;}> = [];
-	var sourceFunctions:Array<{final source:HxExpr; final fingerprint:String; final type:TyType;}> = [];
+	var sourceFunctions:Array<{
+		final source:HxExpr;
+		final fingerprint:String;
+		final type:TyType;
+		final arguments:Array<TyInferenceTerm>;
+	}> = [];
 
 	/** Sealed replay reads the signature inferred for this exact authored function occurrence. */
 	public function sourceFunctionType(source:HxExpr):Null<TyType> {
@@ -49,24 +55,49 @@ class TyFunctionInference {
 			if (entry.source == source) {
 				if (entry.fingerprint != TypedBodyFingerprint.forExpression(source))
 					throw "source function changed after parameter inference";
-				return entry.type;
+				// Body parameters contain Rest<T>; the callable accepts individual T
+				// operands. Reuse the source-signature owner to preserve that distinction.
+				return switch source {
+					case ESourceFunction(facts, _, _, _):
+						TyCallableSignature.sourceFunctionType(facts.getArguments(), facts.getSignature(), entry.arguments.map(solver.published),
+							entry.type.getFunctionReturn());
+					case _: throw "source function signature requires its authored function occurrence";
+				};
 			}
 		return null;
 	}
 
-	/** Keep body-inferred parameter types when later speculative resolvers do not own lexical declarations. */
-	public function recordSourceFunction(source:HxExpr, type:TyType):Void {
+	/** Retain parameter terms so replay observes their final types, including constraints supplied after an earlier body call. */
+	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>):Void {
 		if (solver.isSealed())
 			throw "source function signature is absent from sealed inference";
 		if (!type.isFunction())
 			throw "source function inference requires a callable type";
+		if (parameters.length != type.getFunctionArguments().length)
+			throw "source function inference requires one binding per parameter";
 		final fingerprint = TypedBodyFingerprint.forExpression(source);
+		final arguments = [
+			for (parameter in parameters) {
+				final term = locals.get(parameter.getIdentity().getCanonicalKey());
+				term == null ? TyInferenceSolver.fromType(parameter.getType()) : term;
+			}
+		];
 		for (index in 0...sourceFunctions.length)
 			if (sourceFunctions[index].source == source) {
-				sourceFunctions[index] = {source: source, fingerprint: fingerprint, type: type};
+				sourceFunctions[index] = {
+					source: source,
+					fingerprint: fingerprint,
+					type: type,
+					arguments: arguments
+				};
 				return;
 			}
-		sourceFunctions.push({source: source, fingerprint: fingerprint, type: type});
+		sourceFunctions.push({
+			source: source,
+			fingerprint: fingerprint,
+			type: type,
+			arguments: arguments
+		});
 	}
 
 	/** Exact source occurrence ownership keeps optional selection stable during typed-body replay. */
@@ -77,12 +108,41 @@ class TyFunctionInference {
 		return null;
 	}
 
-	/** Only the shared context validator may publish a completed callback alignment. */
+	/**
+		Retain a selected callback's slots until all local constraints are complete.
+		The contextual preview can include deferred Dynamic defaults, so its types
+		are not a final binding. Publication reads the original terms after sealing
+		and checks the same slots without repeating optional-argument selection.
+	 */
 	@:allow(TyCallbackArgumentContext)
-	function recordCallbackBinding(callee:HxExpr, binding:TyCallArgumentBinding):Void {
+	function recordCallbackAlignment(callee:HxExpr, signature:TyCallableSignature, arguments:Array<HxExpr>, types:Array<TyType>,
+			slots:Array<TyCallAlignment.TyCallArgumentSlot>, environment:TyFunctionEnv, index:TyperIndex):Void {
 		if (solver.isSealed())
 			throw "callback alignment is absent from sealed inference";
-		callbackArguments.push({callee: callee, binding: binding});
+		capturedCalls = capturedCalls.filter(call -> call.callee != callee);
+		capturedCalls.push({
+			callee: callee,
+			callable: TyInferenceSolver.fromType(signature.getFunctionType()),
+			arguments: arguments.copy(),
+			terms: [
+				for (argument in arguments)
+					sourceTerm(switch argument {
+						case ECall(EIdent("__hxhx_spread"), [container]): container;
+						case _: argument;
+					}, environment)
+			],
+			types: types.copy(),
+			index: index,
+			selectedSlots: [
+				for (slot in slots)
+					switch slot {
+						case RestElements(sources):
+							RestElements(sources.copy());
+						case _:
+							slot;
+					}
+			]
+		});
 	}
 
 	public function new(owner:String) {
@@ -92,7 +152,7 @@ class TyFunctionInference {
 
 	/** Register only source arguments whose annotation was omitted, before aliases can capture them. */
 	public function registerOmittedParameter(symbol:TySymbol):Void {
-		if (symbol.getKind() != Parameter || !symbol.getType().unwrapNull().isUnknown())
+		if ((symbol.getKind() != Parameter && symbol.getKind() != LambdaParameter) || !symbol.getType().unwrapNull().isUnknown())
 			throw "omitted parameter registration requires an unknown declaration input";
 		final key = symbol.getIdentity().getCanonicalKey();
 		if (locals.exists(key))
@@ -596,6 +656,13 @@ class TyFunctionInference {
 		return term == null ? fallback : solver.isSealed() ? solver.published(term) : solver.preview(term);
 	}
 
+	/** Candidate checking may observe deferred defaults, but source typing continues to use the unsolved term. */
+	@:allow(TyCallbackArgumentContext)
+	function callbackContextType(expression:HxExpr, fallback:TyType, environment:TyFunctionEnv):TyType {
+		final term = sourceTerm(expression, environment);
+		return term == null ? fallback : solver.previewDynamicUses(term);
+	}
+
 	/** Resolve a retained lexical term against this traversal's constraints, including in speculative forks. */
 	public function termType(term:TyInferenceTerm):TyType {
 		return solver.isSealed() ? solver.published(term) : solver.preview(term);
@@ -615,7 +682,9 @@ class TyFunctionInference {
 					call.terms[operand] == null ? call.types[operand] : solver.published(call.terms[operand])
 			];
 			final signature = TyCallableSignature.fromFunctionValue(solver.published(call.callable));
-			callbackArguments.push({callee: call.callee, binding: TyCallbackArgumentContext.publish(signature, call.arguments, types, call.index)});
+			final binding = call.selectedSlots == null ? TyCallbackArgumentContext.publish(signature, call.arguments, types,
+				call.index) : TyCallbackArgumentContext.publishSlots(signature, call.arguments, types, call.index, call.selectedSlots);
+			callbackArguments.push({callee: call.callee, binding: binding});
 		}
 		for (symbol in symbols)
 			symbol.setType(localType(symbol));

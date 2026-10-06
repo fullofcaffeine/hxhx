@@ -31,6 +31,7 @@ class JsExprEmitter {
 			},
 			runtimeTypes: parent == null ? null : parent.runtimeTypes,
 			methodUses: parent == null ? null : parent.methodUses,
+			lambdaUses: parent == null ? null : parent.lambdaUses,
 			abstractReceiver: parent != null && parent.abstractReceiver == true};
 	}
 
@@ -129,7 +130,7 @@ class JsExprEmitter {
 			case EArrayAccess(array, index):
 				emitArrayRead(array, index, scope);
 			case ELambda(args, body):
-				emitLambda(args, body, scope);
+				JsLambdaEmitter.emit(expr, args, body, scope);
 			case EParenthesized(inner, _):
 				"(" + emit(inner, scope) + ")";
 			case ECast(inner, _):
@@ -2114,29 +2115,6 @@ class JsExprEmitter {
 			}
 		}
 		return "{" + pairs.join(", ") + "}";
-	}
-
-	static function emitLambda(args:Array<String>, body:HxExpr, scope:JsEmitScope):String {
-		switch body {
-			case ELoweredControl(FunctionBody, _, _, _):
-				final nested = JsFunctionScope.nested(scope);
-				final parameters = [for (argument in args) nested.declareLocal(argument)];
-				final writer = new JsWriter();
-				JsStmtEmitter.emitFunctionBody(writer, TypedControlStatements.functionBody(body), nested);
-				// Haxe closures retain the enclosing instance even when invoked as plain callbacks.
-				return "(function(" + parameters.join(", ") + ") {\n" + writer.toString() + "\n}).bind(this)";
-			case _:
-		}
-		final lambdaLocals = new haxe.ds.StringMap<String>();
-		final params = new Array<String>();
-		for (a in args) {
-			final safe = JsNameMangler.identifier(a);
-			lambdaLocals.set(a, safe);
-			params.push(safe);
-		}
-		final nested = nestedScope(scope, lambdaLocals);
-		// Expression-bodied closures have the same lexical receiver as block-bodied closures.
-		return "(function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }).bind(this)";
 	}
 
 	static function emitRangeExpr(startExpr:HxExpr, endExpr:HxExpr, scope:JsEmitScope):String {

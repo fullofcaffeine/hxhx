@@ -18,6 +18,32 @@ typedef NekoConstructionMethod = {
 	backing value. Missing ancestors are errors.
 **/
 class NekoClassConstructionPlan {
+	/**
+		Select a projected Haxe class from the exact typed allocation occurrence.
+		Written generic arguments and import aliases are source syntax, not runtime
+		class names. Native-only types stay with their existing intrinsic owners.
+		Both reachability and emission must consume this same selection.
+	 */
+	public static function fromExpression(context:NekoEmitContext, expression:HxExpr):Null<TypedBackendClassProjection> {
+		final occurrence = switch context.currentExecutable {
+			case FunctionBody(selected):
+				final current = context.typedProgram.requireDeclaredFunction(selected.body.getDeclaration());
+				if (current.body != selected.body || current.owner != selected.owner)
+					throw "Neko constructor belongs to another function projection";
+				selected.body.requireConstructor(expression);
+			case FieldInitializer(selected):
+				if (context.typedProgram.requireDeclaredInitializer(selected.getDeclaration()) != selected)
+					throw "Neko constructor belongs to another initializer projection";
+				selected.requireConstructor(expression);
+			case null: throw "Neko constructor requires its executable projection";
+		};
+		occurrence.assertCurrent();
+		final identity = occurrence.getConstructedType().getNominalIdentity();
+		if (identity == null || context.typedProgram.classGraph.findClassFacts(identity.getCanonicalName()) == null)
+			return null;
+		return context.typedProgram.requireClass(identity.getCanonicalName());
+	}
+
 	/** An abstract factory returns its backing value rather than a class instance. */
 	public final returnsBackingValue:Bool;
 

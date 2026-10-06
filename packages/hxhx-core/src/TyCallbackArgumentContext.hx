@@ -56,10 +56,15 @@ function publish(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 /** Validate converted operands against the already selected slots; conversions must never reselect an optional parameter. */
 function publishSelected(signature:TyCallableSignature, arguments:Array<HxExpr>, types:Array<TyType>, index:TyperIndex,
 		order:TyMethodArgumentOrder):TyCallArgumentBinding {
+	return publishSlots(signature, arguments, types, index, order.getSlots());
+}
+
+/** Final callback publication checks retained slots after inference, without selecting a different optional argument. */
+function publishSlots(signature:TyCallableSignature, arguments:Array<HxExpr>, types:Array<TyType>, index:TyperIndex,
+		slots:Array<TyCallAlignment.TyCallArgumentSlot>):TyCallArgumentBinding {
 	if (arguments.length != types.length)
 		throw "selected call requires one final type per source operand";
 	final parameters = signature.getParameters();
-	final slots = order.getSlots();
 	if (slots.length != parameters.length)
 		throw "selected call order differs from its final signature";
 	final kinds:Array<TyCallOperandKind> = [
@@ -143,7 +148,7 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 		final trial = inference.fork();
 		if (!trial.constrain([sources[source]], [expected], environment, index))
 			return Incompatible;
-		return compatible(index, sources[source], parameters[parameter].type, trial.expressionType(sources[source], types[source], environment), spread);
+		return compatible(index, sources[source], parameters[parameter].type, trial.callbackContextType(sources[source], types[source], environment), spread);
 	});
 	return switch aligned {
 		case Rejected(_): aligned;
@@ -178,7 +183,7 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 			} else {
 				final solved = [
 					for (source in 0...sources.length)
-						trial.expressionType(sources[source], types[source], environment)
+						trial.callbackContextType(sources[source], types[source], environment)
 				];
 				// Validate the selected slots, without repeating optional selection under a different policy.
 				function check(source:Int, parameter:Int, spread:Bool):Void {
@@ -205,10 +210,10 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 					case Aligned(_):
 						if (!inference.constrain(selectedSources, selectedTypes, environment, index))
 							throw "callback argument constraints changed after isolated validation";
-						for (source in 0...sources.length)
-							types[source] = solved[source];
 						if (callee != null)
-							inference.recordCallbackBinding(callee, new TyCallArgumentBinding(signature, solved, kinds, slots, Unchecked));
+							inference.recordCallbackAlignment(callee, signature, arguments, types, slots, environment, index);
+						for (source in 0...sources.length)
+							types[source] = trial.expressionType(sources[source], types[source], environment);
 						checked;
 				}
 			}

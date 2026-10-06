@@ -884,8 +884,12 @@ class TypedControlLowering {
 		// effects. Its invocation now consumes that value, not a newly selected
 		// member named after the temporary. The captured read retains its exact
 		// declaration; shared function-call checking retains the argument contract.
-		final lowered = capturedCallee ? TypedExpr.functionValueCall(values[0], values.slice(1), expression.getType(), expression.getPosition(),
-			expression.getArgumentBinding()) : expression.withExpressions(values);
+		// Explicit Dynamic callables retain their runtime call contract after capture.
+		// They have no fixed parameter signature for functionValueCall to validate.
+		final lowered = !capturedCallee ? expression.withExpressions(values) : values[0].getType()
+			.isDynamic() ? TypedExpr.call(values[0], values.slice(1), null, expression.getType(),
+				expression.getPosition()) : TypedExpr.functionValueCall(values[0], values.slice(1), expression.getType(), expression.getPosition(),
+					expression.getArgumentBinding());
 		return {steps: steps, value: lowered, completes: true};
 	}
 }

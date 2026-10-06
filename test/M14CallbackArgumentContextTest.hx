@@ -57,7 +57,7 @@ class M14CallbackArgumentContextTest {
 		final source:HxExpr = ESourceFunction(facts, ESourceGroup(children, position), [], position);
 		final inference = new TyFunctionInference("source-signature");
 		final type = TyType.functionType([], TyType.fromHintText("Int"));
-		inference.recordSourceFunction(source, type);
+		inference.recordSourceFunction(source, type, []);
 		if (inference.sourceFunctionType(source) != null)
 			throw "mutable source inference reused a frozen signature";
 		inference.seal([]);
@@ -98,6 +98,9 @@ class M14CallbackArgumentContextTest {
 		final single = TyCallableSignature.fromFunctionValue(TyType.functionType([callable.getFunctionArguments()[0]], TyType.fromHintText("Bool")));
 		if (!TyCallbackArgumentContext.resolve(single, [expr], [inferred], [Value], env, TyperIndex.build([]), callee).match(Aligned(_)))
 			throw "failed alignment poisoned a later compatible call";
+		if (env.getInference().callbackBinding(callee) != null)
+			throw "callback published a binding before inference completed";
+		env.getInference().seal([]);
 		final binding = env.getInference().callbackBinding(callee);
 		var rejected = false;
 		try {

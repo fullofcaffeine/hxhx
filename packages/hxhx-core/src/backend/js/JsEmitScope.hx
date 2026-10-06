@@ -6,6 +6,7 @@ typedef JsEmitScope = {
 	final resolveSuperClassRef:Void->Null<String>;
 	final ?runtimeTypes:JsRuntimeTypeScope;
 	final ?methodUses:HxExpr->Null<TypedBackendMethodOccurrence>;
+	final ?lambdaUses:HxExpr->Null<TypedBackendLambdaOccurrence>;
 
 	/** Abstract bodies read their backing value through this; ordinary classes read the instance. */
 	final ?abstractReceiver:Bool;

@@ -134,7 +134,8 @@ class JsFunctionScope {
 	}
 
 	/** Initializers select their own executable catalog even when emitted inside a constructor. */
-	public function exprScope(?initializerTypes:JsRuntimeTypeScope, ?initializerMethods:HxExpr->Null<TypedBackendMethodOccurrence>):JsEmitScope {
+	public function exprScope(?initializerTypes:JsRuntimeTypeScope, ?initializerMethods:HxExpr->Null<TypedBackendMethodOccurrence>,
+			?initializerLambdas:HxExpr->Null<TypedBackendLambdaOccurrence>):JsEmitScope {
 		final self = this;
 		return {
 			resolveLocal: function(name:String):Null<String> return self.resolveLocal(name),
@@ -142,6 +143,7 @@ class JsFunctionScope {
 			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef(),
 			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
+			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
 			abstractReceiver: abstractReceiver
 		};
 	}

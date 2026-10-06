@@ -647,7 +647,8 @@ class JsTargetCore implements ITargetCore {
 			} else {
 				try {
 					JsExprEmitter.emit(init,
-						staticScope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field)));
+						staticScope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field),
+							JsLambdaEmitter.initializerLookup(unit.projection, field)));
 				} catch (e:String) {
 					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
 						"null";
@@ -1045,7 +1046,8 @@ class JsTargetCore implements ITargetCore {
 			} else {
 				try {
 					JsExprEmitter.emit(init,
-						scope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field)));
+						scope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field),
+							JsLambdaEmitter.initializerLookup(unit.projection, field)));
 				} catch (e:String) {
 					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				} catch (error:haxe.Exception) {

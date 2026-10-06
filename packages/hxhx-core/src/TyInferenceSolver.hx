@@ -171,6 +171,29 @@ class TyInferenceSolver {
 		revision++;
 	}
 
+	/**
+		Inspect a candidate after its recorded Dynamic uses, without finalizing this
+		owner. Call alignment can check that a deferred fallback satisfies a written
+		parameter while later expressions still contribute concrete constraints.
+		Only solver-owned variables with actual Dynamic evidence receive defaults;
+		immutable Unknown values and unrelated open variables remain unproved.
+	 */
+	public function previewDynamicUses(term:TyInferenceTerm):TyType {
+		assertOwned(term);
+		if (sealed)
+			return published(term);
+		final candidate = fork();
+		candidate.applyDynamicUses();
+		return candidate.preview(term);
+	}
+
+	/** Use the same deferred defaults for speculative observation and final publication. */
+	function applyDynamicUses():Void {
+		for (index in 0...dynamicUses.length)
+			if (dynamicUses[index])
+				visitDynamicUse(Variable(variables[index]), true);
+	}
+
 	/** Follow final alias solutions and preserve nominal, callable, and required-field structure. */
 	function visitDynamicUse(term:TyInferenceTerm, publish:Bool):Void {
 		switch follow(term) {
@@ -432,9 +455,7 @@ class TyInferenceSolver {
 	public function seal():Void {
 		requireMutable();
 		final candidate = fork();
-		for (index in 0...candidate.dynamicUses.length)
-			if (candidate.dynamicUses[index])
-				candidate.visitDynamicUse(Variable(candidate.variables[index]), true);
+		candidate.applyDynamicUses();
 		candidate.publishOpenMethods();
 		for (variable in candidate.variables)
 			candidate.materialize(Variable(variable), true, variable.allowsUnknown);
