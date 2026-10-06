@@ -30,11 +30,13 @@ class CsEnumConstructorCallLowering {
 	final constructors:haxe.ds.StringMap<CsExactEnumConstructorTarget>;
 	final noRoot:Bool;
 	final staticCalls:CsSourceStaticCallLowering;
+	final program:backend.GenIrProgram;
 
 	public function new(program:backend.GenIrProgram, noRoot:Bool) {
 		if (program == null)
 			throw "C# enum-constructor lowering requires a typed program";
 		this.noRoot = noRoot;
+		this.program = program;
 		this.staticCalls = new CsSourceStaticCallLowering(program, noRoot);
 		this.constructors = new haxe.ds.StringMap<CsExactEnumConstructorTarget>();
 		for (typedModule in program.getTypedModules()) {
@@ -107,7 +109,8 @@ class CsEnumConstructorCallLowering {
 	public function body(projection:TypedBackendFunctionProjection):Array<HxStmt> {
 		if (projection == null)
 			throw "C# enum-constructor lowering requires a typed function projection";
-		final dynamicCalls = staticCalls.body(CsDynamicLocalCallLowering.body(projection));
+		final lambdas = CsLambdaLowering.body(projection, program, noRoot);
+		final dynamicCalls = staticCalls.body(CsDynamicLocalCallLowering.body(projection, lambdas));
 		return SourceFunctionBodyRewriter.body(dynamicCalls, function(expression) {
 			final exact = TypedExactEnumConstructorSource.decode(expression);
 			if (exact == null)

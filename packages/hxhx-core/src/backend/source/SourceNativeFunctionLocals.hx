@@ -51,7 +51,8 @@ class SourceNativeFunctionLocals {
 		return typeName(type) + " " + nativeName + (hasNullInitializer ? " = null;" : ";");
 	}
 
-	function typeName(type:TyType):String {
+	/** Use the same checked target representation for locals and callback signatures. */
+	public function typeName(type:TyType):String {
 		final nullable = type.isNullable();
 		final inner = type.unwrapNull();
 		return switch (inner.getSemanticKey()) {

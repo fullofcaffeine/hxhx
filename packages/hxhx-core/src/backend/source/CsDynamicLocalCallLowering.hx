@@ -15,11 +15,11 @@ class CsDynamicLocalCallLowering {
 	public static inline function isMarker(value:String):Bool
 		return value == marker();
 
-	public static function body(projection:TypedBackendFunctionProjection):Array<HxStmt> {
+	public static function body(projection:TypedBackendFunctionProjection, ?statements:Array<HxStmt>):Array<HxStmt> {
 		if (projection == null)
 			throw "C# Dynamic local-call lowering requires a typed function projection";
 		final locals = projection.getLocalCatalog();
-		return SourceFunctionBodyRewriter.body(HxFunctionDecl.getBody(projection.getDeclaration()), function(expression) {
+		return SourceFunctionBodyRewriter.body(statements == null ? projection.getBody() : statements, function(expression) {
 			return switch (expression) {
 				case ECall(EField(receiver, field), arguments) if (dependsOnExactDynamicLocal(receiver, locals)):
 					ECall(EUnsupported(marker()), [receiver, EString(field), EArrayDecl(arguments)]);

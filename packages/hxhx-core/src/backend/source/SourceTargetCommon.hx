@@ -1187,6 +1187,23 @@ class SourceTargetCommon {
 		if (staticCall != null)
 			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final csLambda = CsLambdaLowering.decode(expr);
+		if (csLambda != null) {
+			if (target != Cs)
+				throw "C# callback reached a different target";
+			final locals = switch frame {
+				case NativeFunction(locals): locals;
+				case _: throw "C# callback rendering requires its typed function frame";
+			};
+			final lines = ["(("
+				+ csLambda.delegateType
+				+ ")(("
+				+ [for (name in csLambda.arguments) sanitizeCsIdentifier(name)].join(", ") + ") => {"];
+			for (line in renderNativeFunctionBody(locals, TypedControlStatements.functionBody(csLambda.body), "  "))
+				lines.push(line);
+			lines.push("}))");
+			return lines.join("\n");
+		}
 		final phpRuntimeType = PhpRuntimeTypeLowering.decode(expr);
 		final phpClosure = PhpExecutableLowering.decodeClosure(expr);
 		if (phpClosure != null) {
@@ -3155,7 +3172,7 @@ class SourceTargetCommon {
 					}
 				}
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExprWithFrame(frame, receiver);
-				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
+				callExprWithFrame(frame, fieldAccess(target, renderedReceiver, field), args);
 		};
 	}
 
@@ -8851,7 +8868,7 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Python: "range(" + a + ", " + b + ")";
 			case Java: "range(" + a + ", " + b + ")";
-			case Cs: "range(" + a + ", " + b + ")";
+			case Cs: "global::hxhx.__HxRuntime.range(" + a + ", " + b + ")";
 			case Php: "range(" + a + ", " + b + " - 1)";
 			case Lua: "hxhx_range(" + a + ", " + b + ")";
 		};
@@ -8864,7 +8881,7 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Python: "range(" + a + ", " + b + ")";
 			case Java: "range(" + a + ", " + b + ")";
-			case Cs: "range(" + a + ", " + b + ")";
+			case Cs: "global::hxhx.__HxRuntime.range(" + a + ", " + b + ")";
 			case Php: "range(" + a + ", " + b + " - 1)";
 			case Lua: "hxhx_range(" + a + ", " + b + ")";
 		};
@@ -10946,7 +10963,7 @@ class SourceTargetCommon {
 		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final cleanName = sanitizeTypeName(name);
 		final value = valueName(target, cleanName);
-		final source = renderExpr(target, iterable);
+		final source = renderExprWithFrame(frame, iterable);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		switch (target) {
