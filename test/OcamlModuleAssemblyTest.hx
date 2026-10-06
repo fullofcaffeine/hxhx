@@ -35,6 +35,14 @@ class OcamlModuleAssemblyTest {
 		reject([module("Private", "Private", OcamlASTTraversalTest.allTypeConstructors())], "signature-runtime-copy-required");
 		reject([module("HxArray", "HxArray", OcamlASTTraversalTest.allTypeConstructors())], "signature-runtime-copy-required");
 		reject([module("Private", "Private", TIdent("HxArray.t"))], "signature-runtime-copy-required");
+		var plainRejected = false;
+		try {
+			assembleModules([module("Private", "Private", TApp("option", [TIdent("HxArray.t")]))], printer, (type, _) -> type);
+		} catch (message:String) {
+			plainRejected = message.indexOf("signature-runtime-copy-required") >= 0;
+		}
+		if (!plainRejected)
+			throw "An output callback must not authorize a plain private type.";
 		// A generated program module with a runtime-like name still owns its type.
 		assembleModules([module("HxUser", "HxUser", TIdent("HxUser.t"))], printer);
 	}

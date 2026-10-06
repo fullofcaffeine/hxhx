@@ -4,8 +4,8 @@ The macro also checks function-only module eligibility and dependency order befo
 
 Run `PORTABLE_FIXTURE_ALLOWLIST=module_function_signature npm run test:portable`.
 The runner compiles the Haxe source, builds the OCaml program, and checks its output against `expected.stdout`.
-The constructor assertion checks that its argument reaches the returned instance.
-A two-argument constructor remains without a checked signature and must fail recursive-module eligibility while preserving ordinary runtime behavior.
+The constructor assertion checks that two integer arguments reach the returned instance.
+A constructor with an array parameter remains without a checked signature and must fail recursive-module eligibility while preserving ordinary runtime behavior.
 
 This fixture does not emit recursive modules or prove safe initialization for arbitrary modules.
 It does not change the README Goals percentages.

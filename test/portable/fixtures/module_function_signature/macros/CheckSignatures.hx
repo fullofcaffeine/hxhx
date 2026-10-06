@@ -15,7 +15,7 @@ class CheckSignatures {
 			check("Main", "main", "unit -> unit");
 			check("CycleLeft", "create", "unit -> t");
 			check("CycleLeft", "__empty", "unit -> t");
-			check("ConstructorProbe", "create", "int -> t");
+			check("ConstructorProbe", "create", "int -> int -> t");
 			check("ConstructorProbe", "__empty", "unit -> t");
 			final unrepresented = OcamlCompiler.instance.moduleChunks.itemsFor("UnrepresentedConstructorProbe", "UnrepresentedConstructorProbe");
 			if (unrepresented == null)

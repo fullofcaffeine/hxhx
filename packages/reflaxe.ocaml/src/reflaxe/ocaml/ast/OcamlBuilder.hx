@@ -9340,7 +9340,7 @@ class OcamlBuilder {
 		// the result of the effect-only Haxe constructor body.
 		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
 		final declarationSignature = preserveDeclarationSignature ? projectDeclarationSignature(args.map(argument -> argument.t),
-			expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType) : null;
+			expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType, ctx) : null;
 		final params = if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {

@@ -4,7 +4,10 @@ Two modules call each other through functions that accept and return Haxe record
 Native output must preserve copied values, optional fields, and mutation through aliases.
 The input also has an extra field, which must survive a narrower function parameter.
 A record and a concrete class also cross the same function signature. The class
-must use an existing representation entry; an unregistered class is rejected.
+stores an array and calls back into the group from its constructor. This checks
+the constructor signature and the array type in the recursive module interface.
+Whole-program inheritance facts must prove that the class uses one direct record.
+This declaration support does not expand optimized field access or constructor calls.
 
 Run from the repository root:
 

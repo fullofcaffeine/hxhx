@@ -27,7 +27,8 @@ typedef OcamlModuleAssemblyInput = {
 	Only function-only groups with fully visible declarations are admitted here.
 	Acyclic output retains its original text and part order.
 **/
-function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter):Map<String, String> {
+function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter,
+		?signatureTypeForOutput:(OcamlTypeExpr, String) -> OcamlTypeExpr):Map<String, String> {
 	final byName:Map<String, OcamlModuleAssemblyInput> = [];
 	final itemsByName:Map<String, Array<OcamlModuleItem>> = [];
 	var opaque = false;
@@ -73,8 +74,7 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 				case FunctionModuleRejected(problem):
 					throw "reflaxe.ocaml [ocaml-module-cycle:unsupported-initialization]: " + name + ": " + Std.string(problem);
 				case FunctionModuleReady(signature):
-					requirePlainSignatureTypes(signature, name, byName);
-					signatures.set(name, signature);
+					signatures.set(name, prepareSignatureTypes(signature, name, byName, signatureTypeForOutput));
 			}
 		}
 	}
@@ -123,32 +123,64 @@ private function renderParts(parts:Array<OcamlModulePart>, printer:OcamlASTPrint
 	].join("\n\n");
 }
 
-/** Duplicating a private type token in a signature needs a separate checked output identity. */
-private function requirePlainSignatureTypes(signature:Array<OcamlModuleSignatureItem>, name:String, ownedModules:Map<String, OcamlModuleAssemblyInput>):Void {
-	function check(type:OcamlTypeExpr):Void {
-		RuntimeUsageCollector.collectTypeExpr(type, candidate -> {
-			if (!ownedModules.exists(candidate))
-				throw "reflaxe.ocaml [ocaml-module-cycle:signature-runtime-copy-required]: " + name;
-		});
+/**
+	Retains each interface type at its exact output site before printing.
+
+	Plain private-runtime names remain invalid. Checked references need the
+	compiler's final-output authority to account for their additional appearance.
+	The callback receives only selected types; it cannot infer missing signatures.
+**/
+private function prepareSignatureTypes(signature:Array<OcamlModuleSignatureItem>, name:String, ownedModules:Map<String, OcamlModuleAssemblyInput>,
+		signatureTypeForOutput:Null<(OcamlTypeExpr, String) -> OcamlTypeExpr>):Array<OcamlModuleSignatureItem> {
+	function prepare(type:OcamlTypeExpr, role:String):OcamlTypeExpr {
 		OcamlASTTraversal.walkTypePre(type, current -> switch (current) {
+			case TIdent(symbol), TApp(symbol, _):
+				RuntimeUsageCollector.collectTypeExpr(TIdent(symbol), candidate -> {
+					if (!ownedModules.exists(candidate))
+						throw "reflaxe.ocaml [ocaml-module-cycle:signature-runtime-copy-required]: " + name;
+				});
 			case TRuntimeIdent(_), TRuntimeApp(_, _):
-				throw "reflaxe.ocaml [ocaml-module-cycle:signature-runtime-copy-required]: " + name;
+				if (signatureTypeForOutput == null) throw "reflaxe.ocaml [ocaml-module-cycle:signature-runtime-copy-required]: " + name;
 			case _:
 		});
+		return signatureTypeForOutput == null ? type : signatureTypeForOutput(type, "module-signature:" + name + ":" + role);
 	}
-	for (item in signature)
-		switch (item) {
-			case SValue(_, type):
-				check(type);
-			case SType(declarations, _):
-				for (declaration in declarations)
-					switch (declaration.kind) {
-						case Alias(type): check(type);
-						case Record(fields): for (field in fields)
-								check(field.typ);
-						case Variant(constructors): for (constructor in constructors)
-								for (type in constructor.args)
-									check(type);
-					}
-		}
+	return [
+		for (item in signature)
+			switch (item) {
+				case SValue(valueName, type):
+					SValue(valueName, prepare(type, "value:" + valueName));
+				case SType(declarations, isRec):
+					SType([
+						for (declaration in declarations) {
+							final role = "type:" + declaration.name;
+							{
+								name: declaration.name,
+								params: declaration.params,
+								kind: switch (declaration.kind) {
+									case Alias(type): Alias(prepare(type, role));
+									case Record(fields): Record([
+											for (field in fields)
+												{
+													name: field.name,
+													isMutable: field.isMutable,
+													typ: prepare(field.typ, role + ":field:" + field.name)
+												}
+										]);
+									case Variant(constructors): Variant([
+											for (constructor in constructors)
+												{
+													name: constructor.name,
+													args: [
+														for (index in 0...constructor.args.length)
+															prepare(constructor.args[index], role + ":constructor:" + constructor.name + ":argument:" + index)
+													]
+												}
+										]);
+								}
+							};
+						}
+					], isRec);
+			}
+	];
 }

@@ -1,6 +1,7 @@
 import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.ocaml.OcamlCompiler;
+import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
@@ -13,6 +14,7 @@ class CheckSignatures {
 		Context.onAfterTyping(_ -> {
 			final voidType = Context.getType("Void");
 			final representations = new OcamlRepresentationRegistry();
+			final context = new CompilationContext();
 			for (source in [
 				"Iterator<Int>",
 				"{key:Int, value:Int}",
@@ -23,13 +25,20 @@ class CheckSignatures {
 			]) {
 				final expression = Context.parse("(null : " + source + ")", Context.currentPos());
 				final type = Context.typeExpr(expression).t;
-				if (projectDeclarationSignature([type], voidType, representations, unexpectedNominal) != null)
+				if (projectDeclarationSignature([type], voidType, representations, unexpectedNominal, context) != null)
 					throw "unsupported declaration received a signature: " + source;
 			}
-			if (projectDeclarationSignature([Context.makeMonomorph()], voidType, representations, unexpectedNominal) != null)
+			if (projectDeclarationSignature([Context.makeMonomorph()], voidType, representations, unexpectedNominal, context) != null)
 				throw "unresolved type received a signature";
+			context.virtualTypesComputed = true;
+			if (projectDeclarationSignature([Context.getType("haxe.io.Bytes")], voidType, representations, unexpectedNominal, context) != null)
+				throw "private Bytes storage received a direct record signature";
+			context.dispatchTypes.set("Token", true);
+			if (projectDeclarationSignature([Context.getType("Token")], voidType, representations, unexpectedNominal, context) != null)
+				throw "a class marked for subtype dispatch received a direct record signature";
 		});
 		Context.onAfterGenerate(() -> {
+			check("Token", "create", "int -> t");
 			check("First", "copy", "Obj.t -> Obj.t");
 			check("First", "make", "int -> Obj.t");
 			check("First", "change", "Obj.t -> int -> unit");

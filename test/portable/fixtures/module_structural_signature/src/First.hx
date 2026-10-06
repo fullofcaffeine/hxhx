@@ -19,6 +19,6 @@ class First {
 	}
 
 	public static function withToken(item:Item, token:Token):Item {
-		return make(item.value + token.value);
+		return make(item.value + token.values[0]);
 	}
 }

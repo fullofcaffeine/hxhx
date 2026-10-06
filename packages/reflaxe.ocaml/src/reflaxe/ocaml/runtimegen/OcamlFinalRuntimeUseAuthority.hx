@@ -9,6 +9,7 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeReference;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 
 using StringTools;
 
@@ -289,6 +290,45 @@ class OcamlFinalRuntimeUseAuthority {
 						}
 					}
 			}
+	}
+
+	/**
+		Accounts for a type printed in a recursive module's explicit interface.
+
+		A record field or function annotation already appeared in its implementation,
+		so its interface needs a checked output copy. A declaration retained only as
+		signature metadata instead spends its original occurrence here. The callback
+		activates staged type decisions; it cannot grant authority to plain names.
+		Each syntax position has a stable role, so repeating this output operation
+		still fails the ordinary duplicate-use check. Module bodies remain strict.
+	**/
+	public function signatureTypeForOutput(type:OcamlTypeExpr, outputRole:String, ?beforeReference:OcamlRuntimeReference->Void):OcamlTypeExpr {
+		requireOpen();
+		final stableRole = requiredOutputRole(outputRole);
+		var index = 0;
+		function retain(reference:OcamlRuntimeReference):OcamlRuntimeReference {
+			final location = stableRole + ":runtime:" + index++;
+			if (reference.domain != OcamlRuntimeUseDomain.TypeIdentifier)
+				throw 'Final signature runtime use ${reference.id} has the wrong target domain.';
+			if (beforeReference != null)
+				beforeReference(reference);
+			final key = occurrenceKey(reference.planRevision, reference.id);
+			// Repeating the first metadata-only output must not turn it into a copy.
+			final alreadyAtThisSite = firstObservationByKey.get(key) == location;
+			final output = !observedCounts.exists(key)
+				|| alreadyAtThisSite ? reference : copyReferenceForOutput(reference, location, [], null);
+			observeReference(output, location);
+			return output;
+		}
+		function map(current:OcamlTypeExpr):OcamlTypeExpr {
+			final retained = switch (current) {
+				case TRuntimeIdent(reference): TRuntimeIdent(retain(reference));
+				case TRuntimeApp(reference, parameters): TRuntimeApp(retain(reference), parameters);
+				case _: current;
+			};
+			return OcamlASTTraversal.mapTypeImmediate(retained, map);
+		}
+		return map(type);
 	}
 
 	/** Observes checked private names stored in one final OCaml type tree. */

@@ -64,8 +64,18 @@ class OcamlMonomorphicClassPlanner {
 	}
 
 	static function isCandidate(classType:ClassType, context:CompilationContext, isUserClass:ClassType->Bool):Bool {
-		if (!isUserClass(classType)
-			|| classType.isExtern
+		return isUserClass(classType) && hasDirectRecordLayout(classType, context);
+	}
+
+	/**
+		Checks whether the class uses one concrete record without subtype dispatch.
+
+		The caller must supply the complete program's inheritance facts. This check
+		does not admit field optimizations: a declaration can name a record containing
+		arrays even when those fields are outside the narrower optimized-value family.
+	**/
+	public static function hasDirectRecordLayout(classType:ClassType, context:CompilationContext):Bool {
+		if (classType.isExtern
 			|| classType.isInterface
 			|| classType.meta.has(":native")
 			|| classType.params.length > 0

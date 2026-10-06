@@ -1,8 +1,8 @@
-/** Keeps an explicit constructor argument and its selected instance record type visible. */
+/** Retains two declaration arguments outside the optimized constructor-call subset. */
 class ConstructorProbe {
 	public final seed:Int;
 
-	public function new(seed:Int) {
-		this.seed = seed;
+	public function new(seed:Int, offset:Int) {
+		this.seed = seed + offset;
 	}
 }

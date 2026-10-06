@@ -43,6 +43,9 @@ import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlModuleAssembly;
 import reflaxe.ocaml.ast.OcamlModuleAssembly.assembleModules;
 import reflaxe.ocaml.ast.OcamlAssignOp;
@@ -1366,7 +1369,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				bucket.parts.unshift(ModuleDeclarations("", staticPrelude));
 			assembly.push({name: bucket.name, parts: bucket.parts});
 		}
-		final plannedOutput = assembleModules(assembly, printer);
+		final plannedOutput = assembleModules(assembly, printer,
+			(type, role) -> ctx.finalRuntimeUses.signatureTypeForOutput(type, role, ctx.activateStagedTypeRuntimeUse));
 		var index = 0;
 		return {
 			hasNext: () -> index < fileOrder.length,
@@ -2590,6 +2594,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
 			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
 			var constructionBoundary:Null<OcamlCallableBoundaryPlan> = null;
+			var constructorDeclaration:Null<OcamlDeclarationSignature> = null;
 			if (ctorFunc != null && ctorFunc.expr != null) {
 				final argInfo:Array<{
 					id:Int,
@@ -2608,6 +2613,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				};
 				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
 				constructionBoundary = syntaxInput.constructionBoundary;
+				constructorDeclaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), ctorReturnType, representationRegistry,
+					ocamlTypeExprFromHaxeType, ctx);
 				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)
 					.expression) {
 					case OcamlExpr.EFun(params, body):
@@ -2750,10 +2757,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (!isAbstractImplementation) {
 				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
 					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
-				// The selected record type and emitted parameter annotations define this
-				// allocator's exact OCaml signature; no Haxe type inference is repeated.
+				// Keep checked call conversions authoritative. Other constructors may
+				// retain known declaration carriers; the recursive interface checks them
+				// against the allocator body and its selected instance record.
 				final createExpr = OcamlExpr.EFun(createParams, createBody);
-				final createSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
+				final annotatedSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
+				final createSignature = annotatedSignature != null ? annotatedSignature : (constructorDeclaration == null ? null : signatureFromTypes(constructorDeclaration.parameters,
+					OcamlTypeExpr.TIdent(instanceTypeName)));
 				lets.push(createSignature == null ? {name: createName, expr: createExpr} : {
 					name: createName,
 					expr: createExpr,
