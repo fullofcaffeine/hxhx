@@ -198,7 +198,7 @@ class PhpFunctionLoweringPlan {
 			localIndex.set(fact.targetName, copyLocal(fact));
 			locals.push(copyLocal(fact));
 		}
-		requireExactParameters(methodArguments, parameterBindingIdentities);
+		requireExactParameters(methodArguments, parameterBindingIdentities, initializerMode ? [] : HxFunctionDecl.getArgs(functionProjection.getDeclaration()));
 
 		instanceFieldTypeHints = new haxe.ds.StringMap<String>();
 		for (field in classFacts.copyFields())
@@ -649,7 +649,11 @@ class PhpFunctionLoweringPlan {
 	function hasCurrentInstanceContext():Bool
 		return currentMethod != null && (!currentMethod.isStatic || currentMethod.name == "new");
 
-	function requireExactParameters(arguments:Array<TypedBackendClassMethodArgumentFact>, parameterBindings:Array<String>):Void {
+	/** Validate the value entering the body, retaining the signature's separate call and omission contract. */
+	function requireExactParameters(arguments:Array<TypedBackendClassMethodArgumentFact>, parameterBindings:Array<String>,
+			declarations:Array<HxFunctionArg>):Void {
+		if (declarations.length != arguments.length)
+			throw "PHP function lowering plan received conflicting parameter declaration count in " + functionIdentity;
 		var parameterCount = 0;
 		for (local in locals)
 			if (local.declarationKind.match(Parameter))
@@ -668,7 +672,8 @@ class PhpFunctionLoweringPlan {
 				throw "PHP function lowering plan cannot find exact parameter binding " + parameterIdentity + " in " + functionIdentity;
 			if (!match.declarationKind.match(Parameter))
 				throw "PHP function lowering plan received non-parameter binding " + parameterIdentity + " for " + argument.name;
-			if (match.typeIdentity != argument.typeIdentity)
+			final entryType = TyFunctionParameter.declarationBodyType(argument.semanticType, declarations[index]);
+			if (match.typeIdentity != entryType.getSemanticKey())
 				throw "PHP function lowering plan received conflicting parameter type for " + argument.name + " in " + functionIdentity;
 		}
 	}

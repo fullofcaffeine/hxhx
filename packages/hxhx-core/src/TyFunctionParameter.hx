@@ -27,6 +27,10 @@ function copy(parameter:TyFunctionParameter):TyFunctionParameter {
 	A concrete default instead initializes that declared value before body effects.
  */
 function declarationBodyType(type:TyType, argument:HxFunctionArg):TyType {
+	// Rest omission supplies an empty collection, not a missing nullable value.
+	// The method parser's omission flag must not change that body contract.
+	if (HxFunctionArg.getIsRest(argument))
+		return type;
 	final nullable = switch HxFunctionArg.getDefaultValue(argument) {
 		case NoDefault: HxFunctionArg.getIsOptional(argument);
 		case Default(expression): isNullDefault(expression);

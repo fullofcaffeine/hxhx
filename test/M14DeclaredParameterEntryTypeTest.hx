@@ -1,7 +1,7 @@
 /** Written call types and nullable body inputs are distinct parts of a declared parameter contract. */
 class M14DeclaredParameterEntryTypeTest {
 	static function main():Void {
-		final source = 'class Main { static function probe<T>(?i:Int, ?s:String, ?t:T, n:Int=4, ?b:Bool):Void {} static function infer(?value):Void { take(value); } static function take(value:Int):Void {} }';
+		final source = 'class Main { static function probe<T>(?i:Int, ?s:String, ?t:T, n:Int=4, ?b:Bool):Void {} static function infer(?value):Void { take(value); } static function take(value:Int):Void {} static function rest(...values:Int):Void {} }';
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final functions = typed.getTypedClasses()[0].getFunctions();
@@ -26,6 +26,8 @@ class M14DeclaredParameterEntryTypeTest {
 			throw "body nullability changed the written call type";
 		if (functions[1].getEnvironment().getParams()[0].getType().getSemanticKey() != "nullable:primitive:Int")
 			throw "inference lost optional parameter nullability: " + functions[1].getEnvironment().getParams()[0].getType().getSemanticKey();
+		if (functions[3].getEnvironment().getParams()[0].getType().isNullable())
+			throw "rest omission incorrectly introduced a nullable body collection";
 		Sys.println("DECLARED_PARAMETER_ENTRY_TYPES:PASS");
 	}
 }
