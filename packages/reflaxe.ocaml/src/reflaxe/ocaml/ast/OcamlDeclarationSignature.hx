@@ -20,8 +20,10 @@ typedef OcamlDeclarationSignature = {
 	A Haxe record parameter uses the same boxed table selected by ordinary field
 	access and coercion. Its OCaml type is therefore Obj.t, not a guessed record.
 	Iterators, key/value pairs, and FileStat use other representations and remain
-	unavailable here. Unresolved, generic, extern, and private runtime carriers
-	also remain unavailable; their signatures need their own representation proof.
+	unavailable here. Arrays of supported elements use the existing checked
+	container mapping, including the same storage for optional arrays. Other
+	private runtime carriers, unresolved types, and generic or extern declarations
+	remain unavailable; their signatures need their own representation proof.
 	Class declarations can also use a direct record after the whole program's
 	inheritance check; this does not admit new field optimizations. The recursive
 	module interface checks each generated function against the selected types. Ordinary
@@ -62,6 +64,23 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				case "Void": TIdent("unit");
 				case _: null;
 			}
+		case TAbstract(reference, [inner]) if (reference.get().pack.length == 0
+			&& reference.get().name == "Null"
+			&& isStandardArray(TypeTools.follow(inner))):
+			// Null<Array<T>> uses the array carrier and the existing null sentinel.
+			// This is not permission to erase arbitrary nullable scalar boundaries.
+			declarationCarrier(TypeTools.follow(inner), representations, nominalType, context);
+		case TInst(_, [element]) if (isStandardArray(type)):
+			if (declarationCarrier(element, representations, nominalType, context) == null) {
+				null;
+			} else {
+				// The normal type mapper obtains request-bound container authority.
+				// A plain target name cannot authorize an exported array type.
+				switch (nominalType(type)) {
+					case carrier = TRuntimeApp(_, [_]): carrier;
+					case _: null;
+				}
+			}
 		case TInst(reference, []):
 			final definition = reference.get();
 			switch (definition.kind) {
@@ -80,5 +99,13 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 			representations.nativeEnumValue(definition.pack.concat([definition.name]).join(".")) == null ? null : nominalType(type);
 		case _: null;
 	}
+}
+
+/** Recognizes the source Array declaration; checked storage still comes from its owner. */
+private function isStandardArray(type:Type):Bool {
+	return switch (type) {
+		case TInst(reference, [_]): final definition = reference.get(); definition.pack.length == 0 && definition.module == "Array" && definition.name == "Array";
+		case _: false;
+	};
 }
 #end

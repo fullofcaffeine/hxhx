@@ -11,5 +11,13 @@ class Main {
 		Sys.println(alias.label);
 		Sys.println(source.extra);
 		Sys.println(First.withToken(source, new Token(3)).value);
+		Sys.println(First.scopes(source)[0][0].value);
+		Sys.println(First.scopes(source, null)[0][0].value);
+		final groups = [[new Token(4)]];
+		final returned = First.scopes(source, groups);
+		Sys.println(returned == groups);
+		returned[0].push(new Token(5));
+		Sys.println(groups[0].length);
+		Sys.println(First.scopes(source, []).length);
 	}
 }

@@ -10,4 +10,8 @@ class Second {
 		First.change(item, 9);
 		return item;
 	}
+
+	public static function scopes(groups:Array<Array<Token>>):Array<Array<Token>> {
+		return First.identity(groups);
+	}
 }

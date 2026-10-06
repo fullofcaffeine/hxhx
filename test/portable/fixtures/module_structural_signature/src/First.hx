@@ -21,4 +21,13 @@ class First {
 	public static function withToken(item:Item, token:Token):Item {
 		return make(item.value + token.values[0]);
 	}
+
+	/** Omitted and explicit null inputs allocate a group; supplied arrays keep their identity. */
+	public static function scopes(item:Item, ?groups:Array<Array<Token>>):Array<Array<Token>> {
+		return groups == null ? [[new Token(item.value)]] : Second.scopes(groups);
+	}
+
+	public static function identity(groups:Array<Array<Token>>):Array<Array<Token>> {
+		return groups;
+	}
 }

@@ -18,7 +18,11 @@ class CheckSignatures {
 			for (source in [
 				"Iterator<Int>",
 				"{key:Int, value:Int}",
-				"Array<Int>",
+				"Array<Dynamic>",
+				"Array<Array<Dynamic>>",
+				"Null<Array<Dynamic>>",
+				"Array<Iterator<Int>>",
+				"Array<haxe.io.Bytes>",
 				"Dynamic",
 				"sys.FileStat",
 				"haxe.io.Input"
@@ -30,6 +34,15 @@ class CheckSignatures {
 			}
 			if (projectDeclarationSignature([Context.makeMonomorph()], voidType, representations, unexpectedNominal, context) != null)
 				throw "unresolved type received a signature";
+			final unresolvedArray = switch (Context.getType("Array")) {
+				case TInst(reference, _): TInst(reference, [Context.makeMonomorph()]);
+				case _: throw "missing standard Array declaration";
+			};
+			if (projectDeclarationSignature([unresolvedArray], voidType, representations, unexpectedNominal, context) != null)
+				throw "an unresolved array element received a signature";
+			final arrayType = Context.typeExpr(Context.parse("(null : Array<Int>)", Context.currentPos())).t;
+			if (projectDeclarationSignature([arrayType], voidType, representations, _ -> TIdent("HxArray.t"), context) != null)
+				throw "a plain private type name authorized an array signature";
 			context.virtualTypesComputed = true;
 			if (projectDeclarationSignature([Context.getType("haxe.io.Bytes")], voidType, representations, unexpectedNominal, context) != null)
 				throw "private Bytes storage received a direct record signature";
@@ -43,6 +56,9 @@ class CheckSignatures {
 			check("First", "make", "int -> Obj.t");
 			check("First", "change", "Obj.t -> int -> unit");
 			check("First", "withToken", "Obj.t -> Token.t -> Obj.t");
+			check("First", "scopes", "Obj.t -> Token.t HxArray.t HxArray.t -> Token.t HxArray.t HxArray.t");
+			check("First", "identity", "Token.t HxArray.t HxArray.t -> Token.t HxArray.t HxArray.t");
+			check("Second", "scopes", "Token.t HxArray.t HxArray.t -> Token.t HxArray.t HxArray.t");
 			check("Second", "copy", "Obj.t -> Obj.t");
 			check("Second", "update", "Obj.t -> Obj.t");
 		});

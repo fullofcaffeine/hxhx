@@ -9,6 +9,12 @@ the constructor signature and the array type in the recursive module interface.
 Whole-program inheritance facts must prove that the class uses one direct record.
 This declaration support does not expand optimized field access or constructor calls.
 
+An optional nested array of class instances also crosses the group. Omitted and
+explicit null arguments select the same branch. Supplied arrays retain their
+identity and expose mutation through an alias; an empty array stays empty.
+The exported parameter and return types use checked array runtime identities.
+Arrays with unsupported elements, such as Dynamic or Iterator, remain rejected.
+
 Run from the repository root:
 
 ```sh
