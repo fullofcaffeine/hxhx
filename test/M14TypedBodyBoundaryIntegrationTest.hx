@@ -807,11 +807,25 @@ class M14TypedBodyBoundaryIntegrationTest {
 
 	/**
 		Keep method-only generic parameters inside the selected call until argument
-		types bind them. A parameter that remains unbound must not escape as a
-		caller-visible nominal type or collide with an unrelated class of the same
-		name.
+		types bind them. An unused parameter retains its own open call identity,
+		without selecting an unrelated class with the same name. Projected carrier
+		hints must not replace these semantic facts.
 	**/
 	static function assertMethodGenericResultSpecialization():Void {
+		final invalidSource = 'class Main { static function same<T>(left:T,right:T):T return left;' + 'static function main():Void { same(1,"x"); } }';
+		genericReference("conflict", invalidSource, null);
+		var rejectedConflict = false;
+		try {
+			final invalid = new ResolvedModule("Main", "Main.hx", ParserStage.parse(invalidSource, "Main.hx"));
+			TyperStage.typeResolvedModule(invalid, TyperIndex.build([invalid]));
+		} catch (error:haxe.Exception)
+			rejectedConflict = error.message.indexOf("No compatible method signature for same") >= 0;
+		assertTrue(rejectedConflict, "conflicting method-generic arguments must be rejected before publication");
+		genericReference("independent",
+			'class A {} class Main { static function unbound<A>(value:Dynamic):Array<A> return [];' +
+			'static function main():Void { var first=unbound({}); var second=unbound({});' +
+			'first.push(7); second.push("x"); Sys.println(first[0]); Sys.println(second[0]); } }',
+			"7\nx\n");
 		final filePath = "checks/GenericMethodResults.hx";
 		final parsed = ParserStage.parse([
 			"class Array<T> {",
@@ -827,9 +841,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"  static function main() {",
 			"    var scalar = identity(7);",
 			"    var nested = wrap([\"x\"]);",
-			"    var conflict = same(1, \"x\");",
+			"    var compatible = same(1, 2);",
 			"    var constrainedResult = constrained(1);",
 			"    var unresolved = unbound({});",
+			"    var secondUnresolved = unbound({});",
 			"  }",
 			"}",
 		].join("\n"), filePath);
@@ -851,9 +866,9 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& nestedArguments[0].getSemanticKey() == "primitive:String",
 			"nested method-generic result did not specialize Array<T> to Array<String>");
 
-		final conflict = variableInitializer(body, "conflict");
-		assertTrue(conflict.getType().isUnknown(), "conflicting method-generic arguments produced a false common result");
-		assertTrue(conflict.getDeclaration() == null, "conflicting method-generic arguments selected an inapplicable declaration");
+		final compatible = variableInitializer(body, "compatible");
+		assertTrue(compatible.getType().getSemanticKey() == "primitive:Int" && compatible.getDeclaration() != null,
+			"compatible repeated method-generic arguments lost their selected Int result");
 
 		final constrainedResult = variableInitializer(body, "constrainedResult");
 		assertTrue(constrainedResult.getType().getSemanticKey() == "primitive:Int", "valid Int-constrained call lost its concrete result");
@@ -862,22 +877,53 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"valid Int-constrained call lost its exact selected declaration");
 
 		final unresolved = variableInitializer(body, "unresolved");
-		assertTrue(unresolved.getType().isUnknown(), "unbound method-generic result escaped as a caller-visible nominal type");
+		final openArguments = unresolved.getType().getTypeArguments();
+		final secondArguments = variableInitializer(body, "secondUnresolved").getType().getTypeArguments();
+		assertTrue(unresolved.getType().getNominalIdentity() != null
+			&& unresolved.getType().getNominalIdentity().getCanonicalName() == "GenericMethodResults.Array"
+			&& openArguments.length == 1
+			&& openArguments[0].isOpenMethodParameter()
+			&& secondArguments.length == 1
+			&& secondArguments[0].isOpenMethodParameter()
+			&& openArguments[0].getSemanticKey() != secondArguments[0].getSemanticKey(),
+			"unused method calls must retain separate open parameters without selecting the unrelated class A");
 		assertTrue(unresolved.getDeclaration() != null && unresolved.getDeclaration().getSignature().getName() == "unbound",
 			"unknown generic result lost the exact selected declaration");
-		var keptBlankHint = false;
+		var keptCarrierHint = false;
 		// Executable projection owns control lowering, including an empty object argument.
 		final projection = TypedBodySource.functionProjection(method);
 		for (statement in projection.getBody())
 			TypedBackendSourceWalk.statement(statement, _ -> {}, entry -> {
 				switch entry {
-					case SVar(name, "", _, _):
+					case SVar(name, "GenericMethodResults.Array<Dynamic>", _, _):
 						final local = projection.getLocalCatalog().findByProjectedName(name);
-						if (local != null && local.getBinding().getSourceName() == "unresolved") keptBlankHint = true;
+						if (local != null
+							&& local.getBinding()
+								.getSourceName() == "unresolved") keptCarrierHint = local.getBinding()
+								.getType()
+								.getSemanticKey() == unresolved.getType()
+								.getSemanticKey();
 					case _:
 				}
 			});
-		assertTrue(keptBlankHint, "unbound method generic became a false source-level local annotation");
+		assertTrue(keptCarrierHint, "projected generic carrier must preserve the original open semantic type in its local catalog");
+	}
+
+	/** Compare generic acceptance with upstream before asserting the compiler's retained type facts. */
+	static function genericReference(name:String, source:String, expected:Null<String>):Void {
+		final root = ".tmp/typed_body_generic_" + name;
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		final process = new sys.io.Process("haxe", ["-cp", root, "-main", "Main", "--interp"]);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		assertTrue(expected == null ? code != 0 && errors.indexOf("String should be Int") >= 0 : code == 0 && output == expected,
+			"upstream generic contract differs: "
+			+ name
+			+ output
+			+ errors);
 	}
 
 	/** A field's nominal value type must not make its variable name look like a type alias. **/
