@@ -8,6 +8,7 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 @:access(OcamlASTTraversalTest)
 class OcamlModuleAssemblyTest {
 	public static function run():Void {
+		checkBatchDiagnostics();
 		final printer = new OcamlASTPrinter();
 		final left = module("Left", "Right", TIdent("int"));
 		final right = module("Right", "Left", TIdent("int"));
@@ -96,7 +97,55 @@ class OcamlModuleAssemblyTest {
 		return value;
 	}
 
-	static function module(name:String, dependency:String, result:OcamlTypeExpr):OcamlModuleAssemblyInput {
+	/** Reports every invalid module before spending any runtime references on output. */
+	static function checkBatchDiagnostics():Void {
+		final input = [
+			module("AReady", "BMissing", TIdent("int")),
+			module("BMissing", "CMissing", null),
+			module("CMissing", "AReady", null),
+			module("DMissing", "EMissing", null),
+			module("EMissing", "DMissing", null)
+		];
+		function diagnostic(modules:Array<OcamlModuleAssemblyInput>):String {
+			var copies = 0;
+			var failure = "";
+			try {
+				assembleModules(modules, new OcamlASTPrinter(), (type, _) -> {
+					copies++;
+					return type;
+				});
+			} catch (message:String) {
+				failure = message;
+			}
+			for (name in ["BMissing", "CMissing", "DMissing", "EMissing"])
+				if (failure.indexOf(name + ": MissingSignature(run)") < 0)
+					throw "module rejection omitted " + name + ": " + failure;
+			if (copies != 0)
+				throw "rejected declarations activated signature output uses";
+			return failure;
+		}
+		final expected = diagnostic(input);
+		input.reverse();
+		if (diagnostic(input) != expected)
+			throw "input order changed the module diagnostics";
+		var unsafeCopies = 0;
+		var unsafeRejected = false;
+		try {
+			assembleModules([
+				withLiteral(module("Left", "Right", TIdent("int"))),
+				withLiteral(module("Right", "Left", TIdent("int")))
+			], new OcamlASTPrinter(), (type, _) -> {
+				unsafeCopies++;
+				return type;
+			});
+		} catch (message:String) {
+			unsafeRejected = message.indexOf("unsafe-literal-cycle") >= 0;
+		}
+		if (!unsafeRejected || unsafeCopies != 0)
+			throw "unsafe initialization activated signature output uses";
+	}
+
+	static function module(name:String, dependency:String, result:Null<OcamlTypeExpr>):OcamlModuleAssemblyInput {
 		return {
 			name: name,
 			parts: [
@@ -106,7 +155,7 @@ class OcamlModuleAssemblyTest {
 						{
 							name: "run",
 							expr: EFun([PConst(CUnit)], EApp(EIdent(dependency + ".run"), [EConst(CUnit)])),
-							signature: TArrow(TIdent("unit"), result)
+							signature: result == null ? null : TArrow(TIdent("unit"), result)
 						}
 					], false)
 				])

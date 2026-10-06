@@ -28,6 +28,9 @@ typedef OcamlModuleAssemblyInput = {
 	Functions and primitive literals require fully visible declarations. Every
 	cycle must pass through a module exporting only functions, so OCaml can
 	initialize the group without reading an unfinished value.
+	Invalid declarations report one failure per affected module in graph order.
+	All declaration and initialization checks finish before interface runtime
+	references are activated or output is rendered.
 	Acyclic output retains its original text and part order.
 **/
 function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter,
@@ -67,6 +70,7 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 	}
 	final signatures:Map<String, Array<OcamlModuleSignatureItem>> = [];
 	final literalModules:Map<String, Bool> = [];
+	final problems:Array<String> = [];
 	for (group in graph.groups) {
 		if (!group.recursive)
 			continue;
@@ -78,14 +82,18 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 				throw "Missing recursive module declarations: " + name;
 			switch (checkRecursiveModule(items)) {
 				case RecursiveModuleRejected(problem):
-					throw "reflaxe.ocaml [ocaml-module-cycle:unsupported-initialization]: " + name + ": " + Std.string(problem);
+					problems.push(name + ": " + Std.string(problem));
 				case RecursiveModuleReady(signature, functionsOnly):
 					if (!functionsOnly)
 						literalModules.set(name, true);
-					signatures.set(name, prepareSignatureTypes(signature, name, byName, signatureTypeForOutput));
+					signatures.set(name, signature);
 			}
 		}
 	}
+	// One expensive generation attempt should reveal independent module failures.
+	// Keep the complete group rejected, and do not activate output references yet.
+	if (problems.length > 0)
+		throw "reflaxe.ocaml [ocaml-module-cycle:unsupported-initialization]: " + problems.join("\n");
 	// Remove function-only modules, which OCaml can initialize with delayed
 	// placeholders. A remaining cycle has no safe initialization anchor.
 	// Type-only references group declarations but impose no runtime order.
@@ -99,6 +107,17 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 	for (group in planGroups(unsafeNodes).groups)
 		if (group.recursive)
 			throw "reflaxe.ocaml [ocaml-module-cycle:unsafe-literal-cycle]: " + group.members.join(", ");
+
+	// Only validated declarations may spend checked runtime references on their
+	// interfaces. Preserve the original graph order for accepted programs.
+	for (group in graph.groups)
+		if (group.recursive)
+			for (name in group.members) {
+				final signature = signatures.get(name);
+				if (signature == null)
+					throw "Missing recursive module signature: " + name;
+				signatures.set(name, prepareSignatureTypes(signature, name, byName, signatureTypeForOutput));
+			}
 
 	final output:Map<String, String> = [];
 	for (group in graph.groups) {
