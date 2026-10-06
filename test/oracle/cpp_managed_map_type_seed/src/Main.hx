@@ -18,6 +18,12 @@ class Main {
 		return [nextKey() => nextValue()];
 	}
 
+	/** The literal needs Dynamic storage while its authored value remains Bool. */
+	static function contextualValue():Dynamic {
+		final values:Map<String, Dynamic> = ["value" => true];
+		return values.get("value");
+	}
+
 	static function main():Void {
 		final ints = [1 => "one"];
 		final strings = ["one" => 1];
@@ -38,5 +44,6 @@ class Main {
 		];
 		Sys.println(objects is haxe.ds.ObjectMap);
 		Sys.println(objects is haxe.ds.IntMap);
+		Sys.println(contextualValue());
 	}
 }

@@ -1,28 +1,15 @@
-import hxhx.Stage1Compiler.Stage1Args;
-import hxhx.Stage3SetupSupport;
-
 /** Check map yields against real providers without claiming full-program target execution. */
 class M14SourceMapComprehensionTypingTest {
 	static function main():Void {
-		final args = Stage1Args.parse(["-cp", "test/oracle/source_comprehension_seed/maps", "-main", "MapCollection"], true);
-		if (args == null)
-			throw "map fixture arguments did not parse";
-		final paths = Stage3SetupSupport.projectClassPaths({
-			explicitPaths: Stage1Args.getExplicitClassPaths(args),
-			libraries: [],
-			cwd: Sys.getCwd(),
-			standardRoot: Stage1Args.getStandardLibraryRoot(args),
-			targetDefine: "cpp"
+		// Load provider dependencies before publishing their signatures, as the
+		// production compiler does. The assertions below still inspect authored yields.
+		final fixture = CppResolvedFixture.load({
+			sourceRoot: "test/oracle/source_comprehension_seed/maps",
+			mainModule: "MapCollection",
+			requiredModules: ["haxe.ds.Map", "Array"]
 		});
-		final defines = Stage3SetupSupport.buildDefinesMap([], "cpp", "cpp-native");
-		final resolved = ResolverStage.parseProjectRoots(paths, ["MapCollection"], defines);
-		final index = TyperIndex.build(resolved);
-		final loader = new ModuleLoader(paths, defines, index);
-		loader.markResolvedAlready(resolved);
-		final selected = resolved.filter(module -> ResolvedModule.getModulePath(module) == "MapCollection");
-		if (selected.length != 1)
-			throw "map fixture requires its exact authored module";
-		final module = TyperStage.typeResolvedModule(selected[0], index, loader, true);
+		final index = fixture.index;
+		final module = fixture.main;
 		final provider = index.getByFullName("haxe.ds.Map");
 		if (provider == null)
 			throw "map fixture requires the real Map provider";

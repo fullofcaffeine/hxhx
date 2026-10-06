@@ -1457,7 +1457,8 @@ class TyperStage {
 				return Compatible;
 			if (!TyStructuralArgument.literalFits(sources[source], parameter.type))
 				return Incompatible;
-			if (TypedAnonymousLiteral.isLiteral(sources[source]) && parameter.type.unwrapNull().isAnonymous()) {
+			if ((TypedAnonymousLiteral.isLiteral(sources[source]) && parameter.type.unwrapNull().isAnonymous())
+				|| (TypedMapLiteral.isLiteral(sources[source]) && TypedMapLiteral.context(parameter.type, parameters) != null)) {
 				final literal = literalType(sources[source], parameter.type);
 				return literal != null && overloadArgScore(parameter.type, literal, parameters, index) >= 0 ? Compatible : Incompatible;
 			}
@@ -1653,13 +1654,15 @@ class TyperStage {
 			if (declaration != null
 				&& (args.filter(TypedCollectionExpectation.isEmpty).length > 0
 					|| args.filter(TypedCastExpectation.isUnchecked).length > 0
+					|| args.filter(TypedMapLiteral.isLiteral).length > 0
 					|| args.filter(TypedAnonymousLiteral.isLiteral).length > 0)) {
 				final expected = order.sourceContexts(TyMethodGenericBinding.specializeParameters(declaration, applied, ranked, ctx.getIndex()));
 				final rest = candidate.getArgRest();
 				for (index in 0...args.length)
 					if (index < expected.length && !(order.parameterIndex(index) < rest.length && rest[order.parameterIndex(index)])) {
-						final selected = TypedCastExpectation.isUnchecked(args[index]) ? expected[index] : TypedAnonymousLiteral.isLiteral(args[index]) ? literalType(args[index],
-							expected[index]) : TypedCollectionExpectation.select(args[index], expected[index]);
+						final selected = TypedCastExpectation.isUnchecked(args[index]) ? expected[index] : (TypedAnonymousLiteral.isLiteral(args[index])
+							|| TypedMapLiteral.isLiteral(args[index])) ? literalType(args[index],
+								expected[index]) : TypedCollectionExpectation.select(args[index], expected[index]);
 						if (selected != null)
 							contextual[index] = selected;
 					}
@@ -3214,7 +3217,12 @@ class TyperStage {
 					typeMapEntry: entry -> {
 						final map = TypedMapLiteral.infer({
 							values: [entry],
-							typeExpression: value -> inferExprType(value, scope, ctx, pos),
+							expected: null,
+							typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
+							accepts: (expected,
+								actual) -> actual.isDynamic()
+									|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
+									|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
 							resolveProvider: () -> ctx.resolveType("haxe.ds.Map"),
 							filePath: ctx.getFilePath(),
 							position: pos
@@ -3237,7 +3245,12 @@ class TyperStage {
 				}
 				final mapType = TypedMapLiteral.infer({
 					values: values,
-					typeExpression: value -> inferExprType(value, scope, ctx, pos),
+					expected: expectedResult,
+					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
+					accepts: (expected,
+						actual) -> actual.isDynamic()
+							|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
+							|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
 					resolveProvider: () -> ctx.resolveType("haxe.ds.Map"),
 					filePath: ctx.getFilePath(),
 					position: pos

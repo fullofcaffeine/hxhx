@@ -98,5 +98,6 @@ class M14ContextualMapLiteralTypingTest {
 		if (failures.length > 0)
 			throw failures.join("\n");
 		Sys.println("CONTEXTUAL_MAP_LITERAL_TYPING:PASS");
+		M14ContextualMapEntriesTest.run();
 	}
 }

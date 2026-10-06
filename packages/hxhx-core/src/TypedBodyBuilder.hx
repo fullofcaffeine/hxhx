@@ -1082,6 +1082,25 @@ class TypedBodyBuilder {
 				TypedExpr.arrayComprehension(name, typedIterable, typedGuard, typedValue, nodeType, position, binding);
 			case EArrayDecl(values):
 				final element = TypedArrayLiteral.elementType(nodeType);
+				final map = TypedMapLiteral.context(nodeType);
+				if (map != null && TypedMapLiteral.isLiteral(expression)) {
+					final entries = [
+						for (entry in values)
+							switch entry {
+								case EBinop("=>", key, value):
+									final typedKey = buildExpr(key, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, map.key);
+									final typedValue = buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+										map.value);
+									// The arrow groups two operands; it has no standalone value type.
+									// Executable abstract conversions stay at the original operand position.
+									TypedExpr.binary("=>", typeResolver == null ? typedKey : typeResolver.convertValue(typedKey, map.key),
+										typeResolver == null ? typedValue : typeResolver.convertValue(typedValue, map.value), TyType.unknown(), null);
+								case _:
+									throw "typed Map literal lost an arrow entry";
+							}
+					];
+					return TypedExpr.arrayDecl(entries, nodeType, position);
+				}
 				// A comprehension's loop still has Void type. Its yield owns element
 				// conversions; treating the loop as an element demands a false return.
 				final comprehension = values.length == 1 && values[0].match(ESourceFor(_, _, _, _));
