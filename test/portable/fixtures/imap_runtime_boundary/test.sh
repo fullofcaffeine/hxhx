@@ -190,8 +190,11 @@ repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
 lowering_backup="$(mktemp)"
+manifest_backup="$(mktemp)"
 cp out/ocaml_lowering_report.json "$lowering_backup"
-trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"' EXIT
+cp out/ocaml_artifact_manifest.json "$manifest_backup"
+# The corruption helper updates the report and manifest; restore both originals.
+trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; cp "$manifest_backup" out/ocaml_artifact_manifest.json; rm -f "$inspection_report" "$lowering_backup" "$manifest_backup"' EXIT
 
 inspect() {
 	(

@@ -110,7 +110,7 @@ class ReflaxeOcamlInspection {
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v114";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v17";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {

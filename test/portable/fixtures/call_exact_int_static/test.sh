@@ -276,47 +276,7 @@ if [ -f all-path-negative-out/AllPathResultControlRejected.ml ]; then
 fi
 rm -f "$all_path_negative_log"
 
-optional_negative_log="$(mktemp)"
-rm -rf optional-negative-out
-if haxe optional-negative.hxml >"$optional_negative_log" 2>&1; then
-	echo "An optional static-initializer call unexpectedly fell back to builder-time argument padding" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-if ! grep -Fq '[ocaml-call:plan-invariant]' "$optional_negative_log" \
-	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$optional_negative_log"; then
-	echo "The unplanned optional call did not report the stable hard-cut diagnostic" >&2
-	cat "$optional_negative_log" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-if [ -f optional-negative-out/OptionalOccurrenceRejected.ml ]; then
-	echo "The unplanned optional call reached OCaml module output" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-rm -f "$optional_negative_log"
-
-void_negative_log="$(mktemp)"
-rm -rf void-negative-out
-if haxe void-negative.hxml >"$void_negative_log" 2>&1; then
-	echo "A Void static-initializer call unexpectedly fell back to unplanned target syntax" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-if ! grep -Fq '[ocaml-call:plan-invariant]' "$void_negative_log" \
-	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$void_negative_log"; then
-	echo "The unplanned Void call did not report the stable hard-cut diagnostic" >&2
-	cat "$void_negative_log" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-if [ -f void-negative-out/VoidOccurrenceRejected.ml ]; then
-	echo "The unplanned Void call reached OCaml module output" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-rm -f "$void_negative_log"
+# Planned optional and Void initializer calls run in standalone_static_calls.
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
