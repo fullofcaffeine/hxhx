@@ -1,6 +1,8 @@
 package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
@@ -9225,8 +9227,9 @@ class OcamlBuilder {
 	/**
 			Builds one planned function and preserves its represented static signature.
 			Parameter and result types come from the active checked callable boundary.
-			Other callable families return no signature; callers must not infer one from
-			the expression or treat that absence as permission to export a recursive module.
+			Static declarations can also retain known structural and nominal carriers.
+			A recursive module interface checks the actual function against that projection.
+			An unsupported declaration still has no signature and cannot enter a recursive group.
 		**/
 	public function buildFunctionFromArgsAndExpr(args:Array<{
 		id:Int,
@@ -9234,8 +9237,8 @@ class OcamlBuilder {
 		t:Type,
 		value:Null<TypedExpr>
 	}>,
-			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan,
-			?expectedReturnType:Null<Type>):OcamlBuiltFunction {
+			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>,
+			preserveDeclarationSignature:Bool = false):OcamlBuiltFunction {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -9336,6 +9339,8 @@ class OcamlBuilder {
 		// describe these same parameters, while its instance result must not become
 		// the result of the effect-only Haxe constructor body.
 		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
+		final declarationSignature = preserveDeclarationSignature ? projectDeclarationSignature(args.map(argument -> argument.t),
+			expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType) : null;
 		final params = if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
@@ -9476,12 +9481,19 @@ class OcamlBuilder {
 			ctx.activateStagedTypeRuntimeUse);
 
 		// Preserve the same represented types used above while their owning plan is active.
-		final signature = if (callableBoundary == null || callableBoundary.kind != OcamlCallKind.DirectStaticHaxeMethod) {
+		function signatureForResult(result:OcamlTypeExpr):Null<OcamlTypeExpr> {
+			return parameterBoundary == null
+				&& declarationSignature != null ? signatureFromTypes(declarationSignature.parameters, result) : signatureFromParameters(params, result);
+		}
+		final signature = if (!preserveDeclarationSignature
+			&& (callableBoundary == null || callableBoundary.kind != OcamlCallKind.DirectStaticHaxeMethod)) {
 			null;
 		} else if (completionResultKind == OcamlCallResultKind.EffectOnlyVoid) {
-			signatureFromParameters(params, OcamlTypeExpr.TIdent("unit"));
+			signatureForResult(OcamlTypeExpr.TIdent("unit"));
 		} else if (completionResult != null) {
-			signatureFromParameters(params, callableOutputType(completionResult, bodyExpr.pos));
+			signatureForResult(callableOutputType(completionResult, bodyExpr.pos));
+		} else if (declarationSignature != null) {
+			signatureForResult(declarationSignature.result);
 		} else {
 			null;
 		};

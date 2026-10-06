@@ -2,8 +2,9 @@ package reflaxe.ocaml.ast;
 
 /**
 	A completed function and its represented callable type, when fully known.
-	The signature comes from the same checked parameter and result selections as
-	the expression. Absence means module planning cannot export this function yet.
+	The signature comes from checked callable selections or known declaration
+	carriers. The recursive module interface checks the expression against that
+	type. Absence means module planning cannot export this function yet.
 **/
 typedef OcamlBuiltFunction = {
 	final expression:OcamlExpr;
@@ -25,6 +26,13 @@ function signatureFromParameters(parameters:Array<OcamlPat>, result:OcamlTypeExp
 				return null;
 		}
 	}
+	return signatureFromTypes(types, result);
+}
+
+/** Haxe functions without source parameters still take unit in generated OCaml. */
+function signatureFromTypes(types:Array<OcamlTypeExpr>, result:OcamlTypeExpr):OcamlTypeExpr {
+	if (types.length == 0)
+		return OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), result);
 	var signature = result;
 	var index = types.length;
 	while (index > 0) {

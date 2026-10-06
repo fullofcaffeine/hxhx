@@ -1,0 +1,13 @@
+import First.Item;
+
+/** Cross-module calls create a cycle, while all module initialization remains delayed. */
+class Second {
+	public static function copy(item:Item):Item {
+		return First.make(item.value);
+	}
+
+	public static function update(item:Item):Item {
+		First.change(item, 9);
+		return item;
+	}
+}

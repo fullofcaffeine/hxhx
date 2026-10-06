@@ -2916,7 +2916,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
 			#end
 			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
-				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
+				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType, true);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
