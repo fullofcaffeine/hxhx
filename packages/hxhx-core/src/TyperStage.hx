@@ -2331,9 +2331,9 @@ class TyperStage {
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):TyType {
 		final capture:Null<TyMethodCallCapture> = expr.match(ECall(_, _)) ? {selection: null} : null;
 		var result = inferExprValueType(expr, scope, ctx, pos, expectedResult, capture);
-		// Only an unresolved call inside authored untyped syntax gains a result
-		// variable. Known calls retain their declared argument and result types.
-		if (result.isUnknown() && scope.isUntypedContext() && expr.match(ECall(_, _)))
+		// Unresolved calls and field values inside authored untyped syntax retain
+		// contextual constraints. Known declarations keep their written types.
+		if (result.isUnknown() && scope.isUntypedContext() && (expr.match(ECall(_, _)) || expr.match(EField(_, _))))
 			result = scope.getInference().untypedResult(expr);
 		// Field requirements belong to the receiver's inference variable, including
 		// reads through aliases. Resolve that shared fact before applying context.
@@ -2784,7 +2784,8 @@ class TyperStage {
 						// A declared data field can contain a function. Its argument and
 						// result contract belongs to callback typing, not method lookup.
 						// Resolve speculatively, then type the selected read once in this scope.
-						if (resolveFieldDeclaration(callee, scope, ctx, pos) != null) {
+						final declaredField = resolveFieldDeclaration(callee, scope, ctx, pos);
+						if (declaredField != null) {
 							final candidate = inferExprType(callee, scope.copyForInference(), ctx, pos);
 							if (candidate.isFunction() || candidate.isDynamic()) {
 								final callable = inferExprType(callee, scope, ctx, pos);
@@ -2814,6 +2815,10 @@ class TyperStage {
 											inferExprType(a, scope, ctx, pos);
 										final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos, true);
 										if (extension == null) {
+											// Replay also visits the callee field. Retain that occurrence
+											// without traversing the receiver or arguments a second time.
+											if (scope.isUntypedContext() && declaredField == null && structural == null)
+												scope.getInference().untypedResult(callee);
 											TyType.unknown();
 										} else {
 											extension.type;
@@ -2851,6 +2856,10 @@ class TyperStage {
 										inferExprType(a, scope, ctx, pos);
 									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos, true);
 									if (extension == null) {
+										// The unresolved callee stays unknown, but its source occurrence
+										// must exist before inference is sealed for typed-body replay.
+										if (scope.isUntypedContext() && declaredField == null && structural == null)
+											scope.getInference().untypedResult(callee);
 										TyType.unknown();
 									} else {
 										extension.type;

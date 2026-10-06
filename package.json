@@ -247,7 +247,7 @@
     "test:m14:control-assignment-neko": "haxe test/m14_control_assignment_neko_test.hxml",
     "test:m14:untyped-call-control": "haxe test/m14_untyped_dynamic_context_test.hxml && haxe test/m14_untyped_call_control_test.hxml",
     "test:m14:untyped-range-inference": "haxe test/m14_untyped_range_inference_test.hxml",
-    "test:m14:untyped-nominal-field": "haxe test/m14_untyped_nominal_field_test.hxml",
+    "test:m14:untyped-nominal-field": "haxe test/m14_untyped_field_inference_test.hxml && haxe test/m14_untyped_nominal_field_test.hxml",
     "test:m14:abstract-this-member": "haxe test/m14_abstract_this_member_test.hxml",
     "test:m14:generic-ancestor-call": "haxe test/m14_generic_ancestor_call_test.hxml",
     "test:m14:nested-generic-call-inference": "haxe test/m14_nested_generic_call_inference_test.hxml",
