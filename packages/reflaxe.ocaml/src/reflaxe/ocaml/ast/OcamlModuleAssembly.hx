@@ -1,8 +1,9 @@
 package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlModuleGroups.plan as planGroups;
-import reflaxe.ocaml.ast.OcamlFunctionModuleCheck;
-import reflaxe.ocaml.ast.OcamlFunctionModuleCheck.checkFunctionModule;
+import reflaxe.ocaml.ast.OcamlModuleGroups.OcamlModuleDependencyNode;
+import reflaxe.ocaml.ast.OcamlRecursiveModuleCheck;
+import reflaxe.ocaml.ast.OcamlRecursiveModuleCheck.checkRecursiveModule;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 
 /** Headers accompany compiler-owned declarations; framework-supplied text has no graph facts. */
@@ -24,13 +25,16 @@ typedef OcamlModuleAssemblyInput = {
 	re-exports its original module; other members keep their filenames and alias
 	the corresponding nested module. Existing callers and registry paths therefore
 	keep the same type and value identities without expression rewriting.
-	Only function-only groups with fully visible declarations are admitted here.
+	Functions and primitive literals require fully visible declarations. Every
+	cycle must pass through a module exporting only functions, so OCaml can
+	initialize the group without reading an unfinished value.
 	Acyclic output retains its original text and part order.
 **/
 function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter,
 		?signatureTypeForOutput:(OcamlTypeExpr, String) -> OcamlTypeExpr):Map<String, String> {
 	final byName:Map<String, OcamlModuleAssemblyInput> = [];
 	final itemsByName:Map<String, Array<OcamlModuleItem>> = [];
+	final valueNodes:Array<OcamlModuleDependencyNode> = [];
 	var opaque = false;
 	final nodes = [
 		for (module in input) {
@@ -47,6 +51,7 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 				}
 			itemsByName.set(module.name, items);
 			final references = OcamlModuleReferences.collect(items);
+			valueNodes.push({name: module.name, dependencies: references.functionModules.concat(references.initializationModules)});
 			{
 				name: module.name,
 				dependencies: references.functionModules.concat(references.initializationModules).concat(references.typeModules)
@@ -61,6 +66,7 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 		return module.parts;
 	}
 	final signatures:Map<String, Array<OcamlModuleSignatureItem>> = [];
+	final literalModules:Map<String, Bool> = [];
 	for (group in graph.groups) {
 		if (!group.recursive)
 			continue;
@@ -70,14 +76,29 @@ function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlAST
 			final items = itemsByName.get(name);
 			if (items == null)
 				throw "Missing recursive module declarations: " + name;
-			switch (checkFunctionModule(items)) {
-				case FunctionModuleRejected(problem):
+			switch (checkRecursiveModule(items)) {
+				case RecursiveModuleRejected(problem):
 					throw "reflaxe.ocaml [ocaml-module-cycle:unsupported-initialization]: " + name + ": " + Std.string(problem);
-				case FunctionModuleReady(signature):
+				case RecursiveModuleReady(signature, functionsOnly):
+					if (!functionsOnly)
+						literalModules.set(name, true);
 					signatures.set(name, prepareSignatureTypes(signature, name, byName, signatureTypeForOutput));
 			}
 		}
 	}
+	// Remove function-only modules, which OCaml can initialize with delayed
+	// placeholders. A remaining cycle has no safe initialization anchor.
+	// Type-only references group declarations but impose no runtime order.
+	final unsafeNodes = [
+		for (node in valueNodes)
+			if (literalModules.exists(node.name)) {
+				name: node.name,
+				dependencies: node.dependencies.filter(name -> literalModules.exists(name))
+			}
+	];
+	for (group in planGroups(unsafeNodes).groups)
+		if (group.recursive)
+			throw "reflaxe.ocaml [ocaml-module-cycle:unsafe-literal-cycle]: " + group.members.join(", ");
 
 	final output:Map<String, String> = [];
 	for (group in graph.groups) {

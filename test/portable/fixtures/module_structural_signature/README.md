@@ -32,4 +32,4 @@ PATH="$PWD/node_modules/.bin:$PATH" \
 The runner compiles and executes OCaml output. The additional check compares
 the independent expected output with upstream Haxe eval.
 Missing signatures and eager recursive initialization remain covered by
-`OcamlFunctionModuleCheckTest` and `module_recursive_functions`.
+`OcamlRecursiveModuleCheckTest` and `module_recursive_functions`.

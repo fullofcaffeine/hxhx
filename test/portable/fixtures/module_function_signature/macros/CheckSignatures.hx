@@ -3,7 +3,7 @@ import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlModuleReferences;
 import reflaxe.ocaml.ast.OcamlModuleGroups.plan as planModules;
-import reflaxe.ocaml.ast.OcamlFunctionModuleCheck.checkFunctionModule;
+import reflaxe.ocaml.ast.OcamlRecursiveModuleCheck.checkRecursiveModule;
 
 /** Checks metadata from actual function lowering, before relying on module signatures. */
 @:access(reflaxe.ocaml.OcamlCompiler)
@@ -21,17 +21,17 @@ class CheckSignatures {
 			final unrepresented = OcamlCompiler.instance.moduleChunks.itemsFor("UnrepresentedConstructorProbe", "UnrepresentedConstructorProbe");
 			if (unrepresented == null)
 				throw "missing unrepresented constructor syntax";
-			switch (checkFunctionModule(unrepresented)) {
-				case FunctionModuleRejected(MissingSignature("create")):
+			switch (checkRecursiveModule(unrepresented)) {
+				case RecursiveModuleRejected(MissingSignature("create")):
 				case _: throw "unrepresented constructor acquired an inferred signature";
 			}
 			for (name in ["Main", "CycleLeft", "CycleRight", "ConstructorProbe", "ArrayConstructorProbe"]) {
 				final items = OcamlCompiler.instance.moduleChunks.itemsFor(name, name);
 				if (items == null)
 					throw "missing module syntax: " + name;
-				switch (checkFunctionModule(items)) {
-					case FunctionModuleReady(_):
-					case FunctionModuleRejected(problem): throw "incomplete function module " + name + ": " + Std.string(problem);
+				switch (checkRecursiveModule(items)) {
+					case RecursiveModuleReady(_, _):
+					case RecursiveModuleRejected(problem): throw "incomplete function module " + name + ": " + Std.string(problem);
 				}
 			}
 			final nodes = [

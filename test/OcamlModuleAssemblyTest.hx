@@ -45,6 +45,55 @@ class OcamlModuleAssemblyTest {
 			throw "An output callback must not authorize a plain private type.";
 		// A generated program module with a runtime-like name still owns its type.
 		assembleModules([module("HxUser", "HxUser", TIdent("HxUser.t"))], printer);
+		final literalLeft = withLiteral(module("Left", "Right", TIdent("int")));
+		final literalOutput = assembleModules([literalLeft, right], printer).get("Left");
+		if (literalOutput == null || literalOutput.indexOf("val tag : string") < 0 || literalOutput.indexOf("let tag = \"ready\"") < 0)
+			throw "literal export or initialization changed";
+		reject([literalLeft, withLiteral(module("Right", "Left", TIdent("int")))], "unsafe-literal-cycle");
+		reject([withLiteral(module("Self", "Self", TIdent("int")))], "unsafe-literal-cycle");
+		// A safe member elsewhere in the group cannot repair an unsafe subcycle.
+		final unsafeRight = withLiteral(module("Right", "Left", TIdent("int")));
+		unsafeRight.parts.push(ModuleDeclarations("", [
+			ILet([
+				{
+					name: "viaSafe",
+					expr: EFun([PConst(CUnit)], EApp(EIdent("Safe.run"), [EConst(CUnit)])),
+					signature: TArrow(TIdent("unit"), TIdent("int"))
+				}
+			], false)
+		]));
+		reject([literalLeft, unsafeRight, module("Safe", "Left", TIdent("int"))], "unsafe-literal-cycle");
+		// Multiple literal-bearing members are valid when every cycle crosses Safe.
+		assembleModules([
+			withLiteral(module("Left", "Right", TIdent("int"))),
+			withLiteral(module("Right", "Safe", TIdent("int"))),
+			module("Safe", "Left", TIdent("int"))
+		], printer);
+		assembleModules([typeOnly("Left", "Right"), typeOnly("Right", "Left")], printer);
+	}
+
+	static function typeOnly(name:String, dependency:String):OcamlModuleAssemblyInput {
+		return withLiteral({
+			name: name,
+			parts: [
+				ModuleDeclarations("", [
+					IType([
+						{
+							name: "t",
+							params: [],
+							kind: Record([
+								{name: "other", typ: TApp("option", [TIdent(dependency + ".t")]), isMutable: false}
+							])
+						}
+					], false)
+				])
+			]
+		});
+	}
+
+	static function withLiteral(value:OcamlModuleAssemblyInput):OcamlModuleAssemblyInput {
+		value.parts.push(ModuleDeclarations("", [ILet([{name: "tag", expr: EConst(CString("ready"))}], false)]));
+		return value;
 	}
 
 	static function module(name:String, dependency:String, result:OcamlTypeExpr):OcamlModuleAssemblyInput {

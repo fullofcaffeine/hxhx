@@ -154,7 +154,7 @@ class OcamlASTPrinterTest {
 	static function main() {
 		OcamlModuleReferencesTest.run();
 		OcamlModuleGroupsTest.run();
-		OcamlFunctionModuleCheckTest.run();
+		OcamlRecursiveModuleCheckTest.run();
 		OcamlModuleAssemblyTest.run();
 		final signaturePrinter = new OcamlASTPrinter();
 		final signature = signatureFromParameters([
