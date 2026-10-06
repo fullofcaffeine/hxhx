@@ -474,7 +474,8 @@ class CppManagedRootedExpression {
 						rightType); else if (CppManagedClassEquality.selects(op, leftType, rightType, input.classes)) {
 					requireClassOperation(value);
 					TyType.fromHintText("Bool");
-				} else if (CppManagedCallableRepresentation.selectsEquality(op, leftType, rightType)
+				} else if (CppManagedDynamicEquality.selects(op, leftType, rightType, input.casts)
+					|| CppManagedCallableRepresentation.selectsEquality(op, leftType, rightType)
 					|| CppManagedClassEquality.selectsInstances(op, leftType, rightType, input.classes, input.casts)
 					|| CppManagedClassEquality.selectsOpaqueInstances(op, leftType, rightType, input.classes, input.casts)) {
 					TyType.fromHintText("Bool");
@@ -645,13 +646,14 @@ class CppManagedRootedExpression {
 					&& !instances
 					&& CppManagedClassEquality.selectsOpaqueInstances(op, leftType, rightType, input.classes, input.casts);
 				final booleans = CppManagedBoolean.supportsEquality(op, leftType, rightType);
+				final erased = CppManagedDynamicEquality.selects(op, leftType, rightType, input.casts);
 				if (classes)
 					requireClassOperation(value);
 				if (nulls)
 					CppManagedNullCompare.requireTypes(op, leftType, rightType, input.casts);
 				else if (concatenation)
 					CppManagedStringConcat.resultType(leftType, rightType);
-				else if (!strings && !classes && !booleans && !callables && !instances && !opaqueInstances)
+				else if (!strings && !classes && !booleans && !callables && !instances && !opaqueInstances && !erased)
 					CppManagedInteger.resultType(op, valueType(left), valueType(right));
 				final prefix = destination + "_binary_";
 				final a = prefix + "left";
@@ -671,8 +673,9 @@ class CppManagedRootedExpression {
 					lines.push(line);
 				for (line in render(right, b, indent + "  "))
 					lines.push(line);
-				final operation = opaqueInstances ? CppManagedReferenceEquality.computeOpaqueInstance(op, a + '.get()', b + '.get()', destination,
-					indent + '  ') : (callables || instances) ? CppManagedReferenceEquality.compute(op, a + '.get()', b + '.get()', destination,
+				final operation = erased ? CppManagedDynamicEquality.compute(op, a + '.get()', b + '.get()', destination,
+					indent + '  ') : opaqueInstances ? CppManagedReferenceEquality.computeOpaqueInstance(op, a + '.get()', b + '.get()', destination,
+						indent + '  ') : (callables || instances) ? CppManagedReferenceEquality.compute(op, a + '.get()', b + '.get()', destination,
 						indent + '  ') : booleans ? CppManagedBoolean.compare(op, leftType, rightType, a + '.get()', b + '.get()', destination,
 							indent + '  ') : classes ? CppManagedClassEquality.compute(op, a + '.get()', b + '.get()', destination,
 							indent + '  ') : nulls ? CppManagedNullCompare.compute(op, a + '.get()', b + '.get()', destination,

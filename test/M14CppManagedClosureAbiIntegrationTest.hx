@@ -219,6 +219,7 @@ class M14CppManagedClosureAbiIntegrationTest {
 		final requiredHeaders = [
 			"ManagedHeap.hpp",
 			"ManagedValue.hpp",
+			"ManagedEquality.hpp",
 			"ManagedMap.hpp",
 			"ManagedThrow.hpp",
 			"ManagedStack.hpp",

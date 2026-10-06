@@ -31,6 +31,7 @@ class M14SourceNamedFunctionTest {
 		headers.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
 		final requiredHeaders = [
 			"ManagedCallable.hpp",
+			"ManagedEquality.hpp",
 			"ManagedHeap.hpp",
 			"ManagedMap.hpp",
 			"ManagedOutput.hpp",

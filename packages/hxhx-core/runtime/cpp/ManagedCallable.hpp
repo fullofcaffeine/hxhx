@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ManagedValue.hpp"
+#include "ManagedEquality.hpp"
 #include "ManagedMap.hpp"
 #include "ManagedThrow.hpp"
 #include <optional>
