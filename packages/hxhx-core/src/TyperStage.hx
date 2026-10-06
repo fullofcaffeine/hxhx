@@ -1945,8 +1945,13 @@ class TyperStage {
 			return captured;
 		// A call through an explicitly Dynamic value also has a Dynamic result.
 		// Unknown callees remain unproved; this permission must not fill missing facts.
-		if (calleeType.isDynamic())
+		if (calleeType.isDynamic()) {
+			// Record argument use without sealing its inference term. A later
+			// concrete use can still constrain an unchecked value or its alias.
+			if (!scope.getInference().constrain(args, [for (_ in args) calleeType], scope, ctx.getIndex()))
+				throw new TyperError(ctx.getFilePath(), pos, "Dynamic call argument constraints are inconsistent");
 			return calleeType;
+		}
 		if (!calleeType.isFunction())
 			return TyType.unknown();
 		final signature = TyCallableSignature.fromFunctionValue(calleeType);
