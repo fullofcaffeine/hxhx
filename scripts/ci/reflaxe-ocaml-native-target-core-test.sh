@@ -118,7 +118,7 @@ assert.deepStrictEqual(report, referenceReport, 'native and interpreted target-c
 assert.deepStrictEqual(manifest, referenceManifest, 'native and interpreted target-core manifests differ')
 NODE
 
-if ! grep -Fxq 'and value = let inner = 7 in inner' "$APP_OUTPUT/Main.ml"; then
+if ! grep -Fxq 'let value = let inner = 7 in inner' "$APP_OUTPUT/Main.ml"; then
 	echo "Native target-core fixture produced an unexpected Main.value initializer." >&2
 	exit 1
 fi

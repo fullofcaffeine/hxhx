@@ -26,7 +26,8 @@ class HxhxOcamlTargetLiteralAdapter {
 				MacroType | Lambda | SwitchExpr | NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl |
 				ArrayAccess | Range | Cast | Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr |
 				BreakExpr | ContinueExpr | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | ThrowExpr | ControlBranch | ControlWhile |
-				ControlFor | ControlSwitch | FixedRange | SourceTry | ControlTry:
+				ControlFor | ControlSwitch | FixedRange | SourceTry | ControlTry | ArrayAppend | FeatureDefinition | FeatureSelection | MapInsert |
+				PrivateAccess | TargetScope:
 				null;
 		};
 	}
