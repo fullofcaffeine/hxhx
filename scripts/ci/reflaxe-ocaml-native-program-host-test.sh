@@ -8,15 +8,14 @@ HAXE_BIN="${HAXE_BIN:-$ROOT/node_modules/.bin/haxe}"
 mkdir -p "$ROOT/.tmp"
 PRESERVED_WORK_ROOT="${REFLAXE_OCAML_NATIVE_PROGRAM_HOST_WORK_ROOT:-}"
 if [[ -n "$PRESERVED_WORK_ROOT" ]]; then
-	if [[ ! -d "$PRESERVED_WORK_ROOT" ]]; then
-		echo "Native program-host preserved work root does not exist: $PRESERVED_WORK_ROOT" >&2
+	if [[ -e "$PRESERVED_WORK_ROOT" ]]; then
+		echo "Native program-host output must be a new directory: $PRESERVED_WORK_ROOT" >&2
 		exit 2
 	fi
+	mkdir -p "$PRESERVED_WORK_ROOT"
 	WORK_ROOT="$(cd "$PRESERVED_WORK_ROOT" && pwd -P)"
-	REUSED_GENERATION=1
 else
 	WORK_ROOT="$(mktemp -d "$ROOT/.tmp/reflaxe-ocaml-native-program-host.XXXXXX")"
-	REUSED_GENERATION=0
 fi
 STOCK_COMPILER_OUTPUT="$WORK_ROOT/stock-compiler/out"
 STOCK_SHARED_OUTPUT="$WORK_ROOT/stock-shared-output"
@@ -27,7 +26,7 @@ NATIVE_DIAGNOSTICS="$WORK_ROOT/native-hxhx.stderr.log"
 
 cleanup() {
 	local status="$?"
-	if [[ "$REUSED_GENERATION" -eq 1 ]]; then
+	if [[ -n "$PRESERVED_WORK_ROOT" ]]; then
 		echo "native_program_host_preserved_artifacts=$WORK_ROOT" >&2
 		return "$status"
 	fi
@@ -57,58 +56,51 @@ for command_name in dune node "$HAXE_BIN"; do
 done
 
 cd "$ROOT"
-if [[ "$REUSED_GENERATION" -eq 0 ]]; then
-	(
-		cd "$APP_FIXTURE"
-		run_background "$HAXE_BIN" build.hxml \
-			-D "ocaml_output=$STOCK_COMPILER_OUTPUT" \
-			-D "reflaxe_ocaml_shared_program_output=$STOCK_SHARED_OUTPUT" \
-			-D 'reflaxe_ocaml_target_expression_test_require_shared=field-initializer:static:Main|Main::value' \
-			-D 'reflaxe_ocaml_target_function_test_require_shared=Main|Main::main'
-	) 2> >(tee "$STOCK_DIAGNOSTICS" >&2)
+(
+	cd "$APP_FIXTURE"
+	run_background "$HAXE_BIN" build.hxml \
+		-D "ocaml_output=$STOCK_COMPILER_OUTPUT" \
+		-D "reflaxe_ocaml_shared_program_output=$STOCK_SHARED_OUTPUT" \
+		-D 'reflaxe_ocaml_target_expression_test_require_shared=field-initializer:static:Main|Main::value' \
+		-D 'reflaxe_ocaml_target_function_test_require_shared=Main|Main::main'
+) 2> >(tee "$STOCK_DIAGNOSTICS" >&2)
 
-	run_background dune build --root "$STOCK_COMPILER_OUTPUT" ./out.exe
-	stock_compiler_program_output="$("$STOCK_COMPILER_OUTPUT/_build/default/out.exe")"
-	if [[ -n "$stock_compiler_program_output" ]]; then
-		echo "Stock Haxe compiler output produced unexpected runtime output." >&2
-		printf '%s\n' "$stock_compiler_program_output" >&2
-		exit 1
-	fi
-
-	run_background dune build --root "$STOCK_SHARED_OUTPUT" ./reflaxe_ocaml_entry.exe
-	stock_shared_program_output="$("$STOCK_SHARED_OUTPUT/_build/default/reflaxe_ocaml_entry.exe")"
-	if [[ -n "$stock_shared_program_output" ]]; then
-		echo "Stock Haxe shared-target output produced unexpected runtime output." >&2
-		printf '%s\n' "$stock_shared_program_output" >&2
-		exit 1
-	fi
-
-	host_compile_started="$(date +%s)"
-	run_background "$HAXE_BIN" \
-		-cp packages/hxhx-core/src \
-		-cp packages/reflaxe.ocaml/src \
-		-cp "$HOST_FIXTURE_SOURCE" \
-		--main NativeProgramHostFixture \
-		--no-output \
-		-lib reflaxe.ocaml \
-		-D "ocaml_output=$NATIVE_HOST_OUTPUT" \
-		-D ocaml_no_build \
-		-D no-traces \
-		-D no_traces
-	host_compile_finished="$(date +%s)"
-	host_compile_seconds="$((host_compile_finished - host_compile_started))"
-else
-	for required_path in \
-		"$STOCK_COMPILER_OUTPUT/_build/default/out.exe" \
-		"$STOCK_SHARED_OUTPUT/_build/default/reflaxe_ocaml_entry.exe" \
-		"$NATIVE_HOST_OUTPUT/_GeneratedFiles.json"; do
-		if [[ ! -f "$required_path" ]]; then
-			echo "Preserved native program-host work is incomplete: $required_path" >&2
-			exit 2
-		fi
-	done
-	host_compile_seconds="reused-preserved-generation"
+run_background dune build --root "$STOCK_COMPILER_OUTPUT" ./out.exe
+stock_compiler_program_output="$("$STOCK_COMPILER_OUTPUT/_build/default/out.exe")"
+if [[ -n "$stock_compiler_program_output" ]]; then
+	echo "Stock Haxe compiler output produced unexpected runtime output." >&2
+	printf '%s\n' "$stock_compiler_program_output" >&2
+	exit 1
 fi
+
+run_background dune build --root "$STOCK_SHARED_OUTPUT" ./reflaxe_ocaml_entry.exe
+stock_shared_program_output="$("$STOCK_SHARED_OUTPUT/_build/default/reflaxe_ocaml_entry.exe")"
+if [[ -n "$stock_shared_program_output" ]]; then
+	echo "Stock Haxe shared-target output produced unexpected runtime output." >&2
+	printf '%s\n' "$stock_shared_program_output" >&2
+	exit 1
+fi
+
+host_compile_started="$(date +%s)"
+echo "native_program_host_generation_started=$host_compile_started"
+# Keep every reachable parser, typer and target operation, while dropping unused
+# compiler code. The executable must still compile the source fixture below.
+REFLAXE_OCAML_PROGRESS_FILE="$WORK_ROOT/native-host-progress.log" run_background "$HAXE_BIN" \
+	-cp packages/hxhx-core/src \
+	-cp packages/reflaxe.ocaml/src \
+	-cp "$HOST_FIXTURE_SOURCE" \
+	--main NativeProgramHostFixture \
+	--no-output \
+	-lib reflaxe.ocaml \
+	-dce full \
+	-D "ocaml_output=$NATIVE_HOST_OUTPUT" \
+	-D ocaml_no_build \
+	-D no-traces \
+	-D no_traces \
+	-D reflaxe_ocaml_telemetry
+host_compile_finished="$(date +%s)"
+host_compile_seconds="$((host_compile_finished - host_compile_started))"
+echo "native_program_host_generation_finished=$host_compile_finished"
 
 node - "$NATIVE_HOST_OUTPUT/_GeneratedFiles.json" <<'NODE'
 const fs = require('fs')
