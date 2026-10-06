@@ -901,6 +901,7 @@ class CppTargetCore {
 		}
 		stmtMayContributeAnonStruct = function(stmt:HxStmt, scope:Null<CppRenderScope>):Bool {
 			return switch (stmt) {
+				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _):
 					stmtsMayContributeAnonStruct(stmts, scope);
 				case SVar(_, typeHint, init, _): typeHintMayContributeAnonStruct(typeHint) || (init != null
@@ -935,6 +936,8 @@ class CppTargetCore {
 		}
 		function addStmt(stmt:HxStmt, ?scope:CppRenderScope):Void {
 			switch (stmt) {
+				case STargetScope(_, _, _):
+					throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _):
 					for (s in stmts)
 						addStmt(s, scope);
@@ -2375,6 +2378,8 @@ class CppTargetCore {
 
 	static function addOneStmtClassDependencies(stmt:HxStmt, add:String->Void, ?scope:CppRenderScope):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				addStmtClassDependencies(stmts, add, scope);
 			case SVar(_, typeHint, init, _):
@@ -4610,6 +4615,7 @@ class CppTargetCore {
 
 	static function stmtForwardsArgToUtestPosition(stmt:HxStmt, argName:String):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListForwardsArgToUtestPosition(stmts, argName);
 			case SIf(cond, thenBranch, elseBranch, _): exprForwardsArgToUtestPosition(cond,
@@ -7756,6 +7762,8 @@ class CppTargetCore {
 	static function collectStaticFieldCallableArgTypesFromStmt(owner:String, field:String, arity:Int, stmt:HxStmt, scope:CppRenderScope,
 			matches:Array<Array<String>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, s, scope, matches);
@@ -7921,6 +7929,8 @@ class CppTargetCore {
 	static function collectOptionalLambdaLocalCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectOptionalLambdaLocalCandidatesFromStmt(s, scope, candidates);
@@ -8020,6 +8030,8 @@ class CppTargetCore {
 
 	static function collectOptionalLambdaLocalCallsFromStmt(stmt:HxStmt, scope:CppRenderScope, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectOptionalLambdaLocalCallsFromStmt(s, scope, callShapes);
@@ -8347,6 +8359,8 @@ class CppTargetCore {
 	static function collectGenericFactoryLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
 			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				withGenericFactoryInferenceScope(scope, candidates, mapped, () -> {
 					for (s in stmts)
@@ -8621,6 +8635,8 @@ class CppTargetCore {
 
 	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectDynamicLocalTypeOverridesFromStmt(s, scope, candidates);
@@ -8907,6 +8923,8 @@ class CppTargetCore {
 	static function collectBindCallableCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectBindCallableCandidatesFromStmt(s, scope, candidates);
@@ -8940,6 +8958,8 @@ class CppTargetCore {
 	static function collectBindCallableEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>,
 			evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>, expectedType:String):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectBindCallableEvidenceFromStmt(s, scope, candidates, evidence, expectedType);
@@ -9198,6 +9218,8 @@ class CppTargetCore {
 
 	static function collectHelperTypedAsLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectHelperTypedAsLocalTypeOverridesFromStmt(s, scope);
@@ -9398,6 +9420,8 @@ class CppTargetCore {
 
 	static function collectAssignedArgTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectAssignedArgTypeOverridesFromStmt(s, scope, candidates);
@@ -9519,6 +9543,8 @@ class CppTargetCore {
 
 	static function collectCallableArgTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectCallableArgTypeOverridesFromStmt(s, scope, candidates, expectedType);
@@ -22543,6 +22569,7 @@ class CppTargetCore {
 
 	static function stmtKind(stmt:HxStmt):String {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, _): "SBlock";
 			case SVar(_, _, _, _): "SVar";
 			case SIf(_, _, _, _): "SIf";

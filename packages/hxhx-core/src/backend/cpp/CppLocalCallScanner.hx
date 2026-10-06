@@ -22,6 +22,7 @@ class CppLocalCallScanner {
 
 	static function stmtCallsLocal(stmt:HxStmt, local:String):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListCallsLocal(stmts, local);
 			case SVar(_, _, init, _):

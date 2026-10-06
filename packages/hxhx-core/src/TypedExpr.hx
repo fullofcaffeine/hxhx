@@ -22,6 +22,7 @@ enum TypedExprTag {
 	FieldRead;
 	NullSafeFieldRead;
 	Call;
+	TargetScope;
 	FeatureDefinition;
 	FeatureSelection;
 	MacroExpr;
@@ -82,6 +83,14 @@ enum TypedExprTag {
 	use `TyType.unknown()` explicitly.
 **/
 class TypedExpr {
+	/** Statement operands keep their exact API owner and do not acquire runtime argument bindings. */
+	public static function targetScope(declaration:TyDeclarationInfo, body:TypedExpr, position:Null<HxPos>):TypedExpr {
+		final result = new TypedExpr(TargetScope, body.getType().isNoNormalCompletion() ? TyType.noNormalCompletion() : TyType.fromHintText("Void"), position,
+			[], [body], null, false, 0, 0.0, declaration);
+		TypedTargetScope.kind(result);
+		return result;
+	}
+
 	final tag:TypedExprTag;
 	final type:TyType;
 	final position:Null<HxPos>;
@@ -171,6 +180,8 @@ class TypedExpr {
 		this.constructorApplication = constructorApplication;
 		this.argumentBinding = argumentBinding;
 		this.namedArguments = namedArguments;
+		if (tag == TargetScope)
+			TypedTargetScope.kind(this);
 		assertArgumentBinding();
 	}
 

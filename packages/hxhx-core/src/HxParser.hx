@@ -363,6 +363,7 @@ class HxParser {
 
 	static function rebaseFunctionBodyStmt(stmt:HxStmt, base:HxPos, bodyStartIndex:Int):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
@@ -605,6 +606,7 @@ class HxParser {
 
 	static function offsetFunctionBodyStmtColumns(stmt:HxStmt, delta:Int):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
@@ -1929,6 +1931,7 @@ class HxParser {
 
 		inline function stmtKindText(stmt:HxStmt):String {
 			return switch (stmt) {
+				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(_, _): "block";
 				case SVar(_, _, _, _): "var";
 				case SIf(_, _, _, _): "if";

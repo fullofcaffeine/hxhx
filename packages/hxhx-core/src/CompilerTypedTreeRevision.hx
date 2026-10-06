@@ -267,6 +267,7 @@ class CompilerTypedTreeRevision {
 			case FieldRead: "field-read";
 			case NullSafeFieldRead: "null-safe-field-read";
 			case Call: "call";
+			case TargetScope: "target-scope";
 			case FeatureDefinition: "feature-definition";
 			case FeatureSelection: "feature-selection";
 			case MacroExpr: "macro-expr";

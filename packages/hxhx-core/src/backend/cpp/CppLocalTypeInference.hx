@@ -138,6 +138,8 @@ class CppLocalTypeInference {
 
 	function collectErasedDynamicArgUsageNamesFromStmt(stmt:HxStmt, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectErasedDynamicArgUsageNamesFromStmt(s, dynamicArgs, used);
@@ -270,6 +272,8 @@ class CppLocalTypeInference {
 
 	function collectClosureVectorLocalCandidatesFromStmt(stmt:HxStmt, candidates:StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorLocalCandidatesFromStmt(s, candidates);
@@ -299,6 +303,8 @@ class CppLocalTypeInference {
 	function collectClosureVectorEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>, pushedValues:StringMap<Array<HxExpr>>,
 			callArgTypes:StringMap<Array<Array<String>>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorEvidenceFromStmt(s, scope, candidates, pushedValues, callArgTypes);
@@ -414,6 +420,8 @@ class CppLocalTypeInference {
 	function collectClosureVectorPushedTypesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>,
 			callArgTypes:StringMap<Array<Array<String>>>, pushedTypes:StringMap<Array<String>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorPushedTypesFromStmt(s, scope, candidates, callArgTypes, pushedTypes);
@@ -622,6 +630,8 @@ class CppLocalTypeInference {
 
 	function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				withStringMapInferenceScope(scope, candidates, () -> {
 					for (s in stmts)

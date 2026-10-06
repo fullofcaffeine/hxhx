@@ -32,6 +32,7 @@ class PhpThisValueSlotFacts {
 
 	static function statementNeedsValueSlot(statement:HxStmt):Bool {
 		return switch (statement) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(statements, _):
 				statementListNeedsValueSlot(statements);
 			case SVar(_, _, initializer, _): initializer != null && expressionNeedsValueSlot(initializer);

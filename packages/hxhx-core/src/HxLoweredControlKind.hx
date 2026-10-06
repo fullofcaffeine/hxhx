@@ -12,6 +12,7 @@ enum HxLoweredControlKind {
 	Initializer(hasValue:Bool);
 
 	Scope;
+	TargetScope(kind:HxTargetScopeKind);
 	Return;
 	Branch;
 	Throw;

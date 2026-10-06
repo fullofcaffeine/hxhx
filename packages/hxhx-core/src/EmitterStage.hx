@@ -5914,6 +5914,7 @@ class EmitterStage {
 			final erasedTyCtx = cast tyCtx;
 			final erasedReturnTyCtx = cast tyCtx;
 			return switch (s) {
+				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
@@ -8523,6 +8524,8 @@ class EmitterStage {
 								if (s == null)
 									continue;
 								switch (s) {
+									case STargetScope(_, _, _):
+										throw "native target scope is not valid in this source or target phase";
 									case SBlock(stmts, _):
 										if (stmts != null)
 											for (ss in stmts)

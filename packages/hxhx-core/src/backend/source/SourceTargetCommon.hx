@@ -423,6 +423,8 @@ class SourceTargetCommon {
 		if (compiler == null)
 			throw "C# source backend MVP executable packaging requires `mcs` or `csc` on PATH";
 		final args = compiler == "csc" ? ["-nologo", "-out:" + exePath].concat(sourcePaths) : ["-out:" + exePath].concat(sourcePaths);
+		if (context.hasDefine("unsafe"))
+			args.unshift("-unsafe");
 		final code = Sys.command(compiler, args);
 		if (code != 0)
 			throw "C# source backend MVP executable packaging failed with exit code " + code;
@@ -476,6 +478,8 @@ class SourceTargetCommon {
 		if (compiler == null)
 			throw "C# source backend MVP library packaging requires `mcs` or `csc` on PATH";
 		final args = compiler == "csc" ? ["-nologo", "-target:library", "-out:" + dllPath].concat(sourcePaths) : ["-target:library", "-out:" + dllPath].concat(sourcePaths);
+		if (context.hasDefine("unsafe"))
+			args.unshift("-unsafe");
 		final code = Sys.command(compiler, args);
 		if (code != 0)
 			throw "C# source backend MVP library packaging failed with exit code " + code;
@@ -3208,7 +3212,9 @@ class SourceTargetCommon {
 		if (args == null || args.length != 1)
 			return null;
 		return switch (field) {
-			case "unsafe" | "unsafe_" | "fixed" | "fixed_" | "pointerOfArray" | "valueOf":
+			case "unsafe" | "unsafe_":
+				throw "C# unsafe requires its checked syntax scope";
+			case "fixed" | "fixed_" | "pointerOfArray" | "valueOf":
 				renderExpr(Cs, args[0]);
 			case _:
 				null;
@@ -5592,6 +5598,8 @@ class SourceTargetCommon {
 
 	static function phpCollectAssignedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -9065,6 +9073,8 @@ class SourceTargetCommon {
 	static function renderStmtWithFrame(frame:SourceFunctionRenderFrame, stmt:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		return switch (stmt) {
+			case STargetScope(kind, body, _):
+				CsSyntaxScopeEmitter.render(kind, target, indent, () -> renderStmtWithFrame(frame, body, indent));
 			case SBlock(stmts, _) if (target == Cs):
 				renderCStyleScopedBlockWithFrame(frame, stmts, indent);
 			case SBlock(stmts, _):
@@ -9130,6 +9140,7 @@ class SourceTargetCommon {
 
 	static function stmtKind(stmt:HxStmt):String {
 		return switch (stmt) {
+			case STargetScope(_, _, _): "STargetScope";
 			case SBlock(_, _): "SBlock";
 			case SVar(_, _, _, _): "SVar";
 			case SIf(_, _, _, _): "SIf";
@@ -13740,6 +13751,8 @@ class SourceTargetCommon {
 
 	static function collectJavaEntryBodyFunctionRefs(stmt:HxStmt, out:Map<String, Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (child in stmts)
 					collectJavaEntryBodyFunctionRefs(child, out);
@@ -13986,6 +13999,8 @@ class SourceTargetCommon {
 
 	static function collectJavaEntryBodyDirectCalls(stmt:HxStmt, out:Array<{name:String, arity:Int}>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (child in stmts)
 					collectJavaEntryBodyDirectCalls(child, out);
@@ -14809,6 +14824,8 @@ class SourceTargetCommon {
 
 	static function phpRecordReferencedMemberStmt(stmt:HxStmt, names:Map<String, Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (inner in stmts)
 					phpRecordReferencedMemberStmt(inner, names);
@@ -17316,6 +17333,8 @@ class SourceTargetCommon {
 		if (stmt == null)
 			return;
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpCollectGenericStaticSpecializationsFromStmts(stmts, className, genericFns, copyStringMap(localTypes), specializations, allowDirectCalls);
 			case SVar(name, typeHint, init, _):
@@ -18045,6 +18064,7 @@ class SourceTargetCommon {
 
 	static function phpStmtTouchesThis(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListTouchesThis(stmts);
 			case SVar(_, _, init, _): init != null && phpExprTouchesThis(init);
@@ -18141,6 +18161,8 @@ class SourceTargetCommon {
 
 	static function phpCollectDeclaredLocalsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -18225,6 +18247,8 @@ class SourceTargetCommon {
 
 	static function phpCollectUsedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -18267,6 +18291,7 @@ class SourceTargetCommon {
 
 	static function phpStmtHasRefCaptureOfNames(stmt:HxStmt, names:Array<String>):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasRefCaptureOfNames(stmts, names);
 			case SVar(_, _, init, _): init != null && phpExprHasRefCaptureOfNames(init, names);
@@ -18349,6 +18374,7 @@ class SourceTargetCommon {
 
 	static function phpStmtHasLoopControlEscape(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasLoopControlEscape(stmts);
 			case SIf(_, thenBranch, elseBranch, _): phpStmtHasLoopControlEscape(thenBranch) || (elseBranch != null && phpStmtHasLoopControlEscape(elseBranch));
@@ -18527,6 +18553,7 @@ class SourceTargetCommon {
 
 	static function phpRenameScopedLocalStmt(stmt:HxStmt, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>, rewriteRawText:Bool):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters, rewriteRawText), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -18767,6 +18794,7 @@ class SourceTargetCommon {
 
 	static function pythonRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -19074,6 +19102,8 @@ class SourceTargetCommon {
 
 	static function csRewriteSameClassStaticMembersInStmt(stmt:HxStmt, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(kind, body, position):
+				STargetScope(kind, csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, locals.copy()), position);
 			case SBlock(stmts, pos):
 				SBlock(csRewriteSameClassStaticMembersInStmts(stmts, staticMemberNames, className, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -19228,6 +19258,7 @@ class SourceTargetCommon {
 	static function phpRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):

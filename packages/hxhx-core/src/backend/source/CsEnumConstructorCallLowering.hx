@@ -111,7 +111,7 @@ class CsEnumConstructorCallLowering {
 			throw "C# enum-constructor lowering requires a typed function projection";
 		final lambdas = CsLambdaLowering.body(projection, program, noRoot);
 		final dynamicCalls = staticCalls.body(CsDynamicLocalCallLowering.body(projection, lambdas));
-		return SourceFunctionBodyRewriter.body(dynamicCalls, function(expression) {
+		final lowered = SourceFunctionBodyRewriter.body(dynamicCalls, function(expression) {
 			final exact = TypedExactEnumConstructorSource.decode(expression);
 			if (exact == null)
 				return expression;
@@ -128,5 +128,9 @@ class CsEnumConstructorCallLowering {
 				EArrayDecl(exact.arguments.copy())
 			]);
 		});
+		return switch lowered {
+			case [SExpr(region = ELoweredControl(FunctionBody, _, _, _), _)]: TypedControlStatements.functionBody(region);
+			case _: lowered;
+		};
 	}
 }

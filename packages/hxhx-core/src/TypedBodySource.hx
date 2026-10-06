@@ -555,6 +555,11 @@ class TypedBodySource {
 				final target = typedExpression.getControlTarget();
 				ELoweredControl(target == null ? Scope : FunctionBody, target == null ? "" : target.getCanonicalIdentity(),
 					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case TargetScope:
+				if (expressions.length != 1 || expressions[0].getTag() != ControlRegion)
+					throw "native syntax scope requires its lowered lexical body";
+				ELoweredControl(TargetScope(TypedTargetScope.kind(typedExpression)), "", expressionTail(expressions, 0, catalog, projectionFacts),
+					sourcePosition(typedExpression.getPosition()));
 			case BoolValue: EBool(typedExpression.getBoolValue());
 			case StringValue: EString(texts[0]);
 			case IntValue: EInt(typedExpression.getIntValue());

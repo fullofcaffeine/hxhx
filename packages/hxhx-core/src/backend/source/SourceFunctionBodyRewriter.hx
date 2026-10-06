@@ -32,6 +32,7 @@ class SourceFunctionBodyRewriter {
 
 	static function statementNode(statement:HxStmt, transform:(HxExpr, HxExpr) -> HxExpr):HxStmt {
 		return switch (statement) {
+			case STargetScope(kind, body, position): STargetScope(kind, statementNode(body, transform), position);
 			case SBlock(statements, position):
 				SBlock([for (child in statements) statementNode(child, transform)], position);
 			case SVar(name, typeHint, initializer, position, metadata):

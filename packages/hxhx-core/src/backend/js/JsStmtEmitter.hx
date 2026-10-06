@@ -27,6 +27,8 @@ class JsStmtEmitter {
 
 	public static function emitStmt(writer:JsWriter, stmt:HxStmt, scope:JsFunctionScope):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				writer.writeln("{");
 				writer.pushIndent();

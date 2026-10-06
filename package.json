@@ -260,6 +260,7 @@
     "test:m14:enum-switch-coverage": "haxe test/m14_enum_switch_coverage_test.hxml",
     "test:m14:enum-switch-coverage-proof": "haxe test/m14_enum_switch_coverage_proof_test.hxml && haxe test/m14_pattern_capture_coverage_test.hxml && haxe test/m14_cs_enum_switch_result_test.hxml",
     "test:m14:cs-callback-control": "haxe test/m14_cs_callback_control_test.hxml",
+    "test:m14:cs-syntax-scope": "haxe test/m14_cs_syntax_scope_test.hxml",
     "test:m14:enum-switch-coverage-ocaml": "haxe test/m14_enum_switch_coverage_ocaml_test.hxml",
     "test:m14:declared-bound-call": "haxe test/m14_declared_bound_call_test.hxml",
     "test:m14:declared-bound-call-native": "haxe test/m14_declared_bound_call_native_test.hxml",

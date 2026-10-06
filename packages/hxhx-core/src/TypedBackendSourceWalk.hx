@@ -80,6 +80,8 @@ class TypedBackendSourceWalk {
 				onExpression(value);
 		}
 		switch (node) {
+			case STargetScope(_, body, _):
+				onStatement(body);
 			case SBlock(body, _):
 				for (child in body)
 					onStatement(child);

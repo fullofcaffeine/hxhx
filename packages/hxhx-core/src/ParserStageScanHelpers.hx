@@ -2365,6 +2365,7 @@ class ParserStageScanHelpers {
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				hasUnsupportedStmtList(stmts);
 			case SVar(_, _, init, _):

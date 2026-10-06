@@ -114,6 +114,8 @@ class MetalProfileVerifier {
 
 	static function verifyStmt(filePath:String, className:String, fnName:String, stmt:HxStmt, violations:Array<MetalViolation>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (inner in stmts)
 					verifyStmt(filePath, className, fnName, inner, violations);

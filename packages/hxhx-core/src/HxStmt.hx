@@ -207,4 +207,7 @@ enum HxStmt {
 	SReturnVoid(pos:HxPos);
 	SReturn(expr:HxExpr, pos:HxPos);
 	SExpr(expr:HxExpr, pos:HxPos);
+
+	/** Backend-only lexical scope. Parsing and macro quotation never manufacture this statement. */
+	STargetScope(kind:HxTargetScopeKind, body:HxStmt, pos:HxPos);
 }

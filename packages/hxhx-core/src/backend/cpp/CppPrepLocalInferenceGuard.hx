@@ -61,6 +61,7 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasLocalDeclEvidence(stmts, evidence);
 			case SIf(_, thenBranch, elseBranch, _): stmtHasLocalDeclEvidence(thenBranch,
@@ -203,6 +204,7 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasBindCallableEvidence(stmts);
 			case SIf(cond, thenBranch, elseBranch, _): exprHasBindCallableEvidence(cond) || stmtHasBindCallableEvidence(thenBranch) || (elseBranch != null
@@ -277,6 +279,7 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasHelperTypedAsEvidence(stmts);
 			case SIf(cond, thenBranch, elseBranch, _): exprHasHelperTypedAsEvidence(cond) || stmtHasHelperTypedAsEvidence(thenBranch) || (elseBranch != null

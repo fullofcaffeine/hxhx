@@ -13,6 +13,7 @@ class TypedBodyFingerprint {
 			case FunctionBody: "function-body";
 			case Initializer(hasValue): hasValue ? "initializer-value" : "initializer-abrupt";
 			case Scope: "scope";
+			case TargetScope(CsUnsafe): "cs-unsafe";
 			case Return: "return";
 			case Branch: "branch";
 			case Throw: "throw";
@@ -383,6 +384,10 @@ class TypedBodyFingerprint {
 
 	static function addStatement(state:BodyIdentityState, statement:HxStmt):Void {
 		switch (statement) {
+			case STargetScope(kind, body, position):
+				addString(state, loweredControlName(TargetScope(kind)));
+				addPosition(state, position);
+				addStatement(state, body);
 			case SBlock(statements, position):
 				addString(state, "stmt-block");
 				addStatements(state, statements);

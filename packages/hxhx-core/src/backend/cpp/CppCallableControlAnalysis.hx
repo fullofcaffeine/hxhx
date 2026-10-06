@@ -10,6 +10,8 @@ import haxe.ds.StringMap;
 **/
 function control(kind:HxLoweredControlKind, children:Array<HxExpr>, scope:CppRenderScope, candidates:StringMap<Bool>, resultType:String):Void {
 	switch kind {
+		case TargetScope(_):
+			throw "C# syntax scope cannot reach C++ callable analysis";
 		case Try(catches):
 			visit(children[0], scope, candidates, resultType);
 			for (index in 0...catches.length) {

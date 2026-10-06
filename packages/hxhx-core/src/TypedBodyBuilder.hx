@@ -887,6 +887,12 @@ class TypedBodyBuilder {
 					// A declaration-selected generic call owns its applied signature. Replaying
 					// its callee must not allocate an unrelated stored-method capture.
 					final selected = resolution.getDeclaration();
+					if (resolution.getTargetScope() != null) {
+						if (selected == null || arguments.length != 1)
+							throw "selected native scope lost its body";
+						return TypedExpr.targetScope(selected,
+							buildExpr(arguments[0], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), position);
+					}
 					final callable = selected != null
 						&& selected.getTypeParameterIds()
 							.length > 0 ? TyType.functionType(resolution.getExpectedArguments(),
@@ -1151,6 +1157,7 @@ class TypedBodyBuilder {
 	static function buildStmt(statement:HxStmt, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
 			callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>):TypedStmt {
 		final sourcePosition = switch (statement) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, position) | SVar(_, _, _, position) | SIf(_, _, _, position) | SForIn(_, _, _, position) | SForKeyValue(_, _, _, _, position) |
 				SWhile(_, _, position) | SDoWhile(_, _, position) | SSwitch(_, _, _, position) | STry(_, _, position) | SBreak(position) |
 				SContinue(position) | SThrow(_, position) | SReturnVoid(position) | SReturn(_, position) | SExpr(_, position): position;
@@ -1158,6 +1165,7 @@ class TypedBodyBuilder {
 		final storedPosition = exactPosition(sourcePosition);
 		final diagnosticPosition = sourcePosition == null ? HxPos.unknown() : sourcePosition;
 		return switch (statement) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(statements, _):
 				if (environment != null)
 					environment.enterLexicalScope();

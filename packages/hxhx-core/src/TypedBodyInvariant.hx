@@ -102,6 +102,8 @@ class TypedBodyInvariant {
 		if (expression == null)
 			throw "typed body contains a null expression in " + owner;
 		expression.assertArgumentBinding();
+		if (expression.getTag() == TargetScope)
+			TypedTargetScope.kind(expression);
 		if (expression.getTag() == FeatureDefinition || expression.getTag() == FeatureSelection) {
 			final children = expression.getExpressions();
 			final definition = expression.getTag() == FeatureDefinition;
@@ -129,7 +131,7 @@ class TypedBodyInvariant {
 			throw "implicit catch uses require a try region or handler lambda in " + owner;
 		assertCatchUses(expression.getCatchUses(), expression.getLocalBindings(), owner);
 		final member = expression.getDeclaration();
-		if (member != null && expression.getTag() != Call && expression.getTag() != NewValue) {
+		if (member != null && expression.getTag() != Call && expression.getTag() != NewValue && expression.getTag() != TargetScope) {
 			if ((expression.getTag() != NameRead && expression.getTag() != FieldRead)
 				|| (!member.getIsStatic() && (expression.getTag() != FieldRead || expression.getRequiresOwnerQualification()))
 				|| member.getIsEnumConstructor()

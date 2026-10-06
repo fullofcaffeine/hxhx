@@ -26,6 +26,7 @@ function expression(node:TypedExpr):HxExpr {
 		case FieldRead: EField(child(0), texts[0]);
 		case NullSafeFieldRead: ENullSafeField(child(0), texts[0]);
 		case Call: ECall(child(0), tail(1));
+		case TargetScope: throw "resolved native syntax cannot supply an authored macro quote";
 		case FeatureDefinition: ECall(EIdent("__define_feature__"), [HxExpr.EString(texts[0])].concat(tail(0)));
 		case FeatureSelection: ECall(EIdent("__feature__"), [HxExpr.EString(texts[0])].concat(tail(0)));
 		case MacroExpr: EMacroExpr(child(0), texts);

@@ -45,6 +45,8 @@ private function statement(expression:HxExpr, target:String, loop:String, onTry:
 	final result:HxStmt = switch expression {
 		case ELoweredControl(Scope, "", entries, position):
 			SBlock(statements(entries, target, loop, onTry), position);
+		case ELoweredControl(TargetScope(kind), "", [body], position):
+			STargetScope(kind, block(body, target, loop, onTry), position);
 		case ELoweredControl(Return, destination, values, position) if (target.length > 0 && destination == target && values.length <= 1):
 			values.length == 0 ? SReturnVoid(position) : SReturn(values[0], position);
 		case ELoweredControl(Branch, "", children, position) if (children.length == 2 || children.length == 3):

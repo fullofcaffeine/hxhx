@@ -492,6 +492,12 @@ class TyperStage {
 						case _:
 					}
 				}
+				final scope = TypedTargetScope.select(declaration, context.hasDefine("cs"));
+				if (scope != null) {
+					if (arguments.length != 1)
+						throw new TyperError(context.getFilePath(), position, "C# syntax scope requires one body");
+					return new TypedCallResolution(declaration, false, null, null, null, null, scope);
+				}
 				final current = context.currentClass();
 				final inheritedInstanceCall = declaration != null
 					&& !declaration.getIsStatic()
@@ -954,6 +960,8 @@ class TyperStage {
 
 		function typeStmt(s:HxStmt):Void {
 			switch (s) {
+				case STargetScope(_, _, _):
+					throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _pos):
 					scope.enterLexicalScope();
 					for (ss in stmts)

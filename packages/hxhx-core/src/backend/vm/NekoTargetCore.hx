@@ -595,6 +595,8 @@ class NekoTargetCore {
 	static function collectStmtRefs(context:NekoEmitContext, stmt:HxStmt, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectStmtRefs(context, s, addConstructor, addStatic);
@@ -1156,6 +1158,8 @@ class NekoTargetCore {
 			case _:
 		}
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				final blockContext = childContext(context);
 				out.push(indent + "{");
@@ -1341,6 +1345,7 @@ class NekoTargetCore {
 
 	static function stmtContainsBreak(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				var found = false;
 				for (s in stmts) {
@@ -1382,6 +1387,7 @@ class NekoTargetCore {
 
 	static function stmtTag(stmt:HxStmt):String {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, _): "SBlock";
 			case SVar(name, _, _, _): "SVar(" + name + ")";
 			case SIf(_, _, _, _): "SIf";

@@ -14,15 +14,20 @@ class TypedCallResolution {
 	final argumentConversions:Array<Null<TyImplicitConversionPlan>>;
 	final expectedArguments:Array<TyType>;
 	final namedArguments:Null<TypedNamedCallPlan>;
+	final targetScope:Null<HxTargetScopeKind>;
 
 	public function new(?declaration:TyDeclarationInfo, requiresOwnerQualification:Bool = false, ?extensionProvider:TyNominalTypeId,
-			?argumentConversions:Array<Null<TyImplicitConversionPlan>>, ?expectedArguments:Array<TyType>, ?namedArguments:TypedNamedCallPlan) {
+			?argumentConversions:Array<Null<TyImplicitConversionPlan>>, ?expectedArguments:Array<TyType>, ?namedArguments:TypedNamedCallPlan,
+			?targetScope:HxTargetScopeKind) {
 		this.declaration = declaration;
 		this.requiresOwnerQualification = requiresOwnerQualification;
 		this.extensionProvider = extensionProvider;
 		this.argumentConversions = argumentConversions == null ? [] : argumentConversions.copy();
 		this.expectedArguments = expectedArguments == null ? [] : expectedArguments.copy();
 		this.namedArguments = namedArguments;
+		this.targetScope = targetScope;
+		if (targetScope != null && (TypedTargetScope.select(declaration, true) != targetScope || namedArguments != null))
+			throw "native syntax scope cannot carry an ordinary call plan";
 		if (this.expectedArguments.length > 0 && declaration == null)
 			throw "call argument contexts require an exact declaration";
 		if (requiresOwnerQualification && declaration == null)
@@ -53,4 +58,7 @@ class TypedCallResolution {
 
 	public function getNamedArguments():Null<TypedNamedCallPlan>
 		return namedArguments;
+
+	public function getTargetScope():Null<HxTargetScopeKind>
+		return targetScope;
 }

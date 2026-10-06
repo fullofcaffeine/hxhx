@@ -28,13 +28,14 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v23";
+	static final passIdentity = "source-control-v24";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
 	var didLower:Bool = false;
 	var activeLoop:Null<TyControlTarget> = null;
 	var untypedContext:Bool = false;
+	var hasTargetScope:Bool = false;
 
 	final rootTarget:Null<TyControlTarget>;
 
@@ -55,9 +56,15 @@ class TypedControlLowering {
 					plan.steps.length == 0 ? plan.value : TypedExpr.block(plan.steps.concat([plan.value]), expression.getType(), expression.getPosition()));
 			}
 		];
-		final statements = lowerer.statements(fn.getBody().getStatements());
+		var statements = lowerer.statements(fn.getBody().getStatements());
 		if (!lowerer.didLower)
 			return fn;
+		if (lowerer.hasTargetScope) {
+			if (lowerer.rootTarget == null)
+				throw "native syntax scopes require an exact enclosing function";
+			final region = TypedStatementControl.region(statements, lowerer.rootTarget, null).withControlTarget(lowerer.rootTarget);
+			statements = [TypedStmt.expressionStmt(region, null)];
+		}
 		final result = fn.withBody(new TypedFunctionBody(statements, fn.getBody().getSourceFingerprint()), defaults);
 		TypedBodyInvariant.assertFunction(result);
 		return result;
@@ -798,6 +805,20 @@ class TypedControlLowering {
 				};
 			case SourceGroup:
 				return group(expression, target, true);
+			case TargetScope:
+				TypedTargetScope.kind(expression);
+				hasTargetScope = true;
+				final body = discard(children[0], target);
+				didLower = true;
+				final region = TypedExpr.controlRegion(body.steps, body.completes ? TyType.fromHintText("Void") : TyType.noNormalCompletion(),
+					expression.getPosition());
+				return {
+					steps: [
+						TypedExpr.targetScope(expression.getDeclaration(), region, expression.getPosition())
+					],
+					value: null,
+					completes: body.completes
+				};
 			case SourceIf | Ternary:
 				return conditional(expression, target, true);
 			case ThrowExpr:
