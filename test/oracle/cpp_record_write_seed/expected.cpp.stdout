@@ -1,0 +1,11 @@
+false:none:RV:true:true
+false:receiver:R:receiver-failure:false
+false:value:RV:value-failure:false
+true:none:RV:discarded:true
+true:receiver:R:receiver-failure:false
+true:value:RV:value-failure:false
+text:RV:after:after
+nested:RV:nested:nested
+local:true:false
+object:true:true
+optional:true:true

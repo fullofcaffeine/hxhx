@@ -1109,6 +1109,22 @@ class CppManagedRootedExpression {
 		if (field == null)
 			return switch target {
 				case EIdent(name): renderAssignment(locals.binding(name), value, destination, indent, compoundOp);
+				case EField(receiver, name):
+					requireExpression(target);
+					if (compoundOp != null)
+						throw "managed record compound assignment requires explicit read-modify-write lowering";
+					CppManagedRecordWrite.render({
+						receiver: receiver,
+						receiverType: valueType(receiver),
+						name: name,
+						value: value,
+						valueType: valueType(value),
+						casts: input.casts,
+						heap: input.heap,
+						prefix: input.temporaryPrefix + (destination == null ? "discarded" : destination) + "_record_write_",
+						destination: destination,
+						renderValue: render
+					}, indent);
 				case _: throw "managed assignment requires an exact mutable place";
 			};
 		if (!field.getField().getIsStatic())
