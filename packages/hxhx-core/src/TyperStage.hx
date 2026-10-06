@@ -10,10 +10,11 @@ private typedef TyMethodCallCapture = {
 	var selection:Null<TyMethodCallResolution>;
 };
 
-/** The already-typed receiver supplies owner arguments without repeating its traversal. */
-private typedef TyCallReceiverContext = {
+/** Reuse the typed receiver and, for allocations, operands whose inference traversal already ran. */
+private typedef TyCallInferenceContext = {
 	final expression:HxExpr;
 	final type:TyType;
+	final ?argumentTypes:Array<TyType>;
 };
 
 private typedef TyExtensionCallResolution = {
@@ -1565,7 +1566,7 @@ class TyperStage {
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
-			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallReceiverContext):TyMethodCallResolution {
+			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext):TyMethodCallResolution {
 		if (!isStatic && admittedCandidates == null && field != "new") {
 			final declaring = ctx.instanceMethodOwner(field, c);
 			if (declaring != null)
@@ -1605,10 +1606,12 @@ class TyperStage {
 		final callbackContexts = TyLambdaArgumentContext.shared(contextualCandidates.length != candidates.length ? [] : contextualCandidates.map(signature ->
 			TyNominalApplication.signature(ctx.getIndex(), c, receiver == null ? null : receiver.type, signature)),
 			args.length);
-		final argTypes = [
+		final argTypes = receiver != null && receiver.argumentTypes != null ? receiver.argumentTypes.copy() : [
 			for (index in 0...args.length)
 				inferExprType(args[index], scope, ctx, pos, callbackContexts[index])
 		];
+		if (argTypes.length != args.length)
+			throw "call selection requires one retained type per source argument";
 		// Candidate trials must not commit context to the caller's inference state.
 		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
 			return try {
@@ -1796,7 +1799,7 @@ class TyperStage {
 		instead of replacing the call with an unbound-expression fallback.
 	**/
 	static function resolveCallSelectionCandidate(owner:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
-			pos:HxPos, ?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallReceiverContext):Null<TyMethodCallResolution> {
+			pos:HxPos, ?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext):Null<TyMethodCallResolution> {
 		final resolved = resolveMethodCall(owner, field, isStatic, args, scope, ctx, pos, admittedCandidates, receiver);
 		if (resolved.declaration != null)
 			return resolved;
@@ -3013,6 +3016,18 @@ class TyperStage {
 				if (expectedResult != null && !scope.getInference().constrain([expr], [expectedResult], scope, ctx.getIndex()))
 					throw new TyperError(ctx.getFilePath(), pos, "generic constructor conflicts with its expected type");
 				final applied = scope.getInference().expressionType(expr, constructed, scope);
+				// Constructor parameters constrain omitted inputs just like ordinary
+				// method parameters. Reuse the nearest declared owner's selection and
+				// optional/rest alignment without traversing operand declarations again.
+				if (args.filter(argument -> scope.getInference().canReceiveContext(argument, scope)).length > 0) {
+					final constructor = TypedConstructorPath.select(ctx.getIndex(), applied);
+					if (constructor != null)
+						resolveMethodCall(constructor.getOwner(), "new", false, args, scope, ctx, pos, null, {
+							expression: expr,
+							type: constructor.getOwnerType(),
+							argumentTypes: argumentTypes
+						});
+				}
 				validateClassArguments(applied, ctx, pos);
 				applied;
 			case EUnop(_op, _fixity, e):
