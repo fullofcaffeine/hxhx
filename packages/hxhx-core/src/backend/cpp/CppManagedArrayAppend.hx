@@ -12,7 +12,8 @@ function requireTypes(arrayType:TyType, valueType:TyType, ?casts:CppManagedCastP
 	if (identity == null
 		|| identity.getCanonicalName() != 'Array'
 		|| arguments.length != 1
-		|| !CppManagedValueTransfer.accepts(arguments[0], valueType, casts))
+		|| (!CppManagedValueTransfer.accepts(arguments[0], valueType, casts)
+			&& !CppManagedNumericErasure.selects(arguments[0], valueType, casts)))
 		throw 'managed array append requires its exact selected element type';
 }
 
@@ -46,6 +47,11 @@ function render(input:{
 	for (line in input.renderValue(input.array, array, indent + "  "))
 		lines.push(line);
 	for (line in input.renderValue(input.value, element, indent + "  "))
+		lines.push(line);
+	var arrayType = input.arrayType;
+	while (arrayType.getNullableInner() != null)
+		arrayType = arrayType.getNullableInner();
+	for (line in CppManagedValueTransfer.convertRoot(arrayType.getTypeArguments()[0], input.valueType, element, indent + "  ", input.casts))
 		lines.push(line);
 	lines.push(indent
 		+ '  if ('

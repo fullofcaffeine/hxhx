@@ -57,7 +57,8 @@ function render(input:CppManagedAggregateInput, indent:String):Array<String> {
 		}
 	}
 	for (index in 0...children.length)
-		if (!CppManagedValueTransfer.accepts(expected[index], types[index], input.casts))
+		if (!CppManagedValueTransfer.accepts(expected[index], types[index], input.casts)
+			&& !CppManagedNumericErasure.selects(expected[index], types[index], input.casts))
 			throw "managed aggregate child requires an explicit typed conversion";
 	final parent = input.destination + "_aggregate";
 	final child = input.destination + "_element";
@@ -78,6 +79,8 @@ function render(input:CppManagedAggregateInput, indent:String):Array<String> {
 		lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + child + "(" + input.heap + ");");
 	for (index in 0...children.length) {
 		for (line in input.renderValue(children[index], child, indent + "  "))
+			lines.push(line);
+		for (line in CppManagedValueTransfer.convertRoot(expected[index], types[index], child, indent + "  ", input.casts))
 			lines.push(line);
 		lines.push(indent
 			+ "  "

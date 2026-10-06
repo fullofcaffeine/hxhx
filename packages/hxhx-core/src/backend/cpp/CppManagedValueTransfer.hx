@@ -30,6 +30,8 @@ function accepts(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool {
 	} catch (error:haxe.Exception) {
 		throw new haxe.Exception('managed value transfer requires complete types: ' + source.getSemanticKey() + ' -> ' + target.getSemanticKey(), error);
 	}
+	if (CppManagedNumericErasure.selects(target, source, casts))
+		return false;
 	if (target.isDynamic() || target.getSemanticKey() == source.getSemanticKey())
 		return true;
 	// Shared typing and abstract lowering have already selected any authored
@@ -59,9 +61,19 @@ function needsScalarConversion(target:TyType, source:TyType, ?casts:CppManagedCa
 	return stored.getSemanticKey() == "primitive:Int" || stored.getSemanticKey() == "primitive:Bool";
 }
 
-/** Admit either an unchanged copy or the explicit native scalar conversion below. */
+/** Every signed 32-bit Int has an exact Float representation; other source types need their own conversion. */
+function needsIntegerWidening(target:TyType, source:TyType):Bool
+	return target.getSemanticKey() == "primitive:Float" && source.getSemanticKey() == "primitive:Int";
+
+/** Scalar recovery, numeric widening, and Float erasure execute before publication. */
+function needsConversion(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool
+	return needsScalarConversion(target, source, casts)
+		|| needsIntegerWidening(target, source)
+		|| CppManagedNumericErasure.selects(target, source, casts);
+
+/** Admit either an unchanged copy or an explicitly selected storage conversion. */
 function supports(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool
-	return accepts(target, source, casts) || needsScalarConversion(target, source, casts);
+	return accepts(target, source, casts) || needsConversion(target, source, casts);
 
 /**
 	Choose storage for already typed conditional branches without coercing either branch.
@@ -88,6 +100,12 @@ function conditionalStorage(left:TyType, right:TyType):TyType {
 	other type pairs emit no conversion and gain no admission from this helper.
  */
 function convertRoot(target:TyType, source:TyType, root:String, indent:String, ?casts:CppManagedCastPlan):Array<String> {
+	if (needsIntegerWidening(target, source))
+		return [
+			indent + root + ".set(hxhx::managed::Value::floating(static_cast<double>(" + root + ".get().asInteger())));"
+		];
+	if (CppManagedNumericErasure.selects(target, source, casts))
+		return CppManagedNumericErasure.render(root, indent);
 	if (!needsScalarConversion(target, source, casts))
 		return [];
 	final storedTarget = scalarRepresentation(target, casts);

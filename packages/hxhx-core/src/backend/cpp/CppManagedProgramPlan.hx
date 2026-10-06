@@ -103,6 +103,7 @@ class CppManagedProgramPlan {
 				if (instance != null
 					&& !CppManagedArrayPush.selects(instance)
 					&& !CppManagedArrayJoin.selects(instance)
+					&& !CppManagedMapSet.selects(instance)
 					&& !CppManagedMapGet.selects(instance))
 					enqueueInstance(instance, CppManagedCallContext.fromInitializer(application));
 				final call = TypedExactStaticCallSource.decode(expression);
@@ -214,6 +215,7 @@ class CppManagedProgramPlan {
 					if (instance != null
 						&& !CppManagedArrayPush.selects(instance)
 						&& !CppManagedArrayJoin.selects(instance)
+						&& !CppManagedMapSet.selects(instance)
 						&& !CppManagedMapGet.selects(instance))
 						enqueueInstance(instance, CppManagedCallContext.fromFunction(applications.get(identity)));
 					final call = TypedExactStaticCallSource.decode(expression);

@@ -269,7 +269,7 @@ class CppManagedRootedExpression {
 		if (acceptsStoredTransfer(value, target))
 			return render(value, destination, indent);
 		final source = valueType(value);
-		if (CppManagedValueTransfer.needsScalarConversion(target, source, input.casts))
+		if (CppManagedValueTransfer.needsConversion(target, source, input.casts))
 			return render(value, destination, indent).concat(CppManagedValueTransfer.convertRoot(target, source, destination, indent, input.casts));
 		if (CppManagedArrayRecovery.selects(target, source))
 			return CppManagedArrayRecovery.render({
@@ -313,7 +313,7 @@ class CppManagedRootedExpression {
 					indent + "{",
 					indent + "  hxhx::managed::Root<hxhx::managed::Value> " + root + "(" + input.heap + ");"
 				];
-				for (line in render(value, root, indent + "  "))
+				for (line in renderTransfer(value, TyType.fromHintText("Dynamic"), root, indent + "  "))
 					lines.push(line);
 				final carrier = root + "_carrier";
 				lines.push(indent + "  auto " + carrier + " = hxhx::managed::ThrownValue(" + input.heap + ", " + root + ".get());");
@@ -407,6 +407,10 @@ class CppManagedRootedExpression {
 	/** Keep occurrence ownership in the declared view, then apply types at the storage boundary. */
 	function declaredValueType(value:HxExpr):TyType {
 		final call = instanceCall(value);
+		if (CppManagedMapSet.selects(call)) {
+			CppManagedMapSet.require(call, input.classes, input.enums, input.casts);
+			return call.getResultType();
+		}
 		if (CppManagedArrayPush.selects(call)) {
 			CppManagedArrayPush.require(call, input.casts);
 			return call.getResultType();
@@ -716,7 +720,11 @@ class CppManagedRootedExpression {
 				return lines;
 			case ECast(_, _):
 				final conversion = converted(value);
-				return render(conversion == null ? locals.requireAscribedClosure(value) : conversion.getOperand(), destination, indent);
+				final lines = render(conversion == null ? locals.requireAscribedClosure(value) : conversion.getOperand(), destination, indent);
+				if (conversion != null
+					&& CppManagedNumericErasure.selects(conversion.getTargetType(), conversion.getSourceType(), input.casts))
+					return lines.concat(CppManagedNumericErasure.render(destination, indent));
+				return lines;
 			case EIdent(_):
 				return [indent + destination + ".set(" + locals.value(value) + ");"];
 			case ELambda(_, _):
@@ -856,6 +864,17 @@ class CppManagedRootedExpression {
 			case _:
 		}
 		final instance = instanceCall(expression);
+		if (CppManagedMapSet.selects(instance))
+			return CppManagedMapSet.render({
+				call: instance,
+				classes: input.classes,
+				enums: input.enums,
+				casts: input.casts,
+				heap: input.heap,
+				prefix: input.temporaryPrefix + "map_set_",
+				destination: destination,
+				renderValue: render
+			}, indent);
 		if (CppManagedArrayPush.selects(instance))
 			return CppManagedArrayPush.render({
 				call: instance,

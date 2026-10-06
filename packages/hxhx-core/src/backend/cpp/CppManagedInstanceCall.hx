@@ -90,7 +90,7 @@ function render(input:{
 			&& !parameter.type.isNullable() ? TyType.nullable(parameter.type) : parameter.type;
 		if (expression != null
 			&& !input.acceptsStoredTransfer(expression, acceptedType)
-			&& !CppManagedValueTransfer.needsScalarConversion(acceptedType, input.valueType(expression), input.classes.casts))
+			&& !CppManagedValueTransfer.needsConversion(acceptedType, input.valueType(expression), input.classes.casts))
 			throw 'managed instance argument requires an explicit typed conversion';
 		final root = input.prefix + 'argument' + parameter.slot;
 		lines.push(indent + '  hxhx::managed::Root<hxhx::managed::Value> ' + root + '(' + input.heap + ');');
@@ -124,7 +124,7 @@ function render(input:{
 			if (!CppManagedValueTransfer.supports(accepted, source, input.classes.casts))
 				throw "managed override argument requires an explicit storage adaptation";
 			var root = roots[slot];
-			if (CppManagedValueTransfer.needsScalarConversion(accepted, source, input.classes.casts)) {
+			if (CppManagedValueTransfer.needsConversion(accepted, source, input.classes.casts)) {
 				root = input.prefix + "override_argument" + slot;
 				lines.push(callIndent + "hxhx::managed::Root<hxhx::managed::Value> " + root + "(" + input.heap + ", " + roots[slot] + ".get());");
 				for (line in CppManagedValueTransfer.convertRoot(accepted, source, root, callIndent, input.classes.casts))

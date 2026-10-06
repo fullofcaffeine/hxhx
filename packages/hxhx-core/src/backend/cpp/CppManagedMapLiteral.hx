@@ -13,7 +13,8 @@ function render(input:CppManagedAggregate.CppManagedAggregateInput, indent:Strin
 		throw "managed Map literal requires every typed arrow entry";
 	for (entry in entries)
 		if (entry.keyType.getSemanticKey() != storage.keyType.getSemanticKey()
-			|| !CppManagedValueTransfer.accepts(storage.valueType, entry.valueType, input.casts))
+			|| (!CppManagedValueTransfer.accepts(storage.valueType, entry.valueType, input.casts)
+				&& !CppManagedNumericErasure.selects(storage.valueType, entry.valueType, input.casts)))
 			throw "managed Map literal entry requires an explicit typed conversion";
 	final parent = input.destination + "_map";
 	final key = input.destination + "_key";
@@ -36,6 +37,8 @@ function render(input:CppManagedAggregate.CppManagedAggregateInput, indent:Strin
 		for (line in input.renderValue(entry.key, key, indent + "  "))
 			lines.push(line);
 		for (line in input.renderValue(entry.value, value, indent + "  "))
+			lines.push(line);
+		for (line in CppManagedValueTransfer.convertRoot(storage.valueType, entry.valueType, value, indent + "  ", input.casts))
 			lines.push(line);
 		lines.push(indent
 			+ "  "

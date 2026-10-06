@@ -133,9 +133,12 @@ class CppManagedExpressionLocals {
 				if (input.initializer != null) {
 					final source = input.valueType(input.initializer);
 					if (!input.accepts(input.initializer, type)
-						&& !CppManagedValueTransfer.needsScalarConversion(type, source, input.casts)
+						&& !CppManagedValueTransfer.needsConversion(type, source, input.casts)
 						&& !CppManagedArrayRecovery.selects(type, source))
-						throw "managed local initialization requires an explicit typed conversion";
+						throw "managed local initialization requires an explicit typed conversion: "
+							+ source.getSemanticKey()
+							+ " -> "
+							+ type.getSemanticKey();
 				}
 				access.locals.renderDeclaration(selected, input.initializer, input.heap, input.indent, render);
 		};

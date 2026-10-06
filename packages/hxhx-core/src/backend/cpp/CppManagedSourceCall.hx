@@ -89,7 +89,7 @@ function render(input:CppManagedSourceCallInput, indent:String):Array<String> {
 			&& !parameter.type.isNullable() ? TyType.nullable(parameter.type) : parameter.type;
 		if (expression != null
 			&& !input.acceptsStoredTransfer(expression, acceptedType)
-			&& !CppManagedValueTransfer.needsScalarConversion(acceptedType, input.valueType(expression), input.casts))
+			&& !CppManagedValueTransfer.needsConversion(acceptedType, input.valueType(expression), input.casts))
 			throw "managed source argument requires an explicit typed conversion at slot "
 				+ parameter.slot
 				+ ": "

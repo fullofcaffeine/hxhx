@@ -17,7 +17,7 @@ function render(input:{
 }, indent:String):Array<String> {
 	final storage = CppManagedMapStorage.select(input.mapType, input.classes, input.enums);
 	if (storage.keyType.getSemanticKey() != input.keyType.getSemanticKey()
-		|| !CppManagedValueTransfer.accepts(storage.valueType, input.valueType, input.casts))
+		|| !CppManagedValueTransfer.supports(storage.valueType, input.valueType, input.casts))
 		throw "managed map insertion requires its exact key and value types";
 	final map = input.prefix + "map";
 	final key = input.prefix + "key";
@@ -32,6 +32,8 @@ function render(input:{
 	])
 		for (line in input.renderValue(operand.expression, operand.root, indent + "  "))
 			lines.push(line);
+	for (line in CppManagedValueTransfer.convertRoot(storage.valueType, input.valueType, value, indent + "  ", input.casts))
+		lines.push(line);
 	lines.push(indent
 		+ "  "
 		+ map
