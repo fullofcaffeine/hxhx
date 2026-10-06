@@ -7541,6 +7541,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EDiscardThen(_, _):
 				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				pythonMacroEnum("EBlock", ["[" + [for (child in children) pythonMacroExpr(child, [])].join(", ") + "]"]);
 			case EString(value):
 				pythonMacroEnum("EConst", [
 					pythonMacroEnum("CString", [quoteString(value), pythonMacroEnum("DoubleQuotes", [])])
@@ -7957,6 +7959,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EDiscardThen(_, _):
 				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				phpMacroEnum("EBlock", ["[" + [for (child in children) phpMacroExpr(child, [])].join(", ") + "]"]);
 			case EString(value):
 				phpMacroEnum("EConst", [
 					phpMacroEnum("CString", [PhpSyntax.quoteString(value), phpMacroEnum("DoubleQuotes", [])])

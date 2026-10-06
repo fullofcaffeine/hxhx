@@ -199,6 +199,9 @@ class CppMacroExpr {
 				throw "C++ macro metadata requires the source quotation contract (haxe_ocaml-o25kr)";
 			case EDiscardThen(_, _):
 				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				// Only authored brace groups may become quoted blocks; preserve each nested group.
+				macroEnum("EBlock", [for (child in children) macroExpr(child, [])]);
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [macroString(value), macroEnum("DoubleQuotes", [])])]);
 			case EInt(value):

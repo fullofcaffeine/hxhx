@@ -61,6 +61,11 @@ class NekoMacroExprBuilder {
 		return switch (expr) {
 			case EDiscardThen(_, _):
 				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				// Preserve source braces independently of the sequence used for runtime evaluation.
+				macroEnum("EBlock", [
+					"$array(" + [for (child in children) macroExprObject(macroExprDef(child))].join(", ") + ")"
+				]);
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [quote(value), macroEnum("DoubleQuotes", [])])]);
 			case EInt(value):

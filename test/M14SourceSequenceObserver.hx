@@ -46,15 +46,12 @@ class M14SourceSequenceObserver {
 		final module = new ResolvedModule("Main", "Main.hx", parsed);
 		final body = TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getTypedClasses()[0].getFunctions()[0];
 		final projection = TypedBodySource.functionProjection(body);
-		final expression = switch (projection.getBody()[0]) {
-			case SReturn(value, _): value;
-			case _: throw "missing projected sequence";
-		};
-		observe(expression, HxFunctionArg.getName(HxFunctionDecl.getArgs(projection.getDeclaration())[0]));
+		observe(projection, HxFunctionArg.getName(HxFunctionDecl.getArgs(projection.getDeclaration())[0]));
 		Sys.println("SOURCE_SEQUENCE:PASS");
 	}
 
-	public static function observe(expression:HxExpr, parameter:String):Void {
+	/** Render the complete lowered body so result locals and discarded calls share their real scope. */
+	public static function observe(projection:TypedBackendFunctionProjection, parameter:String):Void {
 		final root = ".tmp/sequence_source_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final quoteSource = HxExpr.ESourceGroup([EInt(1), EInt(2)], HxPos.unknown());
@@ -74,27 +71,25 @@ class M14SourceSequenceObserver {
 			+
 			"; $items=$quoted->expr->__hx_params[0]; echo $quoted->expr->__hx_ctor,':',count($items),':',$items[0]->expr->__hx_params[0]->__hx_params[0],':',$items[1]->expr->__hx_params[0]->__hx_params[0],\"\\n\";",
 			"EBlock:2:1:2");
-		final python = @:privateAccess SourceTargetCommon.renderExpr(Python, expression);
+		final python = @:privateAccess SourceTargetCommon.renderStmts(Python, projection.getBody(), " ").join("\n");
 		check(root
 			+ "/sequence.py", "python3", [],
 			"state=[0,False]\ndef "
 			+ parameter
-			+ "():\n state[0]+=1\n if state[1]: raise Exception('stop')\nresult="
+			+ "():\n state[0]+=1\n if state[1]: raise Exception('stop')\ndef run():\n"
 			+ python
-			+ "\nprint(str(result)+':'+str(state[0]))\nstate[:]=[0,True]\ntry:\n "
-			+ python
+			+ "\nresult=run()\nprint(str(result)+':'+str(state[0]))\nstate[:]=[0,True]\ntry:\n run()"
 			+ "\n print('unexpected')\nexcept Exception as e:\n print(str(e)+':'+str(state[0]))\n");
-		final lua = @:privateAccess SourceTargetCommon.renderExpr(Lua, expression);
+		final lua = @:privateAccess SourceTargetCommon.renderStmts(Lua, projection.getBody(), " ").join("\n");
 		check(root
 			+ "/sequence.lua", "lua", [],
 			"local n=0; local stop=false; local function "
 			+ parameter
-			+ "() n=n+1; if stop then error('stop',0) end end\nlocal result="
+			+ "() n=n+1; if stop then error('stop',0) end end\nlocal function run()\n"
 			+ lua
-			+ "\nprint(result..':'..n)\nn=0;stop=true;local ok,err=pcall(function() return "
-			+ lua
-			+ " end)\nif ok then error('unexpected') end\nprint(err..':'..n)\n");
-		final javaBody = @:privateAccess SourceTargetCommon.renderStmt(Java, SReturn(expression, HxPos.unknown()), "").join("\n");
+			+ "\nend\nlocal result=run()\nprint(result..':'..n)\nn=0;stop=true;local ok,err=pcall(run)"
+			+ "\nif ok then error('unexpected') end\nprint(err..':'..n)\n");
+		final javaBody = @:privateAccess SourceTargetCommon.renderStmts(Java, projection.getBody(), "").join("\n");
 		sys.io.File.saveContent(root
 			+ "/Sequence.java",
 			"class Sequence { static int n=0; static boolean stop=false; static void "
@@ -105,7 +100,7 @@ class M14SourceSequenceObserver {
 			+ "catch(RuntimeException e){System.out.println(e.getMessage()+\":\"+n);}}}\n");
 		run("javac", [root + "/Sequence.java"]);
 		requireOutput(run("java", ["-cp", root, "Sequence"]));
-		final csBody = @:privateAccess SourceTargetCommon.renderStmt(Cs, SReturn(expression, HxPos.unknown()), "").join("\n");
+		final csBody = @:privateAccess SourceTargetCommon.renderStmts(Cs, projection.getBody(), "").join("\n");
 		sys.io.File.saveContent(root
 			+ "/Sequence.cs",
 			"class Sequence { static int n=0; static bool stop=false; static void "

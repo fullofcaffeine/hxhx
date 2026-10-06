@@ -1,4 +1,5 @@
-import backend.js.JsExprEmitter;
+import backend.js.JsStmtEmitter;
+import backend.js.JsWriter;
 import backend.js.JsFunctionScope;
 import HxExpr;
 
@@ -7,20 +8,24 @@ class M14SequenceExpressionIntegrationTest {
 	static function main():Void {
 		walkers();
 		M14SourceSequenceObserver.checkWalkers();
-		final parsed = ParserStage.parse("class Main { static function run(step:()->Void):Int return { step(); step(); 7; }; }", "Main.hx");
+		final runSource = "static function run(step:()->Void):Int return { step(); step(); 7; };";
+		observeUpstream(runSource);
+		final parsed = ParserStage.parse("class Main { "
+			+ runSource
+			+ " static function make():Dependency return new Dependency(); } class Dependency { public function new() {} }",
+			"Main.hx");
 		final module = new ResolvedModule("Main", "Main.hx", parsed);
-		final functionBody = TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getTypedClasses()[0].getFunctions()[0];
+		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final functionBody = typed.getTypedClasses()[0].getFunctions()[0];
 		final value = functionBody.getBody().getStatements()[0].getExpressions()[0];
-		if (!value.getTag().match(Block) || value.getType().getDisplay() != "Int")
+		if (!value.getTag().match(SourceGroup) || value.getType().getDisplay() != "Int" || value.getExpressions().length != 3)
 			throw "sequence did not retain its typed children and final result";
 		final projection = TypedBodySource.functionProjection(functionBody);
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, null, projection.getLocalCatalog());
 		final name = scope.declareLocal(HxFunctionArg.getName(HxFunctionDecl.getArgs(projection.getDeclaration())[0]));
-		final expression = switch (projection.getBody()[0]) {
-			case SReturn(result, _): result;
-			case _: throw "missing projected sequence";
-		};
-		final generated = JsExprEmitter.emit(expression, scope.exprScope());
+		final writer = new JsWriter();
+		JsStmtEmitter.emitFunctionBody(writer, projection.getBody(), scope);
+		final generated = "(function(){" + writer.toString() + "})()";
 		observe("let n=0;const " + name + "=()=>{n++;};const result=" + generated + ";console.log(result+':'+n);", "7:2");
 		observe("let n=0;const "
 			+ name
@@ -28,20 +33,25 @@ class M14SequenceExpressionIntegrationTest {
 			+ generated
 			+ ";console.log('unexpected');}catch(e){console.log(e.message+':'+n);}",
 			"stop:1");
-		observeOcaml(expression, projection, name);
-		observeCpp(expression, name);
-		observeNeko(expression, name);
+		observeOcaml(projection, name);
+		observeCpp(projection, name);
+		observeNeko(typed.getBackendProjection(), name);
+		M14SourceGroupMacroAdapterTest.run();
 		Sys.println("SEQUENCE_EXPRESSION:PASS");
 	}
 
 	/** Native Neko blocks retain the last value and stop evaluating after an exception. */
-	static function observeNeko(expression:HxExpr, parameter:String):Void {
+	static function observeNeko(module:TypedBackendModuleProjection, parameter:String):Void {
+		final program = new backend.vm.NekoTypedProgramProjection("sequence-observer", [module]);
+		final functions = program.requireClass("Main").getFunctions();
+		final projection = functions[0];
+		final factory = functions[1];
 		final locals = new haxe.ds.StringMap<Bool>();
 		locals.set(parameter, true);
 		final context:backend.vm.NekoEmitContext = {
 			classes: new haxe.ds.StringMap(),
-			typedProgram: null,
-			currentExecutable: null,
+			typedProgram: program,
+			currentExecutable: FunctionBody(program.requireDeclaredFunction(factory.getDeclaration())),
 			captureStorage: null,
 			abstractHelpers: [],
 			abstractHelperIds: new haxe.ds.StringMap(),
@@ -54,18 +64,24 @@ class M14SequenceExpressionIntegrationTest {
 			insideTry: false,
 			breakFlag: null
 		};
-		final cls = HxModuleDecl.getClasses(ParserStage.parse("class Dependency {}", "Dependency.hx").getDecl())[0];
-		context.classes.set("Dependency", {fullName: "Dependency", shortName: "Dependency", cls: cls});
-		for (node in [
-			EDiscardThen(ENew("Dependency", []), EInt(1)),
-			EDiscardThen(EInt(1), ENew("Dependency", []))
-		]) {
+		final cls = program.requireClass("Main.Dependency").getDeclaration();
+		context.classes.set("Main.Dependency", {fullName: "Main.Dependency", shortName: "Dependency", cls: cls});
+		// Reachability consumes the exact projected allocation, whose catalog selects the constructor.
+		final allocation = switch (factory.getBody()[0]) {
+			case SReturn(value, _): value;
+			case _: throw "missing projected dependency allocation";
+		};
+		for (node in [EDiscardThen(allocation, EInt(1)), EDiscardThen(EInt(1), allocation)]) {
 			var found = 0;
 			@:privateAccess backend.vm.NekoTargetCore.collectExprRefs(context, node, info -> found++, (info, fn) -> {});
 			if (found != 1)
 				throw "Neko dependency traversal skipped a sequence child";
 		}
-		final generated = @:privateAccess backend.vm.NekoTargetCore.renderExpr(context, expression);
+		context.currentExecutable = FunctionBody(program.requireDeclaredFunction(projection.getDeclaration()));
+		final statements = new Array<String>();
+		for (statement in projection.getBody())
+			@:privateAccess backend.vm.NekoTargetCore.renderStmt(statements, context, statement, "");
+		final generated = "(function(){" + statements.join("\n") + "})()";
 		final quoted = backend.vm.NekoMacroExprLowering.render(ESourceGroup([EInt(1), EInt(2)], HxPos.unknown()), [],
 			_ -> throw "sequence quotation used fallback");
 		final root = ".tmp/sequence_neko_" + Date.now().getTime();
@@ -125,15 +141,14 @@ class M14SequenceExpressionIntegrationTest {
 				throw "C++ call scan skipped a sequence child";
 	}
 
-	/** The native comma operator discards even a Void first child and stops when it throws. */
-	static function observeCpp(expression:HxExpr, parameter:String):Void {
-		final generated = @:privateAccess backend.cpp.CppTargetCore.renderExpr(expression);
+	/** Execute the complete lowered body, including its result storage and discarded Void calls. */
+	static function observeCpp(projection:TypedBackendFunctionProjection, parameter:String):Void {
+		final generated = "([&]()->int {" + @:privateAccess backend.cpp.CppTargetCore.renderStmts(projection.getBody(), "").join("\n") + "})()";
 		final quoted = backend.cpp.CppMacroExpr.macroExpr(ESourceGroup([EInt(1), EInt(2)], HxPos.unknown()), []);
 		final ordinaryLambda = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("__hxhx_lambda_seq_0")),
 			[ECall(EIdent("eq"), [])]));
-		final resultType = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(expression);
-		if (resultType != "int")
-			throw "C++ sequence lost its continuation type: " + resultType;
+		if (projection.getReturnType().getSemanticKey() != "primitive:Int")
+			throw "C++ sequence lost its projected result type";
 		final root = ".tmp/sequence_cpp_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final source = "#include <cstdio>\n#include <stdexcept>\n#include <memory>\n#include <vector>\n#include <string>\n#include <sstream>\n"
@@ -159,10 +174,20 @@ class M14SequenceExpressionIntegrationTest {
 	}
 
 	/** Compile the projected authored body and observe both normal and exceptional native execution. */
-	static function observeOcaml(expression:HxExpr, projection:TypedBackendFunctionProjection, parameterName:String):Void {
+	static function observeOcaml(projection:TypedBackendFunctionProjection, parameterName:String):Void {
 		final names = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false, name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
 		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = names;
-		final generated = @:privateAccess EmitterStage.exprToOcaml(expression);
+		final types = new Map<String, TyType>();
+		for (entry in projection.getLocalCatalog().getEntries())
+			types.set(entry.getProjectedName(), entry.getBinding().getType());
+		@:privateAccess EmitterStage.currentTypedFunction = projection;
+		final body = @:privateAccess EmitterStage.stmtListToOcaml(projection.getBody(), [parameterName => true], "Sequence_return", [parameterName => 0],
+			types, [], "", [], [], types, [], null, [parameterName]);
+		// Statement returns use a boxed exception payload. The checked projection guarantees an Int here.
+		final generated = "(let exception Sequence_return of Obj.t in try (let _ = "
+			+ body
+			+ " in failwith \"missing sequence return\") with Sequence_return value -> (Obj.obj value : int))";
+		@:privateAccess EmitterStage.currentTypedFunction = null;
 		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = null;
 		final parameter = names.targetName(parameterName);
 		final root = ".tmp/sequence_expression_" + Date.now().getTime();
@@ -182,6 +207,22 @@ class M14SequenceExpressionIntegrationTest {
 		final output = run(root + "/sequence.exe", []);
 		if (StringTools.trim(output) != "7:2\nstop:1")
 			throw "native OCaml sequence differs: " + output;
+	}
+
+	/** Check the same authored function against upstream before observing projected target code. */
+	static function observeUpstream(runSource:String):Void {
+		final root = ".tmp/sequence_upstream_" + Date.now().getTime();
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root
+			+ "/Main.hx",
+			"class Main { "
+			+ runSource
+			+ " static function main() { var n = 0; var result = run(function() { n++; }); Sys.println(result + ':' + n);"
+			+ " n = 0; try { run(function() { n++; throw 'stop'; }); Sys.println('unexpected'); }"
+			+ " catch (e:String) { Sys.println(e + ':' + n); } } }");
+		final output = run("haxe", ["-cp", root, "-main", "Main", "--interp"]);
+		if (StringTools.trim(output) != "7:2\nstop:1")
+			throw "upstream sequence differs: " + output;
 	}
 
 	static function run(command:String, arguments:Array<String>):String {
