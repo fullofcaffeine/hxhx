@@ -309,7 +309,7 @@ class CppManagedProgramPlan {
 		for (initializer in initializers)
 			startup.push("  " + initializer.symbol + "(heap);");
 		program.assertCurrent();
-		return '#include "ManagedCallable.hpp"\n#include "ManagedOutput.hpp"\n'
+		return '#include "ManagedCallable.hpp"\n#include "ManagedOutput.hpp"\n#include "ManagedString.hpp"\n'
 			+ sources.join("\n")
 			+ "\nvoid hxhx_program_run(hxhx::managed::Heap& heap) {\n"
 			+ startup.join("\n")

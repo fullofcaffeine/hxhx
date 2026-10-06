@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ManagedHeap.hpp"
+#include <algorithm>
 #include <map>
 #include <string>
 #include <variant>
@@ -107,6 +108,7 @@ template<> struct Trace<ArrayPayload> {
 // or map iterator escapes across collecting source operations.
 class RecordPayload {
   std::map<std::string, Value> fields_;
+  std::vector<std::string> fieldOrder_;
 public:
   bool contains(const std::string& name) const { return fields_.find(name) != fields_.end(); }
   Value read(const std::string& name) const { return fields_.at(name); }
@@ -115,6 +117,23 @@ public:
       throw std::invalid_argument("record field is already defined");
   }
   void write(const std::string& name, Value value) { fields_.at(name) = std::move(value); }
+  // Haxe supplies native observation order after authored field initialization.
+  // Snapshot names, not values: a conversion callback can change a later field.
+  void setFieldOrder(std::vector<std::string> names) {
+    if (names.size() != fields_.size()) throw std::invalid_argument("record field order is incomplete");
+    auto sorted = names;
+    std::sort(sorted.begin(), sorted.end());
+    auto field = fields_.begin();
+    for (const auto& name : sorted) {
+      if (field == fields_.end() || field->first != name) throw std::invalid_argument("record field order is foreign or repeated");
+      ++field;
+    }
+    fieldOrder_ = std::move(names);
+  }
+  std::vector<std::string> fieldNames() const {
+    if (fieldOrder_.size() != fields_.size()) throw std::logic_error("record field order was not selected");
+    return fieldOrder_;
+  }
   void trace(Visitor& visitor) const noexcept {
     for (const auto& field : fields_) field.second.trace(visitor);
   }

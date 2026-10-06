@@ -2,7 +2,8 @@ package backend.cpp;
 
 /**
 	Plan value-preserving casts and class upcasts through exact program types.
-	Admit an authored unchecked cast only when exact storage types agree.
+	Admit an authored unchecked cast only when exact storage types agree; an exact
+	null literal may also retain null in a destination with null-capable storage.
 	An explicit cast does not need an abstract's implicit conversion header. It
 	still needs a target operation: this plan supports preserving a stored value,
 	and rejects casts requiring a runtime check or a representation change.
@@ -29,6 +30,11 @@ class CppManagedCastPlan {
 		final find = owners.get(occurrence.getOwnerIdentity());
 		if (find == null || find(occurrence.getExpression()) != occurrence)
 			throw "managed cast belongs to another program";
+		// Both a valid annotation and a checked reference cast preserve an exact
+		// null literal. This does not guess which syntax was written or authorize
+		// non-null checked casts; scalar backing types still need conversion.
+		if (occurrence.getSourceType().isNullLiteral() && retainsNull(occurrence.getTargetType()))
+			return;
 		if (!occurrence.isUnchecked())
 			throw "managed cast requires an explicit runtime conversion plan";
 		final source = storageType(occurrence.getSourceType(), new haxe.ds.StringMap());

@@ -25,9 +25,19 @@ public and private classes. Compiler lookup paths remain separate identities.
 record formatting, and two instantiations of a generic class. Run
 `npm run test:m14:cpp-object-string` to compare candidate output with
 `expected.cpp.stdout`. This broader test remains required even when the instance
-contract passes. The complete test exceeds both 180- and 360-second observation
-windows before publishing C++. A separate planning/rendering probe completes, but
-the normal end-to-end path still needs a completed result.
+contract passes. The complete native program now matches `expected.cpp.stdout`,
+including records, record callbacks, arrays, and nested exception conversion.
+
+`AggregateContract.hx` checks field order, nested records and arrays, null and thrown
+callback results, and mutations made during conversion. A later field or array
+element must see changes made by an earlier callback. Native record order differs
+from alphabetical order and does not change when source fields are reordered.
+
+Run `npm run test:m14:cpp-aggregate-string` for the focused native contract and
+both sanitizer profiles with forced collection. Use the reference commands below
+with `-main AggregateContract` to check it against upstream native C++. Successful
+execution produces no output. This contract uses native expectations; interpreter
+formatting and null-result behavior differ.
 
 `GenericContract.hx` checks different applications of the same ordinary generic
 class. `GenericBox<Int>` and `GenericBox<String>` must select their own compiled
@@ -57,5 +67,6 @@ The different record formatting and null-result behavior are intentional referen
 observations. Interpreter output must not replace the native expectation.
 
 `haxe_ocaml-hcnk8` remains open for complete conversion, including
-aggregates, function-valued conversion fields, and the separately reviewed Float
+other callable signatures, non-callable conversion fields, cyclic aggregates,
+field-hash collisions and Unicode ordering, and the separately reviewed Float
 contract. These tests do not establish Full1 readiness or PR92 integration.

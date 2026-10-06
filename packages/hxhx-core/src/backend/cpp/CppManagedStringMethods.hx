@@ -127,6 +127,7 @@ class CppManagedStringMethods {
 		}
 		lines.push('    throw std::invalid_argument("managed string conversion received an unplanned instance descriptor");');
 		lines.push("  }");
+		lines.push("  if (hxhx::managed::formatAggregateString(heap, value.get(), result, &hxhx_standard_string)) return;");
 		for (line in CppManagedStringConversion.render(TyType.fromHintText("Dynamic"), "value.get()", "bytes"))
 			lines.push("  " + line);
 		lines.push("  result.set(hxhx::managed::Value::string(bytes));\n}");

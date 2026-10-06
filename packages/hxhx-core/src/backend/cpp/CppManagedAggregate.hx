@@ -91,6 +91,13 @@ function render(input:CppManagedAggregateInput, indent:String):Array<String> {
 			+ ".get());");
 		lines.push(indent + "  " + child + ".set({});");
 	}
+	if (names != null)
+		lines.push(indent
+			+ "  "
+			+ parent
+			+ ".get()->setFieldOrder({"
+			+ CppManagedRecordOrder.names(names).map(CppManagedText.literal).join(", ")
+			+ "});");
 	lines.push(indent + "  " + input.destination + ".set(hxhx::managed::Value::managed(" + parent + ".get()));");
 	lines.push(indent + "}");
 	return lines;

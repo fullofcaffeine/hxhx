@@ -47,11 +47,27 @@ class M14CppManagedCastPlanTest {
 		final foreign = authored(project(source));
 		for (occurrence in foreign)
 			rejected(() -> plan.requireStoredValue(occurrence), "current initializer projection");
+		for (declaration in [
+			"static var value:Void->String = (null:Void->String);",
+			"static var value:String = (null:String);",
+			"static var value:Carrier<Int> = cast(null, Carrier<Int>);"
+		]) {
+			final text = "class Main { " + declaration + " static function main():Void {} } class Carrier<T> {}";
+			final nullable = project(text);
+			final selected = authored(nullable);
+			if (selected.length != 1)
+				throw "null cast fixture lost its exact occurrence";
+			final nullPlan = new CppManagedCastPlan(nullable);
+			nullPlan.requireStoredValue(selected[0]);
+			for (copied in authored(project(text)))
+				rejected(() -> nullPlan.requireStoredValue(copied), "current initializer projection");
+		}
 		for (declarations in [
 			"static var value:Hidden<Bool> = cast 7;",
 			"static var source:Carrier<Int>; static var value:Carrier<Bool> = cast source;",
 			"static var value:Int = cast(7, Int);",
-			"static var source:Dynamic = 7; static var value:Int = cast source;"
+			"static var source:Dynamic = 7; static var value:Int = cast source;",
+			"static var value:Int = (null:Int);"
 		]) {
 			final invalid = project("class Main { " + declarations + " static function main():Void {} } abstract Hidden<T>(T) {} class Carrier<T> {}");
 			final selected = authored(invalid);

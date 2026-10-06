@@ -20,7 +20,8 @@ class CppManagedRuntimeMacro {
 			"ManagedThrow.hpp",
 			"ManagedStack.hpp",
 			"ManagedCallable.hpp",
-			"ManagedOutput.hpp"
+			"ManagedOutput.hpp",
+			"ManagedString.hpp"
 		]) {
 			final path = haxe.io.Path.join([root, name]);
 			Context.registerModuleDependency(Context.getLocalModule(), path);

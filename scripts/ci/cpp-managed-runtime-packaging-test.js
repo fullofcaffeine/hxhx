@@ -13,7 +13,7 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-managed-runtime-')
 const owner = path.join(temporary, 'owner')
 const source = path.join(owner, 'src')
 const launch = path.join(temporary, 'launch')
-const headers = ['ManagedHeap.hpp', 'ManagedValue.hpp', 'ManagedEquality.hpp', 'ManagedMap.hpp', 'ManagedThrow.hpp', 'ManagedStack.hpp', 'ManagedCallable.hpp', 'ManagedOutput.hpp']
+const headers = ['ManagedHeap.hpp', 'ManagedValue.hpp', 'ManagedEquality.hpp', 'ManagedMap.hpp', 'ManagedThrow.hpp', 'ManagedStack.hpp', 'ManagedCallable.hpp', 'ManagedOutput.hpp', 'ManagedString.hpp']
 const haxe = process.env.HAXE || 'haxe'
 const neko = process.env.NEKO || 'neko'
 let server

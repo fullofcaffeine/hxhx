@@ -219,7 +219,37 @@ static void inheritedInstance() {
   require(heap.liveCount() == 0, "inherited instance leaked");
 }
 
+// Field order is compiler-selected metadata; values remain live mutable storage.
+static void recordFieldOrder() {
+  Heap heap(0);
+  Root<Ref<RecordPayload>> record(heap);
+  heap.allocateInto(record);
+  record.get()->define("first", Value::integer(1));
+  record.get()->define("later", Value::integer(2));
+  bool rejected = false;
+  try { static_cast<void>(record.get()->fieldNames()); }
+  catch (const std::logic_error&) { rejected = true; }
+  require(rejected, "record silently invented field order");
+  for (const auto& invalid : std::vector<std::vector<std::string>>{{"first"}, {"first", "first"}, {"first", "foreign"}}) {
+    rejected = false;
+    try { record.get()->setFieldOrder(invalid); }
+    catch (const std::invalid_argument&) { rejected = true; }
+    require(rejected, "invalid record field order was accepted");
+  }
+  record.get()->setFieldOrder({"later", "first"});
+  auto names = record.get()->fieldNames();
+  names[0] = "foreign";
+  record.get()->write("later", Value::integer(3));
+  heap.collect();
+  require(record.get()->fieldNames() == std::vector<std::string>{"later", "first"}, "field names were borrowed or sorted again");
+  require(record.get()->read("later").asInteger() == 3, "field order froze its values");
+  record.set({});
+  heap.collect();
+  require(heap.liveCount() == 0, "field order retained its record");
+}
+
 int main() {
+  recordFieldOrder();
   appliedInstances();
   inheritedInstance();
   emptyArrayRepresentations();
