@@ -7,11 +7,12 @@
 static void namedKeyGraph() {
   using namespace hxhx::managed;
   static const ClassDescriptor keyLayout{"Key", true, 2, nullptr};
+  static const InstanceDescriptor keyApplication{keyLayout};
   Heap heap(0);
   Root<Ref<ObjectMapPayload>> map(heap);
   Root<Ref<InstancePayload>> key(heap);
   heap.allocateInto(map);
-  heap.allocateInto(key, keyLayout, std::vector<Value>{Value::integer(7), Value{}});
+  heap.allocateInto(key, keyApplication, std::vector<Value>{Value::integer(7), Value{}});
   const auto identity = ErasedRef(key.get());
   map.get()->insert(identity, Value::string("stored"));
   key.get()->write(keyLayout, 1, Value::managed(map.get()));
@@ -20,7 +21,7 @@ static void namedKeyGraph() {
   if (heap.liveCount() != 2 || identity.as<InstancePayload>()->read(keyLayout, 0).asInteger() != 7
       || map.get()->readExisting(identity).asString() != "stored")
     throw std::runtime_error("object map failed to trace named instance keys");
-  heap.allocateInto(key, keyLayout, std::vector<Value>{Value::integer(7), Value{}});
+  heap.allocateInto(key, keyApplication, std::vector<Value>{Value::integer(7), Value{}});
   if (map.get()->contains(ErasedRef(key.get())))
     throw std::runtime_error("equal named-instance fields replaced allocation identity");
   key.set({});

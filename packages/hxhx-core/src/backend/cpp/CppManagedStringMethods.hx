@@ -67,12 +67,12 @@ class CppManagedStringMethods {
 					throw "managed string conversion requires its parameterless String method contract";
 				break;
 			}
-			final descriptor = classes.requireType(allocation).symbol;
+			final descriptor = classes.requireType(allocation).instanceSymbol;
 			final existing = selected.filter(entry -> entry.descriptor == descriptor);
 			if (existing.length != 0) {
 				final previous = existing[0].method;
 				if ((previous == null) != (method == null) || (method != null && previous.identity != method.identity))
-					throw "managed string conversion requires distinct generic receiver applications (haxe_ocaml-hcnk8)";
+					throw "managed string conversion found conflicting applications for one instance descriptor";
 				continue;
 			}
 			final facts = program.requireClass(program.requireClassIdentity(allocation.getNominalIdentity().getCanonicalName())).requireSemanticFacts();
@@ -107,7 +107,7 @@ class CppManagedStringMethods {
 			"  if (value.get().kind() == hxhx::managed::ValueKind::Managed && value.get().asManaged().hasLayout<hxhx::managed::InstancePayload>()) {"
 		];
 		if (cases.length != 0)
-			lines.push("    const auto descriptor = &value.get().asManaged().as<hxhx::managed::InstancePayload>()->descriptor();");
+			lines.push("    const auto descriptor = &value.get().asManaged().as<hxhx::managed::InstancePayload>()->instanceDescriptor();");
 		for (entry in cases) {
 			lines.push("    if (descriptor == &" + entry.descriptor + ") {");
 			if (entry.method == null) {

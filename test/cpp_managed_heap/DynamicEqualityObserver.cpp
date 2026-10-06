@@ -101,9 +101,10 @@ static void references(Heap& heap) {
   arrayCopy.get()->append(Value::string("same"));
   static const ClassDescriptor descriptor{"Same", true, 0, nullptr};
   static const ClassDescriptor otherDescriptor{"Same", true, 0, nullptr};
+  static const InstanceDescriptor application{descriptor};
   Root<Ref<InstancePayload>> instance(heap), instanceCopy(heap);
-  heap.allocateInto(instance, descriptor, std::vector<Value>{});
-  heap.allocateInto(instanceCopy, descriptor, std::vector<Value>{});
+  heap.allocateInto(instance, application, std::vector<Value>{});
+  heap.allocateInto(instanceCopy, application, std::vector<Value>{});
   using Callback = CallablePayload<void(Root<Value>&)>;
   Root<Ref<Callback>> callable(heap), callableCopy(heap);
   heap.allocateInto(callable, &leftEntry, ErasedRef{});

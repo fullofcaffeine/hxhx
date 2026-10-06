@@ -247,7 +247,7 @@ class CppManagedRootedExpression {
 		return renderTransfer(value, abi.signature.getFunctionReturn(), destination, indent);
 	}
 
-	/** Context may specialize an exact Array class literal, but cannot narrow a stored erased handle. */
+	/** Context may specialize an exact class literal, but cannot narrow a stored erased handle. */
 	public function acceptsStoredTransfer(value:HxExpr, target:TyType):Bool {
 		if (CppManagedValueTransfer.accepts(target, valueType(value), input.casts))
 			return true;
@@ -260,7 +260,7 @@ class CppManagedRootedExpression {
 					requireExpression(selected);
 					selected = inner;
 				case _:
-					return input.classes.acceptsArrayLiteral(runtimeType(selected), target);
+					return input.classes.acceptsClassLiteral(runtimeType(selected), target);
 			}
 	}
 

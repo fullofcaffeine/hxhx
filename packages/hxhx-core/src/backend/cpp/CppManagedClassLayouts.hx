@@ -14,6 +14,7 @@ class CppManagedClassLayouts {
 	final symbol:TypedBackendClassProjection->String;
 	final publish:CppManagedClassLayout->Void;
 	final applications = new haxe.ds.StringMap<CppManagedClassLayout>();
+	var nextInstanceSymbol:Int = 0;
 
 	public function new(program:CppTypedProgramProjection, symbol:TypedBackendClassProjection->String, publish:CppManagedClassLayout->Void) {
 		this.program = program;
@@ -68,6 +69,7 @@ class CppManagedClassLayouts {
 			owner: owner,
 			type: type,
 			symbol: selectedSymbol,
+			instanceSymbol: "hxhx_instance_" + nextInstanceSymbol++,
 			fields: parent == null ? fields : parent.fields.concat(fields),
 			declaredFields: parent == null ? declared : parent.declaredFields.concat(declared),
 			parent: parent == null ? null : parent.symbol
@@ -77,11 +79,28 @@ class CppManagedClassLayouts {
 		return copy(layout);
 	}
 
+	/** Each exact application dispatches independently while retaining its declaration's public identity. */
+	public function renderInstances():String {
+		program.assertCurrent();
+		final names = [for (name in applications.keys()) name];
+		names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
+		return [
+			for (name in names) {final layout = applications.get(name);
+				"inline const hxhx::managed::InstanceDescriptor "
+				+ layout.instanceSymbol
+				+ " = {"
+				+ layout.symbol
+				+ "};";
+			}
+		].join("\n");
+	}
+
 	static function copy(layout:CppManagedClassLayout):CppManagedClassLayout
 		return {
 			owner: layout.owner,
 			type: layout.type,
 			symbol: layout.symbol,
+			instanceSymbol: layout.instanceSymbol,
 			fields: layout.fields.copy(),
 			declaredFields: layout.declaredFields.copy(),
 			parent: layout.parent

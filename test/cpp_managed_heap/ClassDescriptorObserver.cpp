@@ -14,7 +14,8 @@ int main() {
   if (std::string(descriptor->identity) != "Main.Key" || !descriptor->hasInstanceLayout)
     throw std::runtime_error("class value lost its declaration identity");
   Root<Ref<InstancePayload>> instance(heap);
-  heap.allocateInto(instance, *descriptor, std::vector<Value>{Value::integer(7)});
+  const InstanceDescriptor application{*descriptor};
+  heap.allocateInto(instance, application, std::vector<Value>{Value::integer(7)});
   Root<Value> alias(heap, value.get());
   value.set({});
   heap.collect();

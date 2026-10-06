@@ -15,6 +15,7 @@ typedef CppManagedClassLayout = {
 	final owner:TypedBackendClassProjection;
 	final type:TyType;
 	final symbol:String;
+	final instanceSymbol:String;
 	final fields:Array<TypedBackendClassFieldFact>;
 	final declaredFields:Array<TypedBackendClassFieldFact>;
 	final parent:Null<String>;
@@ -269,17 +270,24 @@ class CppManagedClassStorage {
 		};
 	}
 
-	/** The owned Array literal is contextually polymorphic; a stored Class<Array<Dynamic>> is not. */
-	public function acceptsArrayLiteral(occurrence:Null<TypedBackendRuntimeTypeOccurrence>, target:TyType):Bool {
+	/**
+		A fresh class literal may take the context's complete type arguments while
+		retaining its declaration's public identity. Stored handles do not enter
+		this path, and selecting a handle must not allocate an instance layout.
+	 */
+	public function acceptsClassLiteral(occurrence:Null<TypedBackendRuntimeTypeOccurrence>, target:TyType):Bool {
 		if (occurrence == null || occurrence.getValue() != null)
 			return false;
 		switch occurrence.getTarget().getKind() {
 			case ArrayCore:
+				if (CppManagedClassValueType.arrayElement(program, target) == null)
+					return false;
+			case Nominal(identity):
+				if (!CppManagedClassValueType.acceptsNominalLiteral(program, identity, target))
+					return false;
 			case _:
 				return false;
 		}
-		if (CppManagedClassValueType.arrayElement(program, target) == null)
-			return false;
 		requireRuntimeDescriptor(occurrence);
 		return true;
 	}
@@ -596,7 +604,7 @@ class CppManagedClassStorage {
 				+ (entry.layout == null ? 'false, 0' : 'true, ' + entry.layout.fields.length)
 				+ ', '
 				+ (entry.layout == null || entry.layout.parent == null ? 'nullptr' : '&' + entry.layout.parent)
-				+ '};']).join('\n');
+				+ '};']).join('\n') + '\n' + layouts.renderInstances();
 	}
 
 	/**

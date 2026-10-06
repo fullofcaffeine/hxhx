@@ -135,25 +135,34 @@ struct ClassDescriptor {
   const ClassDescriptor* parent;
 };
 
+// Haxe selects one immutable identity for each applied instance layout. Several
+// applications can share a public class while selecting different compiled
+// method bodies. This reference never adds managed ownership or native lookup.
+struct InstanceDescriptor {
+  const ClassDescriptor& declaration;
+};
+
 // One traced allocation stores the fields selected by the Haxe layout plan.
 // Defaults arrive explicitly; native storage never invents source initialization.
 // The Haxe plan preserves each ancestor layout as a prefix and supplies the
 // complete acyclic parent chain. Native storage only checks those exact owners.
 class InstancePayload {
-  const ClassDescriptor* descriptor_;
+  const InstanceDescriptor* instanceDescriptor_;
   std::vector<Value> fields_;
   void requireOwner(const ClassDescriptor& owner) const {
     if (!hasOwner(owner)) throw std::invalid_argument("instance field belongs to another layout");
   }
 public:
-  InstancePayload(const ClassDescriptor& descriptor, std::vector<Value> defaults)
-      : descriptor_(&descriptor), fields_(std::move(defaults)) {
+  InstancePayload(const InstanceDescriptor& instanceDescriptor, std::vector<Value> defaults)
+      : instanceDescriptor_(&instanceDescriptor), fields_(std::move(defaults)) {
+    const auto& descriptor = instanceDescriptor.declaration;
     if (descriptor.identity == nullptr || descriptor.identity[0] == '\0' || !descriptor.hasInstanceLayout || fields_.size() != descriptor.fieldCount)
       throw std::invalid_argument("instance allocation requires its complete declared layout");
   }
-  const ClassDescriptor& descriptor() const noexcept { return *descriptor_; }
+  const ClassDescriptor& descriptor() const noexcept { return instanceDescriptor_->declaration; }
+  const InstanceDescriptor& instanceDescriptor() const noexcept { return *instanceDescriptor_; }
   bool hasOwner(const ClassDescriptor& owner) const noexcept {
-    for (auto current = descriptor_; current != nullptr; current = current->parent)
+    for (auto current = &descriptor(); current != nullptr; current = current->parent)
       if (current == &owner) return true;
     return false;
   }

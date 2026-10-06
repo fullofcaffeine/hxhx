@@ -141,7 +141,7 @@ function render(input:{
 		+ '('
 		+ input.heap
 		+ ');');
-	lines.push(indent + '  ' + input.heap + '.allocateInto(' + instance + ', ' + layout.symbol + ', std::vector<hxhx::managed::Value>{'
+	lines.push(indent + '  ' + input.heap + '.allocateInto(' + instance + ', ' + layout.instanceSymbol + ', std::vector<hxhx::managed::Value>{'
 		+ input.classes.defaults(type).join(', ') + '});');
 	final value = 'hxhx::managed::Value::managed(' + instance + '.get())';
 	lines.push(indent + '  ' + target.symbol + '(' + [input.heap, value].concat(transported).join(', ') + ');');

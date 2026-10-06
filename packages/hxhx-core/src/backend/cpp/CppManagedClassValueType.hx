@@ -49,3 +49,27 @@ function permitsArrayErasure(program:CppTypedProgramProjection, target:TyType, s
 	final element = arrayElement(program, target);
 	return element != null && element.isDynamic() && arrayElement(program, source) != null;
 }
+
+/** Check a fresh ordinary class literal without requesting physical instance storage. */
+function acceptsNominalLiteral(program:CppTypedProgramProjection, identity:TyNominalTypeId, target:TyType):Bool {
+	if (!selects(program, target))
+		return false;
+	final instance = target.getTypeArguments()[0];
+	if (instance.getNominalIdentity() == null || instance.getNominalIdentity().getCanonicalName() != identity.getCanonicalName())
+		return false;
+	final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+	final facts = owner.requireSemanticFacts();
+	if (!facts.getNominalKind().match(ClassInstance))
+		return false;
+	if (instance.getTypeArguments().length != facts.getTypeParameterIds().length)
+		throw 'managed class literal requires exact type argument arity';
+	if (TyTypeSubstitution.parameterIdentities(instance).length != 0)
+		throw 'managed class literal requires complete applied arguments';
+	for (metadata in HxClassDecl.getMetadata(owner.getDeclaration())) {
+		final raw = StringTools.trim(metadata);
+		final name = StringTools.startsWith(raw, '@:') ? raw.substr(2) : StringTools.startsWith(raw, ':') ? raw.substr(1) : raw;
+		if (name == 'generic' || StringTools.startsWith(name, 'generic('))
+			throw 'managed specialized classes require their own runtime identity plan';
+	}
+	return true;
+}

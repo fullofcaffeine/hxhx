@@ -159,7 +159,7 @@ function render(input:{
 			+ descriptor
 			+ ' = &'
 			+ receiver
-			+ '.get().asManaged().as<hxhx::managed::InstancePayload>()->descriptor();');
+			+ '.get().asManaged().as<hxhx::managed::InstancePayload>()->instanceDescriptor();');
 		for (index in 0...dispatch.length) {
 			final entry = dispatch[index];
 			lines.push(indent + '  ' + (index == 0 ? 'if' : 'else if') + ' (' + descriptor + ' == &' + entry.descriptor + ') {');

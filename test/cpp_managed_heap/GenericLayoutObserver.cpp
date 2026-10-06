@@ -17,6 +17,10 @@ int main() {
   const auto& box = ints->descriptor();
   if (&box != &strings->descriptor() || !leaf->hasOwner(box))
     throw std::runtime_error("generic applications lost nominal class identity");
+  if (&ints->instanceDescriptor() == &strings->instanceDescriptor()
+      || &ints->instanceDescriptor().declaration != &box
+      || &strings->instanceDescriptor().declaration != &box)
+    throw std::runtime_error("generic applications lost distinct dispatch identities");
   for (const auto value : {ints, strings, leaf}) {
     if (value->read(box, 0).asInteger() != 0 || value->read(box, 1).kind() != ValueKind::Null)
       throw std::runtime_error("applied type replaced a declared generic default");

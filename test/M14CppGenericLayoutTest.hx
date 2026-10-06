@@ -35,6 +35,8 @@ class M14CppGenericLayoutTest {
 		final leaf = layouts[2];
 		if (ints.type.getSemanticKey() == strings.type.getSemanticKey()
 			|| ints.symbol != strings.symbol
+			|| ints.instanceSymbol == strings.instanceSymbol
+			|| storage.requireType(types[0]).instanceSymbol != ints.instanceSymbol
 			|| ints.fields[1].semanticType.getSemanticKey() != "primitive:Int"
 			|| strings.fields[1].semanticType.getSemanticKey() != "primitive:String"
 			|| leaf.fields[1].semanticType.getSemanticKey() != "primitive:String"

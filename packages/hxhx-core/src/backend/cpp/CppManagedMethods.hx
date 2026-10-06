@@ -193,11 +193,11 @@ class CppManagedMethods {
 				|| CompilerCacheIdentity.encode(application.parameterTypes()
 					.map(type -> type.getSemanticKey())) != CompilerCacheIdentity.encode(selected.parameterTypes().map(type -> type.getSemanticKey())))
 				throw "managed virtual override requires an explicit signature adaptation";
-			final descriptor = classes.requireType(allocation).symbol;
+			final descriptor = classes.requireType(allocation).instanceSymbol;
 			final existing = cases.filter(entry -> entry.descriptor == descriptor);
 			if (existing.length != 0) {
 				if (existing[0].application.identity != application.identity)
-					throw "managed erased receiver descriptor selects conflicting method applications";
+					throw "managed instance descriptor selects conflicting method applications";
 				continue;
 			}
 			cases.push({descriptor: descriptor, application: application});

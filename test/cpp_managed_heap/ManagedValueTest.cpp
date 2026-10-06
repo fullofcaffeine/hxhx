@@ -121,9 +121,10 @@ static void localResultSlot() {
 static void instanceGraph() {
   static const ClassDescriptor first{"SameSpelling", true, 2, nullptr};
   static const ClassDescriptor foreign{"SameSpelling", true, 2, nullptr};
+  static const InstanceDescriptor application{first};
   Heap heap(0);
   Root<Ref<InstancePayload>> instance(heap);
-  heap.allocateInto(instance, first, std::vector<Value>{Value::integer(0), Value{}});
+  heap.allocateInto(instance, application, std::vector<Value>{Value::integer(0), Value{}});
   Root<Ref<ArrayPayload>> array(heap);
   heap.allocateInto(array, ArrayRepresentation::Dynamic);
   instance.get()->write(first, 1, Value::managed(array.get()));
@@ -150,6 +151,32 @@ static void instanceGraph() {
   require(heap.liveCount() == 0, "unreachable instance cycle leaked");
 }
 
+// Identically empty generic fields cannot identify the compiled application.
+// Its explicit descriptor survives collection without splitting public identity.
+static void appliedInstances() {
+  static const ClassDescriptor owner{"Generic", true, 1, nullptr};
+  static const InstanceDescriptor integers{owner}, strings{owner};
+  Heap heap(0);
+  Root<Ref<InstancePayload>> first(heap), second(heap), repeated(heap);
+  heap.allocateInto(first, integers, std::vector<Value>{Value{}});
+  heap.allocateInto(second, strings, std::vector<Value>{Value{}});
+  heap.allocateInto(repeated, integers, std::vector<Value>{Value{}});
+  heap.collect();
+  require(&first.get()->descriptor() == &owner && &second.get()->descriptor() == &owner,
+          "applied instances split public class identity");
+  require(&first.get()->instanceDescriptor() != &second.get()->instanceDescriptor()
+          && &first.get()->instanceDescriptor() == &repeated.get()->instanceDescriptor(),
+          "applied instance identity was inferred from fields or allocation address");
+  first.get()->write(owner, 0, Value::integer(3));
+  second.get()->write(owner, 0, Value::string("text"));
+  require(first.get()->read(owner, 0).asInteger() == 3
+          && second.get()->read(owner, 0).asString() == "text",
+          "common class owner conflated applied instance fields");
+  first.set({}); second.set({}); repeated.set({});
+  heap.collect();
+  require(heap.liveCount() == 0, "instance descriptors retained released objects");
+}
+
 static void emptyArrayRepresentations() {
   Heap heap(0);
   Root<Ref<ArrayPayload>> boolean(heap), integer(heap);
@@ -171,9 +198,10 @@ static void inheritedInstance() {
   static const ClassDescriptor child{"Child", true, 2, &base};
   static const ClassDescriptor leaf{"Leaf", true, 3, &child};
   static const ClassDescriptor foreign{"Base", true, 1, nullptr};
+  static const InstanceDescriptor application{leaf};
   Heap heap(0);
   Root<Ref<InstancePayload>> instance(heap);
-  heap.allocateInto(instance, leaf, std::vector<Value>{Value::integer(7), Value::string("child"), Value{}});
+  heap.allocateInto(instance, application, std::vector<Value>{Value::integer(7), Value::string("child"), Value{}});
   instance.get()->write(base, 0, Value::integer(11));
   require(instance.get()->read(leaf, 0).asInteger() == 11, "upcast lost inherited alias");
   require(&instance.get()->descriptor() == &leaf && instance.get()->hasOwner(base)
@@ -192,6 +220,7 @@ static void inheritedInstance() {
 }
 
 int main() {
+  appliedInstances();
   inheritedInstance();
   emptyArrayRepresentations();
   instanceGraph();
@@ -209,6 +238,7 @@ int main() {
   catch (const std::bad_variant_access&) { rejected = true; }
   require(rejected, "storage access performed an implicit semantic conversion");
   static const ClassDescriptor descriptor{"Probe", false, 0, nullptr};
+  static const InstanceDescriptor application{descriptor};
   Heap heap;
   Root<Value> type(heap, Value::descriptor(&descriptor));
   heap.collect();
@@ -217,7 +247,7 @@ int main() {
   {
     Root<Ref<InstancePayload>> instance(heap);
     bool refused = false;
-    try { heap.allocateInto(instance, descriptor, std::vector<Value>{}); }
+    try { heap.allocateInto(instance, application, std::vector<Value>{}); }
     catch (const std::invalid_argument&) { refused = true; }
     require(refused && !instance.get() && heap.liveCount() == 0,
             "identity-only descriptor acquired an instance layout");
