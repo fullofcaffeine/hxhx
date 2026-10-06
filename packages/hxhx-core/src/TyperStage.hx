@@ -840,6 +840,7 @@ class TyperStage {
 		validateClassArguments(expectedReturn, ctx, HxFunctionDecl.getPos(fn));
 		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, expectedReturn, TyType.unknown(), functionIdentity, null, false, 0,
 			HxFunctionDecl.getIsStatic(fn), new TyControlScope(functionIdentity, TypedBodyFingerprint.forStatements(semanticBody)), null, typeParameters);
+		scope.retainFunctionBody(fn, semanticBody);
 		for (argumentIndex in 0...functionArgs.length) {
 			final hint = HxFunctionArg.getTypeHint(functionArgs[argumentIndex]);
 			if ((hint == null || StringTools.trim(hint).length == 0) && params[argumentIndex].getType().unwrapNull().isUnknown())

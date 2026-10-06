@@ -1333,7 +1333,8 @@ class TypedBodyBuilder {
 			environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver, ?callResolver:TypedCallDeclarationResolver,
 			?memberResolver:TypedMemberDeclarationResolver):TypedFunction {
 		final sourceBody = HxFunctionDecl.getBody(declaration);
-		final semanticBody = expandStructuralStatements(sourceBody);
+		final semanticBody = environment == null
+			|| typeResolver == null ? expandStructuralStatements(sourceBody) : environment.functionBodyForReplay(declaration);
 		final lexicalReplay = environment == null ? null : environment.createBodyReplay();
 		final defaults = new Array<TypedFunctionDefault>();
 		final arguments = HxFunctionDecl.getArgs(declaration);

@@ -40,6 +40,31 @@ class TyFunctionEnv {
 	final controlScope:Null<TyControlScope>;
 	final inference:TyFunctionInference;
 	var untypedContext:Bool = false;
+	var retainedBody:Null<{
+		final declaration:HxFunctionDecl;
+		final sourceIdentity:String;
+		final statements:Array<HxStmt>;
+	}>;
+
+	/** Keep the expanded occurrences that inference visits; rebuilding them would allocate unrelated untyped expressions. */
+	public function retainFunctionBody(declaration:HxFunctionDecl, statements:Array<HxStmt>):Void {
+		if (retainedBody != null || replayMode)
+			throw "function body can only be retained before inference";
+		retainedBody = {
+			declaration: declaration,
+			sourceIdentity: TypedBodyFingerprint.exactStatements(HxFunctionDecl.getBody(declaration)),
+			statements: statements.copy()
+		};
+	}
+
+	/** Replay consumes the compiler-owned expansion only while its authored declaration remains unchanged. */
+	public function functionBodyForReplay(declaration:HxFunctionDecl):Array<HxStmt> {
+		if (retainedBody == null
+			|| retainedBody.declaration != declaration
+			|| retainedBody.sourceIdentity != TypedBodyFingerprint.exactStatements(HxFunctionDecl.getBody(declaration)))
+			throw "function body replay requires unchanged inferred source";
+		return retainedBody.statements.copy();
+	}
 
 	/** Untyped permission belongs to the current expression traversal, not the whole function. */
 	public function isUntypedContext():Bool
@@ -158,6 +183,7 @@ class TyFunctionEnv {
 	/** Preserve definition-time visibility when deriving a replay or sealed return environment. */
 	function withEnclosingSymbolsFrom(source:TyFunctionEnv):TyFunctionEnv {
 		untypedContext = source.untypedContext;
+		retainedBody = source.retainedBody;
 		for (symbol in source.enclosingSymbols)
 			enclosingSymbols.push(symbol);
 		return this;
@@ -317,6 +343,7 @@ class TyFunctionEnv {
 		final copied = new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext,
 			controlScope == null ? null : controlScope.copyForInference(), inference.fork(), typeParameters);
 		copied.untypedContext = untypedContext;
+		copied.retainedBody = retainedBody;
 		for (symbol in enclosingSymbols)
 			copied.enclosingSymbols.push(copySymbol(symbol));
 		return copied;
