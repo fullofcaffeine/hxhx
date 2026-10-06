@@ -15,6 +15,12 @@ The test loads real providers, checks ownership and rejected transfers, then
 compiles and runs the generated C++ executable. Its output must match the four
 lines in `expected.stdout`.
 
+Run `haxe test/m14_array_class_context_test.hxml` for the shared typing checks.
+They compare literal arguments, grouping, access metadata, and omitted optional
+parameters with upstream Haxe. Stored erased handles, shadowing locals, and
+incompatible element types must still fail. The conversion retains the exact
+literal child and class descriptor; it does not infer a class from its spelling.
+
 Upstream Haxe 4.3.7 reproductions:
 
 ```sh

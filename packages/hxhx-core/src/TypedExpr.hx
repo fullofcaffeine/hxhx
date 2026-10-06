@@ -565,7 +565,7 @@ class TypedExpr {
 		return new TypedExpr(ControlSwitch, type, position, null, [scrutinee].concat(branches), patterns, exhaustive, 0, 0.0, null, null, null, null, null,
 			bindings);
 
-	/** Only a selected abstract conversion may certify unchanged value storage; authored casts use false. */
+	/** Shared typing certifies unchanged storage for selected abstract or class-literal conversions; authored casts use false. */
 	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>, preservesRepresentation:Bool = false):TypedExpr
 		return new TypedExpr(Cast, type, position, [typeHint], [expression], null, preservesRepresentation);
 

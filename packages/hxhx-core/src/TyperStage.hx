@@ -459,6 +459,9 @@ class TyperStage {
 					return TyEnumSwitchCoverage.proves(input, patterns, context, position, isCapture);
 				},
 				convertValue: function(value, expected) {
+					final classContext = TypedArrayClassContext.convert(value, expected);
+					if (classContext != null)
+						return classContext;
 					final conversion = TyAbstractMethodConversion.select(context.getIndex(), expected, value.getType());
 					if (conversion != null)
 						return conversion.apply(value);
