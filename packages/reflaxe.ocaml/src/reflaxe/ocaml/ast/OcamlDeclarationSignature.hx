@@ -7,6 +7,7 @@ import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 
 /** Concrete declaration types used to constrain recursive module exports. */
 typedef OcamlDeclarationSignature = {
@@ -20,9 +21,10 @@ typedef OcamlDeclarationSignature = {
 	A Haxe record parameter uses the same boxed table selected by ordinary field
 	access and coercion. Its OCaml type is therefore Obj.t, not a guessed record.
 	Iterators, key/value pairs, and FileStat use other representations and remain
-	unavailable here. Arrays of supported elements use the existing checked
-	container mapping. Supported class, String, and Array references retain their
-	existing storage when nullable. Other
+	unavailable here. Arrays and standard maps of supported elements use their
+	existing checked container mappings. Nullable maps use the ordinary mapper's
+	storage, including boxed Map abstracts. Other supported class, String, and
+	Array references retain their existing storage when nullable. Other
 	private runtime carriers, unresolved types, and generic or extern declarations
 	remain unavailable; their signatures need their own representation proof.
 	Class declarations can also use a direct record after the whole program's
@@ -46,6 +48,18 @@ function projectDeclarationSignature(parameters:Array<Type>, result:Type, repres
 /** Only explicit, existing storage choices may become exported declaration types. */
 private function declarationCarrier(type:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr,
 		context:CompilationContext):Null<OcamlTypeExpr> {
+	final mapParameters = OcamlStandardMapCarrierContract.declarationParameters(type);
+	if (mapParameters != null) {
+		for (parameter in mapParameters)
+			if (declarationCarrier(parameter, representations, nominalType, context) == null)
+				return null;
+		// The existing map owner classifies source identity and seals the runtime
+		// reference. Neither a printed name nor generic class shape is sufficient.
+		return switch (nominalType(type)) {
+			case carrier = TRuntimeApp(_, parameters) if (parameters.length == mapParameters.length): carrier;
+			case _: null;
+		};
+	}
 	return switch (type) {
 		case TType(reference, parameters):
 			final definition = reference.get();
@@ -66,11 +80,26 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				case _: null;
 			}
 		case TAbstract(reference, [inner]) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
-			// Supported references retain their carrier and existing null sentinel.
-			// Scalars and enums can change storage when nullable and remain separate.
-			switch (TypeTools.follow(inner)) {
-				case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context);
-				case _: null;
+			if (OcamlStandardMapCarrierContract.declarationParameters(TypeTools.follow(inner)) != null) {
+				// Null<Map<K,V>> can be boxed even when Map<K,V> uses HxMap.
+				// Validate the element contract, then preserve the actual nullable
+				// storage instead of inferring it from the non-null map carrier.
+				if (declarationCarrier(inner, representations, nominalType, context) == null) {
+					null;
+				} else {
+					switch (nominalType(type)) {
+						case carrier = TIdent("Obj.t"): carrier;
+						case carrier = TRuntimeApp(_, _): carrier;
+						case _: null;
+					}
+				}
+			} else {
+				// Other supported references retain their existing null sentinel.
+				// Scalars and enums remain outside this declaration contract.
+				switch (TypeTools.follow(inner)) {
+					case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context);
+					case _: null;
+				}
 			}
 		case TInst(_, [element]) if (isStandardArray(type)):
 			if (declarationCarrier(element, representations, nominalType, context) == null) {

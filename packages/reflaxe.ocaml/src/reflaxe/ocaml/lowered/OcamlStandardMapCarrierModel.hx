@@ -85,6 +85,23 @@ class OcamlStandardMapCarrierContract {
 
 	#if macro
 	/**
+		Returns the parameters of an exact standard Map storage type for export checks.
+
+		The declaration projector must validate each parameter before asking the
+		normal mapper for a checked runtime reference. Classification alone does not
+		authorize private target syntax or an unspecified key/value type.
+	**/
+	public static function declarationParameters(type:Type):Null<Array<Type>> {
+		final selected = select(type);
+		if (selected == null || selected.keyType == null || selected.valueType == null)
+			return null;
+		return switch (selected.kind) {
+			case StringKeys, IntKeys: [selected.valueType];
+			case ObjectIdentityKeys: [selected.keyType, selected.valueType];
+		};
+	}
+
+	/**
 		Returns the standard carrier kind, or `null` for a non-Map declaration.
 	**/
 	public static function kindForClass(classType:ClassType):Null<OcamlStandardMapCarrierKind> {
