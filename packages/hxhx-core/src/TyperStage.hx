@@ -1288,27 +1288,6 @@ class TyperStage {
 		return s;
 	}
 
-	static function normalizeFunctionTypeSegment(s:String):String {
-		var out = StringTools.trim(s);
-		while (StringTools.startsWith(out, "(") && StringTools.endsWith(out, ")"))
-			out = StringTools.trim(out.substr(1, out.length - 2));
-		return out;
-	}
-
-	static function functionTypeSegments(display:String):Array<String> {
-		final trimmed = StringTools.trim(display);
-		if (trimmed.indexOf("->") < 0)
-			return [];
-		final out = new Array<String>();
-		for (part in trimmed.split("->")) {
-			final segment = normalizeFunctionTypeSegment(part);
-			if (segment.length == 0)
-				return [];
-			out.push(segment);
-		}
-		return out.length < 2 ? [] : out;
-	}
-
 	static function flatOverloadTypeScore(exp:String, act:String):Int {
 		if (exp == act)
 			return 4;
@@ -1317,23 +1296,6 @@ class TyperStage {
 		if ((exp == "Float" && act == "Int") || (exp == "Int" && act == "Float"))
 			return 1;
 		return -1;
-	}
-
-	static function functionOverloadTypeScore(exp:String, act:String):Int {
-		final expParts = functionTypeSegments(exp);
-		final actParts = functionTypeSegments(act);
-		if (expParts.length == 0 && actParts.length == 0)
-			return flatOverloadTypeScore(exp, act);
-		if (expParts.length == 0 || actParts.length == 0 || expParts.length != actParts.length)
-			return -1;
-		var score = 0;
-		for (i in 0...expParts.length) {
-			final partScore = flatOverloadTypeScore(expParts[i], actParts[i]);
-			if (partScore < 0)
-				return -1;
-			score += partScore;
-		}
-		return score;
 	}
 
 	/**
@@ -1430,7 +1392,9 @@ class TyperStage {
 			return expected.isUnknown() || actual.isUnknown() || expected.isDynamic() || actual.isDynamic() ? 0 : -1;
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
-		return functionOverloadTypeScore(exp, act);
+		// Function types were compared structurally above. An arrow inside a
+		// record or collection's display text does not make that value callable.
+		return flatOverloadTypeScore(exp, act);
 	}
 
 	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,

@@ -353,12 +353,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			[]);
 		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
 			[]);
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v11",
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v12",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
 		assertTrue(orderedClassFacts.getModuleIdentity() == "unit.Container",
 			"typed backend class facts should keep source-module identity separate from secondary-type identity");
+		assertTrue(orderedClassFacts.getDeclaredName() == "Helper",
+			"typed backend class facts should retain the declared name without the package or module path");
 		assertTrue(orderedClassFacts.getSuperClassIdentity() == "unit.Container.Base",
 			"typed backend class facts should preserve the raw superclass node selected by typing");
 		assertTrue(orderedClassFacts.getSuperTypeIdentity() == "nominal:unit.Container.Base",

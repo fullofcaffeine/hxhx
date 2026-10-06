@@ -181,6 +181,7 @@ class CppManagedProgramPlan {
 					&& !declaration.getHasBody()) {
 					CppManagedStandardString.requireDeclaration(declaration);
 					standardStrings.push(declaration);
+					classes.strings.enable();
 					continue;
 				}
 				if (CppManagedDowncast.owns(declaration)
@@ -226,6 +227,8 @@ class CppManagedProgramPlan {
 			// A selected override can allocate another concrete receiver. Revisit
 			// dispatch after each reachability pass until no new bodies are selected.
 			final previous = pending.length;
+			for (application in classes.strings.discover())
+				enqueueApplication(application);
 			for (call in instanceCalls) {
 				final cases = classes.methods.instanceDispatch(call.call, call.context);
 				if (cases != null)
@@ -236,6 +239,7 @@ class CppManagedProgramPlan {
 				break;
 		}
 		classes.methods.sealInstanceDispatch(instanceCalls);
+		classes.strings.seal();
 		final identities = [for (identity in sources.keys()) identity];
 		identities.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final functions = new Array<CppManagedProgramFunction>();

@@ -49,7 +49,22 @@ private function requireSource(owner:CppManagedExpressionOwner, source:CppManage
 	}
 }
 
-/** Keep the native unwinding carrier separate from the typed Haxe handler value. */
+/** Select only independently supported value tags; other catch families retain their explicit boundary. */
+private function ordinaryKind(use:TypedCatchUse):String {
+	if (use.view == OrdinaryValue && use.target != null)
+		return switch use.target.getKind() {
+			case BoolCore: "Boolean";
+			case StringCore: "String";
+			case _: throw "managed catch requires typed handler selection for " + use.binding.getType().getSemanticKey() + " (haxe_ocaml-qrk0u)";
+		};
+	throw "managed catch requires typed handler selection for " + use.binding.getType().getSemanticKey() + " (haxe_ocaml-qrk0u)";
+}
+
+/**
+	Keep the native unwinding carrier separate from the typed Haxe handler value.
+	A wrapped payload can match any supported typed handler in source order. If
+	none matches, propagate the original wrapper rather than enter a later catch-all.
+ */
 function render(input:{
 	owner:CppManagedExpressionOwner,
 	source:CppManagedTrySource,
@@ -83,17 +98,16 @@ function render(input:{
 					use;
 			}
 	];
+	final kinds = [for (use in uses) use.view == Carrier ? null : ordinaryKind(use)];
 	var payload:Null<backend.cpp.CppManagedClassStorage.CppManagedInstanceMember> = null;
 	for (use in uses) {
-		if (use.view == OrdinaryValue && use.target != null && use.target.getKind().match(BoolCore)) {
+		if (use.view == OrdinaryValue) {
 			if (input.classes == null)
 				throw "managed typed catch requires its program class storage";
 			final selectedPayload = input.classes.catchPayload(use);
 			if (payload != null && (payload.layout.symbol != selectedPayload.layout.symbol || payload.slot != selectedPayload.slot))
 				throw "managed catch views disagree on their payload provider";
 			payload = selectedPayload;
-		} else if (use.view != Carrier) {
-			throw "managed catch requires typed handler selection for " + use.binding.getType().getSemanticKey() + " (haxe_ocaml-qrk0u)";
 		}
 	}
 	final carrier = input.prefix + "carrier";
@@ -125,15 +139,16 @@ function render(input:{
 			+ "));");
 		lines.push(at + "  }");
 	}
+	var sawOrdinaryHandler = false;
 	for (index in 0...uses.length) {
 		final isCarrier = uses[index].view == Carrier;
-		final booleanMatch = ordinary + ".get().kind() == hxhx::managed::ValueKind::Boolean";
-		final condition = isCarrier ? "true" : "(" + booleanMatch + " || " + wrapped + ")";
+		final condition = isCarrier ? (sawOrdinaryHandler ? "!" + wrapped : "true") : ordinary + ".get().kind() == hxhx::managed::ValueKind::" + kinds[index];
 		lines.push(at + (index == 0 ? "  if (" : "  else if (") + condition + ") {");
 		// Upstream C++ commits a ValueException to the primitive handler group.
-		// An unmatched payload escapes instead of reaching a later Dynamic catch.
+		// Test every typed handler before the final rethrow; a failed early test
+		// must not hide a later match. A raw unmatched value can reach Dynamic.
 		if (!isCarrier)
-			lines.push(at + "    if (!(" + booleanMatch + ")) throw;");
+			sawOrdinaryHandler = true;
 		for (line in input.locals.renderCatch(uses[index].binding, isCarrier ? selected : ordinary, input.heap, at + "    "))
 			lines.push(line);
 		for (line in input.handler(index, at + "    "))

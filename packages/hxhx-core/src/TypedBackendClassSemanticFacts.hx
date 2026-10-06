@@ -82,6 +82,7 @@ class TypedBackendClassSemanticFacts {
 	final declaredFieldTypes:Null<TypedDeclaredFieldTypes>;
 	final nominalKind:TypedBackendNominalKind;
 	final moduleIdentity:String;
+	final declaredName:String;
 	final typeParameters:Array<TyTypeParameterId>;
 	final superType:Null<TyType>;
 	final superClassIdentity:Null<String>;
@@ -107,6 +108,7 @@ class TypedBackendClassSemanticFacts {
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
 		moduleIdentity = normalize(info.getModulePath());
+		declaredName = normalize(info.getShortName());
 		// Only class declarations own interface relationships. This checked boundary
 		// keeps enum and abstract facts out of the class/interface membership graph.
 		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
@@ -325,6 +327,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(getSchemaRevision());
 		identityFacts.push(classIdentity);
 		identityFacts.push(moduleIdentity);
+		identityFacts.push(declaredName);
 		identityFacts.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		switch (nominalKind) {
 			case ClassInstance:
@@ -409,6 +412,14 @@ class TypedBackendClassSemanticFacts {
 	public function getModuleIdentity():String
 		return moduleIdentity;
 
+	/**
+		Return the declared short name without deriving it from a compiler lookup path.
+		Targets can use it for name-based runtime behavior while classIdentity retains
+		the exact declaration owner. Native C++ default string conversion uses this name.
+	 */
+	public function getDeclaredName():String
+		return declaredName;
+
 	/** Return class-level generic parameters in declared order. **/
 	public function getTypeParameters():Array<String>
 		return [for (parameter in typeParameters) parameter.getName()];
@@ -459,7 +470,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v11";
+		return "typed-backend-class-semantic-facts-v12";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected

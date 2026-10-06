@@ -95,6 +95,7 @@ class CppManagedMethods {
 	}
 
 	/** Ordinary entries use their declaring class view; the Value retains the actual allocated descriptor. */
+	@:allow(backend.cpp.CppManagedStringMethods)
 	function ordinaryMethodApplication(projection:TypedBackendFunctionProjection, receiver:TyType, ?validate:Void->Void):CppManagedFunctionApplication {
 		assertInstanceMethod(projection);
 		final declaration = projection.requireSemanticDeclaration();
@@ -114,6 +115,14 @@ class CppManagedMethods {
 					validate();
 			}
 		});
+	}
+
+	/** Implicit standard conversion can visit only constructor-validated allocations. */
+	@:allow(backend.cpp.CppManagedStringMethods)
+	function stringAllocations():Array<TyType> {
+		final names = [for (name in allocations.keys()) name];
+		names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
+		return [for (name in names) allocations.get(name)];
 	}
 
 	/** Shared assignment views substitute class and interface edges before selecting the declaring owner. */

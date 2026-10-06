@@ -226,6 +226,8 @@ class CppManagedProgramEmitter {
 		final lines = statics == null ? [] : [statics.render()];
 		for (fn in functions)
 			lines.push(fn.rootDeclaration());
+		if (classes != null)
+			lines.push(classes.strings.render(application -> instanceMethods.get(application.identity)));
 		for (fn in functions)
 			lines.push(fn.render());
 		return lines.join("\n");

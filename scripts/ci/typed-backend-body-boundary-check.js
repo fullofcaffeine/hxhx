@@ -41,6 +41,8 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/cpp/CppManagedClassLayouts.hx",
   // Extracted method planning validates exact calls and freezes targets from admitted allocations.
   "packages/hxhx-core/src/backend/cpp/CppManagedMethods.hx",
+  // Implicit string conversion seals exact authored method applications before rendering.
+  "packages/hxhx-core/src/backend/cpp/CppManagedStringMethods.hx",
   // Static defaults substitute exact abstract backing types before choosing storage values.
   "packages/hxhx-core/src/backend/cpp/CppManagedStaticDefault.hx",
   // Class-handle storage validates the exact core abstract and applied parameter shape.
@@ -126,6 +128,7 @@ for (const file of files) {
     relative !== "packages/hxhx-core/src/backend/cpp/CppManagedClassStorage.hx" &&
     relative !== "packages/hxhx-core/src/backend/cpp/CppManagedClassLayouts.hx" &&
     relative !== "packages/hxhx-core/src/backend/cpp/CppManagedMethods.hx" &&
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedStringMethods.hx" &&
     relative !== "packages/hxhx-core/src/backend/cpp/CppManagedCastPlan.hx" &&
     source.includes(".getClassGraph(")
   ) {
@@ -161,7 +164,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v11"',
+  'return "typed-backend-class-semantic-facts-v12"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(

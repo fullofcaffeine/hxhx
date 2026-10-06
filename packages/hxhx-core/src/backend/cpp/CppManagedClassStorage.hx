@@ -55,6 +55,9 @@ class CppManagedClassStorage {
 	/** Method calls share this program's exact owners and physical descriptors. */
 	public final methods:CppManagedMethods;
 
+	/** Standard conversion shares these exact descriptors and ordinary method applications. */
+	public final strings:CppManagedStringMethods;
+
 	/** One exact program resolves both abstract storage and typed transfer boundaries. */
 	public final casts:CppManagedCastPlan;
 
@@ -70,6 +73,7 @@ class CppManagedClassStorage {
 		casts = new CppManagedCastPlan(program);
 		methods = new CppManagedMethods(program, this);
 		layouts = new CppManagedClassLayouts(program, owner -> descriptor(owner).symbol, publishLayout);
+		strings = new CppManagedStringMethods(program, this);
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses()) {
 				for (fn in owner.getFunctions()) {

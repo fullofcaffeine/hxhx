@@ -14,6 +14,9 @@ the standard abstract's declared storage. This covers the conversion used by
 real `haxe.ValueException` construction without giving arbitrary nominal types
 a string conversion.
 
-This proves primitive conversion only. Aggregate/object formatting, Float policy,
-and using the standard function as a stored callable remain unfinished under
-`haxe_ocaml-hcnk8`. README readiness estimates are unchanged.
+This fixture proves primitive conversion only. The neighboring
+[instance contract](../cpp_object_string_seed/README.md) adds ordinary object
+conversion. Aggregate and generic object formatting, Float policy, and using the
+standard function as a stored callable remain unfinished under `haxe_ocaml-hcnk8`.
+The combined package command includes the incomplete full comparison.
+README readiness estimates are unchanged.

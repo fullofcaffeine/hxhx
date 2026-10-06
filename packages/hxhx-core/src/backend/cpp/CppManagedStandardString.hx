@@ -30,11 +30,11 @@ function requireDeclaration(declaration:TyDeclarationInfo):Void {
 }
 
 /**
-	Root the operand before conversion and publish its complete String afterward.
-	Primitive alternatives reuse the exact formatter; erased values retain their
-	runtime tags. Other tags reject explicitly until their formatting contract is
-	implemented under haxe_ocaml-hcnk8, including the separate Float review gate.
-	Aggregate formatting must use an owned runtime boundary before this grows.
+	Root the operand before conversion, including calls into authored toString methods.
+	The sealed program plan selects instance methods and preserves their null returns
+	and exceptions. Primitive alternatives retain their runtime tags and exact formatter.
+	Other tags reject until their formatting contract is implemented under haxe_ocaml-hcnk8.
+	Aggregate formatting needs an owned runtime boundary; Float needs its separate review.
  */
 function render(declaration:TyDeclarationInfo, input:CppManagedSourceCallInput, indent:String):Array<String> {
 	requireDeclaration(declaration);
@@ -56,6 +56,17 @@ function render(declaration:TyDeclarationInfo, input:CppManagedSourceCallInput, 
 	];
 	for (line in input.renderValue(expression, value, indent + "  "))
 		lines.push(line);
+	if (input.classes != null && input.classes.strings.isEnabled()) {
+		// A user method can return a null String. Keep common value storage rather
+		// than forcing that result through std::string and losing native behavior.
+		final returned = result + "_root";
+		lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + returned + "(" + input.heap + ");");
+		lines.push(indent + "  hxhx_standard_string(" + input.heap + ", " + read + ", " + returned + ");");
+		if (input.destination != null)
+			lines.push(indent + "  " + input.destination + ".set(" + returned + ".get());");
+		lines.push(indent + "}");
+		return lines;
+	}
 	for (line in CppManagedStringConversion.render(conversionType, read, result))
 		lines.push(indent + "  " + line);
 	lines.push(indent
