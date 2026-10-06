@@ -32,6 +32,10 @@ function accepts(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool {
 	}
 	if (target.isDynamic() || target.getSemanticKey() == source.getSemanticKey())
 		return true;
+	// Shared typing and abstract lowering have already selected any authored
+	// conversion. An opaque backing value then copies its existing runtime tag.
+	if (casts != null && target.getNominalIdentity() != null && casts.representationType(target).isDynamic())
+		return true;
 	if (target.isFunction() && source.isFunction() && CppManagedCallableRepresentation.compatible(target, source))
 		return true;
 	if (casts != null && casts.permitsArrayClassErasure(target, source))

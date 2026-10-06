@@ -197,6 +197,7 @@ class CppManagedRootedExpression {
 			renderHandler:(Int, String) -> Array<String>):Array<String> {
 		return CppManagedCatchRegion.render({
 			owner: input.owner,
+			classes: input.classes,
 			source: source,
 			locals: locals,
 			heap: input.heap,

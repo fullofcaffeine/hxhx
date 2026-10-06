@@ -54,6 +54,7 @@ function render(input:{
 	owner:CppManagedExpressionOwner,
 	source:CppManagedTrySource,
 	locals:CppManagedExpressionLocals,
+	?classes:CppManagedClassStorage,
 	heap:String,
 	prefix:String,
 	indent:String,
@@ -82,27 +83,64 @@ function render(input:{
 					use;
 			}
 	];
-	// Carrier handling is complete without runtime classification. Other views
-	// must acquire their exact provider and target policy before admission.
-	for (use in uses)
-		if (use.view != Carrier)
+	var payload:Null<backend.cpp.CppManagedClassStorage.CppManagedInstanceMember> = null;
+	for (use in uses) {
+		if (use.view == OrdinaryValue && use.target != null && use.target.getKind().match(BoolCore)) {
+			if (input.classes == null)
+				throw "managed typed catch requires its program class storage";
+			final selectedPayload = input.classes.catchPayload(use);
+			if (payload != null && (payload.layout.symbol != selectedPayload.layout.symbol || payload.slot != selectedPayload.slot))
+				throw "managed catch views disagree on their payload provider";
+			payload = selectedPayload;
+		} else if (use.view != Carrier) {
 			throw "managed catch requires typed handler selection for " + use.binding.getType().getSemanticKey() + " (haxe_ocaml-qrk0u)";
+		}
+	}
 	final carrier = input.prefix + "carrier";
 	final selected = input.prefix + "selected";
+	final ordinary = input.prefix + "ordinary";
+	final wrapped = input.prefix + "wrapped";
 	final at = input.indent;
 	final lines = [at + "try {"];
 	for (line in input.body(at + "  "))
 		lines.push(line);
 	lines.push(at + "} catch (const hxhx::managed::ThrownValue& " + carrier + ") {");
 	lines.push(at + "  hxhx::managed::Root<hxhx::managed::Value> " + selected + "(" + input.heap + ", " + carrier + ".value());");
+	if (payload != null) {
+		// Unwrap one layer without modifying the original carrier. Unmatched
+		// propagation must retain the original exception.
+		lines.push(at + "  hxhx::managed::Root<hxhx::managed::Value> " + ordinary + "(" + input.heap + ", " + selected + ".get());");
+		lines.push(at + "  const bool " + wrapped + " = hxhx_runtime_is_of_type(" + selected + ".get(), hxhx::managed::Value::descriptor(&"
+			+ payload.layout.symbol + "));\n");
+		lines.push(at + "  if (" + wrapped + ") {");
+		lines.push(at
+			+ "    "
+			+ ordinary
+			+ ".set("
+			+ selected
+			+ ".get().asManaged().as<hxhx::managed::InstancePayload>()->read("
+			+ payload.layout.symbol
+			+ ", "
+			+ payload.slot
+			+ "));");
+		lines.push(at + "  }");
+	}
 	for (index in 0...uses.length) {
-		lines.push(at + (index == 0 ? "  if (true) {" : "  else if (true) {"));
-		for (line in input.locals.renderCatch(uses[index].binding, selected, input.heap, at + "    "))
+		final isCarrier = uses[index].view == Carrier;
+		final booleanMatch = ordinary + ".get().kind() == hxhx::managed::ValueKind::Boolean";
+		final condition = isCarrier ? "true" : "(" + booleanMatch + " || " + wrapped + ")";
+		lines.push(at + (index == 0 ? "  if (" : "  else if (") + condition + ") {");
+		// Upstream C++ commits a ValueException to the primitive handler group.
+		// An unmatched payload escapes instead of reaching a later Dynamic catch.
+		if (!isCarrier)
+			lines.push(at + "    if (!(" + booleanMatch + ")) throw;");
+		for (line in input.locals.renderCatch(uses[index].binding, isCarrier ? selected : ordinary, input.heap, at + "    "))
 			lines.push(line);
 		for (line in input.handler(index, at + "    "))
 			lines.push(line);
 		lines.push(at + "  }");
 	}
+	lines.push(at + "  else { throw; }");
 	lines.push(at + "}");
 	requireSource(input.owner, input.source);
 	return lines;

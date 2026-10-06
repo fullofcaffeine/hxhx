@@ -11,6 +11,10 @@ class Main {
 		return Std.string(value);
 	}
 
+	static function opaque(value:Any):String {
+		return Std.string(value);
+	}
+
 	static function main():Void {
 		final absent:Null<Int> = null;
 		Sys.println(text(next()));
@@ -21,5 +25,9 @@ class Main {
 		Sys.println(text("héllo"));
 		Sys.println(text(""));
 		Sys.println(evaluations);
+		Sys.println(opaque(true));
+		Sys.println(opaque(false));
+		Sys.println(opaque(null));
+		Sys.println(opaque("opaque"));
 	}
 }

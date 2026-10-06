@@ -14,6 +14,7 @@ class M14CppTypedCatchTest {
 		runProgram("WrapperCatchMain", "wrapper.cpp.stdout", ["haxe.Exception", "haxe.ValueException"]);
 		runProgram("RuntimeBoundaryCatchMain", "runtime-boundary.expected.stdout", ["haxe.io.Eof"]);
 		M14CppInitializerCatchExecutionTest.run();
+		M14CppBoolCatchTest.run("Main");
 	}
 
 	/** Use the production classpath and lazy-loading boundaries so real standard-library declarations participate. */

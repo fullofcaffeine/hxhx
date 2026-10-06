@@ -1,7 +1,8 @@
 /** Native assertion fixtures with only scalar static storage must release every temporary allocation. */
 class CppManagedAssertionFixture {
 	/** Compile both sanitizer profiles; the selected observer must force collection and check temporary-root cleanup. */
-	public static function sanitizers(output:String, label:String, observerSource:String = "test/cpp_managed_heap/UninitializedLocalObserver.cpp"):Void {
+	public static function sanitizers(output:String, label:String, observerSource:String = "test/cpp_managed_heap/UninitializedLocalObserver.cpp",
+			programSource:String = "src/Main.cpp"):Void {
 		sys.io.File.copy(observerSource, output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
@@ -15,7 +16,7 @@ class CppManagedAssertionFixture {
 				"-g",
 				"-fno-omit-frame-pointer",
 				"-fsanitize=address,undefined",
-				'-DHXHX_LOCAL_PROGRAM="src/Main.cpp"',
+				'-DHXHX_LOCAL_PROGRAM="' + programSource + '"',
 				'-DHXHX_UNASSIGNED_DIAGNOSTIC=""',
 				output + "/Observer.cpp",
 				"-o",

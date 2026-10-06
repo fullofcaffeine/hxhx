@@ -43,6 +43,10 @@ function render(declaration:TyDeclarationInfo, input:CppManagedSourceCallInput, 
 	final expression = input.arguments[0];
 	final type = input.valueType(expression);
 	CppManagedClosureAbi.assertComplete(type);
+	// Any and other Dynamic-backed abstracts keep the runtime tag of their
+	// value. Read that checked representation instead of formatting a nominal name.
+	final represented = input.casts == null || type.getNominalIdentity() == null ? type : input.casts.representationType(type);
+	final conversionType = represented.isDynamic() ? represented : type;
 	final value = "hxhx_std_string_" + input.prefix + "value";
 	final result = "hxhx_std_string_" + input.prefix + "bytes";
 	final read = value + ".get()";
@@ -52,7 +56,7 @@ function render(declaration:TyDeclarationInfo, input:CppManagedSourceCallInput, 
 	];
 	for (line in input.renderValue(expression, value, indent + "  "))
 		lines.push(line);
-	for (line in CppManagedStringConversion.render(type, read, result))
+	for (line in CppManagedStringConversion.render(conversionType, read, result))
 		lines.push(indent + "  " + line);
 	lines.push(indent
 		+ "  "

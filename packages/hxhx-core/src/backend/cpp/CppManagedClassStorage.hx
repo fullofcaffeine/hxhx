@@ -60,6 +60,7 @@ class CppManagedClassStorage {
 
 	final runtimeOwners = new haxe.ds.ObjectMap<TypedBackendRuntimeTypeOccurrence, ManagedOccurrenceOwner<TypedBackendRuntimeTypeOccurrence>>();
 	final constructorOwners = new haxe.ds.ObjectMap<TypedBackendConstructorOccurrence, ManagedOccurrenceOwner<TypedBackendConstructorOccurrence>>();
+	final catchOwners = new haxe.ds.ObjectMap<TypedCatchUse, Void->Void>();
 
 	public function new(program:CppTypedProgramProjection) {
 		if (program == null)
@@ -72,18 +73,55 @@ class CppManagedClassStorage {
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses()) {
 				for (fn in owner.getFunctions()) {
+					registerCatches(fn.getLocalCatalog(), () -> fn.requireCaptureCatalog().assertCurrent());
 					for (entry in fn.getRuntimeTypeCatalog().getEntries())
 						runtimeOwners.set(entry, {source: FunctionSource(fn), find: () -> fn.requireRuntimeType(entry.getExpression())});
 					for (entry in fn.getConstructorCatalog().getEntries())
 						constructorOwners.set(entry, {source: FunctionSource(fn), find: () -> fn.requireConstructor(entry.getExpression())});
 				}
 				for (initializer in owner.getFieldInitializers()) {
+					registerCatches(initializer.getLocalCatalog(), () -> initializer.assertCurrent());
 					for (entry in initializer.getRuntimeTypeCatalog().getEntries())
 						runtimeOwners.set(entry, {source: FieldSource(initializer), find: () -> initializer.requireRuntimeType(entry.getExpression())});
 					for (entry in initializer.getConstructorCatalog().getEntries())
 						constructorOwners.set(entry, {source: FieldSource(initializer), find: () -> initializer.requireConstructor(entry.getExpression())});
 				}
 			}
+	}
+
+	/** Implicit payload reads belong to the same exact lexical catalogs as explicit source operations. */
+	function registerCatches(catalog:TypedBackendLocalCatalog, validate:Void->Void):Void {
+		for (local in catalog.getEntries()) {
+			final binding = local.getBinding();
+			final identity = binding.getIdentity().getCanonicalKey();
+			final use = catalog.findCatchUse(identity);
+			if (use != null)
+				catchOwners.set(use, () -> {
+					validate();
+					if (catalog.findCatchUse(identity) != use || use.binding != binding)
+						throw "managed catch payload requires its exact implicit use";
+				});
+		}
+	}
+
+	/**
+		Use the real ValueException field and ordinary class layout for implicit unwrapping.
+		The nominal predicate must succeed before native code reads this slot. No
+		synthetic source field or runtime-type occurrence can authorize the access.
+	 */
+	public function catchPayload(use:TypedCatchUse):CppManagedInstanceMember {
+		final validate = catchOwners.get(use);
+		if (validate == null)
+			throw "managed catch payload belongs to another program or implicit use";
+		validate();
+		if (use.view != OrdinaryValue || use.payload == null)
+			throw "managed catch payload requires an ordinary-value view";
+		final field = use.payload;
+		final member = storedMember(field, TyType.nominal(field.getOwner(), []), field.getType());
+		final entry = descriptor(member.layout.owner);
+		entry.runtimeKind = Nominal(field.getOwner());
+		hasInstanceTypeTests = true;
+		return member;
 	}
 
 	/**
@@ -431,6 +469,11 @@ class CppManagedClassStorage {
 		if (TyTypeSubstitution.parameterIdentities(occurrence.getType()).length == 0
 			&& occurrence.getType().getSemanticKey() != fieldType.getSemanticKey())
 			throw "managed instance field cannot change a concrete occurrence type";
+		return storedMember(field, receiverType, fieldType);
+	}
+
+	/** Explicit occurrences and checked implicit uses share declaration identity and physical offsets. */
+	function storedMember(field:TyFieldInfo, receiverType:TyType, fieldType:TyType):CppManagedInstanceMember {
 		final owner = program.requireClass(program.requireClassIdentity(field.getOwner().getCanonicalName()));
 		final declared = owner.requireSemanticFacts().requireField(field);
 		final layout = requireType(receiverType.getNullableInner() == null ? receiverType : receiverType.getNullableInner());
