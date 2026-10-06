@@ -47,6 +47,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          # Routing needs the full graph and tags, but not historical file contents.
+          filter: blob:none
       - name: Run cheap routing and documentation guards
         run: |
           set -euo pipefail
