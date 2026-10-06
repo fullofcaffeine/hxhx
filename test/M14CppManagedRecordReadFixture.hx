@@ -18,6 +18,6 @@ function append(declarations:Array<String>):Void {
 		declarations.push(emitter.render());
 		count++;
 	}
-	if (count != 3)
+	if (count != 5)
 		throw "record fixture lost an authored function";
 }

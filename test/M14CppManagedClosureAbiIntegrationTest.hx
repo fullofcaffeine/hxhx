@@ -216,7 +216,16 @@ class M14CppManagedClosureAbiIntegrationTest {
 		final runtime = new CppManagedRuntime();
 		final runtimeDirectory = output + "/runtime";
 		final artifacts = runtime.publish(runtimeDirectory);
-		if (artifacts.length != 6)
+		final requiredHeaders = [
+			"ManagedHeap.hpp",
+			"ManagedValue.hpp",
+			"ManagedMap.hpp",
+			"ManagedThrow.hpp",
+			"ManagedStack.hpp",
+			"ManagedCallable.hpp",
+			"ManagedOutput.hpp"
+		];
+		if (artifacts.length != requiredHeaders.length || runtime.getFiles().map(file -> file.name).join(",") != requiredHeaders.join(","))
 			throw "managed runtime packaging lost a native header";
 		for (file in runtime.getFiles()) {
 			final expected = sys.io.File.getContent("packages/hxhx-core/runtime/cpp/" + file.name);
@@ -226,7 +235,7 @@ class M14CppManagedClosureAbiIntegrationTest {
 				throw "managed runtime packaging changed native source identity";
 		}
 		runtime.getFiles().pop();
-		if (runtime.getFiles().length != 6)
+		if (runtime.getFiles().map(file -> file.name).join(",") != requiredHeaders.join(","))
 			throw "managed runtime exposed a mutable file inventory";
 		sys.io.File.saveContent(output + "/ClosureAbi.generated.hpp", declarations.join("\n") + "\n");
 		sys.io.File.copy("test/cpp_managed_heap/GeneratedAbiTest.cpp", output + "/GeneratedAbiTest.cpp");

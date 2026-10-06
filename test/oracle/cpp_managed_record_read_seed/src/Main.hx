@@ -12,7 +12,19 @@ class Main {
 		return {name: left()}.name == right();
 	}
 
+	static function contextual(value:Bool):Dynamic {
+		final result:{item:Dynamic} = {item: value};
+		return result.item;
+	}
+
+	static function contextualNested(value:Bool):Dynamic {
+		final result:{inner:{item:Dynamic}} = {inner: {item: value}};
+		return result.inner.item;
+	}
+
 	static function main():Void {
+		if (contextual(true) != true || contextualNested(false) != false)
+			throw "contextual record lost Boolean identity";
 		Sys.println(equal(null, null));
 		Sys.println(equal(null, ""));
 		Sys.println(equal("", null));

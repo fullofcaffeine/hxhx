@@ -1032,7 +1032,8 @@ class TypedBodyBuilder {
 					position);
 			case EBinop("=", left, right):
 				final destination = TypedCastExpectation.isUnchecked(right)
-					|| TypedArrayLiteral.isLiteral(right) ? expressionType(left, diagnosticPosition, environment, typeResolver) : null;
+					|| TypedArrayLiteral.isLiteral(right)
+					|| TypedAnonymousLiteral.isLiteral(right) ? expressionType(left, diagnosticPosition, environment, typeResolver) : null;
 				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, destination);
 				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				// A declared conversion is executable behavior, including effects.
@@ -1056,8 +1057,15 @@ class TypedBodyBuilder {
 				final typedWhenFalse = buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
 				TypedExpr.ternary(typedCondition, typedWhenTrue, typedWhenFalse, nodeType, position);
 			case EAnon(fieldNames, fieldValues):
-				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(),
-					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), nodeType, position);
+				final contexts = TypedAnonymousLiteral.fieldTypes(fieldNames, nodeType);
+				final children = buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, contexts);
+				// A declared abstract conversion can execute code; retain it at the
+				// field's original position rather than just changing its storage type.
+				final converted = typeResolver == null ? children : [
+					for (index in 0...children.length)
+						contexts[index].isUnknown() ? children[index] : typeResolver.convertValue(children[index], contexts[index])
+				];
+				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(), converted, nodeType, position);
 			case EArrayComprehension(name, iterable, guard, value):
 				final typedIterable = buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final elementType = switch (typedIterable.getType().getTypeArguments()) {

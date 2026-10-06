@@ -1445,8 +1445,8 @@ class TyperStage {
 	}
 
 	/** Align a candidate with the same structural and conversion rules used for its overload score. */
-	static function methodArgumentOrder(signature:TyFunSig, sources:Array<HxExpr>, types:Array<TyType>, parameters:Array<TyTypeParameterId>,
-			index:TyperIndex):Null<TyMethodArgumentOrder> {
+	static function methodArgumentOrder(signature:TyFunSig, sources:Array<HxExpr>, types:Array<TyType>, parameters:Array<TyTypeParameterId>, index:TyperIndex,
+			literalType:(HxExpr, TyType) -> Null<TyType>):Null<TyMethodArgumentOrder> {
 		return TyMethodArgumentOrder.select(signature, sources, (source, slot, spread) -> {
 			final parameter = TyCallableSignature.argumentParameter(signature, slot);
 			if (spread)
@@ -1457,6 +1457,10 @@ class TyperStage {
 				return Compatible;
 			if (!TyStructuralArgument.literalFits(sources[source], parameter.type))
 				return Incompatible;
+			if (TypedAnonymousLiteral.isLiteral(sources[source]) && parameter.type.unwrapNull().isAnonymous()) {
+				final literal = literalType(sources[source], parameter.type);
+				return literal != null && overloadArgScore(parameter.type, literal, parameters, index) >= 0 ? Compatible : Incompatible;
+			}
 			if (parameter.isOptional && types[source].isNullLiteral())
 				return Compatible;
 			final contextual = TypedCollectionExpectation.select(sources[source], parameter.type);
@@ -1604,6 +1608,14 @@ class TyperStage {
 			for (index in 0...args.length)
 				inferExprType(args[index], scope, ctx, pos, callbackContexts[index])
 		];
+		// Candidate trials must not commit context to the caller's inference state.
+		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
+			return try {
+				inferExprType(source, scope.copyForInference(), ctx, pos, expected);
+			} catch (_:TyperError) {
+				null;
+			};
+		}
 
 		if (candidates.length == 0)
 			return {type: TyType.unknown(), declaration: null};
@@ -1621,7 +1633,7 @@ class TyperStage {
 			final initial = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope), candidate);
 			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
-			final order = methodArgumentOrder(initial, args, argTypes, methodTypeParameters, ctx.getIndex());
+			final order = methodArgumentOrder(initial, args, argTypes, methodTypeParameters, ctx.getIndex(), literalType);
 			if (order == null) {
 				if (initial.acceptsArity(args.length))
 					rejectedArgumentTypes = true;
@@ -1640,13 +1652,14 @@ class TyperStage {
 			final contextual = argTypes.copy();
 			if (declaration != null
 				&& (args.filter(TypedCollectionExpectation.isEmpty).length > 0
-					|| args.filter(TypedCastExpectation.isUnchecked).length > 0)) {
+					|| args.filter(TypedCastExpectation.isUnchecked).length > 0
+					|| args.filter(TypedAnonymousLiteral.isLiteral).length > 0)) {
 				final expected = order.sourceContexts(TyMethodGenericBinding.specializeParameters(declaration, applied, ranked, ctx.getIndex()));
 				final rest = candidate.getArgRest();
 				for (index in 0...args.length)
 					if (index < expected.length && !(order.parameterIndex(index) < rest.length && rest[order.parameterIndex(index)])) {
-						final selected = TypedCastExpectation.isUnchecked(args[index]) ? expected[index] : TypedCollectionExpectation.select(args[index],
-							expected[index]);
+						final selected = TypedCastExpectation.isUnchecked(args[index]) ? expected[index] : TypedAnonymousLiteral.isLiteral(args[index]) ? literalType(args[index],
+							expected[index]) : TypedCollectionExpectation.select(args[index], expected[index]);
 						if (selected != null)
 							contextual[index] = selected;
 					}
@@ -3168,8 +3181,17 @@ class TyperStage {
 				final u = TyConditionalResult.join(t1, t2);
 				u == null ? TyType.fromHintText("Dynamic") : u;
 			case EAnon(names, values):
-				final fieldTypes = [for (value in values) inferExprType(value, scope, ctx, pos)];
-				TyType.anonymous(names, fieldTypes);
+				TypedAnonymousLiteral.infer({
+					names: names,
+					values: values,
+					expected: expectedResult,
+					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
+					accepts: (expected,
+						actual) -> overloadArgScore(expected, actual, [], ctx.getIndex()) >= 0
+							|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
+					filePath: ctx.getFilePath(),
+					position: pos
+				});
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				// Bring-up: type the iterable and bind the loop variable for the yield expression.
 				final itTy = inferExprType(iterable, scope, ctx, pos);

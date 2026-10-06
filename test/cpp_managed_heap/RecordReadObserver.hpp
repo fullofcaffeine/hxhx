@@ -19,6 +19,15 @@ static void right(Heap& heap, ErasedRef, Root<Value>& result) {
   result.set(Value::string("same"));
 }
 static void run(Heap& heap) {
+  {
+    Root<Value> result(heap);
+    generatedRecordcontextual(heap, result, true);
+    heap.collect();
+    require(result.get().kind() == ValueKind::Boolean && result.get().asBoolean());
+    generatedRecordcontextualNested(heap, result, false);
+    heap.collect();
+    require(result.get().kind() == ValueKind::Boolean && !result.get().asBoolean());
+  }
   require(generatedRecordequal(heap, {}, {}));
   require(!generatedRecordequal(heap, {}, Value::string("")));
   require(!generatedRecordequal(heap, Value::string(""), {}));
