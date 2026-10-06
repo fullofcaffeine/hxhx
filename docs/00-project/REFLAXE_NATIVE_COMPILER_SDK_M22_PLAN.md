@@ -1,7 +1,7 @@
 # M22 Native Reflaxe Compiler SDK Plan
 
-- Status: accepted planning contract; implementation deferred until Full1 and
-  the authentic shared-target hard cut; no SDK capability or support claim
+- Status: eval-to-native compiler pilot prioritized on 2026-10-06; full SDK
+  support still requires Full1 and the authentic shared-target proofs
 - Date: 2026-07-15; shared-host ABI amendment accepted 2026-07-18;
   exact-host/profile redesign accepted 2026-07-29
 - Owner: `haxe_ocaml-bomhr`
@@ -16,15 +16,22 @@ repository can call the Native Reflaxe Compiler SDK supported. It does not
 describe functionality available today, change an ABI version, authorize a
 release claim, or increase any README readiness bar.
 
-The six-month checkpoint keeps this design but changes its schedule. M22
-implementation must not begin while native `hxhx` still reaches the independent
-Stage3 OCaml emitter. `haxe_ocaml-38gsp.1` must first prove that native `hxhx`
-feeds the actual standalone `reflaxe.ocaml` target implementation, and Full1
-must satisfy the existing prerequisite. This prevents M22 from freezing host
-services or a program envelope around a temporary second semantic target.
-`haxe_ocaml-38gsp.2` must then prove that the real target can compile and run
-itself as a stage0-free native artifact. M22 product implementation starts
-only after both target proofs and Full1.
+The repository owner changed the implementation priority on 2026-10-06.
+Prototype a custom compiler in pure Haxe/eval, then compile the same stable
+implementation to native code through `reflaxe.ocaml`. Run that implementation
+from stock Haxe and/or `hxhx`, and measure the actual edit–compile–test loop.
+This bounded pilot takes priority over unrelated Full1 target work.
+
+The earlier blanket implementation pause no longer applies to this pilot.
+`haxe_ocaml-38gsp.1` still owns reuse of the actual standalone target, and
+`haxe_ocaml-38gsp.2` owns its native self-promotion proof. A second emitter
+does not satisfy either requirement. Full SDK support still requires those
+proofs and Full1; the pilot does not freeze a public host ABI.
+
+Pilot acceptance requires equivalent eval and native results, request-state
+isolation, and measured cold, warm, and one-file build latency. Use a real
+compiler workload and record native artifact build and load costs separately.
+The runtime speed of a generated application does not establish compiler speed.
 
 The focused native-host review is recorded in
 `docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
