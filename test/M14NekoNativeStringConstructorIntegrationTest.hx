@@ -42,7 +42,9 @@ class M14NekoNativeStringConstructorIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final resolved = ResolverStage.parseProjectRoots(paths, ["Main"], defines);
-		final index = TyperIndex.build(resolved);
+		// Match production: let the loader resolve signature dependencies before
+		// retaining method types, including the BytesData alias used by neko.Lib.
+		final index = TyperIndex.buildHeaders(resolved);
 		final loader = new ModuleLoader(paths, defines, index);
 		loader.markResolvedAlready(resolved);
 		final pending = resolved.copy();
