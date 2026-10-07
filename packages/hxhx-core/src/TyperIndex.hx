@@ -647,7 +647,7 @@ class TyperIndex {
 			final signatureOccurrences = new StringMap<Int>();
 			final methodOccurrences = new StringMap<Int>();
 
-			for (functionDeclaration in HxClassDecl.getFunctions(classDeclaration)) {
+			for (functionDeclaration in HxOverloadDeclarations.forClass(classDeclaration, ResolvedModule.getFilePath(module))) {
 				final functionName = HxFunctionDecl.getName(functionDeclaration);
 				final isStatic = HxFunctionDecl.getIsStatic(functionDeclaration);
 				final functionMetadata = HxFunctionDecl.getMetadata(functionDeclaration);

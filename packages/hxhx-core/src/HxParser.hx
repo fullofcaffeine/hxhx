@@ -4326,19 +4326,8 @@ class HxParser {
 		// function name, e.g. `static function coalesce<T>(left:T, right:T):T;`.
 		final functionTypeMetadata = HxFunctionTypeParamMetadata.fromParameters(new HxTypedefParser(this).parameters(), source);
 		final args = new Array<HxFunctionArg>();
-		for (argument in new HxFunctionSyntaxParser(this).readParenthesizedArguments()) {
-			final declaration = argument.declaration;
-			if (!HxFunctionArg.getIsRest(declaration)) {
-				args.push(declaration);
-			} else {
-				// Method consumers currently expect an omittable Array<T> body binding.
-				// Keep that existing representation outside the written-syntax reader.
-				final writtenHint = HxFunctionArg.getTypeHint(declaration);
-				final elementHint = StringTools.trim(writtenHint).length == 0 ? "Dynamic" : writtenHint;
-				args.push(new HxFunctionArg(HxFunctionArg.getName(declaration), "Array<" + elementHint + ">", HxFunctionArg.getDefaultValue(declaration),
-					true, true, HxFunctionArg.getDefaultValueText(declaration), HxFunctionArg.getMetadata(declaration)));
-			}
-		}
+		for (argument in new HxFunctionSyntaxParser(this).readParenthesizedArguments())
+			args.push(HxFunctionSyntaxParser.methodArgument(argument.declaration));
 
 		var returnType = "";
 		if (cur.kind.match(TColon)) {

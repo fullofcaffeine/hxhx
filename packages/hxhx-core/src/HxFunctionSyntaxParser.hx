@@ -29,6 +29,50 @@ class HxFunctionSyntaxParser {
 		return value;
 	}
 
+	/** Read the compiler's function-valued overload metadata with the ordinary signature grammar. */
+	public static function parseOverloadMetadata(source:String):Null<HxParsedFunction> {
+		final parser = new HxParser(source);
+		if (!parser.acceptOtherChar("@") || !parser.cur.kind.match(TColon))
+			return null;
+		parser.bump();
+		if (!parser.cur.kind.match(TIdent("overload")))
+			return null;
+		parser.bump();
+		// A bare @:overload marks a normal method declaration, not an added signature.
+		if (!parser.cur.kind.match(TLParen))
+			return null;
+		parser.bump();
+		if (!parser.cur.kind.match(TKeyword(KFunction)))
+			parser.fail("Overload requires a function declaration");
+		final parsed = new HxFunctionSyntaxParser(parser).read(() -> parser.cur.kind.match(TRParen));
+		if (!parser.cur.kind.match(TRParen))
+			parser.fail("Expected ')' after overload declaration");
+		parser.bump();
+		if (!parser.cur.kind.match(TEof))
+			parser.fail("Unexpected token after overload declaration");
+		switch (parsed.body) {
+			case Statements(body) if (body.length == 0):
+			case _:
+				parser.fail("Overload must only declare an empty method body {}");
+		}
+		if (parsed.resultTypeHint == null)
+			parser.fail("Explicit type required");
+		for (argument in parsed.arguments)
+			if (!argument.hasTypeAnnotation)
+				parser.fail("Explicit type required");
+		return parsed;
+	}
+
+	/** Method bodies currently bind a written rest parameter as an omittable Array<T>. */
+	public static function methodArgument(declaration:HxFunctionArg):HxFunctionArg {
+		if (!HxFunctionArg.getIsRest(declaration))
+			return declaration;
+		final writtenHint = HxFunctionArg.getTypeHint(declaration);
+		final elementHint = StringTools.trim(writtenHint).length == 0 ? "Dynamic" : writtenHint;
+		return new HxFunctionArg(HxFunctionArg.getName(declaration), "Array<" + elementHint + ">", HxFunctionArg.getDefaultValue(declaration), true, true,
+			HxFunctionArg.getDefaultValueText(declaration), HxFunctionArg.getMetadata(declaration));
+	}
+
 	/** Consume one function on the caller's token stream, bounded by its expression delimiter. */
 	public function read(stop:() -> Bool):HxParsedFunction {
 		final pos = parser.cur.getPos();

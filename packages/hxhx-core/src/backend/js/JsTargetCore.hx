@@ -17,6 +17,7 @@ private typedef JsClassUnit = {
 	final runtimeTypes:JsRuntimeTypePlan;
 	final receiverPlan:JsClassInheritancePlan.JsClassInheritanceNode;
 	final jsRef:String;
+	final externRef:Null<String>;
 	final decl:HxClassDecl;
 	final projection:TypedBackendClassProjection;
 	final exposeToplevelMain:Bool;
@@ -96,6 +97,7 @@ class JsTargetCore implements ITargetCore {
 					runtimeTypes: runtimeTypes,
 					receiverPlan: plan,
 					jsRef: jsRef,
+					externRef: JsExternBinding.reference(cls),
 					decl: cls,
 					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
@@ -582,6 +584,11 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
+		// A host value already owns its implementation and runtime metadata.
+		if (unit.externRef != null) {
+			writer.writeln("var " + unit.jsRef + " = " + unit.externRef + ";");
+			return;
+		}
 		final nodeRequireRef = nativeJsNodeRequireExternRef(unit.fullName);
 		final browserRef = nativeJsBrowserExternRef(unit.fullName);
 		if (nodeRequireRef != null) {
@@ -619,7 +626,8 @@ class JsTargetCore implements ITargetCore {
 
 	/** Run values only after every class and method exists; retain target runtime setup after its fields. */
 	static function emitClassInitialization(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
-		if (nativeJsNodeRequireExternRef(unit.fullName) != null
+		if (unit.externRef != null
+			|| nativeJsNodeRequireExternRef(unit.fullName) != null
 			|| nativeJsBrowserExternRef(unit.fullName) != null
 			|| isNativeJsGlobalExtern(unit.fullName))
 			return;
@@ -3694,7 +3702,7 @@ class JsTargetCore implements ITargetCore {
 		declarationOrder.sort((left, right) -> left.declarationRank - right.declarationRank);
 		for (emitNative in [true, false]) {
 			for (unit in declarationOrder) {
-				if (isNativeJsLibExtern(unit.fullName) != emitNative)
+				if ((unit.externRef != null || isNativeJsLibExtern(unit.fullName)) != emitNative)
 					continue;
 				emitClass(writer, unit, classRefs, classes.bySimpleName);
 			}
@@ -3702,11 +3710,12 @@ class JsTargetCore implements ITargetCore {
 
 		// All interface values exist before membership metadata or user initializers run.
 		for (unit in classes.units)
-			if (unit.interfaceRefs.length > 0)
+			if (unit.externRef == null && unit.interfaceRefs.length > 0)
 				writer.writeln(unit.jsRef + ".__hx_interfaces = [" + unit.interfaceRefs.join(", ") + "];");
 
 		for (unit in classes.units)
-			if (nativeJsNodeRequireExternRef(unit.fullName) == null
+			if (unit.externRef == null
+				&& nativeJsNodeRequireExternRef(unit.fullName) == null
 				&& nativeJsBrowserExternRef(unit.fullName) == null
 				&& !isNativeJsGlobalExtern(unit.fullName))
 				JsClassInitialization.emit(writer, unit.projection, unit.jsRef);

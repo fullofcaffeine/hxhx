@@ -178,7 +178,7 @@ class ModuleLoader extends LazyTypeLoader {
 					position: HxPos.unknown(),
 					parameters: []
 				};
-				for (path in TySignatureDependencies.declared(declaration)) {
+				for (path in TySignatureDependencies.declared(declaration, current.filePath)) {
 					final dependency = declarationHeadersAvailable(path, context);
 					if (dependency == null || queued.exists(dependency.getModulePath()))
 						continue;

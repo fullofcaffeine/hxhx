@@ -19,7 +19,7 @@ private class SignatureDependencyPaths {
 }
 
 /** Collect declaration dependencies before any method signature is published. */
-function declared(module:HxModuleDecl):Array<String> {
+function declared(module:HxModuleDecl, filePath:String = ""):Array<String> {
 	final paths = new SignatureDependencyPaths();
 	function add(path:String, bound:Array<String>):Void {
 		if (path.length > 0 && bound.indexOf(path) < 0)
@@ -56,7 +56,7 @@ function declared(module:HxModuleDecl):Array<String> {
 					hint(entry.substr(prefix.length), parameters);
 		for (field in HxClassDecl.getFields(declaration))
 			hint(HxFieldDecl.getTypeHint(field), parameters);
-		for (method in HxClassDecl.getFunctions(declaration)) {
+		for (method in HxOverloadDeclarations.forClass(declaration, filePath)) {
 			final metadata = HxFunctionDecl.getMetadata(method);
 			final bound = parameters.concat(HxFunctionTypeParamMetadata.typeParamNames(metadata));
 			for (constraint in HxFunctionTypeParamMetadata.constraints(metadata))
