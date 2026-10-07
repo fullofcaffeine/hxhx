@@ -33,12 +33,31 @@ class TypedNamedCallPlan {
 	public function publish(values:Array<TypedExpr>, result:TyType):TypedNamedCallBinding {
 		final offset = extensionProvider == null ? 0 : 1;
 		final declared = TyCallableSignature.fromDeclaration(declaration, signature).getParameters().slice(offset);
+		final sourceDeclaration = declaration.getSourceDeclaration();
+		final sourceArguments = sourceDeclaration == null ? [] : HxFunctionDecl.getArgs(sourceDeclaration);
+		final slots = order.getSlots();
 		if (declared.length != parameterTypes.length)
 			throw "named call parameter contexts changed after selection";
 		final parameters = [
 			for (slot in 0...declared.length) {
 				final source = declared[slot];
-				final type = parameterTypes[slot];
+				var type = parameterTypes[slot];
+				// Dynamic does not solve an omitted declaration parameter in Haxe.
+				// Retain that unresolved declaration, but record this invocation's
+				// explicit Dynamic transport type. No other Unknown is admitted.
+				if (type.isUnknown()
+					&& !source.isRest
+					&& sourceDeclaration != null
+					&& HxFunctionDecl.getHasBody(sourceDeclaration)
+					&& slot + offset < sourceArguments.length) {
+					final hint = HxFunctionArg.getTypeHint(sourceArguments[slot + offset]);
+					if (hint == null || StringTools.trim(hint).length == 0)
+						switch slots[slot] {
+							case Supplied(index) if (index < values.length && values[index].getType().isDynamic()):
+								type = values[index].getType();
+							case _:
+						}
+				}
 				final elements = type.getTypeArguments();
 				if (source.isRest && elements.length != 1) throw "named call rest context requires its declared container";
 				{

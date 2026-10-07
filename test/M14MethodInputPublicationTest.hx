@@ -1,6 +1,9 @@
 /** Caller checking must consume body-inferred inputs while declaration headers retain their identity. */
 class M14MethodInputPublicationTest {
 	static function main():Void {
+		for (privateAccess in [false, true])
+			for (bodyInferred in [false, true])
+				dynamicOmittedInput(privateAccess, bodyInferred);
 		for (capture in [false, true])
 			for (valid in [true, false]) {
 				final source = 'class Main {static function run(value):Int {var n:Int=value.length; return n;} '
@@ -29,6 +32,40 @@ class M14MethodInputPublicationTest {
 				'literal_width_'
 				+ capture, false);
 		Sys.println('METHOD_INPUT_PUBLICATION:PASS');
+	}
+
+	/** Explicit Dynamic operands do not manufacture a resolved declaration input. */
+	static function dynamicOmittedInput(privateAccess:Bool, bodyInferred:Bool):Void {
+		final root = '.tmp/method_input_dynamic_omitted_' + privateAccess + '_' + bodyInferred;
+		sys.FileSystem.createDirectory(root);
+		final source = 'class Helper {public static function read(value, suffix:String):String {'
+			+ (bodyInferred ? 'var n:Int=value; ' : '')
+			+ 'return suffix;}} '
+			+ 'class Main {static function call(value:Dynamic):String {return '
+			+ (privateAccess ? '@:privateAccess ' : '')
+			+ 'Helper.read(value,"ok");} static function main():Void {Sys.println(call(7));}}';
+		sys.io.File.saveContent(root + '/Main.hx', source);
+		final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		if (code != 0 || output != 'ok\n')
+			throw 'upstream omitted Dynamic input differs: ' + output + errors;
+		final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
+		final index = TyperIndex.build([module]);
+		final typed = TyperStage.typeResolvedModule(module, index);
+		JsRuntimeFixture.assertRuntime(typed, 'Main', 'ok\n');
+		final owner = index.getByFullName('Main.Helper');
+		final signature = owner.staticMethodCandidates('read')[0];
+		final declaration = owner.declarationForSignature(signature);
+		final input = index.getMethodBodyResults().signature(declaration).getArgs()[0];
+		if (!signature.getArgs()[0].isUnknown()
+			|| (bodyInferred ? input.getSemanticKey() != TyType.fromHintText('Int').getSemanticKey() : !input.isUnknown()))
+			throw 'Dynamic call changed the declaration input evidence';
+		if (TyAssignmentCompatibility.classify(TyType.unknown(), TyType.fromHintText('Dynamic'), Unchecked) != Unknown)
+			throw 'arbitrary Unknown became compatible with Dynamic';
+		Sys.println('METHOD_INPUT_DYNAMIC_OMITTED:PASS ' + privateAccess + '/' + bodyInferred);
 	}
 
 	static function upstream(root:String, valid:Bool):Void {
