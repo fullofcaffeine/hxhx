@@ -24,8 +24,6 @@ class CheckSignatures {
 				"Null<Array<Dynamic>>",
 				"Array<Iterator<Int>>",
 				"Array<haxe.io.Bytes>",
-				"Null<Int>",
-				"Null<Bool>",
 				"Dynamic",
 				"sys.FileStat",
 				"haxe.io.Input"
@@ -34,6 +32,19 @@ class CheckSignatures {
 				final type = Context.typeExpr(expression).t;
 				if (projectDeclarationSignature([type], voidType, representations, unexpectedNominal, context) != null)
 					throw "unsupported declaration received a signature: " + source;
+			}
+			// Nullable primitives use the existing boxed carrier so null stays distinct
+			// from zero and false. A scalar mapping must not authorize this boundary.
+			for (source in ["Null<Int>", "Null<Bool>"]) {
+				final type = Context.typeExpr(Context.parse("(null : " + source + ")", Context.currentPos())).t;
+				final signature = projectDeclarationSignature([type], type, representations, _ -> TIdent("Obj.t"), context);
+				if (signature == null
+					|| new OcamlASTPrinter().printType(signature.parameters[0]) != "Obj.t"
+						|| new OcamlASTPrinter().printType(signature.result) != "Obj.t")
+					throw "nullable primitive lost its boxed declaration carrier: " + source;
+				for (carrier in ["int", "bool", "unit"])
+					if (projectDeclarationSignature([type], type, representations, _ -> TIdent(carrier), context) != null)
+						throw "nullable primitive accepted an unboxed declaration carrier: " + source;
 			}
 			if (projectDeclarationSignature([Context.makeMonomorph()], voidType, representations, unexpectedNominal, context) != null)
 				throw "unresolved type received a signature";

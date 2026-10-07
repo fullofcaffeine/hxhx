@@ -540,7 +540,7 @@ try {
 	assert.strictEqual(oldSchemaResult.status, 1)
 	const oldSchemaReport = JSON.parse(oldSchemaResult.stdout)
 	assert.strictEqual(oldSchemaReport.lowering.status, 'invalid')
-	assert(oldSchemaReport.lowering.message.includes('expected 89'))
+	assert(oldSchemaReport.lowering.message.includes(`expected ${lowering.schemaVersion}`))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const corruptTypeCheckValue = JSON.parse(loweringBytes)
 	const corruptTypeCheck = corruptTypeCheckValue.stdIsOfType.find(decision => decision.runtimeRequirementIds.length > 0)
