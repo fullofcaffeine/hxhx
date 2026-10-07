@@ -117,7 +117,7 @@ for (const expected of expectedAliases) {
 		|| alias.sourceCarrierTypeId !== expected.carrier
 		|| alias.preservedCarrierTypeId !== expected.carrier
 		|| alias.nullPolicy !== 'non-null-source'
-		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
+		|| alias.proofId !== 'typed-standard-map-storage-alias-v3'
 		|| alias.runtimeRequirementIds?.length !== 0
 		|| alias.runtimeUseOccurrences?.length !== 0
 		|| report.runtimeRequirements.some(requirement => requirement.decisionId === alias.id)

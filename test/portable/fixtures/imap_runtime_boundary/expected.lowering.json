@@ -23343,7 +23343,7 @@
     }
   ],
   "iMapInterfaceModel": "typed-imap-interface-adapter-v6",
-  "iMapInterfaceRevision": "sha256:483189106734f663387889f7264cd2f2c227b25b60d0451e58a616cf4c3d8fd3",
+  "iMapInterfaceRevision": "sha256:ba6033c6ef994bb17e7b1838a28ce75d6159c4663661cdd30b8d278fb7a97b82",
   "iMapStorageAliasCount": 6,
   "iMapStorageAliases": [
     {
@@ -23355,8 +23355,8 @@
       "pipelineRevision": "ocaml-nested-function-plans-v33",
       "preservedCarrierTypeId": "HxMap.string_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {
@@ -23390,8 +23390,8 @@
       "pipelineRevision": "ocaml-nested-function-plans-v33",
       "preservedCarrierTypeId": "HxMap.obj_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {
@@ -23425,8 +23425,8 @@
       "pipelineRevision": "ocaml-function-plans-v114",
       "preservedCarrierTypeId": "HxMap.string_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {
@@ -23460,8 +23460,8 @@
       "pipelineRevision": "ocaml-nested-function-plans-v33",
       "preservedCarrierTypeId": "HxMap.int_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {
@@ -23495,8 +23495,8 @@
       "pipelineRevision": "ocaml-function-plans-v114",
       "preservedCarrierTypeId": "HxMap.int_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {
@@ -23530,8 +23530,8 @@
       "pipelineRevision": "ocaml-function-plans-v114",
       "preservedCarrierTypeId": "HxMap.obj_map",
       "programRevision": "0f906d584f1d942992581811aea52b4682ae516717bfe527fbe3c2b8f9191a34",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or an exact static Null<Map<K,V>> field whose sealed storage carrier is Obj.t. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
-      "proofId": "typed-standard-map-storage-alias-v2",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
       "source": {

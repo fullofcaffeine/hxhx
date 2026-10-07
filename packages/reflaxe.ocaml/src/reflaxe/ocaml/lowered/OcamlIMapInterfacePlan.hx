@@ -626,6 +626,7 @@ class OcamlIMapInterfacePlanner {
 	**/
 	function planStandardMapStorageAliases(expression:TypedExpr):PlannedStandardMapStorageAliases {
 		final candidates:Map<Int, PendingStandardMapStorageAlias> = [];
+		final localSources = OcamlSingleWriteSource.localInitializerSources(expression);
 
 		function collect(current:TypedExpr):Void {
 			switch (current.expr) {
@@ -633,7 +634,7 @@ class OcamlIMapInterfacePlanner {
 					return;
 				case TVar(local, initializer) if (initializer != null):
 					final target = exactIMap(local.t);
-					final source = standardMapStorageSource(initializer);
+					final source = standardMapStorageSource(initializer, localSources.get(initializer));
 					if (target != null && source != null && sameType(target.key, source.key) && sameType(target.value, source.value)) {
 						candidates.set(local.id, {
 							localId: local.id,
@@ -874,12 +875,12 @@ class OcamlIMapInterfacePlanner {
 	/**
 		Selects the raw standard Map carrier that an `IMap` expansion may preserve.
 
-		A nullable value is admitted only for an exact static field read whose field
-		declaration still has `Map<K,V>` storage. This matters because an arbitrary
-		`Null<Map<K,V>>` local can use a different target representation and cannot
-		be treated as an `HxMap` merely because its source type looks similar.
+		A nullable value needs a proven Obj.t producer: a sealed static field or
+		the exact target lookup returning a nested Map. An arbitrary nullable local
+		or user call does not prove storage. Every admitted value is checked for
+		null before its original Map reference is recovered.
 	**/
-	function standardMapStorageSource(initializer:TypedExpr):Null<{
+	function standardMapStorageSource(initializer:TypedExpr, localSource:Null<TypedExpr>):Null<{
 		kind:OcamlStandardMapCarrierKind,
 		key:Type,
 		value:Type,
@@ -900,6 +901,15 @@ class OcamlIMapInterfacePlanner {
 		final nullable = nullableStandardMapAbstractTypes(initializer.t);
 		if (nullable == null)
 			return null;
+		if (OcamlMapLookupSource.producesObjectCarrier(localSource ?? initializer, nullable.type)) {
+			return {
+				kind: nullable.kind,
+				key: nullable.key,
+				value: nullable.value,
+				sourceCarrierTypeId: "Obj.t",
+				nullPolicy: OcamlIMapStorageAliasNullPolicy.CheckNullAndUnbox
+			};
+		}
 		final storageEntry = switch (unwrapParenthesesAndMetadata(initializer).expr) {
 			case TField(_, FStatic(classRef, fieldRef)):
 				final classType = classRef.get();
@@ -922,6 +932,7 @@ class OcamlIMapInterfacePlanner {
 
 	/** Returns the standard Map facts inside one exact `Null<Map<K,V>>`. */
 	static function nullableStandardMapAbstractTypes(type:Type):Null<{
+		type:Type,
 		kind:OcamlStandardMapCarrierKind,
 		key:Type,
 		value:Type
@@ -929,7 +940,13 @@ class OcamlIMapInterfacePlanner {
 		return switch (followTypeAliases(type)) {
 			case TAbstract(abstractRef, [inner]):
 				final abstractType = abstractRef.get();
-				if (abstractType.pack.length == 0 && abstractType.name == "Null") standardMapAbstractTypes(inner); else null;
+				final map = abstractType.pack.length == 0 && abstractType.name == "Null" ? standardMapAbstractTypes(inner) : null;
+				map == null ? null : {
+					type: inner,
+					kind: map.kind,
+					key: map.key,
+					value: map.value
+				};
 			case _:
 				null;
 		};
