@@ -372,9 +372,10 @@ class TyperStage {
 	}
 
 	/**
-		Explicit this denotes an abstract's storage type inside its body, and the
-		applied class type otherwise. Member lookup must use this type rather than
-		the enclosing declaration, which can expose different methods with the same name.
+		Explicit this denotes an abstract's storage type or the core String value
+		type inside those bodies, and the applied class type otherwise. Member lookup
+		uses this value type; the enclosing declaration can expose different methods
+		with the same name.
 	 */
 	static function currentThisType(ctx:TyperContext):TyType {
 		if (ctx == null)
@@ -384,6 +385,10 @@ class TyperStage {
 			return TyType.unknown();
 		if (Std.isOfType(current, TyAbstractInfo))
 			return (cast current : TyAbstractInfo).getUnderlyingType();
+		// The core String declaration supplies members for the language value type.
+		// A qualified class such as custom.String remains an ordinary class below.
+		if (current.getIdentity().getCanonicalName() == "String")
+			return TyType.fromHintText("String");
 		return TyType.nominal(current.getIdentity(), [
 			for (parameter in TyNominalApplication.parameterIds(current))
 				TyType.typeParameter(parameter)
