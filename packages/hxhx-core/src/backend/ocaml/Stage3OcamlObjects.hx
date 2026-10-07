@@ -50,7 +50,11 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:Stage3OcamlLocalNames, quote:String->String):String {
 	return switch occurrence.kind {
 		case Read:
-			read(occurrence.resultType, "HxAnon.get (Obj.repr (" + emit(occurrence.receiver) + ")) " + quote(occurrence.field));
+			final stored = "HxAnon.get (Obj.repr (" + emit(occurrence.receiver) + ")) " + quote(occurrence.field);
+			// This owned access reads the runtime's Obj.t field storage. An open
+			// field type keeps that carrier intact; only a concrete result permits
+			// unboxing. This does not admit an arbitrary Unknown expression or store.
+			occurrence.resultType.isUnknown() ? "(" + stored + ")" : read(occurrence.resultType, stored);
 		case Write:
 			if (occurrence.value == null || occurrence.valueType == null)
 				throw "object assignment lost its typed operand";

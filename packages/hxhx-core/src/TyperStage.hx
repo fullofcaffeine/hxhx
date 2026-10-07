@@ -3108,6 +3108,14 @@ class TyperStage {
 							case EIdent(name):
 								final sym = scope.resolveSymbol(name);
 								if (sym != null) {
+									// The first assignment to an unannotated, uninitialized
+									// local must retain the RHS inference identity, just as
+									// an initializer does. Later uses constrain that same term.
+									if (sym.getType().isUnknown() && scope.getInference().sourceTerm(a, scope) == null) {
+										final assignedTerm = scope.getInference().sourceTerm(b, scope);
+										if (assignedTerm != null)
+											scope.getInference().recordLocal(sym, assignedTerm);
+									}
 									if (scope.getInference().sourceTerm(a, scope) != null) {
 										final inferred = scope.getInference().expressionType(a, sym.getType(), scope);
 										final compatible = inferred.hasUnknownComponent() ? scope.getInference()

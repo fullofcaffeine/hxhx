@@ -86,7 +86,8 @@ class M14MethodInputPublicationTest {
 		JsRuntimeFixture.assertRuntime(typed, 'Main', 'ok\n');
 		if (!privateAccess && !bodyInferred) {
 			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
-			final native = new sys.io.Process('gtimeout', ['30', executable]);
+			final timeout = Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout';
+			final native = new sys.io.Process(timeout, ['30', executable]);
 			final nativeOutput = native.stdout.readAll().toString();
 			final nativeErrors = native.stderr.readAll().toString();
 			final nativeCode = native.exitCode();
