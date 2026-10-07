@@ -210,6 +210,19 @@ class M14InferenceSolverTest {
 
 	/** Dynamic consumers supply a publication fallback, never an early alias-unification result. */
 	static function dynamicUseContracts():Void {
+		final destinations = new TyInferenceSolver("Main.dynamicDestinations");
+		final input = destinations.freshOmittedParameter();
+		final field = destinations.field(input, "value");
+		final operation = destinations.freshUntypedResult();
+		destinations.observeDynamicUse(input, true);
+		destinations.observeDynamicUse(field, true);
+		destinations.observeDynamicUse(operation, true);
+		check(destinations.previewDynamicUses(field).isUnknown(), "Dynamic destination invented an input field annotation");
+		check(destinations.previewDynamicUses(operation).isDynamic(), "untyped operation lost its Dynamic consumer carrier");
+		destinations.seal();
+		check(destinations.published(field).isUnknown(), "Dynamic destination changed the input field at seal");
+		check(destinations.published(operation).isDynamic(), "untyped operation lost its Dynamic carrier at seal");
+
 		final solver = new TyInferenceSolver("Main.dynamicUse");
 		final pending = solver.freshUntypedResult();
 		solver.observeDynamicUse(pending);

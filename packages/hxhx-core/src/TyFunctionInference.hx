@@ -500,7 +500,10 @@ class TyFunctionInference {
 			}
 			if (expected[index].isDynamic()) {
 				// A Dynamic destination accepts the value without supplying a type
-				// for an omitted parameter. Preserve later concrete constraints.
+				// for an omitted parameter. Explicitly untyped results still need
+				// their deferred carrier when consumed through a Dynamic boundary.
+				if (term != null)
+					candidate.observeDynamicUse(term, true);
 				continue;
 			}
 			if (term == null) {

@@ -1,4 +1,5 @@
 import TyInferenceTerm.TyInferenceVariable;
+import TyInferenceTerm.TyInferenceVariableKind;
 
 /** A read-only declaration lookup projects existing owner terms; it must not allocate inference variables. */
 typedef TyInferenceMemberResolver = (TyInferenceTerm, String) -> Null<TyInferenceTerm>;
@@ -55,17 +56,17 @@ class TyInferenceSolver {
 
 	/** An omitted input may stay unknown; this is missing evidence, never an inferred Dynamic value. */
 	public function freshOmittedParameter():TyInferenceTerm {
-		return allocate(null, true);
+		return allocate(null, OmittedInput);
 	}
 
 	/** An explicitly untyped result accepts later constraints; unused results retain Unknown rather than guessed Dynamic. */
 	public function freshUntypedResult():TyInferenceTerm {
-		return allocate(null, true);
+		return allocate(null, UntypedResult);
 	}
 
-	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>, allowsUnknown:Bool = false):TyInferenceTerm {
+	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>, kind:TyInferenceVariableKind = Required):TyInferenceTerm {
 		requireMutable();
-		final identity = new TyInferenceVariable(owner, variables.length, openMethodParameter, allowsUnknown);
+		final identity = new TyInferenceVariable(owner, variables.length, openMethodParameter, kind);
 		variables.push(identity);
 		solutions.push(null);
 		dynamicUses.push(false);
@@ -131,7 +132,7 @@ class TyInferenceSolver {
 						return entry.term;
 				if (sealed)
 					throw "field requirement is absent from sealed inference";
-				final child = allocate(null, identity.allowsUnknown);
+				final child = allocate(null, identity.kind);
 				fields.push({name: name, term: child});
 				child;
 			case Structure(fields, signature):
@@ -163,11 +164,13 @@ class TyInferenceSolver {
 		Record explicit Dynamic input or destination evidence without solving shared variables.
 		A later typed use can still constrain an alias or report a conflict. Only
 		seal applies this fallback to remaining holes owned by this solver.
+		A bare destination preserves omitted input annotations; explicit Dynamic
+		input evidence can still constrain those variables through other calls.
 	 */
-	public function observeDynamicUse(term:TyInferenceTerm):Void {
+	public function observeDynamicUse(term:TyInferenceTerm, preserveOmittedInputs:Bool = false):Void {
 		requireMutable();
 		assertOwned(term);
-		visitDynamicUse(term, false);
+		visitDynamicUse(term, false, preserveOmittedInputs);
 		revision++;
 	}
 
@@ -195,9 +198,11 @@ class TyInferenceSolver {
 	}
 
 	/** Follow final alias solutions and preserve nominal, callable, and required-field structure. */
-	function visitDynamicUse(term:TyInferenceTerm, publish:Bool):Void {
+	function visitDynamicUse(term:TyInferenceTerm, publish:Bool, preserveOmittedInputs:Bool = false):Void {
 		switch follow(term) {
 			case Variable(identity):
+				if (preserveOmittedInputs && identity.kind == OmittedInput)
+					return;
 				if (!publish) {
 					dynamicUses[identity.ordinal] = true;
 				} else if (fieldRequirements[identity.ordinal].length > 0) {
@@ -208,16 +213,16 @@ class TyInferenceSolver {
 				}
 			case Nominal(_, arguments):
 				for (argument in arguments)
-					visitDynamicUse(argument, publish);
+					visitDynamicUse(argument, publish, preserveOmittedInputs);
 			case Nullable(inner):
-				visitDynamicUse(inner, publish);
+				visitDynamicUse(inner, publish, preserveOmittedInputs);
 			case Function(arguments, result, _):
 				for (argument in arguments)
-					visitDynamicUse(argument, publish);
-				visitDynamicUse(result, publish);
+					visitDynamicUse(argument, publish, preserveOmittedInputs);
+				visitDynamicUse(result, publish, preserveOmittedInputs);
 			case Structure(fields, _):
 				for (field in fields)
-					visitDynamicUse(field, publish);
+					visitDynamicUse(field, publish, preserveOmittedInputs);
 			case Known(_):
 				// Missing concrete type facts are not solver variables and gain no fallback.
 		}

@@ -15,6 +15,13 @@ enum TyInferenceTerm {
 	Structure(fields:Array<TyInferenceTerm>, signature:TyType);
 }
 
+/** Distinguish missing input annotations from operation results that can acquire a Dynamic carrier. */
+enum TyInferenceVariableKind {
+	Required;
+	OmittedInput;
+	UntypedResult;
+}
+
 /** Identity is object-owned, so unrelated solvers cannot forge equal variables by name. */
 @:allow(TyInferenceSolver)
 class TyInferenceVariable {
@@ -25,10 +32,13 @@ class TyInferenceVariable {
 	/** Omitted inputs, explicitly untyped results, and their projections may retain missing evidence. */
 	public final allowsUnknown:Bool;
 
-	function new(owner:String, ordinal:Int, ?openMethodParameter:TyOpenMethodParameterId, allowsUnknown:Bool = false) {
+	public final kind:TyInferenceVariableKind;
+
+	function new(owner:String, ordinal:Int, ?openMethodParameter:TyOpenMethodParameterId, kind:TyInferenceVariableKind = Required) {
 		this.owner = owner;
 		this.ordinal = ordinal;
 		this.openMethodParameter = openMethodParameter;
-		this.allowsUnknown = allowsUnknown;
+		this.allowsUnknown = kind != Required;
+		this.kind = kind;
 	}
 }
