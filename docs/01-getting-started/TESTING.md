@@ -74,6 +74,37 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Native compiler promotion
+
+Run `npm run test:reflaxe-ocaml:native-program-host` to compile the Haxe-authored
+frontend into a native executable, then use it to compile a small application.
+The gate builds and runs that application and compares its shared-target
+reports, manifests, generated source bytes, diagnostics, and behavior with
+the stock-Haxe route. It excludes the independent Stage3 emitter.
+
+The Reflaxe OCaml package workflow runs this compiler-scale gate in its
+`native_program_host` job on the weekly schedule and manual dispatches.
+Ordinary push and pull-request runs skip this job. The command has a 75-minute
+limit inside a 90-minute job. Failures fail the workflow.
+For an isolated manual validation, select the `native_only` input. This skips
+the package producer and its dependent jobs; scheduled runs retain the whole
+matrix. For example:
+
+```bash
+gh workflow run reflaxe-ocaml-package-matrix.yml --ref <branch> -f native_only=true
+```
+
+The job retains its exact commit, validation log, generation progress,
+diagnostics, generated sources, and reports as
+`reflaxe-ocaml-native-program-host-<commit>`. Native build directories are
+excluded from the upload. A manual run proves the configured job; a scheduled
+run remains separate execution evidence.
+
+This gate proves the admitted revision-one application through the native
+frontend and the shared standalone target. It does not prove general target
+compatibility, native Genes, compiler self-promotion, or a performance gain.
+Its elapsed time includes compiler preparation and background scheduling.
+
 ### Abstract method declarations
 
 Run `npm run test:m14:typer-abstract-catalog` when you change abstract declaration

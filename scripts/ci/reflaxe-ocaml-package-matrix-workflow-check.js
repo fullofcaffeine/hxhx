@@ -34,6 +34,26 @@ const builder = jobSection('package_artifact')
 const consumers = jobSection('package_install')
 const summary = jobSection('package_matrix_summary')
 const performanceSummary = jobSection('package_performance_summary')
+const nativeProgramHost = jobSection('native_program_host')
+
+// Native frontend compilation is a compiler-scale correctness gate. Keep it
+// off ordinary PRs, preserve failures, and bind retained evidence to the commit.
+for (const needle of [
+	"if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'",
+	'timeout-minutes: 90',
+	'REFLAXE_OCAML_NATIVE_PROGRAM_HOST_WORK_ROOT:',
+	'git rev-parse HEAD > "$evidence/revision.txt"',
+	'git diff --exit-code HEAD',
+	'timeout --kill-after=30s 75m npm run test:reflaxe-ocaml:native-program-host',
+	'set -euo pipefail',
+	'if: always()',
+	'name: reflaxe-ocaml-native-program-host-${{ github.sha }}'
+]) {
+	requireIncludes('native_program_host', nativeProgramHost, needle)
+}
+if (nativeProgramHost.includes('continue-on-error:')) {
+	fail('native compiler promotion failures must fail the workflow')
+}
 
 for (const needle of [
 	'name: Reflaxe OCaml / Package Artifact Matrix',
@@ -50,6 +70,7 @@ for (const needle of [
 // source provenance. It must not make an otherwise clean checkout look dirty.
 requireIncludes('gitignore', gitignore, '/_opam/')
 for (const needle of [
+	"if: github.event_name != 'workflow_dispatch' || !inputs.native_only",
 	'npm run build:reflaxe-ocaml:package-artifact',
 	'name: reflaxe-ocaml-source-package-${{ github.sha }}',
 	'artifact-manifest.json',
@@ -105,3 +126,4 @@ for (const needle of [
 console.log('[ci:guards] OK: one reflaxe.ocaml package artifact feeds Linux and macOS consumers')
 console.log('RO_PACKAGE_ARTIFACT_MATRIX_CONTRACT:PASS')
 console.log('RO_TARGET_PERF_PLATFORM_MATRIX_CONTRACT:PASS')
+console.log('RO_NATIVE_PROGRAM_HOST_SCHEDULE_CONTRACT:PASS')
