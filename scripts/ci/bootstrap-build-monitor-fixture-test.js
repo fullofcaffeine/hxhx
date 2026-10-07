@@ -88,6 +88,64 @@ touch "_build/default/$(basename "$2")"
     assert.ok(active(control.pid), 'cleanup stopped the unrelated control process')
     console.log('BOOTSTRAP_BUILD_MONITORS:PASS ' + name)
   }
+
+  // A quiet compiler must expose flushed phase records before it exits, keep
+  // caller-owned files, and apply the same retention policy to owned logs.
+  executable('haxe', `#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "\${REFLAXE_OCAML_PROGRESS_FILE:-}" ]; then
+  printf 'fixture_phase_begin\\n' >> "$REFLAXE_OCAML_PROGRESS_FILE"
+fi
+/bin/sleep 2
+exit 7
+`)
+  for (const name of ['cleanup', 'retain', 'external', 'timeout', 'direct', 'disabled']) {
+    const logDir = path.join(temporary, 'progress-' + name)
+    fs.mkdirSync(logDir)
+    const external = path.join(logDir, 'caller.log')
+    if (name === 'external') fs.writeFileSync(external, 'caller record\n')
+    const result = spawnSync('bash', [path.join(fixture, 'scripts/hxhx/build-hxhx.sh')], {
+      encoding: 'utf8', timeout: 15000,
+      env: {
+        ...process.env,
+        PATH: bin + path.delimiter + process.env.PATH,
+        HAXE_BIN: path.join(bin, 'haxe'), HAXE_CONNECT: '',
+        HXHX_FORCE_STAGE0: '1', HXHX_FORBID_STAGE0: '0',
+        HXHX_STAGE0_USE_REPO_SERVER: '0', HXHX_STAGE0_OCAML_BUILD: 'byte',
+        HXHX_STAGE0_OUTPUT_DIR: path.join(temporary, 'source-' + name),
+        HXHX_STAGE0_PROGRESS: name === 'disabled' ? '0' : '1',
+        HXHX_STAGE0_TELEMETRY: '0',
+        HXHX_STAGE0_HEARTBEAT: name === 'direct' ? '0' : '1',
+        HXHX_STAGE0_FAILFAST_SECS: name === 'direct' ? '0' : name === 'timeout' ? '1' : '10',
+        HXHX_KEEP_LOGS: name === 'retain' ? '1' : '0', HXHX_LOG_DIR: logDir,
+        REFLAXE_OCAML_PROGRESS_FILE: name === 'external' ? external : '',
+      },
+    })
+    assert.ifError(result.error)
+    assert.equal(result.status, 1, result.stderr)
+    assert.equal(result.stdout, '', 'phase output polluted artifact stdout')
+    if (name === 'disabled') {
+      assert.ok(!result.stderr.includes('fixture_phase_begin'))
+    } else {
+      assert.match(result.stderr, /fixture_phase_begin/)
+      if (!['timeout', 'direct'].includes(name)) {
+        assert.match(result.stderr, /Stage0 latest progress:\nfixture_phase_begin/)
+      }
+    }
+    const files = fs.readdirSync(logDir)
+    if (name === 'retain') {
+      assert.equal(files.length, 2)
+      const progress = files.find(file => file.startsWith('hxhx-stage0-progress.'))
+      assert.ok(progress)
+      assert.equal(fs.readFileSync(path.join(logDir, progress), 'utf8'), 'fixture_phase_begin\n')
+    } else if (name === 'external') {
+      assert.deepEqual(files, ['caller.log'])
+      assert.equal(fs.readFileSync(external, 'utf8'), 'caller record\nfixture_phase_begin\n')
+    } else {
+      assert.deepEqual(files, [])
+    }
+    console.log('STAGE0_BUILD_PROGRESS:PASS ' + name)
+  }
 } finally {
   for (const file of fs.existsSync(pids) ? fs.readdirSync(pids) : []) {
     try { process.kill(Number(fs.readFileSync(path.join(pids, file), 'utf8')), 'SIGTERM') } catch (_) {}
