@@ -113,9 +113,9 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v115";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v34";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v18";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v116";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v35";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v19";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -152,7 +152,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 49,
+			schemaVersion: 50,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -479,8 +479,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 90) {
-						throw 'Unsupported lowering report schema $version; expected 90.';
+					if (version != 91) {
+						throw 'Unsupported lowering report schema $version; expected 91.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -2142,7 +2142,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v32")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v33")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -3779,7 +3779,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -4245,6 +4245,7 @@ class ReflaxeOcamlInspection {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
 		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier"
+			|| decision.boxingPolicy == "nullable-nominal-call-carrier"
 			|| decision.boxingPolicy == "direct-nominal-value-carrier"
 			|| decision.boxingPolicy == "direct-native-enum-carrier";
 		if (isNominal != (nominalCount == 3))
@@ -4294,6 +4295,20 @@ class ReflaxeOcamlInspection {
 				|| decision.proofId != OcamlInt64RepresentationContract.PROOF_ID) {
 				throw 'Representation decision "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
 			}
+		} else if (decision.boxingPolicy == "nullable-nominal-call-carrier") {
+			if (decision.domain != "generic-call-value"
+				|| decision.proofId != reflaxe.ocaml.lowered.OcamlGenericClassRepresentation.PROOF_ID + ":" + decision.nominalLayoutRevision
+				|| decision.proofClaim != reflaxe.ocaml.lowered.OcamlGenericClassRepresentation.PROOF_CLAIM
+				|| decision.id != "representation:" + decision.semanticTypeId + ":generic-call-value"
+				|| decision.key != decision.semanticTypeId + "|generic-call-value"
+				|| decision.nullPolicy != "runtime-sentinel"
+				|| decision.identityPolicy != "reference-identity"
+				|| decision.aliasingPolicy != "shared-reference-aliases"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "mutable-runtime-container"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.profileEligibility.join(",") != "metal,portable")
+				throw 'Representation decision "${decision.id}" does not match its generic class transport proof.';
 		} else if (decision.boxingPolicy == "nullable-nominal-record-carrier") {
 			if (decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
 				throw 'Representation decision "${decision.id}" does not match its sealed monomorphic-class carrier proof.';
@@ -4321,7 +4336,7 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		final expectedRevision = "sha256:" + Sha256.encode([
-			"ocaml-representation-v23",
+			"ocaml-representation-v24",
 			decision.semanticTypeId,
 			decision.domain,
 			decision.carrierTypeId,
@@ -5687,7 +5702,7 @@ class ReflaxeOcamlInspection {
 			representedArrayModel: null,
 			representedArrayRevision: null,
 			representedArrays: [],
-			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15",
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16",
 			message: message
 		};
 	}

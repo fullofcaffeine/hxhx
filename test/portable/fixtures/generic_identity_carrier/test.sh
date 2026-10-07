@@ -19,8 +19,8 @@ fi
 
 node - <<'NODE'
 const report = require('./out/ocaml_lowering_report.json')
-if (report.schemaVersion !== 90
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v32') {
+if (report.schemaVersion !== 91
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v33') {
 	throw new Error('The generic identity fixture uses a stale lowering contract')
 }
 const calls = report.calls.filter(call =>
@@ -38,7 +38,7 @@ if (carriers.join(',') !== 'Int:int->int,String:string->string') {
 }
 for (const call of calls) {
 	if (call.proofId !== 'direct-static-generic-identity-v1'
-		|| call.pipelineRevision !== 'ocaml-function-plans-v115'
+		|| call.pipelineRevision !== 'ocaml-function-plans-v116'
 		|| call.arguments[0].conversion !== 'identity'
 		|| call.result.conversion !== 'identity') {
 		throw new Error(`Generic identity call ${call.id} lacks its typed carrier proof`)

@@ -26,6 +26,8 @@ class OcamlMonomorphicClassPlanner {
 			for (classType in classes) {
 				if (!isCandidate(classType, context, isUserClass))
 					continue;
+				// Whole-object call transport does not grant the field optimizations below.
+				OcamlGenericClassRepresentation.register(classType, context, representations);
 				final fields:Array<OcamlMonomorphicClassField> = [];
 				var supported = true;
 				var declarationOrder = 0;

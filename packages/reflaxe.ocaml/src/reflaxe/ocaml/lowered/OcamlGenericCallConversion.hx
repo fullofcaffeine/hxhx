@@ -16,6 +16,10 @@ enum OcamlGenericValueShape {
 	Text(nullable:Bool);
 	NullableInteger;
 	NullableBoolean;
+
+	/** Exact registered record identity; null uses the same native reference carrier. */
+	NominalValue(typeId:String, representationId:String, nullable:Bool);
+
 	ArrayValue(element:OcamlGenericValueShape);
 	FunctionValue(arguments:Array<OcamlGenericValueShape>, result:OcamlGenericValueShape);
 	EffectOnly;
@@ -62,18 +66,18 @@ function parameterId(type:Type):Null<String> {
 }
 
 /** Classifies storage without following away the distinction between String and Null<String>. */
-function shape(type:Type):Null<OcamlGenericValueShape> {
+function shape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericValueShape> {
 	final parameter = parameterId(type);
 	if (parameter != null)
 		return Erased(parameter);
 	return switch (type) {
-		case TLazy(resolve): shape(resolve());
+		case TLazy(resolve): shape(resolve(), nominalProof);
 		case TMono(reference):
 			final resolved = reference.get();
-			resolved == null ? null : shape(resolved);
+			resolved == null ? null : shape(resolved, nominalProof);
 		case TType(reference, parameters):
 			final declaration = reference.get();
-			shape(TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters));
+			shape(TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters), nominalProof);
 		case TAbstract(reference, parameters):
 			final declaration = reference.get();
 			if (declaration.pack.length != 0) null else switch ([declaration.name, parameters]) {
@@ -81,28 +85,36 @@ function shape(type:Type):Null<OcamlGenericValueShape> {
 				case ["Bool", []]: Boolean;
 				case ["Void", []]: EffectOnly;
 				case ["Null", [inner]]:
-					switch (shape(inner)) {
+					switch (shape(inner, nominalProof)) {
 						case Text(_): Text(true);
 						case Integer: NullableInteger;
 						case Boolean: NullableBoolean;
+						case NominalValue(typeId, proof, _): NominalValue(typeId, proof, true);
 						case _: null;
 					}
 				case _: null;
 			}
 		case TInst(reference, parameters):
 			final declaration = reference.get();
-			if (declaration.pack.length != 0) null else switch ([declaration.module, declaration.name, parameters]) {
+			final typeId = (declaration.pack ?? []).concat([declaration.name]).join(".");
+			final proof = nominalProof == null ? null : nominalProof(typeId);
+			if (proof != null && parameters.length == 0 && !declaration.isExtern && !declaration.isInterface && !declaration.meta.has(":native")
+				&& declaration.params.length == 0) {
+				NominalValue(typeId, proof, false);
+			} else if (declaration.pack.length != 0) null else switch ([declaration.module, declaration.name, parameters]) {
 				case ["String", "String", []]: Text(false);
-				case ["Array", "Array", [element]]: final selected = shape(element); selected == null || !isArrayElement(selected) ? null : ArrayValue(selected);
+				case ["Array", "Array", [element]]: final selected = shape(element,
+						nominalProof); selected == null || !isArrayElement(selected) ? null : ArrayValue(selected);
 				case _: null;
 			}
 		case TFun(arguments, result): final selectedArguments:Array<OcamlGenericValueShape> = []; var supported = true; for (argument in arguments) {
-				final selected = shape(argument.t);
+				final selected = shape(argument.t, nominalProof);
 				if (argument.opt || selected == null || selected == EffectOnly)
 					supported = false;
 				else
 					selectedArguments.push(selected);
-			} final selectedResult = shape(result); !supported || selectedResult == null ? null : FunctionValue(selectedArguments, selectedResult);
+			} final selectedResult = shape(result,
+				nominalProof); !supported || selectedResult == null ? null : FunctionValue(selectedArguments, selectedResult);
 		case _: null;
 	}
 }
@@ -158,8 +170,8 @@ function crossing(source:OcamlGenericValueShape, destination:OcamlGenericValueSh
 		case [Erased(_), NullableBoolean]: UnboxNullableBoolean;
 		case [Boolean, Erased(_)]: BoxBoolean;
 		case [Erased(_), Boolean]: UnboxBoolean;
-		case [Integer | Text(_) | ArrayValue(_), Erased(_)]: BoxValue;
-		case [Erased(_), Integer | Text(_) | ArrayValue(_)]: UnboxValue;
+		case [Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _), Erased(_)]: BoxValue;
+		case [Erased(_), Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _)]: UnboxValue;
 		case [
 			FunctionValue(sourceArguments, sourceResult),
 			FunctionValue(destinationArguments, destinationResult)
@@ -191,6 +203,7 @@ function shapeId(value:OcamlGenericValueShape):String {
 		case Text(nullable): nullable ? "Null<String>" : "String";
 		case NullableInteger: "Null<Int>";
 		case NullableBoolean: "Null<Bool>";
+		case NominalValue(typeId, representationId, nullable): 'class:${typeId}:${representationId}:${nullable}';
 		case ArrayValue(element): 'Array<${shapeId(element)}>';
 		case FunctionValue(arguments, result): '(${arguments.map(shapeId).join(",")})->${shapeId(result)}';
 		case EffectOnly: "Void";

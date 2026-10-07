@@ -14,6 +14,8 @@ private enum abstract NodeKind(String) to String {
 	final NullableText = "nullable-string";
 	final NullableInteger = "nullable-int";
 	final NullableBoolean = "nullable-bool";
+	final NominalValue = "class";
+	final NullableNominalValue = "nullable-class";
 	final ArrayValue = "array";
 	final FunctionValue = "function";
 	final EffectOnly = "void";
@@ -27,11 +29,13 @@ private enum abstract NodeKind(String) to String {
 	final AdaptFunction = "adapt-function";
 }
 
-/** Parameters are present only for erased nodes; function children end with the result. */
+/** Only class nodes carry nominal proof fields; function children end with the result. */
 private typedef ReportNode = {
 	final kind:NodeKind;
 	final parameter:Null<String>;
 	final children:Array<ReportNode>;
+	final ?classTypeId:String;
+	final ?classRepresentationId:String;
 }
 
 /** JSON-safe projection; no compiler object or Haxe enum reaches the report writer. */
@@ -109,6 +113,13 @@ private function shapeToReport(shape:OcamlGenericValueShape):ReportNode {
 		case Text(nullable): node(nullable ? NodeKind.NullableText : NodeKind.Text);
 		case NullableInteger: node(NodeKind.NullableInteger);
 		case NullableBoolean: node(NodeKind.NullableBoolean);
+		case NominalValue(typeId, representationId, nullable): {
+				kind: nullable ? NodeKind.NullableNominalValue : NodeKind.NominalValue,
+				parameter: null,
+				children: [],
+				classTypeId: typeId,
+				classRepresentationId: representationId
+			};
 		case ArrayValue(element): node(NodeKind.ArrayValue, [shapeToReport(element)]);
 		case FunctionValue(arguments, result): node(NodeKind.FunctionValue, arguments.map(shapeToReport).concat([shapeToReport(result)]));
 		case EffectOnly: node(NodeKind.EffectOnly);
@@ -139,6 +150,8 @@ private function readShape(value:Dynamic, depth:Int):OcamlGenericValueShape {
 		case "nullable-string" if (children.length == 0): Text(true);
 		case "nullable-int" if (children.length == 0): NullableInteger;
 		case "nullable-bool" if (children.length == 0): NullableBoolean;
+		case "class", "nullable-class" if (children.length == 0):
+			NominalValue(text(Reflect.field(value, "classTypeId")), text(Reflect.field(value, "classRepresentationId")), decoded.kind == "nullable-class");
 		case "void" if (children.length == 0): EffectOnly;
 		case "array" if (children.length == 1): ArrayValue(readShape(children[0], depth + 1));
 		case "function" if (children.length > 0):
@@ -168,8 +181,8 @@ private function readConversion(value:Dynamic, depth:Int):OcamlGenericValueConve
 private function readNode(value:Dynamic, depth:Int):{kind:String, parameter:Null<String>, children:Array<Dynamic>} {
 	if (depth > 64)
 		throw "Generic call report exceeds the supported type nesting depth.";
-	requireFields(value, ["kind", "parameter", "children"]);
 	final kind = text(Reflect.field(value, "kind"));
+	requireFields(value, kind == "class" || kind == "nullable-class" ? ["kind", "parameter", "children", "classTypeId", "classRepresentationId"] : ["kind", "parameter", "children"]);
 	final rawParameter:Dynamic = Reflect.field(value, "parameter");
 	final parameter = rawParameter == null ? null : text(rawParameter);
 	if ((kind == "erased") != (parameter != null))

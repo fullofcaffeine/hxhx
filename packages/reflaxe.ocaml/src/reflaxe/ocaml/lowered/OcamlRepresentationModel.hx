@@ -6,6 +6,9 @@ enum abstract OcamlRepresentationDomain(String) from String to String {
 	/** An ordinary value used inside a function. */
 	final InternalValue = "internal-value";
 
+	/** An opaque class reference passed through a proved generic call boundary. */
+	final GenericCallValue = "generic-call-value";
+
 	/** A value stored in a mutable local cell. */
 	final MutableLocalStorage = "mutable-local-storage";
 
@@ -161,6 +164,13 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		null-to-record crossing is not implied by the carrier decision.
 	**/
 	final NullableNominalRecordCarrier = "nullable-nominal-record-carrier";
+
+	/**
+		An ordinary class record crosses a generic call without copying its fields.
+		The declaration identity fixes its named carrier. This family grants no
+		direct-field, local-storage, inheritance, or container-layout optimization.
+	**/
+	final NullableNominalCallCarrier = "nullable-nominal-call-carrier";
 
 	/**
 		Haxe Dynamic stores one already-produced target value in `Obj.t`.

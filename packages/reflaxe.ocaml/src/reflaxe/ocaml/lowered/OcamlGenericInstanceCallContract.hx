@@ -34,9 +34,9 @@ typedef OcamlGenericInstanceCallTarget = {
 }
 
 /** Selects generic calls only when the receiver and every storage crossing are proved. */
-final PROOF_ID = "generic-instance-storage-crossing-v1";
+final PROOF_ID = "generic-instance-storage-crossing-v2";
 
-final PROOF_CLAIM = "One ordinary generic instance method owns the erased type parameters. Its exact concrete instantiation fixes directional argument and result conversions, and a registered monomorphic receiver fixes direct dispatch. The source receiver and arguments are evaluated once in order before invocation.";
+final PROOF_CLAIM = "One ordinary generic instance method owns the erased type parameters. Its exact concrete instantiation fixes directional argument and result conversions. Registered whole-record proofs fix direct receiver dispatch and the identities of class values without authorizing field optimizations. The source receiver and arguments are evaluated once in order before invocation.";
 
 #if macro
 /** Creates a decision bound to the final caller, source occurrence, and target facts. */
@@ -169,17 +169,39 @@ function select(expression:TypedExpr, representations:OcamlRepresentationRegistr
 			(owner.pack ?? []).concat([owner.name]).join(".");
 		case _: return null;
 	};
-	final representation = representations.monomorphicClassValue(receiverType);
-	return representation == null ? null : selectWithReceiverProof(expression, representation.id);
+	final representation = representations.genericClassValue(receiverType);
+	return representation == null ? null : selectWithReceiverProof(expression, representation.id, typeId -> {
+		final value = representations.genericClassValue(typeId);
+		return value == null ? null : value.id;
+	});
 }
 
 /** Rechecks final typed facts; the call's program revision owns the registered receiver proof. */
+function representationsMatch(target:OcamlGenericInstanceCallTarget, representations:OcamlRepresentationRegistry, programRevision:String):Bool {
+	final receiver = representations.genericClassValue(target.receiverTypeId);
+	if (receiver == null || receiver.id != target.receiverRepresentationId || receiver.programRevision != programRevision)
+		return false;
+	for (proof in nominalProofs(target)) {
+		final value = representations.genericClassValue(proof.typeId);
+		if (value == null || value.id != proof.representationId || value.programRevision != programRevision)
+			return false;
+	}
+	return true;
+}
+
+/** Rechecks the final typed occurrence using only retained class identities. */
 function matches(target:OcamlGenericInstanceCallTarget, expression:TypedExpr):Bool {
-	final selected = selectWithReceiverProof(expression, target.receiverRepresentationId);
+	final proofs = nominalProofs(target);
+	final selected = selectWithReceiverProof(expression, target.receiverRepresentationId, typeId -> {
+		for (proof in proofs)
+			if (proof.typeId == typeId)
+				return proof.representationId;
+		return null;
+	});
 	return selected != null && fingerprint(selected) == fingerprint(target);
 }
 
-private function selectWithReceiverProof(expression:TypedExpr, receiverProof:String):Null<OcamlGenericInstanceCallTarget> {
+private function selectWithReceiverProof(expression:TypedExpr, receiverProof:String, nominalProof:String->Null<String>):Null<OcamlGenericInstanceCallTarget> {
 	return switch (expression.expr) {
 		case TCall(callee = {expr: TField(receiver, FInstance(classRef, [], fieldRef))}, arguments):
 			final owner = classRef.get();
@@ -193,9 +215,9 @@ private function selectWithReceiverProof(expression:TypedExpr, receiverProof:Str
 			final receiverType = (owner.pack ?? []).concat([owner.name]).join(".");
 			if (TypeTools.toString(TypeTools.follow(receiver.t)) != receiverType)
 				return null;
-			final declared = genericValueShape(field.type);
-			final instantiated = genericValueShape(callee.t);
-			final resultShape = genericValueShape(expression.t);
+			final declared = genericValueShape(field.type, nominalProof);
+			final instantiated = genericValueShape(callee.t, nominalProof);
+			final resultShape = genericValueShape(expression.t, nominalProof);
 			final owned:Array<String> = [];
 			for (parameter in field.params) {
 				final id = genericValueParameterId(parameter.t);
@@ -214,7 +236,7 @@ private function selectWithReceiverProof(expression:TypedExpr, receiverProof:Str
 					final shapes:Array<OcamlGenericValueShape> = [];
 					final conversions:Array<OcamlGenericValueConversion> = [];
 					for (index in 0...arguments.length) {
-						final shape = genericValueShape(arguments[index].t);
+						final shape = genericValueShape(arguments[index].t, nominalProof);
 						if (shape == null || !sameShape(shape, actualParameters[index]))
 							return null;
 						final conversion = genericValueCrossing(shape, parameters[index]);
@@ -260,6 +282,7 @@ function require(target:OcamlGenericInstanceCallTarget):Void {
 		|| target.ownedParameterIds.length == 0
 		|| !genericValueMatchInstantiation(target.declaration, target.instantiation, target.ownedParameterIds, new Map()))
 		throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: incomplete method or inconsistent instantiation";
+	nominalProofs(target);
 	switch ([target.declaration, target.instantiation]) {
 		case [FunctionValue(parameters, result), FunctionValue(actualParameters, actualResult)]:
 			if (parameters.length != target.arguments.length
@@ -274,6 +297,43 @@ function require(target:OcamlGenericInstanceCallTarget):Void {
 		case _:
 			throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: missing function shape";
 	}
+}
+
+/**
+	Collects exact class identities used by the conversion without widening class admission.
+	Selection supplies registered proofs; occurrence matching reuses only those retained facts.
+	The report inspector separately checks each proof against the current program inventory.
+**/
+function nominalProofs(target:OcamlGenericInstanceCallTarget):Array<{typeId:String, representationId:String}> {
+	final proofs:Array<{typeId:String, representationId:String}> = [];
+	function visit(shape:OcamlGenericValueShape):Void {
+		switch (shape) {
+			case NominalValue(typeId, representationId, _):
+				if (typeId.length == 0 || representationId.length == 0)
+					throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: missing class representation";
+				for (proof in proofs) {
+					if (proof.typeId == typeId) {
+						if (proof.representationId != representationId)
+							throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: conflicting class representations";
+						return;
+					}
+				}
+				proofs.push({typeId: typeId, representationId: representationId});
+			case FunctionValue(arguments, result):
+				for (argument in arguments)
+					visit(argument);
+				visit(result);
+			case ArrayValue(element):
+				visit(element);
+			case _:
+		}
+	}
+	visit(target.declaration);
+	visit(target.instantiation);
+	for (shape in target.argumentShapes)
+		visit(shape);
+	visit(target.resultShape);
+	return proofs;
 }
 
 function fingerprint(target:OcamlGenericInstanceCallTarget):String {

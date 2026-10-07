@@ -45,6 +45,11 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescr
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
@@ -78,13 +83,14 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 90;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
+	public static inline final SCHEMA_VERSION = 91;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
 		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
 			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier
 			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier;
 		if (isNominal != (nominalCount == 3))
@@ -115,6 +121,19 @@ class OcamlLoweringReportWriter {
 				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
 				throw 'Program representation "${decision.id}" does not match its sealed native enum carrier.';
 			}
+			return;
+		}
+		if (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier) {
+			if (decision.proof.id != OcamlGenericClassRepresentation.PROOF_ID + ":" + decision.nominalLayoutRevision
+				|| decision.proof.claim != OcamlGenericClassRepresentation.PROOF_CLAIM
+				|| decision.domain != OcamlRepresentationDomain.GenericCallValue
+				|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+				|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+				|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+				|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+				|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted)
+				throw 'Program representation "${decision.id}" does not match its generic class transport proof.';
 			return;
 		}
 		if (decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
@@ -383,8 +402,19 @@ class OcamlLoweringReportWriter {
 				final receiver = representationById.get(target.receiverRepresentationId);
 				if (receiver == null
 					|| receiver.semanticTypeId != target.receiverTypeId
-					|| receiver.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier)
+					|| receiver.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
+					|| receiver.domain != OcamlRepresentationDomain.GenericCallValue
+					|| receiver.programRevision != call.programRevision)
 					throw 'Generic call "${call.id}" has no matching direct-record receiver representation.';
+				for (proof in reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.nominalProofs(target)) {
+					final value = representationById.get(proof.representationId);
+					if (value == null
+						|| value.semanticTypeId != proof.typeId
+						|| value.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
+						|| value.domain != OcamlRepresentationDomain.GenericCallValue
+						|| value.programRevision != call.programRevision)
+						throw 'Generic call "${call.id}" has no matching class-value representation.';
+				}
 			}
 			if (call.receiver != null)
 				requireCallValue(representationById, call.receiver, 'Call "${call.id}" receiver');
@@ -978,7 +1008,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + hashUtf8(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v32",
+			callModel: "typed-ocaml-directional-call-boundary-v33",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + hashUtf8(canonicalCalls),
 			callCount: sortedCalls.length,

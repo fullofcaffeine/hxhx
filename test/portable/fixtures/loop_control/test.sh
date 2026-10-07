@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 90
+if (report.schemaVersion !== 91
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
@@ -53,8 +53,8 @@ const nestedTransfers = report.controls.filter(control =>
 	&& control.functionId.includes('|nested-function|'))
 if (nestedTargets.length !== 1
 	|| nestedTransfers.length !== 2
-	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v34'
-	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v34')) {
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v35'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v35')) {
 	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 
@@ -79,7 +79,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v115') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v116') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
@@ -147,7 +147,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 49
+if (report.schemaVersion !== 50
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

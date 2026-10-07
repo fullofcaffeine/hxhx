@@ -18,9 +18,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 90
+if (report.schemaVersion !== 91
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
-	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16') {
 	fail('unexpected lowering-report schema, control model, or representation scope')
 }
 
@@ -77,7 +77,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v115'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v116'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'

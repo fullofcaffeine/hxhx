@@ -51,7 +51,7 @@ import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.OcamlNativeEnumDescri
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v23";
+	public static inline final MODEL_REVISION = "ocaml-representation-v24";
 	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
@@ -291,6 +291,13 @@ class OcamlRepresentationRegistry {
 			return null;
 		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
 		return decision == null ? null : copyDecision(decision);
+	}
+
+	/** Resolves only the opaque class transport proof; field and local planners cannot use it. */
+	public function genericClassValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.GenericCallValue));
+		return decision == null
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier ? null : copyDecision(decision);
 	}
 
 	function selectMonomorphicClassDecision(layout:OcamlMonomorphicClassDecision, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
@@ -610,6 +617,7 @@ class OcamlRepresentationRegistry {
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-int-domain]: generic class transport cannot select Int storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -709,6 +717,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectExactBool(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: generic class transport cannot select Bool storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -760,6 +769,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectNormalizedRepresentedArray(normalized:OcamlNormalizedRepresentedArray, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: generic class transport cannot select Array storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField, StaticField, ArrayElement:
@@ -839,6 +849,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectExactString(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: generic class transport cannot select String storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -1137,6 +1148,7 @@ class OcamlRepresentationRegistry {
 	function selectExactNullablePrimitive(domain:OcamlRepresentationDomain, semanticTypeId:String, reason:String,
 			proof:OcamlRepresentationProof):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: generic class transport cannot select nullable primitive storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -1456,6 +1468,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactIntReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-int-domain]: generic class transport has no Int storage reason";
 			case InternalValue: "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.";
 			case MutableLocalStorage: "An exact, non-null Haxe Int uses OCaml int directly inside the mutable local cell selected by the function plan.";
 			case CapturedLocalStorage: "An exact, non-null Haxe Int uses OCaml int directly inside the one local cell shared with nested functions.";
@@ -1467,6 +1480,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactBoolReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: generic class transport has no Bool storage reason";
 			case InternalValue: "An exact, non-null Haxe Bool local uses OCaml bool directly; a later value is represented by a newer immutable binding.";
 			case MutableLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the mutable local cell selected by the function plan.";
 			case CapturedLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the one local cell shared with nested functions.";
@@ -1479,6 +1493,7 @@ class OcamlRepresentationRegistry {
 
 	static function representedArrayReason(descriptor:OcamlRepresentedArrayDescriptor, domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: generic class transport has no Array storage reason";
 			case InternalValue:
 				'An exact ${descriptor.arraySemanticTypeId} immutable binding stores the descriptor-owned ${descriptor.arrayCarrierTypeId} container; aliases share its element mutations while a later source assignment creates a newer binding.';
 			case MutableLocalStorage:
@@ -1492,6 +1507,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactNullIntReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: generic class transport has no nullable Int storage reason";
 			case InternalValue:
 				"An exact Null<Int> immutable binding uses Obj.t so one carrier can preserve Haxe null and boxed Int values across source rebindings.";
 			case MutableLocalStorage:
@@ -1509,6 +1525,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactNullBoolReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: generic class transport has no nullable Bool storage reason";
 			case InternalValue:
 				"An exact Null<Bool> immutable binding uses Obj.t so stored null remains distinct from boxed false and boxed true.";
 			case MutableLocalStorage:
@@ -1526,6 +1543,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactStringReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: generic class transport has no String storage reason";
 			case InternalValue:
 				"An exact Haxe String internal value uses the nullable OCaml string carrier; non-null values are direct and the canonical null sentinel is materialized only through the sealed proof.";
 			case MutableLocalStorage:
@@ -1576,6 +1594,8 @@ class OcamlRepresentationRegistry {
 
 	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		switch (domain) {
+			case GenericCallValue:
+				throw "reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: generic class transport cannot admit nullable primitives";
 			case InternalValue, MutableLocalStorage, CapturedLocalStorage, InstanceField, StaticField:
 			case ArrayElement:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, local, instance-field, or static-field storage, not $domain';

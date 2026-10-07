@@ -2,6 +2,7 @@ package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlGenericCallEmitter.emit as genericSyntaxEmit;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.representationsMatch as genericCallRepresentationsMatch;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
@@ -1709,9 +1710,8 @@ class OcamlBuilder {
 		final target = call.genericInstanceTarget;
 		if (target == null || callee == null || currentCallPlan == null)
 			return callPlanInvariant("generic instance call has no target, callee, or current inventory", position);
-		final representation = representationRegistry.monomorphicClassValue(target.receiverTypeId);
-		if (representation == null || representation.id != target.receiverRepresentationId)
-			return callPlanInvariant("generic instance receiver lost its exact direct-dispatch representation", position);
+		if (!genericCallRepresentationsMatch(target, representationRegistry, call.programRevision))
+			return callPlanInvariant("generic instance call lost its current receiver or class-value representation", position);
 		final receiver = switch (callee.expr) {
 			case TField(value, FInstance(_, _, _)): value;
 			case _: return callPlanInvariant("generic instance call has no instance receiver", position);

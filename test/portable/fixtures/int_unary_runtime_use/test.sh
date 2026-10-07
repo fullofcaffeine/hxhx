@@ -10,7 +10,7 @@ trap 'rm -f "$inspection"' EXIT
 node - "$report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 90
+if (report.schemaVersion !== 91
 	|| report.intUnaryModel !== 'typed-ocaml-int-unary-v1'
 	|| report.intUnaryCount !== 10
 	|| report.intUnary?.length !== 10) {
@@ -29,7 +29,7 @@ for (const decision of report.intUnary) {
 		? [finalSymbol, 'HxRuntime.hx_null']
 		: [finalSymbol]
 	if (decision.proofId !== 'int-unary-runtime-use-v1'
-		|| !['ocaml-function-plans-v115', 'ocaml-nested-function-plans-v34', 'ocaml-standalone-expression-plans-v18'].includes(decision.pipelineRevision)
+		|| !['ocaml-function-plans-v116', 'ocaml-nested-function-plans-v35', 'ocaml-standalone-expression-plans-v19'].includes(decision.pipelineRevision)
 		|| decision.runtimeUseOccurrences.map(use => use.exactSymbol).join(',') !== expectedSymbols.join(',')) {
 		throw new Error(`Incomplete integer unary authority: ${JSON.stringify(decision)}`)
 	}
@@ -57,7 +57,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$inspection" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 49
+if (report.schemaVersion !== 50
 	|| !report.summary?.valid
 	|| report.summary.intUnaryCount !== 10
 	|| report.lowering?.intUnary?.length !== 10) {
