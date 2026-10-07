@@ -2,6 +2,14 @@ import First.Item;
 
 /** Cross-module calls create a cycle, while all module initialization remains delayed. */
 class Second {
+	public static function maybe(item:Item, present:Bool):Null<Item> {
+		return present ? item : null;
+	}
+
+	public static function floatIdentity(value:Float):Float {
+		return value;
+	}
+
 	public static function copy(item:Item):Item {
 		return First.make(item.value);
 	}

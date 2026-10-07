@@ -11,3 +11,5 @@ true
 2
 0
 methods-ok
+nullable-records-ok
+float-declarations-ok

@@ -36,6 +36,9 @@ typedef OcamlDeclarationSignature = {
 	when no optimized enum-returning function registered a result-carrier proof.
 	This only exports the declaration; it does not authorize new call conversions.
 	Nullable enums retain the mapper's existing boxed null-or-variant carrier.
+	Nullable anonymous records retain their existing boxed table-or-null carrier.
+	Ordinary Float declarations name the existing float carrier without changing
+	numeric operations, formatting, nullable Float storage, or generic conversions.
 	Function types use the ordinary curried callback ABI only when every argument
 	and result has an admitted declaration carrier; zero arguments use unit.
 	Optional callback arguments currently require String's existing null sentinel.
@@ -111,6 +114,7 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 			switch (reference.get().name) {
 				case "Int": TIdent("int");
 				case "Bool": TIdent("bool");
+				case "Float": TIdent("float");
 				case "Void": TIdent("unit");
 				case _: null;
 			}
@@ -141,8 +145,10 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 							case _: null;
 						}
 					case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context, erasedMethodTypeParameters);
-					case referred = TEnum(_, _):
-						if (declarationCarrier(referred, representations, nominalType, context, erasedMethodTypeParameters) == null) {
+					case TEnum(_, _) | TAnonymous(_):
+						// The supported non-null value must already have a declaration
+						// carrier. Null does not admit private or iterator record layouts.
+						if (declarationCarrier(TypeTools.follow(inner), representations, nominalType, context, erasedMethodTypeParameters) == null) {
 							null;
 						} else {
 							switch (nominalType(type)) {

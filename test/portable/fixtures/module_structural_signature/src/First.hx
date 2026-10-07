@@ -6,6 +6,19 @@ typedef Item = {
 
 /** The recursive group must export the same carrier used by these function bodies. */
 class First {
+	/** Nullable records keep the same reference across both recursive modules. */
+	public static function maybe(item:Item, present:Bool):Null<Item> {
+		return Second.maybe(item, present);
+	}
+
+	public static function hold(?item:Item):RecordHolder {
+		return new RecordHolder(item);
+	}
+
+	public static function floatIdentity(value:Float):Float {
+		return Second.floatIdentity(value);
+	}
+
 	public static function copy(item:Item):Item {
 		return Second.copy(item);
 	}

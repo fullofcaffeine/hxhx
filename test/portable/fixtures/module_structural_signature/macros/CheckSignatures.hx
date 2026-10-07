@@ -13,6 +13,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 class CheckSignatures {
 	public static function install():Void {
 		Context.onAfterTyping(_ -> {
+			CheckDeclarationCarriers.check();
 			final voidType = Context.getType("Void");
 			final representations = new OcamlRepresentationRegistry();
 			final context = new CompilationContext();
@@ -73,6 +74,11 @@ class CheckSignatures {
 				throw "a dispatch declaration lost its existing named record type";
 		});
 		Context.onAfterGenerate(() -> {
+			check("First", "maybe", "Obj.t -> bool -> Obj.t");
+			check("Second", "maybe", "Obj.t -> bool -> Obj.t");
+			check("RecordHolder", "create", "Obj.t -> t");
+			check("First", "floatIdentity", "float -> float");
+			check("Second", "floatIdentity", "float -> float");
 			check("Token", "create", "int -> t");
 			check("Token", "getLinked", "t -> unit -> t");
 			check("Token", "setLinked", "t -> t -> unit");

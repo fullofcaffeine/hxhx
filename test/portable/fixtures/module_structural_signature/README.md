@@ -18,10 +18,20 @@ Arrays with unsupported elements, such as Dynamic or Iterator, remain rejected.
 Instance methods preserve the receiver, nullable class and string results, and
 array argument/result types. For example, after `a.setLinked(b)`, `a.getLinked()`
 returns `b` while `b.getLinked()` remains null. Zero-argument getters still use
-the existing generated calling convention. Scalar null declarations remain
-outside this signature projection. A dispatch class can export its existing
+the existing generated calling convention. Nullable Int and Bool declarations
+retain their boxed carrier; unboxed alternatives are rejected. A dispatch class can export its existing
 record type but must not gain direct-field optimization permission. The separate
 `module_inherited_signature` fixture observes its native dispatch behavior.
+
+Nullable records preserve null, identity, and shared mutation through recursive
+functions and an optional constructor argument. Omitted and explicit null
+arguments both select the constructor's default record. Unsupported iterator
+and key/value record layouts remain rejected.
+
+Ordinary Float parameters and results retain the existing native `float` type.
+Finite fractional values pass through both recursive modules unchanged. This
+declaration check does not change numeric operations or formatting, and does
+not admit nullable Float or generic Float conversions.
 
 Run from the repository root:
 

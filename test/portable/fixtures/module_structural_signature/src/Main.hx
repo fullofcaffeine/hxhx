@@ -36,5 +36,17 @@ class Main {
 		if (values.length != 2 || values[1] != 9 || other.getValues().length != 1)
 			throw "array method parameter or receiver mutation changed";
 		Sys.println("methods-ok");
+		if (First.maybe(source, false) != null || First.maybe(source, true) != source)
+			throw "nullable record result changed";
+		final holder = First.hold(source);
+		if (holder.item != source || First.hold().item.value != 5 || First.hold(null).item.value != 5)
+			throw "optional record constructor changed";
+		holder.item.value = 11;
+		if (source.value != 11)
+			throw "record constructor lost its alias";
+		Sys.println("nullable-records-ok");
+		if (First.floatIdentity(1.25) != 1.25 || First.floatIdentity(-2.5) != -2.5)
+			throw "finite Float declaration changed its value";
+		Sys.println("float-declarations-ok");
 	}
 }
