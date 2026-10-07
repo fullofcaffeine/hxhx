@@ -21,9 +21,46 @@ class M14PrivateAccessTest {
 		throw "privateAccess accepted invalid source: " + body;
 	}
 
+	/** Compare body permission and generic forwarding with upstream and both executable backends. */
+	static function bodyMetadataRuntime(source:String):Void {
+		final root = JsRuntimeFixture.reserveOutput();
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		final upstream = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]);
+		final output = upstream.stdout.readAll().toString();
+		final errors = upstream.stderr.readAll().toString();
+		final code = upstream.exitCode();
+		upstream.close();
+		if (code != 0 || output != "7\n")
+			throw "upstream body metadata differs: " + output + errors;
+		final module = typed(source);
+		JsRuntimeFixture.assertRuntime(module, "Main", "7\n");
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([module], []), root + "/ocaml", true);
+		final native = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]);
+		final nativeOutput = native.stdout.readAll().toString();
+		final nativeErrors = native.stderr.readAll().toString();
+		final nativeCode = native.exitCode();
+		native.close();
+		if (nativeCode != 0 || nativeOutput != "7\n")
+			throw "native body metadata differs: " + nativeOutput + nativeErrors;
+		Sys.println("BODY_METADATA_RUNTIME:PASS");
+	}
+
 	static function main():Void {
 		// Local initializer mismatches are diagnostics in the strict compiler lane.
 		Sys.putEnv("HXHX_TYPER_STRICT", "1");
+		final bodyMetadataSource = "class Other { public static var value(null,default):Int=7; } "
+			+ "class Main { static function read():Int@:privateAccess { return Other.value; } "
+			+ "static function identity<T>(value:T):T@:privateAccess { return value; } "
+			+ "static function forward<T>(value:T):T { return identity(value); } "
+			+ "static function main() { Sys.println(forward(read())); } }";
+		bodyMetadataRuntime(bodyMetadataSource);
+		try {
+			typed(StringTools.replace(bodyMetadataSource, "return identity(value);", "var denied=Other.value; return identity(value);"));
+			throw "body permission leaked into the following method";
+		} catch (error:TyperError) {
+			if (error.message.indexOf("cannot be accessed for reading") < 0)
+				throw error;
+		}
 		for (body in [
 			"var a=(@:privateAccess o.value);",
 			"@:privateAccess { var a=o.value; }",

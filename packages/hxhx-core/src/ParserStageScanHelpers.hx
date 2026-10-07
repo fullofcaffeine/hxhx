@@ -1548,6 +1548,10 @@ class ParserStageScanHelpers {
 				if (tok.text.length == 0)
 					return {hint: parts.join(""), nextPos: j};
 				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				// Metadata after a return type belongs to the body. Leave it for the
+				// statement parser so scoped permissions survive declaration recovery.
+				if (atTop && stopAtUntypedBodyModifier && tok.text == "@")
+					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && tok.text == "return")
 					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && expressionBodyKeywordStartsWithoutReturn(tok.text))

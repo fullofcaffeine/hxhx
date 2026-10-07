@@ -419,6 +419,8 @@ class HxParser {
 
 	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos, bodyStartIndex:Int):HxExpr {
 		return switch (expr) {
+			case EPrivateAccess(inner, position):
+				EPrivateAccess(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case EParenthesized(inner, position):
 				EParenthesized(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case ESourceTry(catches, bodies, position):
@@ -1600,7 +1602,8 @@ class HxParser {
 		// the syntax tree retains the permission to use untyped expressions.
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
-		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis))
+		// Body metadata must reach the statement parser with its permission scope intact.
+		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis))
 			|| cur.kind.match(TKeyword(KSwitch)) || cur.kind.match(TKeyword(KIf)) || cur.kind.match(TKeyword(KFor)) || cur.kind.match(TKeyword(KWhile))
 			|| cur.kind.match(TKeyword(KDo)) || cur.kind.match(TKeyword(KTry)),
 			true);

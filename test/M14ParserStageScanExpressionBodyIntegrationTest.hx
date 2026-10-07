@@ -50,6 +50,10 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 		}
 
 		final typeCases = [
+			{hint: "T", body: "@:privateAccess { return value; }"},
+			{hint: "Array<Array<Int>>", body: "@:privateAccess { return [[1]]; }"},
+			{hint: "Void->Void", body: "@:privateAccess { return callback; }"},
+			{hint: "{value:Int}", body: "@:privateAccess { return {value: 1}; }"},
 			{hint: "Void", body: '/* body boundary */ Sys.println("ok");'},
 			{hint: "Array<Array<Int>>", body: "return [[1]];"},
 			{hint: "Void->Void", body: "return callback;"},
@@ -69,6 +73,15 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 				assertTrue(functions.length == 2, "return type must not consume the following method: " + testCase.hint);
 				assertTrue(HxFunctionDecl.getReturnTypeHint(functions[0]) == testCase.hint, "preserve the complete type: " + testCase.hint);
 				assertTrue(HxFunctionDecl.getBody(functions[0]).length > 0, "retain the body after type: " + testCase.hint);
+				if (StringTools.startsWith(testCase.body, "@:privateAccess")) {
+					assertTrue(HxFunctionDecl.getBodyText(functions[0]) == testCase.body, "retain exact body metadata text");
+					switch HxFunctionDecl.getBody(functions[0]) {
+						case [HxStmt.SExpr(HxExpr.EPrivateAccess(_, position), _)]:
+							assertTrue(position.getIndex() == text.indexOf("@:privateAccess"), "retain body permission source position");
+						case _:
+							throw "return type scanning erased the body permission";
+					}
+				}
 			}
 		}
 
