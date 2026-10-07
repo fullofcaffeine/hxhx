@@ -93,7 +93,9 @@ touch "_build/default/$(basename "$2")"
   // caller-owned files, and apply the same retention policy to owned logs.
   executable('haxe', `#!/usr/bin/env bash
 set -euo pipefail
-if [ -n "\${REFLAXE_OCAML_PROGRESS_FILE:-}" ]; then
+if [ "\${REFLAXE_OCAML_PROGRESS_FILE:-}" = /dev/stderr ]; then
+  printf 'fixture_phase_begin\\n' >&2
+elif [ -n "\${REFLAXE_OCAML_PROGRESS_FILE:-}" ]; then
   printf 'fixture_phase_begin\\n' >> "$REFLAXE_OCAML_PROGRESS_FILE"
 fi
 /bin/sleep 2

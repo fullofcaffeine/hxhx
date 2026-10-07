@@ -271,6 +271,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 	function profileLogLine(msg:String):Void {
 		if (!profileEnabled)
 			return;
+		// A captured stderr descriptor can be a socket on Linux. Reopening its
+		// /dev path fails there; use the inherited stream and never close it.
+		if (Sys.getEnv("REFLAXE_OCAML_PROGRESS_FILE") == "/dev/stderr") {
+			try {
+				final output = Sys.stderr();
+				output.writeString(msg + "\n");
+				output.flush();
+			} catch (_:haxe.Exception) {}
+			return;
+		}
 		profileTryOpenLog();
 		if (profileLog == null)
 			return;
