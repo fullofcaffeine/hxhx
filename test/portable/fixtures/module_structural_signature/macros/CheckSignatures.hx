@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 
 /** Checks retained export types and rejects unsupported storage before native compilation. */
 @:access(reflaxe.ocaml.OcamlCompiler)
@@ -49,8 +50,16 @@ class CheckSignatures {
 			if (projectDeclarationSignature([Context.getType("haxe.io.Bytes")], voidType, representations, unexpectedNominal, context) != null)
 				throw "private Bytes storage received a direct record signature";
 			context.dispatchTypes.set("Token", true);
-			if (projectDeclarationSignature([Context.getType("Token")], voidType, representations, unexpectedNominal, context) != null)
-				throw "a class marked for subtype dispatch received a direct record signature";
+			final tokenType = Context.getType("Token");
+			final tokenClass = switch (tokenType) {
+				case TInst(reference, []): reference.get();
+				case _: throw "missing Token class";
+			};
+			if (OcamlMonomorphicClassPlanner.hasDirectRecordLayout(tokenClass, context))
+				throw "a dispatch class gained direct-field optimization permission";
+			final dispatchDeclaration = projectDeclarationSignature([tokenType], voidType, representations, _ -> TIdent("Token.t"), context);
+			if (dispatchDeclaration == null || new OcamlASTPrinter().printType(dispatchDeclaration.parameters[0]) != "Token.t")
+				throw "a dispatch declaration lost its existing named record type";
 		});
 		Context.onAfterGenerate(() -> {
 			check("Token", "create", "int -> t");

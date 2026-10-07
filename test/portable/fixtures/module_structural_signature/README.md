@@ -18,8 +18,10 @@ Arrays with unsupported elements, such as Dynamic or Iterator, remain rejected.
 Instance methods preserve the receiver, nullable class and string results, and
 array argument/result types. For example, after `a.setLinked(b)`, `a.getLinked()`
 returns `b` while `b.getLinked()` remains null. Zero-argument getters still use
-the existing generated calling convention. Scalar null and subtype-dispatch
-declarations remain outside this signature projection.
+the existing generated calling convention. Scalar null declarations remain
+outside this signature projection. A dispatch class can export its existing
+record type but must not gain direct-field optimization permission. The separate
+`module_inherited_signature` fixture observes its native dispatch behavior.
 
 Run from the repository root:
 
