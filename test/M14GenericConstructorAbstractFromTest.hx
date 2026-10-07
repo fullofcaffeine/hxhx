@@ -3,6 +3,7 @@ import sys.io.File;
 /** Compare abstract-header constructor inference with upstream before checking exact typed publication. */
 class M14GenericConstructorAbstractFromTest {
 	static function main():Void {
+		M14AbstractDestinationInferenceTest.check();
 		check("AbstractFromCases");
 		check("AbstractDynamicCases");
 		reject("AbstractMissingHeader", "Array<String> should be Box<Unknown<0>>");
@@ -11,14 +12,18 @@ class M14GenericConstructorAbstractFromTest {
 	}
 
 	/** Each case uses the real Array declaration, without typing unrelated library bodies. */
-	static function fixture(module:String):{resolved:ResolvedModule, index:TyperIndex} {
+	static function fixture(module:String):{resolved:ResolvedModule, index:TyperIndex, loader:ModuleLoader} {
 		final path = "test/fixtures/generic_constructor_context/" + module + ".hx";
 		final resolved = new ResolvedModule(module, path, ParserStage.parse(File.getContent(path), path));
 		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", module], true);
 		final standardRoot = hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args);
 		final defines = hxhx.Stage3SetupSupport.buildDefinesMap([], "js", "js-native");
-		final providers = ResolverStage.parseProjectRoots([standardRoot + "/js/_std", standardRoot], ["Array"], defines);
-		return {resolved: resolved, index: TyperIndex.build([resolved].concat(providers))};
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([standardRoot + "/js/_std", standardRoot], defines, index, null, true);
+		loader.markResolvedAlready([resolved]);
+		if (loader.ensureTypeAvailable("Array", "", []) == null)
+			throw "missing real Array provider";
+		return {resolved: resolved, index: index, loader: loader};
 	}
 
 	/** Upstream diagnostics define rejected inputs; local failure must occur at constructor selection. */
@@ -40,7 +45,7 @@ class M14GenericConstructorAbstractFromTest {
 		final input = fixture(module);
 		var rejection = "";
 		try {
-			TyperStage.typeResolvedModule(input.resolved, input.index);
+			TyperStage.typeResolvedModule(input.resolved, input.index, input.loader, true);
 		} catch (error:haxe.Exception) {
 			rejection = error.message;
 		}
@@ -62,7 +67,7 @@ class M14GenericConstructorAbstractFromTest {
 		Sys.println("ABSTRACT_CONSTRUCTOR_UPSTREAM:" + module + ":PASS");
 		final input = fixture(module);
 		final index = input.index;
-		final typed = TyperStage.typeResolvedModule(input.resolved, index);
+		final typed = TyperStage.typeResolvedModule(input.resolved, index, input.loader, true);
 		final binder = index.getAbstractByFullName(module + ".Box").getTypeParameterIds()[0];
 		var concreteCount = 0;
 		var binderCount = 0;

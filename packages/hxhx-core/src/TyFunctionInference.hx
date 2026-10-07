@@ -661,7 +661,9 @@ class TyFunctionInference {
 				final direct = context.isAnonymous() ? TyStructuralConstraint.constrain(semanticIndex, candidate, value,
 					context) : projected != null
 					&& TyStructuralConstraint.constrainNominalAssignment(semanticIndex, candidate, projected, context);
-				if (!direct && TyAbstractMethodConversion.constrain(semanticIndex, candidate, value, context) == null)
+				if (!direct
+					&& !TyInferenceAbstractDestination.constrain(semanticIndex, candidate, value, context)
+					&& TyAbstractMethodConversion.constrain(semanticIndex, candidate, value, context) == null)
 					return false;
 			}
 		}
