@@ -29,6 +29,7 @@ function select(index:TyperIndex, constructed:TyType, arguments:Array<TyType>, s
 		return null;
 	final substitutions = TyTypeSubstitution.bind(parameters, appliedOwner.getTypeArguments(), identity.getCanonicalName());
 	var bestScore = -1;
+	final selectedGroups = new Array<TyDeclarationInfo>();
 	var best:Null<TyDeclarationInfo> = null;
 	var tied = false;
 	for (signature in owner.instanceMethodCandidates("new")) {
@@ -59,6 +60,8 @@ function select(index:TyperIndex, constructed:TyType, arguments:Array<TyType>, s
 		// null type facts score omissions; they never become executable operands.
 		final candidateScore = score(applied, ranked, TyMethodGenericBinding.inferableTypeParameters(declaration));
 		if (candidateScore < 0)
+			continue;
+		if (!TyMetadataOverloadOrder.accept(declaration, selectedGroups))
 			continue;
 		if (candidateScore > bestScore) {
 			bestScore = candidateScore;

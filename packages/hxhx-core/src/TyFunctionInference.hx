@@ -559,6 +559,7 @@ class TyFunctionInference {
 		if (candidates.length == 0)
 			return true;
 		var best:Null<TyFunctionInference> = null;
+		final selectedGroups = new Array<TyDeclarationInfo>();
 		var bestScore = -1;
 		var tied = false;
 		for (signature in candidates) {
@@ -571,6 +572,8 @@ class TyFunctionInference {
 			final applied = TyNominalApplication.signature(input.index, input.provider, candidate.solver.preview(term), signature);
 			final score = input.score(applied, TyMethodGenericBinding.inferableTypeParameters(declaration));
 			if (score < 0)
+				continue;
+			if (!TyMetadataOverloadOrder.accept(declaration, selectedGroups))
 				continue;
 			if (score > bestScore) {
 				best = candidate;

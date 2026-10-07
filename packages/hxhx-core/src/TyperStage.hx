@@ -1609,6 +1609,7 @@ class TyperStage {
 		if (candidates.length == 0)
 			return {type: TyType.unknown(), declaration: null};
 		final arityMatches = new Array<TyFunSig>();
+		final selectedGroups = new Array<TyDeclarationInfo>();
 		var bestScore = -1;
 		final bestMatches = new Array<TyFunSig>();
 		var bestArguments = argTypes;
@@ -1686,6 +1687,8 @@ class TyperStage {
 			if (score < 0 && applied.acceptsArity(args.length))
 				rejectedArgumentTypes = true;
 			if (score >= 0) {
+				if (!TyMetadataOverloadOrder.accept(declaration, selectedGroups))
+					continue;
 				arityMatches.push(candidate);
 				if (score > bestScore) {
 					bestScore = score;
