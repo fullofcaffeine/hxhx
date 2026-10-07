@@ -6,6 +6,7 @@ import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroState;
 import sys.io.File;
 
+/** Exercise runtime modes and preserve ordered source children through macro expansion and diagnostics. */
 @:access(hxhx.Stage3DiagnosticsSupport)
 class M14MacroRuntimeModeSwitchIntegrationTest {
 	static function fail(message:String):Void {
@@ -127,7 +128,10 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		MacroState.setGeneratedHxDir(".tmp/m14_macro_runtime_generated_entrypoints");
 
 		final generated = MacroRuntimeMode.openSession(MacroRuntimeMode.INPROC);
-		final unsupportedSequence = HxExpr.ESequence(EUnsupported("first"), ESequence(EInt(0), EUnsupported("last")));
+		final unsupportedSequence = HxExpr.ESourceGroup([
+			EUnsupported("first"),
+			ESourceGroup([EInt(0), EUnsupported("last")], HxPos.unknown())
+		], HxPos.unknown());
 		assertIntEq("sequence unsupported count", Stage3DiagnosticsSupport.countUnsupportedExprsInExpr(unsupportedSequence), 2);
 		final unsupportedRaw = new Array<String>();
 		Stage3DiagnosticsSupport.collectUnsupportedExprRawInExpr(unsupportedSequence, unsupportedRaw, 2);
@@ -142,7 +146,7 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		assertIntEq("sequence macro expansion count", sequenceExpansion.expandedCount, 2);
 		final sequenceClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(sequenceExpansion.modules[0]).getDecl());
 		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(sequenceClass)[0])) {
-			case [SReturn(ESequence(EString("HELLO"), EString("HELLO")), _)]:
+			case [SReturn(ESourceGroup([EString("HELLO"), EString("HELLO")], _), _)]:
 			case body:
 				fail("sequence macro expansion lost ordered children: " + Std.string(body));
 		}
