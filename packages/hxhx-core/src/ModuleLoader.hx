@@ -284,8 +284,7 @@ class ModuleLoader extends LazyTypeLoader {
 		};
 		if (ensureDeclarationAvailable(raw, context) == null)
 			return null;
-		final identity = index.resolveTypeUse(TyType.unresolved(raw, []), context).getType().getNominalIdentity();
-		return identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		return index.resolveNominalProvider(raw, context);
 	}
 
 	function candidateModulePaths(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,

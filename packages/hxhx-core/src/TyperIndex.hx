@@ -69,6 +69,32 @@ class TyperIndex {
 	public function resolveTypeDeclaration(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration>
 		return typeDeclarations.resolve(path, context);
 
+	/**
+		Find a static-member provider without constructing a value type.
+		Required alias parameters use their own declaration binders for this lookup;
+		trailing defaults still resolve normally. Value uses continue through the
+		ordinary resolver, which rejects missing arguments. Structural aliases have
+		no nominal provider and return null.
+	 */
+	public function resolveNominalProvider(path:String, context:TyTypeResolutionContext):Null<TyNominalInfo> {
+		final declaration = resolveTypeDeclaration(path, context);
+		if (declaration == null)
+			return null;
+		final identity = switch declaration.getKind() {
+			case Nominal(identity): identity;
+			case Alias(source):
+				final parameters = source.getParameters();
+				var required = 0;
+				for (index in 0...parameters.length)
+					if (parameters[index].defaultType == null)
+						required = index + 1;
+				final binders = declaration.getParameterIds();
+				resolveTypeUse(TyType.unresolved(path, [for (index in 0...required) TyType.typeParameter(binders[index])]),
+					context).getType().getNominalIdentity();
+		};
+		return identity == null ? null : getByFullName(identity.getCanonicalName());
+	}
+
 	/** A registered source module supplies headers without promising ready signatures. */
 	public function getRegisteredModule(modulePath:String):Null<ResolvedModule>
 		return registeredModules.get(modulePath);

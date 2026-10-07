@@ -74,9 +74,14 @@ class TyperContext {
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
-		final type = resolveTypeUse(TyType.unresolved(typePath, [])).getType();
-		final identity = type.getNominalIdentity();
-		return identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		return index.resolveNominalProvider(typePath, {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: directives,
+			filePath: filePath,
+			position: HxPos.unknown(),
+			parameters: []
+		});
 	}
 
 	/** Resolve a value type separately from operations that require a nominal provider. */
