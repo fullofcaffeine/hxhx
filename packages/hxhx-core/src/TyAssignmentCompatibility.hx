@@ -66,6 +66,9 @@ private function nominalArguments(expected:TyType, actual:TyType):TyCallArgument
 	for (index in 0...targets.length) {
 		final target = targets[index];
 		final source = sources[index];
+		if (target.isNullable()
+			&& (target.unwrapNull().isDynamic() || target.unwrapNull().getSemanticKey() == source.unwrapNull().getSemanticKey()))
+			continue;
 		if (target.getSemanticKey() == source.getSemanticKey() || target.isDynamic())
 			continue;
 		if (source.isDynamic() || (target.isPrimitive() && source.isPrimitive()))

@@ -7,6 +7,18 @@ function isLiteral(expression:HxExpr):Bool {
 	};
 }
 
+/** Null-only literals contribute nullability while later uses infer the element beneath it. */
+function isNullOnly(values:Array<HxExpr>):Bool {
+	function isNull(value:HxExpr):Bool {
+		return switch value {
+			case ENull: true;
+			case EParenthesized(inner, _) | EPrivateAccess(inner, _): isNull(inner);
+			case _: false;
+		};
+	}
+	return values.length > 0 && values.filter(value -> !isNull(value)).length == 0;
+}
+
 /** Only a resolved Array declaration supplies element context to nested literals. */
 function elementType(expected:Null<TyType>):Null<TyType> {
 	if (expected == null)

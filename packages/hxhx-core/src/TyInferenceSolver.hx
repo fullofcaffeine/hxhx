@@ -178,6 +178,40 @@ class TyInferenceSolver {
 	}
 
 	/**
+		Infer a member input through a nullable destination without removing that
+		destination's wrapper. Exact unification remains unchanged. The selected
+		call still has to pass assignment and target-carrier validation.
+	 */
+	public function constrainNullableInput(expected:TyInferenceTerm, actual:TyInferenceTerm):Bool {
+		requireMutable();
+		assertOwned(expected);
+		assertOwned(actual);
+		final candidate = fork();
+		function constrainInput(left:TyInferenceTerm, right:TyInferenceTerm):Bool {
+			return switch [candidate.follow(left), candidate.follow(right)] {
+				case [Variable(_), Known(value)] if (value.isDynamic()):
+					candidate.observeDynamicUse(left);
+					true;
+				case [Nullable(inner), Nullable(value)]: constrainInput(inner, value);
+				case [Nullable(inner), value]: constrainInput(inner, value);
+				case [Nominal(owner, inputs), Nominal(other, values)] if (owner.equals(other) && inputs.length == values.length):
+					var accepted = true;
+					for (index in 0...inputs.length)
+						if (!constrainInput(inputs[index], values[index])) {
+							accepted = false;
+							break;
+						}
+					accepted;
+				case _: candidate.unify(left, right);
+			};
+		}
+		if (!constrainInput(expected, actual))
+			return false;
+		commit(candidate);
+		return true;
+	}
+
+	/**
 		Record explicit Dynamic input or destination evidence without solving shared variables.
 		A later typed use can still constrain an alias or report a conflict. Only
 		seal applies this fallback to remaining holes owned by this solver.

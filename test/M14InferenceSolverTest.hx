@@ -17,6 +17,66 @@ class M14InferenceSolverTest {
 		check(rejected, "missing inference rejection: " + message);
 	}
 
+	/** Retained argument evidence cannot be borrowed by another declaration or equal-looking source node. */
+	static function receiverCallOwnership():Void {
+		final source = "class Box<T> { public function take(value:T):Void {} public function other(value:T):Void {} public function read():T return null; } class Main {}";
+		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final index = TyperIndex.build([module]);
+		final owner = index.getByFullName("Main.Box");
+		final declaration = owner.declarationForSignature(owner.instanceMethodCandidates("take")[0]);
+		final other = owner.declarationForSignature(owner.instanceMethodCandidates("other")[0]);
+		final arguments:Array<HxExpr> = [EIdent("value")];
+		final call:HxExpr = ECall(EField(EIdent("box"), "take"), arguments);
+		final identical:HxExpr = ECall(EField(EIdent("box"), "take"), [EIdent("value")]);
+		final integer = TyType.fromHintText("Int");
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final parameters:Array<Null<TyType>> = [dynamicType];
+		final context = new TyReceiverCallContext(call, declaration, parameters);
+		parameters[0] = integer;
+		check(context.apply(call, declaration, [integer])[0].isDynamic(), "retained call borrowed its caller's mutable parameter list");
+		rejects(() -> context.apply(identical, declaration, [integer]), "no longer belongs");
+		rejects(() -> context.apply(call, other, [integer]), "no longer belongs");
+		final inference = new TyFunctionInference("receiver-context");
+		inference.recordReceiverCall(call, declaration, [dynamicType]);
+		check(inference.receiverCallParameters(identical, declaration, [integer])[0].getSemanticKey() == integer.getSemanticKey(),
+			"a distinct occurrence borrowed receiver permission");
+		check(inference.fork().receiverCallParameters(call, declaration, [integer])[0].isDynamic(), "fork lost immutable invocation evidence");
+		final resultEnvironment = new TyFunctionEnv("receiver-result", [], [], TyType.unknown(), TyType.unknown());
+		final resultInference = resultEnvironment.getInference();
+		final receiver:HxExpr = EIdent("receiver");
+		resultInference.construct(receiver, TyType.nominal(owner.getIdentity(), []), 1);
+		final read = owner.declarationForSignature(owner.instanceMethodCandidates("read")[0]);
+		final resultArguments:Array<HxExpr> = [];
+		final resultCall:HxExpr = ECall(EField(receiver, "read"), resultArguments);
+		resultInference.recordReceiverResult(resultCall, receiver, read, resultEnvironment, index);
+		check(resultInference.constrain([resultCall], [integer], resultEnvironment, index), "member result lost receiver variables");
+		check(resultInference.expressionType(receiver, TyType.unknown(), resultEnvironment).getTypeArguments()[0].getSemanticKey() == integer.getSemanticKey(),
+			"result context did not constrain its receiver");
+		rejects(() -> resultInference.recordReceiverResult(resultCall, receiver, other, resultEnvironment, index), "changed its selected declaration");
+		resultArguments.push(EInt(7));
+		rejects(() -> resultInference.expressionType(resultCall, integer, resultEnvironment), "source changed");
+		arguments[0] = EInt(7);
+		rejects(() -> context.apply(call, declaration, [integer]), "no longer belongs");
+	}
+
+	/** Nullable argument inference keeps wrappers and rolls back every component on failure. */
+	static function nullableInputContracts():Void {
+		final solver = new TyInferenceSolver("nullable-input");
+		final integer = Known(TyType.fromHintText("Int"));
+		final string = Known(TyType.fromHintText("String"));
+		check(!solver.constrain(Nullable(integer), integer), "exact unification erased nullability");
+		final value = solver.fresh();
+		final owner = new TyNominalTypeId("Pair");
+		final wanted = Nominal(owner, [Nullable(value), integer]);
+		check(!solver.constrainNullableInput(wanted, Nominal(owner, [string, string])), "nullable matching accepted a conflicting component");
+		check(solver.preview(value).isUnknown(), "failed nullable matching leaked its first binding");
+		check(solver.constrainNullableInput(wanted, Nominal(owner, [integer, integer])), "nullable matching rejected a matching input");
+		check(solver.requireSolved(Nullable(value)).getSemanticKey() == TyType.nullable(TyType.fromHintText("Int")).getSemanticKey(),
+			"nullable input lost its wrapper");
+		check(!solver.constrainNullableInput(wanted, Nominal(owner, [string, integer])), "later input erased an existing constraint");
+		check(!solver.constrainNullableInput(integer, Nullable(integer)), "nullable input matching became symmetric");
+	}
+
 	/** Nested record variables participate in ownership, rollback, occurs checks, and exact field contracts. */
 	static function structuralContracts():Void {
 		final solver = new TyInferenceSolver("Main.structural");
@@ -288,6 +348,8 @@ class M14InferenceSolverTest {
 	}
 
 	static function main():Void {
+		nullableInputContracts();
+		receiverCallOwnership();
 		emptyArrayContracts();
 		dynamicUseContracts();
 		directCallConstraints();

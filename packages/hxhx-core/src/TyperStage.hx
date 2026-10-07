@@ -3,6 +3,7 @@ private typedef TyMethodCallResolution = {
 	final declaration:Null<TyDeclarationInfo>;
 	final ?order:TyMethodArgumentOrder;
 	final ?actual:Array<TyType>;
+	final ?receiverArguments:Array<Null<TyType>>;
 };
 
 /** One source-call traversal hands its selected declaration and operand types to generic inference. */
@@ -564,7 +565,7 @@ class TyperStage {
 						declaration: declaration,
 						signature: signature,
 						order: selection.order,
-						parameters: parameters,
+						parameters: lexicalEnvironment.getInference().receiverCallParameters(callExpression, declaration, parameters),
 						sources: arguments,
 						index: context.getIndex(),
 						extensionProvider: extensionProvider
@@ -1570,8 +1571,12 @@ class TyperStage {
 				type: selected.type,
 				declaration: selected.declaration,
 				order: order,
-				actual: solved
-			};
+				actual: solved,
+				receiverArguments: receiver != null
+				&& declaration != null
+				&& declaration.getTypeParameterIds().length == 0
+				&& inference.sourceTerm(receiver.expression,
+					scope) != null ? TyReceiverCallContext.select(signature, applied, TyNominalApplication.parameterIds(c), solved, order) : null};
 		}
 		final candidates = admittedCandidates == null ? (isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field)) : admittedCandidates;
 		final callbackContexts = TyLambdaArgumentContext.shared(candidates.map(signature -> TyNominalApplication.signature(ctx.getIndex(), c,
@@ -2329,6 +2334,15 @@ class TyperStage {
 			case ECall(callee, arguments):
 				final selection = capture.selection;
 				final declaration = selection == null ? null : selection.declaration;
+				if (declaration != null)
+					switch callee {
+						case EField(receiver, _) | ENullSafeField(receiver, _):
+							scope.getInference().recordReceiverResult(expr, receiver, declaration, scope, ctx.getIndex());
+							result = scope.getInference().expressionType(expr, result, scope);
+						case _:
+					}
+				if (declaration != null && selection.receiverArguments != null)
+					scope.getInference().recordReceiverCall(expr, declaration, selection.receiverArguments);
 				// An omitted result annotation belongs to body inference. It is not a
 				// declared method parameter that this call can instantiate or solve.
 				selectedGenericResult = declaration != null
@@ -3282,7 +3296,7 @@ class TyperStage {
 				if (values.length == 0) {
 					final array = ctx.resolveType("Array");
 					if (array != null)
-						return scope.getInference().emptyArray(expr, array.getIdentity());
+						return scope.getInference().inferredArray(expr, array.getIdentity());
 				}
 				final mapType = TypedMapLiteral.infer({
 					values: values,
@@ -3311,6 +3325,11 @@ class TyperStage {
 				});
 				if (contextualArray != null)
 					return contextualArray;
+				if (TypedArrayLiteral.isNullOnly(values)) {
+					final array = ctx.resolveType("Array");
+					if (array != null)
+						return scope.getInference().inferredArray(expr, array.getIdentity(), true);
+				}
 				var elem:TyType = TyType.unknown();
 				var saw = false;
 				for (v in values) {

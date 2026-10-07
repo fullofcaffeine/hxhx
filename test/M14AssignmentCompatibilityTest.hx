@@ -14,6 +14,14 @@ class M14AssignmentCompatibilityTest {
 		spreadAssignments();
 		functionAssignments();
 		genericAssignments();
+		final arrayIdentity = new TyNominalTypeId("Array");
+		final intType = TyType.fromHintText("Int");
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final nullableInts = TyType.nominal(arrayIdentity, [TyType.nullable(intType)]);
+		check(nullableInts, TyType.nominal(arrayIdentity, [intType]), Strict, Compatible);
+		check(nullableInts, TyType.nominal(arrayIdentity, [dynamicType]), Unchecked, Incompatible);
+		check(TyType.nominal(arrayIdentity, [TyType.nullable(dynamicType)]), TyType.nominal(arrayIdentity, [dynamicType]), Unchecked, Compatible);
+
 		dynamicErasure();
 		final cases:Array<{expected:String, actual:String, wanted:TyCallArgumentCompatibility}> = [
 			{expected: "Float", actual: "Int", wanted: Compatible},

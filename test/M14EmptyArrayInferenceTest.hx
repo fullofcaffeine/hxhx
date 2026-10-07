@@ -1,7 +1,7 @@
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.Stage3SetupSupport;
 
-/** Empty arrays retain their own element variable until later source uses supply a type. */
+/** Empty and null-only arrays retain element inference, nullability, and per-call acceptance through later source uses. */
 class M14EmptyArrayInferenceTest {
 	static function main():Void {
 		final helpers = 'using Main.Extensions;'
@@ -11,6 +11,72 @@ class M14EmptyArrayInferenceTest {
 			+ 'static function text(values:Array<String>):Void{values.push("word");}'
 			+ 'static function collect<T>(value:T):Array<T>{var values=[];values.push(value);return values;}';
 		for (entry in [
+			{
+				name: "null_late_dynamic",
+				body: 'var args:Array<Dynamic>=[7];var values=[null];values.push(7);values.concat(args);',
+				output: "",
+				accepted: false
+			},
+			{
+				name: "null_written_dynamic",
+				body: 'var args:Array<Dynamic>=[7];var values:Array<Null<Int>>=[null];values.concat(args);',
+				output: "",
+				accepted: false
+			},
+			{
+				name: "null_distinct_calls",
+				body: 'var args:Array<Dynamic>=[7];var values=[null];values.concat(args);values.push(7);values.concat(args);',
+				output: "",
+				accepted: false
+			},
+			{
+				name: "null_dynamic_later",
+				body: 'var args:Array<Dynamic>=[7];var values=[null];values.concat(args);values.push(7);trace(values[0]);trace(values[1]);',
+				output: "null\n7\n",
+				accepted: true
+			},
+			{
+				name: "null_dynamic_conflict",
+				body: 'var args:Array<Dynamic>=[7];var values=[null];values.concat(args);values.push(7);values.push("bad");',
+				output: "",
+				accepted: false
+			},
+			{
+				name: "null_concat",
+				body: 'var values=[null];var joined=values.concat([7]);trace(joined[0]);trace(joined[1]);',
+				output: "null\n7\n",
+				accepted: true
+			},
+			{
+				name: "null_dynamic",
+				body: 'var args:Array<Dynamic>=[7];var values=[null];var joined=values.concat(args);trace(joined[0]);trace(joined[1]);',
+				output: "null\n7\n",
+				accepted: true
+			},
+			{
+				name: "null_alias",
+				body: 'var values=[(null),null];var alias=values;alias.push(7);trace(values[0]);trace(values[2]);',
+				output: "null\n7\n",
+				accepted: true
+			},
+			{
+				name: "null_string",
+				body: 'var values=[null];values.push("word");trace(values[0]);trace(values[1]);',
+				output: "null\nword\n",
+				accepted: true
+			},
+			{
+				name: "null_unused",
+				body: 'var values=[null];trace(values[0]);',
+				output: "null\n",
+				accepted: true
+			},
+			{
+				name: "null_conflict",
+				body: 'var values=[null];values.push(7);values.push("word");',
+				output: "",
+				accepted: false
+			},
 			{
 				name: "extension",
 				body: 'var a=[];"witness".fill(a);trace(a[0]);',
@@ -118,7 +184,9 @@ class M14EmptyArrayInferenceTest {
 					throw error;
 				if (error.message.indexOf("conflict") < 0
 					&& error.message.indexOf("not compatible") < 0
-					&& error.message.indexOf("No compatible") < 0)
+					&& error.message.indexOf("No compatible") < 0
+					&& !(["null_late_dynamic", "null_written_dynamic", "null_distinct_calls"].indexOf(entry.name) >= 0
+						&& StringTools.startsWith(error.message, "selected call conversion does not satisfy its retained parameter:")))
 					throw "empty-array rejection lost its type diagnostic: " + error.message;
 				typed = null;
 			}
@@ -145,6 +213,10 @@ class M14EmptyArrayInferenceTest {
 					if (type.getNominalIdentity() == null || type.getNominalIdentity().getCanonicalName() != "Array")
 						continue;
 					final expected = signature.getName() == "collect" ? signature.getReturnType().getTypeArguments()[0].getSemanticKey() : switch name {
+						case "null_dynamic" | "null_dynamic_later" if (local.getName() == "args"): "dynamic";
+						case "null_dynamic" | "null_unused": TyType.nullable(TyType.fromHintText("Dynamic")).getSemanticKey();
+						case "null_string": TyType.nullable(TyType.fromHintText("String")).getSemanticKey();
+						case "null_concat" | "null_alias" | "null_dynamic_later": TyType.nullable(TyType.fromHintText("Int")).getSemanticKey();
 						case "explicit_dynamic" | "unused": "dynamic";
 						case "generic_extension": "primitive:String";
 						case "independent" if (local.getName() == "b"): "primitive:String";

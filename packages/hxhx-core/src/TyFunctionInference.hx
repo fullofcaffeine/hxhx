@@ -6,6 +6,8 @@ private typedef InferredOccurrence = {
 	final expression:HxExpr;
 	final term:TyInferenceTerm;
 	final ?methodSignature:TyFunSig;
+	final ?callFingerprint:String;
+	final ?callDeclarationKey:String;
 }
 
 /** A direct call retains its callable parameters as well as the result shared with local uses. */
@@ -36,6 +38,7 @@ class TyFunctionInference {
 	var solver:TyInferenceSolver;
 	var occurrences:Array<InferredOccurrence> = [];
 	var directCalls:Array<InferredDirectCall> = [];
+	var receiverCalls:Array<TyReceiverCallContext> = [];
 	var capturedCalls:Array<InferredCapturedCall> = [];
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
@@ -46,6 +49,64 @@ class TyFunctionInference {
 		final type:TyType;
 		final arguments:Array<TyInferenceTerm>;
 	}> = [];
+
+	/** Preserve invocation-only evidence before later source uses solve the receiver. */
+	public function recordReceiverCall(source:HxExpr, declaration:TyDeclarationInfo, parameters:Array<Null<TyType>>):Void {
+		for (entry in receiverCalls)
+			if (entry.owns(source))
+				return;
+		if (solver.isSealed())
+			throw "receiver call context is absent from sealed inference";
+		receiverCalls.push(new TyReceiverCallContext(source, declaration, parameters));
+	}
+
+	/** A member result shares the receiver's type variables even when it allocates a different runtime value. */
+	public function recordReceiverResult(source:HxExpr, receiver:HxExpr, declaration:TyDeclarationInfo, environment:TyFunctionEnv, index:TyperIndex):Void {
+		if (declaration.getIsStatic() || declaration.getTypeParameterIds().length > 0)
+			return;
+		for (entry in occurrences)
+			if (entry.expression == source
+				&& entry.callDeclarationKey != null
+				&& entry.callDeclarationKey != declaration.getIdentity().getCanonicalKey())
+				throw "receiver result changed its selected declaration";
+		if (occurrence(source) != null)
+			return;
+		final original = sourceTerm(receiver, environment);
+		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
+		if (original == null || owner == null)
+			return;
+		final parameters = TyNominalApplication.parameterIds(owner);
+		final result = declaration.getSignature().getReturnType();
+		if (result.hasUnknownComponent()
+			|| TyTypeSubstitution.parameterIdentities(result).filter(parameter -> parameters.filter(owned -> owned.equals(parameter)).length > 0).length == 0)
+			return;
+		final viewed = TyInferenceNominalContext.view(index, original, TyType.nominal(owner.getIdentity(), []));
+		final arguments = switch viewed {
+			case Nominal(identity, arguments) if (identity.equals(owner.getIdentity())): arguments;
+			case _: return;
+		};
+		if (parameters.length != arguments.length)
+			throw "receiver result lost its owner arguments";
+		if (solver.isSealed())
+			throw "receiver result is absent from sealed inference";
+		final bindings = new StringMap<TyInferenceTerm>();
+		for (i in 0...parameters.length)
+			bindings.set(parameters[i].getCanonicalKey(), arguments[i]);
+		occurrences.push({
+			expression: source,
+			term: TyInferenceSubstitution.apply(result, bindings),
+			callFingerprint: TypedBodyFingerprint.exactExpression(source),
+			callDeclarationKey: declaration.getIdentity().getCanonicalKey()
+		});
+	}
+
+	/** A different occurrence receives no permission from an earlier call with the same spelling. */
+	public function receiverCallParameters(source:HxExpr, declaration:TyDeclarationInfo, parameters:Array<TyType>):Array<TyType> {
+		for (entry in receiverCalls)
+			if (entry.owns(source))
+				return entry.apply(source, declaration, parameters);
+		return parameters;
+	}
 
 	/** Sealed replay reads the signature inferred for this exact authored function occurrence. */
 	public function sourceFunctionType(source:HxExpr):Null<TyType> {
@@ -168,6 +229,7 @@ class TyFunctionInference {
 		candidate.speculativeReplay = solver.isSealed();
 		candidate.occurrences = occurrences.copy();
 		candidate.directCalls = directCalls.copy();
+		candidate.receiverCalls = receiverCalls.copy();
 		candidate.capturedCalls = capturedCalls.copy();
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
@@ -178,8 +240,11 @@ class TyFunctionInference {
 
 	function occurrence(expression:HxExpr):Null<TyInferenceTerm> {
 		for (entry in occurrences)
-			if (entry.expression == expression)
+			if (entry.expression == expression) {
+				if (entry.callFingerprint != null && entry.callFingerprint != TypedBodyFingerprint.exactExpression(expression))
+					throw "receiver result source changed during inference";
 				return entry.term;
+			}
 		return null;
 	}
 
@@ -232,13 +297,14 @@ class TyFunctionInference {
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);
 	}
 
-	/** Each uncontextualized empty array owns an element variable shared by its later aliases and uses. */
-	public function emptyArray(expression:HxExpr, identity:TyNominalTypeId):TyType {
+	/** Empty and null-only arrays retain an element variable shared by later aliases and uses. */
+	public function inferredArray(expression:HxExpr, identity:TyNominalTypeId, nullableElement:Bool = false):TyType {
 		var term = occurrence(expression);
 		if (term == null) {
 			if (solver.isSealed())
 				throw "empty array occurrence is absent from sealed inference";
-			term = Nominal(identity, [solver.freshEmptyArrayElement()]);
+			final element = solver.freshEmptyArrayElement();
+			term = Nominal(identity, [nullableElement ? Nullable(element) : element]);
 			occurrences.push({expression: expression, term: term});
 		}
 		return solver.isSealed() ? solver.published(term) : solver.preview(term);
@@ -586,19 +652,9 @@ class TyFunctionInference {
 		final bindings = new StringMap<TyInferenceTerm>();
 		for (index in 0...parameters.length)
 			bindings.set(parameters[index].getCanonicalKey(), arguments[index]);
-		function term(type:TyType):TyInferenceTerm {
-			final parameter = type.getTypeParameterIdentity();
-			if (parameter != null && bindings.exists(parameter.getCanonicalKey()))
-				return bindings.get(parameter.getCanonicalKey());
-			if (type.isNullable())
-				return Nullable(term(type.unwrapNull()));
-			if (type.isFunction())
-				return Function(type.getFunctionArguments().map(term), term(type.getFunctionReturn()), type);
-			if (type.isAnonymous())
-				return Structure(type.getAnonymousFieldTypes().map(term), type);
-			final identity = type.getNominalIdentity();
-			return identity == null ? Known(type) : Nominal(identity, type.getTypeArguments().map(term));
-		}
+		function term(type:TyType):TyInferenceTerm
+			return TyInferenceSubstitution.apply(type, bindings);
+
 		final candidate = solver.fork();
 		final expected = signature.getArgs();
 		for (argumentIndex in 0...actual.length) {
@@ -621,7 +677,7 @@ class TyFunctionInference {
 			final actualType = actual[argumentIndex].unwrapNull();
 			final expectedIdentity = expected[argumentIndex].unwrapNull().getNominalIdentity();
 			final ancestor = expectedIdentity == null ? null : TyNominalAncestor.view(index, actualType, expectedIdentity);
-			if (!candidate.constrain(expectedTerm, TyInferenceSolver.fromType(ancestor == null ? actualType : ancestor))
+			if (!candidate.constrainNullableInput(expectedTerm, TyInferenceSolver.fromType(ancestor == null ? actualType : ancestor))
 				&& !TyInferenceAbstractInput.constrain({
 					solver: candidate,
 					expected: expected[argumentIndex].unwrapNull(),
