@@ -38,8 +38,9 @@ function render(input:FunctionRenderInput):String {
 	final rendered = input.renderStatements(selected.statements);
 	final payload = input.names.internalName("__hx_block_result");
 	final fallthrough = selected.isVoid ? "()" : "failwith \"native function reached its end without returning\"";
-	// Every caught payload comes from this exact region and has the checked scalar
-	// return type. Obj.obj only removes the representation used by the local exception.
+	// Every caught payload comes from this exact region and has its checked return
+	// representation. For Dynamic, Obj.repr/Obj.obj preserve the existing Obj.t value;
+	// they must not reinterpret a Boolean tag or allocate a new identity wrapper.
 	return "(let exception HxBlockReturn of Obj.t in fun "
 		+ (renderedArguments.length == 0 ? "()" : renderedArguments.join(" "))
 		+ " -> try (let _ = ("
@@ -57,7 +58,7 @@ function render(input:FunctionRenderInput):String {
 
 /**
 	Admit shared block-function control only where native statements preserve it.
-	Return payloads currently require the same concrete scalar type as the callable;
+	Return payloads require the same scalar or Dynamic type as the callable;
 	broader conversion needs exact per-return adaptation before this boundary expands.
  */
 function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatements {
@@ -74,6 +75,7 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatement
 		case "primitive:Bool": "bool";
 		case "primitive:String": "string";
 		case "primitive:Void": "unit";
+		case "dynamic": "Obj.t";
 		case _: throw "OCaml block function requires a supported concrete return carrier";
 	};
 	for (type in facts.getReturnTypes())
