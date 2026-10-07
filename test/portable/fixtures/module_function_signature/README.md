@@ -7,8 +7,9 @@ The runner compiles the Haxe source, builds the OCaml program, and checks its ou
 The constructor assertion checks that two integer arguments reach the returned instance.
 An array constructor parameter also has a checked signature. Its unused interface
 metadata must not activate extra runtime references in this non-recursive module.
-A constructor with a function parameter remains without a checked signature and
-must fail recursive-module eligibility while preserving ordinary runtime behavior.
+A constructor with an Int-to-Int callback retains that checked function signature
+and passes recursive-module eligibility. Its runtime assertion checks the callback result.
+Unsupported callback representations remain covered by `module_callback_signature`.
 
 This fixture does not emit recursive modules or prove safe initialization for arbitrary modules.
 It does not change the README Goals percentages.

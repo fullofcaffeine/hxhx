@@ -1,4 +1,4 @@
-/** Function parameters remain outside the supported declaration-signature family. */
+/** Previously unsupported callback parameters now retain their checked function type. */
 class UnrepresentedConstructorProbe {
 	public final seed:Int;
 

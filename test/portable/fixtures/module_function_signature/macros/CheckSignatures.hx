@@ -18,14 +18,15 @@ class CheckSignatures {
 			check("ConstructorProbe", "create", "int -> int -> t");
 			check("ConstructorProbe", "__empty", "unit -> t");
 			check("ArrayConstructorProbe", "create", "int -> int HxArray.t -> t");
-			final unrepresented = OcamlCompiler.instance.moduleChunks.itemsFor("UnrepresentedConstructorProbe", "UnrepresentedConstructorProbe");
-			if (unrepresented == null)
-				throw "missing unrepresented constructor syntax";
-			switch (checkRecursiveModule(unrepresented)) {
-				case RecursiveModuleRejected(MissingSignature("create")):
-				case _: throw "unrepresented constructor acquired an inferred signature";
-			}
-			for (name in ["Main", "CycleLeft", "CycleRight", "ConstructorProbe", "ArrayConstructorProbe"]) {
+			check("UnrepresentedConstructorProbe", "create", "int -> (int -> int) -> t");
+			for (name in [
+				"Main",
+				"CycleLeft",
+				"CycleRight",
+				"ConstructorProbe",
+				"ArrayConstructorProbe",
+				"UnrepresentedConstructorProbe"
+			]) {
 				final items = OcamlCompiler.instance.moduleChunks.itemsFor(name, name);
 				if (items == null)
 					throw "missing module syntax: " + name;
