@@ -148,6 +148,8 @@ class ExprMacroExpander {
 	static function rewriteStmt(s:HxStmt, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, onExpand:() -> Void):HxStmt {
 		return switch (s) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final out = new Array<HxStmt>();
 				var changed = false;

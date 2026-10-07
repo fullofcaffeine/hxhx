@@ -170,6 +170,8 @@ class Stage3DiagnosticsSupport {
 		if (out.length >= max)
 			return;
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _pos):
 				for (child in stmts)
 					collectUnsupportedExprRawInStmt(child, out, max);
@@ -228,6 +230,8 @@ class Stage3DiagnosticsSupport {
 
 	static function countUnsupportedExprsInStmt(stmt:HxStmt):Int {
 		return switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _pos):
 				var count = 0;
 				for (child in stmts)
