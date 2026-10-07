@@ -35,6 +35,17 @@ class TyInferenceSolver {
 	public function isSealed():Bool
 		return sealed;
 
+	/** Only a sealed, solver-owned omitted input can justify a Dynamic value conversion while its annotation stays unresolved. */
+	public function isUnresolvedInput(term:TyInferenceTerm):Bool {
+		assertOwned(term);
+		if (!sealed)
+			return false;
+		return switch follow(term) {
+			case Variable(identity): identity.kind == OmittedInput && published(term).isUnknown();
+			case _: false;
+		};
+	}
+
 	/** Allocate one distinct omitted argument; spelling and nominal owner do not merge it. */
 	public function fresh():TyInferenceTerm {
 		return allocate(null);
