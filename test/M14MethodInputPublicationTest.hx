@@ -1,6 +1,7 @@
 /** Caller checking must consume body-inferred inputs while declaration headers retain their identity. */
 class M14MethodInputPublicationTest {
 	static function main():Void {
+		partialInputDynamicBoundary();
 		for (privateAccess in [false, true])
 			for (bodyInferred in [false, true])
 				dynamicOmittedInput(privateAccess, bodyInferred);
@@ -34,6 +35,33 @@ class M14MethodInputPublicationTest {
 		Sys.println('METHOD_INPUT_PUBLICATION:PASS');
 	}
 
+	/** Invoke an inferred record input through Dynamic, observing the field in the receiving function. */
+	static function partialInputDynamicBoundary():Void {
+		final root = '.tmp/method_input_partial_dynamic';
+		sys.FileSystem.createDirectory(root);
+		final source = 'class Main {static function consume(value:Dynamic):Void {Sys.println(value.foo);} '
+			+ 'static function forward(value):Void {var field=value.foo; consume(value);} '
+			+ 'static function main():Void {var invoke:Dynamic=forward; invoke({foo:7});}}';
+		sys.io.File.saveContent(root + '/Main.hx', source);
+		final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		if (code != 0 || output != '7\n')
+			throw 'upstream partial input Dynamic boundary differs: ' + output + errors;
+		final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
+		final index = TyperIndex.build([module]);
+		final typed = TyperStage.typeResolvedModule(module, index);
+		JsRuntimeFixture.assertRuntime(typed, 'Main', '7\n');
+		final owner = index.getByFullName('Main');
+		final declaration = owner.declarationForSignature(owner.staticMethodCandidates('forward')[0]);
+		final input = index.getMethodBodyResults().signature(declaration).getArgs()[0];
+		if (!input.isAnonymous() || input.getAnonymousFieldNames().join(',') != 'foo' || !input.getAnonymousFieldTypes()[0].isUnknown())
+			throw 'Dynamic boundary fabricated a concrete structural field type';
+		Sys.println('METHOD_INPUT_PARTIAL_DYNAMIC:PASS');
+	}
+
 	/** Explicit Dynamic operands do not manufacture a resolved declaration input. */
 	static function dynamicOmittedInput(privateAccess:Bool, bodyInferred:Bool):Void {
 		final root = '.tmp/method_input_dynamic_omitted_' + privateAccess + '_' + bodyInferred;
@@ -56,6 +84,17 @@ class M14MethodInputPublicationTest {
 		final index = TyperIndex.build([module]);
 		final typed = TyperStage.typeResolvedModule(module, index);
 		JsRuntimeFixture.assertRuntime(typed, 'Main', 'ok\n');
+		if (!privateAccess && !bodyInferred) {
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
+			final native = new sys.io.Process('gtimeout', ['30', executable]);
+			final nativeOutput = native.stdout.readAll().toString();
+			final nativeErrors = native.stderr.readAll().toString();
+			final nativeCode = native.exitCode();
+			native.close();
+			if (nativeCode != 0 || nativeOutput != 'ok\n')
+				throw 'native omitted Dynamic input differs: ' + nativeOutput + nativeErrors;
+			Sys.println('METHOD_INPUT_DYNAMIC_OMITTED_NATIVE:PASS');
+		}
 		final owner = index.getByFullName('Main.Helper');
 		final signature = owner.staticMethodCandidates('read')[0];
 		final declaration = owner.declarationForSignature(signature);

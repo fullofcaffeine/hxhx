@@ -14,6 +14,7 @@ class M14AssignmentCompatibilityTest {
 		spreadAssignments();
 		functionAssignments();
 		genericAssignments();
+		dynamicErasure();
 		final cases:Array<{expected:String, actual:String, wanted:TyCallArgumentCompatibility}> = [
 			{expected: "Float", actual: "Int", wanted: Compatible},
 			{expected: "Int", actual: "Float", wanted: Incompatible},
@@ -55,6 +56,30 @@ class M14AssignmentCompatibilityTest {
 				throw "directional compatibility did not drive optional argument alignment";
 		}
 		Sys.println("ASSIGNMENT_COMPATIBILITY:PASS");
+	}
+
+	/** Dynamic receives known values without promising their unresolved inner inference types. */
+	static function dynamicErasure():Void {
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final unknown = TyType.unknown();
+		final record = TyType.anonymous(["value"], [unknown]);
+		for (value in [
+			record,
+			TyType.functionType([record], TyType.fromHintText("Void")),
+			TyType.nominal(new TyNominalTypeId("Array"), [unknown])
+		]) {
+			check(dynamicType, value, Unchecked, Compatible);
+			check(value, value, Unchecked, Unknown);
+		}
+		for (value in [
+			unknown,
+			TyType.fromHintText("Missing"),
+			TyType.anonymous(["value"], [TyType.fromHintText("Missing")]),
+			TyType.functionType([TyType.fromHintText("Missing")], dynamicType),
+			TyType.nominal(new TyNominalTypeId("Array"), [TyType.fromHintText("Missing")])
+		])
+			check(dynamicType, value, Unchecked, Unknown);
+		check(dynamicType, TyType.fromHintText("Void"), Unchecked, Incompatible);
 	}
 
 	/** Generic Dynamic is directional and never erases unknown or unrelated nominal identity. */

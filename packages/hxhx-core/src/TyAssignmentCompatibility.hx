@@ -10,10 +10,17 @@ enum TyAssignmentNullPolicy {
 	Exact resolved types, primitives, function signatures, explicit Dynamic, and the supplied nullable
 	policy are supported here. Other relationships remain Unknown until their
 	inheritance, structural, generic, or abstract-conversion proof is available.
-	Unknown is not compatibility and must never seal a call. This owner does not
-	emit conversions or perform flow-sensitive null analysis.
+	An Unknown compatibility result must never seal a call. An explicit Dynamic
+	destination can receive a known value with unresolved inner inference types
+	because it promises no typed access to those components. Their source types
+	remain unchanged. This owner does not emit conversions or perform flow-sensitive null analysis.
  */
 function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPolicy):TyCallArgumentCompatibility {
+	// An explicit Dynamic destination makes no promise about the fields, type
+	// arguments, or callable inputs of an already identified value. Preserve
+	// those inference variables; unresolved named types are still invalid.
+	if (expected != null && expected.isDynamic() && actual != null && !actual.isUnknown() && !incomplete(actual, true))
+		return actual.isVoid() ? Incompatible : Compatible;
 	if (incomplete(expected) || incomplete(actual))
 		return Unknown;
 	if (expected.isVoid() || actual.isVoid() || expected.isNoNormalCompletion())
@@ -148,24 +155,24 @@ private function restParameter(expected:TyFunctionParameter, actual:TyFunctionPa
 	return fixedType.isPrimitive() ? Incompatible : Unknown;
 }
 
-/** Matching outer shapes do not prove assignment when any child type is unresolved. */
-private function incomplete(type:TyType):Bool {
-	if (type == null || type.isUnknown() || type.isUnresolved())
+/** Only explicit Dynamic erasure may leave nested inference variables unsolved; named types must always resolve. */
+private function incomplete(type:TyType, eraseInference:Bool = false):Bool {
+	if (type == null || (!eraseInference && type.isUnknown()) || type.isUnresolved())
 		return true;
-	if (type.isNullable() && incomplete(type.getNullableInner()))
+	if (type.isNullable() && incomplete(type.getNullableInner(), eraseInference))
 		return true;
 	for (argument in type.getTypeArguments())
-		if (incomplete(argument))
+		if (incomplete(argument, eraseInference))
 			return true;
 	if (type.isFunction()) {
 		for (argument in type.getFunctionArguments())
-			if (incomplete(argument))
+			if (incomplete(argument, eraseInference))
 				return true;
-		if (incomplete(type.getFunctionReturn()))
+		if (incomplete(type.getFunctionReturn(), eraseInference))
 			return true;
 	}
 	for (field in type.getAnonymousFieldTypes())
-		if (incomplete(field))
+		if (incomplete(field, eraseInference))
 			return true;
 	return false;
 }
