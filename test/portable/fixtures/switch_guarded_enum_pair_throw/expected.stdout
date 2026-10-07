@@ -1,0 +1,7 @@
+read=accepted
+write=accepted
+compound=accepted
+read mismatch=invalid operation pair
+write mismatch=invalid operation pair
+guard mismatch=invalid operation pair
+shape mismatch=invalid operation pair

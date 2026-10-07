@@ -9971,6 +9971,10 @@ class OcamlBuilder {
 		return visit(e, false);
 	}
 
+	/**
+			Builds branches only for the selected output form. Building an expression
+			activates its runtime uses, so an omitted default must not be built speculatively.
+		**/
 	function buildSwitch(scrutinee:TypedExpr, cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>, edef:Null<TypedExpr>, switchType:Type):OcamlExpr {
 		final wantUnit = isVoidType(switchType);
 
@@ -9983,8 +9987,10 @@ class OcamlBuilder {
 			return wantUnit ? exprAsStatement(expr, source) : expr;
 		}
 
-		final defaultExpr:OcamlExpr = edef != null ? buildExpr(edef) : (wantUnit ? OcamlExpr.EConst(OcamlConst.CUnit) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"),
-			[OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+		function buildDefaultExpr():OcamlExpr {
+			return edef != null ? buildExpr(edef) : (wantUnit ? OcamlExpr.EConst(OcamlConst.CUnit) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"),
+				[OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+		}
 
 		// Enum pattern matching: Haxe's pattern matcher often lowers enum switches to:
 		// switch (TEnumIndex(e)) { case 0: ...; case 1: ... }
@@ -9995,9 +10001,14 @@ class OcamlBuilder {
 				switch (enumValueExpr.t) {
 					case TEnum(eRef, _):
 						final enumType = eRef.get();
+						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
+						final defaultArm:Null<OcamlMatchCase> = isExhaustive ? null : {
+							pat: OcamlPat.PAny,
+							guard: null,
+							expr: wrapCaseExpr(edef, buildDefaultExpr())
+						};
 						final scrut = buildExpr(enumValueExpr);
 						final arms:Array<OcamlMatchCase> = [];
-						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
 
 						for (c in cases) {
 							final patRes = buildEnumIndexCasePats(enumType, c.values, c.expr.pos);
@@ -10014,13 +10025,8 @@ class OcamlBuilder {
 							arms.push({pat: pat, guard: null, expr: expr});
 						}
 
-						if (!isExhaustive) {
-							arms.push({
-								pat: OcamlPat.PAny,
-								guard: null,
-								expr: wrapCaseExpr(edef, defaultExpr)
-							});
-						}
+						if (defaultArm != null)
+							arms.push(defaultArm);
 
 						return OcamlExpr.EMatch(scrut, arms);
 					case _:
@@ -10089,7 +10095,7 @@ class OcamlBuilder {
 			final scrutTmp = freshTmp("switch");
 			final scrutVar = OcamlExpr.EIdent(scrutTmp);
 			final scrutObj = toDynamicObjExpr(scrutinee.t, scrutVar);
-			var chain = edef == null ? defaultExpr : buildBranch(edef);
+			var chain = edef == null ? buildDefaultExpr() : buildBranch(edef);
 
 			for (ci in 0...cases.length) {
 				final c = cases[cases.length - 1 - ci];
@@ -10111,6 +10117,7 @@ class OcamlBuilder {
 
 			return OcamlExpr.ELet(scrutTmp, buildExpr(scrutinee), chain, false);
 		}
+		final defaultExpr = buildDefaultExpr();
 		for (c in cases) {
 			// NOTE: For now, only support enum-parameter binding for a single pattern.
 			final patRes = c.values.length == 1 ? buildSwitchValuePatAndEnumParams(c.values[0]) : null;
