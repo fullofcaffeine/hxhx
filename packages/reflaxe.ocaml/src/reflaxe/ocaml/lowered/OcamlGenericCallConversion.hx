@@ -1,7 +1,7 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime || eval)
-#if (macro || reflaxe_runtime)
+#if macro
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 #end
@@ -47,7 +47,7 @@ enum OcamlGenericValueConversion {
 	representation proof before this boundary can select a conversion.
 **/
 
-#if (macro || reflaxe_runtime)
+#if macro
 /** Method type parameters use qualified identities, never macro wrapper identity. */
 function parameterId(type:Type):Null<String> {
 	return switch (TypeTools.follow(type)) {

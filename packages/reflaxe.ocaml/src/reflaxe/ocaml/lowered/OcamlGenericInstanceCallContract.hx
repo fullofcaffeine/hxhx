@@ -1,7 +1,7 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime || eval)
-#if (macro || reflaxe_runtime)
+#if macro
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.parameterId as genericValueParameterId;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.shape as genericValueShape;
 import haxe.macro.Type;
@@ -38,7 +38,7 @@ final PROOF_ID = "generic-instance-storage-crossing-v1";
 
 final PROOF_CLAIM = "One ordinary generic instance method owns the erased type parameters. Its exact concrete instantiation fixes directional argument and result conversions, and a registered monomorphic receiver fixes direct dispatch. The source receiver and arguments are evaluated once in order before invocation.";
 
-#if (macro || reflaxe_runtime)
+#if macro
 /** Creates a decision bound to the final caller, source occurrence, and target facts. */
 function decision(expression:TypedExpr, target:OcamlGenericInstanceCallTarget, binding:OcamlFunctionPlanBinding):OcamlCallDecision {
 	require(target);
@@ -160,7 +160,7 @@ function runtimeHelpers(target:OcamlGenericInstanceCallTarget):Array<{role:Strin
 	return helpers;
 }
 
-#if (macro || reflaxe_runtime)
+#if macro
 /** Resolves one final call without inferring storage from generated syntax. */
 function select(expression:TypedExpr, representations:OcamlRepresentationRegistry):Null<OcamlGenericInstanceCallTarget> {
 	final receiverType = switch (expression.expr) {

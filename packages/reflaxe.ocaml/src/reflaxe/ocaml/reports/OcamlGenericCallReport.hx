@@ -200,7 +200,7 @@ private function requireFields(value:Dynamic, expected:Array<String>):Void {
 		throw "Generic call report has missing or unexpected fields.";
 }
 
-#if (macro || reflaxe_runtime)
+#if macro
 /** Copies the existing call envelope while projecting only the enum-bearing generic target. */
 function callToReport(call:reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision) {
 	return {
