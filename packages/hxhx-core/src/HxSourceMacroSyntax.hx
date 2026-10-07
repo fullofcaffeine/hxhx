@@ -7,7 +7,7 @@ import haxe.macro.Expr;
 	function kind, grouping, optional markers, and default placement across hosts.
 	It reads source facts only; inferred types cannot create written annotations.
  */
-function definition(source:HxExpr, convert:HxExpr->Expr, parseType:String->Null<ComplexType>):Null<ExprDef> {
+function definition(source:HxExpr, convert:HxExpr->Expr, parseType:String->Null<ComplexType>, ?parseMetadata:Array<String>->Metadata):Null<ExprDef> {
 	return switch source {
 		case EParenthesized(inner, _): EParenthesis(convert(inner));
 		case EPrivateAccess(inner, _):
@@ -84,11 +84,12 @@ function definition(source:HxExpr, convert:HxExpr->Expr, parseType:String->Null<
 				case Arrow: FArrow;
 			};
 			final writtenResult = facts.getSignature().getReturnTypeHint();
+			final convertedBody = convert(body);
 			EFunction(kind, {
 				args: arguments,
 				ret: writtenResult == null ? null : parseType(writtenResult),
-				expr: convert(body),
-				params: []
+				expr: convertedBody,
+				params: HxMacroTypeSyntax.parameterDeclarations(facts.getGenerics().getParameters(), convertedBody.pos, parseMetadata)
 			});
 		case _:
 			null;

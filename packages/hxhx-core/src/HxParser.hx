@@ -1890,8 +1890,7 @@ class HxParser {
 				name;
 			case _: null;
 		};
-		if (isOtherChar("<"))
-			fail("Generic source functions require structured type parameters");
+		final generics = new HxSourceFunctionGenerics(new HxTypedefParser(this).parameters());
 		if (isInline && name == null)
 			fail("Inline source functions require a name");
 		final inputs = parseSourceFunctionParameters();
@@ -1906,6 +1905,7 @@ class HxParser {
 		final facts = new HxSourceFunction({
 			kind: name == null ? Anonymous : Named(name, isInline),
 			placement: placement,
+			generics: generics,
 			arguments: inputs.arguments,
 			signature: new HxLambdaSignature(inputs.parameters, returnType.length == 0 ? null : returnType)
 		});

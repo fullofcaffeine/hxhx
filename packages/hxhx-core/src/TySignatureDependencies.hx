@@ -96,6 +96,9 @@ private function visitSyntax(type:HxTypeSyntax, bound:Array<String>, paths:Signa
 				visitSyntax(argument, bound, paths);
 		case GroupedType(inner):
 			visitSyntax(inner, bound, paths);
+		case IntersectionType(members):
+			for (member in members)
+				visitSyntax(member, bound, paths);
 		case ArrowType(argument, result):
 			visitSyntax(argument, bound, paths);
 			visitSyntax(result, bound, paths);

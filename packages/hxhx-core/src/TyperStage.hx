@@ -1951,6 +1951,11 @@ class TyperStage {
 	static function inferSourceFunctionType(source:HxExpr, facts:HxSourceFunction, body:HxExpr, defaults:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos, ?context:TyType):TyType {
 		facts.assertDefaultCount(defaults.length);
+		// Syntax and macro parsing retain these declarations. Executable typing must
+		// not reinterpret their binders as unresolved class names. Remove this guard
+		// when haxe_ocaml-ijd7i provides per-call instantiation and native execution.
+		if (facts.getGenerics().getParameters().length > 0)
+			throw new TyperError(ctx.getFilePath(), pos, "Generic local functions require independently instantiated local binders");
 		final retained = scope.getInference().sourceFunctionType(source);
 		if (retained != null)
 			return retained;

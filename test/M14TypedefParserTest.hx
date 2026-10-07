@@ -86,6 +86,25 @@ class M14TypedefParserTest {
 				throw "legacy arrow syntax disappeared";
 		}
 		final mixed = ParserStage.parse("typedef Alias = Int; class Main {}", "Main.hx").getDecl();
+		final constrained = declaration("typedef Alias<T:(First & Second)> = T;");
+		switch constrained.getParameters()[0].constraints[0].getKind() {
+			case GroupedType(inner):
+				switch inner.getKind() {
+					case IntersectionType(members):
+						require(members.length == 2, "intersection members disappeared");
+						members.resize(0);
+					case _: throw "constraint intersection lost its type node";
+				}
+				switch inner.getKind() {
+					case IntersectionType(members): require(members.length == 2, "caller mutated an intersection");
+					case _: throw "intersection kind changed";
+				}
+			case _:
+				throw "constraint parentheses disappeared";
+		}
+		final constrainedModule = ParserStage.parse("typedef Alias<T:(First & Second)> = T;", "Alias.hx").getDecl();
+		require(TySignatureDependencies.declared(constrainedModule).join(",") == "First,Second",
+			"intersection dependencies were lost or included a bound parameter");
 		require(HxModuleDecl.getClasses(mixed).length == 1
 			&& HxModuleDecl.getTypedefs(mixed).length == 1, "mixed module confused classes and aliases");
 		for (source in [
@@ -95,7 +114,8 @@ class M14TypedefParserTest {
 			"typedef Alias = (value:Int)->String->Bool;",
 			"typedef Alias = ()->Int->Bool;",
 			"typedef Alias = (?...values:Int)->Int;",
-			"typedef Alias = (...?values:Int)->Int;"
+			"typedef Alias = (...?values:Int)->Int;",
+			"typedef Alias<T:(Int,String)> = T;"
 		])
 			try {
 				declaration(source);
@@ -110,6 +130,9 @@ class M14TypedefParserTest {
 		require(integrity("typedef Alias=Int;") != integrity("typedef Alias=Bool;"), "typedef target is absent from parsed integrity");
 		require(integrity("typedef Alias=(...x:Int)->Int;") != integrity("typedef Alias=(   x:Int)->Int;"), "rest marker is absent from parsed integrity");
 		require(integrity("typedef Alias={var x:Int;};") != integrity("typedef Alias={final x:Int;};"), "field mutability is absent from integrity");
+		require(integrity("typedef Alias<T:A&B> = T;") != integrity("typedef Alias<T:A&C> = T;"), "constraint intersection is absent from integrity");
+		require(integrity("typedef Alias={var x:Int;};") != integrity("typedef Alias={public var x:Int;};"),
+			"written field visibility is absent from integrity");
 		Sys.println("TYPEDEF_PARSER:PASS");
 	}
 }

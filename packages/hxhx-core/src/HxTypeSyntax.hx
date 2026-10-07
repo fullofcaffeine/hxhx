@@ -34,6 +34,7 @@ typedef HxTypeSyntaxField = {
 	final kind:HxTypeSyntaxFieldKind;
 	final isOptional:Bool;
 	final visibility:HxVisibility;
+	final isVisibilityExplicit:Bool;
 	final metadata:Array<String>;
 	final pos:HxPos;
 	final endPos:HxPos;
@@ -48,6 +49,10 @@ enum HxTypeSyntaxKind {
 	ArrowType(argument:HxTypeSyntax, result:HxTypeSyntax);
 
 	GroupedType(inner:HxTypeSyntax);
+
+	/** Preserve an authored intersection as one type, including nested grouping. */
+	IntersectionType(members:Array<HxTypeSyntax>);
+
 	AnonymousType(fields:Array<HxTypeSyntaxField>, extensions:Array<HxTypeSyntax>);
 }
 
@@ -122,6 +127,7 @@ class HxTypeSyntax {
 			case FunctionType(arguments, result): FunctionType(copyArguments(arguments), result);
 			case ArrowType(argument, result): ArrowType(argument, result);
 			case GroupedType(inner): GroupedType(inner);
+			case IntersectionType(members): IntersectionType(members.copy());
 			case AnonymousType(fields, extensions): AnonymousType([
 					for (field in fields)
 						{
@@ -129,6 +135,7 @@ class HxTypeSyntax {
 							kind: copyFieldKind(field.kind),
 							isOptional: field.isOptional,
 							visibility: field.visibility,
+							isVisibilityExplicit: field.isVisibilityExplicit,
 							metadata: field.metadata.copy(),
 							pos: field.pos,
 							endPos: field.endPos

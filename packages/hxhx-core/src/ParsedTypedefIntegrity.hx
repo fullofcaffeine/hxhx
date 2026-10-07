@@ -7,13 +7,14 @@ function appendDeclaration(out:StringBuf, declaration:HxTypedefDecl):Void {
 	text(out, declaration.getVisibility() == Public ? "public" : "private");
 	text(out, declaration.getIsExtern() ? "extern" : "ordinary");
 	strings(out, declaration.getMetadata());
-	parameters(out, declaration.getParameters());
+	appendParameters(out, declaration.getParameters());
 	appendType(out, declaration.getTarget());
 	position(out, declaration.getPos());
 	position(out, declaration.getEndPos());
 }
 
-private function parameters(out:StringBuf, values:Array<HxTypeSyntaxParameter>):Void {
+/** Shared declaration grammar has one integrity encoding for typedef and local-function binders. */
+function appendParameters(out:StringBuf, values:Array<HxTypeSyntaxParameter>):Void {
 	text(out, Std.string(values.length));
 	for (value in values) {
 		text(out, value.name);
@@ -63,6 +64,11 @@ private function appendType(out:StringBuf, type:HxTypeSyntax):Void {
 		case GroupedType(inner):
 			text(out, "group");
 			appendType(out, inner);
+		case IntersectionType(members):
+			text(out, "intersection");
+			text(out, Std.string(members.length));
+			for (member in members)
+				appendType(out, member);
 		case AnonymousType(fields, extensions):
 			text(out, "anonymous");
 			text(out, Std.string(extensions.length));
@@ -73,6 +79,7 @@ private function appendType(out:StringBuf, type:HxTypeSyntax):Void {
 				text(out, field.name);
 				text(out, field.isOptional ? "optional" : "required");
 				text(out, field.visibility == Public ? "public" : "private");
+				text(out, field.isVisibilityExplicit ? "written-visibility" : "default-visibility");
 				strings(out, field.metadata);
 				position(out, field.pos);
 				position(out, field.endPos);
@@ -85,7 +92,7 @@ private function appendType(out:StringBuf, type:HxTypeSyntax):Void {
 						appendType(out, type);
 					case Method(params, args, result):
 						text(out, "method");
-						parameters(out, params);
+						appendParameters(out, params);
 						arguments(out, args);
 						appendType(out, result);
 				}

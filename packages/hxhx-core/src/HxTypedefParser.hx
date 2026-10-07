@@ -110,18 +110,8 @@ class HxTypedefParser {
 			final annotations = metadata();
 			final parameterName = name();
 			final constraints = new Array<HxTypeSyntax>();
-			if (take(TColon)) {
-				if (take(TLParen)) {
-					do {
-						constraints.push(type());
-					} while (take(TComma));
-					require(TRParen, "')'");
-				} else {
-					do {
-						constraints.push(type());
-					} while (other("&"));
-				}
-			}
+			if (take(TColon))
+				constraints.push(type());
 			final defaultType = other("=") ? type() : null;
 			values.push({
 				name: parameterName,
@@ -195,8 +185,9 @@ class HxTypedefParser {
 			}
 			final fieldPos = parser.cur.getPos();
 			final annotations = metadata();
-			final visibility:HxVisibility = take(TKeyword(KPrivate)) ? Private : Public;
-			take(TKeyword(KPublic));
+			final privateWritten = take(TKeyword(KPrivate));
+			final publicWritten = take(TKeyword(KPublic));
+			final visibility:HxVisibility = privateWritten ? Private : Public;
 			var optional = other("?");
 			final method = take(TKeyword(KFunction));
 			final isFinal = !method && take(TKeyword(KFinal));
@@ -228,6 +219,7 @@ class HxTypedefParser {
 				kind: kind,
 				isOptional: optional,
 				visibility: visibility,
+				isVisibilityExplicit: privateWritten || publicWritten,
 				metadata: annotations,
 				pos: fieldPos,
 				endPos: end
@@ -271,10 +263,19 @@ class HxTypedefParser {
 			}
 			new HxTypeSyntax(TypePath(segments, args), pos, end);
 		};
-		if (!arrow())
-			return value;
-		final result = type();
-		return new HxTypeSyntax(ArrowType(value, result), pos, end);
+		if (arrow()) {
+			final result = type();
+			return new HxTypeSyntax(ArrowType(value, result), pos, end);
+		}
+		if (other("&")) {
+			final result = type();
+			final members = switch result.getKind() {
+				case IntersectionType(members): [value].concat(members);
+				case _: [value, result];
+			};
+			return new HxTypeSyntax(IntersectionType(members), pos, end);
+		}
+		return value;
 	}
 
 	public function declaration(visibility:HxVisibility, annotations:Array<String>, isExtern:Bool):HxTypedefDecl {

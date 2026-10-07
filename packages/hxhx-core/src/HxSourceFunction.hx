@@ -11,19 +11,20 @@ enum HxSourceFunctionPlacement {
 	Declaration;
 }
 
-/** Scalar source facts supplied by the parser for one function. */
+/** Written signature facts supplied by the parser for one function. */
 typedef HxSourceFunctionInput = {
 	final kind:HxSourceFunctionKind;
 	final placement:HxSourceFunctionPlacement;
 	final arguments:Array<String>;
 	final signature:HxLambdaSignature;
+	final ?generics:HxSourceFunctionGenerics;
 }
 
 /**
 	Preserves written function syntax independently of its selected callable type.
 
 	The enclosing expression owns the body and default expressions as recursive
-	children. This value owns only scalar facts, which avoids an OCaml module cycle.
+	children. This value owns signature syntax without expression children, which avoids an OCaml module cycle.
 	Default children follow parameter order; their indexes never imply an optional marker.
  */
 class HxSourceFunction {
@@ -32,6 +33,7 @@ class HxSourceFunction {
 	final arguments:Array<String>;
 	final signature:HxLambdaSignature;
 	final defaultParameterIndexes:Array<Int>;
+	final generics:HxSourceFunctionGenerics;
 
 	public function new(input:HxSourceFunctionInput) {
 		if (input.signature == null || input.arguments.length != input.signature.getParameters().length)
@@ -48,6 +50,7 @@ class HxSourceFunction {
 		this.placement = input.placement;
 		this.arguments = input.arguments.copy();
 		this.signature = input.signature;
+		this.generics = input.generics == null ? HxSourceFunctionGenerics.empty() : input.generics;
 		this.defaultParameterIndexes = [];
 		final parameters = signature.getParameters();
 		for (index in 0...parameters.length)
@@ -80,6 +83,9 @@ class HxSourceFunction {
 	public function getSignature():HxLambdaSignature
 		return signature;
 
+	public function getGenerics():HxSourceFunctionGenerics
+		return generics;
+
 	public function getDefaultParameterIndexes():Array<Int>
 		return defaultParameterIndexes.copy();
 
@@ -91,7 +97,11 @@ class HxSourceFunction {
 
 	/** Syntax-only changes must invalidate both source fingerprints and typed revisions. */
 	public function getCanonicalIdentity():String {
-		final facts:Array<Null<String>> = ["source-function-v2", signature.getCanonicalIdentity()];
+		final facts:Array<Null<String>> = [
+			"source-function-v3",
+			signature.getCanonicalIdentity(),
+			generics.getCanonicalIdentity()
+		];
 		switch kind {
 			case Anonymous:
 				facts.push("anonymous");

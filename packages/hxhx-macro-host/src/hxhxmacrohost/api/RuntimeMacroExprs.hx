@@ -601,7 +601,8 @@ class RuntimeMacroExprs {
 		return switch (expr) {
 			case EPrivateAccess(_, _) | EParenthesized(_, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) |
 				ESourceFor(_, _, _, _) | HxExpr.EThrow(_, _) | HxExpr.EWhile(_, _, _, _, _):
-				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType);
+				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType,
+					RuntimeMacroTypes.parseMetadataEntries);
 				if (definition == null)
 					throw "source macro mapper did not handle authored control syntax";
 				definition;

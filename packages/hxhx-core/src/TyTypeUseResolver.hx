@@ -139,6 +139,8 @@ class TyTypeUseResolver {
 		};
 		return switch (syntax.getKind()) {
 			case GroupedType(inner): resolveSyntax(inner, positioned, expansion, declarations, scope);
+			case IntersectionType(_):
+				throw new TyperError(positioned.filePath, positioned.position, "Intersection type resolution is not implemented");
 			case TypePath(segments, arguments):
 				final path = segments.join(".");
 				final args = [
