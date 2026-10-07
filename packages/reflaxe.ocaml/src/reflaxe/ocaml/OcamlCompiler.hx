@@ -3862,9 +3862,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Expr");
 		// Stage4 macro-host bring-up also requires compiling `haxe.macro.Type` (many mutually-referencing enums).
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Type");
-		// Portable stdlib closure: `haxe.io.ArrayBufferView` mixes helper/value segments that can
-		// reference class values emitted later in the same unit (`create`), so reorder by local deps.
-		reorderMlSegmentsByLocalTypeDeps("haxe.io.ArrayBufferView");
 
 		final excludedModuleIds:Map<String, Bool> = [];
 		final excludedFrameworkPaths:Map<String, Bool> = [];
