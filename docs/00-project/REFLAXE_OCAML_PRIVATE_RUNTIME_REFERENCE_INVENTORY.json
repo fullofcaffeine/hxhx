@@ -2,10 +2,10 @@
   "schema": "reflaxe-ocaml-private-runtime-reference-inventory.v1",
   "model": "source-level-legacy-reference-migration-inventory",
   "authority": "migration-inventory-only",
-  "reviewBead": "haxe_ocaml-xmf73.1",
+  "reviewBead": "haxe_ocaml-saj4g",
   "sourceRoot": "packages/reflaxe.ocaml/src/reflaxe/ocaml",
   "generator": "scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js",
-  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-xmf73.1",
+  "regenerationCommand": "node scripts/ci/reflaxe-ocaml-runtime-reference-inventory.js --write --review-bead haxe_ocaml-saj4g",
   "completionRule": "This inventory must be empty before runtime-reference authority can be complete.",
   "megaFileRisks": [
     {
@@ -15,21 +15,21 @@
     }
   ],
   "counts": {
-    "total": 209,
+    "total": 208,
     "byDomain": {
-      "expression": 209
+      "expression": 208
     },
     "byMigrationFamily": {
       "builder-anon": 12,
       "builder-array": 25,
-      "builder-boolean-carriers": 19,
+      "builder-boolean-carriers": 18,
       "builder-enum": 21,
       "builder-int": 58,
       "builder-nullable-carriers": 54,
       "builder-type": 20
     }
   },
-  "inventoryRevision": "82bd6fa6eb6deb5bd9b43a360abd1939218c74c34e8cac82418bf27ef808d80d",
+  "inventoryRevision": "1b929566de614cd62b2f24792c5f1726ca0805a6aad0a1ae8e7ebc94c76eb275",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -1859,16 +1859,6 @@
       "symbol": "HxRuntime.unbox_bool_or_obj",
       "rootModule": "HxRuntime",
       "ordinal": 6,
-      "migrationFamily": "builder-boolean-carriers"
-    },
-    {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.box_bool::11",
-      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
-      "domain": "expression",
-      "construction": "EField(EIdent)",
-      "symbol": "HxRuntime.box_bool",
-      "rootModule": "HxRuntime",
-      "ordinal": 11,
       "migrationFamily": "builder-boolean-carriers"
     },
     {

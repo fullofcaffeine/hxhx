@@ -58,7 +58,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 48)
+	assert.strictEqual(report.schemaVersion, 49)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -532,7 +532,7 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
-	assert.strictEqual(lowering.schemaVersion, 89)
+	assert.strictEqual(lowering.schemaVersion, 90)
 	const oldSchemaValue = JSON.parse(loweringBytes)
 	oldSchemaValue.schemaVersion = 87
 	fs.writeFileSync(loweringPath, JSON.stringify(oldSchemaValue, null, 2) + '\n')

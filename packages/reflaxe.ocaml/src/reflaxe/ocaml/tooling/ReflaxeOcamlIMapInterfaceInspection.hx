@@ -44,8 +44,8 @@ typedef InspectionIMapInterfaceInventory = {
 	Edited, missing, or stale evidence makes inspection fail.
 **/
 class ReflaxeOcamlIMapInterfaceInspection {
-	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v114";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
+	static inline final ROOT_FUNCTION_PIPELINE_REVISION = "ocaml-function-plans-v115";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v34";
 	static inline final NESTED_FUNCTION_ID_MARKER = "|nested-function|";
 
 	/** Reads and validates every concrete-to-interface conversion and interface call. */

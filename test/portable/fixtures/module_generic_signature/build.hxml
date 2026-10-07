@@ -1,0 +1,13 @@
+-cp src
+-cp macros
+-main Main
+--no-output
+-lib reflaxe.ocaml
+--macro CheckGenericDeclaration.install()
+--macro CheckGenericConversions.install()
+--macro CheckGenericCallPlans.install()
+--macro CheckNullableBooleanAssignment.install()
+-D no-traces
+-D no_traces
+-D ocaml_output=out
+-D ocaml_lowering_report

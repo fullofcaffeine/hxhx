@@ -40,29 +40,32 @@ typedef OcamlDeclarationSignature = {
 	and result has an admitted declaration carrier; zero arguments use unit.
 	Optional callback arguments currently require String's existing null sentinel.
 	Other optional types need a separate proof of their nullable call boundary.
+	An instance-method caller can supply its declared type parameters to retain
+	their existing erased storage. Other type parameters remain unsupported;
+	this opt-in does not change polymorphic static identity functions.
 	The recursive module interface checks each generated function against the selected types. Ordinary
 	modules keep their existing inferred function types and generated text.
 **/
 function projectDeclarationSignature(parameters:Array<Type>, result:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr,
-		context:CompilationContext):Null<OcamlDeclarationSignature> {
+		context:CompilationContext, ?erasedMethodTypeParameters:Array<Type>):Null<OcamlDeclarationSignature> {
 	final parameterTypes:Array<OcamlTypeExpr> = [];
 	for (parameter in parameters) {
-		final type = declarationCarrier(parameter, representations, nominalType, context);
+		final type = declarationCarrier(parameter, representations, nominalType, context, erasedMethodTypeParameters);
 		if (type == null)
 			return null;
 		parameterTypes.push(type);
 	}
-	final resultType = declarationCarrier(result, representations, nominalType, context);
+	final resultType = declarationCarrier(result, representations, nominalType, context, erasedMethodTypeParameters);
 	return resultType == null ? null : {parameters: parameterTypes, result: resultType};
 }
 
 /** Only explicit, existing storage choices may become exported declaration types. */
-private function declarationCarrier(type:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr,
-		context:CompilationContext):Null<OcamlTypeExpr> {
+private function declarationCarrier(type:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr, context:CompilationContext,
+		erasedMethodTypeParameters:Null<Array<Type>>):Null<OcamlTypeExpr> {
 	final mapParameters = OcamlStandardMapCarrierContract.declarationParameters(type);
 	if (mapParameters != null) {
 		for (parameter in mapParameters)
-			if (declarationCarrier(parameter, representations, nominalType, context) == null)
+			if (declarationCarrier(parameter, representations, nominalType, context, erasedMethodTypeParameters) == null)
 				return null;
 		// The existing map owner classifies source identity and seals the runtime
 		// reference. Neither a printed name nor generic class shape is sufficient.
@@ -73,7 +76,7 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 	}
 	return switch (type) {
 		case TFun(parameters, result):
-			final projectedResult = declarationCarrier(result, representations, nominalType, context);
+			final projectedResult = declarationCarrier(result, representations, nominalType, context, erasedMethodTypeParameters);
 			if (projectedResult == null) {
 				null;
 			} else {
@@ -85,7 +88,7 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 					// values; do not infer that property for scalars or enum variants.
 					if (parameter.opt && !isStringCallbackArgument(parameter.t))
 						return null;
-					final parameterType = declarationCarrier(parameter.t, representations, nominalType, context);
+					final parameterType = declarationCarrier(parameter.t, representations, nominalType, context, erasedMethodTypeParameters);
 					if (parameterType == null)
 						return null;
 					functionType = TArrow(parameterType, functionType);
@@ -94,7 +97,8 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 			}
 		case TType(reference, parameters):
 			final definition = reference.get();
-			declarationCarrier(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), representations, nominalType, context);
+			declarationCarrier(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), representations, nominalType, context,
+				erasedMethodTypeParameters);
 		case TAnonymous(reference):
 			switch (reference.get().status) {
 				case AClosed if (OcamlDynamicCarrierModel.anonymousUsesHxAnon(type)):
@@ -115,7 +119,7 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				// Null<Map<K,V>> can be boxed even when Map<K,V> uses HxMap.
 				// Validate the element contract, then preserve the actual nullable
 				// storage instead of inferring it from the non-null map carrier.
-				if (declarationCarrier(inner, representations, nominalType, context) == null) {
+				if (declarationCarrier(inner, representations, nominalType, context, erasedMethodTypeParameters) == null) {
 					null;
 				} else {
 					switch (nominalType(type)) {
@@ -128,9 +132,17 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				// Other supported references retain their existing null sentinel.
 				// Nullable enums instead preserve their existing boxed null-or-variant carrier.
 				switch (TypeTools.follow(inner)) {
-					case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context);
+					case TAbstract(scalar, []) if (scalar.get().pack.length == 0
+						&& (scalar.get().name == "Int" || scalar.get().name == "Bool")):
+						// Nullable scalars already use Obj.t so null remains distinct
+						// from zero and false. Export only that existing storage.
+						switch (nominalType(type)) {
+							case carrier = TIdent("Obj.t"): carrier;
+							case _: null;
+						}
+					case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context, erasedMethodTypeParameters);
 					case referred = TEnum(_, _):
-						if (declarationCarrier(referred, representations, nominalType, context) == null) {
+						if (declarationCarrier(referred, representations, nominalType, context, erasedMethodTypeParameters) == null) {
 							null;
 						} else {
 							switch (nominalType(type)) {
@@ -142,7 +154,7 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				}
 			}
 		case TInst(_, [element]) if (isStandardArray(type)):
-			if (declarationCarrier(element, representations, nominalType, context) == null) {
+			if (declarationCarrier(element, representations, nominalType, context, erasedMethodTypeParameters) == null) {
 				null;
 			} else {
 				// The normal type mapper obtains request-bound container authority.
@@ -155,7 +167,15 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 		case TInst(reference, []):
 			final definition = reference.get();
 			switch (definition.kind) {
-				case KTypeParameter(_): null;
+				case KTypeParameter(_):
+					if (!ownsErasedParameter(definition, erasedMethodTypeParameters)) {
+						null;
+					} else {
+						switch (nominalType(type)) {
+							case carrier = TIdent("Obj.t"): carrier;
+							case _: null;
+						}
+					}
 				case _ if (definition.pack.length == 0 && definition.name == "String"): TIdent("string");
 				case _ if (representations.monomorphicClassForType(type) != null): nominalType(type);
 				case _
@@ -172,6 +192,30 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 			nominalType(type);
 		case _: null;
 	}
+}
+
+/**
+	Matches the module, method scope and parameter name used by the generic-call planner.
+	Haxe can return distinct wrapper objects for the same declaration. A matching
+	short name alone is insufficient because separate methods can both declare T.
+**/
+private function ownsErasedParameter(definition:ClassType, parameters:Null<Array<Type>>):Bool {
+	if (parameters == null)
+		return false;
+	for (parameter in parameters)
+		switch (parameter) {
+			case TInst(reference, []):
+				final owned = reference.get();
+				switch (owned.kind) {
+					case KTypeParameter(_)
+						if (owned.module == definition.module
+							&& owned.pack.join(".") == definition.pack.join(".")
+							&& owned.name == definition.name): return true;
+					case _:
+				}
+			case _:
+		}
+	return false;
 }
 
 /**

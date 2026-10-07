@@ -2840,6 +2840,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// Keep the builder's unit parameter for a zero-argument Haxe method.
 					if (preserveInstanceSignature && builtMethod.signature != null)
 						methodSignature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName), builtMethod.signature);
+					if (preserveInstanceSignature && methodSignature == null && f.field.params.length > 0) {
+						// Ordinary generic instance calls already use erased method storage.
+						// Only this method's declared parameters may select that boundary.
+						final declaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), methodReturnType, representationRegistry,
+							ocamlTypeExprFromHaxeType, ctx, f.field.params.map(parameter -> parameter.t));
+						if (declaration != null)
+							methodSignature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName),
+								signatureFromTypes(declaration.parameters, declaration.result));
+					}
 					switch (builtMethod.expression) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {

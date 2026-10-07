@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlGenericCallReport.callToReport;
 import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
 import reflaxe.ocaml.reports.OcamlReportJson.render as renderReportJson;
 import haxe.io.Path;
@@ -77,7 +78,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 89;
+	public static inline final SCHEMA_VERSION = 90;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -377,13 +378,22 @@ class OcamlLoweringReportWriter {
 		}
 		for (call in sortedCalls) {
 			OcamlCallPlan.requireCall(call);
+			if (call.genericInstanceTarget != null) {
+				final target = call.genericInstanceTarget;
+				final receiver = representationById.get(target.receiverRepresentationId);
+				if (receiver == null
+					|| receiver.semanticTypeId != target.receiverTypeId
+					|| receiver.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier)
+					throw 'Generic call "${call.id}" has no matching direct-record receiver representation.';
+			}
 			if (call.receiver != null)
 				requireCallValue(representationById, call.receiver, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
-			if (call.kind == OcamlCallKind.DirectStaticGenericIdentity
+			if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod
+				|| call.kind == OcamlCallKind.DirectStaticGenericIdentity
 				|| call.kind == OcamlCallKind.TypedFunctionValue
 				|| call.kind == OcamlCallKind.DynamicFunctionValue
 				|| call.kind == OcamlCallKind.StandardArrayMethod
@@ -891,8 +901,9 @@ class OcamlLoweringReportWriter {
 			calls: sortedIMapInterfaceCalls,
 			storageAliases: sortedIMapStorageAliases
 		});
+		final reportedCalls = sortedCalls.map(callToReport);
 		final canonicalCalls = reportJson({
-			calls: sortedCalls,
+			calls: reportedCalls,
 			callableBoundaries: sortedCallableBoundaries
 		});
 		final sortedReflectCompare = reflectCompare.copy();
@@ -967,11 +978,11 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + hashUtf8(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v31",
+			callModel: "typed-ocaml-directional-call-boundary-v32",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + hashUtf8(canonicalCalls),
 			callCount: sortedCalls.length,
-			calls: sortedCalls,
+			calls: reportedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
 			reflectCompareModel: OcamlReflectComparePlan.MODEL_REVISION,

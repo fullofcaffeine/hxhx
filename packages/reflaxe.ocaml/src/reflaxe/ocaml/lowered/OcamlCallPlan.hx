@@ -1,6 +1,12 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.copy as genericCallCopy;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.decision as genericCallDecision;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.fingerprint as genericCallFingerprint;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.matches as genericCallMatches;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.requireCall as genericCallRequireCall;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
 import haxe.macro.Type;
@@ -13,6 +19,7 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUsePlan;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericInstanceCallTarget;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier.OcamlNullableEnumCarrierReference;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -30,6 +37,7 @@ enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
 	final DirectStaticGenericIdentity = "direct-static-generic-identity";
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
+	final GenericInstanceHaxeMethod = "generic-instance-haxe-method";
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
 	final DynamicFunctionValue = "dynamic-function-value";
@@ -231,6 +239,7 @@ typedef OcamlCallDecision = {
 	final ?standardArrayTarget:OcamlStandardArrayCallTarget;
 	final ?standardIMapTarget:OcamlStandardIMapCallTarget;
 	final ?structuralIteratorTarget:OcamlStructuralIteratorCallTarget;
+	final ?genericInstanceTarget:OcamlGenericInstanceCallTarget;
 }
 
 /**
@@ -298,6 +307,8 @@ class OcamlCallPlan {
 	}
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
+		if (decision.kind == OcamlCallKind.GenericInstanceHaxeMethod)
+			return decision.genericInstanceTarget != null && genericCallMatches(decision.genericInstanceTarget, expression);
 		return switch (expression.expr) {
 			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.DynamicFunctionValue
 				&& decision.dynamicFunctionTarget != null): OcamlCallPlanner.matchesDynamicFunctionTarget(decision.dynamicFunctionTarget, callee, arguments,
@@ -363,6 +374,8 @@ class OcamlCallPlan {
 	}
 
 	static function suppliedArgumentCountForDecision(decision:OcamlCallDecision):Int {
+		if (decision.genericInstanceTarget != null)
+			return decision.genericInstanceTarget.arguments.length;
 		if (decision.dynamicFunctionTarget != null)
 			return decision.dynamicFunctionTarget.argumentSemanticTypeIds.length;
 		if (decision.standardArrayTarget != null)
@@ -404,6 +417,11 @@ class OcamlCallPlan {
 
 	/** Checks one already-selected call for an exact `Null<Bool>` result. */
 	public static function decisionProducesNullableBool(decision:Null<OcamlCallDecision>):Bool {
+		if (decision != null && decision.genericInstanceTarget != null)
+			return switch (decision.genericInstanceTarget.resultShape) {
+				case NullableBoolean: true;
+				case _: false;
+			};
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "Null<Bool>";
 		return decision != null
@@ -423,6 +441,11 @@ class OcamlCallPlan {
 
 	/** Checks one already-selected call for the exact core String result carrier. */
 	public static function decisionProducesExactString(decision:Null<OcamlCallDecision>):Bool {
+		if (decision != null && decision.genericInstanceTarget != null)
+			return switch (decision.genericInstanceTarget.resultShape) {
+				case Text(false): true;
+				case _: false;
+			};
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "String";
 		return decision != null
@@ -471,6 +494,7 @@ class OcamlCallPlan {
 			decision.standardArrayTarget == null ? "" : OcamlStandardArrayCallContract.fingerprint(decision.standardArrayTarget),
 			decision.standardIMapTarget == null ? "" : OcamlStandardIMapCallContract.fingerprint(decision.standardIMapTarget),
 			decision.structuralIteratorTarget == null ? "" : OcamlStructuralIteratorCallContract.fingerprint(decision.structuralIteratorTarget),
+			decision.genericInstanceTarget == null ? "" : genericCallFingerprint(decision.genericInstanceTarget),
 			decision.functionId,
 			decision.programRevision,
 			decision.bodyRevision,
@@ -545,6 +569,7 @@ class OcamlCallPlan {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision,
 			dynamicFunctionTarget: decision.dynamicFunctionTarget == null ? null : copyDynamicFunctionTarget(decision.dynamicFunctionTarget),
+			genericInstanceTarget: decision.genericInstanceTarget == null ? null : genericCallCopy(decision.genericInstanceTarget),
 			standardArrayTarget: decision.standardArrayTarget == null ? null : OcamlStandardArrayCallContract.copy(decision.standardArrayTarget),
 			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget),
 			structuralIteratorTarget: decision.structuralIteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.structuralIteratorTarget)
@@ -883,6 +908,12 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireCall(call:OcamlCallDecision):Void {
+		if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod) {
+			genericCallRequireCall(call);
+			return;
+		}
+		if (call.genericInstanceTarget != null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: ordinary call "${call.id}" owns a generic instance target';
 		if (call.kind == OcamlCallKind.DynamicFunctionValue) {
 			requireDynamicFunctionCall(call);
 			return;
@@ -2134,6 +2165,9 @@ class OcamlCallPlanner {
 	}
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
+		final genericTarget = genericCallSelect(expression, representations);
+		if (genericTarget != null)
+			return genericCallDecision(expression, genericTarget, binding);
 		return switch (expression.expr) {
 			case TCall(callee, arguments) if (OcamlRepresentationRegistry.isExactDynamic(callee.t)):
 				dynamicFunctionCallDecision(expression, callee, arguments);

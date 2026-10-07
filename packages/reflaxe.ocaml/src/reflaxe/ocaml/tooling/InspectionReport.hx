@@ -3,6 +3,7 @@ package reflaxe.ocaml.tooling;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+import reflaxe.ocaml.reports.OcamlGenericCallReport.GenericCallReportTarget;
 
 /** One runtime module and the current report's reasons for selecting it. **/
 typedef InspectionRuntimeReason = {
@@ -685,6 +686,7 @@ typedef InspectionCall = {
 	final standardArrayTarget:Null<InspectionStandardArrayCallTarget>;
 	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 	final structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
+	final genericInstanceTarget:Null<GenericCallReportTarget>;
 }
 
 /** One callable definition independently sealed against its final body. **/

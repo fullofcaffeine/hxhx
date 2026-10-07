@@ -1,5 +1,7 @@
 package reflaxe.ocaml.ast;
 
+import reflaxe.ocaml.ast.OcamlGenericCallEmitter.emit as genericSyntaxEmit;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
@@ -1702,6 +1704,57 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Binds source values once, then emits only the generic conversions selected by the call owner. */
+	function buildPlannedGenericInstanceCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		final target = call.genericInstanceTarget;
+		if (target == null || callee == null || currentCallPlan == null)
+			return callPlanInvariant("generic instance call has no target, callee, or current inventory", position);
+		final representation = representationRegistry.monomorphicClassValue(target.receiverTypeId);
+		if (representation == null || representation.id != target.receiverRepresentationId)
+			return callPlanInvariant("generic instance receiver lost its exact direct-dispatch representation", position);
+		final receiver = switch (callee.expr) {
+			case TField(value, FInstance(_, _, _)): value;
+			case _: return callPlanInvariant("generic instance call has no instance receiver", position);
+		};
+		final runtimePlan = currentCallPlan.runtimeUsePlanFor(call.id);
+		var authority:Null<OcamlRuntimeUseAuthority> = null;
+		if (runtimePlan != null) {
+			OcamlCallRuntimeUseContract.requireForCall(call, runtimePlan);
+			authority = new OcamlRuntimeUseAuthority(runtimePlan.planRevision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				ctx.runtimeRequirementsByIds(runtimePlan.runtimeRequirementIds), runtimePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		}
+		function runtimeIdentifier(role:String, symbol:String):OcamlExpr {
+			if (runtimePlan == null || authority == null)
+				return callPlanInvariant("generic conversion has no exact runtime owner", position);
+			final occurrences = runtimePlan.runtimeUseOccurrences.filter(use -> use.role == role && use.exactSymbol == symbol);
+			if (occurrences.length != 1)
+				return callPlanInvariant("generic conversion lost its exact runtime occurrence", position);
+			final occurrence = occurrences[0];
+			return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, symbol));
+		}
+		final moduleName = moduleIdToOcamlModuleName(target.moduleId);
+		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+		final name = ctx.scopedValueName(target.moduleId, target.typeName, target.fieldName);
+		final method = selfModule == moduleName ? OcamlExpr.EIdent(name) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), name);
+		final receiverName = freshTmp("generic_receiver");
+		final materialized:Array<{name:String, value:OcamlExpr}> = [{name: receiverName, value: buildExpr(receiver)}];
+		final inputNames:Array<OcamlExpr> = [];
+		for (argument in arguments) {
+			final argumentName = freshTmp("generic_source_argument");
+			materialized.push({name: argumentName, value: buildExpr(argument)});
+			inputNames.push(OcamlExpr.EIdent(argumentName));
+		}
+		var output = genericSyntaxEmit(target, method, OcamlExpr.EIdent(receiverName), inputNames, freshTmp, runtimeIdentifier);
+		// Source expressions can contain helpers owned by nested calls. Reconcile
+		// this conversion subtree before those independently checked expressions enter it.
+		if (authority != null)
+			authority.reconcileExpression(output);
+		var index = materialized.length;
+		while (index-- > 0)
+			output = OcamlExpr.ELet(materialized[index].name, materialized[index].value, output, false);
+		return output;
+	}
+
 	/**
 		Materializes one sealed typed call in its Haxe source order.
 
@@ -1712,6 +1765,8 @@ class OcamlBuilder {
 	function buildPlannedCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
+			if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod)
+				return buildPlannedGenericInstanceCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.DynamicFunctionValue)
 				return buildPlannedDynamicFunctionCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.StandardArrayMethod)
@@ -1754,6 +1809,8 @@ class OcamlBuilder {
 				return callPlanInvariant('standard IMap call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StructuralIteratorMethod:
 				return callPlanInvariant('structural Iterator call "${call.id}" bypassed its specialized sealed target', position);
+			case OcamlCallKind.GenericInstanceHaxeMethod:
+				return callPlanInvariant('generic instance call "${call.id}" bypassed its sealed target', position);
 		};
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
 		final applicationArguments:Array<OcamlExpr> = [];
@@ -4104,6 +4161,8 @@ class OcamlBuilder {
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, callee, arguments, e.pos);
+			case TCall(_, _) if (genericCallSelect(e, representationRegistry) != null):
+				callPlanInvariant("a generic instance call reached syntax without its sealed storage conversion plan", e.pos);
 			case TCall(_, _) if (OcamlCallPlanner.isDirectStaticGenericIdentityCall(e)):
 				callPlanInvariant("a direct generic identity call reached syntax without its sealed concrete carrier plan", e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
@@ -7413,6 +7472,10 @@ class OcamlBuilder {
 		}
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
+		// Nullable Bool uses an ordinary bool behind Obj.t. Select it before
+		// the generic abstract branch, which uses tagged Dynamic Boolean storage.
+		if (lhsKind == "bool" && rhsKind == null && isBoolType(rhs.t))
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
 			case TDynamic(_):
 				true;
@@ -7823,9 +7886,6 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 				case "float" if (isIntType(rhs.t)):
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(rhs)])]);
-				case "bool" if (isBoolType(rhs.t)):
-					// Box bools to avoid int/bool ambiguity when carried as `Obj.t`.
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(rhs)]);
 				case _:
 					buildExpr(rhs);
 			}
