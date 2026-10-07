@@ -195,6 +195,14 @@ class TyFunctionInference {
 		return solver.isSealed() ? solver.published(term) : solver.preview(term);
 	}
 
+	/** Query the sealed input origin, including retained aliases, without inventing evidence for an arbitrary Unknown value. */
+	public function isUnresolvedInput(expression:HxExpr, environment:TyFunctionEnv):Bool {
+		if (!solver.isSealed())
+			return false;
+		final term = sourceTerm(expression, environment);
+		return term != null && solver.isUnresolvedInput(term);
+	}
+
 	/** Resolve initializer provenance before its new local becomes visible. */
 	public function sourceTerm(expression:HxExpr, environment:TyFunctionEnv):Null<TyInferenceTerm> {
 		return switch expression {

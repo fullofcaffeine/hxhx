@@ -702,7 +702,7 @@ class TypedBodyBuilder {
 			if (target != null)
 				return TypedExpr.runtimeTypeValue(target, position);
 		}
-		return switch (expression) {
+		final value = switch (expression) {
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
 			case EPrivateAccess(inner, sourcePosition):
@@ -1138,6 +1138,7 @@ class TypedBodyBuilder {
 			case EUnsupported(raw):
 				TypedExpr.opaque(TypedOpaqueExprKind.Unsupported, raw, nodeType, position);
 		};
+		return TypedOmittedInputContext.convert(expression, value, expected, environment);
 	}
 
 	/**

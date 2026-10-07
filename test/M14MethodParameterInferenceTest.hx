@@ -3,7 +3,7 @@ class M14MethodParameterInferenceTest {
 	/** Compare exact public facts: accepting a value as Dynamic must not invent an input annotation. */
 	static function dynamicDestinations():Void {
 		final root = 'test/fixtures/method_parameter_dynamic_context';
-		final expected = 'direct.value=Unknown\nexplicit.value=Dynamic\nlater.value=Int\nlocal.value=Unknown\nunused.value=Unknown\n';
+		final expected = 'alias.value=Unknown\ncall.value=Unknown\ndirect.value=Unknown\nexplicit.value=Dynamic\nlater.value=Int\nlocal.value=Unknown\nunused.value=Unknown\n';
 		final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '-main', 'Main', '--macro', 'UpstreamTypes.check()', '--no-output']);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
@@ -25,6 +25,16 @@ class M14MethodParameterInferenceTest {
 		if (observations.join('\n') + '\n' != expected)
 			throw 'local Dynamic-destination parameter facts differ: ' + observations.join(', ');
 		Sys.println('LOCAL_DYNAMIC_DESTINATION_PARAMETERS:PASS');
+		final expectedRuntime = 'consume\n7\nconsume\nok\nconsume\ntrue\n';
+		final runtime = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+		final runtimeOutput = runtime.stdout.readAll().toString();
+		final runtimeErrors = runtime.stderr.readAll().toString();
+		final runtimeCode = runtime.exitCode();
+		runtime.close();
+		if (runtimeCode != 0 || runtimeOutput != expectedRuntime)
+			throw 'upstream omitted-input runtime differs: ' + runtimeOutput + runtimeErrors;
+		assertNative(typed, '.tmp/method_parameter_dynamic_context', expectedRuntime);
+		Sys.println('OMITTED_INPUT_DYNAMIC_NATIVE:PASS');
 	}
 
 	static function main():Void {
@@ -151,14 +161,14 @@ class M14MethodParameterInferenceTest {
 	}
 
 	/** Compare a real native executable, including the expression-block alias replay path. */
-	static function assertNative(module:TypedModule, root:String):Void {
+	static function assertNative(module:TypedModule, root:String, expectedOutput:String = '3\n'):Void {
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([module], []), root + '/ocaml', true);
 		final process = new sys.io.Process('gtimeout', ['30', executable]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();
 		process.close();
-		if (code != 0 || output != '3\n')
+		if (code != 0 || output != expectedOutput)
 			throw 'native inferred parameter result differs: ' + output + errors;
 	}
 }

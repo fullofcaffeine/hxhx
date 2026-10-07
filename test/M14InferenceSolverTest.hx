@@ -214,12 +214,16 @@ class M14InferenceSolverTest {
 		final input = destinations.freshOmittedParameter();
 		final field = destinations.field(input, "value");
 		final operation = destinations.freshUntypedResult();
+		check(!destinations.isUnresolvedInput(field), "unsealed inference supplied final input evidence");
 		destinations.observeDynamicUse(input, true);
 		destinations.observeDynamicUse(field, true);
 		destinations.observeDynamicUse(operation, true);
 		check(destinations.previewDynamicUses(field).isUnknown(), "Dynamic destination invented an input field annotation");
 		check(destinations.previewDynamicUses(operation).isDynamic(), "untyped operation lost its Dynamic consumer carrier");
 		destinations.seal();
+		check(destinations.isUnresolvedInput(field), "sealed input projection lost its origin");
+		check(!destinations.isUnresolvedInput(operation), "untyped operation forged omitted input evidence");
+		check(!destinations.isUnresolvedInput(Known(TyType.unknown())), "missing type fact forged omitted input evidence");
 		check(destinations.published(field).isUnknown(), "Dynamic destination changed the input field at seal");
 		check(destinations.published(operation).isDynamic(), "untyped operation lost its Dynamic carrier at seal");
 
