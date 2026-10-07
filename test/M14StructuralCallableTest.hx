@@ -8,6 +8,7 @@ class M14StructuralCallableTest {
 	}
 
 	static function main():Void {
+		M14NullableStructuralArgumentTest.check();
 		final source = File.getContent("test/fixtures/structural_callable/Main.hx");
 		final root = ".tmp/structural_callable_upstream";
 		sys.FileSystem.createDirectory(root);

@@ -22,13 +22,19 @@ function literalFits(expression:HxExpr, expected:TyType):Bool {
 	};
 }
 
-/** Reuse the typed member relation for complete record/class operands; other categories keep their normal checker. */
+/**
+	Reuse the typed member relation for complete record/class operands in the
+	caller's unchecked null policy. Nullable wrappers do not change the underlying
+	field contract. Keep null literals and other categories with their normal checker.
+ */
 function compatibility(index:TyperIndex, expected:TyType, actual:TyType):Null<TyCallArgumentCompatibility> {
-	if (!expected.isAnonymous()
-		|| expected.hasUnknownComponent()
-		|| actual.hasUnknownComponent()
-		|| (!actual.isAnonymous() && actual.getNominalIdentity() == null))
+	final target = expected.unwrapNull();
+	final source = actual.unwrapNull();
+	if (!target.isAnonymous()
+		|| target.hasUnknownComponent()
+		|| source.hasUnknownComponent()
+		|| (!source.isAnonymous() && source.getNominalIdentity() == null))
 		return null;
 	final solver = new TyInferenceSolver('structural-call-argument');
-	return TyStructuralConstraint.constrain(index, solver, TyInferenceSolver.fromType(actual), expected) ? Compatible : Incompatible;
+	return TyStructuralConstraint.constrain(index, solver, TyInferenceSolver.fromType(source), target) ? Compatible : Incompatible;
 }
