@@ -2807,7 +2807,10 @@ class TyperStage {
 										if (extension == null) {
 											// Replay also visits the callee field. Retain that occurrence
 											// without traversing the receiver or arguments a second time.
-											if (scope.isUntypedContext() && declaredField == null && structural == null) {
+											// A prior read can already own an unresolved structural slot.
+											if (scope.isUntypedContext()
+												&& declaredField == null
+												&& (structural == null || structural.isUnknown())) {
 												scope.getInference().untypedResult(callee);
 												// Retain any field requirement on the now-inferred receiver.
 												scope.getInference().sourceTerm(callee, scope);
@@ -2851,7 +2854,10 @@ class TyperStage {
 									if (extension == null) {
 										// The unresolved callee stays unknown, but its source occurrence
 										// must exist before inference is sealed for typed-body replay.
-										if (scope.isUntypedContext() && declaredField == null && structural == null) {
+										// A prior read can already own an unresolved structural slot.
+										if (scope.isUntypedContext()
+											&& declaredField == null
+											&& (structural == null || structural.isUnknown())) {
 											scope.getInference().untypedResult(callee);
 											// Retain any field requirement on the now-inferred receiver.
 											scope.getInference().sourceTerm(callee, scope);

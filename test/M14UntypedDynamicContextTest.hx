@@ -3,6 +3,20 @@ class M14UntypedDynamicContextTest {
 	static function main():Void {
 		final cases = [
 			{
+				name: "open_field_call",
+				body: "untyped {var field=record.run;take(record.run());}",
+				parameter: "record",
+				accepted: true,
+				argument: "Dynamic"
+			},
+			{
+				name: "open_nested_field_call",
+				body: "untyped {var field=record.child.run;take(record.child.run());}",
+				parameter: "record",
+				accepted: true,
+				argument: "Dynamic"
+			},
+			{
 				name: "assigned",
 				body: "var value;value=untyped text.foreign();take(value);",
 				parameter: "text:String",
@@ -148,6 +162,39 @@ class M14UntypedDynamicContextTest {
 			Sys.println("UNTYPED_DYNAMIC_CONTEXT:PASS " + entry.name);
 		}
 		assignedRuntime();
+		openFieldRuntime();
+	}
+
+	/** A prior read and a later call refer to one field; the call still executes once. */
+	static function openFieldRuntime():Void {
+		for (nested in [false, true]) {
+			final receiver = nested ? 'record.child' : 'record';
+			final value = '{run:function():Int {Sys.println("called");return 7;}}';
+			final source = 'class Main {static function take(value:Dynamic):Void {Sys.println(value);} '
+				+ 'static function read(record):Void {untyped {var field='
+				+ receiver
+				+ '.run;take('
+				+ receiver
+				+ '.run());}} '
+				+ 'static function main():Void {var invoke:Dynamic=read;invoke('
+				+ (nested ? '{child:' + value + '}' : value)
+				+ ');}}';
+			final root = '.tmp/untyped-open-field-runtime-' + nested;
+			sys.FileSystem.createDirectory(root);
+			final path = root + '/Main.hx';
+			sys.io.File.saveContent(path, source);
+			final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+			final output = process.stdout.readAll().toString();
+			final errors = process.stderr.readAll().toString();
+			final code = process.exitCode();
+			process.close();
+			if (code != 0 || output != 'called\n7\n')
+				throw 'upstream open field call differs: ' + output + errors;
+			final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
+			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			JsRuntimeFixture.assertRuntime(typed, 'Main', 'called\n7\n');
+			Sys.println('UNTYPED_OPEN_FIELD_RUNTIME:PASS ' + nested);
+		}
 	}
 
 	/** Both a successful first write and a throwing path keep their original effects. */
