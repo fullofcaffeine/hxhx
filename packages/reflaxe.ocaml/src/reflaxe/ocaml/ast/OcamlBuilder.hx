@@ -163,9 +163,11 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityKind;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
 import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan.OcamlEnumIdentityPlanner;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan.OcamlMapIdentityPlanner;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOperation;
@@ -240,6 +242,7 @@ class OcamlBuilder {
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
 	var currentEnumIdentityPlan:Null<OcamlEnumIdentityPlan> = null;
+	var currentMapIdentityPlan:Null<OcamlMapIdentityPlan> = null;
 	var currentStringMethodPlan:Null<OcamlStringMethodPlan> = null;
 	var currentStringFieldPlan:Null<OcamlStringFieldPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
@@ -7101,6 +7104,17 @@ class OcamlBuilder {
 			case OpUShr:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [toIntExpr(e1), toIntExpr(e2)]);
 			case OpEq:
+				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
+					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("map comparison has no active function plan", source.pos);
+					return OcamlMapEqualityBuilder.build({
+						plan: currentMapIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
 				if (OcamlEnumIdentityPlanner.selection(e1, e2) != null) {
 					if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("enum comparison has no active function plan", source.pos);
@@ -7178,6 +7192,17 @@ class OcamlBuilder {
 					}
 				}
 			case OpNotEq:
+				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
+					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("map comparison has no active function plan", source.pos);
+					return OcamlMapEqualityBuilder.build({
+						plan: currentMapIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
 				if (OcamlEnumIdentityPlanner.selection(e1, e2) != null) {
 					if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("enum comparison has no active function plan", source.pos);
@@ -8936,6 +8961,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -8966,6 +8992,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentEnumIdentityPlan = validatedPlan.enumIdentity;
+		currentMapIdentityPlan = validatedPlan.mapIdentity;
 		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
@@ -8994,6 +9021,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -9033,6 +9061,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -9063,6 +9092,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
 		currentEnumIdentityPlan = validatedPlan.enumIdentity;
+		currentMapIdentityPlan = validatedPlan.mapIdentity;
 		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
@@ -9091,6 +9121,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -9271,6 +9302,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -9308,6 +9340,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentStringEqualityPlan = functionPlan.stringEquality;
 		currentEnumIdentityPlan = functionPlan.enumIdentity;
+		currentMapIdentityPlan = functionPlan.mapIdentity;
 		currentStringMethodPlan = functionPlan.stringMethods;
 		currentStringFieldPlan = functionPlan.stringFields;
 		currentControlPlan = functionPlan.controls;
@@ -9524,6 +9557,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -9607,6 +9641,7 @@ class OcamlBuilder {
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
 		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
@@ -9629,6 +9664,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
 		currentEnumIdentityPlan = nestedDisposition == null ? null : nestedDisposition.enumIdentity;
+		currentMapIdentityPlan = nestedDisposition == null ? null : nestedDisposition.mapIdentity;
 		currentStringMethodPlan = nestedDisposition == null ? null : nestedDisposition.stringMethods;
 		currentStringFieldPlan = nestedDisposition == null ? null : nestedDisposition.stringFields;
 		if (nestedDisposition != null) {
@@ -9745,6 +9781,7 @@ class OcamlBuilder {
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
 		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;

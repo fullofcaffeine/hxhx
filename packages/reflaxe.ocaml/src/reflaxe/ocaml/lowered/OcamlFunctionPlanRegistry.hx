@@ -86,8 +86,10 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
 import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
 import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan.OcamlEnumIdentityPlanner;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan.OcamlMapIdentityPlanner;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan;
@@ -136,6 +138,7 @@ typedef OcamlSealedFunctionPlan = {
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
 	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 	final controls:OcamlControlPlan;
@@ -188,6 +191,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
 	final ?enumIdentity:OcamlEnumIdentityPlan;
+	final ?mapIdentity:OcamlMapIdentityPlan;
 	final ?stringMethods:OcamlStringMethodPlan;
 	final ?stringFields:OcamlStringFieldPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
@@ -232,6 +236,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
 	final ?enumIdentity:OcamlEnumIdentityPlan;
+	final ?mapIdentity:OcamlMapIdentityPlan;
 	final ?stringMethods:OcamlStringMethodPlan;
 	final ?stringFields:OcamlStringFieldPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
@@ -268,6 +273,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
 	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 }
@@ -310,6 +316,7 @@ private typedef OcamlNestedFunctionRecord = {
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
 	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
@@ -477,7 +484,8 @@ class OcamlFunctionPlanRegistry {
 			dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
 			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
-			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan):Void {
+			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan,
+			?mapIdentity:OcamlMapIdentityPlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, localIdentities);
@@ -502,8 +510,10 @@ class OcamlFunctionPlanRegistry {
 		sealedStringFromCharCode.requirePlanBinding(identity.binding);
 		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
 		final sealedEnumIdentity = enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = mapIdentity ?? new OcamlMapIdentityPlan([]);
 		sealedStringEquality.requirePlanBinding(identity.binding);
 		sealedEnumIdentity.requirePlanBinding(identity.binding);
+		sealedMapIdentity.requirePlanBinding(identity.binding);
 		final sealedStringMethods = stringMethods ?? new OcamlStringMethodPlan([]);
 		sealedStringMethods.requirePlanBinding(identity.binding);
 		final sealedStringFields = stringFields ?? new OcamlStringFieldPlan([]);
@@ -526,6 +536,7 @@ class OcamlFunctionPlanRegistry {
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
 			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			plan: null,
@@ -585,8 +596,10 @@ class OcamlFunctionPlanRegistry {
 		sealedStringFromCharCode.requirePlanBinding(plan.binding);
 		final sealedStringEquality = plan.stringEquality ?? new OcamlStringEqualityPlan([]);
 		final sealedEnumIdentity = plan.enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = plan.mapIdentity ?? new OcamlMapIdentityPlan([]);
 		sealedStringEquality.requirePlanBinding(plan.binding);
 		sealedEnumIdentity.requirePlanBinding(plan.binding);
+		sealedMapIdentity.requirePlanBinding(plan.binding);
 		final sealedStringMethods = plan.stringMethods ?? new OcamlStringMethodPlan([]);
 		sealedStringMethods.requirePlanBinding(plan.binding);
 		final sealedStringFields = plan.stringFields ?? new OcamlStringFieldPlan([]);
@@ -631,6 +644,7 @@ class OcamlFunctionPlanRegistry {
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
 			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			imapInterfaces: plan.imapInterfaces
@@ -653,6 +667,7 @@ class OcamlFunctionPlanRegistry {
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
 			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			plan: stored,
@@ -786,6 +801,7 @@ class OcamlFunctionPlanRegistry {
 			stringFromCharCode: record.stringFromCharCode,
 			stringEquality: record.stringEquality,
 			enumIdentity: record.enumIdentity,
+			mapIdentity: record.mapIdentity,
 			stringMethods: record.stringMethods,
 			stringFields: record.stringFields,
 			plan: record.plan
@@ -900,6 +916,7 @@ class OcamlFunctionPlanRegistry {
 		final stringFromCharCode = new OcamlStringFromCharCodePlanner(binding).plan(expression);
 		final stringEquality = new OcamlStringEqualityPlanner(binding).plan(expression);
 		final enumIdentity = new OcamlEnumIdentityPlanner(binding).plan(expression);
+		final mapIdentity = new OcamlMapIdentityPlanner(binding).plan(expression);
 		final stringMethods = new OcamlStringMethodPlanner(binding).plan(expression);
 		final stringFields = new OcamlStringFieldPlanner(binding).plan(expression);
 		final localStorage = OcamlLocalStoragePlanner.planExpression(expression, localIdentities);
@@ -931,6 +948,7 @@ class OcamlFunctionPlanRegistry {
 		stringFromCharCode.requirePlanBinding(binding);
 		stringEquality.requirePlanBinding(binding);
 		enumIdentity.requirePlanBinding(binding);
+		mapIdentity.requirePlanBinding(binding);
 		stringMethods.requirePlanBinding(binding);
 		stringFields.requirePlanBinding(binding);
 		controls.requirePlanBinding(binding);
@@ -967,6 +985,7 @@ class OcamlFunctionPlanRegistry {
 			stringFromCharCode: stringFromCharCode,
 			stringEquality: stringEquality,
 			enumIdentity: enumIdentity,
+			mapIdentity: mapIdentity,
 			stringMethods: stringMethods,
 			stringFields: stringFields
 		};
@@ -1110,6 +1129,7 @@ class OcamlFunctionPlanRegistry {
 		plan.stringFromCharCode.requirePlanBinding(expected);
 		plan.stringEquality.requirePlanBinding(expected);
 		plan.enumIdentity.requirePlanBinding(expected);
+		plan.mapIdentity.requirePlanBinding(expected);
 		plan.stringMethods.requirePlanBinding(expected);
 		plan.stringFields.requirePlanBinding(expected);
 		plan.controls.requirePlanBinding(expected);
@@ -1268,7 +1288,8 @@ class OcamlFunctionPlanRegistry {
 			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan,
 			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
-			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan):Void {
+			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan,
+			?mapIdentity:OcamlMapIdentityPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -1296,6 +1317,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
 		final sealedEnumIdentity = enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = mapIdentity ?? new OcamlMapIdentityPlan([]);
 		final sealedStringMethods = stringMethods ?? new OcamlStringMethodPlan([]);
 		final sealedStringFields = stringFields ?? new OcamlStringFieldPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
@@ -1320,6 +1342,7 @@ class OcamlFunctionPlanRegistry {
 		sealedStringFromCharCode.requirePlanBinding(binding);
 		sealedStringEquality.requirePlanBinding(binding);
 		sealedEnumIdentity.requirePlanBinding(binding);
+		sealedMapIdentity.requirePlanBinding(binding);
 		sealedStringMethods.requirePlanBinding(binding);
 		sealedStringFields.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
@@ -1372,6 +1395,7 @@ class OcamlFunctionPlanRegistry {
 				stringFromCharCode: sealedStringFromCharCode,
 				stringEquality: sealedStringEquality,
 				enumIdentity: sealedEnumIdentity,
+				mapIdentity: sealedMapIdentity,
 				stringMethods: sealedStringMethods,
 				stringFields: sealedStringFields,
 				controls: controls,

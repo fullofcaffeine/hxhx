@@ -14,8 +14,8 @@ Compile-time checks reject unsupported elements and unchecked private type names
 
 Calling methods directly on a nullable nested-map lookup remains separate work
 under `haxe_ocaml-ud970`. This signature fixture does not claim that conversion
-path works. Mixed nullable/non-null map equality remains tracked separately in
-`haxe_ocaml-jgr6u`.
+path works. Mixed nullable/non-null map equality is covered separately by
+[`map_reference_identity`](../map_reference_identity/README.md).
 
 Run from the repository root:
 

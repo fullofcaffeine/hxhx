@@ -84,6 +84,12 @@ class OcamlStandardMapCarrierContract {
 	public static inline final PAIR_PRODUCER_PROOF_CLAIM = "The final typed iterator initializer is the exact target-authored NativeHxMapIterator.of_array call around NativeHxMap.pairs_string, pairs_int, or pairs_object. The nested pair helper's Array<{key:K,value:V}> result determines the key and value types before field syntax. A shared native symbol, an arbitrary Iterator of anonymous objects, anonymous shape, or the key/value field names alone do not satisfy this proof.";
 
 	#if macro
+	/** Identifies a canonical standard Map family without granting runtime syntax authority. */
+	public static function kindForType(type:Type):Null<OcamlStandardMapCarrierKind> {
+		final selected = select(type);
+		return selected == null ? null : selected.kind;
+	}
+
 	/**
 		Returns the parameters of an exact standard Map storage type for export checks.
 
