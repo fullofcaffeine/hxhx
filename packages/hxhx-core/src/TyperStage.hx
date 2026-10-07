@@ -2535,6 +2535,10 @@ class TyperStage {
 						// constructor path until its separate typed-enum owner replaces it.
 						switch (expr) {
 							case EEnumValue(_): TyType.fromHintText("String");
+							// Only an unresolved host name under authored untyped syntax
+							// gets a retained inference occurrence. Known lexical/member
+							// bindings were resolved above and keep their own constraints.
+							case EIdent(_) if (scope.isUntypedContext()): scope.getInference().untypedResult(expr);
 							case _: TyType.unknown();
 						}
 					}
@@ -2803,8 +2807,11 @@ class TyperStage {
 										if (extension == null) {
 											// Replay also visits the callee field. Retain that occurrence
 											// without traversing the receiver or arguments a second time.
-											if (scope.isUntypedContext() && declaredField == null && structural == null)
+											if (scope.isUntypedContext() && declaredField == null && structural == null) {
 												scope.getInference().untypedResult(callee);
+												// Retain any field requirement on the now-inferred receiver.
+												scope.getInference().sourceTerm(callee, scope);
+											}
 											TyType.unknown();
 										} else {
 											extension.type;
@@ -2844,8 +2851,11 @@ class TyperStage {
 									if (extension == null) {
 										// The unresolved callee stays unknown, but its source occurrence
 										// must exist before inference is sealed for typed-body replay.
-										if (scope.isUntypedContext() && declaredField == null && structural == null)
+										if (scope.isUntypedContext() && declaredField == null && structural == null) {
 											scope.getInference().untypedResult(callee);
+											// Retain any field requirement on the now-inferred receiver.
+											scope.getInference().sourceTerm(callee, scope);
+										}
 										TyType.unknown();
 									} else {
 										extension.type;
