@@ -535,11 +535,7 @@ run_bootstrap_dune_build() {
       if kill -0 "$pid" >/dev/null 2>&1; then
         echo "Bootstrap dune build timed out after ${timeout_sec}s (target=$target)." >&2
         printf 'timeout\n' >"$timeout_marker"
-        kill "$pid" >/dev/null 2>&1 || true
-        sleep 2
-        if kill -0 "$pid" >/dev/null 2>&1; then
-          kill -9 "$pid" >/dev/null 2>&1 || true
-        fi
+        stage0_watchdog_terminate_process_tree "$pid"
       fi
     ) &
     timeout_pid="$!"
@@ -551,12 +547,14 @@ run_bootstrap_dune_build() {
   set -e
 
   if [ -n "$heartbeat_pid" ]; then
-    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    # A monitor's sleep inherits the caller's output pipe. Killing only its
+    # shell leaves that pipe open and delays command substitution until expiry.
+    stage0_watchdog_terminate_process_tree "$heartbeat_pid"
     wait "$heartbeat_pid" >/dev/null 2>&1 || true
   fi
 
   if [ -n "$timeout_pid" ]; then
-    kill "$timeout_pid" >/dev/null 2>&1 || true
+    stage0_watchdog_terminate_process_tree "$timeout_pid"
     wait "$timeout_pid" >/dev/null 2>&1 || true
   fi
 
