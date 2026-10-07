@@ -2720,6 +2720,8 @@ class OcamlBuilder {
 					{semanticTypeId: "Float", carrierTypeId: "float"};
 				} else if (OcamlRepresentationRegistry.isExactString(payload.t)) {
 					{semanticTypeId: "String", carrierTypeId: "string"};
+				} else if (OcamlRepresentationRegistry.isExactNullString(payload.t)) {
+					{semanticTypeId: "Null<String>", carrierTypeId: "string"};
 				} else {
 					final layout = representationRegistry.monomorphicClassForType(payload.t);
 					if (layout != null) {
@@ -3043,7 +3045,7 @@ class OcamlBuilder {
 	/**
 		Builds one planned raw Map initializer without guessing from its source type.
 
-		For a nullable static Map field, the field read is evaluated once. A null
+		For a proven nullable Map producer, the expression is evaluated once. A null
 		value raises the same catchable `Null Access` error used by other checked
 		OCaml-target reads; a non-null value keeps the already-proven `HxMap` carrier.
 	**/

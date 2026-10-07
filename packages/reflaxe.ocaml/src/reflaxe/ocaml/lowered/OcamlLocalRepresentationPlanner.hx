@@ -313,6 +313,9 @@ class OcamlLocalRepresentationPlanner {
 			};
 		if (OcamlRepresentationRegistry.isExactString(unwrapped.t))
 			return dynamicBoxInput("String", "string", sourceLocalId);
+		// Null<String> shares the String carrier; Obj.repr also preserves its null sentinel.
+		if (OcamlRepresentationRegistry.isExactNullString(unwrapped.t))
+			return dynamicBoxInput("Null<String>", "string", sourceLocalId);
 		final enumCarrier = OcamlEnumDynamicCarrier.fromDirectValue(unwrapped);
 		if (enumCarrier != null)
 			return {
