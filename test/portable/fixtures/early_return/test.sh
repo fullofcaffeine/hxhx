@@ -35,11 +35,11 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 91
+if (report.schemaVersion !== 92
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
-	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v6'
+	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v7'
 	|| report.controlCount !== report.controls.length
 	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -333,7 +333,7 @@ if (nestedThrows.length !== 1
 	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
 	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
 	|| nestedThrows[0].bodyRevision !== nestedThrowRoot.bodyRevision
-	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v35') {
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v36') {
 	fail('nestedThrowCatchClosure did not seal its exact Int throw under the freshly checked ordinary-root revision')
 }
 const nestedArrayThrows = report.controls.filter(control =>
@@ -539,7 +539,7 @@ const nestedCatches = report.controlCatches.filter(catchChain =>
 		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
 if (nestedCatches.length !== 2
 	|| nestedCatches.some(catchChain =>
-		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v35'
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v36'
 		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
 		|| catchChain.clauses.length !== 1)) {
 	fail('the two nested catch chains are missing or do not preserve private control signals')
@@ -567,7 +567,7 @@ if (nestedLoopTargets.length !== 1
 	|| nestedLoopReturns.length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
-	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v35'
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v36'
 	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
 	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
 	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
@@ -603,7 +603,7 @@ for (const control of returnControls) {
 			|| control.source.max < control.source.min
 			|| !rawSha256.test(control.programRevision)
 			|| !bodyRevision.test(control.bodyRevision)
-			|| control.pipelineRevision !== 'ocaml-function-plans-v116') {
+			|| control.pipelineRevision !== 'ocaml-function-plans-v117') {
 			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 		}
 		ids.add(control.id)
@@ -627,8 +627,8 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v35'
-			: control.pipelineRevision !== 'ocaml-function-plans-v116')) {
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v36'
+			: control.pipelineRevision !== 'ocaml-function-plans-v117')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -804,7 +804,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v116'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v117'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -964,7 +964,7 @@ neko "$INSPECTOR_DIR/inspect.n" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 50
+if (report.schemaVersion !== 51
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

@@ -522,13 +522,15 @@ class OcamlFunctionPlanSealer {
 						registry.hasCallableDeclaration).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null)
 						boundary = OcamlFunctionResultBoundary.selectNestedNullableEnumCallable(tfunc, representations, nestedBinding, context);
-					final functionResultBoundary = boundary == null ? null : (boundary.result != null
-						&& OcamlCallPlan.isExactEnumToNullableResult(boundary.result) ? OcamlFunctionResultBoundary.fromNestedNullableEnum(boundary, tfunc,
-							context) : OcamlFunctionResultBoundary.fromCallable(boundary));
+					final functionResultBoundary = boundary == null ? OcamlFunctionResultBoundary.selectNestedNullableEnumResult(tfunc, representations,
+						nestedBinding,
+						context) : (boundary.result != null
+							&& OcamlCallPlan.isExactEnumToNullableResult(boundary.result) ? OcamlFunctionResultBoundary.fromNestedNullableEnum(boundary,
+								tfunc, context) : OcamlFunctionResultBoundary.fromCallable(boundary));
 					// Loop and exception control does not depend on whether the closure's
 					// result carrier is represented. Only return planning consumes this
 					// literal-producer plan and the optional result boundary.
-					final arrayLiteralProducers = if (boundary == null) {
+					final arrayLiteralProducers = if (functionResultBoundary == null) {
 						new OcamlArrayLiteralProducerPlan([]);
 					} else {
 						new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
@@ -540,7 +542,7 @@ class OcamlFunctionPlanSealer {
 					requireCompleteCatchCoverage(controls, expression.pos);
 					validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
 					recordControlRuntimeRequirements(controls);
-					if (boundary == null) {
+					if (functionResultBoundary == null) {
 						registry.deferNestedFunction(expression, nestedIdentity, localIdentities, imapInterfaces, arrayReads, arrayIterators, dynamicEquality,
 							controls, "The typed function literal is outside the existing represented-result callable boundary.", dynamicString, staticString,
 							reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality, stringMethods, stringFields, enumIdentity,
@@ -557,14 +559,19 @@ class OcamlFunctionPlanSealer {
 						// return cannot make a partly represented closure look complete.
 						final allControlFamiliesAdmitted = controls.returnFamilyAdmitted && controls.loopFamilyAdmitted && controls.throwFamilyAdmitted;
 						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
-						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
+						if (!allControlFamiliesAdmitted
+							|| !allCatchOccurrencesAdmitted
+							|| (boundary != null && !controls.hasReturnTransfers())) {
 							registry.deferNestedFunction(expression, nestedIdentity, localIdentities, imapInterfaces, arrayReads, arrayIterators,
 								dynamicEquality, controls,
 								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.",
 								dynamicString, staticString, reflectRuntimeUses, stdIsOfType, typeOf, intUnary, stringFromCharCode, stringEquality,
 								stringMethods, stringFields, enumIdentity, mapIdentity);
 						} else {
-							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
+							if (boundary != null)
+								validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
+							validateFunctionResultRepresentationReferences(functionResultBoundary, new OcamlAnonymousStructurePlan([], []),
+								lexicalParentBinding.programRevision, expression.pos);
 							final plan:OcamlSealedNestedFunctionPlan = {
 								occurrenceId: occurrenceId,
 								parentBinding: lexicalParentBinding,

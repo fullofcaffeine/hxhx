@@ -175,7 +175,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final occurrenceId:String;
 	final parentBinding:OcamlFunctionPlanBinding;
 	final binding:OcamlFunctionPlanBinding;
-	final callableBoundary:OcamlCallableBoundaryPlan;
+	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final ?functionResultBoundary:OcamlFunctionResultBoundaryPlan;
 	final controls:OcamlControlPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
@@ -345,9 +345,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v116";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v35";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v19";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v117";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -559,19 +559,28 @@ class OcamlFunctionPlanRegistry {
 			binding: plan.binding
 		};
 		requireNestedFunctionIdentity(expression, identity, localIdentities);
-		OcamlCallPlan.requireCallableBoundary(plan.callableBoundary);
-		requireBoundaryBinding(plan.callableBoundary, plan.binding);
-		final functionResultBoundary = plan.functionResultBoundary ?? OcamlFunctionResultBoundary.fromCallable(plan.callableBoundary);
-		OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, plan.callableBoundary);
-		final callableResult = plan.callableBoundary.result;
+		final callable = plan.callableBoundary;
+		final functionResultBoundary = plan.functionResultBoundary ?? (callable == null ? null : OcamlFunctionResultBoundary.fromCallable(callable));
+		if (functionResultBoundary == null)
+			throw 'reflaxe.ocaml [ocaml-nested-function:missing-result-boundary]: nested function "${plan.binding.functionId}" has no result proof';
+		OcamlFunctionResultBoundary.require(functionResultBoundary);
+		requireFunctionResultBinding(functionResultBoundary, plan.binding);
+		if (callable != null) {
+			OcamlCallPlan.requireCallableBoundary(callable);
+			requireBoundaryBinding(callable, plan.binding);
+			OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, callable);
+		} else if (functionResultBoundary.source != OcamlFunctionResultBoundarySource.NestedNullableEnumResult) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-result-boundary]: nested function "${plan.binding.functionId}" has no independent result proof';
+		}
+		final callableResult = functionResultBoundary.result;
 		final representedResult = callableResult != null
 			&& (callableResult.conversion == OcamlCallCarrierConversion.Identity
 				&& callableResult.inputSemanticTypeId == callableResult.outputSemanticTypeId
 				&& callableResult.inputCarrierTypeId == callableResult.outputCarrierTypeId
 				&& callableResult.inputRepresentationId == callableResult.outputRepresentationId
 				|| OcamlCallPlan.isExactEnumToNullableResult(callableResult));
-		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
-			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
+		if ((callable != null && callable.kind != OcamlCallKind.TypedFunctionValue)
+			|| functionResultBoundary.resultKind != OcamlCallResultKind.Value
 			|| !representedResult) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
@@ -605,7 +614,7 @@ class OcamlFunctionPlanRegistry {
 		final sealedStringFields = plan.stringFields ?? new OcamlStringFieldPlan([]);
 		sealedStringFields.requirePlanBinding(plan.binding);
 		plan.imapInterfaces.requirePlanBinding(plan.binding);
-		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
+		if (!plan.controls.returnFamilyAdmitted || (callable != null && !plan.controls.hasReturnTransfers()))
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
 		// The planner omits unsupported transfers and catch chains. Validate both
 		// the family flags and observed catch count so a surviving return cannot
@@ -616,19 +625,20 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted catch occurrence';
 		final returnBoundary = plan.controls.returnBoundaryDecision();
 		final returnPayload = returnBoundary == null ? null : returnBoundary.payload;
-		if (returnBoundary == null
-			|| returnPayload == null
-			|| callableResult == null
-			|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
-			|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
-			|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId) {
+		if (plan.controls.hasReturnTransfers()
+			&& (returnBoundary == null
+				|| returnPayload == null
+				|| callableResult == null
+				|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
+				|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
+				|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId)) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:return-boundary-mismatch]: nested function "${plan.binding.functionId}" has callable and control plans for different result carriers: control=${returnPayload == null ? "missing" : returnPayload.outputSemanticTypeId + "/" + returnPayload.outputCarrierTypeId + "/" + returnPayload.outputRepresentationId}, callable=${callableResult == null ? "missing" : callableResult.outputSemanticTypeId + "/" + callableResult.outputCarrierTypeId + "/" + callableResult.outputRepresentationId}';
 		}
 		final stored:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: plan.occurrenceId,
 			parentBinding: copyBinding(plan.parentBinding),
 			binding: copyBinding(plan.binding),
-			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
+			callableBoundary: callable == null ? null : OcamlCallPlan.copyBoundary(callable),
 			functionResultBoundary: OcamlFunctionResultBoundary.copy(functionResultBoundary),
 			controls: plan.controls,
 			arrayLiteralProducers: plan.arrayLiteralProducers,
@@ -761,11 +771,14 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function representedNestedFunctionResultFor(expression:TypedExpr):Null<OcamlCallValuePlan> {
 		final record = nestedFunctionsByExpression.get(expression);
-		if (record == null || record.plan == null || record.plan.callableBoundary.result == null)
+		if (record == null
+			|| record.plan == null
+			|| record.plan.functionResultBoundary == null
+			|| record.plan.functionResultBoundary.result == null)
 			return null;
 		if (currentProgramRevision == null || record.binding.programRevision != currentProgramRevision)
 			throw 'reflaxe.ocaml [ocaml-nested-function:stale-result-producer]: nested function "${record.binding.functionId}" belongs to another program';
-		return OcamlCallPlan.copyValue(record.plan.callableBoundary.result);
+		return OcamlCallPlan.copyValue(record.plan.functionResultBoundary.result);
 	}
 
 	/**
@@ -1855,7 +1868,8 @@ class OcamlFunctionPlanRegistry {
 				boundaries.push(OcamlFunctionResultBoundary.copy(record.plan.functionResultBoundary));
 		}
 		for (record in nestedFunctionsByOccurrence) {
-			if (record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumCallable)
+			if (record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumCallable
+				|| record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumResult)
 				boundaries.push(OcamlFunctionResultBoundary.copy(record.functionResultBoundary));
 		}
 		boundaries.sort((left, right) -> Reflect.compare(left.id, right.id));

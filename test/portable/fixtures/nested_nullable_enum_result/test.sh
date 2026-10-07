@@ -14,7 +14,7 @@ const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 const boundary = report.functionResultBoundaries.find(entry => entry.source === 'nested-nullable-enum-callable')
 const controls = report.controls.filter(entry => entry.functionId === boundary?.functionId && entry.kind === 'return')
 
-if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v6'
+if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v7'
 	|| boundary?.result?.inputSemanticTypeId !== 'Choice'
 	|| boundary.result.inputCarrierTypeId !== 'choice'
 	|| boundary.result.outputSemanticTypeId !== 'Null<Choice>'

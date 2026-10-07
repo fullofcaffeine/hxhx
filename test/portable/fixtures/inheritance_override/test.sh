@@ -27,7 +27,7 @@ const expected = [
 ]
 const stringResults = report.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-exact-string-declaration')
-if (report.schemaVersion !== 91 || stringResults.length !== expected.length) {
+if (report.schemaVersion !== 92 || stringResults.length !== expected.length) {
 	throw new Error(`expected ${expected.length} declaration-only instance String results, got ${stringResults.length}`)
 }
 
@@ -115,7 +115,7 @@ const stringResults = report.lowering.functionResultBoundaries.filter(boundary =
 	boundary.source === 'non-generic-instance-exact-string-declaration')
 const voidResults = report.lowering.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-effect-only-void-declaration')
-if (report.schemaVersion !== 50
+if (report.schemaVersion !== 51
 	|| report.summary.valid !== true
 	|| stringResults.length !== 3
 	|| voidResults.length !== 3

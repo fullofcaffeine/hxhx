@@ -1755,6 +1755,24 @@ class OcamlBuilder {
 		return output;
 	}
 
+	/** Recognizes core Null<function> through aliases without following unrelated abstracts. */
+	static function nullableCallableType(type:Type):Null<Type> {
+		final declared = followNoAbstracts(type);
+		final inner = unwrapNullType(declared);
+		return switch (followNoAbstracts(inner)) {
+			case type = TFun(_, _) if (inner != declared): type;
+			case _: null;
+		}
+	}
+
+	/** Uses the shared nullable invocation sequence without changing other call forms. */
+	function buildFunctionValueCall(callee:TypedExpr, arguments:Array<OcamlExpr>):OcamlExpr {
+		final functionType = nullableCallableType(callee.t);
+		final value = buildExpr(callee);
+		return functionType == null ? OcamlExpr.EApp(value,
+			arguments) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.call(value, arguments, typeExprFromHaxeType(functionType), freshTmp);
+	}
+
 	/**
 		Materializes one sealed typed call in its Haxe source order.
 
@@ -1822,7 +1840,9 @@ class OcamlBuilder {
 						return callPlanInvariant('call "${call.id}" has an invalid callee materialization step', position);
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
-					target = OcamlExpr.EIdent(name);
+					final functionType = nullableCallableType(callee.t);
+					target = functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
+						typeExprFromHaxeType(functionType), freshTmp);
 				case OcamlCallEvaluationStepKind.MaterializeReceiver:
 					if (callee == null)
 						return callPlanInvariant('call "${call.id}" has no typed instance receiver occurrence', position);
@@ -5209,7 +5229,7 @@ class OcamlBuilder {
 												for (a in args)
 													builtArgs.push(buildExpr(a));
 											}
-											OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+											buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 									case TField(objExpr, FInstance(clsRef, _, cfRef)):
 										final cf = cfRef.get();
@@ -5431,7 +5451,7 @@ class OcamlBuilder {
 												final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
 												if (expectsNoArgs)
 													builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-												OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+												buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 									case TField(_, FEnum(eRef, ef)):
 										final en = eRef.get();
@@ -5607,7 +5627,7 @@ class OcamlBuilder {
 											final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
 											if (expectsNoArgs)
 												builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-											OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+											buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 								}
 						}
@@ -7438,6 +7458,13 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final nullableFunction = nullableCallableType(lhsType);
+		if (nullableFunction != null) {
+			// Present functions enter the same Obj.t storage used by absent callbacks.
+			// Delegate to the non-null signature first so Void adaptation remains intact.
+			return nullableCallableType(rhs.t) != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.repr"),
+				[coerceForAssignment(nullableFunction, rhs)]);
+		}
 		// A standard `Map` inline expansion can pass its hidden `IMap` local to a
 		// target-owned raw-map operation. The sealed alias proves this exact argument
 		// occurrence, so the ordinary class/interface cast must not re-box it.

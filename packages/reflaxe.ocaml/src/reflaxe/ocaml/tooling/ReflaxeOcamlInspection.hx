@@ -88,7 +88,7 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
-	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v6";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v7";
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
@@ -113,9 +113,9 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v116";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v35";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v19";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v117";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -152,7 +152,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 50,
+			schemaVersion: 51,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -479,8 +479,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 91) {
-						throw 'Unsupported lowering report schema $version; expected 91.';
+					if (version != 92) {
+						throw 'Unsupported lowering report schema $version; expected 92.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -2498,7 +2498,7 @@ class ReflaxeOcamlInspection {
 						|| !sameFunctionResultValue(boundary.result, callable.result)) {
 						throw 'Function-result boundary "${boundary.id}" disagrees with callable owner "$callableId".';
 					}
-				case "nested-nullable-enum-callable":
+				case "nested-nullable-enum-callable", "nested-nullable-enum-result":
 					validateNestedNullableEnumResult(boundary);
 				case "static-inline-exact-int-declaration":
 					validateDeclarationExactResult(boundary, STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID, "|static|function|", "static inline", "Int", "int");
@@ -2531,7 +2531,8 @@ class ReflaxeOcamlInspection {
 		final result = boundary.result;
 		final proof = boundary.nullableEnum;
 		final reference = result == null ? null : result.nullableEnumCarrier;
-		final expectedCallableBoundaryId = "nested-callable-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24);
+		final resultOnly = boundary.source == "nested-nullable-enum-result";
+		final expectedCallableBoundaryId = resultOnly ? null : "nested-callable-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24);
 		if (boundary.callableBoundaryId != expectedCallableBoundaryId
 			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length != 0
@@ -2558,7 +2559,7 @@ class ReflaxeOcamlInspection {
 			|| result.outputRepresentationId != 'representation:${proof.nullableSemanticTypeId}:internal-value'
 			|| result.conversion != "box-exact-enum-to-nullable-enum"
 			|| result.proofId != "nullable-enum-function-result-box-v1"
-			|| boundary.proofId != NESTED_NULLABLE_ENUM_RESULT_PROOF_ID) {
+			|| boundary.proofId != (resultOnly ? "nested-nullable-enum-result-only-v1" : NESTED_NULLABLE_ENUM_RESULT_PROOF_ID)) {
 			throw 'Function-result boundary "${boundary.id}" exceeds the nested nullable-enum callable slice.';
 		}
 	}
