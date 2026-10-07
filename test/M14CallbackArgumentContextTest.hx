@@ -16,12 +16,83 @@ class M14CallbackArgumentContextTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
+		genericMethodContexts();
 		rollback();
 		parameterRollback();
 		omittedInputConversion();
 		sourceSignatureRetention();
 		conflictingArgument();
 		Sys.println("CALLBACK_ARGUMENT_CONTEXT:PASS");
+	}
+
+	/** A receiver fixes callback inputs even while the method result remains inferable. */
+	static function genericMethodContexts():Void {
+		for (explicit in [false, true]) {
+			final source = 'class Box<T> { public var item:T; public function new(item:T) {this.item=item;} '
+				+ 'public function transform<S>(f:T->S):S {return f(item);} } '
+				+ 'class Main { static function run(box:Box<{label:String}>):String {return box.transform('
+				+ (explicit ? '(c:{label:String})' : 'c')
+				+ ' -> c.label);} '
+				+ 'static function main() {Sys.println(run(new Box({label:"ok"})));}}';
+			final root = JsRuntimeFixture.reserveOutput();
+			final path = root + '/Main.hx';
+			File.saveContent(path, source);
+			final upstream = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+			final output = upstream.stdout.readAll().toString();
+			final errors = upstream.stderr.readAll().toString();
+			final code = upstream.exitCode();
+			upstream.close();
+			if (code != 0 || output != 'ok\n')
+				throw 'upstream generic callback differs: ' + output + errors;
+			final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
+			JsRuntimeFixture.assertRuntime(TyperStage.typeResolvedModule(module, TyperIndex.build([module])), 'Main', 'ok\n');
+			if (!explicit)
+				for (callback in ['c -> c.absent', 'c -> 7', '(c:Int) -> "wrong"']) {
+					final invalid = StringTools.replace(source, 'c -> c.label', callback);
+					File.saveContent(path, invalid);
+					final oracle = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '--run', 'Main']);
+					oracle.stdout.readAll();
+					final diagnostic = oracle.stderr.readAll().toString();
+					final status = oracle.exitCode();
+					oracle.close();
+					if (status == 0 || diagnostic.length == 0)
+						throw 'upstream accepted invalid callback: ' + callback;
+					final rejected = new ResolvedModule('Main', path, ParserStage.parse(invalid, path));
+					var failed = false;
+					try {
+						TyperStage.typeResolvedModule(rejected, TyperIndex.build([rejected]));
+					} catch (_:TyperError) {
+						failed = true;
+					} catch (error:haxe.Exception) {
+						if (error.message.indexOf('selected call conversion does not satisfy its retained parameter:') < 0)
+							throw error;
+						failed = true;
+					}
+					if (!failed)
+						throw 'context accepted invalid callback: ' + callback;
+				}
+		}
+		final caller = new TyTypeParameterId('context-caller', 0, 'T');
+		final method = new TyTypeParameterId('context-method', 0, 'T');
+		final callerType = TyType.typeParameter(caller);
+		final methodType = TyType.typeParameter(method);
+		function signature(input:TyType, result:TyType):TyFunSig {
+			return new TyFunSig('transform', true, ['callback'], [TyType.functionType([input], result)], [false], [false], result, HxPos.unknown());
+		}
+		final generic = signature(callerType, methodType);
+		final context = TyLambdaArgumentContext.shared([generic], 1, [[method]])[0];
+		if (context == null
+			|| context.getFunctionArguments()[0].getSemanticKey() != callerType.getSemanticKey()
+			|| !context.getFunctionReturn().isUnknown())
+			throw 'generic context confused equally named caller and method binders';
+		if (generic.getArgs()[0].getFunctionReturn().getSemanticKey() != methodType.getSemanticKey())
+			throw 'callback context mutated the declaration';
+		if (TyLambdaArgumentContext.shared([signature(methodType, methodType)], 1, [[method]])[0] != null)
+			throw 'an open method input became a rigid callback annotation';
+		if (TyLambdaArgumentContext.shared([generic, signature(TyType.fromHintText('Int'), methodType)], 1, [[method], [method]])[0] != null)
+			throw 'overload disagreement supplied a callback context';
+		if (TyLambdaArgumentContext.shared([generic], 0, [[method]]).length != 0)
+			throw 'omitted argument invented a source context';
 	}
 
 	/** Optional omission preserves input facts; only the selected Dynamic slot receives a value conversion after sealing. */

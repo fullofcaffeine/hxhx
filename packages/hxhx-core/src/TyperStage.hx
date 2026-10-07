@@ -1574,14 +1574,12 @@ class TyperStage {
 			};
 		}
 		final candidates = admittedCandidates == null ? (isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field)) : admittedCandidates;
-		// Open method binders need operand evidence before specialization; do not turn them into rigid lambda annotations.
-		final contextualCandidates = candidates.filter(signature -> {
-			final declaration = c.declarationForSignature(signature);
-			return declaration != null && declaration.getTypeParameterIds().length == 0;
-		});
-		final callbackContexts = TyLambdaArgumentContext.shared(contextualCandidates.length != candidates.length ? [] : contextualCandidates.map(signature ->
-			TyNominalApplication.signature(ctx.getIndex(), c, receiver == null ? null : receiver.type, signature)),
-			args.length);
+		final callbackContexts = TyLambdaArgumentContext.shared(candidates.map(signature -> TyNominalApplication.signature(ctx.getIndex(), c,
+			receiver == null ? null : receiver.type, signature)), args.length,
+			candidates.map(signature -> {
+				final declaration = c.declarationForSignature(signature);
+				return declaration == null ? [] : declaration.getTypeParameterIds();
+			}));
 		final argTypes = receiver != null && receiver.argumentTypes != null ? receiver.argumentTypes.copy() : [
 			for (index in 0...args.length)
 				inferExprType(args[index], scope, ctx, pos, callbackContexts[index])
