@@ -94,7 +94,7 @@ resolve_default_port() {
 resolve_port() {
 	if [ -n "$HXHX_HAXE_SERVER_PORT" ]; then
 		echo "$HXHX_HAXE_SERVER_PORT"
-		return
+		return 0
 	fi
 	if [ -f "$PORT_FILE" ]; then
 		local file_port
@@ -104,7 +104,7 @@ resolve_port() {
 				;;
 			*)
 				echo "$file_port"
-				return
+				return 0
 				;;
 		esac
 	fi
@@ -164,7 +164,7 @@ process_start_identity() {
 read_recorded_processes() {
 	if [ -s "$PIDS_FILE" ]; then
 		cat "$PIDS_FILE"
-		return
+		return "$?"
 	fi
 	if [ -s "$PID_FILE" ]; then
 		awk '/^[0-9]+$/ { print $1 }' "$PID_FILE"
@@ -233,10 +233,12 @@ recorded_process_is_owned() {
 		return 1
 	fi
 	if [ -z "$expected_start_identity" ]; then
-		# Legacy numeric-only state may identify only the public launcher. Keep
-		# that fallback restricted to the exact requested port.
+		# Before the first process-tree snapshot, only the public launcher's PID
+		# is saved. Restrict that ownership check to the exact requested port.
+		# During EXIT cleanup, a bare return can reuse the interrupted status
+		# instead of this check's result. Preserve the classifier result explicitly.
 		pid_looks_like_haxe_wait "$pid" "$port"
-		return
+		return "$?"
 	fi
 	local current_start_identity
 	current_start_identity="$(process_start_identity "$pid")"

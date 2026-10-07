@@ -713,6 +713,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       Lock acquisition waits at most 15 seconds. The kernel releases the lock when the helper exits.
       The server does not inherit it. The retained `haxe-server.lock` file does not indicate a running server.
     - `npm run test:hxhx:haxe-server-identity` includes a deterministic late-child regression and a concurrent observation/stop check.
+      It also interrupts startup before PID publication, before the first process-tree snapshot, and during readiness checks.
+      Each interruption must remove owned processes and saved state while preserving an unrelated server on the same port.
     - Warm Reflaxe generation through `--use-repo-server` is temporarily blocked
       because a measured cached request lost complete target-wide state. See
       `docs/01-getting-started/COMPILATION_SERVER.md`.

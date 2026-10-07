@@ -179,23 +179,29 @@ if kill -0 "$wrapper_child_pid" >/dev/null 2>&1; then
 	fail "stop left the wrapper's real Haxe server child alive"
 fi
 
-# Interrupt both before PID publication and during readiness. Bash's DEBUG
-# hook pauses at the former boundary without adding a production test switch.
-# The hook must fire, or the test cannot claim to cover the registration race.
+# Interrupt before PID publication, before the first process-tree snapshot,
+# and during readiness. The snapshot boundary forces EXIT cleanup to verify
+# the numeric launcher record. DEBUG hooks must fire to prove each boundary.
 cat >"$TMP_DIR/interrupt-registration.bash" <<'REGISTRATION_HOOK'
 # Only the start helper loads this hook; its fake compiler children must not.
 unset BASH_ENV
 registration_hook_fired=0
 interrupt_registration() {
 	local interrupted_command="$1"
-	if [[ "$registration_hook_fired" == 0 && "$interrupted_command" == printf* && "$interrupted_command" == *'"$PID_FILE"'* ]]; then
+	local at_boundary=0
+	if [[ "$FAKE_HAXE_INTERRUPT_PHASE" == registration && "$interrupted_command" == printf* && "$interrupted_command" == *'"$PID_FILE"'* ]]; then
+		at_boundary=1
+	elif [[ "$FAKE_HAXE_INTERRUPT_PHASE" == ownership && "$interrupted_command" == 'record_server_processes "$pid"' ]]; then
+		at_boundary=1
+	fi
+	if [[ "$registration_hook_fired" == 0 && "$at_boundary" == 1 ]]; then
 		registration_hook_fired=1
 		for ((attempt = 0; attempt < 100; attempt++)); do
 			[ -s "$FAKE_HAXE_CHILD_PID_CAPTURE" ] && break
 			sleep 0.01
 		done
 		[ -s "$FAKE_HAXE_CHILD_PID_CAPTURE" ] || exit 1
-		printf '%s\n' registration >"$FAKE_HAXE_INTERRUPT_MARKER"
+		printf '%s\n' "$FAKE_HAXE_INTERRUPT_PHASE" >"$FAKE_HAXE_INTERRUPT_MARKER"
 		kill -TERM "$$"
 	fi
 }
@@ -206,13 +212,14 @@ REGISTRATION_HOOK
 # An unrecorded server with the same public port must survive owned cleanup.
 "$TMP_DIR/fake-haxe-a" --wait "$PORT" &
 UNRELATED_PID="$!"
-for interrupt_phase in registration readiness; do
+for interrupt_phase in registration ownership readiness; do
 	rm -f "$CHILD_PID_CAPTURE" "$TMP_DIR/interrupt.marker"
 	interrupt_env=/dev/null
-	if [ "$interrupt_phase" = registration ]; then
+	if [ "$interrupt_phase" != readiness ]; then
 		interrupt_env="$TMP_DIR/interrupt-registration.bash"
 	fi
 	BASH_ENV="$interrupt_env" \
+	FAKE_HAXE_INTERRUPT_PHASE="$interrupt_phase" \
 	FAKE_HAXE_INTERRUPT_MARKER="$TMP_DIR/interrupt.marker" \
 	FAKE_HAXE_CHILD="$TMP_DIR/fake-haxe-child" \
 	FAKE_HAXE_CHILD_PID_CAPTURE="$CHILD_PID_CAPTURE" \
@@ -237,8 +244,8 @@ for interrupt_phase in registration readiness; do
 	helper_code="$?"
 	set -e
 	[ "$helper_code" = "143" ] || fail "$interrupt_phase interruption exited $helper_code instead of 143"
-	if [ "$interrupt_phase" = registration ]; then
-		[ -s "$TMP_DIR/interrupt.marker" ] || fail "registration interruption hook did not run"
+	if [ "$interrupt_phase" != readiness ]; then
+		[ "$(cat "$TMP_DIR/interrupt.marker")" = "$interrupt_phase" ] || fail "$interrupt_phase interruption hook did not run"
 	fi
 	if kill -0 "$interrupted_child_pid" >/dev/null 2>&1; then
 		fail "$interrupt_phase interruption left the wrapper's real Haxe server child alive"
