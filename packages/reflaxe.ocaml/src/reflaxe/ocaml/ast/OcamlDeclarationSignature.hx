@@ -28,8 +28,19 @@ typedef OcamlDeclarationSignature = {
 	private runtime carriers, unresolved types, and generic or extern declarations
 	remain unavailable; their signatures need their own representation proof.
 	Class declarations can also use a direct record after the whole program's
-	inheritance check; this does not admit new field optimizations. The recursive
-	module interface checks each generated function against the selected types. Ordinary
+	inheritance check; this does not admit new field optimizations. Ordinary
+	inherited classes can name their existing dispatch records after that check.
+	Their methods and base-prefix layout remain owned by ordinary class emission.
+	The recursive
+	interface may name an ordinary non-generic enum's existing variant type even
+	when no optimized enum-returning function registered a result-carrier proof.
+	This only exports the declaration; it does not authorize new call conversions.
+	Nullable enums retain the mapper's existing boxed null-or-variant carrier.
+	Function types use the ordinary curried callback ABI only when every argument
+	and result has an admitted declaration carrier; zero arguments use unit.
+	Optional callback arguments currently require String's existing null sentinel.
+	Other optional types need a separate proof of their nullable call boundary.
+	The recursive module interface checks each generated function against the selected types. Ordinary
 	modules keep their existing inferred function types and generated text.
 **/
 function projectDeclarationSignature(parameters:Array<Type>, result:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr,
@@ -61,6 +72,26 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 		};
 	}
 	return switch (type) {
+		case TFun(parameters, result):
+			final projectedResult = declarationCarrier(result, representations, nominalType, context);
+			if (projectedResult == null) {
+				null;
+			} else {
+				var functionType = projectedResult;
+				for (index in 0...parameters.length) {
+					final parameter = parameters[parameters.length - 1 - index];
+					// The optional flag does not imply a Null<T> wrapper in typed
+					// function syntax. String keeps one carrier for present and absent
+					// values; do not infer that property for scalars or enum variants.
+					if (parameter.opt && !isStringCallbackArgument(parameter.t))
+						return null;
+					final parameterType = declarationCarrier(parameter.t, representations, nominalType, context);
+					if (parameterType == null)
+						return null;
+					functionType = TArrow(parameterType, functionType);
+				}
+				parameters.length == 0 ? TArrow(TIdent("unit"), functionType) : functionType;
+			}
 		case TType(reference, parameters):
 			final definition = reference.get();
 			declarationCarrier(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), representations, nominalType, context);
@@ -95,9 +126,18 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 				}
 			} else {
 				// Other supported references retain their existing null sentinel.
-				// Scalars and enums remain outside this declaration contract.
+				// Nullable enums instead preserve their existing boxed null-or-variant carrier.
 				switch (TypeTools.follow(inner)) {
 					case referred = TInst(_, _): declarationCarrier(referred, representations, nominalType, context);
+					case referred = TEnum(_, _):
+						if (declarationCarrier(referred, representations, nominalType, context) == null) {
+							null;
+						} else {
+							switch (nominalType(type)) {
+								case carrier = TIdent("Obj.t"): carrier;
+								case _: null;
+							}
+						}
 					case _: null;
 				}
 			}
@@ -122,14 +162,63 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 					if (context.virtualTypesComputed
 						&& !OcamlRepresentationRegistry.isExactBytes(type)
 						&& (definition.pack.length == 0 || definition.pack[0] != "ocaml")
-						&& OcamlMonomorphicClassPlanner.hasDirectRecordLayout(definition, context)): nominalType(type);
+						&& (OcamlMonomorphicClassPlanner.hasDirectRecordLayout(definition, context)
+							|| hasInheritedDeclarationRecord(definition, context))): nominalType(type);
 				case _: null;
 			}
 		case TEnum(reference, []) if (!reference.get().isExtern && reference.get().params.length == 0):
-			final definition = reference.get();
-			representations.nativeEnumValue(definition.pack.concat([definition.name]).join(".")) == null ? null : nominalType(type);
+			// Ordinary enum declarations already own a named OCaml variant. The
+			// result optimization catalog is not the authority for that public type.
+			nominalType(type);
 		case _: null;
 	}
+}
+
+/**
+	Recognizes ordinary class records selected by the complete inheritance scan.
+
+	Class emission owns the base-prefix layout and method slots. Exporting that
+	named type does not permit direct-field optimizations or alter upcasts. Every
+	ancestor must use ordinary non-generic class emission; foreign and specialized
+	layouts need their own declaration contract.
+**/
+function hasInheritedDeclarationRecord(definition:ClassType, context:CompilationContext):Bool {
+	if (!context.virtualTypesComputed || !context.dispatchTypes.exists(definition.pack.concat([definition.name]).join(".")))
+		return false;
+	var current:Null<ClassType> = definition;
+	while (current != null) {
+		if (current.isExtern
+			|| current.isInterface
+			|| current.params.length > 0
+			|| current.meta.has(":native")
+			|| current.interfaces.length > 0
+			|| (current.pack.length > 0 && current.pack[0] == "ocaml"))
+			return false;
+		switch (current.kind) {
+			case KNormal:
+			case _:
+				return false;
+		}
+		for (field in current.fields.get()) {
+			if (field.meta.has(":native"))
+				return false;
+			switch (field.kind) {
+				case FMethod(MethDynamic):
+					return false;
+				case _:
+			}
+		}
+		current = current.superClass == null ? null : current.superClass.t.get();
+	}
+	return true;
+}
+
+/** Optional String calls and their declarations share the same null sentinel. */
+private function isStringCallbackArgument(type:Type):Bool {
+	return switch (TypeTools.follow(type)) {
+		case TInst(reference, []): final definition = reference.get(); definition.pack.length == 0 && definition.module == "String" && definition.name == "String";
+		case _: false;
+	};
 }
 
 /** Recognizes the source Array declaration; checked storage still comes from its owner. */

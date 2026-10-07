@@ -46,6 +46,7 @@ import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.hasInheritedDeclarationRecord;
 import reflaxe.ocaml.ast.OcamlModuleAssembly;
 import reflaxe.ocaml.ast.OcamlModuleAssembly.assembleModules;
 import reflaxe.ocaml.ast.OcamlAssignOp;
@@ -2275,6 +2276,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final ctorName = ctx.scopedValueName(classType.module, classType.name, "__ctor");
 
 			final isDispatch = !classType.isInterface && ctx.dispatchTypes.exists(fullName);
+			final preserveInstanceSignature = !isOcamlNativeSurface
+				&& ctx.virtualTypesComputed
+				&& (OcamlMonomorphicClassPlanner.hasDirectRecordLayout(classType, ctx) || hasInheritedDeclarationRecord(classType, ctx));
 
 			// For dynamic dispatch we need a list of all visible instance methods (including inherited)
 			// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
@@ -2787,15 +2791,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
 				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body", ctx.activateStagedTypeRuntimeUse);
 				final ctorBodyForCtor = ensureParamUsage(copiedCtorBody, [selfPat].concat(createParams));
-				lets.push({
+				final constructorExpression = OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]));
+				// A super-constructor initializes an existing record and returns unit.
+				// Reuse allocator parameter types without borrowing its record result.
+				final annotatedBodySignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent("unit"));
+				final bodySignature = annotatedBodySignature != null ? annotatedBodySignature : (constructorDeclaration == null ? null : signatureFromTypes(constructorDeclaration.parameters,
+					OcamlTypeExpr.TIdent("unit")));
+				lets.push(!preserveInstanceSignature || bodySignature == null ? {name: ctorName, expr: constructorExpression} : {
 					name: ctorName,
-					expr: OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]))
+					expr: constructorExpression,
+					signature: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName), bodySignature)
 				});
 			}
 
-			final preserveInstanceSignature = !isOcamlNativeSurface
-				&& ctx.virtualTypesComputed
-				&& OcamlMonomorphicClassPlanner.hasDirectRecordLayout(classType, ctx);
 			for (f in instanceMethods) {
 				#if macro
 				if (profileVerbose && profClassMatch && profileDetail) {
