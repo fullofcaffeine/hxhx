@@ -1552,7 +1552,8 @@ class TyperStage {
 		function select(signature:TyFunSig, actual:Array<TyType>, order:TyMethodArgumentOrder):TyMethodCallResolution {
 			final inference = scope.getInference();
 			final ranked = order.rankedTypes(actual);
-			if (receiver != null && !inference.constrainMember(receiver.expression, c, signature, ranked, scope, ctx.getIndex()))
+			if (receiver != null
+				&& !inference.constrainMember(receiver.expression, c, signature, ranked, scope, ctx.getIndex(), {expressions: args, order: order}))
 				throw new TyperError(ctx.getFilePath(), pos, "selected member conflicts with generic constructor constraints");
 			final applied = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : inference.expressionType(receiver.expression, receiver.type, scope), signature);
@@ -1624,7 +1625,7 @@ class TyperStage {
 			}
 			final ranked = order.rankedTypes(argTypes);
 			if (receiver != null
-				&& !candidateInference.constrainMember(receiver.expression, c, candidate, ranked, scope, ctx.getIndex())) {
+				&& !candidateInference.constrainMember(receiver.expression, c, candidate, ranked, scope, ctx.getIndex(), {expressions: args, order: order})) {
 				rejectedReceiverConstraint = true;
 				continue;
 			}

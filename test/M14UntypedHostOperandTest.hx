@@ -1,5 +1,7 @@
 import backend.BackendContext;
 import backend.js.JsBackend;
+import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.Stage3SetupSupport;
 
 /** Explicit untyped host reads retain evidence through call typing and executable publication. */
 class M14UntypedHostOperandTest {
@@ -82,5 +84,79 @@ class M14UntypedHostOperandTest {
 		prove("field", "read(hostPayload.nested)", "7\n");
 		prove("bound", "read(hostPayload.method.bind(hostPayload)())", "7\n", 2);
 		prove("alias", "{var known:Int=3; var alias=hostPayload; read(alias)+known;}", "10\n");
+		proveReceiver("return", 'var values=[];untyped values.push(hostName);return values;');
+		proveReceiver("alias", 'var values=[];var alias=values;untyped alias.push(hostName);return values;');
+		proveReceiver("stored", 'var values=[];var item=untyped hostName;values.push(item);return values;');
+		proveReceiver("written", 'var values:Array<String>=[];untyped values.push(hostName);return values;');
+		proveReceiver("conflict", 'var values=[];untyped values.push(hostName);values.push(7);return values;', false);
+		proveReceiver("scope", 'var values=[];untyped {values.push(hostName);}values.push(missingName);return values;', false);
+	}
+
+	/** A return annotation solves the earlier receiver and operand together; explicit untyped scope stays local. */
+	static function proveReceiver(caseName:String, body:String, accepted:Bool = true):Void {
+		final root = ".tmp/untyped_receiver_" + caseName;
+		sys.FileSystem.createDirectory(root);
+		final path = root + "/Main.hx";
+		final source = '@:native("console") extern class Console {public static function log(value:String):Void;}'
+			+ 'class Main {static function values():Array<String>{'
+			+ body
+			+ '}static function main():Void{Console.log(values()[0]);}}';
+		sys.io.File.saveContent(path, source);
+		final upstream = run("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "-js", root + "/upstream.js"]);
+		check((upstream.code == 0) == accepted, "upstream receiver acceptance differs: " + caseName + upstream.stderr);
+		final args = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [root],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: Stage1Args.getStandardLibraryRoot(args),
+			targetDefine: "js"
+		});
+		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
+		final index = TyperIndex.buildHeaders([module]);
+		final loader = new ModuleLoader(paths, Stage3SetupSupport.buildDefinesMap([], "js", "js-native"), index, null, true);
+		loader.markResolvedAlready([module]);
+		check(loader.ensureTypeAvailable("Array", "", []) != null, "missing real Array declaration");
+		var typed:Null<TypedModule> = null;
+		try {
+			typed = TyperStage.typeResolvedModule(module, index, loader, true);
+			typed.getBackendProjection();
+		} catch (error:haxe.Exception) {
+			if (accepted)
+				throw error;
+			typed = null;
+		}
+		check((typed != null) == accepted, "receiver acceptance differs: " + caseName);
+		if (typed != null) {
+			var pushes = 0;
+			function inspect(expression:TypedExpr):Void {
+				final declaration = expression.getDeclaration();
+				if (expression.getTag() == Call && declaration != null && declaration.getSignature().getName() == "push") {
+					pushes++;
+					final values = expression.getExpressions();
+					check(expression.getNamedArguments() != null, "receiver call lost its selected binding");
+					check(values[values.length - 1].getType().getSemanticKey() == "primitive:String", "receiver operand was not solved");
+				}
+				for (child in expression.getExpressions())
+					inspect(child);
+			}
+			for (owner in typed.getTypedClasses())
+				for (method in owner.getFunctions())
+					for (statement in method.getBody().getStatements())
+						for (expression in statement.getExpressions())
+							inspect(expression);
+			check(pushes == 1, "receiver regression missed its call");
+			final harness = root + "/host.cjs";
+			sys.io.File.saveContent(harness,
+				'let reads=0;Object.defineProperty(global,"hostName",{get(){reads++;return "word";}});' +
+				'require(process.argv[2]);if(reads!==1)throw Error("host read count differs");');
+			new JsBackend().emit(new MacroExpandedProgram([typed], false),
+				new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			for (file in ["upstream.js", "native.js"]) {
+				final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
+				check(result.code == 0 && result.stdout == "word\n", "receiver runtime differs: " + file + result.stderr);
+			}
+		}
+		Sys.println("UNTYPED_RECEIVER_INPUT:PASS " + caseName);
 	}
 }

@@ -85,6 +85,41 @@ class M14InferenceSolverTest {
 		rejects(() -> context.apply(call, declaration, [integer]), "no longer belongs");
 	}
 
+	/** Receiver and operand terms share later constraints; losing candidates cannot retain an earlier partial binding. */
+	static function receiverInputContracts():Void {
+		final source = 'class Pair<A,B>{}class Box<T>{public function take(value:T):Void{}public function reject(value:T,pair:Pair<T,Int>):Void{}}class Main{}';
+		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final index = TyperIndex.build([module]);
+		final owner = index.getByFullName("Main.Box");
+		final pair = index.getByFullName("Main.Pair");
+		final integer = TyType.fromHintText("Int");
+		final string = TyType.fromHintText("String");
+		for (rollback in [false, true]) {
+			final environment = new TyFunctionEnv("receiver-input", [], [], TyType.unknown(), TyType.unknown());
+			final inference = environment.getInference();
+			final receiver:HxExpr = EIdent("receiver");
+			final operand:HxExpr = EIdent("host");
+			final unrelated:HxExpr = EIdent("host");
+			inference.construct(receiver, TyType.nominal(owner.getIdentity(), []), 1);
+			inference.untypedResult(operand);
+			inference.untypedResult(unrelated);
+			final signature = owner.instanceMethodCandidates(rollback ? "reject" : "take")[0];
+			final expressions:Array<HxExpr> = rollback ? [operand, EIdent("pair")] : [operand];
+			final actual = rollback ? [TyType.unknown(), TyType.nominal(pair.getIdentity(), [string, string])] : [TyType.unknown()];
+			final order = TyMethodArgumentOrder.select(signature, expressions, (_, _, _) -> Compatible);
+			final trial = inference.fork();
+			check(trial.constrainMember(receiver, owner, signature, actual, environment, index, {expressions: expressions, order: order}) != rollback,
+				"receiver candidate acceptance differs");
+			check(trial.constrain([receiver], [TyType.nominal(owner.getIdentity(), [integer])], environment, index), "receiver annotation failed");
+			check(trial.expressionType(operand, TyType.unknown(), environment).isUnknown() == rollback,
+				"receiver operand lost its shared term or failed-candidate rollback");
+			check(inference.expressionType(receiver, TyType.unknown(), environment).hasUnknownComponent(), "trial changed original receiver");
+			check(inference.expressionType(operand, TyType.unknown(), environment).isUnknown(), "trial changed original operand");
+			check(trial.expressionType(unrelated, TyType.unknown(), environment).isUnknown(), "equal-looking occurrence borrowed a constraint");
+		}
+		Sys.println("RECEIVER_INPUT_INFERENCE:PASS");
+	}
+
 	/** Nullable argument inference keeps wrappers and rolls back every component on failure. */
 	static function nullableInputContracts():Void {
 		final solver = new TyInferenceSolver("nullable-input");
@@ -377,6 +412,7 @@ class M14InferenceSolverTest {
 		castResultOwnership();
 		nullableInputContracts();
 		receiverCallOwnership();
+		receiverInputContracts();
 		emptyArrayContracts();
 		dynamicUseContracts();
 		directCallConstraints();

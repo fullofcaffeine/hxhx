@@ -1,6 +1,12 @@
 import haxe.ds.StringMap;
 import TyInferenceTerm;
 
+/** Already aligned source operands retain their inference identities across a member call. */
+private typedef MemberInputSources = {
+	final expressions:Array<HxExpr>;
+	final order:TyMethodArgumentOrder;
+}
+
 /** One source occurrence retains its variables through later local constraints. */
 private typedef InferredOccurrence = {
 	final expression:HxExpr;
@@ -685,7 +691,7 @@ class TyFunctionInference {
 		owner and repeats the successful constraint only for its selected declaration.
 	 */
 	public function constrainMember(receiver:HxExpr, provider:TyNominalInfo, signature:TyFunSig, actual:Array<TyType>, environment:TyFunctionEnv,
-			index:TyperIndex):Bool {
+			index:TyperIndex, ?supplied:MemberInputSources):Bool {
 		if (solver.isSealed())
 			return true;
 		final receiverTerm = sourceTerm(receiver, environment);
@@ -704,13 +710,22 @@ class TyFunctionInference {
 		function term(type:TyType):TyInferenceTerm
 			return TyInferenceSubstitution.apply(type, bindings);
 
+		// A later receiver annotation must also solve an earlier open operand.
+		// Preserve its original term instead of copying an incomplete type preview.
+		// Resolve fields before forking because that lookup can add a requirement.
+		final sourceTerms:Array<Null<TyInferenceTerm>> = supplied == null ? [] : [
+			for (slot in supplied.order.getSlots())
+				switch slot {
+					case Supplied(source):
+						sourceTerm(supplied.expressions[source], environment);
+					case _:
+						null;
+				}
+		];
 		final candidate = solver.fork();
 		final expected = signature.getArgs();
 		for (argumentIndex in 0...actual.length) {
-			if (argumentIndex >= expected.length
-				|| actual[argumentIndex].isNullLiteral()
-				|| actual[argumentIndex].isDynamic()
-				|| actual[argumentIndex].hasUnknownComponent())
+			if (argumentIndex >= expected.length || actual[argumentIndex].isNullLiteral() || actual[argumentIndex].isDynamic())
 				continue;
 			final referenced = TyTypeSubstitution.parameterIdentities(expected[argumentIndex]);
 			if (referenced.length == 0 || referenced.filter(parameter -> bindings.exists(parameter.getCanonicalKey())).length == 0)
@@ -723,6 +738,15 @@ class TyFunctionInference {
 			// may accept a conversion such as Int to Float without rebinding T.
 			if (!candidate.preview(expectedTerm).hasUnknownComponent())
 				continue;
+			if (actual[argumentIndex].hasUnknownComponent()) {
+				final original = argumentIndex < sourceTerms.length ? sourceTerms[argumentIndex] : null;
+				if (original == null)
+					continue;
+				final projected = TyInferenceNominalContext.view(index, original, candidate.preview(expectedTerm));
+				if (projected == null || !candidate.constrainNullableInput(expectedTerm, projected))
+					return false;
+				continue;
+			}
 			final actualType = actual[argumentIndex].unwrapNull();
 			final expectedIdentity = expected[argumentIndex].unwrapNull().getNominalIdentity();
 			final ancestor = expectedIdentity == null ? null : TyNominalAncestor.view(index, actualType, expectedIdentity);
