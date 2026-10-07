@@ -18,9 +18,64 @@ class M14CallbackArgumentContextTest {
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		rollback();
 		parameterRollback();
+		omittedInputConversion();
 		sourceSignatureRetention();
 		conflictingArgument();
 		Sys.println("CALLBACK_ARGUMENT_CONTEXT:PASS");
+	}
+
+	/** Optional omission preserves input facts; only the selected Dynamic slot receives a value conversion after sealing. */
+	static function omittedInputConversion():Void {
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final signature = TyCallableSignature.fromFunctionValue(TyType.functionSignature([
+			{
+				name: "value",
+				type: dynamicType,
+				isOptional: false,
+				isRest: false,
+				metadata: []
+			},
+			{
+				name: "label",
+				type: TyType.fromHintText("String"),
+				isOptional: true,
+				isRest: false,
+				metadata: []
+			}
+		], dynamicType));
+		final index = TyperIndex.build([]);
+		for (later in [false, true]) {
+			final env = new TyFunctionEnv("omitted-callback-input", [], [], TyType.unknown(), TyType.unknown());
+			final parameter = env.declareLocal("value", TyType.unknown(), LambdaParameter);
+			env.getInference().registerOmittedParameter(parameter);
+			final source:HxExpr = EIdent("value");
+			final callee:HxExpr = EIdent("callback");
+			final result = TyCallbackArgumentContext.resolve(signature, [source], [TyType.unknown()], [Value], env, index, callee);
+			switch result {
+				case Aligned(slots):
+					if (!slots[0].match(Supplied(0)) || !slots[1].match(Omitted))
+						throw "omitted input changed optional callback selection";
+				case Rejected(failure):
+					throw "omitted callback input was rejected: " + Std.string(failure);
+			}
+			if (!env.getInference().localType(parameter).isUnknown() || env.getInference().callbackBinding(callee) != null)
+				throw "callback selection finalized an omitted input early";
+			final integer = TyType.fromHintText("Int");
+			if (later && !env.getInference().constrain([source], [integer], env, index))
+				throw "Dynamic callback destination prevented a later Int constraint";
+			env.getInference().seal([parameter]);
+			final binding = env.getInference().callbackBinding(callee);
+			if (binding.getOperandTypes()[0].getSemanticKey() != (later ? integer : dynamicType).getSemanticKey())
+				throw "callback binding lost its final value conversion";
+			if (!later && !parameter.getType().isUnknown())
+				throw "callback conversion replaced the omitted declaration type";
+			if (!TyCallbackArgumentContext.resolve(signature, [source], [parameter.getType()], [Value], env, index, callee).match(Aligned(_)))
+				throw "callback replay lost the retained conversion and slots";
+		}
+		final missing = new TyFunctionEnv("missing-callback-fact", [], [], TyType.unknown(), TyType.unknown());
+		missing.declareLocal("value", TyType.unknown(), Variable);
+		if (!TyCallbackArgumentContext.resolve(signature, [EIdent("value")], [TyType.unknown()], [Value], missing, index).match(Rejected(_)))
+			throw "missing local type facts forged an omitted-input conversion";
 	}
 
 	/** A first body constraint is speculative too; explicit Dynamic never becomes a fresh parameter hole. */

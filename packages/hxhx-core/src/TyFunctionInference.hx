@@ -669,9 +669,14 @@ class TyFunctionInference {
 
 	/** Candidate checking may observe deferred defaults, but source typing continues to use the unsolved term. */
 	@:allow(TyCallbackArgumentContext)
-	function callbackContextType(expression:HxExpr, fallback:TyType, environment:TyFunctionEnv):TyType {
+	function callbackContextType(expression:HxExpr, fallback:TyType, environment:TyFunctionEnv, ?expected:TyType):TyType {
 		final term = sourceTerm(expression, environment);
-		return term == null ? fallback : solver.previewDynamicUses(term);
+		final type = term == null ? fallback : solver.previewDynamicUses(term);
+		return expected != null
+			&& expected.isDynamic()
+			&& type.isUnknown()
+			&& term != null
+			&& solver.hasOmittedInputOrigin(term) ? expected : type;
 	}
 
 	/** Resolve a retained lexical term against this traversal's constraints, including in speculative forks. */
@@ -693,8 +698,10 @@ class TyFunctionInference {
 					call.terms[operand] == null ? call.types[operand] : solver.published(call.terms[operand])
 			];
 			final signature = TyCallableSignature.fromFunctionValue(solver.published(call.callable));
+			final converted = call.selectedSlots == null ? types : TyCallbackArgumentContext.dynamicInputTypes(signature, call.selectedSlots, types,
+				operand -> call.terms[operand] != null && solver.isUnresolvedInput(call.terms[operand]));
 			final binding = call.selectedSlots == null ? TyCallbackArgumentContext.publish(signature, call.arguments, types,
-				call.index) : TyCallbackArgumentContext.publishSlots(signature, call.arguments, types, call.index, call.selectedSlots);
+				call.index) : TyCallbackArgumentContext.publishSlots(signature, call.arguments, converted, call.index, call.selectedSlots);
 			callbackArguments.push({callee: call.callee, binding: binding});
 		}
 		for (symbol in symbols)

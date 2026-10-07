@@ -899,11 +899,15 @@ class TypedBodyBuilder {
 							nodeType) : typeResolver == null
 								|| environment == null ? null : typeResolver.callTargetType(callee, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, null, callable);
+					final callback = resolution.getDeclaration() == null
+						&& typedCallee.getDeclaration() == null
+						&& typedCallee.getType().isFunction()
+						&& environment != null ? environment.getInference().callbackBinding(callee) : null;
 					var typedArguments = callee.match(EIdent("__hxhx_try")) ? buildStructuralTryArguments(arguments, diagnosticPosition, environment,
 						typeResolver, callResolver, memberResolver) : null;
 					if (typedArguments == null)
 						typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
-							resolution.getExpectedArguments());
+							callback == null ? resolution.getExpectedArguments() : callback.getExpectedArguments());
 					typedArguments = applyCallArgumentConversions(typedArguments, resolution.getArgumentConversions());
 					typedArguments = convertCallValues(typedArguments, resolution, typeResolver);
 					if (callee.match(EIdent("__hxhx_try")))
@@ -911,8 +915,7 @@ class TypedBodyBuilder {
 					// A method read can retain its declaration even when no call candidate
 					// applies. Its open generic signature is not a function-value binding.
 					if (resolution.getDeclaration() == null && typedCallee.getDeclaration() == null && typedCallee.getType().isFunction())
-						TypedExpr.functionValueCall(typedCallee, typedArguments, nodeType, position,
-							environment == null ? null : environment.getInference().callbackBinding(callee));
+						TypedExpr.functionValueCall(typedCallee, typedArguments, nodeType, position, callback);
 					else {
 						final call = TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position,
 							resolution.getRequiresOwnerQualification(), resolution.getExtensionProvider());
