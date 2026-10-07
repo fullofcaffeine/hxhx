@@ -36,6 +36,13 @@ function main() {
   const fakeHaxe = path.join(tempRoot, 'fake-haxe.sh')
 
   try {
+    // Simulate a caller selecting real snapshots. Every child must override
+    // this directory with its own fixture directory before invoking a writer.
+    const callerSnapshots = path.join(tempRoot, 'caller-snapshots')
+    writeFixture(callerSnapshots, 'untouched')
+    const callerGolden = path.join(callerSnapshots, 'untouched', 'intended', 'Main.ml')
+    const callerBefore = fs.readFileSync(callerGolden)
+    const inheritedEnv = { ...process.env, HXHX_SNAPSHOT_DIR: callerSnapshots }
     writeFixture(snapshotRoot, 'first')
     writeFixture(snapshotRoot, 'second')
     fs.writeFileSync(
@@ -57,7 +64,7 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
-        ...process.env,
+        ...inheritedEnv,
         HAXE_BIN: fakeHaxe,
         HXHX_SNAPSHOT_DIR: snapshotRoot,
         HXHX_SNAPSHOT_RUN_LOG: runLog
@@ -87,7 +94,7 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
-        ...process.env,
+        ...inheritedEnv,
         HAXE_BIN: fakeHaxe,
         HXHX_SNAPSHOT_DIR: snapshotRoot,
         HXHX_SNAPSHOT_RUN_LOG: runLog,
@@ -114,8 +121,9 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
       cwd: updateRoot,
       encoding: 'utf8',
       env: {
-        ...process.env,
+        ...inheritedEnv,
         HAXE_BIN: fakeHaxe,
+        HXHX_SNAPSHOT_DIR: updateSnapshots,
         HXHX_SNAPSHOT_RUN_LOG: updateLog,
         HXHX_SNAPSHOT_MUTATE_MAIN: '1'
       }
@@ -137,7 +145,7 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
       cwd: updateRoot,
       encoding: 'utf8',
       env: {
-        ...process.env,
+        ...inheritedEnv,
         HAXE_BIN: fakeHaxe,
         HXHX_SNAPSHOT_DIR: scopedSnapshots,
         HXHX_SNAPSHOT_RUN_LOG: path.join(tempRoot, 'scoped-runs.txt'),
@@ -150,6 +158,10 @@ printf '%s\\n' "$PWD" >> "$HXHX_SNAPSHOT_RUN_LOG"
     }
     if (fs.readFileSync(untouched, 'utf8') !== 'let untouched = true\n') {
       fail('scoped updater changed a fixture outside its selected directory')
+    }
+
+    if (!fs.readFileSync(callerGolden).equals(callerBefore) || fs.existsSync(path.join(callerSnapshots, 'untouched', 'out'))) {
+      fail('snapshot fixture changed the caller-selected directory')
     }
 
     console.log('SNAPSHOT_RUNNER_BOUNDARY:PASS')
