@@ -71,17 +71,21 @@ class TyperContext {
 	public function getClassFullName():String
 		return classFullName;
 
+	/** Load a requested declaration before resolving its nominal provider; generic aliases retain their own binders. */
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
-		return index.resolveNominalProvider(typePath, {
+		final context:TyTypeDeclaration.TyTypeResolutionContext = {
 			packagePath: packagePath,
 			modulePath: modulePath,
 			directives: directives,
 			filePath: filePath,
 			position: HxPos.unknown(),
 			parameters: []
-		});
+		};
+		if (loader != null)
+			loader.ensureDeclarationAvailable(typePath, context);
+		return index.resolveNominalProvider(typePath, context);
 	}
 
 	/** Resolve a value type separately from operations that require a nominal provider. */

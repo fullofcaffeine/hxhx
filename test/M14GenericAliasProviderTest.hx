@@ -38,9 +38,11 @@ class M14GenericAliasProviderTest {
 		final index = TyperIndex.buildHeaders(roots);
 		final loader = new ModuleLoader([root], new haxe.ds.StringMap<String>(), index, null, false);
 		loader.markResolvedAlready(roots);
-		final owner = loader.ensureTypeAvailable("Chain", "", []);
+		check(index.getByFullName("Box") == null, "fixture loaded the provider before contextual lookup");
+		final lookup = new TyperContext(index, root + "/Main.hx", "Main", "", [], "Main", loader);
+		final owner = lookup.resolveType("Chain");
 		check(owner != null && owner.getIdentity().getCanonicalName() == "Box", "generic alias chain lost its provider");
-		check(loader.ensureTypeAvailable("Record", "", []) == null, "structural alias manufactured a nominal provider");
+		check(lookup.resolveType("Record") == null, "structural alias manufactured a nominal provider");
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
 			packagePath: "",
 			modulePath: "Main",
@@ -74,6 +76,15 @@ class M14GenericAliasProviderTest {
 		check(native.code == 0 && native.stdout == "7\n", "native static alias call differs: " + native.stderr);
 		sys.io.File.saveContent(root + "/Main.hx", 'class Main {static function main():Void {var missing:Alias=null;}}');
 		check(run("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "--interp"]).code != 0, "upstream accepted missing alias arguments");
+		// Each request must discover its own current declarations, without mutating a prior index.
+		sys.io.File.saveContent(root + "/Box.hx", 'class Box<T>{public static function answer():String{return "fresh";}}');
+		final freshIndex = new TyperIndex();
+		final freshLoader = new ModuleLoader([root], new haxe.ds.StringMap<String>(), freshIndex, null, false);
+		final freshLookup = new TyperContext(freshIndex, root + "/Main.hx", "Main", "", [], "Main", freshLoader);
+		final freshOwner = freshLookup.resolveType("Chain");
+		check(freshOwner != null && freshOwner.staticMethod("answer").getReturnType().getSemanticKey() == "primitive:String",
+			"new contextual lookup reused an old provider");
+		check(owner.staticMethod("answer").getReturnType().getSemanticKey() == "primitive:Int", "new lookup changed the previous request");
 		Sys.println("GENERIC_ALIAS_PROVIDER:PASS");
 	}
 }
