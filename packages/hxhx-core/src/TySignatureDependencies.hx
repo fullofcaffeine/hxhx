@@ -56,7 +56,8 @@ function declared(module:HxModuleDecl, filePath:String = ""):Array<String> {
 					hint(entry.substr(prefix.length), parameters);
 		for (field in HxClassDecl.getFields(declaration))
 			hint(HxFieldDecl.getTypeHint(field), parameters);
-		for (method in HxOverloadDeclarations.forClass(declaration, filePath)) {
+		for (entry in HxOverloadDeclarations.forClass(declaration, filePath)) {
+			final method = entry.declaration;
 			final metadata = HxFunctionDecl.getMetadata(method);
 			final bound = parameters.concat(HxFunctionTypeParamMetadata.typeParamNames(metadata));
 			for (constraint in HxFunctionTypeParamMetadata.constraints(metadata))

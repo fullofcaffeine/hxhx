@@ -647,7 +647,9 @@ class TyperIndex {
 			final signatureOccurrences = new StringMap<Int>();
 			final methodOccurrences = new StringMap<Int>();
 
-			for (functionDeclaration in HxOverloadDeclarations.forClass(classDeclaration, ResolvedModule.getFilePath(module))) {
+			final implementationDeclarations = new haxe.ds.ObjectMap<HxFunctionDecl, TyDeclarationInfo>();
+			for (entry in HxOverloadDeclarations.forClass(classDeclaration, ResolvedModule.getFilePath(module))) {
+				final functionDeclaration = entry.declaration;
 				final functionName = HxFunctionDecl.getName(functionDeclaration);
 				final isStatic = HxFunctionDecl.getIsStatic(functionDeclaration);
 				final functionMetadata = HxFunctionDecl.getMetadata(functionDeclaration);
@@ -709,10 +711,16 @@ class TyperIndex {
 				final occurrence = signatureOccurrences.exists(signatureKey) ? signatureOccurrences.get(signatureKey) : 0;
 				signatureOccurrences.set(signatureKey, occurrence + 1);
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);
-				declarations.push(new TyDeclarationInfo(declarationId, identity, signature, functionMetadata, functionDeclaration,
+				final declarationInfo = new TyDeclarationInfo(declarationId, identity, signature, functionMetadata, functionDeclaration,
 					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline"),
 					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public, semanticModulePath, resolvedConstraints, isEnumConstructor,
-					isEnumConstructor ? functionParams : methodParameterIds));
+					isEnumConstructor ? functionParams : methodParameterIds,
+					entry.implementation == functionDeclaration ? null : implementationDeclarations.get(entry.implementation));
+				if (entry.implementation != functionDeclaration && declarationInfo.getImplementation() == declarationInfo)
+					throw "overload signature lost its primary implementation declaration";
+				declarations.push(declarationInfo);
+				if (entry.implementation == functionDeclaration)
+					implementationDeclarations.set(functionDeclaration, declarationInfo);
 			}
 
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {

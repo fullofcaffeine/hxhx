@@ -123,7 +123,10 @@ class TypedExpr {
 			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget, ?catchUses:Array<TypedCatchUse>,
 			?lambdaSignature:HxLambdaSignature, ?sourceFunction:HxSourceFunction, ?controlTarget:TyControlTarget, ?sourceCatches:Array<HxSourceCatch>,
 			?constructorApplication:TypedConstructorApplication, ?argumentBinding:TyCallArgumentBinding, ?namedArguments:TypedNamedCallBinding) {
+		if (declaration != null)
+			declaration.requireSupportedImplementation();
 		if (constructorApplication != null) {
+			constructorApplication.getDeclaration().requireSupportedImplementation();
 			if (declaration != null)
 				throw "constructor application requires an unambiguous construction node";
 			if (tag == NewValue) {

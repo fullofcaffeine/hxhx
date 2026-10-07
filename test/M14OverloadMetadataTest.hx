@@ -63,16 +63,26 @@ class M14OverloadMetadataTest {
 			}
 			check(rejected, "invalid overload did not retain its declaring-file diagnostic");
 		}
-		var implementedRejected = false;
+		final implementationText = 'class Implemented {@:overload(function(value:String):String {}) public static function choose(value:Int):Int {return value;}}';
+		final implementationModule = new ResolvedModule("Implemented", "Implemented.hx", ParserStage.parse(implementationText, "Implemented.hx"));
+		final implementationIndex = TyperIndex.build([implementationModule]);
+		final implemented = implementationIndex.getByFullName("Implemented");
+		final implementationChoices = implemented.staticMethodCandidates("choose");
+		final primary = implemented.declarationForSignature(implementationChoices[0]);
+		final alternative = implemented.declarationForSignature(implementationChoices[1]);
+		check(alternative.getImplementation() == primary
+			&& primary.getHasBody()
+			&& !alternative.getHasBody(), "overload lost its implementation owner");
+		// Unused signatures are valid header information. Selecting the unproved
+		// implementation ABI must fail before any backend can receive a call.
+		TyperStage.typeResolvedModule(implementationModule, implementationIndex);
+		var rejectedImplementation = false;
 		try {
-			final text = 'class Implemented {@:overload(function(value:String):String {}) public static function choose(value:Int):Int {return value;}}';
-			TyperIndex.build([
-				new ResolvedModule("Implemented", "Implemented.hx", ParserStage.parse(text, "Implemented.hx"))
-			]);
-		} catch (error:TyperError) {
-			implementedRejected = error.message.indexOf("implementation routing") >= 0;
+			TypedExpr.staticMethodRead("choose", alternative, TyCallableSignature.fromDeclaration(alternative).getFunctionType(), HxPos.unknown(), true);
+		} catch (error:String) {
+			rejectedImplementation = error.indexOf("implementation routing") >= 0;
 		}
-		check(implementedRejected, "implemented overload must not silently become a bodyless extern");
+		check(rejectedImplementation, "implemented alternative was published as a host extern");
 		Sys.println("OVERLOAD_METADATA:PASS");
 	}
 }

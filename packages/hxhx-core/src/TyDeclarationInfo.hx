@@ -13,6 +13,7 @@ class TyDeclarationInfo {
 	final signature:TyFunSig;
 	final metadata:Array<String>;
 	final sourceDeclaration:HxFunctionDecl;
+	final implementation:Null<TyDeclarationInfo>;
 	final position:HxPos;
 	final isInline:Bool;
 	final isPublic:Bool;
@@ -23,12 +24,19 @@ class TyDeclarationInfo {
 
 	public function new(identity:TyDeclarationId, owner:TyNominalTypeId, signature:TyFunSig, metadata:Array<String>, sourceDeclaration:HxFunctionDecl,
 			position:HxPos, isInline:Bool, isPublic:Bool, modulePath:String, resolvedConstraints:haxe.ds.StringMap<Array<TyType>>,
-			isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>) {
+			isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>, ?implementation:TyDeclarationInfo) {
 		this.identity = identity;
 		this.owner = owner;
 		this.signature = signature;
 		this.metadata = metadata == null ? [] : metadata.copy();
 		this.sourceDeclaration = sourceDeclaration;
+		this.implementation = implementation;
+		if (implementation != null
+			&& (!implementation.getOwner().equals(owner)
+				|| implementation.getSignature().getName() != signature.getName()
+				|| implementation.getIsStatic() != signature.getIsStatic()
+				|| implementation.getImplementation() != implementation))
+			throw "overload implementation must be its exact primary member";
 		this.position = position == null ? HxPos.unknown() : position;
 		this.isInline = isInline;
 		this.isPublic = isPublic;
@@ -56,6 +64,16 @@ class TyDeclarationInfo {
 
 	public function getSourceDeclaration():HxFunctionDecl
 		return sourceDeclaration;
+
+	/** Alternatives own a call signature; only this primary declaration owns the executable body. */
+	public function getImplementation():TyDeclarationInfo
+		return implementation == null ? this : implementation;
+
+	/** Do not publish a callable with an unproved body ABI as if it were a host extern. */
+	public function requireSupportedImplementation():Void {
+		if (implementation != null && implementation.getHasBody())
+			throw "Overload implementation routing is not yet supported: " + identity.getCanonicalKey();
+	}
 
 	public function getPosition():HxPos
 		return position;
