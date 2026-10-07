@@ -499,8 +499,8 @@ class TyFunctionInference {
 				}
 			}
 			if (expected[index].isDynamic()) {
-				if (term != null)
-					candidate.observeDynamicUse(term);
+				// A Dynamic destination accepts the value without supplying a type
+				// for an omitted parameter. Preserve later concrete constraints.
 				continue;
 			}
 			if (term == null) {
