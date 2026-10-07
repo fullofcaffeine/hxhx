@@ -8,6 +8,7 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 @:access(OcamlASTTraversalTest)
 class OcamlModuleAssemblyTest {
 	public static function run():Void {
+		OcamlModuleValuesTest.run();
 		checkBatchDiagnostics();
 		final printer = new OcamlASTPrinter();
 		final left = module("Left", "Right", TIdent("int"));

@@ -47,7 +47,7 @@ try {
 	corrupt('missing class identity', /Generic call report/, target => {
 		visitClass(target, value => { delete value.classTypeId })
 	})
-	corrupt('previous report schema', /Unsupported lowering report schema 90; expected 91/, (_, report) => {
+	corrupt('previous report schema', /Unsupported lowering report schema 91; expected 92/, (_, report) => {
 		report.schemaVersion = 91
 	})
 	const inspected = spawnSync(process.env.HAXE_BIN || 'haxe', [

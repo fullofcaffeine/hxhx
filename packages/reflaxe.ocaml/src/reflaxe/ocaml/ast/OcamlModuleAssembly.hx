@@ -31,10 +31,15 @@ typedef OcamlModuleAssemblyInput = {
 	Invalid declarations report one failure per affected module in graph order.
 	All declaration and initialization checks finish before interface runtime
 	references are activated or output is rendered.
-	Acyclic output retains its original text and part order.
+	Local function dependencies are ordered before inter-module planning.
+	Already valid acyclic output retains its original text and part order.
 **/
-function assembleModules(input:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter,
+function assembleModules(source:Array<OcamlModuleAssemblyInput>, printer:OcamlASTPrinter,
 		?signatureTypeForOutput:(OcamlTypeExpr, String) -> OcamlTypeExpr):Map<String, String> {
+	final input:Array<OcamlModuleAssemblyInput> = [
+		for (module in source)
+			{name: module.name, parts: OcamlModuleValues.order(module.name, module.parts)}
+	];
 	final byName:Map<String, OcamlModuleAssemblyInput> = [];
 	final itemsByName:Map<String, Array<OcamlModuleItem>> = [];
 	final valueNodes:Array<OcamlModuleDependencyNode> = [];
