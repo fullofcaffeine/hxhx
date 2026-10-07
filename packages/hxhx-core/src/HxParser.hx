@@ -2421,11 +2421,13 @@ class HxParser {
 		return ESourceGroup(children, position);
 	}
 
-	/** A braced final branch ends a control expression without an extra semicolon. */
+	/** A final source brace terminates an expression, including a function's returned block; parentheses do not. */
 	static function endsWithSourceBrace(expression:HxExpr):Bool {
 		return switch expression {
 			case ESourceTry(_, bodies, _): bodies.length > 0 && endsWithSourceBrace(bodies[bodies.length - 1]);
-			case ESourceGroup(_, _) | ESourceFunction(_, ESourceGroup(_, _), _, _) | ESwitch(_, _, _): true;
+			case ESourceGroup(_, _) | ESwitch(_, _, _): true;
+			case ESourceFunction(_, body, _, _): endsWithSourceBrace(body);
+			case EReturn(value): value != null && endsWithSourceBrace(value);
 			case ESourceIf(_, whenTrue, whenFalse, _): endsWithSourceBrace(whenFalse == null ? whenTrue : whenFalse);
 			case EWhile(_, body, bodyIsBlock, _, loopKind): loopKind == Normal && (bodyIsBlock
 					|| (body.length == 1 && endsWithSourceBrace(body[0])));
