@@ -32,7 +32,18 @@ class TyFunSig {
 		this.argNames = argNames == null ? [] : argNames;
 		this.args = args == null ? [] : args;
 		this.argOptional = argOptional == null ? [] : argOptional;
-		this.argRest = argRest == null ? [] : argRest;
+		// Named calls and function values share the same resolved Rest contract.
+		// Preserve body container types; only the call convention is normalized.
+		this.argRest = [
+			for (index in 0...this.args.length)
+				TyFunctionParameter.normalizeRest({
+					name: index < this.argNames.length ? this.argNames[index] : null,
+					type: this.args[index],
+					isOptional: index < this.argOptional.length && this.argOptional[index],
+					isRest: argRest != null && index < argRest.length && argRest[index],
+					metadata: []
+				}).isRest
+		];
 		this.returnType = returnType == null ? TyType.unknown() : returnType;
 		this.pos = pos == null ? HxPos.unknown() : pos;
 	}

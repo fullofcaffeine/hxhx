@@ -100,13 +100,13 @@ class TyCallableSignature {
 		};
 	}
 
-	/** Parsed rest declarations use an array in their bodies; callers supply elements. */
+	/** Written ellipsis uses Array in bodies; resolved standard Rest keeps its own container. Callers supply elements. */
 	static function restElement(container:TyType):TyType {
 		final identity = container.getNominalIdentity();
 		final name = identity == null ? container.getUnresolvedPath() : identity.getCanonicalName();
 		final arguments = container.getTypeArguments();
-		if ((name != "Array" && name != "haxe.Array") || arguments.length != 1)
-			throw "rest method signature requires an array container with one element type";
+		if ((name != "Array" && name != "haxe.Array" && name != "haxe.Rest") || arguments.length != 1)
+			throw "rest method signature requires a standard container with one element type";
 		return arguments[0];
 	}
 
