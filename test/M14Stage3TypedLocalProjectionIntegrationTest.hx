@@ -159,7 +159,14 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			@:privateAccess EmitterStage.currentFunctionLocalTypeHints = misleadingHints;
 			assertTrue((@:privateAccess EmitterStage.stage3TyForIdent("match", misleadingHints)) == "Unknown",
 				"Unknown local borrowed the type of a different binding after keyword escaping");
-			EmitterStage.resetRequestState();
+			@:privateAccess EmitterStage.currentEnums = new backend.ocaml.Stage3OcamlEnums(name -> name, text -> text);
+			@:privateAccess EmitterStage.currentTypedFunction = unknown;
+			@:privateAccess EmitterStage.currentTypedInitializer = mainProjection.getFieldInitializers()[0];
+			CompilerRequestStaticState.reset();
+			assertTrue((@:privateAccess EmitterStage.currentEnums) == null
+				&& (@:privateAccess EmitterStage.currentTypedFunction) == null
+					&& (@:privateAccess EmitterStage.currentTypedInitializer) == null,
+				"request cleanup retained typed emission state");
 			assertTrue((@:privateAccess EmitterStage.currentFunctionLocalOcamlNames) == null, "request cleanup retained a previous body catalog");
 			final reversedParameters = collide.getParameterBindingIdentities();
 			reversedParameters.reverse();

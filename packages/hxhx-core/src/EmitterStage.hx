@@ -9311,6 +9311,7 @@ class EmitterStage {
 		stops early because of an error or cancellation.
 	**/
 	public static function resetRequestState():Void {
+		currentEnums = null;
 		currentTypedFunction = null;
 		currentTypedInitializer = null;
 		currentOcamlModuleName = null;
