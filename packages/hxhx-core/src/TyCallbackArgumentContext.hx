@@ -111,6 +111,31 @@ function publishSlots(signature:TyCallableSignature, arguments:Array<HxExpr>, ty
 	return new TyCallArgumentBinding(signature, types, kinds, slots, Unchecked);
 }
 
+/** Project planned Dynamic value conversions at the retained plain-operand slots; spread containers need their own proof. */
+function dynamicInputTypes(signature:TyCallableSignature, slots:Array<TyCallAlignment.TyCallArgumentSlot>, types:Array<TyType>,
+		ownsInput:(Int) -> Bool):Array<TyType> {
+	final parameters = signature.getParameters();
+	if (parameters.length != slots.length)
+		throw "callback conversion contexts differ from selected parameters";
+	final result = types.copy();
+	function convert(source:Int, parameter:Int):Void {
+		if (source < 0 || source >= result.length)
+			throw "callback conversion has a foreign source index";
+		if (parameters[parameter].type.isDynamic() && result[source].isUnknown() && ownsInput(source))
+			result[source] = parameters[parameter].type;
+	}
+	for (parameter in 0...slots.length)
+		switch slots[parameter] {
+			case Supplied(source):
+				convert(source, parameter);
+			case RestElements(sources):
+				for (source in sources)
+					convert(source, parameter);
+			case Omitted | RestSpread(_):
+		}
+	return result;
+}
+
 /**
 	Use a selected callback's parameters to finish existing argument inference.
 	Optional alignment probes isolated solver forks. Only the complete selected
@@ -121,7 +146,8 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 	final inference = environment.getInference();
 	final retained = callee == null ? null : inference.callbackBinding(callee);
 	if (retained != null) {
-		retained.assertCurrent(signature.getFunctionType(), types, kinds);
+		final converted = dynamicInputTypes(signature, retained.getSlots(), types, source -> inference.isUnresolvedInput(arguments[source], environment));
+		retained.assertCurrent(signature.getFunctionType(), converted, kinds);
 		return Aligned(retained.getSlots());
 	}
 	final parameters = signature.getParameters();
@@ -146,7 +172,11 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 		return TyType.nominal(identity, [expected]);
 	}
 	final aligned = TyCallAlignment.align(parameters, kinds, (source, parameter, spread) -> {
-		final original = compatible(index, sources[source], parameters[parameter].type, types[source], spread);
+		final contextual = !spread
+			&& types[source].isUnknown()
+			&& parameters[parameter].type.isDynamic() ? inference.callbackContextType(sources[source], types[source], environment,
+				parameters[parameter].type) : types[source];
+		final original = compatible(index, sources[source], parameters[parameter].type, contextual, spread);
 		if (!types[source].hasUnknownComponent() || !inference.canReceiveContext(sources[source], environment))
 			return original;
 		final expected = context(source, parameter, spread);
@@ -194,8 +224,12 @@ function resolve(signature:TyCallableSignature, arguments:Array<HxExpr>, types:A
 				];
 				// Validate the selected slots, without repeating optional selection under a different policy.
 				function check(source:Int, parameter:Int, spread:Bool):Void {
+					final contextual = !spread
+						&& solved[source].isUnknown()
+						&& parameters[parameter].type.isDynamic() ? trial.callbackContextType(sources[source], solved[source], environment,
+							parameters[parameter].type) : solved[source];
 					if (failure == null)
-						switch compatible(index, sources[source], parameters[parameter].type, solved[source], spread) {
+						switch compatible(index, sources[source], parameters[parameter].type, contextual, spread) {
 							case Compatible:
 							case Incompatible:
 								failure = IncompatibleArgument(source, parameter);

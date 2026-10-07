@@ -40,8 +40,14 @@ class TyInferenceSolver {
 		assertOwned(term);
 		if (!sealed)
 			return false;
+		return hasOmittedInputOrigin(term);
+	}
+
+	/** Candidate selection may plan a Dynamic conversion from this origin without solving or finalizing the input. */
+	public function hasOmittedInputOrigin(term:TyInferenceTerm):Bool {
+		assertOwned(term);
 		return switch follow(term) {
-			case Variable(identity): identity.kind == OmittedInput && published(term).isUnknown();
+			case Variable(identity): identity.kind == OmittedInput && preview(term).isUnknown();
 			case _: false;
 		};
 	}

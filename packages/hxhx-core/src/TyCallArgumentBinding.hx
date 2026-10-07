@@ -59,6 +59,22 @@ class TyCallArgumentBinding {
 	public function getOperandKinds():Array<TyCallOperandKind>
 		return operandKinds.copy();
 
+	/** Reuse the selected plain-operand destinations when building converted values; never reselect optional slots. */
+	public function getExpectedArguments():Array<TyType> {
+		final parameters = TyCallableSignature.fromFunctionValue(functionType).getParameters();
+		final result = [for (_ in operandTypes) TyType.unknown()];
+		for (parameter in 0...slots.length)
+			switch slots[parameter] {
+				case Supplied(source):
+					result[source] = parameters[parameter].type;
+				case RestElements(sources):
+					for (source in sources)
+						result[source] = parameters[parameter].type;
+				case Omitted | RestSpread(_):
+			}
+		return result;
+	}
+
 	/** A rewrite must preserve the callable signature, source count, types, and spread shape. */
 	public function assertCurrent(calleeType:TyType, types:Array<TyType>, kinds:Array<TyCallOperandKind>):Void {
 		if (calleeType.getSemanticKey() != functionType.getSemanticKey()

@@ -3,7 +3,7 @@ class M14MethodParameterInferenceTest {
 	/** Compare exact public facts: accepting a value as Dynamic must not invent an input annotation. */
 	static function dynamicDestinations():Void {
 		final root = 'test/fixtures/method_parameter_dynamic_context';
-		final expected = 'alias.value=Unknown\ncall.value=Unknown\ndirect.value=Unknown\nexplicit.value=Dynamic\nlater.value=Int\nlocal.value=Unknown\nunused.value=Unknown\n';
+		final expected = 'alias.value=Unknown\ncall.value=Unknown\ndirect.value=Unknown\nexplicit.value=Dynamic\nlater.value=Int\nlocal.value=Unknown\nthroughCallback.value=Unknown\nunused.value=Unknown\n';
 		final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '-main', 'Main', '--macro', 'UpstreamTypes.check()', '--no-output']);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();

@@ -28,14 +28,20 @@ class Main {
 
 	static function unused(value):Void {}
 
+	static function throughCallback(value):Dynamic {
+		var callback:Dynamic->Dynamic = explicit;
+		return callback(value);
+	}
+
 	static function main():Void {
 		var direct:Dynamic->Dynamic = call;
 		var indirect:Dynamic->Dynamic = alias;
+		var through:Dynamic->Dynamic = throughCallback;
 		var number:Dynamic = 7;
 		var text:Dynamic = "ok";
 		var boolean:Dynamic = true;
 		Sys.println(direct(number));
 		Sys.println(indirect(text));
-		Sys.println(direct(boolean));
+		Sys.println(through(boolean));
 	}
 }
