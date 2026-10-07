@@ -6153,12 +6153,15 @@ class OcamlBuilder {
 		if (OcamlStaticStringPlanner.semanticTypeId(inner.t) != null)
 			return buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
 
+		// Int and haxe.Int32 share the integer carrier. Build the original
+		// expression once so conversion preserves its value and side effects.
+		if (isIntType(inner.t))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
+
 		return switch (e.t) {
 			case TAbstract(aRef, params):
 				final a = aRef.get();
 				switch (a.name) {
-					case "Int":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
 					case "Float":
 						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(inner)]);
 					case "Bool":
