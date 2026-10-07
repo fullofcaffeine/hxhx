@@ -114,10 +114,14 @@ cmp "$TMP_ROOT/NativeStackTrace.before.ml" "$NATIVE_STACK_SOURCE"
 # The public inspector is a second reader of the generated proof. It does not
 # share request-local typed expressions with the compiler, so a pass here shows
 # that another tool can verify the structure/result/control ownership chain.
+# Compile it once for this fixture, then start a fresh process for each report.
+# The temporary executable shares no inspection state and is removed on exit.
 VALID_INSPECTION="$TMP_ROOT/valid-inspection.json"
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$TMP_ROOT/inspect.n"
+neko "$TMP_ROOT/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$VALID_INSPECTION"
 node - "$VALID_INSPECTION" <<'NODE'
 const fs = require('fs')
@@ -190,9 +194,7 @@ report.controlRevision = `sha256:${crypto.createHash('sha256').update(reportJson
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$TMP_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$TMP_ROOT/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "Public inspection accepted corrupted nullable anonymous return evidence: $mutation" >&2
 		exit 1
