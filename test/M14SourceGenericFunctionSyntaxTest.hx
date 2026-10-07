@@ -11,6 +11,23 @@ class M14SourceGenericFunctionSyntaxTest {
 	}
 
 	static function main():Void {
+		// Stored metadata has the same expression representation for quoted functions and runtime type information.
+		final metadata = RuntimeMacroExprs.parseMetadataEntries(["ignored", '@:tag("first", [1, 2])', "@:flag", '@:tag("second")']);
+		if (metadata.length != 3 || metadata[0].name != ":tag" || metadata[1].name != ":flag" || metadata[2].name != ":tag")
+			throw "stored metadata lost order, duplicate names, or invalid-entry filtering";
+		if (metadata[0].params.length != 2
+			|| ExprTools.toString(metadata[0].params[0]) != '"first"'
+			|| ExprTools.toString(metadata[0].params[1]) != "[1, 2]"
+			|| metadata[1].params.length != 0
+			|| ExprTools.toString(metadata[2].params[0]) != '"second"')
+			throw "stored metadata arguments changed";
+		for (entry in metadata) {
+			final position = hxhxmacrohost.api.Context.getPosInfos(entry.pos);
+			if (position.file != "<macro>" || position.min != 0 || position.max != 0)
+				throw "stored metadata synthetic position changed";
+		}
+		if (RuntimeMacroExprs.parseMetadataEntries(null).length != 0 || RuntimeMacroExprs.parseMetadataEntries([]).length != 0)
+			throw "absent metadata must remain empty";
 		final text = 'function echo<@:localMarker("tag") T:Array<Int>>(value:T):T { return value; }';
 		final source = HxParser.parseCompleteExprText(text);
 		final generics = facts(source).getGenerics();

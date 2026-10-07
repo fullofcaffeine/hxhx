@@ -601,8 +601,7 @@ class RuntimeMacroExprs {
 		return switch (expr) {
 			case EPrivateAccess(_, _) | EParenthesized(_, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) |
 				ESourceFor(_, _, _, _) | HxExpr.EThrow(_, _) | HxExpr.EWhile(_, _, _, _, _):
-				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType,
-					RuntimeMacroTypes.parseMetadataEntries);
+				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType, parseMetadataEntries);
 				if (definition == null)
 					throw "source macro mapper did not handle authored control syntax";
 				definition;
@@ -760,6 +759,72 @@ class RuntimeMacroExprs {
 			case Increment: OpIncrement;
 			case Decrement: OpDecrement;
 		};
+	}
+
+	/** Parses stored metadata through the expression parser without loading the runtime type model.
+		Entries retain their source order, duplicate names, and the existing synthetic macro positions. */
+	public static function parseMetadataEntries(metadataEntries:Array<String>):Metadata {
+		final entries:Metadata = [];
+		if (metadataEntries != null)
+			for (raw in metadataEntries) {
+				final entry = parseMetadataEntry(raw);
+				if (entry != null)
+					entries.push(entry);
+			}
+		return entries;
+	}
+
+	static function parseMetadataEntry(raw:String):Null<MetadataEntry> {
+		final text = StringTools.trim(raw == null ? "" : raw);
+		if (!StringTools.startsWith(text, "@:"))
+			return null;
+		final open = text.indexOf("(");
+		final close = text.lastIndexOf(")");
+		final name = if (open == -1) text.substr(1) else text.substr(1, open - 1);
+		if (name.length == 0)
+			return null;
+		final params = new Array<Expr>();
+		if (open != -1 && close > open) {
+			for (argText in splitMetadataArgs(text.substr(open + 1, close - open - 1))) {
+				final trimmed = StringTools.trim(argText);
+				if (trimmed.length == 0)
+					continue;
+				params.push(parseInlineString(trimmed, defaultPos()));
+			}
+		}
+		return {
+			name: name,
+			params: params,
+			pos: defaultPos()
+		};
+	}
+
+	static function splitMetadataArgs(raw:String):Array<String> {
+		final out = new Array<String>();
+		if (raw == null || raw.length == 0)
+			return out;
+		var depth = 0;
+		var start = 0;
+		var i = 0;
+		while (i < raw.length) {
+			final ch = raw.charAt(i);
+			switch (ch) {
+				case "(" | "[" | "{":
+					depth += 1;
+				case ")" | "]" | "}":
+					if (depth > 0)
+						depth -= 1;
+				case ",":
+					if (depth == 0) {
+						out.push(raw.substr(start, i - start));
+						start = i + 1;
+					}
+				case _:
+			}
+			i += 1;
+		}
+		out.push(raw.substr(start));
+		return out;
 	}
 
 	static function defaultPos():Position {

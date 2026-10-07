@@ -1181,7 +1181,7 @@ class Context {
 				if (m.exists(key))
 					entries.push(m.get(key));
 			}
-			return RuntimeMacroTypes.parseMetadataEntries(entries);
+			return RuntimeMacroExprs.parseMetadataEntries(entries);
 		}
 
 		function parseFunctionArgsFor(i:Int):Array<FunctionArg> {
