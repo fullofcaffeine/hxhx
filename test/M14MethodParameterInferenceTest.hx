@@ -1,6 +1,34 @@
 /** Body constraints must survive in declaration parameters and generated execution. */
 class M14MethodParameterInferenceTest {
+	/** Compare exact public facts: accepting a value as Dynamic must not invent an input annotation. */
+	static function dynamicDestinations():Void {
+		final root = 'test/fixtures/method_parameter_dynamic_context';
+		final expected = 'direct.value=Unknown\nexplicit.value=Dynamic\nlater.value=Int\nlocal.value=Unknown\nunused.value=Unknown\n';
+		final process = new sys.io.Process('node_modules/.bin/haxe', ['-cp', root, '-main', 'Main', '--macro', 'UpstreamTypes.check()', '--no-output']);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		if (code != 0 || stdout != expected)
+			throw 'upstream Dynamic-destination parameter facts differ: ' + stdout + stderr;
+		Sys.println('UPSTREAM_DYNAMIC_DESTINATION_PARAMETERS:PASS');
+		final path = root + '/Main.hx';
+		final module = new ResolvedModule('Main', path, ParserStage.parse(sys.io.File.getContent(path), path));
+		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final projection = typed.getBackendProjection();
+		final observations:Array<String> = [];
+		for (fn in projection.findClass(HxModuleDecl.getMainClass(projection.getDeclaration())).getFunctions())
+			for (parameter in fn.getParameters())
+				observations.push(HxFunctionDecl.getName(fn.getDeclaration()) + '.' + parameter.getBinding().getSourceName() + '='
+					+ parameter.getBinding().getType().getDisplay());
+		observations.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		if (observations.join('\n') + '\n' != expected)
+			throw 'local Dynamic-destination parameter facts differ: ' + observations.join(', ');
+		Sys.println('LOCAL_DYNAMIC_DESTINATION_PARAMETERS:PASS');
+	}
+
 	static function main():Void {
+		dynamicDestinations();
 		final intType = TyType.fromHintText('Int');
 		final lengthType = TyType.anonymous(['length'], [intType]);
 		var failures = 0;
