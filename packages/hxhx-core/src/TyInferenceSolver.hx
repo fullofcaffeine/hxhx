@@ -81,6 +81,30 @@ class TyInferenceSolver {
 		return allocate(null, UntypedResult);
 	}
 
+	/** A hint-free cast owns its result constraints independently of its checked operand. */
+	public function freshUncheckedCastResult():TyInferenceTerm {
+		return allocate(null, UncheckedCastResult);
+	}
+
+	/** Only authored cast results and their projected fields may infer a new callable shape. */
+	public function isUncheckedCastResult(term:TyInferenceTerm):Bool {
+		assertOwned(term);
+		return switch term {
+			case Variable(identity): identity.kind == UncheckedCastResult;
+			case _: false;
+		};
+	}
+
+	/** A call through a cast-owned field shares that field's inferred result variable. */
+	public function uncheckedCallResult(term:TyInferenceTerm):Null<TyInferenceTerm> {
+		if (!isUncheckedCastResult(term))
+			return null;
+		return switch follow(term) {
+			case Function(_, result, _): result;
+			case _: null;
+		};
+	}
+
 	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>, kind:TyInferenceVariableKind = Required):TyInferenceTerm {
 		requireMutable();
 		final identity = new TyInferenceVariable(owner, variables.length, openMethodParameter, kind);

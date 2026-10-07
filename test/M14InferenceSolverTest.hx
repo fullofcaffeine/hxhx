@@ -17,6 +17,32 @@ class M14InferenceSolverTest {
 		check(rejected, "missing inference rejection: " + message);
 	}
 
+	/** Cast results are independent, source-owned variables; checked operands retain their original facts. */
+	static function castResultOwnership():Void {
+		final environment = new TyFunctionEnv("cast-result", [], [], TyType.unknown(), TyType.unknown());
+		final inference = environment.getInference();
+		final operand:HxExpr = EIdent("value");
+		final first:HxExpr = ECast(operand, "");
+		final second:HxExpr = ECast(operand, "");
+		final integer = TyType.fromHintText("Int");
+		final string = TyType.fromHintText("String");
+		check(inference.uncheckedCastResult(first).isUnknown(), "cast borrowed its operand type");
+		check(inference.constrain([first], [integer], environment, null), "cast lost its destination constraint");
+		check(inference.uncheckedCastResult(second).isUnknown(), "separate cast borrowed an earlier solution");
+		check(inference.constrain([second], [string], environment, null), "independent cast shared a result variable");
+		check(inference.sourceTerm(operand, environment) == null, "cast result constrained its operand");
+		rejects(() -> inference.uncheckedCastResult(ECast(operand, "Int")), "hint-free");
+		final arguments:Array<HxExpr> = [];
+		final mutated:HxExpr = ECast(ECall(EIdent("load"), arguments), "");
+		inference.uncheckedCastResult(mutated);
+		arguments.push(EInt(7));
+		rejects(() -> inference.uncheckedCastResult(mutated), "source changed");
+		arguments.pop();
+		inference.seal([]);
+		check(inference.uncheckedCastResult(first).getSemanticKey() == integer.getSemanticKey(), "sealed cast lost its result");
+		rejects(() -> inference.uncheckedCastResult(ECast(operand, "")), "absent from sealed");
+	}
+
 	/** Retained argument evidence cannot be borrowed by another declaration or equal-looking source node. */
 	static function receiverCallOwnership():Void {
 		final source = "class Box<T> { public function take(value:T):Void {} public function other(value:T):Void {} public function read():T return null; } class Main {}";
@@ -348,6 +374,7 @@ class M14InferenceSolverTest {
 	}
 
 	static function main():Void {
+		castResultOwnership();
 		nullableInputContracts();
 		receiverCallOwnership();
 		emptyArrayContracts();

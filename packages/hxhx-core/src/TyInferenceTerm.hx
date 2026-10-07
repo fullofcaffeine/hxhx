@@ -15,11 +15,12 @@ enum TyInferenceTerm {
 	Structure(fields:Array<TyInferenceTerm>, signature:TyType);
 }
 
-/** Distinguish missing input annotations from operation results that can acquire a Dynamic carrier. */
+/** Keep omitted inputs, untyped syntax, and unchecked cast result constraints distinct. */
 enum TyInferenceVariableKind {
 	Required;
 	OmittedInput;
 	UntypedResult;
+	UncheckedCastResult;
 }
 
 /** Identity is object-owned, so unrelated solvers cannot forge equal variables by name. */
@@ -29,7 +30,7 @@ class TyInferenceVariable {
 	public final ordinal:Int;
 	public final openMethodParameter:Null<TyOpenMethodParameterId>;
 
-	/** Omitted inputs, explicitly untyped results, and their projections may retain missing evidence. */
+	/** Omitted inputs, untyped or cast results, and their projections may retain missing evidence. */
 	public final allowsUnknown:Bool;
 
 	public final kind:TyInferenceVariableKind;

@@ -6,7 +6,7 @@ private typedef InferredOccurrence = {
 	final expression:HxExpr;
 	final term:TyInferenceTerm;
 	final ?methodSignature:TyFunSig;
-	final ?callFingerprint:String;
+	final ?sourceFingerprint:String;
 	final ?callDeclarationKey:String;
 }
 
@@ -95,7 +95,7 @@ class TyFunctionInference {
 		occurrences.push({
 			expression: source,
 			term: TyInferenceSubstitution.apply(result, bindings),
-			callFingerprint: TypedBodyFingerprint.exactExpression(source),
+			sourceFingerprint: TypedBodyFingerprint.exactExpression(source),
 			callDeclarationKey: declaration.getIdentity().getCanonicalKey()
 		});
 	}
@@ -180,10 +180,15 @@ class TyFunctionInference {
 			slots:Array<TyCallAlignment.TyCallArgumentSlot>, environment:TyFunctionEnv, index:TyperIndex):Void {
 		if (solver.isSealed())
 			throw "callback alignment is absent from sealed inference";
+		// A cast-owned callable still shares its result variable with later uses.
+		// Freezing its current Unknown preview here would discard those constraints.
+		final original = sourceTerm(callee, environment);
+		final callable = original != null
+			&& solver.isUncheckedCastResult(original) ? original : TyInferenceSolver.fromType(signature.getFunctionType());
 		capturedCalls = capturedCalls.filter(call -> call.callee != callee);
 		capturedCalls.push({
 			callee: callee,
-			callable: TyInferenceSolver.fromType(signature.getFunctionType()),
+			callable: callable,
 			arguments: arguments.copy(),
 			terms: [
 				for (argument in arguments)
@@ -241,8 +246,8 @@ class TyFunctionInference {
 	function occurrence(expression:HxExpr):Null<TyInferenceTerm> {
 		for (entry in occurrences)
 			if (entry.expression == expression) {
-				if (entry.callFingerprint != null && entry.callFingerprint != TypedBodyFingerprint.exactExpression(expression))
-					throw "receiver result source changed during inference";
+				if (entry.sourceFingerprint != null && entry.sourceFingerprint != TypedBodyFingerprint.exactExpression(expression))
+					throw "inferred result source changed during inference";
 				return entry.term;
 			}
 		return null;
@@ -260,6 +265,46 @@ class TyFunctionInference {
 		return solver.isSealed() ? solver.published(term) : solver.preview(term);
 	}
 
+	/** Retain a cast's result through aliases and field requirements without constraining its operand. */
+	public function uncheckedCastResult(expression:HxExpr):TyType {
+		if (!expression.match(ECast(_, "")))
+			throw "unchecked cast inference requires an authored hint-free cast";
+		var term = occurrence(expression);
+		if (term == null) {
+			if (solver.isSealed())
+				throw "unchecked cast result is absent from sealed inference";
+			term = solver.freshUncheckedCastResult();
+			occurrences.push({expression: expression, term: term, sourceFingerprint: TypedBodyFingerprint.exactExpression(expression)});
+		}
+		return solver.isSealed() ? solver.published(term) : solver.preview(term);
+	}
+
+	/** Resolve only a cast-owned field; ordinary missing fields gain no call permission. */
+	public function isUncheckedCallable(expression:HxExpr, environment:TyFunctionEnv):Bool {
+		final term = sourceTerm(expression, environment);
+		return term != null && solver.isUncheckedCastResult(term);
+	}
+
+	/** Infer one fixed-arity callable from checked operands without revisiting their expressions. */
+	public function constrainUncheckedCallable(expression:HxExpr, arguments:Array<HxExpr>, actual:Array<TyType>, environment:TyFunctionEnv):Void {
+		final term = sourceTerm(expression, environment);
+		if (solver.isSealed() || term == null || !solver.isUncheckedCastResult(term) || !solver.preview(term).isUnknown())
+			return;
+		if (arguments.filter(argument -> argument.match(ECall(EIdent("__hxhx_spread"), [_]))).length > 0)
+			return;
+		final inputs = [
+			for (index in 0...arguments.length) {
+				final existing = sourceTerm(arguments[index], environment);
+				existing == null ? TyInferenceSolver.fromType(actual[index]) : existing;
+			}
+		];
+		final candidate = solver.fork();
+		final result = candidate.freshUncheckedCastResult();
+		if (!candidate.constrain(term, Function(inputs, result, TyType.functionType(actual, TyType.unknown()))))
+			throw "unchecked callable conflicts with its inferred shape";
+		solver.commit(candidate);
+	}
+
 	/** Query the sealed input origin, including retained aliases, without inventing evidence for an arbitrary Unknown value. */
 	public function isUnresolvedInput(expression:HxExpr, environment:TyFunctionEnv):Bool {
 		if (!solver.isSealed())
@@ -271,6 +316,10 @@ class TyFunctionInference {
 	/** Resolve initializer provenance before its new local becomes visible. */
 	public function sourceTerm(expression:HxExpr, environment:TyFunctionEnv):Null<TyInferenceTerm> {
 		return switch expression {
+			case ECall(callee, _):
+				final recorded = occurrence(expression);
+				final callable = recorded == null ? sourceTerm(callee, environment) : null;
+				recorded != null ? recorded : callable == null ? null : solver.uncheckedCallResult(callable);
 			case EParenthesized(inner, _) | EPrivateAccess(inner, _): sourceTerm(inner, environment);
 			case EIdent(name):
 				final symbol = environment.resolveSymbol(name);

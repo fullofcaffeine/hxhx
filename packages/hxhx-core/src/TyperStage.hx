@@ -1907,7 +1907,7 @@ class TyperStage {
 				return inferSourceFunctionType(callee, facts, body, defaults, scope, ctx, sourcePosition, context).getFunctionReturn();
 			case _:
 		}
-		final calleeType = selectedCallable == null ? inferExprType(callee, scope, ctx, pos) : selectedCallable;
+		var calleeType = selectedCallable == null ? inferExprType(callee, scope, ctx, pos) : selectedCallable;
 		final argumentTypes = [
 			for (argument in args)
 				switch (argument) {
@@ -1917,6 +1917,13 @@ class TyperStage {
 						inferExprType(argument, scope, ctx, pos);
 				}
 		];
+		scope.getInference().constrainUncheckedCallable(callee, args, argumentTypes, scope);
+		calleeType = scope.getInference().expressionType(callee, calleeType, scope);
+		if (scope.getInference().isUncheckedCallable(callee, scope)
+			&& !calleeType.isUnknown()
+			&& !calleeType.isDynamic()
+			&& !calleeType.isFunction())
+			throw new TyperError(ctx.getFilePath(), pos, "Inferred cast value " + calleeType.getDisplay() + " cannot be called");
 		final captured = scope.getInference()
 			.callCaptured(callee, args, argumentTypes, scope, ctx.getIndex(),
 				(expected, supplied) -> overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0);
@@ -2805,6 +2812,9 @@ class TyperStage {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
 									final structural = TyStructuralFieldRead.resolve(objTy, field);
+									if (scope.getInference().isUncheckedCallable(callee, scope))
+										return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult,
+											structural == null ? TyType.unknown() : structural);
 									if (structural != null && (structural.isFunction() || structural.isDynamic()))
 										return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
 									final idx = ctx.getIndex();
@@ -2853,6 +2863,9 @@ class TyperStage {
 								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
 								final structural = TyStructuralFieldRead.resolve(objTy, field);
+								if (scope.getInference().isUncheckedCallable(callee, scope))
+									return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult,
+										structural == null ? TyType.unknown() : structural);
 								if (structural != null && (structural.isFunction() || structural.isDynamic()))
 									return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
 								final idx = ctx.getIndex();
@@ -3367,15 +3380,17 @@ class TyperStage {
 				}
 				// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
 				TyType.fromHintText("Dynamic");
-			case ECast(expr, typeHint): final hinted = typeFromHintInContext(typeHint, ctx, scope); final inner = switch (expr) {
+			case ECast(operand, typeHint):
+				final hinted = typeFromHintInContext(typeHint, ctx, scope);
+				final inner = switch (operand) {
 					case ELambda(names, body, signature) if (hinted.isFunction() && hinted.getFunctionArguments().length == names.length):
 						inferLambdaType(names, body, hinted.getFunctionArguments(), scope, ctx, pos, signature);
 					case ESourceFunction(facts, body, defaults, sourcePosition):
-						inferSourceFunctionType(expr, facts, body, defaults, scope, ctx, sourcePosition, hinted);
-					case _: inferExprType(expr, scope, ctx, pos);
+						inferSourceFunctionType(operand, facts, body, defaults, scope, ctx, sourcePosition, hinted);
+					case _: inferExprType(operand, scope, ctx, pos);
 				}; // An unchecked cast changes the result's contextual type, never the operand's type.
 				// Written cast hints retain their own contract, independently of the destination.
-				typeHint.length == 0 && expectedResult != null && !expectedResult.isUnknown() ? expectedResult : hinted.isUnknown() ? inner : hinted;
+				typeHint.length == 0 ? scope.getInference().uncheckedCastResult(expr) : hinted.isUnknown() ? inner : hinted;
 			case EUntyped(inner):
 				scope.withUntyped(() -> inferExprType(inner, scope, ctx, pos));
 				// The wrapper has its own result variable, even when its operand has
