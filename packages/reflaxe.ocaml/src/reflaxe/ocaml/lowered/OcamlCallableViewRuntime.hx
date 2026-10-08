@@ -15,10 +15,15 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 	stored callback cannot borrow a helper permission from an unrelated call.
 **/
 function occurrences(decision:OcamlCallableViewLocalDecision):Array<OcamlRuntimeUseOccurrence> {
-	reflaxe.ocaml.lowered.OcamlCallableViewContract.requireDecision(decision);
+	return valueOccurrences(reflaxe.ocaml.lowered.OcamlCallableViewContract.operation(decision));
+}
+
+/** Returns and writes share conversion helpers while retaining their distinct occurrence owners. */
+function valueOccurrences(decision:OcamlCallableValueOperation):Array<OcamlRuntimeUseOccurrence> {
+	reflaxe.ocaml.lowered.OcamlCallableValueOperation.requireOperation(decision);
 	final revision = OcamlRuntimeUseModel.planRevision(decision.binding);
 	final result:Array<OcamlRuntimeUseOccurrence> = [];
-	for (helper in reflaxe.ocaml.lowered.OcamlGenericCallConversion.runtimeHelpers(decision.conversion, "callback-write")) {
+	for (helper in reflaxe.ocaml.lowered.OcamlGenericCallConversion.runtimeHelpers(decision.conversion, decision.role)) {
 		result.push({
 			id: '${decision.id}:runtime-use:${helper.role}',
 			planRevision: revision,
@@ -42,8 +47,13 @@ function occurrences(decision:OcamlCallableViewLocalDecision):Array<OcamlRuntime
 
 /** Packaging receives the same exact helper inventory that syntax must consume. */
 function requirements(decision:OcamlCallableViewLocalDecision):Array<OcamlRuntimeRequirement> {
+	return valueRequirements(reflaxe.ocaml.lowered.OcamlCallableViewContract.operation(decision));
+}
+
+/** Packaging and syntax consume the same inventory for each value operation. */
+function valueRequirements(decision:OcamlCallableValueOperation):Array<OcamlRuntimeRequirement> {
 	return [
-		for (use in occurrences(decision))
+		for (use in valueOccurrences(decision))
 			{
 				id: use.requirementId,
 				sourceKind: HaxeExpression,
@@ -59,7 +69,7 @@ function requirements(decision:OcamlCallableViewLocalDecision):Array<OcamlRuntim
 				implementationFeature: "haxe-boolean-carrier-v1",
 				rootModules: ["HxRuntime"],
 				profileEligibility: use.profileEligibility.copy(),
-				explanation: "The callback write selects a Boolean argument or result adapter that preserves null and keeps Bool distinct from Int."
+				explanation: decision.role == LocalWrite ? "The callback write selects a Boolean argument or result adapter that preserves null and keeps Bool distinct from Int." : "The callback return selects a Boolean argument or result adapter that preserves null and keeps Bool distinct from Int."
 			}
 	];
 }

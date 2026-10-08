@@ -128,6 +128,24 @@ function localReferences(decision:OcamlCallableViewLocalDecision):Array<OcamlLoc
 	};
 }
 
+/** Share value syntax only after the local contract validates its real storage references. */
+function operation(decision:OcamlCallableViewLocalDecision):OcamlCallableValueOperation {
+	final selected = copy(decision);
+	return {
+		id: selected.id,
+		role: LocalWrite,
+		source: selected.source,
+		binding: selected.binding,
+		origin: switch (selected.input) {
+			case ExistingView(_): null;
+			case RawOrigin(kind): kind;
+		},
+		inputLayout: selected.inputLayout,
+		outputLayout: selected.outputLayout,
+		conversion: selected.conversion
+	};
+}
+
 private function copyInput(input:OcamlCallableViewInput):OcamlCallableViewInput {
 	return switch (input) {
 		case ExistingView(reference): ExistingView(copyReference(reference));
@@ -136,16 +154,7 @@ private function copyInput(input:OcamlCallableViewInput):OcamlCallableViewInput 
 }
 
 private function isScalarArrow(shape:OcamlGenericValueShape):Bool {
-	function scalar(value:OcamlGenericValueShape):Bool {
-		return switch (value) {
-			case Integer, Boolean, Text(_), NullableInteger, NullableBoolean, DynamicValue: true;
-			case _: false;
-		};
-	}
-	return switch (shape) {
-		case FunctionValue(arguments, result): Lambda.foreach(arguments, scalar) && (result == EffectOnly || scalar(result));
-		case _: false;
-	};
+	return reflaxe.ocaml.lowered.OcamlCallableValueOperation.isScalarArrow(shape);
 }
 
 private function requireReference(reference:OcamlLocalRepresentationReference, layout:OcamlCallableViewDescriptor):Void {

@@ -75,6 +75,55 @@ class OcamlCallableViewSyntaxTest {
 		return ELet("direct", produced, ESeq([invokeInt("direct"), printBool(equal(EIdent("direct"), EIdent("source")))]), false);
 	}
 
+	/** Return emission uses the same value adapter as local writes, with separate source ownership. */
+	static function returnValue(decision:reflaxe.ocaml.lowered.OcamlCallableReturnContract.OcamlCallableReturnDecision, value:OcamlExpr):OcamlExpr {
+		final operation = reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(decision);
+		final runtime = new reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority();
+		runtime.beginProgram(decision.binding.programRevision, "portable");
+		return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+			operation: operation,
+			value: value,
+			fresh: fresh,
+			profile: "portable",
+			requirements: reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueRequirements(operation),
+			finalRuntimeUses: runtime
+		});
+	}
+
+	/** Literal returns allocate once; parameter and call-result returns preserve the producer's token. */
+	static function returnedValues():OcamlExpr {
+		final declared = EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1))));
+		final bindings:Array<{name:String, value:OcamlExpr}> = [
+			{name: "return_declared", value: declared},
+			{
+				name: "return_literal",
+				value: EFun([PConst(CUnit)], returnValue(CheckOcamlCallableReturnPlan.selected("literal"), withEffect("return-producer", declared)))
+			},
+			{name: "return_preserve", value: EFun([PVar("callback")], returnValue(CheckOcamlCallableReturnPlan.selected("preserve"), EIdent("callback")))},
+			{
+				name: "return_static",
+				value: EFun([PConst(CUnit)], returnValue(CheckOcamlCallableReturnPlan.selected("staticCallback"), EIdent("return_declared")))
+			},
+			{name: "return_forward", value: EFun([PConst(CUnit)], returnValue(CheckOcamlCallableReturnPlan.selected("forwarded"), unitCall("return_literal")))},
+			{name: "return_first", value: unitCall("return_literal")},
+			{name: "return_second", value: unitCall("return_literal")},
+			{name: "return_preserved", value: call("return_preserve", [EIdent("return_first")])},
+			{name: "return_forwarded", value: unitCall("return_forward")}
+		];
+		var body = ESeq([
+			unitCall("Gc.full_major"),
+			printBool(equal(EIdent("return_first"), EIdent("return_second"))),
+			printBool(equal(EIdent("return_preserved"), EIdent("return_first"))),
+			printBool(equal(unitCall("return_static"), unitCall("return_static"))),
+			printBool(equal(EIdent("return_forwarded"), unitCall("return_forward"))),
+			print(call("string_of_int", [EApp(viewInvocation(EIdent("return_forwarded")), [EConst(CInt(7))])]))
+		]);
+		var index = bindings.length;
+		while (index-- > 0)
+			body = ELet(bindings[index].name, bindings[index].value, body, false);
+		return body;
+	}
+
 	static function equal(left:OcamlExpr, right:OcamlExpr):OcamlExpr {
 		return compareViews(left, right, (left, right) -> EBinop(PhysEq, left, right), fresh);
 	}
@@ -186,7 +235,8 @@ class OcamlCallableViewSyntaxTest {
 			higherOrder(),
 			literalOrigins(),
 			tokenLifetime(),
-			directProducer()
+			directProducer(),
+			returnedValues()
 		]);
 		final type = CheckOcamlCallableViewConversions.selectedCarrier("source");
 		final bindings:Array<{name:String, value:OcamlExpr}> = [
@@ -223,7 +273,7 @@ class OcamlCallableViewSyntaxTest {
 		sys.FileSystem.createDirectory(root);
 		sys.io.File.saveContent(root + "/main.ml", "let () = " + new OcamlASTPrinter().printExpr(program()) + "\n");
 		run(["ocamlopt", "-o", root + "/main.exe", root + "/main.ml"]);
-		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\ntrue\ntrue\nfalse\nfalse\n8\n8\ntrue\nfalse\n7\ntrue\n";
+		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\ntrue\ntrue\nfalse\nfalse\n8\n8\ntrue\nfalse\n7\ntrue\nreturn-producer\nreturn-producer\nreturn-producer\nfalse\ntrue\ntrue\nreturn-producer\nfalse\n8\n";
 		final actual = run([root + "/main.exe"]);
 		if (actual != expected)
 			throw "callable view behavior differs\nexpected:\n" + expected + "actual:\n" + actual;

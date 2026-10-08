@@ -1,4 +1,16 @@
 -cp packages/reflaxe.ocaml/src
+-cp test
+-main OcamlCallableReturnContractTest
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-lib reflaxe
+-cp test
+-cp test/fixtures/stage3_stored_callback_views
+-main OcamlCallableProgramSelectionTest
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
 -lib reflaxe
 -cp test
 -cp test/fixtures/stage3_stored_callback_views
