@@ -219,7 +219,7 @@ jobs:
       - name: Build pinned formatter
         run: npm run setup:formatter
       - name: Run guardrails
-        run: npm run ci:guards
+        run: npm run ci:guards:core
       - name: Prove standalone reflaxe.ocaml package install
         run: npm run test:reflaxe-ocaml:package-install
       - name: Upload standalone reflaxe.ocaml package evidence
@@ -241,6 +241,94 @@ jobs:
         run: npm run test:hxhx:reflaxe-server-routing
       - name: Validate hxhx direct-flag CLI contract
         run: npm run test:hxhx:cli-contract
+
+  standalone-guards:
+    name: Standalone target / ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q1 == 'true' }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - script: test:reflaxe-ocaml:doctor
+            label: Doctor and tooling
+          - script: test:reflaxe-ocaml:target-reuse-contract
+            label: Target reuse contract
+          - script: test:reflaxe-ocaml:complete-program-server
+            label: Complete-program server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Install OCaml toolchain for standalone target
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          # These packages come from Ubuntu. Unrelated preinstalled repositories
+          # must not block compiler checks when their package indexes are broken.
+          test -s /etc/apt/sources.list.d/ubuntu.sources
+          apt_sources=(
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources
+            -o Dir::Etc::sourceparts=/dev/null
+          )
+          retry_apt sudo apt-get "${apt_sources[@]}" update
+
+          dune_candidate="$(apt-cache "${apt_sources[@]}" policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get "${apt_sources[@]}" install -y ocaml ocaml-findlib "${dune_pkg}"
+          dune --version
+          ocamlc -version
+          ocamlfind ocamlc -version
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Run independent standalone target checks
+        run: npm run "${{ matrix.script }}"
 
   stage0-free-smoke:
     name: Stage0-free smoke
@@ -689,7 +777,7 @@ jobs:
     name: Tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [route, secret-scan, guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards, hxhx-e2e]
+    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards, hxhx-e2e]
     timeout-minutes: 5
     steps:
       - name: Checkout

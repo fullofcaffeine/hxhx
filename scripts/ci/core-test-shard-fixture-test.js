@@ -50,13 +50,13 @@ function requireIncludes(content, snippet, label) {
 /** Independent runners consume routing outputs; final aggregation still owns guard enforcement. */
 function checkIndependentJobStarts(workflow) {
   const lines = workflow.split('\n')
-  for (const job of ['stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards', 'hxhx-e2e']) {
+  for (const job of ['standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards', 'hxhx-e2e']) {
     const start = lines.indexOf(`  ${job}:`)
     if (start < 0) throw new Error(`missing independent job ${job}`)
     let end = start + 1
     while (end < lines.length && !/^  [a-z][a-z0-9-]*:$/.test(lines[end])) end++
     const block = lines.slice(start, end).join('\n')
-    const tier = job === 'hxhx-e2e' ? 'q3' : 'q2'
+    const tier = job === 'standalone-guards' ? 'q1' : job === 'hxhx-e2e' ? 'q3' : 'q2'
     if (!block.includes('    needs: [route]\n') || block.includes('needs.guards')) {
       throw new Error(`${job} must start after routing without waiting for guards`)
     }
@@ -72,6 +72,7 @@ function main() {
 
   const expectedAggregateJobs = [
     'guards',
+    'standalone-guards',
     'stage0-free-smoke',
     'js-native-smoke',
     'plugin-matrix',
@@ -103,6 +104,7 @@ function main() {
   }
   const expectedJobMinimumTiers = {
     guards: 'Q1',
+    'standalone-guards': 'Q1',
     'stage0-free-smoke': 'Q2',
     'js-native-smoke': 'Q2',
     'plugin-matrix': 'Q2',
@@ -153,7 +155,22 @@ function main() {
     packageJson.scripts['test:ci:shard'].includes('scripts/hxhx/with-heavy-run-lease.js'),
     'package.json test:ci:shard must use the cooperative local lease wrapper'
   )
-  requireIncludes(packageJson.scripts['ci:guards'], 'guard:core-test-shards', 'package.json scripts.ci:guards')
+  requireIncludes(packageJson.scripts['ci:guards:core'], 'guard:core-test-shards', 'package.json scripts.ci:guards:core')
+  assert(
+    packageJson.scripts['ci:guards'] === 'npm run ci:guards:core && npm run ci:guards:standalone',
+    'local guard aggregate must retain both required CI groups exactly once'
+  )
+  const standaloneCommands = [
+    'test:reflaxe-ocaml:doctor',
+    'test:reflaxe-ocaml:target-reuse-contract',
+    'test:reflaxe-ocaml:complete-program-server'
+  ]
+  assert(JSON.stringify(parseAggregateCommands(packageJson, 'ci:guards:standalone')) === JSON.stringify(standaloneCommands),
+    'local standalone aggregate must retain all three independent commands exactly once')
+  for (const command of standaloneCommands) {
+    assert(!packageJson.scripts['ci:guards:core'].split(/\s*&&\s*/).includes(`npm run ${command}`),
+      `core guards must not repeat ${command}`)
+  }
 
   const workflowSource = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflowSource, 'Upload shared macro-host evidence', '.github/workflows/ci.yml')
@@ -224,7 +241,7 @@ function main() {
   )
   assert(
     JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q2')) ===
-      JSON.stringify(['guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards']),
+      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards']),
     'Q2 job boundary changed'
   )
   assert(
@@ -286,7 +303,7 @@ function main() {
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
-  assert(aggregateQ2.stdout.includes('required=5 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+  assert(aggregateQ2.stdout.includes('required=6 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
 
   const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
@@ -306,6 +323,7 @@ function main() {
 
   const q1Needs = structuredClone(q0Needs)
   q1Needs.guards.result = 'success'
+  q1Needs['standalone-guards'].result = 'success'
   const aggregateQ1 = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
     CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q1Needs }),
@@ -313,19 +331,21 @@ function main() {
   })
   assert(aggregateQ1.status === 0, `aggregate CLI rejected policy-authorized Q1 skips\n${aggregateQ1.stderr}`)
 
-  // Successful independent tests cannot hide a required guard outcome at any tier.
-  for (const tier of ['Q1', 'Q2', 'Q3', 'Q4']) {
-    for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
-      const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
-      if (result === 'missing') delete needs.guards
-      else needs.guards.result = result
-      const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
-        ...process.env,
-        CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
-        CORE_TEST_QA_TIER: tier
-      })
-      assert(rejected.status !== 0, `${tier} aggregate accepted guards=${result} with successful tests`)
-      assert(rejected.stderr.includes(`required job guards result=${result}`), `${tier} lost the guard failure reason`)
+  // Every Q1 guard owner must succeed, even when all other independent jobs pass.
+  for (const job of ['guards', 'standalone-guards']) {
+    for (const tier of ['Q1', 'Q2', 'Q3', 'Q4']) {
+      for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
+        const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
+        if (result === 'missing') delete needs[job]
+        else needs[job].result = result
+        const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
+          ...process.env,
+          CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
+          CORE_TEST_QA_TIER: tier
+        })
+        assert(rejected.status !== 0, `${tier} aggregate accepted ${job}=${result} with successful tests`)
+        assert(rejected.stderr.includes(`required job ${job} result=${result}`), `${tier} lost the guard failure reason`)
+      }
     }
   }
 
@@ -340,6 +360,17 @@ function main() {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflow, '  route:\n    name: QA risk route', 'Core workflow')
   requireIncludes(workflow, '  test-shards:', 'Core workflow')
+  const coreGuardBlock = workflow.slice(workflow.indexOf('  guards:'), workflow.indexOf('  standalone-guards:'))
+  const serverGuardBlock = workflow.slice(workflow.indexOf('  standalone-guards:'), workflow.indexOf('  stage0-free-smoke:'))
+  requireIncludes(coreGuardBlock, 'run: npm run ci:guards:core', 'core guard command')
+  const matrixCommands = [...serverGuardBlock.matchAll(/- script: ([^\s]+)/g)].map(match => match[1])
+  assert(JSON.stringify(matrixCommands) === JSON.stringify(standaloneCommands),
+    'standalone guard matrix must execute every local standalone command exactly once')
+  requireIncludes(serverGuardBlock, 'run: npm run "${{ matrix.script }}"', 'standalone matrix command')
+  requireIncludes(serverGuardBlock, 'fail-fast: false', 'independent standalone matrix outcomes')
+  requireIncludes(serverGuardBlock, 'timeout-minutes: 60', 'bounded server job')
+  assert(!coreGuardBlock.includes('run: npm run ci:guards\n'), 'core CI must not repeat the local full aggregate')
+  assert(!serverGuardBlock.includes('run: npm run ci:guards'), 'server job must not repeat core guards')
   checkIndependentJobStarts(workflow)
   expectThrow(
     () => checkIndependentJobStarts(workflow.replace(
