@@ -17,8 +17,11 @@ node_modules/.bin/haxe -cp test/fixtures/stage3_stored_callback_views --run Main
 ```
 
 The expected output is in `expected.stdout`. The native regression runs through
-`test/m14_dynamic_callable_conversion_test.hxml`. It parses and types the same
-source, generates OCaml, compiles it, and observes the executable output.
+`test/m14_dynamic_callable_conversion_test.hxml`. It first compiles the same
+source with standalone `reflaxe.ocaml`, requires a successful Dune build, and
+compares native output. It then parses and types that source with the Stage3
+diagnostic compiler, generates OCaml, and compares its native output too.
+Both complete source paths must pass.
 
 The same command first checks conversion selection against upstream typed
 assignments. A separate native syntax test consumes those selected conversions
