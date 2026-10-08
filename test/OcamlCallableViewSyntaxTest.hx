@@ -1,6 +1,5 @@
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
-import reflaxe.ocaml.ast.OcamlCallableViewSyntax.carrier as viewCarrier;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare as compareViews;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation as viewInvocation;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.origin as originView;
@@ -56,8 +55,7 @@ class OcamlCallableViewSyntaxTest {
 
 	/** An argument callback returned through two opposite conversions retains its origin. */
 	static function higherOrder():OcamlExpr {
-		final callback = viewCarrier(TArrow(TIdent("Obj.t"), TIdent("Obj.t")), TIdent("Obj.t"));
-		final higherType = viewCarrier(TArrow(callback, callback), TIdent("Obj.t"));
+		final higherType = CheckOcamlCallableViewConversions.selectedCarrier("higherSource");
 		final relay = EAnnot(origin(EFun([PVar("callback")], EIdent("callback"))), higherType);
 		final adapted = convertView(CheckOcamlCallableViewConversions.selectedView("higherView"), relay, "test-higher", fresh, unexpectedRuntime);
 		final number = origin(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))));
@@ -112,7 +110,7 @@ class OcamlCallableViewSyntaxTest {
 			lifetime(),
 			higherOrder()
 		]);
-		final type = viewCarrier(TArrow(TIdent("Obj.t"), TIdent("Obj.t")), TIdent("Obj.t"));
+		final type = CheckOcamlCallableViewConversions.selectedCarrier("source");
 		final bindings:Array<{name:String, value:OcamlExpr}> = [
 			{name: "source", value: EAnnot(origin(withEffect("source", identity)), type)},
 			{name: "first", value: view(withEffect("view", EIdent("source")))},

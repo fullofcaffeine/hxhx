@@ -111,6 +111,9 @@ enum abstract OcamlRepresentationValueMutationPolicy(String) from String to Stri
 
 /** Whether the Haxe value needs an additional target box or wrapper. */
 enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
+	/** A typed invocation and its originating function identity travel together. */
+	final CallableIdentityView = "callable-identity-view";
+
 	/** The carrier stores the value directly without a wrapper or Dynamic box. */
 	final DirectUnboxed = "direct-unboxed";
 

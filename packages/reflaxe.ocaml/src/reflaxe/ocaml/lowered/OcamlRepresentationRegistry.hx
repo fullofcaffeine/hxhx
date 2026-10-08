@@ -24,6 +24,10 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassDecision;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassField;
 import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.OcamlNativeEnumDescriptor;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe as describeCallableView;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.validate as validateCallableView;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
@@ -61,8 +65,61 @@ class OcamlRepresentationRegistry {
 	final representedArraysById:StringMap<OcamlRepresentedArrayDescriptor> = new StringMap();
 	final monomorphicClassesBySemanticType:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 	final monomorphicClassesById:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
+	final callableViewsByRepresentationId:StringMap<OcamlCallableViewDescriptor> = new StringMap();
 
 	public function new() {}
+
+	/**
+		Registers one closed, non-null callback layout for internal or local storage.
+
+		This describes storage only. Each producer, conversion, call and comparison
+		still needs exact occurrence evidence. No Dynamic function recovery, field,
+		container, implicit null default, or foreign ABI is authorized here.
+	**/
+	public function selectCallableView(shape:OcamlGenericValueShape, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final descriptor = describeCallableView(shape);
+		final mutation = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case _: throw "reflaxe.ocaml [ocaml-callable-view:unproved-domain]: callback storage needs a domain-specific proof";
+		};
+		final decision = register({
+			semanticTypeId: descriptor.semanticTypeId,
+			domain: domain,
+			carrierTypeId: descriptor.carrierTypeId,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: mutation,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.CallableIdentityView,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "A non-null callback view stores its typed invocation beside the originating function identity. Copies and conversions preserve that identity.",
+			proof: {
+				id: "ocaml-callable-identity-view-v1:" + descriptor.revision,
+				claim: "Every invocation argument and result has a closed scalar or nested callback carrier. Native collection owns the invocation, origin identity and captures. Occurrence plans must prove producers and all crossings."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+		callableViewsByRepresentationId.set(decision.id, descriptor);
+		return decision;
+	}
+
+	/** Resolve the exact registered layout; a type annotation alone cannot acquire this carrier. */
+	public function requireCallableView(representationId:String, representationRevision:String, programRevision:String):OcamlCallableViewDescriptor {
+		final decision = require(representationId, programRevision);
+		final descriptor = callableViewsByRepresentationId.get(representationId);
+		if (descriptor == null
+			|| decision.revision != representationRevision
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.CallableIdentityView)
+			throw "reflaxe.ocaml [ocaml-callable-view:missing-layout]: no matching callback representation was selected";
+		validateCallableView(descriptor);
+		if (decision.semanticTypeId != descriptor.semanticTypeId
+			|| decision.carrierTypeId != descriptor.carrierTypeId
+			|| decision.proof.id != "ocaml-callable-identity-view-v1:" + descriptor.revision)
+			throw "reflaxe.ocaml [ocaml-callable-view:stale-layout]: registered callback identity changed";
+		return describeCallableView(descriptor.shape);
+	}
 
 	/**
 		Registers a native enum type without admitting an arbitrary enum-typed value.
@@ -150,6 +207,7 @@ class OcamlRepresentationRegistry {
 		representedArraysById.clear();
 		monomorphicClassesBySemanticType.clear();
 		monomorphicClassesById.clear();
+		callableViewsByRepresentationId.clear();
 	}
 
 	/**

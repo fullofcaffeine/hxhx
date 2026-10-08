@@ -6,10 +6,42 @@ import reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.crossing;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.shape as genericShape;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.shapeId;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr;
 #end
 
 /** Checks ordinary callback conversion direction on the retained, upstream-typed source fixture. */
 class CheckOcamlCallableViewConversions {
+	/** Native annotations come from a registered signature rather than a test-written arrow type. */
+	public static macro function selectedCarrier(localName:String):haxe.macro.Expr {
+		final owner = switch (Context.getType("Main")) {
+			case TInst(reference, []): reference.get();
+			case _: throw "missing stored callback fixture";
+		};
+		final body = owner.statics.get().filter(field -> field.name == "main")[0].expr();
+		var selected:Null<reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape> = null;
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, _) if (local.name == localName):
+					selected = callableShape(local.t);
+				case _:
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		if (body != null)
+			visit(body);
+		if (selected == null)
+			throw "fixture callback signature was not selected";
+		final registry = new OcamlRepresentationRegistry();
+		registry.beginProgram("callable-view-fixture");
+		final decision = registry.selectCallableView(selected, InternalValue);
+		final descriptor = registry.requireCallableView(decision.id, decision.revision, "callable-view-fixture");
+		return Context.makeExpr(typeExpr(descriptor), Context.currentPos());
+	}
+
 	/** Supplies the exact fixture assignment's selected conversion to the native syntax test. */
 	public static macro function selectedView(localName:String):haxe.macro.Expr {
 		final owner = switch (Context.getType("Main")) {
@@ -97,7 +129,73 @@ class CheckOcamlCallableViewConversions {
 		checkConversion(macro :Dynamic->Dynamic, macro :Null<Bool>->Null<Bool>, "AdaptFunction([BoxNullableBoolean],UnboxNullableBoolean)");
 		checkConversion(macro :Int->Int, macro :String->Int, "null");
 		checkConversion(macro :Int->Int, macro :Int->Int->Int, "null");
+		checkRegistry();
 		Sys.println("OCAML_CALLABLE_VIEW_CONVERSION:PASS");
+	}
+
+	/** Program reset and copied signature mutation must not change a registered callback layout. */
+	static function checkRegistry():Void {
+		final shape = callableShape(Context.resolveType(macro :Dynamic->Dynamic, Context.currentPos()));
+		if (shape == null)
+			throw "missing callback signature";
+		final registry = new OcamlRepresentationRegistry();
+		expectRejected(() -> registry.selectCallableView(shape, InternalValue));
+		registry.beginProgram("callable-view-fixture");
+		final decision = registry.selectCallableView(shape, InternalValue);
+		final descriptor = registry.requireCallableView(decision.id, decision.revision, "callable-view-fixture");
+		if (descriptor.semanticTypeId != "(Dynamic)->Dynamic")
+			throw "callback representation changed its source signature";
+		switch (descriptor.shape) {
+			case FunctionValue(arguments, _):
+				arguments[0] = Integer;
+			case _:
+				throw "callback descriptor lost its function shape";
+		}
+		expectRejected(() -> typeExpr(descriptor));
+		if (registry.requireCallableView(decision.id, decision.revision, "callable-view-fixture").semanticTypeId != "(Dynamic)->Dynamic")
+			throw "a detached descriptor changed registry-owned storage";
+		// The caller also retains its input array after selection. Mutating it
+		// must not rewrite the registry's private signature.
+		switch (shape) {
+			case FunctionValue(arguments, _):
+				arguments[0] = Integer;
+			case _:
+				throw "callback input lost its function shape";
+		}
+		if (registry.requireCallableView(decision.id, decision.revision, "callable-view-fixture").semanticTypeId != "(Dynamic)->Dynamic")
+			throw "a caller-owned signature changed registry-owned storage";
+		for (domain in [MutableLocalStorage, CapturedLocalStorage]) {
+			final stored = registry.selectCallableView(shape, domain);
+			if (stored.storageMutationPolicy != SharedLocalCell)
+				throw "mutable callback storage lost its shared local cell";
+			if (registry.requireCallableView(stored.id, stored.revision, "callable-view-fixture").semanticTypeId != "(Int)->Dynamic")
+				throw "mutable callback storage changed its invocation signature";
+		}
+		expectRejected(() -> registry.requireCallableView(decision.id, "changed", "callable-view-fixture"));
+		expectRejected(() -> registry.requireCallableView(decision.id, decision.revision, "other-program"));
+		expectRejected(() -> registry.selectCallableView(shape, InstanceField));
+		expectRejected(() -> registry.selectCallableView(shape, ArrayElement));
+		for (unsupported in [
+			FunctionValue([EffectOnly], Integer),
+			FunctionValue([Erased("foreign|T")], Integer),
+			FunctionValue([ArrayValue(Integer)], Integer)
+		])
+			expectRejected(() -> describe(unsupported));
+		registry.beginProgram("next-program");
+		expectRejected(() -> registry.requireCallableView(decision.id, decision.revision, "callable-view-fixture"));
+		expectRejected(() -> registry.requireCallableView(decision.id, decision.revision, "next-program"));
+		Sys.println("OCAML_CALLABLE_VIEW_REPRESENTATION:PASS");
+	}
+
+	static function expectRejected(action:Void->Void):Void {
+		try {
+			action();
+		} catch (error:haxe.Exception) {
+			if (error.message.indexOf("reflaxe.ocaml [ocaml-") == 0)
+				return;
+			throw error;
+		}
+		throw "unproved callback representation was accepted";
 	}
 
 	/** Function arguments reverse direction while the result keeps source-to-destination direction. */
