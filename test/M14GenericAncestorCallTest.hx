@@ -1,6 +1,7 @@
 /** Inherited generic arguments must constrain calls and results without erasing the operand type. */
 class M14GenericAncestorCallTest {
 	static function main():Void {
+		M14InheritedArrayReadTest.check();
 		final prefix = "class Base<T> {public function new(){}} class Child<T> extends Base<T> {} class Box<T> {public function new(){}} ";
 		final cases:Array<{
 			name:String,

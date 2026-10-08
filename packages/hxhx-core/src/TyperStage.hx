@@ -3377,7 +3377,13 @@ class TyperStage {
 			case EArrayAccess(array, index):
 				final arrayType = inferExprType(array, scope, ctx, pos);
 				inferExprType(index, scope, ctx, pos);
-				final elementType = arrayElementType(arrayType);
+				var elementType = arrayElementType(arrayType.unwrapNull());
+				if (elementType == null) {
+					// Extern subclasses retain the element type of their applied Array
+					// superclass. This view does not replace the concrete receiver type.
+					final ancestor = TyNominalAncestor.view(ctx.getIndex(), arrayType.unwrapNull(), new TyNominalTypeId("Array"));
+					elementType = ancestor == null ? null : arrayElementType(ancestor);
+				}
 				// Other indexed containers remain explicit Dynamic until their access
 				// contracts are represented in the shared semantic model.
 				elementType == null ? TyType.fromHintText("Dynamic") : elementType;
