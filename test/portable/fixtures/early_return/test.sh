@@ -755,7 +755,7 @@ if (!boxesNullString
 const closureStart = source.indexOf('let nestedClosure =')
 const closureEnd = source.indexOf('\nlet nestedBoolClosure =', closureStart)
 const closureBody = source.slice(closureStart, closureEnd)
-if (!closureBody.includes('let local = fun')
+if (!/let local = let __callback_input_\d+ = fun /.test(closureBody)
 	|| !closureBody.includes('HxRuntime.Hx_return')
 	|| !closureBody.includes('Obj.repr')
 	|| !closureBody.includes('Obj.obj')
@@ -780,7 +780,7 @@ for (const [functionName, expectedType] of [
 		|| !body.includes('HxRuntime.Hx_return')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')
-		|| (functionName === 'nestedZeroArgumentClosure' && !body.includes('let local = fun () ->'))
+		|| (functionName === 'nestedZeroArgumentClosure' && !/let local = let __callback_input_\d+ = fun \(\) ->/.test(body))
 		|| !body.includes(`: ${expectedType}`)) {
 		fail(`${functionName} did not consume its represented nested return plan`)
 	}
@@ -816,16 +816,20 @@ if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v118'
 	|| dynamicBranchBody.includes('__fallback_result')) {
 	fail('dynamicBranch did not preserve its existing Dynamic Obj.t carrier through the current root return plan')
 }
+// Inspect the original lambda separately from the identity token and invocation adapter.
+function callbackLambda(body, functionName) {
+	const match = body.match(/let local = let (__callback_input_\d+) = (fun [\s\S]*?) in let __callable_origin_\d+ = \1 in/)
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${functionName}|`))
+	if (match == null || entries.length !== 1 || !/in Stdlib\.fst __call_callee_\d+ /.test(body))
+		fail(`${functionName} must retain one callback view and invoke its original lambda`)
+	return match[2]
+}
 const arrayThrowStart = source.indexOf('let nestedArrayThrowClosure =')
-const arrayThrowEnd = source.indexOf('\nlet nestedStringArrayLiteralThrowClosure =', arrayThrowStart)
+const arrayThrowEnd = source.indexOf('\nlet ', arrayThrowStart + 1)
 const arrayThrowBody = source.slice(arrayThrowStart, arrayThrowEnd)
-const arrayLocalStart = arrayThrowBody.indexOf('let local = fun')
-const arrayLocalEnd = arrayThrowBody.indexOf(' in let result =', arrayLocalStart)
-const arrayLocalBody = arrayThrowBody.slice(arrayLocalStart, arrayLocalEnd)
+const arrayLocalBody = callbackLambda(arrayThrowBody, 'nestedArrayThrowClosure')
 if (arrayThrowStart < 0
 	|| arrayThrowEnd < 0
-	|| arrayLocalStart < 0
-	|| arrayLocalEnd < 0
 	|| !arrayLocalBody.includes('HxRuntime.Hx_return')
 	|| !arrayLocalBody.includes('HxType.hx_throw_typed_rtti (Obj.repr expected) ["Dynamic"; "Array"]')
 	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : int\)/.test(arrayLocalBody)
@@ -836,16 +840,12 @@ if (arrayThrowStart < 0
 const literalThrowStart = source.indexOf('let nestedArrayLiteralThrowClosure =')
 const literalThrowEnd = source.indexOf('\nlet nestedStringArrayLiteralThrowClosure =', literalThrowStart)
 const literalThrowBody = source.slice(literalThrowStart, literalThrowEnd)
-const literalLocalStart = literalThrowBody.indexOf('let local = fun')
-const literalLocalEnd = literalThrowBody.indexOf(' : int) in (', literalLocalStart)
-const literalLocalBody = literalThrowBody.slice(literalLocalStart, literalLocalEnd)
+const literalLocalBody = callbackLambda(literalThrowBody, 'nestedArrayLiteralThrowClosure')
 const createIndex = literalLocalBody.indexOf('HxArray.create ()')
 const firstElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement')
 const secondElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement', firstElementIndex + 1)
 if (literalThrowStart < 0
 	|| literalThrowEnd < 0
-	|| literalLocalStart < 0
-	|| literalLocalEnd < 0
 	|| (literalLocalBody.match(/HxArray\.create \(\)/g) ?? []).length !== 1
 	|| (literalLocalBody.match(/arrayLiteralThrowElement/g) ?? []).length !== 2
 	|| (literalLocalBody.match(/HxArray\.push/g) ?? []).length !== 2
@@ -862,16 +862,12 @@ if (literalThrowStart < 0
 const stringLiteralThrowStart = source.indexOf('let nestedStringArrayLiteralThrowClosure =')
 const stringLiteralThrowEnd = source.indexOf('\nlet nestedNominalClosure =', stringLiteralThrowStart)
 const stringLiteralThrowBody = source.slice(stringLiteralThrowStart, stringLiteralThrowEnd)
-const stringLiteralLocalStart = stringLiteralThrowBody.indexOf('let local = fun')
-const stringLiteralLocalEnd = stringLiteralThrowBody.indexOf(' : int) in let ordinaryResult', stringLiteralLocalStart)
-const stringLiteralLocalBody = stringLiteralThrowBody.slice(stringLiteralLocalStart, stringLiteralLocalEnd)
+const stringLiteralLocalBody = callbackLambda(stringLiteralThrowBody, 'nestedStringArrayLiteralThrowClosure')
 const stringCreateIndex = stringLiteralLocalBody.indexOf('HxArray.create ()')
 const firstStringElementIndex = stringLiteralLocalBody.indexOf('stringArrayLiteralThrowElement')
 const secondStringElementIndex = stringLiteralLocalBody.indexOf('stringArrayLiteralThrowElement', firstStringElementIndex + 1)
 if (stringLiteralThrowStart < 0
 	|| stringLiteralThrowEnd < 0
-	|| stringLiteralLocalStart < 0
-	|| stringLiteralLocalEnd < 0
 	|| (stringLiteralLocalBody.match(/HxArray\.create \(\)/g) ?? []).length !== 1
 	|| (stringLiteralLocalBody.match(/stringArrayLiteralThrowElement/g) ?? []).length !== 2
 	|| (stringLiteralLocalBody.match(/HxArray\.push/g) ?? []).length !== 2
