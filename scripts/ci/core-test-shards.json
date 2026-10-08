@@ -108,6 +108,7 @@
     "test:m14:hih-compound-assign": "compiler-focused",
     "test:m14:compound-assignment-control": "compiler-focused",
     "test:m14:structural-method-binder": "compiler-focused",
+    "test:m14:dynamic-member-contract": "compiler-focused",
     "test:m14:hih-try-throw-stmt": "compiler-focused",
     "test:m14:hih-nullable-enum-branch-emit": "compiler-focused",
     "test:m14:backend-registry": "compiler-focused",

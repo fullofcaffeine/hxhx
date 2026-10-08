@@ -91,6 +91,7 @@ class TypedBackendClassSemanticFacts {
 	final isInterface:Bool;
 	final isExtern:Bool;
 	final interfaceTypes:Array<TyType>;
+	final dynamicMemberType:Null<TyType>;
 	final fields:Array<TypedBackendClassFieldFact>;
 	final methods:Array<TypedBackendClassMethodFact>;
 	final fieldIndex:haxe.ds.StringMap<TypedBackendClassFieldFact>;
@@ -114,14 +115,17 @@ class TypedBackendClassSemanticFacts {
 		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
 		isInterface = classInfo != null && classInfo.getIsInterface();
 		isExtern = classInfo != null && classInfo.getIsExtern();
-		final indexedInterfaces = classInfo == null ? [] : classInfo.getInterfaceTypes();
-		interfaceTypes = resolvedInterfaces == null ? indexedInterfaces : resolvedInterfaces.copy();
-		if (indexedInterfaces.length != interfaceTypes.length)
+		final indexedInterfaces = classInfo == null ? [] : classInfo.getDeclaredInterfaceTypes();
+		final resolvedHeader = resolvedInterfaces == null ? indexedInterfaces : resolvedInterfaces.copy();
+		if (indexedInterfaces.length != resolvedHeader.length)
 			throw "typed backend interface parent count changed for " + classIdentity;
 		for (index in 0...indexedInterfaces.length)
 			if (!hasUnresolvedHeaderType(indexedInterfaces[index])
-				&& indexedInterfaces[index].getSemanticKey() != interfaceTypes[index].getSemanticKey())
+				&& indexedInterfaces[index].getSemanticKey() != resolvedHeader[index].getSemanticKey())
 				throw "typed backend interface parent conflicts with indexed identity for " + classIdentity;
+		final relationships = TyClassRelationships.resolve(resolvedHeader, isInterface, isExtern);
+		interfaceTypes = relationships.interfaces;
+		dynamicMemberType = relationships.dynamicMemberType;
 		// This checked semantic-class boundary preserves the typed abstract carrier;
 		// targets must not recover abstract identity from its erased display name.
 		nominalKind = if (Std.isOfType(info, TyAbstractInfo)) {
@@ -176,6 +180,8 @@ class TypedBackendClassSemanticFacts {
 			requireDeclaredTypeParameters(selectedSuperType, typeParameters, "superclass " + classIdentity);
 		for (interfaceType in interfaceTypes)
 			requireDeclaredTypeParameters(interfaceType, typeParameters, "interface parent " + classIdentity);
+		if (dynamicMemberType != null)
+			requireDeclaredTypeParameters(dynamicMemberType, typeParameters, "dynamic members " + classIdentity);
 
 		fieldIndex = new haxe.ds.StringMap<TypedBackendClassFieldFact>();
 		for (field in info.getFieldInfos()) {
@@ -348,6 +354,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(superTypeDisplay);
 		identityFacts.push(isInterface ? "interface" : "non-interface");
 		identityFacts.push(isExtern ? "extern" : "generated");
+		identityFacts.push(dynamicMemberType == null ? "no-dynamic-members" : dynamicMemberType.getSemanticKey());
 		identityFacts.push(Std.string(interfaceTypes.length));
 		for (interfaceType in interfaceTypes) {
 			identityFacts.push(interfaceType.getSemanticKey());
@@ -453,6 +460,10 @@ class TypedBackendClassSemanticFacts {
 	public function getInterfaceTypes():Array<TyType>
 		return interfaceTypes.copy();
 
+	/** Exact fallback member type, separate from ordinary interface dispatch. */
+	public function getDynamicMemberType():Null<TyType>
+		return dynamicMemberType;
+
 	/** Early index observations can retain names whose provider has not loaded yet. */
 	static function hasUnresolvedHeaderType(type:TyType):Bool {
 		if (type.isUnknown() || type.isUnresolved())
@@ -470,7 +481,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v12";
+		return "typed-backend-class-semantic-facts-v13";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected

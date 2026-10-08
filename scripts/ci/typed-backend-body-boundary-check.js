@@ -164,7 +164,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v12"',
+  'return "typed-backend-class-semantic-facts-v13"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(

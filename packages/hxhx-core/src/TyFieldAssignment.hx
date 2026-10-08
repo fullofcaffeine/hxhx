@@ -3,9 +3,11 @@
 	Instance substitutions and inferred initializer types belong to expression
 	typing. This boundary reuses directional assignment and structural proofs;
 	it neither widens the field nor mutates the caller's inference state.
+	The caller supplies a diagnostic name only after resolving declared storage
+	or an extern dynamic-member contract. An absent name means neither applies.
  */
 function check(input:{
-	declaration:TyFieldInfo,
+	fieldName:Null<String>,
 	expected:TyType,
 	actual:TyType,
 	expression:HxExpr,
@@ -14,7 +16,7 @@ function check(input:{
 	position:HxPos,
 	unchecked:Bool
 }):Void {
-	if (input.declaration == null || input.unchecked || explicitlyUntyped(input.expression))
+	if (input.fieldName == null || input.unchecked || explicitlyUntyped(input.expression))
 		return;
 	// Incomplete declarations remain unresolved; they must not become concrete
 	// merely because a write supplies a convenient value.
@@ -26,7 +28,7 @@ function check(input:{
 		"assigned type "
 		+ input.actual.getDisplay()
 		+ " is not compatible with field "
-		+ input.declaration.getCanonicalKey()
+		+ input.fieldName
 		+ ":"
 		+ input.expected.getDisplay());
 }

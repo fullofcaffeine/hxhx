@@ -330,7 +330,7 @@ class TyperStage {
 		if (!isStatic) {
 			owner = ctx.instanceMethodOwner(name, owner);
 			if (owner == null)
-				return null;
+				return TyNominalApplication.dynamicMemberType(ctx.getIndex(), receiver);
 		}
 		final candidates = isStatic ? owner.staticMethodCandidates(name) : owner.instanceMethodCandidates(name);
 		if (candidates.length == 1)
@@ -463,6 +463,9 @@ class TyperStage {
 				},
 				enumSwitchCoverage: function(input, patterns, position, isCapture) {
 					return TyEnumSwitchCoverage.proves(input, patterns, context, position, isCapture);
+				},
+				isDynamicMemberWrite: function(expression, position, environment) {
+					return dynamicMemberWriteName(expression, environment, context, position) != null;
 				},
 				convertValue: function(value, expected) {
 					final classContext = TypedArrayClassContext.convert(value, expected);
@@ -2319,6 +2322,20 @@ class TyperStage {
 		};
 	}
 
+	/** Name an undeclared extern member for write diagnostics without inventing field storage. */
+	static function dynamicMemberWriteName(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<String> {
+		return switch expression {
+			case EParenthesized(inner, _): dynamicMemberWriteName(inner, scope, ctx, pos);
+			case EField(receiver, name):
+				final type = inferExprType(receiver, scope.copyForInference(), ctx, pos);
+				final owner = nominalInfoForType(ctx.getIndex(), type);
+				if (owner == null
+					|| ctx.instanceMethodOwner(name, owner) != null
+					|| TyNominalApplication.dynamicMemberType(ctx.getIndex(), type) == null) null; else owner.getIdentity().getCanonicalName() + "." + name;
+			case _: null;
+		};
+	}
+
 	/** Untyped local annotations may reinterpret complete values, but still solve compatible omitted type arguments. */
 	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		if (expected == null || !scope.isUntypedContext())
@@ -3132,8 +3149,9 @@ class TyperStage {
 						final destination = inferExprType(a, scope, ctx, pos);
 						final rhs = inferExprType(b, scope, ctx, pos, destination);
 						final assignedField = resolveFieldDeclaration(a, scope, ctx, pos);
+						final fieldName = assignedField == null ? dynamicMemberWriteName(a, scope, ctx, pos) : assignedField.getCanonicalKey();
 						TyFieldAssignment.check({
-							declaration: assignedField,
+							fieldName: fieldName,
 							expected: destination,
 							actual: rhs,
 							expression: b,
@@ -3142,7 +3160,7 @@ class TyperStage {
 							position: pos,
 							unchecked: scope.isUntypedContext()
 						});
-						if (assignedField != null)
+						if (fieldName != null)
 							return destination;
 						switch (a) {
 							case EIdent(name):

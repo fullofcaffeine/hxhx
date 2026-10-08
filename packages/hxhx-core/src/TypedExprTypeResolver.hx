@@ -26,4 +26,7 @@ typedef TypedExprTypeResolver = {
 
 	/** Materialize a selected executable conversion at a written value boundary, retaining the original typed operand. */
 	final convertValue:(value:TypedExpr, expected:TyType) -> TypedExpr;
+
+	/** Undeclared extern members have a written contract even though they own no field storage. */
+	final isDynamicMemberWrite:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Bool;
 }

@@ -11,6 +11,8 @@ class TyClassInfo extends TyNominalInfo {
 	final isInterface:Bool;
 	final isExtern:Bool;
 	final interfaceTypes:Array<TyType>;
+	final declaredInterfaceTypes:Array<TyType>;
+	final dynamicMemberType:Null<TyType>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -23,7 +25,10 @@ class TyClassInfo extends TyNominalInfo {
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
 		this.isInterface = interfaces != null && interfaces.isInterface;
 		this.isExtern = isExtern;
-		this.interfaceTypes = interfaces == null ? [] : interfaces.types.copy();
+		this.declaredInterfaceTypes = interfaces == null ? [] : interfaces.types.copy();
+		final relationships = TyClassRelationships.resolve(declaredInterfaceTypes, this.isInterface, isExtern);
+		this.interfaceTypes = relationships.interfaces;
+		this.dynamicMemberType = relationships.dynamicMemberType;
 		if (this.isInterface && superType != null)
 			throw "an interface cannot own a superclass constructor edge";
 	}
@@ -38,6 +43,14 @@ class TyClassInfo extends TyNominalInfo {
 	/** Implemented or extended interfaces, with exact applied types retained. */
 	public function getInterfaceTypes():Array<TyType>
 		return interfaceTypes.copy();
+
+	/** Complete indexed header, including markers, for final provider identity checks. */
+	public function getDeclaredInterfaceTypes():Array<TyType>
+		return declaredInterfaceTypes.copy();
+
+	/** Declared fallback for undeclared instance members; null means no local marker. */
+	public function getDynamicMemberType():Null<TyType>
+		return dynamicMemberType;
 
 	/** Exact superclass selected while the program declaration index is built. **/
 	public function getSuperType():Null<TyType>

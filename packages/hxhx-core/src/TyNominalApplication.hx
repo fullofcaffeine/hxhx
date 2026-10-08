@@ -51,6 +51,39 @@ private function receiverBindings(index:TyperIndex, owner:TyNominalInfo, receive
 	return TyTypeSubstitution.bind(parameters, applied.getTypeArguments(), identity.getCanonicalName());
 }
 
+/**
+	Find the nearest extern dynamic-member contract through applied superclasses.
+	Each edge substitutes its exact owner binders. A child marker overrides its
+	parent's marker, while declared fields and methods must be checked first.
+	Missing providers, malformed applications, and cycles cannot supply a type.
+ */
+function dynamicMemberType(index:TyperIndex, receiver:TyType):Null<TyType> {
+	if (index == null || receiver == null)
+		return null;
+	var current:Null<TyType> = receiver.unwrapNull();
+	final visited = new Array<String>();
+	while (current != null) {
+		final identity = current.getNominalIdentity();
+		if (identity == null || visited.indexOf(identity.getCanonicalName()) >= 0)
+			return null;
+		visited.push(identity.getCanonicalName());
+		final provider = index.getByFullName(identity.getCanonicalName());
+		if (!Std.isOfType(provider, TyClassInfo))
+			return null;
+		// Only a validated class declaration can own a superclass or member marker.
+		final owner:TyClassInfo = cast provider;
+		if (owner.getTypeParameterIds().length != current.getTypeArguments().length)
+			return null;
+		final bindings = TyTypeSubstitution.bind(owner.getTypeParameterIds(), current.getTypeArguments(), identity.getCanonicalName());
+		final member = owner.getDynamicMemberType();
+		if (member != null)
+			return TyTypeSubstitution.apply(member, bindings);
+		final parent = owner.getSuperType();
+		current = parent == null ? null : TyTypeSubstitution.apply(parent, bindings);
+	}
+	return null;
+}
+
 /** Nominal providers expose owner binders through their validated declaration kind. */
 function parameterIds(owner:TyNominalInfo):Array<TyTypeParameterId> {
 	// The index contains distinct declaration kinds. Narrow only after checking
