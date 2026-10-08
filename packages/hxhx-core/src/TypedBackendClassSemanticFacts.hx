@@ -668,7 +668,7 @@ class TypedBackendClassSemanticFacts {
 		final allowedKeys = new haxe.ds.StringMap<Bool>();
 		for (parameter in allowed)
 			allowedKeys.set(parameter.getCanonicalKey(), true);
-		for (parameter in TyTypeSubstitution.parameterIdentities(type))
+		for (parameter in TyTypeSubstitution.freeParameterIdentities(type))
 			if (!allowedKeys.exists(parameter.getCanonicalKey()))
 				throw "typed backend class semantic facts contain unbound type parameter " + parameter.getName() + " in " + context;
 	}

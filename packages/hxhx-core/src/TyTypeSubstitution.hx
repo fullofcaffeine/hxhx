@@ -12,35 +12,54 @@ class TyTypeSubstitution {
 	}
 
 	/** Return every exact structural type-parameter identity in deterministic order. **/
-	public static function parameterIdentities(type:TyType):Array<TyTypeParameterId> {
+	public static function parameterIdentities(type:TyType):Array<TyTypeParameterId>
+		return collectParameters(type, false);
+
+	/**
+		Return parameters that the enclosing declaration must bind. A structural
+		method binds its own exact parameters only within that member's signature;
+		siblings do not inherit them. Keep the complete scan for substitution callers.
+	 */
+	public static function freeParameterIdentities(type:TyType):Array<TyTypeParameterId>
+		return collectParameters(type, true);
+
+	static function collectParameters(type:TyType, freeOnly:Bool):Array<TyTypeParameterId> {
 		if (type == null)
 			throw "semantic type parameter scan received a null type";
 		final found = new haxe.ds.StringMap<TyTypeParameterId>();
-		function visit(current:TyType):Void {
+		function visit(current:TyType, bound:Array<TyTypeParameterId>):Void {
 			final parameter = current.getTypeParameterIdentity();
 			if (parameter != null) {
+				for (local in bound)
+					if (local.equals(parameter))
+						return;
 				found.set(parameter.getCanonicalKey(), parameter);
 				return;
 			}
 			if (current.isNullable()) {
-				visit(current.unwrapNull());
+				visit(current.unwrapNull(), bound);
 				return;
 			}
 			if (current.isFunction()) {
 				for (argument in current.getFunctionArguments())
-					visit(argument);
+					visit(argument, bound);
 				final result = current.getFunctionReturn();
 				if (result != null)
-					visit(result);
+					visit(result, bound);
 				return;
 			}
 			if (current.isAnonymous())
-				for (fieldType in current.getAnonymousFieldTypes())
-					visit(fieldType);
+				for (field in current.getAnonymousFields()) {
+					final local = switch field.kind {
+						case Method(parameters) if (freeOnly): bound.concat(parameters);
+						case _: bound;
+					};
+					visit(field.type, local);
+				}
 			for (argument in current.getTypeArguments())
-				visit(argument);
+				visit(argument, bound);
 		}
-		visit(type);
+		visit(type, []);
 		final keys = [for (key in found.keys()) key];
 		keys.sort((left, right) -> Reflect.compare(left, right));
 		final out = [for (key in keys) found.get(key)];
