@@ -33,7 +33,9 @@ function build(sources:Array<{path:String, source:String}>):MacroExpandedProgram
 	});
 	final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 	final resolved = ResolverStage.parseProjectRoots(paths, roots, defines, provider);
-	final index = TyperIndex.build(resolved);
+	// Discover signature dependencies before resolving aliases and abstract
+	// conversions, matching the production loader and NekoRuntimeFixture.
+	final index = TyperIndex.buildHeaders(resolved);
 	final loader = new ModuleLoader(paths, defines, index, null, true, provider);
 	loader.markResolvedAlready(resolved);
 	final pending = resolved.copy();

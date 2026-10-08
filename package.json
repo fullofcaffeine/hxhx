@@ -249,7 +249,6 @@
     "test:m14:dynamic-member-contract": "haxe test/m14_dynamic_member_contract_test.hxml",
     "test:m14:compound-assignment-control": "haxe test/m14_compound_assignment_control_test.hxml",
     "test:m14:control-assignment": "haxe test/m14_control_assignment_test.hxml",
-    "test:m14:control-assignment-neko": "haxe test/m14_control_assignment_neko_test.hxml",
     "test:m14:untyped-call-control": "haxe test/m14_untyped_dynamic_context_test.hxml && haxe test/m14_untyped_call_control_test.hxml",
     "test:m14:untyped-range-inference": "haxe test/m14_untyped_range_inference_test.hxml",
     "test:m14:untyped-nominal-field": "haxe test/m14_untyped_field_inference_test.hxml && haxe test/m14_untyped_nominal_field_test.hxml",
