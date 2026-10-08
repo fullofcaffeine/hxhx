@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v24";
+	static final passIdentity = "source-control-v25";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -624,6 +624,39 @@ class TypedControlLowering {
 		return {steps: steps, value: expression.withExpressions([destination, assigned.value]), completes: true};
 	}
 
+	/** Save the compound destination and old value before any right-side statements or exits. */
+	function compoundAssignment(expression:TypedExpr, target:Null<TyControlTarget>):ControlValue {
+		final children = expression.getExpressions();
+		final address = value(children[0], target);
+		if (!address.completes)
+			return address;
+		if (address.value == null)
+			throw "compound assignment requires a completing destination";
+		final right = value(children[1], target);
+		if (address.steps.length == 0 && right.steps.length == 0 && right.completes && right.value != null)
+			return plain(expression.withExpressions([address.value, right.value]));
+		didLower = true;
+		final steps = address.steps.copy();
+		function capture(operand:TypedExpr):TypedExpr {
+			if (operand.getType().isVoid() || operand.getType().hasUnknownComponent())
+				throw "control-valued compound assignment requires complete operand types";
+			final binding = temporary(operand.getType());
+			steps.push(declaration(binding, operand, operand.getPosition()));
+			return TypedExpr.localRead(binding.getSourceName(), binding.getType(), operand.getPosition(), binding);
+		}
+		final destination = TypedCompoundDestination.retain(address.value, capture);
+		final previous = capture(destination);
+		for (step in right.steps)
+			steps.push(step);
+		if (!right.completes)
+			return {steps: steps, value: null, completes: false};
+		if (right.value == null)
+			throw "compound assignment requires a completing operand value";
+		// Reuse the typed operation on saved storage; write back only on completion.
+		final updated = expression.withExpressions([previous, right.value]);
+		return {steps: steps, value: TypedExpr.assign(destination, updated, expression.getType(), expression.getPosition()), completes: true};
+	}
+
 	/**
 		Parent constructors and extension calls carry invocation syntax rather
 		than a callable read. Retain the parent marker or evaluated extension
@@ -729,6 +762,8 @@ class TypedControlLowering {
 				return {steps: assigned.steps, value: expression.withExpressions([children[0], assigned.value]), completes: true};
 			case Assign if (children.length == 2):
 				return assignment(expression, target);
+			case CompoundAssign if (children.length == 2):
+				return compoundAssignment(expression, target);
 			case SourceTry:
 				return tryValue(expression, target, true);
 			case SwitchExpr:
