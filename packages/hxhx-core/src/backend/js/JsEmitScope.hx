@@ -8,6 +8,9 @@ typedef JsEmitScope = {
 	final ?methodUses:HxExpr->Null<TypedBackendMethodOccurrence>;
 	final ?lambdaUses:HxExpr->Null<TypedBackendLambdaOccurrence>;
 
+	/** Authorize only original lowered operations from the current executable projection. */
+	final ?requireExpression:HxExpr->Void;
+
 	/** Abstract bodies read their backing value through this; ordinary classes read the instance. */
 	final ?abstractReceiver:Bool;
 };

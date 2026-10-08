@@ -136,6 +136,18 @@ class TypedBackendFunctionProjection {
 	public function getDeclaration():HxFunctionDecl
 		return declaration;
 
+	/** Require an original expression after validating this projection against its current typed owner. */
+	public function requireExpression(expression:HxExpr):Void {
+		requireCaptureCatalog().assertCurrent();
+		var present = false;
+		TypedBackendSourceWalk.functionDeclaration(declaration, value -> {
+			if (value == expression)
+				present = true;
+		}, _ -> {});
+		if (!present)
+			throw "expression is absent from this exact function projection";
+	}
+
 	/** Return only the original conditional entry operands of this exact projection. */
 	public function getDefaults():Array<TypedBackendFunctionDefault> {
 		requireCaptureCatalog().assertCurrent();

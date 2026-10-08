@@ -32,6 +32,7 @@ class JsExprEmitter {
 			runtimeTypes: parent == null ? null : parent.runtimeTypes,
 			methodUses: parent == null ? null : parent.methodUses,
 			lambdaUses: parent == null ? null : parent.lambdaUses,
+			requireExpression: parent == null ? null : parent.requireExpression,
 			abstractReceiver: parent != null && parent.abstractReceiver == true};
 	}
 

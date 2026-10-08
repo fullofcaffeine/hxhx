@@ -144,6 +144,7 @@ class JsFunctionScope {
 			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
 			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
+			requireExpression: initializerLambdas != null ? null : controlProjection != null ? controlProjection.requireExpression : parentScope == null ? null : parentScope.requireExpression,
 			abstractReceiver: abstractReceiver
 		};
 	}

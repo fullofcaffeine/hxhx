@@ -90,8 +90,11 @@ class JsStmtEmitter {
 				writer.writeln("continue;");
 			case SExpr(expr, _):
 				switch expr {
+					case ELoweredControl(ArrayAppend, _, _, _):
+						writer.writeln(JsArrayAppendSupport.emit(expr, scope.exprScope()) + ";");
 					case ELoweredControl(_, _, _, _):
-						emitStmt(writer, TypedControlStatements.methodStatement(expr, scope.requireControlIdentity()), scope);
+						emitStmt(writer,
+							TypedControlStatements.methodStatement(expr, scope.requireControlIdentity(), null, scope.exprScope().requireExpression), scope);
 					case _:
 						writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 				}

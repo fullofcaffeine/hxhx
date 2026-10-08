@@ -20,7 +20,7 @@ function emit(expression:HxExpr, arguments:Array<String>, body:HxExpr, scope:JsE
 	// Direct expression-emitter fixtures can lack a typed owner; production scopes supply one.
 	switch body {
 		case ELoweredControl(FunctionBody, _, _, _):
-			JsStmtEmitter.emitFunctionBody(writer, TypedControlStatements.functionBody(body), nested);
+			JsStmtEmitter.emitFunctionBody(writer, TypedControlStatements.functionBody(body, null, nested.exprScope().requireExpression), nested);
 		case _:
 			writer.writeln("return " + JsExprEmitter.emit(body, nested.exprScope()) + ";");
 	}
