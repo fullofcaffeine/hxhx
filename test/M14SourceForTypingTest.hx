@@ -1,9 +1,8 @@
 /** For bindings must preserve record fields and keep returns directed at the enclosing function. */
 class M14SourceForTypingTest {
 	public static function run():Void {
-		final path = "test/oracle/source_for_return_seed/src/Main.hx";
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/source_for_return_seed/src", mainModule: "Main", requiredModules: ["Array", "Sys"]});
+		final typed = fixture.main;
 		for (fn in typed.getTypedClasses()[0].getFunctions()) {
 			final once = TypedControlLowering.functionBody(fn);
 			final revision = CompilerTypedTreeRevision.functionBody(once);

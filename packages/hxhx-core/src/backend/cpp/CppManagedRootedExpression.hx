@@ -999,6 +999,7 @@ class CppManagedRootedExpression {
 		return switch expression {
 			case EIdent(_): true;
 			case EField(owner, _): staticQualifier(owner);
+			case EParenthesized(inner, _): staticQualifier(inner);
 			case _: false;
 		};
 	}

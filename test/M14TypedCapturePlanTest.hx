@@ -14,6 +14,7 @@ class M14TypedCapturePlanTest {
 	}
 
 	public static function run():Void {
+		M14TypedCaptureStaticMethodTest.run();
 		final counter = typed("class Main { static function make():Int->Int { var calls = 0; function count(n:Int):Int { calls++; return n == 0 ? calls : count(n-1); } return count; } }")[0];
 		final before = CompilerTypedTreeRevision.functionBody(counter);
 		final plan = TypedCapturePlan.analyze(counter);

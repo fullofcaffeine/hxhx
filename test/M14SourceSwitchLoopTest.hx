@@ -4,9 +4,8 @@ import backend.cpp.CppTargetCore;
 /** Observe switch-arm loop exits and selected values through native execution. */
 class M14SourceSwitchLoopTest {
 	public static function run():Void {
-		final path = "test/oracle/source_switch_loop_seed/src/Main.hx";
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/source_switch_loop_seed/src", mainModule: "Main", requiredModules: ["Sys"]});
+		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		for (fn in functions) {
@@ -14,8 +13,8 @@ class M14SourceSwitchLoopTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated switch lowering changed the selected control structure";
 		}
-		final context = new BackendContext(".tmp/source-switch-loop", null, "Main", true, true, new haxe.ds.StringMap<String>());
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
+		final context = new BackendContext(".tmp/source-switch-loop", null, "Main", true, true, fixture.defines);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "source switch requires a native executable";
 		for (index in 0...functions.length)

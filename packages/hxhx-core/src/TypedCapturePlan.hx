@@ -402,7 +402,12 @@ private class CaptureAnalysis {
 			case NameRead:
 				if (node.getFieldInfo() != null && !node.getFieldInfo().getIsStatic())
 					useReceiver(scope);
-				if (node.getFieldInfo() == null && node.getType().isFunction() && !resolvedCallee)
+				// A selected static method is a value without a lexical receiver or
+				// local capture, even when grouping separates it from a call node.
+				if (node.getFieldInfo() == null
+					&& node.getType().isFunction()
+					&& !resolvedCallee
+					&& (node.getDeclaration() == null || !node.getDeclaration().getIsStatic()))
 					throw "capture analysis requires an exact declaration for a bare method value in "
 						+ owner
 						+ " at "

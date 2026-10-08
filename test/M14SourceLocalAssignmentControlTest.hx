@@ -12,9 +12,8 @@ class M14SourceLocalAssignmentControlTest {
 	/** Keep statement assignment evidence separate from the full parenthesized-value workload. */
 	static function runProgram(name:String, expected:String):Void {
 		final root = "test/oracle/source_local_assignment_control_seed";
-		final path = root + "/src/" + name + ".hx";
-		final resolved = new ResolvedModule(name, path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fixture = CppResolvedFixture.load({sourceRoot: root + "/src", mainModule: name, requiredModules: ["Sys"]});
+		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		for (fn in functions) {
@@ -22,8 +21,8 @@ class M14SourceLocalAssignmentControlTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated local assignment lowering changed its identities";
 		}
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/source-local-assignment-control/" + name, null, name, true, true, new haxe.ds.StringMap<String>()));
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
+			new BackendContext(".tmp/source-local-assignment-control/" + name, null, name, true, true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "local assignment contract requires a native executable";
 		for (index in 0...functions.length)

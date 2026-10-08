@@ -4,14 +4,18 @@ import backend.cpp.CppTargetCore;
 /** Execute authored grouping, including an ordinary function with the retired helper name. */
 class M14SourceParenthesizedNativeTest {
 	public static function run():Void {
+		// Parentheses do not add effects, but must not hide an effectful receiver
+		// from the native static-call guard.
+		final effectful = HxExpr.EParenthesized(EField(ECall(EIdent("make"), []), "method"), HxPos.unknown());
+		if (@:privateAccess backend.cpp.CppManagedRootedExpression.staticQualifier(effectful))
+			throw "grouped static-call selection discarded a receiver effect";
 		final root = "test/oracle/source_parenthesized_seed";
-		final path = root + "/src/Main.hx";
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fixture = CppResolvedFixture.load({sourceRoot: root + "/src", mainModule: "Main", requiredModules: ["Sys"]});
+		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/source-parenthesized-native", null, "Main", true, true, new haxe.ds.StringMap<String>()));
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
+			new BackendContext(".tmp/source-parenthesized-native", null, "Main", true, true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "parenthesis contract requires native execution";
 		for (index in 0...functions.length)

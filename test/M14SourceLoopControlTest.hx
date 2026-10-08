@@ -23,10 +23,8 @@ class M14SourceLoopControlTest {
 
 	public static function run():Void {
 		checkFunctionBoundary();
-		final path = "test/oracle/source_loop_control_seed/src/Main.hx";
-		final parsed = ParserStage.parse(sys.io.File.getContent(path), path);
-		final resolved = new ResolvedModule("Main", path, parsed);
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/source_loop_control_seed/src", mainModule: "Main", requiredModules: ["Sys"]});
+		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final loop = functions[0].getBody().getStatements()[1];
 		final target = loop.getControlTarget();
@@ -57,8 +55,8 @@ class M14SourceLoopControlTest {
 		}
 		if (!rejectedRetarget)
 			throw "lowering silently redirected loop control after its loop destination changed";
-		final context = new BackendContext(".tmp/source-loop-control", null, "Main", true, true, new haxe.ds.StringMap<String>());
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
+		final context = new BackendContext(".tmp/source-loop-control", null, "Main", true, true, fixture.defines);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "loop control requires a native executable";
 		for (i in 0...functions.length)
