@@ -4,12 +4,13 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
+INSPECTOR_DIR="$(mktemp -d)"
 REPORT_COPY="$(mktemp)"
 MANIFEST_FILE="out/ocaml_artifact_manifest.json"
 MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
-trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
+trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"; rm -rf "$INSPECTOR_DIR"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
 	echo "Missing generated Void-return source or lowering report" >&2
@@ -120,7 +121,9 @@ for (const name of ['throughTry', 'fromCatch']) {
 }
 
 const closureBody = functionBody('nestedClosure')
-if (!closureBody.includes('let local = fun')
+if (!/let local = let __callback_input_\d+ = fun /.test(closureBody)
+	|| report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes('|function|nestedClosure|')).length !== 1
+	|| !/in Stdlib\.fst __call_callee_\d+ /.test(closureBody)
 	|| !closureBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !closureBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| !closureBody.includes('"outer"')) {
@@ -137,9 +140,12 @@ if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	exit 1
 fi
 
+# Build once; positive and corrupted reports still run in separate processes.
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
 node - "$INSPECTION_COPY" <<'NODE'
@@ -172,9 +178,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
 
-if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+if neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$TAMPER_INSPECTION" 2>&1; then
 	echo "Public inspection accepted a payloadless return with a value-return mechanism" >&2
 	exit 1
