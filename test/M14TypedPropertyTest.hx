@@ -18,6 +18,7 @@ class M14TypedPropertyTest {
 	}
 
 	static function main():Void {
+		M14PropertySignatureCompatibilityTest.check();
 		final source = sys.io.File.getContent("test/oracle/cpp_property_accessor_seed/Main.hx");
 		final module = typed(source);
 		var getterCalls = 0;

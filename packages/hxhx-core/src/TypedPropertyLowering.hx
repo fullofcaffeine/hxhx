@@ -95,14 +95,27 @@ class TypedPropertyLowering {
 			throw error(expression, "Property accessor is missing: " + accessorName);
 		final signature = TyNominalApplication.signature(index, provider, receiver == null ? null : receiver.getType(), declaration.getSignature());
 		if (signature.getArgs().length != (writing ? 1 : 0)
-			|| signature.getReturnType().getSemanticKey() != expression.getType().getSemanticKey()
+			|| TyAssignmentCompatibility.classify(expression.getType(), signature.getReturnType(), Unchecked) != Compatible
 			|| writing
-			&& signature.getArgs()[0].getSemanticKey() != expression.getType().getSemanticKey())
+			&& TyAssignmentCompatibility.classify(signature.getArgs()[0], expression.getType(), Unchecked) != Compatible)
 			throw error(expression, "Property accessor signature differs from its declared field: " + accessorName);
 		final callableType = TyCallableSignature.fromDeclaration(declaration, signature).getFunctionType();
 		final callee = receiver == null ? TypedExpr.staticMethodRead(accessorName, declaration, callableType, expression.getPosition(),
 			true) : TypedExpr.instanceMethodRead(receiver, accessorName, declaration, callableType, expression.getPosition());
-		return TypedExpr.call(callee, writing ? [value] : [], declaration, expression.getType(), expression.getPosition(), receiver == null);
+		final arguments = writing ? [convert(value, signature.getArgs()[0])] : [];
+		final call = TypedExpr.call(callee, arguments, declaration, signature.getReturnType(), expression.getPosition(), receiver == null);
+		return convert(call, expression.getType());
+	}
+
+	/** Keep the accessor's own input/output types visible beneath a proven property conversion. */
+	function convert(value:TypedExpr, expected:TyType):TypedExpr {
+		if (value.getType().getSemanticKey() == expected.getSemanticKey())
+			return value;
+		if (TyAssignmentCompatibility.classify(expected, value.getType(), Unchecked) != Compatible)
+			throw error(value, "Property conversion is not compatible with its selected accessor");
+		// Assignment does not introduce a checked-cast runtime test. Targets still
+		// receive both exact types and must implement any representation conversion.
+		return TypedExpr.castValue(value, "", expected, value.getPosition());
 	}
 
 	/** Read-modify-write operations save a receiver before either the getter or RHS runs. */
