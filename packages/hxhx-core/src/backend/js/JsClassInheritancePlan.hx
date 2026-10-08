@@ -10,6 +10,9 @@ typedef JsClassInheritanceNode = {
 	/** A host owns extern implementation and prototype links. */
 	final isExtern:Bool;
 
+	/** Direct host paths emit no declaration and may be shared by several extern types. */
+	final usesHostPath:Bool;
+
 	/** The admitted abstract wrapper stores the source-level receiver in its backing slot. */
 	final abstractReceiver:Bool;
 };
@@ -43,12 +46,16 @@ class JsClassInheritancePlan {
 				classFacts.push(facts);
 				final name = HxClassDecl.getName(owner.getDeclaration());
 				final fullName = packagePath.length == 0 ? name : packagePath + "." + name;
-				final hostReference = JsExternBinding.defaultReference(owner.getDeclaration(), fullName);
+				final nativeReference = JsExternBinding.reference(owner.getDeclaration());
+				final hostReference = nativeReference != null ? nativeReference : JsExternBinding.defaultReference(owner.getDeclaration(), fullName);
 				final reference = hostReference == null ? JsNameMangler.classVarName(fullName) : hostReference;
 				final identity = facts.getClassIdentity();
 				if (byIdentity.exists(identity))
 					throw "JavaScript repeats an exact class provider: " + identity;
-				if (byReference.exists(reference))
+				// Distinct extern declarations can describe the same host value. Neither
+				// emits a declaration, but generated class names must remain unique.
+				final previous = byReference.exists(reference) ? byIdentity.get(byReference.get(reference)) : null;
+				if (previous != null && !(hostReference != null && previous.usesHostPath))
 					throw "JavaScript presentation name collides across exact classes: " + fullName;
 				if (facts.getSuperType() != null && facts.getSuperClassIdentity() == null)
 					throw "JavaScript superclass is unresolved for " + identity;
@@ -58,6 +65,7 @@ class JsClassInheritancePlan {
 					fullName: fullName,
 					reference: reference,
 					isExtern: facts.getIsExtern(),
+					usesHostPath: hostReference != null,
 					abstractReceiver: switch (facts.getNominalKind()) {
 						case AbstractValue(_): true;
 						case _: false;

@@ -19,6 +19,7 @@ class M14JsExternNativeBindingTest {
 	}
 
 	static function main():Void {
+		M14JsNativeExternLookupTest.check();
 		M14JsPlainExternBindingTest.check();
 		final root = ".tmp/js_extern_native_binding";
 		sys.FileSystem.createDirectory(root);

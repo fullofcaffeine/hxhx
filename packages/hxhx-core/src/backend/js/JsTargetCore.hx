@@ -99,7 +99,7 @@ class JsTargetCore implements ITargetCore {
 					receiverPlan: plan,
 					jsRef: jsRef,
 					externRef: JsExternBinding.reference(cls),
-					usesHostPath: JsExternBinding.defaultReference(cls, fullName) != null,
+					usesHostPath: plan.usesHostPath,
 					decl: cls,
 					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
@@ -494,13 +494,9 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
+		// A direct host reference owns its implementation and causes no startup read.
 		if (unit.usesHostPath)
 			return;
-		// A host value already owns its implementation and runtime metadata.
-		if (unit.externRef != null) {
-			writer.writeln("var " + unit.jsRef + " = " + unit.externRef + ";");
-			return;
-		}
 		final nodeRequireRef = JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName);
 		final browserRef = JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName);
 		if (nodeRequireRef != null) {
