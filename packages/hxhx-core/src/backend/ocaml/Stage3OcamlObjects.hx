@@ -17,7 +17,7 @@ function read(type:TyType, value:String):String {
 		+ "))";
 }
 
-/** Preserve left-to-right effects before comparing the identities of two object values. */
+/** Preserve left-to-right effects before comparing object or function identity. */
 function equality(equal:Bool, left:String, right:String, names:Stage3OcamlLocalNames):String {
 	final leftName = names.internalName("__hx_object_left");
 	final rightName = names.internalName("__hx_object_right");

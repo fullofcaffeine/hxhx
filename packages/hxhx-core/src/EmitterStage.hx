@@ -1939,18 +1939,20 @@ class EmitterStage {
 		return access == null ? null : access.resultType;
 	}
 
-	/** Anonymous values compare by identity, including empty objects with equal contents. */
-	static function isAnonymousValue(expr:HxExpr):Bool {
+	/** Objects and typed function values compare by identity, never by OCaml structural comparison. */
+	static function isIdentityValue(expr:HxExpr):Bool {
+		function requiresIdentity(type:TyType):Bool {
+			final value = type.unwrapNull();
+			return value.isAnonymous() || value.isFunction();
+		}
 		final selected = objectAccessType(expr);
 		if (selected != null)
-			return selected.unwrapNull().isAnonymous();
+			return requiresIdentity(selected);
 		return switch expr {
 			case EAnon(_, _): true;
-			case EIdent(name): final catalog = currentTypedFunction != null ? currentTypedFunction.getLocalCatalog() : currentTypedInitializer == null ? null : currentTypedInitializer.getLocalCatalog(); final local = catalog == null ? null : catalog.findByProjectedName(name); local != null && local.getBinding()
-					.getType()
-					.unwrapNull()
-					.isAnonymous();
-			case EParenthesized(inner, _): isAnonymousValue(inner);
+			case EIdent(name): final catalog = currentTypedFunction != null ? currentTypedFunction.getLocalCatalog() : currentTypedInitializer == null ? null : currentTypedInitializer.getLocalCatalog(); final local = catalog == null ? null : catalog.findByProjectedName(name); local != null && requiresIdentity(local.getBinding()
+					.getType());
+			case EParenthesized(inner, _): isIdentityValue(inner);
 			case _: false;
 		};
 	}
@@ -3224,7 +3226,12 @@ class EmitterStage {
 					if (callable != null)
 						return callable;
 					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
-					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
+					// Stored callbacks have checked argument destinations even without a
+					// method signature. Preserve Dynamic boxing at that exact call boundary.
+					final destination = argument != null
+						&& argument.expectedType != null
+						&& argument.expectedType.isDynamic() ? "Dynamic" : hint;
+					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(destination, carrier, rendered);
 				}
 
 				final runtimeIntrinsic = tryExprToOcamlStage3RuntimeIntrinsic(callee, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
@@ -4085,7 +4092,7 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				}
 			case EBinop(op, a, b):
-				if ((op == "==" || op == "!=") && (isAnonymousValue(a) || isAnonymousValue(b))) {
+				if ((op == "==" || op == "!=") && (isIdentityValue(a) || isIdentityValue(b))) {
 					final left = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					final right = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					if (currentFunctionLocalOcamlNames == null)

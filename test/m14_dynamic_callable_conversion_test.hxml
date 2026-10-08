@@ -1,5 +1,10 @@
 -cp packages/hxhx-core/src
 -cp test
+-main M14StoredCallbackArgumentsTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
 -main M14CallableParameterIdentityTest
 --interp
 
