@@ -226,12 +226,19 @@ and then removes the executable. Running any of those npm tests directly still
 builds its own narrow host. This removes duplicate native compilation without
 introducing a global cache or making standalone developer tests depend on CI.
 
+After routing, Core guardrails, smoke tests, plugin checks, and test shards can
+run concurrently on separate runners. They consume no artifacts from the guard
+job, so a long guard run does not delay the first compiler failures. Runner
+availability still controls actual start times. This can use more runner time
+when guards fail, because independent tests already started.
+
 The historical check name `Tests` is a fail-closed aggregate. Its versioned
 manifest records the minimum tier for every prerequisite, so only a skip
 authorized by the exact route is accepted. A failed route, secret scan,
 required job, cancelled job, unexpected skip, or missing result fails the
-aggregate. Local `npm test` remains the canonical complete serialized command
-with all 107 entries. The measured baseline and shard rationale are recorded in
+aggregate. Guardrails remain required at Q1 and above even when every independent
+test succeeds. Local `npm test` remains the canonical complete serialized command
+with every inventoried entry. The measured baseline and shard rationale are recorded in
 `docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
 
 Stable success markers used by required lanes:

@@ -245,8 +245,8 @@ jobs:
   stage0-free-smoke:
     name: Stage0-free smoke
     runs-on: ubuntu-latest
-    needs: [route, guards]
-    if: ${{ needs.route.outputs.run_q2 == 'true' && needs.guards.result == 'success' }}
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -307,8 +307,8 @@ jobs:
   js-native-smoke:
     name: JS-native smoke
     runs-on: ubuntu-latest
-    needs: [route, guards]
-    if: ${{ needs.route.outputs.run_q2 == 'true' && needs.guards.result == 'success' }}
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
     timeout-minutes: 25
     steps:
       - name: Checkout
@@ -396,8 +396,8 @@ jobs:
   plugin-matrix:
     name: Plugin matrix (strict)
     runs-on: ubuntu-latest
-    needs: [route, guards]
-    if: ${{ needs.route.outputs.run_q2 == 'true' && needs.guards.result == 'success' }}
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
     timeout-minutes: 40
     steps:
       - name: Checkout
@@ -476,8 +476,8 @@ jobs:
   test-shards:
     name: Tests / ${{ matrix.label }}
     runs-on: ubuntu-latest
-    needs: [route, guards]
-    if: ${{ needs.route.outputs.run_q2 == 'true' && needs.guards.result == 'success' }}
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -624,8 +624,8 @@ jobs:
   hxhx-e2e:
     name: Tests / hxhx target end-to-end
     runs-on: ubuntu-latest
-    needs: [route, guards]
-    if: ${{ needs.route.outputs.run_q3 == 'true' && needs.guards.result == 'success' }}
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q3 == 'true' }}
     # Current-layout runs 33284703349 and 33289157979 measured this serialized
     # job at 11m05s and 10m46s. Reserve it for Q3 with at least 28m55s headroom.
     timeout-minutes: 40

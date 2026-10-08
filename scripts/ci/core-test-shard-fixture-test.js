@@ -47,6 +47,25 @@ function requireIncludes(content, snippet, label) {
   assert(content.includes(snippet), `${label} must include ${JSON.stringify(snippet)}`)
 }
 
+/** Independent runners consume routing outputs; final aggregation still owns guard enforcement. */
+function checkIndependentJobStarts(workflow) {
+  const lines = workflow.split('\n')
+  for (const job of ['stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards', 'hxhx-e2e']) {
+    const start = lines.indexOf(`  ${job}:`)
+    if (start < 0) throw new Error(`missing independent job ${job}`)
+    let end = start + 1
+    while (end < lines.length && !/^  [a-z][a-z0-9-]*:$/.test(lines[end])) end++
+    const block = lines.slice(start, end).join('\n')
+    const tier = job === 'hxhx-e2e' ? 'q3' : 'q2'
+    if (!block.includes('    needs: [route]\n') || block.includes('needs.guards')) {
+      throw new Error(`${job} must start after routing without waiting for guards`)
+    }
+    if (!block.includes("    if: ${{ needs.route.outputs.run_" + tier + " == 'true' }}\n")) {
+      throw new Error(`${job} lost its exact routing condition`)
+    }
+  }
+}
+
 function main() {
   const plan = loadPlan(repoRoot)
   assert(plan.aggregateCommands.length === 145, `expected 145 npm test commands, found ${plan.aggregateCommands.length}`)
@@ -294,6 +313,22 @@ function main() {
   })
   assert(aggregateQ1.status === 0, `aggregate CLI rejected policy-authorized Q1 skips\n${aggregateQ1.stderr}`)
 
+  // Successful independent tests cannot hide a required guard outcome at any tier.
+  for (const tier of ['Q1', 'Q2', 'Q3', 'Q4']) {
+    for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
+      const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
+      if (result === 'missing') delete needs.guards
+      else needs.guards.result = result
+      const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
+        ...process.env,
+        CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
+        CORE_TEST_QA_TIER: tier
+      })
+      assert(rejected.status !== 0, `${tier} aggregate accepted guards=${result} with successful tests`)
+      assert(rejected.stderr.includes(`required job guards result=${result}`), `${tier} lost the guard failure reason`)
+    }
+  }
+
   const failedRouteNeeds = { ...alwaysNeeds, ...q0Needs, route: { result: 'failure' } }
   const failedRoute = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
@@ -305,7 +340,15 @@ function main() {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflow, '  route:\n    name: QA risk route', 'Core workflow')
   requireIncludes(workflow, '  test-shards:', 'Core workflow')
-  requireIncludes(workflow, '    needs: [route, guards]', 'Core test shards')
+  checkIndependentJobStarts(workflow)
+  expectThrow(
+    () => checkIndependentJobStarts(workflow.replace(
+      '  test-shards:\n    name: Tests / ${{ matrix.label }}\n    runs-on: ubuntu-latest\n    needs: [route]',
+      '  test-shards:\n    name: Tests / ${{ matrix.label }}\n    runs-on: ubuntu-latest\n    needs: [route, guards]'
+    )),
+    'must start after routing',
+    'restored guard dependency'
+  )
   requireIncludes(workflow, '      fail-fast: false', 'Core test shard matrix')
   requireIncludes(workflow, 'npm run test:ci:shard -- --shard "${{ matrix.shard }}"', 'Core test shard runner')
   for (const shard of plan.shards.filter(shard => shard.minimumTier === 'Q2')) {
