@@ -7,15 +7,20 @@ typedef JsClassInheritanceNode = {
 	final fullName:String;
 	final reference:String;
 
+	/** A host owns extern implementation and prototype links. */
+	final isExtern:Bool;
+
 	/** The admitted abstract wrapper stores the source-level receiver in its backing slot. */
 	final abstractReceiver:Bool;
 };
 
 /**
-	Bind typed superclass edges to emitted JavaScript providers before rendering.
+	Bind typed superclass edges to generated classes or host-owned extern references.
 	Names used for output cannot replace semantic identity. This plan rejects missing
 	parents, unresolved edges, cycles, and presentation collisions instead of emitting
-	a child whose prototype silently loses its parent. It is owned by one typed program.
+	a generated child whose prototype silently loses its parent. Extern declarations
+	retain their type edges but do not require the compiler to generate host parents.
+	It is owned by one typed program.
  */
 class JsClassInheritancePlan {
 	final program:MacroExpandedProgram;
@@ -38,7 +43,8 @@ class JsClassInheritancePlan {
 				classFacts.push(facts);
 				final name = HxClassDecl.getName(owner.getDeclaration());
 				final fullName = packagePath.length == 0 ? name : packagePath + "." + name;
-				final reference = JsNameMangler.classVarName(fullName);
+				final hostReference = JsExternBinding.defaultReference(owner.getDeclaration(), fullName);
+				final reference = hostReference == null ? JsNameMangler.classVarName(fullName) : hostReference;
 				final identity = facts.getClassIdentity();
 				if (byIdentity.exists(identity))
 					throw "JavaScript repeats an exact class provider: " + identity;
@@ -51,6 +57,7 @@ class JsClassInheritancePlan {
 					superIdentity: facts.getSuperClassIdentity(),
 					fullName: fullName,
 					reference: reference,
+					isExtern: facts.getIsExtern(),
 					abstractReceiver: switch (facts.getNominalKind()) {
 						case AbstractValue(_): true;
 						case _: false;
@@ -72,9 +79,10 @@ class JsClassInheritancePlan {
 			visiting.set(node.identity, true);
 			if (node.superIdentity != null) {
 				final parent = byIdentity.get(node.superIdentity);
-				if (parent == null)
+				if (parent == null && !node.isExtern)
 					throw "JavaScript superclass has no emitted provider: " + node.superIdentity;
-				visit(parent);
+				if (parent != null)
+					visit(parent);
 			}
 			visiting.remove(node.identity);
 			declarationRanks.set(node.identity, nextRank++);
@@ -120,10 +128,10 @@ class JsClassInheritancePlan {
 	public function interfaceReferences(owner:TypedBackendClassProjection):Array<String> {
 		final identity = requireClass(owner).identity;
 		final facts = graph.findClassFacts(identity);
-		if (!facts.getNominalKind().match(ClassInstance) || (facts.getIsExtern() && facts.getIsInterface()))
+		if (!facts.getNominalKind().match(ClassInstance) || facts.getIsExtern())
 			return [];
 		return [
-			for (node in graph.requireAssignableTypes(identity, fact -> !(fact.getIsExtern() && fact.getIsInterface())))
+			for (node in graph.requireAssignableTypes(identity, fact -> !fact.getIsExtern()))
 				if (node.isInterface) requireRuntimeClass(node.classIdentity).reference
 		];
 	}

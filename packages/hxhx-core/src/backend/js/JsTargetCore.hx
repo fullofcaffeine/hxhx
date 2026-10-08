@@ -18,6 +18,7 @@ private typedef JsClassUnit = {
 	final receiverPlan:JsClassInheritancePlan.JsClassInheritanceNode;
 	final jsRef:String;
 	final externRef:Null<String>;
+	final usesHostPath:Bool;
 	final decl:HxClassDecl;
 	final projection:TypedBackendClassProjection;
 	final exposeToplevelMain:Bool;
@@ -98,6 +99,7 @@ class JsTargetCore implements ITargetCore {
 					receiverPlan: plan,
 					jsRef: jsRef,
 					externRef: JsExternBinding.reference(cls),
+					usesHostPath: JsExternBinding.defaultReference(cls, fullName) != null,
 					decl: cls,
 					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
@@ -342,98 +344,6 @@ class JsTargetCore implements ITargetCore {
 		return parts.length == 0 ? fullName : parts[parts.length - 1];
 	}
 
-	static inline function isNativeJsLibExtern(fullName:String):Bool {
-		return fullName != null && StringTools.startsWith(fullName, "js.lib.");
-	}
-
-	static inline function isNativeJsHtmlExtern(fullName:String):Bool {
-		return fullName != null && StringTools.startsWith(fullName, "js.html.");
-	}
-
-	static inline function isNativeJsGlobalExtern(fullName:String):Bool {
-		return isNativeJsLibExtern(fullName) || isNativeJsHtmlExtern(fullName);
-	}
-
-	static function nativeJsNodeRequireExternRef(fullName:String):Null<String> {
-		return switch (fullName) {
-			case "js.node.buffer.Buffer":
-				"require(\"buffer\").Buffer";
-			case "js.node.buffer.SlowBuffer":
-				"require(\"buffer\").SlowBuffer";
-			case "js.node.console.Console":
-				"require(\"console\").Console";
-			case "js.node.url.URL":
-				"require(\"url\").URL";
-			case "js.node.url.URLSearchParams":
-				"require(\"url\").URLSearchParams";
-			case _:
-				null;
-		}
-	}
-
-	/**
-		Provides the runtime facade for `js.Browser`.
-
-		Why
-		- Upstream JS treats `js.Browser.console` as a shortcut to the selected JS
-		  global's `console` object.
-		- Emitting `js.Browser` as an owned Haxe class initializes recovered static
-		  extern fields to `null`, so `js.Browser.console.log(...)` crashes under Node.
-
-		What
-		- Binds the recovered class symbol to a small facade over the active JS global.
-		- Keeps static field emission disabled for this extern, preventing synthetic
-		  `null` assignments from overwriting host-provided globals.
-	**/
-	static function nativeJsBrowserExternRef(fullName:String):Null<String> {
-		if (fullName != "js.Browser")
-			return null;
-		return [
-			"(function() {",
-			" var __hx_global = (typeof window !== \"undefined\") ? window : ((typeof global !== \"undefined\") ? global : ((typeof self !== \"undefined\") ? self : globalThis));",
-			" return {",
-			"self: __hx_global,",
-			"window: __hx_global.window,",
-			"document: __hx_global.document,",
-			"location: __hx_global.location,",
-			"navigator: __hx_global.navigator,",
-			"console: __hx_global.console,",
-			"supported: (typeof __hx_global.window !== \"undefined\" && __hx_global.window.location != null && typeof __hx_global.window.location.protocol === \"string\")",
-			"};",
-			" })()"
-		].join("");
-	}
-
-	static function nativeJsGlobalExternRef(fullName:String):String {
-		if (isNativeJsHtmlExtern(fullName))
-			return nativeJsSimpleGlobalRef(simpleName(fullName));
-		return nativeJsLibGlobalRef(fullName);
-	}
-
-	static function nativeJsSimpleGlobalRef(globalName:String):String {
-		final quoted = JsNameMangler.quoteString(globalName);
-		return "((globalThis != null && globalThis[" + quoted + "] != null) ? globalThis[" + quoted + "] : {})";
-	}
-
-	static function nativeJsLibGlobalRef(fullName:String):String {
-		final suffix = fullName.substr("js.lib.".length);
-		final parts = suffix.split(".");
-		var expr = "globalThis";
-		var guard = "(globalThis != null)";
-		for (i in 0...parts.length) {
-			final part = parts[i];
-			if (part == null || part.length == 0)
-				continue;
-			final globalPart = switch ([i, part]) {
-				case [0, "intl"]: "Intl";
-				case _: part;
-			};
-			expr += "[" + JsNameMangler.quoteString(globalPart) + "]";
-			guard = "(" + guard + " && " + expr + " != null)";
-		}
-		return "(" + guard + " ? " + expr + " : {})";
-	}
-
 	static function emitRuntimePrelude(writer:JsWriter):Void {
 		writer.writeln("var __hx_exports = (typeof exports !== \"undefined\") ? exports : ((typeof globalThis !== \"undefined\") ? globalThis : {});");
 		writer.writeln("var __hx_classes = Object.create(null);");
@@ -584,19 +494,21 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
+		if (unit.usesHostPath)
+			return;
 		// A host value already owns its implementation and runtime metadata.
 		if (unit.externRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + unit.externRef + ";");
 			return;
 		}
-		final nodeRequireRef = nativeJsNodeRequireExternRef(unit.fullName);
-		final browserRef = nativeJsBrowserExternRef(unit.fullName);
+		final nodeRequireRef = JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName);
+		final browserRef = JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName);
 		if (nodeRequireRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + nodeRequireRef + ";");
 		} else if (browserRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + browserRef + ";");
-		} else if (isNativeJsGlobalExtern(unit.fullName)) {
-			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
+		} else if (JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName)) {
+			writer.writeln("var " + unit.jsRef + " = " + JsBuiltinExternBinding.nativeJsGlobalExternRef(unit.fullName) + ";");
 		} else if (unit.fullName == "haxe.ds.Vector") {
 			emitVectorConstructor(writer, unit.jsRef);
 		} else if (unit.fullName == "EReg") {
@@ -610,7 +522,7 @@ class JsTargetCore implements ITargetCore {
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
-		if (nodeRequireRef != null || browserRef != null || isNativeJsGlobalExtern(unit.fullName))
+		if (nodeRequireRef != null || browserRef != null || JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
 		writer.writeln(unit.jsRef + ".prototype.__class__ = " + unit.jsRef + ";");
@@ -626,10 +538,11 @@ class JsTargetCore implements ITargetCore {
 
 	/** Run values only after every class and method exists; retain target runtime setup after its fields. */
 	static function emitClassInitialization(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
-		if (unit.externRef != null
-			|| nativeJsNodeRequireExternRef(unit.fullName) != null
-			|| nativeJsBrowserExternRef(unit.fullName) != null
-			|| isNativeJsGlobalExtern(unit.fullName))
+		if (unit.usesHostPath
+			|| unit.externRef != null
+			|| JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName) != null
+			|| JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName) != null
+			|| JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitStaticFields(writer, unit, classRefs, staticMemberRefs(unit));
 		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
@@ -781,7 +694,9 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (typeof " + superRef + " === \"function\") {");
 		writer.pushIndent();
 		writer.writeln(unit.jsRef + ".prototype = Object.create(" + superRef + ".prototype);");
-		writer.writeln(unit.jsRef + ".prototype.constructor = " + unit.jsRef + ";");
+		// Define the child's own slot even when a host parent freezes its constructor property.
+		writer.writeln("Object.defineProperty(" + unit.jsRef + ".prototype, \"constructor\", {value: " + unit.jsRef
+			+ ", writable: true, configurable: true, enumerable: true});");
 		writer.writeln(unit.jsRef + ".__super__ = " + superRef + ";");
 		writer.popIndent();
 		writer.writeln("}");
@@ -3615,7 +3530,7 @@ class JsTargetCore implements ITargetCore {
 			return false;
 		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
 			return true;
-		if (isNativeJsGlobalExtern(fullName))
+		if (JsBuiltinExternBinding.isNativeJsGlobalExtern(fullName))
 			return true;
 		if (isNativeJsExternPrototypeClass(fullName))
 			return true;
@@ -3702,7 +3617,7 @@ class JsTargetCore implements ITargetCore {
 		declarationOrder.sort((left, right) -> left.declarationRank - right.declarationRank);
 		for (emitNative in [true, false]) {
 			for (unit in declarationOrder) {
-				if ((unit.externRef != null || isNativeJsLibExtern(unit.fullName)) != emitNative)
+				if ((unit.externRef != null || JsBuiltinExternBinding.isNativeJsLibExtern(unit.fullName)) != emitNative)
 					continue;
 				emitClass(writer, unit, classRefs, classes.bySimpleName);
 			}
@@ -3714,10 +3629,11 @@ class JsTargetCore implements ITargetCore {
 				writer.writeln(unit.jsRef + ".__hx_interfaces = [" + unit.interfaceRefs.join(", ") + "];");
 
 		for (unit in classes.units)
-			if (unit.externRef == null
-				&& nativeJsNodeRequireExternRef(unit.fullName) == null
-				&& nativeJsBrowserExternRef(unit.fullName) == null
-				&& !isNativeJsGlobalExtern(unit.fullName))
+			if (!unit.usesHostPath
+				&& unit.externRef == null
+				&& JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName) == null
+				&& JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName) == null
+				&& !JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
 				JsClassInitialization.emit(writer, unit.projection, unit.jsRef);
 
 		for (unit in classes.units)

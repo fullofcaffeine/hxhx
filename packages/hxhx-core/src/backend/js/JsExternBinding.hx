@@ -1,6 +1,19 @@
 package backend.js;
 
 /**
+	Plain extern values use their declared package path at the point of use.
+	No eager alias is emitted: a declaration used only as a type need not have a
+	host constructor. Explicit native metadata and built-in adapters retain their
+	existing binding routes.
+ */
+function defaultReference(declaration:HxClassDecl, fullName:String):Null<String> {
+	if (!HxClassDecl.getIsExtern(declaration) || reference(declaration) != null || JsBuiltinExternBinding.owns(fullName))
+		return null;
+	final parts = fullName.split(".");
+	return parts[0] + [for (index in 1...parts.length) JsNameMangler.propertySuffix(parts[index])].join("");
+}
+
+/**
 	Resolve an authored extern name to an existing JavaScript host value.
 	Only identifier paths are emitted. Metadata is decoded by the Haxe lexer,
 	so quotes and escapes cannot become arbitrary target-language source.

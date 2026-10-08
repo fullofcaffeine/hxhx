@@ -28,11 +28,29 @@ class M14JsInheritanceTest {
 		reject([
 			{name: "Cycle", source: "class Cycle extends Parent {} class Parent extends Cycle {}"}
 		], "JavaScript superclass cycle");
+		reject([
+			{name: "Cycle", source: "extern class Cycle extends Parent {} extern class Parent extends Cycle {}"}
+		], "JavaScript superclass cycle");
 		reject([{name: "Missing", source: "class Missing extends Absent {}"}], "JavaScript superclass is unresolved");
 		reject([
 			{name: "One", source: "class One {} class Shared {}"},
 			{name: "Two", source: "class Two {} class Shared {}"}
 		], "JavaScript presentation name collides");
+		// A resolved ordinary parent still needs an emitted provider. Extern admission
+		// must not make an incomplete generated-class projection appear executable.
+		final parent = new ResolvedModule("Parent", "Parent.hx", ParserStage.parse("class Parent {}", "Parent.hx"));
+		final child = new ResolvedModule("Child", "Child.hx", ParserStage.parse("class Child extends Parent {}", "Child.hx"));
+		final index = TyperIndex.build([parent, child]);
+		var rejected = false;
+		try {
+			new backend.js.JsClassInheritancePlan(new MacroExpandedProgram([TyperStage.typeResolvedModule(child, index)], false));
+		} catch (message:String) {
+			if (message != "JavaScript superclass has no emitted provider: Parent")
+				throw message;
+			rejected = true;
+		}
+		if (!rejected)
+			throw "missing generated parent provider was accepted";
 	}
 
 	static function main():Void {

@@ -19,6 +19,7 @@ class M14JsExternNativeBindingTest {
 	}
 
 	static function main():Void {
+		M14JsPlainExternBindingTest.check();
 		final root = ".tmp/js_extern_native_binding";
 		sys.FileSystem.createDirectory(root);
 		final source = '@:native("fixture.Host") extern class Host { public function new(value:Int); public function read():Int; public static function label():String; }'
