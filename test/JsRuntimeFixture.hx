@@ -4,12 +4,13 @@ import sys.FileSystem;
 import sys.io.File;
 
 /** Execute a typed module through the JavaScript backend and retain failed output for inspection. */
-function assertRuntime(typed:TypedModule, module:String, expected:String):Void {
+function assertRuntime(typed:TypedModule, module:String, expected:String, ?nodeArguments:Array<String>):Void {
 	final output = reserveOutput();
 	final script = output + "/main.js";
 	new JsBackend().emit(MacroStage.expandProgram([typed], []),
 		new BackendContext(output, script, module, true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
-	final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["60", "node", script]);
+	final arguments = ["60", "node"].concat(nodeArguments == null ? [] : nodeArguments).concat([script]);
+	final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", arguments);
 	final stdout = process.stdout.readAll().toString();
 	final stderr = process.stderr.readAll().toString();
 	final code = process.exitCode();

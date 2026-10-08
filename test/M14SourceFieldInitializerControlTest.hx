@@ -14,6 +14,7 @@ class M14SourceFieldInitializerControlTest {
 	}
 
 	public static function run():Void {
+		M14JsFieldInitializerControlTest.run();
 		initializerReplay();
 		initializerCompletion();
 		final source = sys.io.File.getContent("test/oracle/source_field_initializer_control_seed/src/Main.hx");

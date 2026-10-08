@@ -21,6 +21,32 @@ class JsFunctionScope {
 	var parentScope:Null<JsEmitScope> = null;
 	var abstractReceiver:Bool = false;
 	var controlProjection:Null<TypedBackendFunctionProjection> = null;
+	var allocationScope:Null<JsFunctionScope> = null;
+	var initializerPrefix:String = "";
+
+	/** Fields share their enclosing JavaScript variable scope, but never another field's local bindings. */
+	public static function initializer(parent:JsFunctionScope, projection:TypedBackendFieldInitializerProjection, types:JsRuntimeTypeScope):JsFunctionScope {
+		projection.assertCurrent();
+		final child = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, null, projection.getLocalCatalog(), projection.getFieldReadCatalog(), types,
+			projection.findMethodUse);
+		final outer = parent.exprScope();
+		child.parentScope = {
+			resolveLocal: outer.resolveLocal,
+			resolveClassRef: outer.resolveClassRef,
+			resolveSuperClassRef: outer.resolveSuperClassRef,
+			runtimeTypes: types,
+			methodUses: projection.findMethodUse,
+			lambdaUses: projection.findLambda,
+			requireExpression: projection.requireExpression,
+			abstractReceiver: outer.abstractReceiver
+		};
+		child.abstractReceiver = outer.abstractReceiver == true;
+		child.allocationScope = parent;
+		// Exact UTF-8 encoding keeps different field owners distinct even when their
+		// punctuation would collapse to the same ordinary JavaScript identifier.
+		child.initializerPrefix = "__hx_init_" + haxe.io.Bytes.ofString(projection.getStableIdentity()).toHex() + "_";
+		return child;
+	}
 
 	/** Retain the exact method owner; validate it only when emitting shared control. */
 	public function setControlProjection(projection:TypedBackendFunctionProjection):Void {
@@ -60,6 +86,8 @@ class JsFunctionScope {
 	}
 
 	function reserve(name:String):String {
+		if (allocationScope != null)
+			return allocationScope.reserve(initializerPrefix + name);
 		var candidate = JsNameMangler.identifier(name);
 		if (candidate.length == 0)
 			candidate = "_";
@@ -96,7 +124,7 @@ class JsFunctionScope {
 		final read = fieldCatalog == null ? null : fieldCatalog.findByProjectedName(raw);
 		if (read != null) {
 			final field = read.getField();
-			final receiver = field.getIsStatic() ? classRefs.get(field.getOwner().getCanonicalName()) : "this";
+			final receiver = field.getIsStatic() ? resolveClassRef(field.getOwner().getCanonicalName()) : "this";
 			if (receiver == null)
 				throw "JavaScript bare field has no exact emitted owner: " + field.getCanonicalKey();
 			return receiver + JsNameMangler.propertySuffix(field.getName());

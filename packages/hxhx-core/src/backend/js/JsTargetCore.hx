@@ -563,9 +563,7 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init,
-						staticScope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field),
-							JsLambdaEmitter.initializerLookup(unit.projection, field)));
+					JsFieldInitializerEmitter.emit(writer, unit.projection, field, staticScope, unit.runtimeTypes.forInitializer(field));
 				} catch (e:String) {
 					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
 						"null";
@@ -580,7 +578,8 @@ class JsTargetCore implements ITargetCore {
 					}
 				}
 			};
-			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
+			if (value != null)
+				writer.writeln(unit.jsRef + suffix + " = " + value + ";");
 		}
 	}
 
@@ -964,16 +963,15 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init,
-						scope.exprScope(unit.runtimeTypes.forInitializer(field), JsMethodValueSupport.initializerLookup(unit.projection, field),
-							JsLambdaEmitter.initializerLookup(unit.projection, field)));
+					JsFieldInitializerEmitter.emit(writer, unit.projection, field, scope, unit.runtimeTypes.forInitializer(field));
 				} catch (e:String) {
 					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				} catch (error:haxe.Exception) {
 					throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				}
 			};
-			writer.writeln(fieldRef + " = " + value + ";");
+			if (value != null)
+				writer.writeln(fieldRef + " = " + value + ";");
 		}
 	}
 
