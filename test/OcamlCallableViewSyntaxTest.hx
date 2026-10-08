@@ -3,7 +3,7 @@ import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare as compareViews;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation as viewInvocation;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.identity as viewIdentity;
-import reflaxe.ocaml.ast.OcamlCallableViewSyntax.origin as originView;
+import reflaxe.ocaml.ast.OcamlCallableViewSyntax.produce as produceView;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.literal as literalView;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlGenericCallEmitter.convertView;
@@ -40,7 +40,11 @@ class OcamlCallableViewSyntaxTest {
 		return ESeq([print(EConst(CString(label))), value]);
 
 	static function origin(value:OcamlExpr):OcamlExpr
-		return originView(value, value -> call("Obj.repr", [value]), fresh);
+		return produceView(CheckOcamlCallableViewConversions.selectedOrigin("source"), value, fresh);
+
+	/** The typed lambda initializer selects allocation; the native syntax cannot infer it. */
+	static function sourceLiteral(value:OcamlExpr):OcamlExpr
+		return produceView(CheckOcamlCallableViewConversions.selectedOrigin("number"), value, fresh);
 
 	static function equal(left:OcamlExpr, right:OcamlExpr):OcamlExpr {
 		return compareViews(left, right, (left, right) -> EBinop(PhysEq, left, right), fresh);
@@ -58,9 +62,10 @@ class OcamlCallableViewSyntaxTest {
 	/** An argument callback returned through two opposite conversions retains its origin. */
 	static function higherOrder():OcamlExpr {
 		final higherType = CheckOcamlCallableViewConversions.selectedCarrier("higherSource");
-		final relay = EAnnot(origin(EFun([PVar("callback")], EIdent("callback"))), higherType);
+		final relay = EAnnot(produceView(CheckOcamlCallableViewConversions.selectedOrigin("higherSource"), EFun([PVar("callback")], EIdent("callback")),
+			fresh), higherType);
 		final adapted = convertView(CheckOcamlCallableViewConversions.selectedView("higherView"), relay, "test-higher", fresh, unexpectedRuntime);
-		final number = literalView(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))), fresh);
+		final number = sourceLiteral(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))));
 		final returned = EApp(viewInvocation(EIdent("higher")), [EIdent("number")]);
 		return ELet("higher", adapted, ELet("number", number, ELet("returned", returned, ESeq([
 			unitCall("Gc.full_major"),
@@ -77,7 +82,7 @@ class OcamlCallableViewSyntaxTest {
 	/** Repeated lambda evaluation creates distinct Haxe functions even without captures. */
 	static function literalOrigins():OcamlExpr {
 		final functionValue:OcamlExpr = EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1))));
-		final factory:OcamlExpr = EFun([PConst(CUnit)], literalView(functionValue, fresh));
+		final factory:OcamlExpr = EFun([PConst(CUnit)], sourceLiteral(functionValue));
 		return ELet("declared", functionValue,
 			ELet("make_literal", factory, ELet("literal_left", unitCall("make_literal"), ELet("literal_right", unitCall("make_literal"), ESeq([
 				unitCall("Gc.full_major"),

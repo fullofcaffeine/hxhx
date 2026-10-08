@@ -15,6 +15,29 @@ import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr;
 
 /** Checks ordinary callback conversion direction on the retained, upstream-typed source fixture. */
 class CheckOcamlCallableViewConversions {
+	/** Identity selection uses the fixture's typed initializer, independently of its carrier. */
+	public static macro function selectedOrigin(localName:String):haxe.macro.Expr {
+		final owner = switch (Context.getType("Main")) {
+			case TInst(reference, []): reference.get();
+			case _: throw "missing stored callback fixture";
+		};
+		final body = owner.statics.get().filter(field -> field.name == "main")[0].expr();
+		var selected:Null<reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind> = null;
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, value) if (local.name == localName && value != null):
+					selected = reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(value);
+				case _:
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		if (body != null)
+			visit(body);
+		if (selected == null)
+			throw "fixture initializer is not an admitted callback origin: " + localName;
+		return Context.makeExpr(selected, Context.currentPos());
+	}
+
 	/** Native annotations come from a registered signature rather than a test-written arrow type. */
 	public static macro function selectedCarrier(localName:String):haxe.macro.Expr {
 		final owner = switch (Context.getType("Main")) {
@@ -116,6 +139,7 @@ class CheckOcamlCallableViewConversions {
 		checkConversion(macro :Int->Int, macro :String->Int, "null");
 		checkConversion(macro :Int->Int, macro :Int->Int->Int, "null");
 		checkRegistry();
+		CheckOcamlCallableOrigins.verify(main);
 		Sys.println("OCAML_CALLABLE_VIEW_CONVERSION:PASS");
 	}
 

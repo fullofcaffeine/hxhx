@@ -1,5 +1,7 @@
 package reflaxe.ocaml.ast;
 
+import reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind;
+
 /**
 	Constructs a typed invocation together with its originating function identity.
 
@@ -37,6 +39,20 @@ function origin(value:OcamlExpr, identity:OcamlExpr->OcamlExpr, fresh:String->St
 **/
 function literal(value:OcamlExpr, fresh:String->String):OcamlExpr {
 	return origin(value, _ -> EApp(EField(EIdent("Obj"), "repr"), [EApp(EIdent("ref"), [EConst(CUnit)])]), fresh);
+}
+
+/**
+	Materialize the identity policy selected from the typed producer.
+
+	The caller must supply the invocation selected for that exact producer. For a
+	static method, this is its stable declaration closure before any view adapter.
+	This operation does not convert raw higher-order arrows to nested callback views.
+**/
+function produce(kind:OcamlCallableOriginKind, value:OcamlExpr, fresh:String->String):OcamlExpr {
+	return switch (kind) {
+		case FreshLiteral: literal(value, fresh);
+		case StaticDeclaration(_): origin(value, value -> EApp(EField(EIdent("Obj"), "repr"), [value]), fresh);
+	};
 }
 
 /** Change invocation while retaining the exact identity of the source view. */
