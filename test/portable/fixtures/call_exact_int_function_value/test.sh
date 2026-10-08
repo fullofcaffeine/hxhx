@@ -8,18 +8,28 @@ if [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	exit 1
 fi
 
-if [ "$(grep -Ec 'let __call_callee_[0-9]+ = .* in let __call_arg_0_[0-9]+ = .* in __call_callee_[0-9]+ __call_arg_0_[0-9]+' "$main_source")" -lt 4 ]; then
-	echo "Every admitted function-value call must bind its callee before its argument" >&2
-	exit 1
-fi
 if grep -Eq 'Obj\.magic.*__call_callee_|__call_callee_.*Obj\.magic' "$main_source"; then
 	echo "The exact Int function-value call must not introduce Obj.magic" >&2
 	exit 1
 fi
 
-node - "$report_file" <<'NODE'
+node - "$report_file" "$main_source" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+const source = fs.readFileSync(process.argv[3], 'utf8')
+// Local callbacks now carry a separate identity. Factory results remain raw
+// until their declaration/return boundary is represented. Require each exact
+// form and the same callee-before-argument order, rather than accepting either.
+for (const [name, view] of [['closureCase', true], ['methodValueCase', true], ['selectedCalleeCase', false], ['failedCalleeCase', false]]) {
+	const body = source.match(new RegExp(`\\nlet ${name} = ([\\s\\S]*?)(?=\\nlet |$)`))?.[1]
+	const invocation = view ? 'Stdlib\\.fst ' : ''
+	const ordered = new RegExp(`let (__call_callee_[0-9]+) = [^\\n]*? in let (__call_arg_0_[0-9]+) = [^\\n]*? in ${invocation}\\1 \\2`)
+	if (body == null || !ordered.test(body))
+		throw new Error(`${name} must bind its callee before its argument and invoke its ${view ? 'view' : 'raw'} function`)
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${name}|`))
+	if (entries.length !== (view ? 1 : 0))
+		throw new Error(`${name} has unexpected callback storage evidence`)
+}
 if (report.schemaVersion !== 93 || report.callModel !== 'typed-ocaml-directional-call-boundary-v33') {
 	throw new Error('expected the function-value-aware typed-call report schema')
 }

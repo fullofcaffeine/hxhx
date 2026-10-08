@@ -90,11 +90,19 @@ const callLines = source.split('\n').filter(line => line.includes('let __call_ca
 if (callLines.length !== 11) {
 	fail(`expected eleven syntax-level callee bindings, got ${callLines.length}`)
 }
-for (const line of callLines) {
-	const callee = line.match(/let (__call_callee_[0-9]+) =/)?.[1]
-	if (callee == null || !line.includes(` in ${callee} `)) {
-		fail(`planned call did not bind then invoke its computed callee: ${line}`)
-	}
+const viewCases = ['mixedLocalCase', 'zeroLocalCase', 'nullableIntCase', 'effectLocalCase']
+const rawCases = ['mixedFactoryCase', 'zeroFactoryCase', 'optionalIntOmittedCase', 'optionalIntFactorySuppliedCase',
+	'optionalBoolOmittedCase', 'optionalBoolFactorySuppliedCase', 'effectFactoryCase']
+for (const name of [...viewCases, ...rawCases]) {
+	const body = source.match(new RegExp(`\\nlet ${name} = ([\\s\\S]*?)(?=\\nlet |$)`))?.[1]
+	const callee = body?.match(/let (__call_callee_[0-9]+) =/)?.[1]
+	const view = viewCases.includes(name)
+	const invocation = view ? `Stdlib.fst ${callee}` : callee
+	if (callee == null || !body.includes(` in ${invocation} `))
+		fail(`${name} did not bind then invoke its ${view ? 'view' : 'raw'} computed callee`)
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${name}|`))
+	if (entries.length !== (view ? 1 : 0))
+		fail(`${name} has unexpected callback storage evidence`)
 }
 const factoryLines = callLines.filter(line =>
 	/= make(?:Mixed|Probe|OptionalInt|OptionalBool|Effect) \(\)/.test(line))
