@@ -31,11 +31,9 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
-		final parsed = ParserStage.parse(source, filePath);
-		final resolved = new ResolvedModule("Main", filePath, parsed);
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
-		return MacroStage.expandProgram([typed], []);
+	/** Array.length must come from the real provider before range lowering checks its type. */
+	static function makeProgram(source:String):MacroExpandedProgram {
+		return JsSourceProgramFixture.build({sources: [{path: "Main.hx", source: source}], requiredModules: ["Array"]});
 	}
 
 	static function runNodeScript(jsPath:String):String {
@@ -90,7 +88,7 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 				"  }",
 				"}"
 			].join("\n");
-			final program = makeProgram(source, "PromotionEquivalenceMain.hx");
+			final program = makeProgram(source);
 
 			final builtinBackend = new JsBackend();
 			final pluginBackend = JsBackend.providerRegistrations()[0].create();

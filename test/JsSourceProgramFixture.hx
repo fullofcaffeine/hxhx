@@ -7,12 +7,13 @@ function build(input:{sources:Array<{path:String, source:String}>, requiredModul
 	final filesystem = new CompilerSourceProvider();
 	final files = new haxe.ds.StringMap<String>();
 	final roots = new Array<String>();
+	final cwd = Path.normalize(Sys.getCwd());
 	for (source in input.sources) {
-		files.set(Path.normalize(source.path), source.source);
+		files.set(Path.normalize(Path.join([cwd, source.path])), source.source);
 		roots.push(Path.withoutExtension(source.path).split("/").join("."));
 	}
 	final provider = CompilerSourceProvider.fromCallbacks(function(paths, modulePath) {
-		final path = modulePath.split(".").join("/") + ".hx";
+		final path = Path.normalize(Path.join([cwd, modulePath.split(".").join("/") + ".hx"]));
 		return files.exists(path) ? new CompilerModuleResolution("fixture:" + modulePath, haxe.crypto.Sha256.encode(files.get(path)), path, 0,
 			false) : filesystem.resolveModule(paths, modulePath);
 	}, function(path) {
@@ -33,7 +34,9 @@ function build(input:{sources:Array<{path:String, source:String}>, requiredModul
 	});
 	final defines = Stage3SetupSupport.buildDefinesMap([], "js", "js-native");
 	final resolved = ResolverStage.parseProjectRoots(paths, roots, defines, provider);
-	final index = TyperIndex.build(resolved);
+	// Let the loader discover signature-only dependencies before publishing types,
+	// including types used by declarations in the eagerly resolved standard library.
+	final index = TyperIndex.buildHeaders(resolved);
 	final loader = new ModuleLoader(paths, defines, index, null, true, provider);
 	loader.markResolvedAlready(resolved);
 	final pending = resolved.copy();
@@ -52,5 +55,27 @@ function build(input:{sources:Array<{path:String, source:String}>, requiredModul
 		if (path == null || files.exists(Path.normalize(path)) || !sys.FileSystem.exists(path))
 			throw "JavaScript fixture did not load its real provider: " + required;
 	}
-	return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false);
+	final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false);
+	final entries = [
+		for (module in program.getTypedModules())
+			for (owner in module.getTypedClasses())
+				if (owner.getSemanticInfo().getIdentity().getCanonicalName() == "Main")
+					for (fn in owner.getFunctions())
+						if (fn.getDeclaration().getIsStatic() && fn.getDeclaration().getSignature().getName() == "main")
+							fn
+	];
+	if (entries.length != 1)
+		throw "JavaScript fixture requires one exact Main.main entry point";
+	final sources = new TypedFeatureSourceCatalog({program: program, classPaths: paths, standardRoot: Stage1Args.getStandardLibraryRoot(args)});
+	// Keep the complete provider graph under no DCE. Feature activation still uses
+	// source-aware reference closure: unused SDK definitions do not enable features.
+	final reachable = TypedFeatureMemberClosure.retain(TypedFeatureRoots.select({
+		program: program,
+		sources: sources,
+		entryPoint: entries[0],
+		mode: "no"
+	}));
+	final features = new TypedFeatureDiscovery(reachable);
+	final retained = new TypedEmissionRetention({reachable: reachable, mode: "no"}).apply(program);
+	return TypedFeatureSelection.lower(retained, features.namesFor(program));
 }
