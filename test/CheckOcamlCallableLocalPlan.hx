@@ -67,6 +67,14 @@ class CheckOcamlCallableLocalPlan {
 		final retained = plan.callableViewConversionFor(binding, output.localId, Initializer, source, registry);
 		if (retained == null || plan.callableViewConversionCount != 1 || localReferences(retained).length != 1)
 			throw "callback producer lost its single destination storage reference";
+		// Report decoding must preserve the adapter selected from this actual typed producer.
+		final report = reflaxe.ocaml.reports.OcamlCallableViewReport.adapterToReport(retained.inputLayout, retained.outputLayout, retained.conversion);
+		final restored = reflaxe.ocaml.reports.OcamlCallableViewReport.adapterFromReport(haxe.Json.parse(reflaxe.ocaml.reports.OcamlReportJson.encode(report)));
+		if (restored.input.revision != retained.inputLayout.revision
+			|| restored.output.revision != retained.outputLayout.revision
+			|| Std.string(restored.conversion) != Std.string(retained.conversion))
+			throw "callback producer report changed its selected adapter";
+		CheckOcamlCallableViewReports.verify();
 		final expected = localName == "direct" ? "AdaptFunction([BoxValue],Identity)" : "Identity";
 		if (Std.string(retained.conversion) != expected)
 			throw "callback producer has the wrong selected conversion";

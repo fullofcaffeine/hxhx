@@ -93,6 +93,9 @@ class CheckGenericCallPlans {
 		final decoded = targetFromReport(haxe.Json.parse(encoded));
 		if (genericCallFingerprint(decoded) != genericCallFingerprint(target) || encode(targetToReport(decoded)) != encoded)
 			throw "generic report changed the typed target or canonical bytes";
+		final ordinaryDynamic:Dynamic = haxe.Json.parse(encoded);
+		Reflect.setField(ordinaryDynamic, "resultShape", {kind: "dynamic", parameter: null, children: []});
+		expectRejected(() -> targetFromReport(ordinaryDynamic), "callback Dynamic tag entered a generic report");
 		encode(callToReport(decision));
 		// This test deliberately corrupts parsed JSON at the same boundary as an external report.
 		final unknownField:Dynamic = haxe.Json.parse(encoded);

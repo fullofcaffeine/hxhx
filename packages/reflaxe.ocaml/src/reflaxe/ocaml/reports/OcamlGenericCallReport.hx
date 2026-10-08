@@ -8,6 +8,7 @@ import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericInstan
 /** Closed tags for the plain-data representation of generic storage and conversions. */
 private enum abstract NodeKind(String) to String {
 	final Erased = "erased";
+	final DynamicValue = "dynamic";
 	final Integer = "int";
 	final Boolean = "bool";
 	final Text = "string";
@@ -30,7 +31,7 @@ private enum abstract NodeKind(String) to String {
 }
 
 /** Only class nodes carry nominal proof fields; function children end with the result. */
-private typedef ReportNode = {
+typedef ReportNode = {
 	final kind:NodeKind;
 	final parameter:Null<String>;
 	final children:Array<ReportNode>;
@@ -106,8 +107,28 @@ private function node(kind:NodeKind, ?children:Array<ReportNode>, ?parameter:Str
 }
 
 private function shapeToReport(shape:OcamlGenericValueShape):ReportNode {
+	return encodeShape(shape, false);
+}
+
+/** Encode a closed callback layout without granting generic-parameter admission. */
+function callableShapeToReport(shape:OcamlGenericValueShape):ReportNode {
+	reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe(shape);
+	return encodeShape(shape, true);
+}
+
+/** Decode JSON into a validated callback layout; unresolved and foreign leaves stay rejected. */
+function callableShapeFromReport(value:Dynamic):OcamlGenericValueShape {
+	final shape = readShape(value, 0, true);
+	reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe(shape);
+	return shape;
+}
+
+private function encodeShape(shape:OcamlGenericValueShape, allowDynamic:Bool):ReportNode {
 	return switch (shape) {
-		case DynamicValue: throw "Generic call report cannot describe an unproved Dynamic declaration";
+		case DynamicValue:
+			if (!allowDynamic)
+				throw "Generic call report cannot describe an unproved Dynamic declaration";
+			node(NodeKind.DynamicValue);
 		case Erased(parameter): node(NodeKind.Erased, [], parameter);
 		case Integer: node(NodeKind.Integer);
 		case Boolean: node(NodeKind.Boolean);
@@ -121,13 +142,15 @@ private function shapeToReport(shape:OcamlGenericValueShape):ReportNode {
 				classTypeId: typeId,
 				classRepresentationId: representationId
 			};
-		case ArrayValue(element): node(NodeKind.ArrayValue, [shapeToReport(element)]);
-		case FunctionValue(arguments, result): node(NodeKind.FunctionValue, arguments.map(shapeToReport).concat([shapeToReport(result)]));
+		case ArrayValue(element): node(NodeKind.ArrayValue, [encodeShape(element, allowDynamic)]);
+		case FunctionValue(arguments, result):
+			node(NodeKind.FunctionValue, arguments.map(argument -> encodeShape(argument, allowDynamic)).concat([encodeShape(result, allowDynamic)]));
 		case EffectOnly: node(NodeKind.EffectOnly);
 	};
 }
 
-private function conversionToReport(conversion:OcamlGenericValueConversion):ReportNode {
+/** JSON-safe conversion syntax; the owning boundary must still prove its direction and types. */
+function conversionToReport(conversion:OcamlGenericValueConversion):ReportNode {
 	return switch (conversion) {
 		case Identity: node(NodeKind.Identity);
 		case BoxValue: node(NodeKind.BoxValue);
@@ -140,10 +163,16 @@ private function conversionToReport(conversion:OcamlGenericValueConversion):Repo
 	};
 }
 
-private function readShape(value:Dynamic, depth:Int):OcamlGenericValueShape {
+/** Parse conversion syntax only; a decoded tree grants no representation or runtime authority. */
+function conversionFromReport(value:Dynamic):OcamlGenericValueConversion {
+	return readConversion(value, 0);
+}
+
+private function readShape(value:Dynamic, depth:Int, allowDynamic:Bool = false):OcamlGenericValueShape {
 	final decoded = readNode(value, depth);
 	final children = decoded.children;
 	return switch (decoded.kind) {
+		case "dynamic" if (allowDynamic && children.length == 0): DynamicValue;
 		case "erased" if (children.length == 0 && decoded.parameter != null): Erased(decoded.parameter);
 		case "int" if (children.length == 0): Integer;
 		case "bool" if (children.length == 0): Boolean;
@@ -154,9 +183,10 @@ private function readShape(value:Dynamic, depth:Int):OcamlGenericValueShape {
 		case "class", "nullable-class" if (children.length == 0):
 			NominalValue(text(Reflect.field(value, "classTypeId")), text(Reflect.field(value, "classRepresentationId")), decoded.kind == "nullable-class");
 		case "void" if (children.length == 0): EffectOnly;
-		case "array" if (children.length == 1): ArrayValue(readShape(children[0], depth + 1));
+		case "array" if (children.length == 1): ArrayValue(readShape(children[0], depth + 1, allowDynamic));
 		case "function" if (children.length > 0):
-			FunctionValue(children.slice(0, -1).map(child -> readShape(child, depth + 1)), readShape(children[children.length - 1], depth + 1));
+			FunctionValue(children.slice(0, -1).map(child -> readShape(child, depth + 1, allowDynamic)),
+				readShape(children[children.length - 1], depth + 1, allowDynamic));
 		case _: throw "Generic call report has an unsupported or malformed storage shape.";
 	};
 }
