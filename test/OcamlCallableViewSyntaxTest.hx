@@ -39,12 +39,24 @@ class OcamlCallableViewSyntaxTest {
 	static function withEffect(label:String, value:OcamlExpr):OcamlExpr
 		return ESeq([print(EConst(CString(label))), value]);
 
-	static function origin(value:OcamlExpr):OcamlExpr
-		return produceView(CheckOcamlCallableViewConversions.selectedOrigin("source"), value, fresh);
+	static function origin(value:OcamlExpr):OcamlExpr {
+		final producer = CheckOcamlCallableViewConversions.selectedProducer("source");
+		return convertView(producer.conversion, produceView(producer.kind, value, fresh), "test-source", fresh, unexpectedRuntime);
+	}
 
 	/** The typed lambda initializer selects allocation; the native syntax cannot infer it. */
-	static function sourceLiteral(value:OcamlExpr):OcamlExpr
-		return produceView(CheckOcamlCallableViewConversions.selectedOrigin("number"), value, fresh);
+	static function sourceLiteral(value:OcamlExpr):OcamlExpr {
+		final producer = CheckOcamlCallableViewConversions.selectedProducer("number");
+		return convertView(producer.conversion, produceView(producer.kind, value, fresh), "test-literal", fresh, unexpectedRuntime);
+	}
+
+	/** Construct and adapt a direct static producer while preserving its declaration identity. */
+	static function directProducer():OcamlExpr {
+		final producer = CheckOcamlCallableViewConversions.selectedProducer("direct");
+		final produced = produceView(producer.kind, EIdent("declared_source"), fresh);
+		return ELet("direct", convertView(producer.conversion, produced, "test-direct", fresh, unexpectedRuntime),
+			ESeq([invokeInt("direct"), printBool(equal(EIdent("direct"), EIdent("source")))]), false);
+	}
 
 	static function equal(left:OcamlExpr, right:OcamlExpr):OcamlExpr {
 		return compareViews(left, right, (left, right) -> EBinop(PhysEq, left, right), fresh);
@@ -156,11 +168,13 @@ class OcamlCallableViewSyntaxTest {
 			lifetime(),
 			higherOrder(),
 			literalOrigins(),
-			tokenLifetime()
+			tokenLifetime(),
+			directProducer()
 		]);
 		final type = CheckOcamlCallableViewConversions.selectedCarrier("source");
 		final bindings:Array<{name:String, value:OcamlExpr}> = [
-			{name: "source", value: EAnnot(origin(withEffect("source", identity)), type)},
+			{name: "declared_source", value: identity},
+			{name: "source", value: EAnnot(origin(withEffect("source", EIdent("declared_source"))), type)},
 			{name: "first", value: view(withEffect("view", EIdent("source")))},
 			{name: "second", value: view(EIdent("source"))},
 			{name: "alias", value: EIdent("first")},
@@ -192,7 +206,7 @@ class OcamlCallableViewSyntaxTest {
 		sys.FileSystem.createDirectory(root);
 		sys.io.File.saveContent(root + "/main.ml", "let () = " + new OcamlASTPrinter().printExpr(program()) + "\n");
 		run(["ocamlopt", "-o", root + "/main.exe", root + "/main.ml"]);
-		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\ntrue\ntrue\nfalse\nfalse\n8\n8\ntrue\nfalse\n";
+		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\ntrue\ntrue\nfalse\nfalse\n8\n8\ntrue\nfalse\n7\ntrue\n";
 		final actual = run([root + "/main.exe"]);
 		if (actual != expected)
 			throw "callable view behavior differs\nexpected:\n" + expected + "actual:\n" + actual;

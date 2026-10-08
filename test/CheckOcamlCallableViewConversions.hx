@@ -15,6 +15,18 @@ import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr;
 
 /** Checks ordinary callback conversion direction on the retained, upstream-typed source fixture. */
 class CheckOcamlCallableViewConversions {
+	/** Supplies an origin only after its actual typed producer is retained in a local write plan. */
+	public static macro function selectedProducer(localName:String):haxe.macro.Expr {
+		final owner = switch (Context.getType("Main")) {
+			case TInst(reference, []): reference.get();
+			case _: throw "missing stored callback fixture";
+		};
+		final body = owner.statics.get().filter(field -> field.name == "main")[0].expr();
+		if (body == null)
+			throw "missing stored callback body";
+		return Context.makeExpr(CheckOcamlCallableLocalPlan.selectOrigin(body, localName), Context.currentPos());
+	}
+
 	/** Identity selection uses the fixture's typed initializer, independently of its carrier. */
 	public static macro function selectedOrigin(localName:String):haxe.macro.Expr {
 		final owner = switch (Context.getType("Main")) {

@@ -39,5 +39,8 @@ class Main {
 		Sys.println(firstCapture == secondCapture);
 		Sys.println(firstLiteral(7));
 		Sys.println(secondLiteral(7));
+		var direct:Int->Dynamic = consume;
+		Sys.println(direct(7));
+		Sys.println(direct == source);
 	}
 }

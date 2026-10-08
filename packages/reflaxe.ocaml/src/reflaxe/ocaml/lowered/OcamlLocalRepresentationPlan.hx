@@ -243,7 +243,7 @@ class OcamlLocalRepresentationPlan {
 		for (conversion in orderedCallableViews) {
 			if (conversionsById.exists(conversion.id) || callableViewsById.exists(conversion.id))
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: callback write "${conversion.id}" has another conversion owner';
-			for (reference in [conversion.input, conversion.output]) {
+			for (reference in reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.localReferences(conversion)) {
 				final selected = referenceFor(reference.localId);
 				if (selected == null
 					|| selected.representationId != reference.representationId

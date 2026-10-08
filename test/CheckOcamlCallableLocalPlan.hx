@@ -23,6 +23,76 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 **/
 class CheckOcamlCallableLocalPlan {
 	#if macro
+	/** The first stored view owns an actual source producer, not an invented input local. */
+	public static function selectOrigin(body:TypedExpr, localName:String):{
+		kind:reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind,
+		conversion:OcamlGenericValueConversion
+	} {
+		var selected:Null<{local:TVar, expression:TypedExpr}> = null;
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, value) if (local.name == localName && value != null):
+					selected = {local: local, expression: value};
+				case _:
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(body);
+		if (selected == null)
+			throw "missing callback producer fixture";
+		final binding:OcamlFunctionPlanBinding = {
+			functionId: "callback-fixture-main",
+			programRevision: "callback-fixture-program",
+			bodyRevision: FunctionBodyRevision.initial(body).id,
+			pipelineRevision: "callback-fixture-pipeline"
+		};
+		final identities = LexicalLocalIdentityPlan.build(binding.functionId, body);
+		final registry = new OcamlRepresentationRegistry();
+		registry.beginProgram(binding.programRevision);
+		final shape = callableShape(selected.local.t);
+		if (shape == null)
+			throw "missing callback producer signature";
+		final representation = registry.selectCallableView(shape, InternalValue);
+		final output:OcamlLocalRepresentationReference = {
+			localId: identities.requireHostId(selected.local.id).id,
+			representationId: representation.id,
+			representationRevision: representation.revision,
+			semanticTypeId: representation.semanticTypeId,
+			domain: representation.domain
+		};
+		final producer = sealProducer(registry, binding, Initializer, selected.expression, output);
+		final source = OcamlLoweredOrigin.sourceSpan(selected.expression.pos);
+		final plan = new OcamlLocalRepresentationPlan([choice(output)], [], [producer]);
+		plan.requirePlanBinding(binding);
+		final retained = plan.callableViewConversionFor(binding, output.localId, Initializer, source, registry);
+		if (retained == null || plan.callableViewConversionCount != 1 || localReferences(retained).length != 1)
+			throw "callback producer lost its single destination storage reference";
+		final expected = localName == "direct" ? "AdaptFunction([BoxValue],Identity)" : "Identity";
+		if (Std.string(retained.conversion) != expected)
+			throw "callback producer has the wrong selected conversion";
+		expectRejected(() -> sealProducer(registry, binding, Read, selected.expression, output));
+		expectRejected(() -> new OcamlLocalRepresentationPlan([], [], [producer]));
+		expectRejected(() -> new OcamlLocalRepresentationPlan([choice(output)], [], [producer, producer]));
+		if (plan.callableViewConversionFor(binding, output.localId, Assignment, source, registry) != null)
+			throw "producer initializer was reused as an assignment";
+		// Other callbacks have compatible-looking types but no raw-origin proof.
+		function rejectReads(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, value) if (value != null && ["first", "returned", "higherSource", "firstLiteral"].contains(local.name)):
+					expectRejected(() -> sealProducer(registry, binding, Initializer, value, output));
+				case _:
+			}
+			TypedExprTools.iter(expression, rejectReads);
+		}
+		rejectReads(body);
+		registry.beginProgram("reset-program");
+		expectRejected(() -> plan.callableViewConversionFor(binding, output.localId, Initializer, source, registry));
+		return switch (retained.input) {
+			case RawOrigin(kind): {kind: kind, conversion: retained.conversion};
+			case _: throw "raw callback producer became an existing view";
+		};
+	}
+
 	public static function select(body:TypedExpr, localName:String):OcamlGenericValueConversion {
 		var selected:Null<{local:TVar, input:TVar, expression:TypedExpr}> = null;
 		function visit(expression:TypedExpr):Void {

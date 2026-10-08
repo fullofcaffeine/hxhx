@@ -17,6 +17,11 @@ OCaml can share a capture-free invocation closure, so its physical address
 cannot identify a newly evaluated Haxe lambda. A lambda view needs a fresh
 identity token that later views preserve.
 
+The final case stores the static method directly in an `Int -> Dynamic` local.
+Its initializer must create the declaration's view and adapt the argument in
+one write. Calling it returns `7`, and it still compares equal to the original
+stored function. This tests producer construction and conversion together.
+
 Run the independent upstream observation from the repository root:
 
 ```sh

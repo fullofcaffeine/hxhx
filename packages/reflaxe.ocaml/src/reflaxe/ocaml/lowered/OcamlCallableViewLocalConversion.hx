@@ -2,28 +2,31 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import haxe.macro.Type.TypedExpr;
+import reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.validate;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.crossing;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationReference;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
-/**
-	One exact local write between two already-selected callback views.
+/** A write either preserves an existing view's token or creates the producer's selected identity. */
+enum OcamlCallableViewInput {
+	ExistingView(reference:OcamlLocalRepresentationReference);
+	RawOrigin(kind:OcamlCallableOriginKind);
+}
 
-	This record does not wrap raw functions or prove that a producer is non-null.
-	The enclosing function plan must first select view storage for both locals.
-	The record then fixes the directional adapter for one initializer or assignment.
-**/
+/** One source-bound callback write, including origin construction before signature adaptation. */
 typedef OcamlCallableViewLocalDecision = {
 	final id:String;
 	final revision:String;
 	final role:OcamlLocalConversionRole;
 	final source:OcamlLoweredSourceSpan;
-	final input:OcamlLocalRepresentationReference;
+	final input:OcamlCallableViewInput;
 	final output:OcamlLocalRepresentationReference;
 	final inputLayout:OcamlCallableViewDescriptor;
 	final outputLayout:OcamlCallableViewDescriptor;
@@ -41,6 +44,29 @@ typedef OcamlCallableViewLocalDecision = {
 function seal(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan,
 		input:OcamlLocalRepresentationReference, output:OcamlLocalRepresentationReference):OcamlCallableViewLocalDecision {
 	final inputLayout = registry.requireCallableView(input.representationId, input.representationRevision, binding.programRevision);
+	return sealInput(registry, binding, role, source, ExistingView(input), inputLayout, output);
+}
+
+/**
+	Binds an actual typed producer to the local that will store its view.
+
+	Only scalar argument/result arrows can enter directly. A higher-order native
+	arrow does not already carry nested views and needs a separate declaration or
+	literal invocation plan. Reject it here rather than falsely borrowing the
+	recursive layout descriptor as proof of that calling convention.
+**/
+function sealProducer(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole, expression:TypedExpr,
+		output:OcamlLocalRepresentationReference):OcamlCallableViewLocalDecision {
+	final kind = reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(expression);
+	final shape = reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(expression.t);
+	if (kind == null || shape == null || !isScalarArrow(shape))
+		throw "reflaxe.ocaml [ocaml-callable-local:unproved-producer]: raw callback needs an exact origin and scalar invocation layout";
+	return sealInput(registry, binding, role, OcamlLoweredOrigin.sourceSpan(expression.pos), RawOrigin(kind), describe(shape), output);
+}
+
+private function sealInput(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole,
+		source:OcamlLoweredSourceSpan, input:OcamlCallableViewInput, inputLayout:OcamlCallableViewDescriptor,
+		output:OcamlLocalRepresentationReference):OcamlCallableViewLocalDecision {
 	final outputLayout = registry.requireCallableView(output.representationId, output.representationRevision, binding.programRevision);
 	final conversion = crossing(inputLayout.shape, outputLayout.shape);
 	if (conversion == null)
@@ -51,7 +77,7 @@ function seal(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBin
 		revision: fingerprint(id, binding, role, source, input, output, inputLayout, outputLayout, conversion),
 		role: role,
 		source: {file: source.file, min: source.min, max: source.max},
-		input: copyReference(input),
+		input: copyInput(input),
 		output: copyReference(output),
 		inputLayout: inputLayout,
 		outputLayout: outputLayout,
@@ -66,7 +92,18 @@ function seal(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBin
 function requireDecision(decision:OcamlCallableViewLocalDecision):Void {
 	validate(decision.inputLayout);
 	validate(decision.outputLayout);
-	requireReference(decision.input, decision.inputLayout);
+	switch (decision.input) {
+		case ExistingView(reference):
+			requireReference(reference, decision.inputLayout);
+		case RawOrigin(kind):
+			if (!isScalarArrow(decision.inputLayout.shape))
+				throw "reflaxe.ocaml [ocaml-callable-local:unproved-producer]: raw callback has an unproved invocation layout";
+			switch (kind) {
+				case StaticDeclaration(calleeId) if (calleeId.length == 0):
+					throw "reflaxe.ocaml [ocaml-callable-local:missing-declaration]: static origin lost its declaration identity";
+				case _:
+			}
+	}
 	requireReference(decision.output, decision.outputLayout);
 	final binding = decision.binding;
 	if (binding.functionId.length == 0
@@ -87,18 +124,23 @@ function requireDecision(decision:OcamlCallableViewLocalDecision):Void {
 		throw "reflaxe.ocaml [ocaml-callable-local:stale-conversion]: callback write no longer matches its sealed source and layouts";
 }
 
-/** Revalidate both registry references before a native consumer can use the adapter. */
+/** Revalidate every actual local reference before a native consumer can use the adapter. */
 function requireRegistry(decision:OcamlCallableViewLocalDecision, registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding):Void {
 	requireBinding(decision, binding);
-	for (reference in [decision.input, decision.output]) {
+	function requireRegistered(reference:OcamlLocalRepresentationReference, expected:OcamlCallableViewDescriptor):Void {
 		final registered = registry.require(reference.representationId, binding.programRevision);
 		final layout = registry.requireCallableView(reference.representationId, reference.representationRevision, binding.programRevision);
-		final expected = reference == decision.input ? decision.inputLayout : decision.outputLayout;
 		if (registered.semanticTypeId != reference.semanticTypeId
 			|| registered.domain != reference.domain
 			|| layout.revision != expected.revision)
 			throw "reflaxe.ocaml [ocaml-callable-local:foreign-layout]: callback write refers to another registered layout or storage domain";
 	}
+	switch (decision.input) {
+		case ExistingView(reference):
+			requireRegistered(reference, decision.inputLayout);
+		case RawOrigin(_):
+	}
+	requireRegistered(decision.output, decision.outputLayout);
 }
 
 /** A valid conversion from another body or pipeline is still unusable here. */
@@ -119,12 +161,40 @@ function copy(decision:OcamlCallableViewLocalDecision):OcamlCallableViewLocalDec
 		revision: decision.revision,
 		role: decision.role,
 		source: {file: decision.source.file, min: decision.source.min, max: decision.source.max},
-		input: copyReference(decision.input),
+		input: copyInput(decision.input),
 		output: copyReference(decision.output),
 		inputLayout: describe(decision.inputLayout.shape),
 		outputLayout: describe(decision.outputLayout.shape),
 		conversion: copyConversion(decision.conversion),
 		binding: copyBinding(decision.binding)
+	};
+}
+
+/** Enumerate only real local storage references; a producer is not a synthetic input local. */
+function localReferences(decision:OcamlCallableViewLocalDecision):Array<OcamlLocalRepresentationReference> {
+	return switch (decision.input) {
+		case ExistingView(reference): [copyReference(reference), copyReference(decision.output)];
+		case RawOrigin(_): [copyReference(decision.output)];
+	};
+}
+
+private function copyInput(input:OcamlCallableViewInput):OcamlCallableViewInput {
+	return switch (input) {
+		case ExistingView(reference): ExistingView(copyReference(reference));
+		case RawOrigin(kind): RawOrigin(kind);
+	};
+}
+
+private function isScalarArrow(shape:OcamlGenericValueShape):Bool {
+	function scalar(value:OcamlGenericValueShape):Bool {
+		return switch (value) {
+			case Integer, Boolean, Text(_), NullableInteger, NullableBoolean, DynamicValue: true;
+			case _: false;
+		};
+	}
+	return switch (shape) {
+		case FunctionValue(arguments, result): Lambda.foreach(arguments, scalar) && (result == EffectOnly || scalar(result));
+		case _: false;
 	};
 }
 
@@ -178,10 +248,10 @@ private function referenceKey(reference:OcamlLocalRepresentationReference):Strin
 }
 
 private function fingerprint(id:String, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan,
-		input:OcamlLocalRepresentationReference, output:OcamlLocalRepresentationReference, inputLayout:OcamlCallableViewDescriptor,
+		input:OcamlCallableViewInput, output:OcamlLocalRepresentationReference, inputLayout:OcamlCallableViewDescriptor,
 		outputLayout:OcamlCallableViewDescriptor, conversion:OcamlGenericValueConversion):String {
 	return "sha256:" + Sha256.encode([
-		"ocaml-callable-local-conversion-v1",
+		"ocaml-callable-local-conversion-v2",
 		id,
 		binding.functionId,
 		binding.programRevision,
@@ -191,7 +261,12 @@ private function fingerprint(id:String, binding:OcamlFunctionPlanBinding, role:O
 		source.file,
 		Std.string(source.min),
 		Std.string(source.max),
-		referenceKey(input),
+		switch (input) {
+			case ExistingView(reference):
+				"existing-view\n" + referenceKey(reference);
+			case RawOrigin(kind):
+				"raw-origin\n" + Std.string(kind);
+		},
 		referenceKey(output),
 		inputLayout.revision,
 		outputLayout.revision,
