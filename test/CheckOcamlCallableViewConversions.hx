@@ -42,30 +42,16 @@ class CheckOcamlCallableViewConversions {
 		return Context.makeExpr(typeExpr(descriptor), Context.currentPos());
 	}
 
-	/** Supplies the exact fixture assignment's selected conversion to the native syntax test. */
+	/** Supplies a source-bound local plan's conversion to the native syntax test. */
 	public static macro function selectedView(localName:String):haxe.macro.Expr {
 		final owner = switch (Context.getType("Main")) {
 			case TInst(reference, []): reference.get();
 			case _: throw "missing stored callback fixture";
 		};
 		final body = owner.statics.get().filter(field -> field.name == "main")[0].expr();
-		var selected:Null<reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion> = null;
-		function visit(expression:TypedExpr):Void {
-			switch (expression.expr) {
-				case TVar(local, value) if (local.name == localName && value != null):
-					final source = callableShape(value.t);
-					final destination = callableShape(local.t);
-					if (source != null && destination != null)
-						selected = crossing(source, destination);
-				case _:
-			}
-			TypedExprTools.iter(expression, visit);
-		}
-		if (body != null)
-			visit(body);
-		if (selected == null)
-			throw "fixture callback conversion was not selected";
-		return Context.makeExpr(selected, Context.currentPos());
+		if (body == null)
+			throw "missing stored callback body";
+		return Context.makeExpr(CheckOcamlCallableLocalPlan.select(body, localName), Context.currentPos());
 	}
 
 	#if macro

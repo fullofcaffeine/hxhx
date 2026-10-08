@@ -6,6 +6,10 @@ import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.OcamlCallableViewLocalDecision;
+import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.copy as copyCallableView;
+import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireBinding as requireCallableViewBinding;
+import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry as requireCallableViewRegistry;
 
 /** How syntax construction must convert one value crossing a local-carrier boundary. */
 enum abstract OcamlLocalCarrierConversion(String) from String to String {
@@ -156,20 +160,33 @@ typedef OcamlLocalRepresentationDecision = {
 	validate and consume the answer without reclassifying the Haxe type. Carrier
 	conversions are sealed separately so initialization, whole-value
 	replacement, and reads cannot fall back to generic same-class casts.
+
+	Callback-view writes retain their structured adapter and both registered
+	layouts in a separate conversion family. Primitive conversion and unsafe
+	operation accessors do not enumerate that family. Production planners must
+	also supply its producer, runtime-use, report and syntax consumers before
+	selecting it for a compiled function.
 **/
 class OcamlLocalRepresentationPlan {
 	final orderedDecisions:Array<OcamlLocalRepresentationDecision>;
 	final decisionsByLocalId:Map<String, OcamlLocalRepresentationDecision> = [];
 	final orderedConversions:Array<OcamlLocalConversionDecision>;
 	final conversionsById:Map<String, OcamlLocalConversionDecision> = [];
+	final orderedCallableViews:Array<OcamlCallableViewLocalDecision>;
+	final callableViewsById:Map<String, OcamlCallableViewLocalDecision> = [];
 
 	public final count:Int;
 	public final admittedCount:Int;
+
+	/** Number of primitive local conversions; callback adapters have their own count below. */
 	public final conversionCount:Int;
+
 	public final unsafeOperationCount:Int;
+	public final callableViewConversionCount:Int;
 	public final revision:String;
 
-	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>) {
+	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>,
+			?callableViews:Array<OcamlCallableViewLocalDecision>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> Reflect.compare(left.localId, right.localId));
 		var admitted = 0;
@@ -221,7 +238,28 @@ class OcamlLocalRepresentationPlan {
 		}
 		conversionCount = orderedConversions.length;
 		unsafeOperationCount = unsafeCount;
-		revision = "sha256:" + Sha256.encode(orderedDecisions.map(decisionFingerprint).concat(orderedConversions.map(conversionFingerprint)).join("\n"));
+		orderedCallableViews = callableViews == null ? [] : callableViews.map(copyCallableView);
+		orderedCallableViews.sort((left, right) -> Reflect.compare(left.id, right.id));
+		for (conversion in orderedCallableViews) {
+			if (conversionsById.exists(conversion.id) || callableViewsById.exists(conversion.id))
+				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: callback write "${conversion.id}" has another conversion owner';
+			for (reference in [conversion.input, conversion.output]) {
+				final selected = referenceFor(reference.localId);
+				if (selected == null
+					|| selected.representationId != reference.representationId
+					|| selected.representationRevision != reference.representationRevision
+					|| selected.semanticTypeId != reference.semanticTypeId
+					|| selected.domain != reference.domain)
+					throw "reflaxe.ocaml [ocaml-representation:foreign-callable-local]: callback conversion does not use this function's selected local storage";
+			}
+			callableViewsById.set(conversion.id, conversion);
+		}
+		callableViewConversionCount = orderedCallableViews.length;
+		revision = "sha256:"
+			+ Sha256.encode(orderedDecisions.map(decisionFingerprint)
+				.concat(orderedConversions.map(conversionFingerprint))
+				.concat(orderedCallableViews.map(conversion -> conversion.revision))
+				.join("\n"));
 	}
 
 	/**
@@ -254,6 +292,8 @@ class OcamlLocalRepresentationPlan {
 		OCaml syntax can consume the plan.
 	**/
 	public function requirePlanBinding(binding:OcamlFunctionPlanBinding):Void {
+		for (conversion in orderedCallableViews)
+			requireCallableViewBinding(conversion, binding);
 		for (conversion in orderedConversions) {
 			if (conversion.functionId != binding.functionId
 				|| conversion.programRevision != binding.programRevision
@@ -275,6 +315,21 @@ class OcamlLocalRepresentationPlan {
 	/** Returns every conversion in deterministic identity order. */
 	public function conversions():Array<OcamlLocalConversionDecision> {
 		return orderedConversions.map(copyConversion);
+	}
+
+	/** Resolve one source-bound callback write and validate both layouts against the live program registry. */
+	public function callableViewConversionFor(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan,
+			registry:OcamlRepresentationRegistry):Null<OcamlCallableViewLocalDecision> {
+		final decision = callableViewsById.get(occurrenceId(binding, localId, role, source));
+		if (decision == null)
+			return null;
+		requireCallableViewRegistry(decision, registry, binding);
+		return copyCallableView(decision);
+	}
+
+	/** Callback adapters are a separate family from primitive local conversions and their unsafe-operation ledger. */
+	public function callableViewConversions():Array<OcamlCallableViewLocalDecision> {
+		return orderedCallableViews.map(copyCallableView);
 	}
 
 	/** Returns the admitted unsafe-operation ledger in conversion order. */
