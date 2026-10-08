@@ -26,6 +26,19 @@ function origin(value:OcamlExpr, identity:OcamlExpr->OcamlExpr, fresh:String->St
 	return ELet(name, value, ETuple([local, identity(local)]), false);
 }
 
+/**
+	Allocate one Haxe function identity for each evaluation of a lambda literal.
+
+	OCaml can share a capture-free invocation closure across evaluations. Its
+	physical address therefore cannot identify the Haxe lambda. A fresh mutable
+	cell supplies a distinct, collector-owned token even when invocation is shared.
+	Only the typed literal producer may choose this operation. Reading an existing
+	function or adapting its signature must preserve the token already selected.
+**/
+function literal(value:OcamlExpr, fresh:String->String):OcamlExpr {
+	return origin(value, _ -> EApp(EField(EIdent("Obj"), "repr"), [EApp(EIdent("ref"), [EConst(CUnit)])]), fresh);
+}
+
 /** Change invocation while retaining the exact identity of the source view. */
 function adapt(value:OcamlExpr, conversion:OcamlExpr->OcamlExpr, fresh:String->String):OcamlExpr {
 	final name = fresh("callable_view");

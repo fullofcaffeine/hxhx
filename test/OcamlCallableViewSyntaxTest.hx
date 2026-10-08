@@ -2,7 +2,9 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare as compareViews;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation as viewInvocation;
+import reflaxe.ocaml.ast.OcamlCallableViewSyntax.identity as viewIdentity;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.origin as originView;
+import reflaxe.ocaml.ast.OcamlCallableViewSyntax.literal as literalView;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlGenericCallEmitter.convertView;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -58,7 +60,7 @@ class OcamlCallableViewSyntaxTest {
 		final higherType = CheckOcamlCallableViewConversions.selectedCarrier("higherSource");
 		final relay = EAnnot(origin(EFun([PVar("callback")], EIdent("callback"))), higherType);
 		final adapted = convertView(CheckOcamlCallableViewConversions.selectedView("higherView"), relay, "test-higher", fresh, unexpectedRuntime);
-		final number = origin(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))));
+		final number = literalView(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))), fresh);
 		final returned = EApp(viewInvocation(EIdent("higher")), [EIdent("number")]);
 		return ELet("higher", adapted, ELet("number", number, ELet("returned", returned, ESeq([
 			unitCall("Gc.full_major"),
@@ -72,6 +74,45 @@ class OcamlCallableViewSyntaxTest {
 		return print(call("string_of_int", [EAnnot(call("Obj.obj", [result]), TIdent("int"))]));
 	}
 
+	/** Repeated lambda evaluation creates distinct Haxe functions even without captures. */
+	static function literalOrigins():OcamlExpr {
+		final functionValue:OcamlExpr = EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1))));
+		final factory:OcamlExpr = EFun([PConst(CUnit)], literalView(functionValue, fresh));
+		return ELet("declared", functionValue,
+			ELet("make_literal", factory, ELet("literal_left", unitCall("make_literal"), ELet("literal_right", unitCall("make_literal"), ESeq([
+				unitCall("Gc.full_major"),
+				printBool(equal(origin(EIdent("declared")), origin(EIdent("declared")))),
+				printBool(equal(EIdent("literal_left"), EIdent("literal_left"))),
+				printBool(equal(EIdent("literal_left"), EIdent("literal_right"))),
+				printBool(equal(EIdent("left"), EIdent("right"))),
+				print(call("string_of_int", [EApp(viewInvocation(EIdent("literal_left")), [EConst(CInt(7))])])),
+				print(call("string_of_int", [EApp(viewInvocation(EIdent("literal_right")), [EConst(CInt(7))])]))
+			]), false), false), false), false);
+	}
+
+	/** A capture-free lambda's token lives with its view and is reclaimed after that view dies. */
+	static function tokenLifetime():OcamlExpr {
+		final token = literalView(EFun([PConst(CUnit)], EConst(CUnit)), fresh);
+		final observed = call("Weak.check", [EIdent("token_observer"), EConst(CInt(0))]);
+		final use = EFun([PConst(CUnit)], ELet("token_live", token, ESeq([
+			call("Weak.set", [
+				EIdent("token_observer"),
+				EConst(CInt(0)),
+				call("Some", [viewIdentity(EIdent("token_live"))])
+			]),
+			unitCall("Gc.full_major"),
+			printBool(observed),
+			// Keep the complete view live across collection, including its token.
+			call("ignore", [call("Sys.opaque_identity", [EIdent("token_live")])])
+		]), false));
+		return ELet("token_observer", call("Weak.create", [EConst(CInt(1))]), ELet("use_token", use, ESeq([
+			unitCall("use_token"),
+			unitCall("Gc.full_major"),
+			unitCall("Gc.full_major"),
+			printBool(observed)
+		]), false), false);
+	}
+
 	/** A weak observer must see the capture alive with a view and absent after its scope ends. */
 	static function lifetime():OcamlExpr {
 		final capture:OcamlExpr = EFun([PAnnot(PVar("value"), TIdent("Obj.t"))], call("Obj.repr", [
@@ -79,7 +120,7 @@ class OcamlCallableViewSyntaxTest {
 		]));
 		final install = EFun([PConst(CUnit)], ELet("payload", call("ref", [EConst(CInt(1))]), ESeq([
 			call("Weak.set", [EIdent("observer"), EConst(CInt(0)), call("Some", [EIdent("payload")])]),
-			view(origin(capture))
+			view(literalView(capture, fresh))
 		]), false));
 		final observed = call("Weak.check", [EIdent("observer"), EConst(CInt(0))]);
 		final use = EFun([PConst(CUnit)],
@@ -94,9 +135,9 @@ class OcamlCallableViewSyntaxTest {
 
 	static function program():OcamlExpr {
 		final identity:OcamlExpr = EFun([PAnnot(PVar("value"), TIdent("Obj.t"))], EIdent("value"));
-		final factory:OcamlExpr = EFun([PVar("offset")], EFun([PAnnot(PVar("value"), TIdent("Obj.t"))], call("Obj.repr", [
+		final factory:OcamlExpr = EFun([PVar("offset")], literalView(EFun([PAnnot(PVar("value"), TIdent("Obj.t"))], call("Obj.repr", [
 			EBinop(Add, EAnnot(call("Obj.obj", [EIdent("value")]), TIdent("int")), EIdent("offset"))
-		])));
+		])), fresh));
 		var body:OcamlExpr = ESeq([
 			invokeInt("first"),
 			printBool(equal(EIdent("first"), EIdent("alias"))),
@@ -108,7 +149,9 @@ class OcamlCallableViewSyntaxTest {
 			unitCall("Gc.full_major"),
 			invokeInt("first"),
 			lifetime(),
-			higherOrder()
+			higherOrder(),
+			literalOrigins(),
+			tokenLifetime()
 		]);
 		final type = CheckOcamlCallableViewConversions.selectedCarrier("source");
 		final bindings:Array<{name:String, value:OcamlExpr}> = [
@@ -118,8 +161,8 @@ class OcamlCallableViewSyntaxTest {
 			{name: "alias", value: EIdent("first")},
 			{name: "third", value: adaptView(EIdent("first"), value -> value, fresh)},
 			{name: "make", value: factory},
-			{name: "left", value: origin(call("make", [EConst(CInt(1))]))},
-			{name: "right", value: origin(call("make", [EConst(CInt(1))]))}
+			{name: "left", value: call("make", [EConst(CInt(1))])},
+			{name: "right", value: call("make", [EConst(CInt(1))])}
 		];
 		var index = bindings.length;
 		while (index-- > 0)
@@ -144,7 +187,7 @@ class OcamlCallableViewSyntaxTest {
 		sys.FileSystem.createDirectory(root);
 		sys.io.File.saveContent(root + "/main.ml", "let () = " + new OcamlASTPrinter().printExpr(program()) + "\n");
 		run(["ocamlopt", "-o", root + "/main.exe", root + "/main.ml"]);
-		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\n";
+		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\ntrue\ntrue\nfalse\nfalse\n8\n8\ntrue\nfalse\n";
 		final actual = run([root + "/main.exe"]);
 		if (actual != expected)
 			throw "callable view behavior differs\nexpected:\n" + expected + "actual:\n" + actual;

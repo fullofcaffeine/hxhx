@@ -10,6 +10,13 @@ and returns `Dynamic -> Dynamic` callbacks. The returned view must produce `8`
 for input `7` and compare equal to the original callback. This checks opposite
 conversion directions at the argument and result boundaries.
 
+Repeated evaluation of the same lambda creates distinct function identities,
+including lambdas with no captures. Repeated reads of a static method remain
+equal. The final observations check both rules and invoke both returned lambdas.
+OCaml can share a capture-free invocation closure, so its physical address
+cannot identify a newly evaluated Haxe lambda. A lambda view needs a fresh
+identity token that later views preserve.
+
 Run the independent upstream observation from the repository root:
 
 ```sh
