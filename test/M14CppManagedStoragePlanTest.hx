@@ -419,8 +419,14 @@ class M14CppManagedStoragePlanTest {
 		rejected(() -> access.locals.renderDeclaration(copy, null, "heap", "", rooted.render), "explicit source initialization");
 		final parameterName = projected.getLocalCatalog().projectedName(parameter);
 		final widerName = projected.getLocalCatalog().projectedName(wider);
-		rejected(() -> rooted.renderStatement(SVar(widerName, "Float", EIdent(parameterName), HxPos.unknown()), ""), "explicit typed conversion");
-		rejected(() -> rooted.render(EBinop("=", EIdent(widerName), EIdent(parameterName)), "result", ""), "explicit typed conversion");
+		// Integer widening is an implemented storage conversion. Both declaration
+		// and assignment must emit it; incompatible strings must still reject.
+		final initialized = rooted.renderStatement(SVar(widerName, "Float", EIdent(parameterName), HxPos.unknown()), "").join("\n");
+		final assigned = rooted.render(EBinop("=", EIdent(widerName), EIdent(parameterName)), "result", "").join("\n");
+		for (emitted in [initialized, assigned])
+			check(emitted.indexOf("Value::floating(static_cast<double>(") >= 0, "Float storage omitted its integer widening conversion");
+		rejected(() -> rooted.renderStatement(SVar(widerName, "Float", EString("wrong"), HxPos.unknown()), ""), "explicit typed conversion");
+		rejected(() -> rooted.render(EBinop("=", EIdent(widerName), EString("wrong")), "result", ""), "explicit typed conversion");
 	}
 
 	/** Roots retain exact method ownership and cannot be substituted by equal source text. */
