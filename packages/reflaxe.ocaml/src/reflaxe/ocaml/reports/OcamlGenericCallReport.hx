@@ -107,6 +107,7 @@ private function node(kind:NodeKind, ?children:Array<ReportNode>, ?parameter:Str
 
 private function shapeToReport(shape:OcamlGenericValueShape):ReportNode {
 	return switch (shape) {
+		case DynamicValue: throw "Generic call report cannot describe an unproved Dynamic declaration";
 		case Erased(parameter): node(NodeKind.Erased, [], parameter);
 		case Integer: node(NodeKind.Integer);
 		case Boolean: node(NodeKind.Boolean);

@@ -5,6 +5,11 @@ The source stores one `Dynamic -> Dynamic` function in two `Int -> Dynamic`
 locals. Both views and the original function must compare equal. An alias must
 also keep that identity. Calling a view with `7` must return `7`.
 
+A second case passes an `Int -> Int` callback through a function that accepts
+and returns `Dynamic -> Dynamic` callbacks. The returned view must produce `8`
+for input `7` and compare equal to the original callback. This checks opposite
+conversion directions at the argument and result boundaries.
+
 Run the independent upstream observation from the repository root:
 
 ```sh
@@ -14,6 +19,11 @@ node_modules/.bin/haxe -cp test/fixtures/stage3_stored_callback_views --run Main
 The expected output is in `expected.stdout`. The native regression runs through
 `test/m14_dynamic_callable_conversion_test.hxml`. It parses and types the same
 source, generates OCaml, compiles it, and observes the executable output.
+
+The same command first checks conversion selection against upstream typed
+assignments. A separate native syntax test consumes those selected conversions
+and checks identity, evaluation order, and captured-value lifetime. Passing
+that component test does not replace the complete source compilation test.
 
 Current limitation: the Stage3 diagnostic emitter stores the original function
 without adapting its input representation. Native compilation rejects the raw

@@ -11,6 +11,9 @@ enum OcamlGenericValueShape {
 	/** A method parameter already stored as Obj.t; identity includes its declaring scope. */
 	Erased(parameterId:String);
 
+	/** An explicit Haxe Dynamic value, distinct from an unresolved or generic parameter. */
+	DynamicValue;
+
 	Integer;
 	Boolean;
 	Text(nullable:Bool);
@@ -67,17 +70,35 @@ function parameterId(type:Type):Null<String> {
 
 /** Classifies storage without following away the distinction between String and Null<String>. */
 function shape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericValueShape> {
+	return classifyShape(type, nominalProof, false);
+}
+
+/**
+	Classifies ordinary callback values with their explicit Dynamic boundaries.
+
+	This admission is separate from generic method declarations, whose proofs do
+	not yet cover Dynamic. Neither path turns an unresolved monomorph into Dynamic.
+	A typed Dynamic<T> object also needs its own storage proof. Conversion direction
+	remains owned by crossing for both callers.
+**/
+function callableShape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericValueShape> {
+	return classifyShape(type, nominalProof, true);
+}
+
+/** The admission choice follows aliases and nested functions without changing their storage. */
+private function classifyShape(type:Type, nominalProof:Null<String->Null<String>>, explicitDynamic:Bool):Null<OcamlGenericValueShape> {
 	final parameter = parameterId(type);
 	if (parameter != null)
 		return Erased(parameter);
 	return switch (type) {
-		case TLazy(resolve): shape(resolve(), nominalProof);
+		case TDynamic(null) if (explicitDynamic): DynamicValue;
+		case TLazy(resolve): classifyShape(resolve(), nominalProof, explicitDynamic);
 		case TMono(reference):
 			final resolved = reference.get();
-			resolved == null ? null : shape(resolved, nominalProof);
+			resolved == null ? null : classifyShape(resolved, nominalProof, explicitDynamic);
 		case TType(reference, parameters):
 			final declaration = reference.get();
-			shape(TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters), nominalProof);
+			classifyShape(TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters), nominalProof, explicitDynamic);
 		case TAbstract(reference, parameters):
 			final declaration = reference.get();
 			if (declaration.pack.length != 0) null else switch ([declaration.name, parameters]) {
@@ -85,7 +106,7 @@ function shape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericV
 				case ["Bool", []]: Boolean;
 				case ["Void", []]: EffectOnly;
 				case ["Null", [inner]]:
-					switch (shape(inner, nominalProof)) {
+					switch (classifyShape(inner, nominalProof, explicitDynamic)) {
 						case Text(_): Text(true);
 						case Integer: NullableInteger;
 						case Boolean: NullableBoolean;
@@ -103,18 +124,18 @@ function shape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericV
 				NominalValue(typeId, proof, false);
 			} else if (declaration.pack.length != 0) null else switch ([declaration.module, declaration.name, parameters]) {
 				case ["String", "String", []]: Text(false);
-				case ["Array", "Array", [element]]: final selected = shape(element,
-						nominalProof); selected == null || !isArrayElement(selected) ? null : ArrayValue(selected);
+				case ["Array", "Array", [element]]: final selected = classifyShape(element, nominalProof,
+						explicitDynamic); selected == null || !isArrayElement(selected) ? null : ArrayValue(selected);
 				case _: null;
 			}
 		case TFun(arguments, result): final selectedArguments:Array<OcamlGenericValueShape> = []; var supported = true; for (argument in arguments) {
-				final selected = shape(argument.t, nominalProof);
+				final selected = classifyShape(argument.t, nominalProof, explicitDynamic);
 				if (argument.opt || selected == null || selected == EffectOnly)
 					supported = false;
 				else
 					selectedArguments.push(selected);
-			} final selectedResult = shape(result,
-				nominalProof); !supported || selectedResult == null ? null : FunctionValue(selectedArguments, selectedResult);
+			} final selectedResult = classifyShape(result, nominalProof,
+				explicitDynamic); !supported || selectedResult == null ? null : FunctionValue(selectedArguments, selectedResult);
 		case _: null;
 	}
 }
@@ -160,18 +181,25 @@ private function allArgumentsMatch(declared:Array<OcamlGenericValueShape>, actua
 	return true;
 }
 
-/** Selects a conversion only after the call owner verifies one coherent instantiation. */
+/** Selects a storage crossing after the owning call or assignment proves type compatibility. */
 function crossing(source:OcamlGenericValueShape, destination:OcamlGenericValueShape):Null<OcamlGenericValueConversion> {
 	if (shapeId(source) == shapeId(destination))
 		return Identity;
 	return switch ([source, destination]) {
-		case [Erased(_), Erased(_)], [NullableInteger, Erased(_)], [Erased(_), NullableInteger]: Identity;
-		case [NullableBoolean, Erased(_)]: BoxNullableBoolean;
-		case [Erased(_), NullableBoolean]: UnboxNullableBoolean;
-		case [Boolean, Erased(_)]: BoxBoolean;
-		case [Erased(_), Boolean]: UnboxBoolean;
-		case [Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _), Erased(_)]: BoxValue;
-		case [Erased(_), Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _)]: UnboxValue;
+		case [Erased(_) | DynamicValue, Erased(_) | DynamicValue], [NullableInteger, Erased(_) | DynamicValue],
+			[Erased(_) | DynamicValue, NullableInteger]: Identity;
+		case [NullableBoolean, Erased(_) | DynamicValue]: BoxNullableBoolean;
+		case [Erased(_) | DynamicValue, NullableBoolean]: UnboxNullableBoolean;
+		case [Boolean, Erased(_) | DynamicValue]: BoxBoolean;
+		case [Erased(_) | DynamicValue, Boolean]: UnboxBoolean;
+		case [
+			Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _),
+			Erased(_) | DynamicValue
+		]: BoxValue;
+		case [
+			Erased(_) | DynamicValue,
+			Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _)
+		]: UnboxValue;
 		case [
 			FunctionValue(sourceArguments, sourceResult),
 			FunctionValue(destinationArguments, destinationResult)
@@ -198,6 +226,7 @@ function crossing(source:OcamlGenericValueShape, destination:OcamlGenericValueSh
 function shapeId(value:OcamlGenericValueShape):String {
 	return switch (value) {
 		case Erased(parameter): 'parameter:$parameter';
+		case DynamicValue: "Dynamic";
 		case Integer: "Int";
 		case Boolean: "Bool";
 		case Text(nullable): nullable ? "Null<String>" : "String";

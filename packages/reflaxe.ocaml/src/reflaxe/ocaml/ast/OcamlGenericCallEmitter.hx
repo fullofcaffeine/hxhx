@@ -1,6 +1,7 @@
 package reflaxe.ocaml.ast;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
+import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.require as genericCallRequire;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericInstanceCallTarget;
@@ -35,8 +36,22 @@ function emit(target:OcamlGenericInstanceCallTarget, method:OcamlExpr, receiver:
 	return output;
 }
 
-private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr, role:String, fresh:String->String,
+/**
+	Converts an already selected identity-bearing callback representation.
+
+	The owning plan must establish that each function value is a non-null view.
+	This syntax operation does not admit raw native arrows, recover Dynamic
+	functions, or choose a representation from the conversion alone. Scalar
+	operations and runtime helper roles are shared with generic call emission.
+**/
+function convertView(conversion:OcamlGenericValueConversion, value:OcamlExpr, role:String, fresh:String->String,
 		runtime:(String, String) -> OcamlExpr):OcamlExpr {
+	return convert(conversion, value, role, fresh, runtime, true);
+}
+
+/** The caller's representation domain fixes whether nested callbacks are arrows or views. */
+private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr, role:String, fresh:String->String, runtime:(String, String) -> OcamlExpr,
+		views:Bool = false):OcamlExpr {
 	return switch (conversion) {
 		case Identity: value;
 		case BoxValue: EApp(EField(EIdent("Obj"), "repr"), [value]);
@@ -59,14 +74,18 @@ private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr
 			for (index in 0...arguments.length) {
 				final name = fresh("generic_input");
 				patterns.push(PVar(name));
-				inputs.push(convert(arguments[index], EIdent(name), '$role/argument:$index', fresh, runtime));
+				inputs.push(convert(arguments[index], EIdent(name), '$role/argument:$index', fresh, runtime, views));
 			}
 			if (arguments.length == 0) {
 				patterns.push(PConst(CUnit));
 				inputs.push(EConst(CUnit));
 			}
-			final invocation:OcamlExpr = EApp(EIdent(callback), inputs);
-			ELet(callback, value, EFun(patterns, convert(result, invocation, '$role/result', fresh, runtime)), false);
+			if (views) {
+				adaptView(value, invocation -> EFun(patterns, convert(result, EApp(invocation, inputs), '$role/result', fresh, runtime, true)), fresh);
+			} else {
+				final invocation:OcamlExpr = EApp(EIdent(callback), inputs);
+				ELet(callback, value, EFun(patterns, convert(result, invocation, '$role/result', fresh, runtime)), false);
+			}
 	}
 }
 #end

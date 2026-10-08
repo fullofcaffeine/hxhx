@@ -1,6 +1,7 @@
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.decision as genericCallDecision;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.fingerprint as genericCallFingerprint;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.require as genericCallRequire;
 import haxe.macro.Context;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
@@ -61,6 +62,21 @@ class CheckGenericCallPlans {
 		final target = genericCallSelect(expression, registry);
 		if (target == null)
 			throw "actual generic call lost its registered receiver or conversion target";
+		// Ordinary callback support must not authorize a new generic method ABI.
+		expectRejected(() -> genericCallRequire({
+			moduleId: target.moduleId,
+			typeName: target.typeName,
+			fieldName: target.fieldName,
+			receiverTypeId: target.receiverTypeId,
+			receiverRepresentationId: target.receiverRepresentationId,
+			ownedParameterIds: target.ownedParameterIds.copy(),
+			declaration: FunctionValue([], DynamicValue),
+			instantiation: FunctionValue([], DynamicValue),
+			argumentShapes: [],
+			arguments: [],
+			resultShape: DynamicValue,
+			result: Identity
+		}), "ordinary Dynamic acquired a generic declaration proof");
 		final binding:OcamlFunctionPlanBinding = {
 			functionId: "First|contract",
 			programRevision: "generic-call-plan-test",

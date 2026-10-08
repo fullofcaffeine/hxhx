@@ -1,5 +1,7 @@
 -cp packages/reflaxe.ocaml/src
 -cp test
+-cp test/fixtures/stage3_stored_callback_views
+--macro CheckOcamlCallableViewConversions.install()
 -main OcamlCallableViewSyntaxTest
 --interp
 --next

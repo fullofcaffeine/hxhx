@@ -308,6 +308,8 @@ function nominalProofs(target:OcamlGenericInstanceCallTarget):Array<{typeId:Stri
 	final proofs:Array<{typeId:String, representationId:String}> = [];
 	function visit(shape:OcamlGenericValueShape):Void {
 		switch (shape) {
+			case DynamicValue:
+				throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: explicit Dynamic belongs to the ordinary callable boundary, not this generic declaration proof";
 			case NominalValue(typeId, representationId, _):
 				if (typeId.length == 0 || representationId.length == 0)
 					throw "reflaxe.ocaml [ocaml-generic-call:invalid-plan]: missing class representation";

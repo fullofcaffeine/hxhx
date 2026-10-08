@@ -5,6 +5,7 @@ import reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare as compareViews;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation as viewInvocation;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.origin as originView;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlGenericCallEmitter.convertView;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
@@ -46,10 +47,26 @@ class OcamlCallableViewSyntaxTest {
 
 	/** The test's selected conversion boxes an Int before an Obj.t callback invocation. */
 	static function view(value:OcamlExpr):OcamlExpr {
-		return adaptView(value, function(invocation) {
-			final argument = fresh("argument");
-			return EFun([PAnnot(PVar(argument), TIdent("int"))], EApp(invocation, [call("Obj.repr", [EIdent(argument)])]));
-		}, fresh);
+		return convertView(CheckOcamlCallableViewConversions.selectedView("first"), value, "test-view", fresh, unexpectedRuntime);
+	}
+
+	static function unexpectedRuntime(role:String, symbol:String):OcamlExpr {
+		throw "Int callback conversion requested an unexpected runtime helper: " + role + "/" + symbol;
+	}
+
+	/** An argument callback returned through two opposite conversions retains its origin. */
+	static function higherOrder():OcamlExpr {
+		final callback = viewCarrier(TArrow(TIdent("Obj.t"), TIdent("Obj.t")), TIdent("Obj.t"));
+		final higherType = viewCarrier(TArrow(callback, callback), TIdent("Obj.t"));
+		final relay = EAnnot(origin(EFun([PVar("callback")], EIdent("callback"))), higherType);
+		final adapted = convertView(CheckOcamlCallableViewConversions.selectedView("higherView"), relay, "test-higher", fresh, unexpectedRuntime);
+		final number = origin(EFun([PAnnot(PVar("value"), TIdent("int"))], EBinop(Add, EIdent("value"), EConst(CInt(1)))));
+		final returned = EApp(viewInvocation(EIdent("higher")), [EIdent("number")]);
+		return ELet("higher", adapted, ELet("number", number, ELet("returned", returned, ESeq([
+			unitCall("Gc.full_major"),
+			print(call("string_of_int", [EApp(viewInvocation(EIdent("returned")), [EConst(CInt(7))])])),
+			printBool(equal(EIdent("returned"), EIdent("number")))
+		]), false), false), false);
 	}
 
 	static function invokeInt(name:String):OcamlExpr {
@@ -92,7 +109,8 @@ class OcamlCallableViewSyntaxTest {
 			printBool(equal(withEffect("left", EIdent("first")), withEffect("right", EIdent("second")))),
 			unitCall("Gc.full_major"),
 			invokeInt("first"),
-			lifetime()
+			lifetime(),
+			higherOrder()
 		]);
 		final type = viewCarrier(TArrow(TIdent("Obj.t"), TIdent("Obj.t")), TIdent("Obj.t"));
 		final bindings:Array<{name:String, value:OcamlExpr}> = [
@@ -128,7 +146,7 @@ class OcamlCallableViewSyntaxTest {
 		sys.FileSystem.createDirectory(root);
 		sys.io.File.saveContent(root + "/main.ml", "let () = " + new OcamlASTPrinter().printExpr(program()) + "\n");
 		run(["ocamlopt", "-o", root + "/main.exe", root + "/main.ml"]);
-		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n";
+		final expected = "source\nview\n7\ntrue\ntrue\ntrue\ntrue\nfalse\nleft\nright\ntrue\n7\ntrue\n8\nfalse\n8\ntrue\n";
 		final actual = run([root + "/main.exe"]);
 		if (actual != expected)
 			throw "callable view behavior differs\nexpected:\n" + expected + "actual:\n" + actual;
