@@ -5,6 +5,7 @@ typedef FunctionStatements = {
 	final statements:Array<HxStmt>;
 	final carrier:String;
 	final isVoid:Bool;
+	final returns:Array<{statement:HxStmt, fact:TypedBackendReturnOccurrence}>;
 }
 
 /** Rendering callbacks keep native syntax here and the caller's lexical environment in its owner. */
@@ -13,7 +14,7 @@ typedef FunctionRenderInput = {
 	final body:HxExpr;
 	final names:Stage3OcamlLocalNames;
 	final renderType:TyType->String;
-	final renderStatements:Array<HxStmt>->String;
+	final renderStatements:(Array<HxStmt>, (HxStmt, String) -> String) -> String;
 }
 
 /** Each closure owns a return exception; the nearest invocation catches its own exit. */
@@ -35,7 +36,15 @@ function render(input:FunctionRenderInput):String {
 			throw "OCaml block function requires complete fixed required parameters";
 		renderedArguments.push("(" + input.names.targetName(arguments[index]) + " : " + input.renderType(parameter.type) + ")");
 	}
-	final rendered = input.renderStatements(selected.statements);
+	final rendered = input.renderStatements(selected.statements, (statement, value) -> {
+		for (entry in selected.returns)
+			if (entry.statement == statement) {
+				final fact = input.facts.requireReturn(entry.fact.expression);
+				final converted = Stage3OcamlCallableConversion.returnValue(fact.type, input.facts.callableType.getFunctionReturn(), value, input.names);
+				return "Obj.repr (" + converted + ")";
+			}
+		throw "OCaml block return is absent from its exact statement plan";
+	});
 	final payload = input.names.internalName("__hx_block_result");
 	final fallthrough = selected.isVoid ? "()" : "failwith \"native function reached its end without returning\"";
 	// Every caught payload comes from this exact region and has its checked return
@@ -58,8 +67,8 @@ function render(input:FunctionRenderInput):String {
 
 /**
 	Admit shared block-function control only where native statements preserve it.
-	Return payloads require the same scalar or Dynamic type as the callable;
-	broader conversion needs exact per-return adaptation before this boundary expands.
+	Each return operation retains its checked operand type through statement
+	adaptation. Conversion happens before its value enters the return exception.
  */
 function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatements {
 	if (facts == null)
@@ -79,15 +88,22 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatement
 		case _: throw "OCaml block function requires a supported concrete return carrier";
 	};
 	for (type in facts.getReturnTypes())
-		if (type.getSemanticKey() != result.getSemanticKey())
-			throw "OCaml block function requires per-return representation conversion";
-	final statements = TypedControlStatements.functionBody(body);
+		Stage3OcamlCallableConversion.validateReturn(type, result);
+	final mapped:Array<{statement:HxStmt, fact:TypedBackendReturnOccurrence}> = [];
+	final statements = TypedControlStatements.functionBody(body, null, null, (expression, statement) -> {
+		mapped.push({statement: statement, fact: facts.requireReturn(expression)});
+	});
 	var returns = 0;
 	for (statement in statements)
 		returns += validate(statement);
-	if (returns != facts.getReturnTypes().length)
+	if (returns != facts.getReturnTypes().length || returns != mapped.length)
 		throw "OCaml block function lost its typed return operands";
-	return {statements: statements, carrier: carrier, isVoid: result.isVoid()};
+	return {
+		statements: statements,
+		carrier: carrier,
+		isVoid: result.isVoid(),
+		returns: mapped
+	};
 }
 
 /** Keep unsupported native statement paths from becoming silent placeholder success. */

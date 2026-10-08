@@ -21,6 +21,7 @@ class TypedBodyProjectionBuilder {
 	final objectAccesses:Array<TypedBackendObjectAccess> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
+	final returns:Array<TypedBackendReturnOccurrence> = [];
 	final statementControls:Array<TypedBackendStatementControl> = [];
 	var sealed:Bool = false;
 
@@ -74,8 +75,17 @@ class TypedBodyProjectionBuilder {
 			owner: ownerIdentity,
 			revision: bodyRevision,
 			source: source,
-			expression: expression
+			expression: expression,
+			returns: returns
 		}));
+		return expression;
+	}
+
+	/** Save exact return facts before the enclosing lambda collects its own exits. */
+	public function projectReturn(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add return facts to a sealed body projection";
+		returns.push(new TypedBackendReturnOccurrence(ownerIdentity, bodyRevision, source, expression));
 		return expression;
 	}
 

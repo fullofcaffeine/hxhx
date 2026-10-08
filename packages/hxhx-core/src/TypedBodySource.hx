@@ -679,9 +679,13 @@ class TypedBodySource {
 				}
 			case ReturnExpr:
 				final target = typedExpression.getControlTarget();
-				if (target == null) EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog,
-					projectionFacts)); else ELoweredControl(Return, target.getCanonicalIdentity(), expressionTail(expressions, 0, catalog, projectionFacts),
-					sourcePosition(typedExpression.getPosition()));
+				if (target == null) {
+					EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog, projectionFacts));
+				} else {
+					final returned:HxExpr = ELoweredControl(Return, target.getCanonicalIdentity(), expressionTail(expressions, 0, catalog, projectionFacts),
+						sourcePosition(typedExpression.getPosition()));
+					projectionFacts == null ? returned : projectionFacts.projectReturn(typedExpression, returned);
+				}
 			case VariableDeclarations:
 				final declarations = new Array<HxExpr>();
 				for (declaration in expressions) {

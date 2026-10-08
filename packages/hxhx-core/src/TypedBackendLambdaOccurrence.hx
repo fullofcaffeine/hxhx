@@ -14,12 +14,14 @@ class TypedBackendLambdaOccurrence {
 	final revision:String;
 	final fingerprint:String;
 	final returnTypes:Array<TyType> = [];
+	final returns:Array<TypedBackendReturnOccurrence> = [];
 
 	public function new(input:{
 		owner:String,
 		revision:String,
 		source:TypedExpr,
-		expression:HxExpr
+		expression:HxExpr,
+		returns:Array<TypedBackendReturnOccurrence>
 	}) {
 		if (input.owner == null
 			|| input.revision == null
@@ -37,20 +39,42 @@ class TypedBackendLambdaOccurrence {
 		};
 		callableType = input.source.getType();
 		bodyType = input.source.getExpressions()[0].getType();
-		collectReturns(input.source.getExpressions()[0]);
+		collectReturns(input.source.getExpressions()[0], input.returns);
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 
 	/** Nested lambdas own their returns; only this function's exits enter the contract. */
-	function collectReturns(value:TypedExpr):Void {
+	function collectReturns(value:TypedExpr, candidates:Array<TypedBackendReturnOccurrence>):Void {
 		if (value.getTag() == Lambda)
 			return;
 		if (value.getTag() == ReturnExpr) {
 			final values = value.getExpressions();
 			returnTypes.push(values.length == 0 ? TyType.fromHintText("Void") : values[0].getType());
+			var selected:Null<TypedBackendReturnOccurrence> = null;
+			for (candidate in candidates)
+				if (candidate.belongsTo(value)) {
+					if (selected != null)
+						throw "lambda return has duplicate projected occurrences";
+					selected = candidate;
+				}
+			if (selected == null)
+				throw "lambda lost its exact projected return";
+			selected.assertCurrent(owner, revision);
+			returns.push(selected);
 		}
 		for (child in value.getExpressions())
-			collectReturns(child);
+			collectReturns(child, candidates);
+	}
+
+	/** Select by exact operation identity, never by return order or operand spelling. */
+	public function requireReturn(expression:HxExpr):TypedBackendReturnOccurrence {
+		assertCurrent(owner, revision);
+		for (entry in returns)
+			if (entry.expression == expression) {
+				entry.assertCurrent(owner, revision);
+				return entry;
+			}
+		throw "return is absent from this exact lambda projection";
 	}
 
 	public function getReturnTypes():Array<TyType>

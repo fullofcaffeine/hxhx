@@ -3015,8 +3015,9 @@ class EmitterStage {
 					body: body,
 					names: currentFunctionLocalOcamlNames,
 					renderType: ocamlTypeFromTy,
-					renderStatements: statements -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent,
-						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments)
+					renderStatements: (statements,
+						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
 				});
 			case _:
 		}
@@ -5130,7 +5131,7 @@ class EmitterStage {
 	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, arityByIdent:Map<String, Int>,
 			tyByIdent:Map<String, TyType>, staticImportByIdent:Map<String, String>, currentPackagePath:String, moduleNameByPkgAndClass:Map<String, String>,
 			callSigByCallee:Map<String, EmitterCallSig>, localTypeHints:Map<String, TyType>, fnReturnTypes:Map<String, TyType>, ?finalValue:HxExpr,
-			?parameterNames:Array<String>):String {
+			?parameterNames:Array<String>, ?renderReturn:(HxStmt, String) -> String):String {
 		if ((stmts == null || stmts.length == 0) && finalValue == null)
 			return "()";
 
@@ -5917,7 +5918,7 @@ class EmitterStage {
 				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
+						callSigByCallee, localTypeHintsMap, fnReturnTypesMap, null, null, renderReturn);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
@@ -6061,7 +6062,7 @@ class EmitterStage {
 					final bodyUnit = backend.ocaml.Stage3OcamlExceptions.loopBody(switch (body) {
 						case SBlock(ss, _):
 							stmtListToOcaml(ss, loopAllowed, returnExc, arityByIdent, bodyTy, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
+								moduleNameByPkgAndClass, callSigByCallee, localTypeHintsMap, fnReturnTypesMap, null, null, renderReturn);
 						case _:
 							stmtToUnit(body, cast bodyTy);
 					});
@@ -6097,7 +6098,7 @@ class EmitterStage {
 					// Keep the non-JS path compiling while js-native handles this syntax precisely.
 					"()";
 				case SReturnVoid(_pos):
-					"raise (" + returnExc + " (Obj.repr ()))";
+					"raise (" + returnExc + " (" + (renderReturn == null ? "Obj.repr ()" : renderReturn(s, "()")) + "))";
 				case SReturn(expr, _pos):
 					final rendered = returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -6105,7 +6106,9 @@ class EmitterStage {
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
 					final dynamicReturn = declaredReturn != null
 						&& backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(declaredReturn.toString());
-					final payload = if (dynamicReturn) {
+					final payload = if (renderReturn != null) {
+						renderReturn(s, rendered);
+					} else if (dynamicReturn) {
 						final carrier = if (stage3IsBoolExpr(expr, cast tyCtx, callSigByCallee)) {
 							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
 						} else if (stage3IsDynamicExpr(expr, cast tyCtx, callSigByCallee)) {

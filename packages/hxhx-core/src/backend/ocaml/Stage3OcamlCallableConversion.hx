@@ -55,15 +55,31 @@ function lambdaResult(facts:TypedBackendLambdaOccurrence, value:String, names:St
 	if (facts == null || facts.bodyType.isNoNormalCompletion())
 		return value;
 	final expected = facts.callableType.getFunctionReturn();
-	if (facts.bodyType.getSemanticKey() == expected.getSemanticKey())
+	return returnValue(facts.bodyType, expected, value, names);
+}
+
+/** Both expression bodies and exact block returns use the same checked conversion. */
+function returnValue(actual:TyType, expected:TyType, value:String, names:Stage3OcamlLocalNames):String {
+	if (actual.getSemanticKey() == expected.getSemanticKey())
 		return value;
 	if (expected.isVoid())
 		return "ignore (" + value + ")";
-	if (facts.bodyType.hasUnknownComponent() || expected.hasUnknownComponent())
+	validateReturn(actual, expected);
+	return convert(actual, expected, value, names);
+}
+
+/** Reject unsupported carriers before the native statement adapter admits a function. */
+function validateReturn(actual:TyType, expected:TyType):Void {
+	if (actual.hasUnknownComponent() || expected.hasUnknownComponent())
 		throw "OCaml lambda return conversion requires complete types";
-	if (TyAssignmentCompatibility.classify(expected, facts.bodyType, Unchecked) != Compatible)
+	if (actual.getSemanticKey() == expected.getSemanticKey() || expected.isVoid())
+		return;
+	if (TyAssignmentCompatibility.classify(expected, actual, Unchecked) != Compatible)
 		throw "OCaml lambda body does not satisfy its return contract";
-	return convert(facts.bodyType, expected, value, names);
+	final scalar = actual.isDynamic() ? expected : actual;
+	if (!(actual.isDynamic() || expected.isDynamic())
+		|| !["primitive:Bool", "primitive:Int", "primitive:String"].contains(scalar.getSemanticKey()))
+		throw "unsupported OCaml block return representation conversion";
 }
 
 /** Boolean boxing stays distinct from the integer carrier; no numeric conversion is introduced. */

@@ -1,8 +1,8 @@
 /** Compare native block-function captures and control with independent upstream execution. */
 class M14NativeBlockFunctionTest {
 	static function main():Void {
-		rejectedSource('class Main {static function main():Void {var callback = function(value:Dynamic):Int {return value;};}}',
-			"OCaml block function requires per-return representation conversion");
+		rejectedSource('class Main {static function main():Void {var callback = function(value:Dynamic):Array<Int> {return value;};}}',
+			"OCaml block function requires a supported concrete return carrier");
 		final root = "test/fixtures/native_block_function";
 		final expected = "10\n99\n15\nbool\ntrue\nfalse\n1\ntext\neffect\nafter\n4\n2\n3\n36\n10\n11\n12\nselect\n21\nbad\n7\n3\nunmatched\nfalse\n12\n";
 		if (run("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]) != expected)
@@ -55,6 +55,11 @@ class M14NativeBlockFunctionTest {
 
 	/** Unsupported valid source must fail at its named native boundary, never emit a placeholder. */
 	static function rejectedSource(source:String, expected:String):Void {
+		final root = ".tmp/native_block_unsupported_return";
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		if (run("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]) != "")
+			throw "unsupported-return control changed upstream behavior";
 		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		var rejected = false;
