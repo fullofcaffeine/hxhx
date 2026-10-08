@@ -113,7 +113,8 @@ class JsExprEmitter {
 				emitIncDec(op, fixity, inner, scope);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
-				"(" + HxUnaryOperatorTools.sourceToken(op) + emit(inner, scope) + ")";
+				// A signed Int operand must not fuse with negation into a decrement token.
+				"(" + HxUnaryOperatorTools.sourceToken(op) + " " + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
 				emitBinop(op, left, right, scope);
 			case ETernary(cond, thenExpr, elseExpr):
