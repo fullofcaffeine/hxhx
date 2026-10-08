@@ -637,6 +637,42 @@ class OcamlCallPlan {
 		return value == null ? null : copyValue(value);
 	}
 
+	/** Compares the complete published calling convention, including its revision and proof. */
+	public static function sameDeclaration(left:OcamlCallableDeclarationPlan, right:OcamlCallableDeclarationPlan):Bool {
+		if (left.id != right.id
+			|| left.calleeId != right.calleeId
+			|| left.kind != right.kind
+			|| left.sourceModuleId != right.sourceModuleId
+			|| left.sourceTypeName != right.sourceTypeName
+			|| left.sourceFieldName != right.sourceFieldName
+			|| left.programRevision != right.programRevision
+			|| left.pipelineRevision != right.pipelineRevision
+			|| left.proofId != right.proofId
+			|| left.proofClaim != right.proofClaim
+			|| left.reason != right.reason
+			|| left.resultKind != right.resultKind
+			|| left.arguments.length != right.arguments.length
+			|| left.profileEligibility.length != right.profileEligibility.length)
+			return false;
+		for (index in 0...left.profileEligibility.length)
+			if (left.profileEligibility[index] != right.profileEligibility[index])
+				return false;
+		if (left.receiver == null || right.receiver == null) {
+			if (left.receiver != null || right.receiver != null)
+				return false;
+		} else if (!sameValue(left.receiver, right.receiver))
+			return false;
+		if (left.result == null || right.result == null) {
+			if (left.result != null || right.result != null)
+				return false;
+		} else if (!sameValue(left.result, right.result))
+			return false;
+		for (index in 0...left.arguments.length)
+			if (!sameValue(left.arguments[index], right.arguments[index]))
+				return false;
+		return true;
+	}
+
 	public static function copyValue(value:OcamlCallValuePlan):OcamlCallValuePlan {
 		return {
 			index: value.index,
@@ -1682,7 +1718,7 @@ class OcamlCallPlanner {
 	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
 	final localIdentities:Null<LexicalLocalIdentityPlan>;
 	final provesFunctionValueResult:Null<(TypedExpr, String) -> Bool>;
-	final hasCallableDeclaration:Null<String->Bool>;
+	final callableDeclaration:Null<String->Null<OcamlCallableDeclarationPlan>>;
 	final preliminaryDecisionsByExpression:ObjectMap<TypedExpr, OcamlCallDecision> = new ObjectMap();
 	final observedPreliminaryExpressions:ObjectMap<TypedExpr, Bool> = new ObjectMap();
 	#if reflaxe_lifecycle_test
@@ -1690,13 +1726,14 @@ class OcamlCallPlanner {
 	#end
 
 	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan,
-			?localIdentities:LexicalLocalIdentityPlan, ?provesFunctionValueResult:(TypedExpr, String) -> Bool, ?hasCallableDeclaration:String->Bool) {
+			?localIdentities:LexicalLocalIdentityPlan, ?provesFunctionValueResult:(TypedExpr, String) -> Bool,
+			?callableDeclaration:String->Null<OcamlCallableDeclarationPlan>) {
 		this.representations = representations;
 		this.binding = binding;
 		this.localRepresentations = localRepresentations;
 		this.localIdentities = localIdentities;
 		this.provesFunctionValueResult = provesFunctionValueResult;
-		this.hasCallableDeclaration = hasCallableDeclaration;
+		this.callableDeclaration = callableDeclaration;
 	}
 
 	/**
@@ -1754,8 +1791,8 @@ class OcamlCallPlanner {
 
 	/** Selects the callable boundary exported by this function, if admitted. */
 	public function boundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
-		final declaration = declarationFor(data.classType, data.field, data.isStatic, representations, binding.programRevision, binding.pipelineRevision);
-		if (!isPublishedDeclaration(declaration))
+		final declaration = publishedMethodDeclaration(data.classType, data.field, data.isStatic);
+		if (declaration == null)
 			return null;
 		var result = OcamlCallPlan.copyOptionalValue(declaration.result);
 		var resultReason = "";
@@ -1890,8 +1927,8 @@ class OcamlCallPlanner {
 	public function constructionBoundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
 		if (data.field.name != "new" || data.isStatic)
 			return null;
-		final declaration = constructorDeclarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
-		if (!isPublishedDeclaration(declaration))
+		final declaration = publishedConstructorDeclaration(data.classType, data.field);
+		if (declaration == null)
 			return null;
 		return {
 			id: "construction-boundary:" + Sha256.encode(declaration.calleeId).substr(0, 24),
@@ -2175,9 +2212,8 @@ class OcamlCallPlanner {
 				final classType = classRef.get();
 				final constructor = classType.constructor == null ? null : classType.constructor.get();
 				final declaration = parameters.length == 0
-					&& constructor != null ? constructorDeclarationFor(classType, constructor, representations, binding.programRevision,
-						binding.pipelineRevision) : null;
-				final plannedArguments = !isPublishedDeclaration(declaration) ? null : callArgumentValues(arguments, declaration.arguments, representations);
+					&& constructor != null ? publishedConstructorDeclaration(classType, constructor) : null;
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| plannedArguments == null
 					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
@@ -2221,8 +2257,8 @@ class OcamlCallPlanner {
 				final genericIdentity = directStaticGenericIdentityDecision(expression, classType, field, arguments);
 				if (genericIdentity != null)
 					return genericIdentity;
-				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
-				final plannedArguments = !isPublishedDeclaration(declaration) ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final declaration = publishedMethodDeclaration(classType, field, true);
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				final resultMaterialization = plannedArguments == null ? null : directStaticResultMaterialization(expression.t, declaration);
 				if (declaration == null
 					|| plannedArguments == null
@@ -2274,9 +2310,8 @@ class OcamlCallPlanner {
 				final standardIMapTarget = OcamlStandardIMapCallContract.select(classType, parameters, field, receiverExpression, arguments, expression.t);
 				if (standardIMapTarget != null)
 					return standardIMapCallDecision(expression, classType, field, standardIMapTarget);
-				final declaration = parameters.length == 0 ? declarationFor(classType, field, false, representations, binding.programRevision,
-					binding.pipelineRevision) : null;
-				final receiver = !isPublishedDeclaration(declaration) ? null : instanceReceiverValue(receiverExpression, declaration);
+				final declaration = parameters.length == 0 ? publishedMethodDeclaration(classType, field, false) : null;
+				final receiver = declaration == null ? null : instanceReceiverValue(receiverExpression, declaration);
 				final plannedArguments = receiver == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| receiver == null
@@ -2756,9 +2791,41 @@ class OcamlCallPlanner {
 		return signature != null && (representations == null || !requiresFunctionValueResultProducer(signature, representations));
 	}
 
-	/** Returns whether the complete request catalog published this declaration. */
-	function isPublishedDeclaration(declaration:Null<OcamlCallableDeclarationPlan>):Bool {
-		return declaration != null && (hasCallableDeclaration == null || hasCallableDeclaration(declaration.calleeId));
+	/**
+		Uses the catalog's exact declaration after checking the typed source agrees.
+
+		A matching name alone cannot authorize argument or result representations.
+		Production callers supply the request-local catalog; isolated planner tests
+		can omit it when they exercise selection before catalog publication.
+	**/
+	function publishedDeclaration(candidate:Null<OcamlCallableDeclarationPlan>):Null<OcamlCallableDeclarationPlan> {
+		if (candidate == null || callableDeclaration == null)
+			return candidate;
+		final published = callableDeclaration(candidate.calleeId);
+		if (published == null)
+			return null;
+		OcamlCallPlan.requireCallableDeclarationPlan(published);
+		if (!OcamlCallPlan.sameDeclaration(candidate, published))
+			throw 'reflaxe.ocaml [ocaml-call:catalog-mismatch]: typed callable "${candidate.calleeId}" does not match its published declaration';
+		return OcamlCallPlan.copyDeclaration(published);
+	}
+
+	/**
+		Checks the callee against the ordinary function pipeline that publishes it.
+
+		Nested functions and static initializers have different caller pipelines.
+		Their call occurrences retain those revisions; the referenced declaration
+		still belongs to the ordinary function pipeline, not the caller's pipeline.
+	**/
+	function publishedMethodDeclaration(owner:ClassType, field:ClassField, isStatic:Bool):Null<OcamlCallableDeclarationPlan> {
+		return publishedDeclaration(declarationFor(owner, field, isStatic, representations, binding.programRevision,
+			OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+	}
+
+	/** Constructors share the ordinary declaration pipeline, independently of their callers. */
+	function publishedConstructorDeclaration(owner:ClassType, field:ClassField):Null<OcamlCallableDeclarationPlan> {
+		return publishedDeclaration(constructorDeclarationFor(owner, field, representations, binding.programRevision,
+			OcamlFunctionPlanRegistry.PIPELINE_REVISION));
 	}
 
 	/**
@@ -3033,8 +3100,8 @@ class OcamlCallPlanner {
 		final exactProducer = switch (unwrapped.expr) {
 			case TNew(classRef, parameters, _): parameters.length == 0 && representations.monomorphicClassForType(unwrapped.t) != null;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
-				final producer = declarationFor(classRef.get(), fieldRef.get(), true, representations, binding.programRevision, binding.pipelineRevision);
-				isPublishedDeclaration(producer)
+				final producer = publishedMethodDeclaration(classRef.get(), fieldRef.get(), true);
+				producer != null
 				&& producer.result != null
 				&& arguments.length == producer.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length
 				&& producer.result.outputRepresentationId == boundary.inputRepresentationId;

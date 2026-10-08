@@ -172,7 +172,7 @@ class OcamlFunctionPlanSealer {
 		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		registry.registerRootIdentityPlan(binding, localIdentities);
-		final callPlanner = new OcamlCallPlanner(representations, binding, null, null, null, registry.hasCallableDeclaration);
+		final callPlanner = new OcamlCallPlanner(representations, binding, null, null, null, registry.callableDeclaration);
 		final callableBoundary = callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		telemetryCheckpoint("binding");
@@ -261,7 +261,7 @@ class OcamlFunctionPlanSealer {
 				return false;
 			final result = nestedFunctionResults.get(local.id);
 			return result != null && result.outputSemanticTypeId == semanticTypeId;
-		}, registry.hasCallableDeclaration).plan(data.expr, callPlanner);
+		}, registry.callableDeclaration).plan(data.expr, callPlanner);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		for (decision in reflectCompare.decisions())
 			context.recordReflectCompareRuntimeRequirements(decision);
@@ -524,7 +524,7 @@ class OcamlFunctionPlanSealer {
 					// optional behavior plan does not own the lexical parent relationship.
 					final childParentBinding = nestedBinding;
 					var boundary = new OcamlCallPlanner(representations, nestedBinding, null, null, null,
-						registry.hasCallableDeclaration).boundaryForNestedRepresentedResult(tfunc);
+						registry.callableDeclaration).boundaryForNestedRepresentedResult(tfunc);
 					if (boundary == null)
 						boundary = OcamlFunctionResultBoundary.selectNestedNullableEnumCallable(tfunc, representations, nestedBinding, context);
 					final functionResultBoundary = boundary == null ? OcamlFunctionResultBoundary.selectNestedNullableEnumResult(tfunc, representations,

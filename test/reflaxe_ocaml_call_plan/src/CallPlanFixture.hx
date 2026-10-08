@@ -1582,7 +1582,7 @@ class CallPlanFixture {
 		}
 	}
 
-	/** Proves a shared enum carrier cannot invent a direct method declaration. */
+	/** Proves a direct call uses its exact published declaration, not only a matching name. */
 	static function assertEnumDirectCallRequiresDeclaration():Void {
 		final typed = Context.typeExpr(macro PreliminaryCallFactsEnumProducer.select("ready"));
 		final representations = new OcamlRepresentationRegistry();
@@ -1592,12 +1592,48 @@ class CallPlanFixture {
 			Context.error("The direct enum-call fixture has no native enum descriptor.", typed.pos);
 		representations.selectNativeEnum(descriptor);
 		final caller = binding("PreliminaryCallFactsFixture|PreliminaryCallFactsFixture::enumDirectCaller", "body:enum-direct-call");
-		final unpublished = new OcamlCallPlanner(representations, caller, null, null, null, _ -> false).plan(typed);
+		final unpublished = new OcamlCallPlanner(representations, caller, null, null, null, _ -> null).plan(typed);
 		if (unpublished.decisions().length != 0)
 			Context.error("A program-wide enum carrier invented an unpublished direct method declaration.", typed.pos);
-		final published = new OcamlCallPlanner(representations, caller, null, null, null, _ -> true).plan(typed);
+		final declaration = switch (typed.expr) {
+			case TCall({expr: TField(_, FStatic(owner, field))}, _):
+				OcamlCallPlanner.declarationFor(owner.get(), field.get(), true, representations, caller.programRevision, caller.pipelineRevision);
+			case _: null;
+		};
+		if (declaration == null)
+			Context.error("The direct enum-call fixture did not produce its typed declaration.", typed.pos);
+		final published = new OcamlCallPlanner(representations, caller, null, null, null, _ -> declaration).plan(typed);
 		if (published.decisions().length != 1 || published.decisionFor(typed) == null)
 			Context.error("A published direct enum method did not retain its exact call decision.", typed.pos);
+		for (callerPipeline in [
+			OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION,
+			OcamlFunctionPlanRegistry.STANDALONE_PIPELINE_REVISION
+		]) {
+			final distinctCaller:OcamlFunctionPlanBinding = {
+				functionId: caller.functionId,
+				programRevision: caller.programRevision,
+				bodyRevision: caller.bodyRevision,
+				pipelineRevision: callerPipeline
+			};
+			final planned = new OcamlCallPlanner(representations, distinctCaller, null, null, null, _ -> declaration).plan(typed);
+			if (planned.decisions().length != 1 || planned.decisions()[0].pipelineRevision != callerPipeline)
+				Context.error("A nested or standalone caller lost its own pipeline when using an ordinary declaration.", typed.pos);
+		}
+		final incompatible = OcamlCallPlan.copyDeclaration(declaration);
+		incompatible.arguments.pop();
+		OcamlCallPlan.requireCallableDeclarationPlan(incompatible);
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, caller, null, null, null, _ -> incompatible).plan(typed));
+		final wrongCarrier = OcamlCallPlan.copyDeclaration(declaration);
+		wrongCarrier.arguments[0] = value(0);
+		OcamlCallPlan.requireCallableDeclarationPlan(wrongCarrier);
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, caller, null, null, null, _ -> wrongCarrier).plan(typed));
+		final otherRequest:OcamlFunctionPlanBinding = {
+			functionId: caller.functionId,
+			programRevision: "program:other-request",
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, otherRequest, null, null, null, _ -> declaration).plan(typed));
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {
@@ -2532,6 +2568,16 @@ class CallPlanFixture {
 		if (optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))
 			Context.error("The optional hard-cut guard reported an unregistered callable.", Context.currentPos());
 		optionalRegistry.registerCallableDeclaration(optionalDeclaration());
+		final exportedDeclaration = optionalRegistry.callableDeclaration(OPTIONAL_CALLEE_ID);
+		if (exportedDeclaration == null)
+			Context.error("The catalog did not return its registered declaration.", Context.currentPos());
+		exportedDeclaration.arguments.pop();
+		exportedDeclaration.profileEligibility.pop();
+		final retainedDeclaration = optionalRegistry.callableDeclaration(OPTIONAL_CALLEE_ID);
+		if (retainedDeclaration == null || !OcamlCallPlan.sameDeclaration(retainedDeclaration, optionalDeclaration()))
+			Context.error("A caller mutated the declaration retained by the request catalog.", Context.currentPos());
+		if (optionalRegistry.callableDeclaration("absent:callee") != null)
+			Context.error("The catalog invented a declaration for an absent callee.", Context.currentPos());
 		if (!optionalRegistry.hasCallableDeclaration(OPTIONAL_CALLEE_ID))
 			Context.error("The optional declaration guard did not expose the registered callable.", Context.currentPos());
 		if (!optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))

@@ -24,7 +24,7 @@ typedef OcamlCallableMethodSelection = {
 /** Host objects remain private to the typed-program scan and never enter a stored plan. */
 private typedef Candidate = {
 	final id:String;
-	final field:ClassField;
+	final fieldName:String;
 	final body:TFunc;
 	final signature:Null<OcamlGenericValueShape>;
 	final dependencies:Array<String>;
@@ -72,7 +72,7 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 			throw "reflaxe.ocaml [callback-program:duplicate-method]: typed declaration occurs twice";
 		candidates.set(id, {
 			id: id,
-			field: field,
+			fieldName: field.name,
 			body: body,
 			signature: callableShape(field.type),
 			dependencies: [],
@@ -87,6 +87,21 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 			collect(owner, field, false);
 		if (owner.constructor != null)
 			collect(owner, owner.constructor.get(), false);
+		// Haxe keeps __init__ outside statics. It can consume callback factories
+		// before ordinary code runs, so its dependencies must reject ABI changes
+		// just like unsupported static-field and constructor consumers do.
+		if (owner.init != null) {
+			final id = "callback-class-initializer:" + owner.module + ":" + owner.name;
+			candidates.set(id, {
+				id: id,
+				fieldName: "__init__",
+				body: {args: [], t: owner.init.t, expr: owner.init},
+				signature: null,
+				dependencies: [],
+				rejected: true,
+				usesViews: false
+			});
+		}
 	}
 	function connect(candidate:Candidate, id:String):Void {
 		final other = candidates.get(id);
@@ -262,7 +277,7 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 	final selected:Array<OcamlCallableMethodSelection> = [];
 	for (candidate in candidates)
 		if (candidate.usesViews && !candidate.rejected && candidate.signature != null)
-			selected.push({calleeId: candidate.id, fieldName: candidate.field.name, signature: candidate.signature});
+			selected.push({calleeId: candidate.id, fieldName: candidate.fieldName, signature: candidate.signature});
 	selected.sort((left, right) -> Reflect.compare(left.calleeId, right.calleeId));
 	return selected;
 }

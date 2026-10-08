@@ -13,17 +13,20 @@ class OcamlCallableProgramSelectionTest {
 
 	/** The real failing source remains the positive contract; negative programs test rejection propagation. */
 	static macro function verify():Expr {
-		function check(name:String, expected:Array<String>):Void {
-			final owner = switch (Context.getType(name)) {
-				case TInst(reference, []): reference.get();
-				case _: throw "callback selection fixture is not an ordinary class";
-			};
+		function checkOwner(owner:ClassType, name:String, expected:Array<String>):Void {
 			final selected = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select([owner]);
 			final actual = selected.map(method -> method.fieldName);
 			actual.sort(Reflect.compare);
 			expected.sort(Reflect.compare);
 			if (actual.join(",") != expected.join(","))
 				throw 'callback program $name: expected $expected, got $actual';
+		}
+		function check(name:String, expected:Array<String>):Void {
+			final owner = switch (Context.getType(name)) {
+				case TInst(reference, []): reference.get();
+				case _: throw "callback selection fixture is not an ordinary class";
+			};
+			checkOwner(owner, name, expected);
 		}
 		check("Main", [
 			"relay",
@@ -40,6 +43,13 @@ class OcamlCallableProgramSelectionTest {
 		check("OcamlCallableProgramSelectionTest.CallbackCapture", []);
 		check("OcamlCallableProgramSelectionTest.CallbackStaticEscape", []);
 		check("OcamlCallableProgramSelectionTest.CallbackConstructorEscape", []);
+		// Haxe populates ClassType.init after macro expansion. Observe this case
+		// at the same completed-typing boundary used by program planning.
+		final initializedOwner = switch (Context.getType("OcamlCallableProgramSelectionTest.CallbackClassInitializationEscape")) {
+			case TInst(reference, []): reference;
+			case _: throw "class initializer fixture is not an ordinary class";
+		};
+		Context.onAfterTyping(_ -> checkOwner(initializedOwner.get(), "CallbackClassInitializationEscape", []));
 		check("OcamlCallableProgramSelectionTest.CallbackReflectiveEscape", []);
 		check("OcamlCallableProgramSelectionTest.CallbackStringReflectiveEscape", []);
 		return macro null;
@@ -111,6 +121,18 @@ private class CallbackConstructorEscape {
 	public function new() {
 		var stored:Dynamic = factory();
 		Sys.println(stored);
+	}
+}
+
+/** Class initialization is a consumer even when Haxe stores it outside ordinary static fields. */
+private class CallbackClassInitializationEscape {
+	static function factory():Int->Int
+		return value -> value + 1;
+
+	static function __init__():Void {
+		var stored:Dynamic = factory();
+		if (stored == null)
+			throw "class initializer lost its callback";
 	}
 }
 

@@ -907,7 +907,7 @@ class OcamlFunctionPlanRegistry {
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, expression);
-		final calls = new OcamlCallPlanner(representations, binding, null, localIdentities, null, hasCallableDeclaration).plan(expression);
+		final calls = new OcamlCallPlanner(representations, binding, null, localIdentities, null, callableDeclaration).plan(expression);
 		requireStandaloneCalls(calls, binding);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls,
 			new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap()), anonymousStructures, representations,
@@ -1461,6 +1461,12 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function hasCallableDeclaration(calleeId:String):Bool {
 		return declaredCallableByCallee.exists(calleeId);
+	}
+
+	/** Returns a detached copy of the calling convention published for this request. */
+	public function callableDeclaration(calleeId:String):Null<OcamlCallableDeclarationPlan> {
+		final declaration = declaredCallableByCallee.get(calleeId);
+		return declaration == null ? null : OcamlCallPlan.copyDeclaration(declaration);
 	}
 
 	/** Returns whether one declaration needs the sealed optional-call hard cut. */
