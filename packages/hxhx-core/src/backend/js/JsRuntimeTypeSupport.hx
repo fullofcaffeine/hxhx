@@ -14,6 +14,9 @@ function emit(expression:HxExpr, scope:JsEmitScope):String {
 		// Haxe's JavaScript Array check uses prototype identity, including its
 		// cross-realm behavior. Interface metadata cannot confer core membership.
 		case ArrayCore: "((" + operand + ") instanceof " + reference + ")";
+		// A String instance test checks the primitive representation. Boxed
+		// strings and replacement constructors do not change this contract.
+		case StringCore: "(typeof (" + operand + ") === \"string\")";
 		case _: "__hx_is_nominal(" + operand + ", " + reference + ")";
 	};
 }
@@ -27,6 +30,11 @@ function arrayReference():String {
 	return "$hx_array_type()";
 }
 
+/** String class values observe the host constructor; instance checks use primitive representation instead. */
+function stringReference():String {
+	return "$hx_string_type()";
+}
+
 /**
 	Nominal objects use native prototype identity and the typed interface closure.
 	Class objects and enum values do not gain membership from names or string tags.
@@ -34,6 +42,7 @@ function arrayReference():String {
  */
 function emitDefinition(writer:JsWriter):Void {
 	writer.writeln("function $hx_array_type() { return Array; }");
+	writer.writeln("function $hx_string_type() { return String; }");
 	writer.writeln("function __hx_is_nominal(value, type) {");
 	writer.pushIndent();
 	writer.writeln("if (value == null || typeof type !== \"function\") return false;");

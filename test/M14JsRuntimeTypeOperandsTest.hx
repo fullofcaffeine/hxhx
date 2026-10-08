@@ -19,7 +19,7 @@ class M14JsRuntimeTypeOperandsTest {
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		assertOwnership(typed, module);
 		assertUnsupportedPublication();
-		M14JsArrayRuntimeTypeTest.check();
+		M14JsCoreRuntimeTypeTest.check();
 		Sys.println("JS_RUNTIME_TYPE_OPERANDS:PASS");
 	}
 
