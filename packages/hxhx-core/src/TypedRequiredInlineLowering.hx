@@ -43,12 +43,17 @@ class TypedRequiredInlineLowering {
 	function storedValue(value:TypedExpr, declared:TyType):TypedExpr {
 		final expected = TyTypeSubstitution.apply(declared, typeBindings);
 		final conversion = TyImplicitConversionPlan.select(semanticIndex, expected, value.getType());
-		if (conversion == null)
-			throw "inline storage requires a proven conversion from "
-				+ value.getType().getSemanticKey()
-				+ " to "
-				+ expected.getSemanticKey();
-		return conversion.apply(value);
+		if (conversion != null)
+			return conversion.apply(value);
+		// Ordinary assignment also admits Dynamic inputs and compatible nullable
+		// views. Preserve both types for target storage without adding a runtime
+		// checked cast or treating an unresolved relationship as permission.
+		if (TyAssignmentCompatibility.classify(expected, value.getType(), Unchecked) == Compatible)
+			return TypedExpr.castValue(value, "", expected, value.getPosition());
+		throw "inline storage requires a proven conversion from "
+			+ value.getType().getSemanticKey()
+			+ " to "
+			+ expected.getSemanticKey();
 	}
 
 	/** Detect direct rebinding and calls to already-selected helpers to a fixed point. */

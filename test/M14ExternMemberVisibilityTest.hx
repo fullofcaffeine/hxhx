@@ -89,6 +89,7 @@ class M14ExternMemberVisibilityTest {
 		}
 		checkInlineExecution();
 		M14ExternInlineGenericTest.run();
+		M14ExternInlineStorageTest.run();
 	}
 
 	/** Independent expected effects catch argument duplication, name capture, and returns escaping into the caller. */
