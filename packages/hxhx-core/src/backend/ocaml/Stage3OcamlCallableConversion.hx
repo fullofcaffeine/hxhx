@@ -27,7 +27,11 @@ function adapt(argument:TypedBackendCallArgument, value:String, names:Stage3Ocam
 		if (source[index].isRest || target[index].isRest || source[index].isOptional || target[index].isOptional)
 			throw "OCaml callable conversion needs an optional/rest storage plan";
 	final closure = names.internalName("__hx_callable");
-	final parameters = [for (_ in source) names.internalName("__hx_callback_arg")];
+	// internalName avoids authored locals; each parameter also needs its own base.
+	final parameters = [
+		for (index in 0...source.length)
+			names.internalName("__hx_callback_arg_" + index)
+	];
 	final arguments = [
 		for (index in 0...source.length)
 			convert(target[index].type, source[index].type, parameters[index], names)
