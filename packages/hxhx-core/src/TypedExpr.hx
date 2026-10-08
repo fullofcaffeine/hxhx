@@ -705,6 +705,25 @@ class TypedExpr {
 			sourceCatches, constructorApplication, argumentBinding, namedArguments);
 	}
 
+	/** Instantiate an inline expression and its retained call proof atomically; local declarations are remapped by the inline owner. */
+	@:allow(TypedRequiredInlineLowering)
+	function withInlineTypes(children:Array<TypedExpr>, bindings:haxe.ds.StringMap<TyType>):TypedExpr {
+		assertArgumentBinding();
+		if (!bindings.iterator().hasNext())
+			return withExpressions(children);
+		if (localBindings.length != 0 || constructorApplication != null || catchUses.length != 0 || controlTarget != null || lambdaSignature != null
+			|| sourceFunction != null)
+			throw "inline type specialization requires explicit support for owned locals, construction, or nested control";
+		final applied = TyTypeSubstitution.apply(type, bindings);
+		// An unchecked authored cast has no written target. Giving it a type hint
+		// would change its runtime checking behavior during source projection.
+		final appliedTexts = tag == Cast && texts.length == 1 && texts[0].length > 0 ? [applied.getCanonicalDisplay()] : texts;
+		return new TypedExpr(tag, applied, position, appliedTexts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
+			unaryFixity, opaqueKind, fieldInfo, [], extensionProvider, runtimeTypeTarget, [], null, null, null, sourceCatches, null,
+			argumentBinding == null ? null : argumentBinding.substituteTypes(bindings),
+			namedArguments == null ? null : namedArguments.substituteTypes(bindings));
+	}
+
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
 		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns,

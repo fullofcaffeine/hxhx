@@ -186,6 +186,26 @@ class TyMethodGenericBinding {
 		return bindings(sig, argTypes, suppliedArity, methodTypeParameters, index) != null;
 	}
 
+	/** Recover method binders from an already-selected call signature, without choosing another overload or argument order. */
+	@:allow(TypedRequiredInlineLowering)
+	static function inlineBindings(declaration:TyDeclarationInfo, selectedParameters:Array<TyType>, result:TyType, index:TyperIndex):haxe.ds.StringMap<TyType> {
+		final parameters = declaration.getTypeParameterIds();
+		final bound = new haxe.ds.StringMap<TyType>();
+		final signature = declaration.getSignature();
+		final declared = signature.getArgs();
+		if (declared.length != selectedParameters.length)
+			throw "inline specialization requires an exact selected parameter list";
+		for (slot in 0...declared.length)
+			if (!collect(declared[slot], selectedParameters[slot], parameters, bound, index))
+				throw "inline specialization has conflicting parameter evidence";
+		if (!collect(signature.getReturnType(), result, parameters, bound, index))
+			throw "inline specialization has conflicting result evidence";
+		for (parameter in parameters)
+			if (!bound.exists(parameter.getCanonicalKey()))
+				throw "inline specialization lacks type parameter " + parameter.getName();
+		return bound;
+	}
+
 	static function hasUnbound(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>):Bool {
 		if (type == null)
 			return false;

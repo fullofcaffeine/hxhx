@@ -50,6 +50,14 @@ class TyCallArgumentBinding {
 	public function getSlots():Array<TyCallArgumentSlot>
 		return copySlots(slots);
 
+	/** Substitute the same exact binders in both sides of a proven alignment; omission and rest membership stay fixed. */
+	@:allow(TypedExpr)
+	@:allow(TypedNamedCallBinding)
+	function substituteTypes(bindings:haxe.ds.StringMap<TyType>):TyCallArgumentBinding {
+		final signature = TyCallableSignature.fromFunctionValue(TyTypeSubstitution.apply(functionType, bindings));
+		return new TyCallArgumentBinding(signature, [for (type in operandTypes) TyTypeSubstitution.apply(type, bindings)], operandKinds, slots, nullPolicy);
+	}
+
 	public function getFunctionType():TyType
 		return functionType;
 

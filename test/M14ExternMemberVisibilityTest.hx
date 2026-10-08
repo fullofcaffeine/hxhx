@@ -87,5 +87,55 @@ class M14ExternMemberVisibilityTest {
 				JsRuntimeFixture.assertRuntime(typed, "Main", "");
 			Sys.println("EXTERN_MEMBER_VISIBILITY:PASS " + entry.name);
 		}
+		checkInlineExecution();
+		M14ExternInlineGenericTest.run();
+	}
+
+	/** Independent expected effects catch argument duplication, name capture, and returns escaping into the caller. */
+	static function checkInlineExecution():Void {
+		final source = 'using Main.Helper;
+extern class Helper {
+static inline function twice(value:Int):Int {return value*2;}
+static inline function combine(left:Int,right:Int):Int {var local=left*10;return local+right;}
+static inline function choose(value:Int):Int {if(value<0)return twice(-value);var local=value+1;return twice(local);}
+static inline function ignore(value:Int):Int {return 7;}
+static inline function repeat(value:Int):Int {return value+value;}
+}
+@:native("console") extern class Console {public static function log(value:String):Void;}
+class Main {
+static function print(value:Int):Void {Console.log(""+value);}
+static var initialized=Helper.twice(4);
+static var events="";
+static function mark(name:String,value:Int):Int {events=events+name;return value;}
+static function main():Void {
+var local=100;
+print(initialized);
+print(mark("a",2).combine(mark("b",3)));
+print(Helper.combine(mark("c",4),mark("d",5)));
+print(Helper.ignore(mark("e",9)));
+print(Helper.repeat(mark("f",6)));
+print(Helper.choose(-3));
+print(Helper.choose(3));
+print(local);
+Console.log(events);
+Console.log("continued");
+}}';
+		final expected = "8\n23\n45\n7\n12\n6\n8\n100\nabcdef\ncontinued\n";
+		final root = ".tmp/extern-inline-execution";
+		sys.FileSystem.createDirectory(root);
+		final path = root + "/Main.hx";
+		sys.io.File.saveContent(path, source);
+		final compiler = Sys.getEnv("HXHX_UPSTREAM_HAXE");
+		final upstream = @:privateAccess M14JsPlainExternBindingTest.run(compiler == null ? "node_modules/.bin/haxe" : compiler,
+			["-cp", root, "-main", "Main", "-js", root + "/upstream.js"]);
+		if (upstream.code != 0)
+			throw "upstream extern inline compilation failed: " + upstream.stderr;
+		final observed = @:privateAccess M14JsPlainExternBindingTest.run("node", [root + "/upstream.js"]);
+		if (observed.code != 0 || observed.stdout != expected)
+			throw "upstream extern inline execution differs: " + observed.stdout + observed.stderr;
+		final resolved = new ResolvedModule("Main", path, ParserStage.parse(source, path));
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
+		Sys.println("EXTERN_INLINE_EXECUTION:PASS");
 	}
 }
