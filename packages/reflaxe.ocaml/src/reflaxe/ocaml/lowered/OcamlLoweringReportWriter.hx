@@ -83,8 +83,8 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 92;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16";
+	public static inline final SCHEMA_VERSION = 93;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
@@ -188,7 +188,8 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
-			artifacts:OcamlArtifactManifestBuilder):Void {
+			callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport, artifacts:OcamlArtifactManifestBuilder):Void {
+		final callbackInventory = reflaxe.ocaml.reports.OcamlCallableViewInventory.fromReport(callableViews);
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -685,6 +686,14 @@ class OcamlLoweringReportWriter {
 			requirementById.set(requirement.id, requirement);
 		}
 		final includedRequirementIds:Map<String, Bool> = [];
+		for (decision in reflaxe.ocaml.reports.OcamlCallableViewInventory.decisions(callbackInventory)) {
+			for (expected in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.requirements(decision)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null || reportJson(recorded) != reportJson(expected))
+					throw 'Callback write "${decision.id}" has missing or conflicting runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (decision in reflectCompare) {
 			OcamlReflectComparePlan.requireDecision(decision);
 			for (expected in OcamlReflectCompareRuntimeRequirementRecorder.requirementsFor(decision)) {
@@ -995,6 +1004,7 @@ class OcamlLoweringReportWriter {
 			localConversionRevision: "sha256:" + hashUtf8(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
+			callableViews: callbackInventory,
 			containerElementConversionModel: "typed-ocaml-container-element-conversions-v1",
 			containerElementRequiredConversionModel: "typed-ocaml-required-container-element-conversions-v1",
 			containerElementRequiredConversionRevision: "sha256:" + hashUtf8(canonicalContainerElementRequiredConversionIds),

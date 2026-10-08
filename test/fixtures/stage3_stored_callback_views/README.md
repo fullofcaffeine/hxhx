@@ -10,17 +10,33 @@ and returns `Dynamic -> Dynamic` callbacks. The returned view must produce `8`
 for input `7` and compare equal to the original callback. This checks opposite
 conversion directions at the argument and result boundaries.
 
-Repeated evaluation of the same lambda creates distinct function identities,
+The native acceptance contract follows upstream Haxe 4.3.7 eval. In eval,
+repeated evaluation of the same lambda creates distinct function identities,
 including lambdas with no captures. Repeated reads of a static method remain
-equal. The final observations check both rules and invoke both returned lambdas.
-OCaml can share a capture-free invocation closure, so its physical address
-cannot identify a newly evaluated Haxe lambda. A lambda view needs a fresh
-identity token that later views preserve.
+equal. The fixture checks both observations and invokes both returned lambdas.
+OCaml can share a capture-free invocation closure. To preserve this eval
+behavior, a lambda view needs a fresh identity token that later views retain.
+
+This is not an identity-allocation rule shared by every Haxe target. Upstream
+Haxe 4.3.7 with Neko 2.4.1 reuses the capture-free function in this fixture.
+`expected.neko.stdout` records that observation separately. Lines 9 and 19
+differ from eval: separate factory results compare equal, including through a
+forwarding function. All other observations agree. The regression checks both
+upstream outputs and still requires the native target to match eval.
+The [Reflect API](https://api.haxe.org/v/4.3.7/Reflect.html#compareMethods)
+describes identity comparison, but does not establish fresh allocation for
+every lambda evaluation.
 
 The final case stores the static method directly in an `Int -> Dynamic` local.
 Its initializer must create the declaration's view and adapt the argument in
 one write. Calling it returns `7`, and it still compares equal to the original
 stored function. This tests producer construction and conversion together.
+
+The last six observations exercise function return boundaries. Returning an
+existing parameter must preserve its identity and invocation. Returning a
+static method must preserve that declaration's identity. Forwarding a factory
+result must preserve the identity created by the factory. Wrapping each result
+as a new function at the caller would break the existing-value cases.
 
 Run the independent upstream observation from the repository root:
 
@@ -45,8 +61,10 @@ without adapting its input representation. Native compilation rejects the raw
 integer where the stored function requires `Obj.t`. A wrapper-only repair is
 insufficient because separate wrappers change function identity.
 
-The standalone target currently emits the same invalid native call. Reproduce
-that separate route from the repository root:
+The local standalone integration now compiles and executes this program, but
+still shares capture-free factory identity instead of matching eval. The
+complete source test remains failing. Reproduce that separate route from the
+repository root:
 
 ```sh
 node_modules/.bin/haxe -cp test/fixtures/stage3_stored_callback_views -main Main --no-output -lib reflaxe.ocaml -D ocaml_no_build -D ocaml_output=.tmp/stored_callback_views/standalone

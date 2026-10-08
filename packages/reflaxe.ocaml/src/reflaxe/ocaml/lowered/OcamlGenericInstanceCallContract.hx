@@ -138,25 +138,11 @@ function requireCall(call:OcamlCallDecision):Void {
 /** Every nested Bool crossing gets one exact helper role, shared by planning and emission. */
 function runtimeHelpers(target:OcamlGenericInstanceCallTarget):Array<{role:String, symbol:String}> {
 	final helpers:Array<{role:String, symbol:String}> = [];
-	function visit(conversion:OcamlGenericValueConversion, role:String):Void {
-		switch (conversion) {
-			case BoxBoolean:
-				helpers.push({role: role, symbol: "HxRuntime.box_bool"});
-			case UnboxBoolean:
-				helpers.push({role: role, symbol: "HxRuntime.unbox_bool_or_obj"});
-			case BoxNullableBoolean, UnboxNullableBoolean:
-				helpers.push({role: '$role/null', symbol: "HxRuntime.hx_null"});
-				helpers.push({role: '$role/value', symbol: conversion == BoxNullableBoolean ? "HxRuntime.box_bool" : "HxRuntime.unbox_bool_or_obj"});
-			case AdaptFunction(arguments, result):
-				for (index in 0...arguments.length)
-					visit(arguments[index], '$role/argument:$index');
-				visit(result, '$role/result');
-			case _:
-		}
-	}
 	for (index in 0...target.arguments.length)
-		visit(target.arguments[index], 'generic-call:argument:$index');
-	visit(target.result, "generic-call:result");
+		for (helper in reflaxe.ocaml.lowered.OcamlGenericCallConversion.runtimeHelpers(target.arguments[index], 'generic-call:argument:$index'))
+			helpers.push(helper);
+	for (helper in reflaxe.ocaml.lowered.OcamlGenericCallConversion.runtimeHelpers(target.result, "generic-call:result"))
+		helpers.push(helper);
 	return helpers;
 }
 

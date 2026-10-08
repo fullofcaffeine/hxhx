@@ -8,7 +8,7 @@ import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
-import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationDecision;
@@ -1168,7 +1168,10 @@ class OcamlLocalRepresentationPlanner {
 					conversions.push(sealLocalConversion(localIdentities, binding, pending));
 			}
 		}
-		return new OcamlLocalRepresentationPlan(decisions, conversions);
+		if (binding == null)
+			return new OcamlLocalRepresentationPlan(decisions, conversions);
+		final callbacks = reflaxe.ocaml.lowered.OcamlCallableLocalPlanner.plan(expression, localIdentities, storage, representations, binding);
+		return new OcamlLocalRepresentationPlan(decisions.concat(callbacks.locals), conversions, callbacks.writes);
 	}
 
 	static function nullIntWriteInput(expression:TypedExpr):Null<{

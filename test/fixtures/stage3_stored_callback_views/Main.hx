@@ -1,3 +1,4 @@
+/** Function conversions and returns preserve source identity independently of native closure sharing. */
 class Main {
 	static function consume(value:Dynamic):Dynamic
 		return value;
@@ -13,6 +14,15 @@ class Main {
 
 	static function captured(offset:Int):Int->Int
 		return value -> value + offset;
+
+	static function preserve(callback:Int->Int):Int->Int
+		return callback;
+
+	static function staticCallback():Int->Int
+		return declared;
+
+	static function forwarded():Int->Int
+		return literal();
 
 	static function main():Void {
 		var source:Dynamic->Dynamic = consume;
@@ -42,5 +52,14 @@ class Main {
 		var direct:Int->Dynamic = consume;
 		Sys.println(direct(7));
 		Sys.println(direct == source);
+		var preserved = preserve(firstLiteral);
+		Sys.println(preserved == firstLiteral);
+		Sys.println(preserved(7));
+		Sys.println(staticCallback() == declared);
+		Sys.println(staticCallback() == staticCallback());
+		var firstForwarded = forwarded();
+		var secondForwarded = forwarded();
+		Sys.println(firstForwarded != secondForwarded);
+		Sys.println(firstForwarded(7));
 	}
 }

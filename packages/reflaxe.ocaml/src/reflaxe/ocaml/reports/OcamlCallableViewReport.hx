@@ -6,6 +6,124 @@ import reflaxe.ocaml.lowered.OcamlGenericCallConversion;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
 import reflaxe.ocaml.reports.OcamlGenericCallReport;
 import reflaxe.ocaml.reports.OcamlGenericCallReport.ReportNode;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalRepresentationReference;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+
+/** Explicit producer tags; absent fields remain null instead of carrying an invented local. */
+private enum abstract InputKind(String) to String {
+	final Existing = "existing-view";
+	final Literal = "fresh-literal";
+	final Declaration = "static-declaration";
+}
+
+/** JSON-safe origin selection for one callback write. */
+private typedef InputReport = {
+	final kind:InputKind;
+	final reference:Null<OcamlLocalRepresentationReference>;
+	final calleeId:Null<String>;
+};
+
+/** A callback write retains its source, body, storage references, and validated adapter. */
+typedef CallableViewLocalReport = {
+	final id:String;
+	final revision:String;
+	final role:OcamlLocalConversionRole;
+	final source:OcamlLoweredSourceSpan;
+	final binding:OcamlFunctionPlanBinding;
+	final input:InputReport;
+	final output:OcamlLocalRepresentationReference;
+	final adapter:CallableViewAdapterReport;
+};
+
+/** Snapshot an actual sealed decision before exposing plain report fields. */
+function localToReport(decision:OcamlCallableViewLocalDecision):CallableViewLocalReport {
+	final selected = copy(decision);
+	return {
+		id: selected.id,
+		revision: selected.revision,
+		role: selected.role,
+		source: selected.source,
+		binding: selected.binding,
+		input: switch (selected.input) {
+			case ExistingView(reference): {kind: Existing, reference: reference, calleeId: null};
+			case RawOrigin(FreshLiteral): {kind: Literal, reference: null, calleeId: null};
+			case RawOrigin(StaticDeclaration(calleeId)): {kind: Declaration, reference: null, calleeId: calleeId};
+		},
+		output: selected.output,
+		adapter: adapterToReport(selected.inputLayout, selected.outputLayout, selected.conversion)
+	};
+}
+
+/** Decode a complete occurrence, then reuse the compiler's source-bound decision validation. */
+function localFromReport(value:Dynamic):OcamlCallableViewLocalDecision {
+	requireFields(value, ["id", "revision", "role", "source", "binding", "input", "output", "adapter"]);
+	final source:Dynamic = Reflect.field(value, "source");
+	requireFields(source, ["file", "min", "max"]);
+	final input:Dynamic = Reflect.field(value, "input");
+	requireFields(input, ["kind", "reference", "calleeId"]);
+	final kind = text(Reflect.field(input, "kind"));
+	final reference:Dynamic = Reflect.field(input, "reference");
+	final callee:Dynamic = Reflect.field(input, "calleeId");
+	final adapter = adapterFromReport(Reflect.field(value, "adapter"));
+	final result:OcamlCallableViewLocalDecision = {
+		id: text(Reflect.field(value, "id")),
+		revision: text(Reflect.field(value, "revision")),
+		role: text(Reflect.field(value, "role")),
+		source: {file: text(Reflect.field(source, "file")), min: integer(Reflect.field(source, "min")), max: integer(Reflect.field(source, "max"))},
+		binding: readBinding(Reflect.field(value, "binding")),
+		input: switch (kind) {
+			case "existing-view" if (callee == null): ExistingView(readReference(reference));
+			case "fresh-literal" if (reference == null && callee == null): RawOrigin(FreshLiteral);
+			case "static-declaration" if (reference == null): RawOrigin(StaticDeclaration(text(callee)));
+			case _: throw "Callback report has a conflicting or unsupported producer.";
+		},
+		output: readReference(Reflect.field(value, "output")),
+		inputLayout: adapter.input,
+		outputLayout: adapter.output,
+		conversion: adapter.conversion
+	};
+	requireDecision(result);
+	return result;
+}
+
+/** Narrow a report reference; the owning decision/inventory validates its registered identity. */
+function readReference(value:Dynamic):OcamlLocalRepresentationReference {
+	requireFields(value, [
+		"localId",
+		"representationId",
+		"representationRevision",
+		"semanticTypeId",
+		"domain"
+	]);
+	return {
+		localId: text(Reflect.field(value, "localId")),
+		representationId: text(Reflect.field(value, "representationId")),
+		representationRevision: text(Reflect.field(value, "representationRevision")),
+		semanticTypeId: text(Reflect.field(value, "semanticTypeId")),
+		domain: text(Reflect.field(value, "domain"))
+	};
+}
+
+/** The full compiler context is explicit even when two functions have the same local shape. */
+function readBinding(value:Dynamic):OcamlFunctionPlanBinding {
+	requireFields(value, ["functionId", "programRevision", "bodyRevision", "pipelineRevision"]);
+	return {
+		functionId: text(Reflect.field(value, "functionId")),
+		programRevision: text(Reflect.field(value, "programRevision")),
+		bodyRevision: text(Reflect.field(value, "bodyRevision")),
+		pipelineRevision: text(Reflect.field(value, "pipelineRevision"))
+	};
+}
+
+private function integer(value:Dynamic):Int {
+	if (!Std.isOfType(value, Int))
+		throw "Callback report requires an Int source position.";
+	return value;
+}
 
 /** Plain JSON fields for one directional callback adapter, independent of its source occurrence. */
 typedef CallableViewAdapterReport = {

@@ -71,20 +71,37 @@ private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr
 			final callback = fresh("generic_callback");
 			final patterns:Array<OcamlPat> = [];
 			final inputs:Array<OcamlExpr> = [];
+			final bindings:Array<{name:String, value:OcamlExpr}> = [];
 			for (index in 0...arguments.length) {
 				final name = fresh("generic_input");
 				patterns.push(PVar(name));
-				inputs.push(convert(arguments[index], EIdent(name), '$role/argument:$index', fresh, runtime, views));
+				final convertedName = fresh("generic_converted_input");
+				bindings.push({
+					name: convertedName,
+					value: convert(arguments[index], EIdent(name), '$role/argument:$index', fresh, runtime, views)
+				});
+				inputs.push(EIdent(convertedName));
 			}
 			if (arguments.length == 0) {
 				patterns.push(PConst(CUnit));
 				inputs.push(EConst(CUnit));
 			}
+			// Conversion can call private runtime helpers or fail. Bind each input
+			// before invocation, then convert its result. Besides preserving source
+			// order, this keeps the syntax's helper uses in their planned order.
+			function body(invocation:OcamlExpr):OcamlExpr {
+				final resultName = fresh("generic_callback_result");
+				var output:OcamlExpr = ELet(resultName, EApp(invocation, inputs), convert(result, EIdent(resultName), '$role/result', fresh, runtime, views),
+					false);
+				var index = bindings.length;
+				while (index-- > 0)
+					output = ELet(bindings[index].name, bindings[index].value, output, false);
+				return output;
+			}
 			if (views) {
-				adaptView(value, invocation -> EFun(patterns, convert(result, EApp(invocation, inputs), '$role/result', fresh, runtime, true)), fresh);
+				adaptView(value, invocation -> EFun(patterns, body(invocation)), fresh);
 			} else {
-				final invocation:OcamlExpr = EApp(EIdent(callback), inputs);
-				ELet(callback, value, EFun(patterns, convert(result, invocation, '$role/result', fresh, runtime)), false);
+				ELet(callback, value, EFun(patterns, body(EIdent(callback))), false);
 			}
 	}
 }

@@ -41,21 +41,38 @@ class OcamlCallableViewSyntaxTest {
 
 	static function origin(value:OcamlExpr):OcamlExpr {
 		final producer = CheckOcamlCallableViewConversions.selectedProducer("source");
-		return convertView(producer.conversion, produceView(producer.kind, value, fresh), "test-source", fresh, unexpectedRuntime);
+		CheckOcamlCallableViewReports.verifyLocalReport(producer.report);
+		return producerWrite(producer.report, value);
+	}
+
+	/** Exercise the production write emitter with a plan decoded at the report boundary. */
+	static function producerWrite(report:String, value:OcamlExpr):OcamlExpr {
+		final decision = reflaxe.ocaml.reports.OcamlCallableViewReport.localFromReport(haxe.Json.parse(report));
+		final runtime = new reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority();
+		runtime.beginProgram(decision.binding.programRevision, "portable");
+		return reflaxe.ocaml.ast.OcamlCallableViewWriteSyntax.build({
+			decision: decision,
+			value: value,
+			fresh: fresh,
+			profile: "portable",
+			requirements: reflaxe.ocaml.lowered.OcamlCallableViewRuntime.requirements(decision),
+			finalRuntimeUses: runtime
+		});
 	}
 
 	/** The typed lambda initializer selects allocation; the native syntax cannot infer it. */
 	static function sourceLiteral(value:OcamlExpr):OcamlExpr {
 		final producer = CheckOcamlCallableViewConversions.selectedProducer("number");
-		return convertView(producer.conversion, produceView(producer.kind, value, fresh), "test-literal", fresh, unexpectedRuntime);
+		CheckOcamlCallableViewReports.verifyLocalReport(producer.report);
+		return producerWrite(producer.report, value);
 	}
 
 	/** Construct and adapt a direct static producer while preserving its declaration identity. */
 	static function directProducer():OcamlExpr {
 		final producer = CheckOcamlCallableViewConversions.selectedProducer("direct");
-		final produced = produceView(producer.kind, EIdent("declared_source"), fresh);
-		return ELet("direct", convertView(producer.conversion, produced, "test-direct", fresh, unexpectedRuntime),
-			ESeq([invokeInt("direct"), printBool(equal(EIdent("direct"), EIdent("source")))]), false);
+		CheckOcamlCallableViewReports.verifyLocalReport(producer.report);
+		final produced = producerWrite(producer.report, EIdent("declared_source"));
+		return ELet("direct", produced, ESeq([invokeInt("direct"), printBool(equal(EIdent("direct"), EIdent("source")))]), false);
 	}
 
 	static function equal(left:OcamlExpr, right:OcamlExpr):OcamlExpr {

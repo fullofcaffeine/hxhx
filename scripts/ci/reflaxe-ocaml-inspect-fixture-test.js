@@ -58,7 +58,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 51)
+	assert.strictEqual(report.schemaVersion, 52)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -262,7 +262,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.representedArrays.some(descriptor => descriptor.id === 'represented-array:Array<Int>'
 		&& descriptor.elementRepresentationId === 'representation:Int:array-element'
@@ -532,7 +532,7 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
-	assert.strictEqual(lowering.schemaVersion, 92)
+	assert.strictEqual(lowering.schemaVersion, 93)
 	const oldSchemaValue = JSON.parse(loweringBytes)
 	oldSchemaValue.schemaVersion = 87
 	fs.writeFileSync(loweringPath, JSON.stringify(oldSchemaValue, null, 2) + '\n')

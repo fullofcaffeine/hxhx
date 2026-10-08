@@ -40,6 +40,27 @@ enum OcamlGenericValueConversion {
 	AdaptFunction(arguments:Array<OcamlGenericValueConversion>, result:OcamlGenericValueConversion);
 }
 
+/** Exact helper roles for one conversion tree, shared by call and stored-view plans. */
+function runtimeHelpers(conversion:OcamlGenericValueConversion, role:String):Array<{role:String, symbol:String}> {
+	return switch (conversion) {
+		case BoxBoolean: [{role: role, symbol: "HxRuntime.box_bool"}];
+		case UnboxBoolean: [{role: role, symbol: "HxRuntime.unbox_bool_or_obj"}];
+		case BoxNullableBoolean, UnboxNullableBoolean: [
+				{role: '$role/null', symbol: "HxRuntime.hx_null"},
+				{role: '$role/value', symbol: conversion == BoxNullableBoolean ? "HxRuntime.box_bool" : "HxRuntime.unbox_bool_or_obj"}
+			];
+		case AdaptFunction(arguments, result):
+			final helpers:Array<{role:String, symbol:String}> = [];
+			for (index in 0...arguments.length)
+				for (helper in runtimeHelpers(arguments[index], '$role/argument:$index'))
+					helpers.push(helper);
+			for (helper in runtimeHelpers(result, '$role/result'))
+				helpers.push(helper);
+			helpers;
+		case Identity, BoxValue, UnboxValue: [];
+	};
+}
+
 /**
 	Selects conversions between a generic method declaration and one instantiation.
 

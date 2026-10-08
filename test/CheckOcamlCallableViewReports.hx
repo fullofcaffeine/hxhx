@@ -10,6 +10,35 @@ class CheckOcamlCallableViewReports {
 		verify();
 	}
 
+	/** Inspect an actual compiler-selected occurrence outside the macro host, then corrupt its evidence. */
+	public static function verifyLocalReport(json:String):Void {
+		final selected = localFromReport(haxe.Json.parse(json));
+		if (encode(localToReport(selected)) != json)
+			throw "Callback occurrence report changed its sealed decision.";
+		for (mutation in ["body", "source", "local", "role", "revision", "origin", "extra"]) {
+			// Deliberate JSON corruption at the untrusted report boundary.
+			final changed:Dynamic = haxe.Json.parse(json);
+			switch (mutation) {
+				case "body":
+					Reflect.setField(Reflect.field(changed, "binding"), "bodyRevision", "foreign-body");
+				case "source":
+					Reflect.setField(Reflect.field(changed, "source"), "min", -1);
+				case "local":
+					Reflect.setField(Reflect.field(changed, "output"), "localId", "123");
+				case "role":
+					Reflect.setField(changed, "role", "read");
+				case "revision":
+					Reflect.setField(changed, "revision", "sha256:stale");
+				case "origin":
+					Reflect.setField(Reflect.field(changed, "input"), "kind", "returned-function");
+				case "extra":
+					Reflect.setField(Reflect.field(changed, "binding"), "unchecked", true);
+			}
+			reject(() -> localFromReport(changed));
+		}
+		Sys.println("OCAML_CALLABLE_OCCURRENCE_REPORT:PASS");
+	}
+
 	public static function verify():Void {
 		final source = describe(FunctionValue([DynamicValue], DynamicValue));
 		final destination = describe(FunctionValue([Boolean], Boolean));

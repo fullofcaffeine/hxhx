@@ -21,7 +21,10 @@ class CheckOcamlCallableOrigins {
 			"firstLiteral" => "null",
 			"secondLiteral" => "null",
 			"firstCapture" => "null",
-			"secondCapture" => "null"
+			"secondCapture" => "null",
+			"preserved" => "null",
+			"firstForwarded" => "null",
+			"secondForwarded" => "null"
 		]);
 		final cases = switch (Context.getType("CheckOcamlCallableOrigins.CallableOriginCases")) {
 			case TInst(reference, []): reference.get();

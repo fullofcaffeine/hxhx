@@ -133,7 +133,7 @@ import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementLook
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
-import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
@@ -1769,6 +1769,8 @@ class OcamlBuilder {
 	function buildFunctionValueCall(callee:TypedExpr, arguments:Array<OcamlExpr>):OcamlExpr {
 		final functionType = nullableCallableType(callee.t);
 		final value = buildExpr(callee);
+		if (isCallableViewLocal(callee))
+			return OcamlExpr.EApp(reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(value), arguments);
 		return functionType == null ? OcamlExpr.EApp(value,
 			arguments) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.call(value, arguments, typeExprFromHaxeType(functionType), freshTmp);
 	}
@@ -1841,7 +1843,7 @@ class OcamlBuilder {
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
 					final functionType = nullableCallableType(callee.t);
-					target = functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
+					target = isCallableViewLocal(callee) ? reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(OcamlExpr.EIdent(name)) : functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
 						typeExprFromHaxeType(functionType), freshTmp);
 				case OcamlCallEvaluationStepKind.MaterializeReceiver:
 					if (callee == null)
@@ -2507,6 +2509,9 @@ class OcamlBuilder {
 		final decision = plannedLocalRepresentation(localId, position);
 		if (decision == null)
 			return typeExprFromHaxeType(type);
+		if (decision.boxingPolicy == CallableIdentityView)
+			return reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(representationRegistry.requireCallableView(decision.id, decision.revision,
+				decision.programRevision));
 		if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)) {
 			if (ctx.currentModuleId == null)
 				return localStorageInvariant('local $localId selected a nominal class carrier outside an OCaml module', position);
@@ -3075,6 +3080,8 @@ class OcamlBuilder {
 	**/
 	function coerceLocalInitializer(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
 		final representation = plannedLocalRepresentation(localId, rhs.pos);
+		if (representation != null && representation.boxingPolicy == CallableIdentityView)
+			return buildCallableViewWrite(localId, rhs);
 		if (representation != null && representation.semanticTypeId == "Null<Int>")
 			return buildNullIntWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
 		if (representation != null && representation.semanticTypeId == "Null<Bool>")
@@ -3117,6 +3124,46 @@ class OcamlBuilder {
 				NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic:
 				localStorageInvariant('local $localId leaked an occurrence-only carrier conversion into its initializer summary', rhs.pos);
 		}
+	}
+
+	/** Resolve the sealed write before constructing identity and adapting its invocation. */
+	function buildCallableViewWrite(localId:Int, rhs:TypedExpr):OcamlExpr {
+		final binding = currentLocalPlanBinding;
+		final plan = activeLocalRepresentationPlan(rhs.pos);
+		if (binding == null || plan == null)
+			return localStorageInvariant("callback write has no owning function plan", rhs.pos);
+		final decision = plan.callableViewConversionFor(binding, stableLocalId(localId, rhs.pos), Initializer, OcamlLoweredOrigin.sourceSpan(rhs.pos),
+			representationRegistry);
+		if (decision == null)
+			return localStorageInvariant("callback initializer has no exact write decision", rhs.pos);
+		switch (decision.input) {
+			case ExistingView(reference):
+				switch (unwrap(rhs).expr) {
+					case TLocal(local) if (stableLocalId(local.id, rhs.pos) == reference.localId):
+					case _: return localStorageInvariant("callback write changed its input local", rhs.pos);
+				}
+			case RawOrigin(kind):
+				if (Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(rhs)) != Std.string(kind))
+					return localStorageInvariant("callback write changed its typed producer", rhs.pos);
+		}
+		final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.occurrences(decision);
+		return reflaxe.ocaml.ast.OcamlCallableViewWriteSyntax.build({
+			decision: decision,
+			value: buildExpr(rhs),
+			fresh: freshTmp,
+			profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+			finalRuntimeUses: ctx.finalRuntimeUses
+		});
+	}
+
+	/** Only a local with a resolved view decision may expose a view invocation or identity. */
+	function isCallableViewLocal(expression:TypedExpr):Bool {
+		return switch (unwrap(expression).expr) {
+			case TLocal(local): final decision = plannedLocalRepresentation(local.id,
+					expression.pos); decision != null && decision.boxingPolicy == CallableIdentityView;
+			case _: false;
+		};
 	}
 
 	/**
@@ -7188,6 +7235,12 @@ class OcamlBuilder {
 			case OpUShr:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [toIntExpr(e1), toIntExpr(e2)]);
 			case OpEq:
+				if (isCallableViewLocal(e1) || isCallableViewLocal(e2)) {
+					if (!isCallableViewLocal(e1) || !isCallableViewLocal(e2))
+						return localStorageInvariant("callback comparison crossed unplanned storage", source.pos);
+					return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(buildExpr(e1), buildExpr(e2),
+						(left, right) -> OcamlExpr.EBinop(OcamlBinop.PhysEq, left, right), freshTmp);
+				}
 				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
 					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("map comparison has no active function plan", source.pos);
@@ -7276,6 +7329,12 @@ class OcamlBuilder {
 					}
 				}
 			case OpNotEq:
+				if (isCallableViewLocal(e1) || isCallableViewLocal(e2)) {
+					if (!isCallableViewLocal(e1) || !isCallableViewLocal(e2))
+						return localStorageInvariant("callback comparison crossed unplanned storage", source.pos);
+					return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(buildExpr(e1), buildExpr(e2),
+						(left, right) -> OcamlExpr.EBinop(OcamlBinop.PhysNeq, left, right), freshTmp);
+				}
 				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
 					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("map comparison has no active function plan", source.pos);

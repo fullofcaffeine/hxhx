@@ -3360,7 +3360,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.reflectCompareDecisions(), functionPlanRegistry.stdIsOfTypeDecisions(), functionPlanRegistry.intUnaryDecisions(),
 				functionPlanRegistry.functionResultBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
 				functionPlanRegistry.controlCatchChains(), functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(),
-				staticStoragePlan.revision(), artifacts);
+				staticStoragePlan.revision(), functionPlanRegistry.callableViewInventory(representationRegistry), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

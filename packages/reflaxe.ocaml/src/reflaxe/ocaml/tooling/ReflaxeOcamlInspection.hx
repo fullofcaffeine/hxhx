@@ -113,7 +113,7 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v117";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v118";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
 
@@ -152,7 +152,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 51,
+			schemaVersion: 52,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -182,6 +182,9 @@ class ReflaxeOcamlInspection {
 				iMapInterfaceCallCount: lowering.iMapInterfaceCalls.length,
 				iMapStorageAliasCount: lowering.iMapStorageAliases.length,
 				localConversionCount: lowering.localConversions.length,
+				callbackViewCount: lowering.callableViews.entries.length,
+				callbackUnsafeOperationCount: Lambda.fold(lowering.callableViews.entries, (entry, count) -> count + entry.unsafeOperations.length, 0),
+				callbackRuntimeUseCount: Lambda.fold(lowering.callableViews.entries, (entry, count) -> count + entry.runtimeUses.length, 0),
 				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
@@ -243,6 +246,7 @@ class ReflaxeOcamlInspection {
 			}
 			lines.push('[PASS] IMap interfaces: ${report.lowering.iMapInterfaceConversions.length} concrete-to-interface conversion${report.lowering.iMapInterfaceConversions.length == 1 ? "" : "s"}, ${report.lowering.iMapInterfaceCalls.length} interface call${report.lowering.iMapInterfaceCalls.length == 1 ? "" : "s"}, and ${report.lowering.iMapStorageAliases.length} closed standard Map storage alias${report.lowering.iMapStorageAliases.length == 1 ? "" : "es"} were validated before target syntax.');
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
+			lines.push('[PASS] Callback views: ${report.summary.callbackViewCount} initializer conversions, ${report.summary.callbackUnsafeOperationCount} raw representation operations, and ${report.summary.callbackRuntimeUseCount} runtime-helper uses have source-bound evidence.');
 			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
 			for (operation in report.lowering.unsafeOperations) {
@@ -443,6 +447,7 @@ class ReflaxeOcamlInspection {
 					iMapStorageAliases: [],
 					localConversionRevision: null,
 					localConversions: [],
+					callableViews: reflaxe.ocaml.reports.OcamlCallableViewInventory.build([], []),
 					containerElementRequiredConversionRevision: null,
 					containerElementRequiredConversionIds: [],
 					containerElementConversionRevision: null,
@@ -479,8 +484,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 92) {
-						throw 'Unsupported lowering report schema $version; expected 92.';
+					if (version != 93) {
+						throw 'Unsupported lowering report schema $version; expected 93.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -499,6 +504,8 @@ class ReflaxeOcamlInspection {
 					final structuralFields = ReflaxeOcamlStructuralFieldInspection.inspect(value);
 					final iMapInterfaces = ReflaxeOcamlIMapInterfaceInspection.inspect(value);
 					final localConversions = inspectLocalConversions(value);
+					final callableViews = reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.inspect(Reflect.field(value, "callableViews"),
+						representation.decisions, FUNCTION_PLAN_PIPELINE_REVISION);
 					final containerElementRequiredConversionIds = inspectContainerElementRequiredConversions(value);
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
@@ -516,7 +523,7 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, intUnary, controls);
+						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, intUnary, controls, callableViews);
 					{
 						status: "present",
 						required: required,
@@ -540,6 +547,7 @@ class ReflaxeOcamlInspection {
 						iMapStorageAliases: iMapInterfaces.storageAliases,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
+						callableViews: callableViews,
 						containerElementRequiredConversionRevision: requiredSha256Revision(value, "containerElementRequiredConversionRevision"),
 						containerElementRequiredConversionIds: containerElementRequiredConversionIds,
 						containerElementConversionRevision: requiredSha256Revision(value, "containerElementConversionRevision"),
@@ -3780,7 +3788,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -4549,7 +4557,8 @@ class ReflaxeOcamlInspection {
 			containerElementConversions:Array<InspectionContainerElementConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
 			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
 			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, reflectCompare:Array<InspectionReflectCompare>,
-			stdIsOfType:Array<InspectionStdIsOfType>, intUnary:Array<InspectionIntUnary>, controls:Array<InspectionControl>):Int {
+			stdIsOfType:Array<InspectionStdIsOfType>, intUnary:Array<InspectionIntUnary>, controls:Array<InspectionControl>,
+			callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -4588,6 +4597,8 @@ class ReflaxeOcamlInspection {
 				throw 'Lowering report runtime requirement "$id" has no eligible profile.';
 		}
 		final referenced:Map<String, Bool> = [];
+		for (id in reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.validateRuntime(callableViews, requirements))
+			referenced.set(id, true);
 		for (plan in plans) {
 			for (requirementId in plan.runtimeRequirementIds) {
 				if (!requirements.exists(requirementId))
@@ -5656,6 +5667,7 @@ class ReflaxeOcamlInspection {
 			iMapStorageAliases: [],
 			localConversionRevision: null,
 			localConversions: [],
+			callableViews: reflaxe.ocaml.reports.OcamlCallableViewInventory.build([], []),
 			containerElementRequiredConversionRevision: null,
 			containerElementRequiredConversionIds: [],
 			containerElementConversionRevision: null,
@@ -5703,7 +5715,7 @@ class ReflaxeOcamlInspection {
 			representedArrayModel: null,
 			representedArrayRevision: null,
 			representedArrays: [],
-			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v16",
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17",
 			message: message
 		};
 	}

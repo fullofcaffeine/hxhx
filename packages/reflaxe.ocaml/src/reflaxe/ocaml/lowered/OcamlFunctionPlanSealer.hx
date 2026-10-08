@@ -353,6 +353,11 @@ class OcamlFunctionPlanSealer {
 			if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
 				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
 		}
+		for (conversion in localRepresentations.callableViewConversions()) {
+			reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry(conversion, representations, binding);
+			for (requirement in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.requirements(conversion))
+				context.runtimeRequirements.record(requirement);
+		}
 		for (conversion in containerElements.decisions())
 			context.recordContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);

@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 92
+if (report.schemaVersion !== 93
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v33') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
@@ -37,7 +37,7 @@ const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
 	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
 		? 'ocaml-nested-function-plans-v36'
-		: 'ocaml-function-plans-v117')
+		: 'ocaml-function-plans-v118')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
@@ -110,7 +110,7 @@ const expectedAliases = [
 for (const expected of expectedAliases) {
 	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
 		&& candidate.standardKeyKind === expected.kind)
-	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v36' : 'ocaml-function-plans-v117'
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v36' : 'ocaml-function-plans-v118'
 	if (!alias
 		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
 		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`
@@ -191,17 +191,24 @@ fixture_root="$PWD"
 inspection_report="$(mktemp)"
 lowering_backup="$(mktemp)"
 manifest_backup="$(mktemp)"
+inspector_dir="$(mktemp -d)"
 cp out/ocaml_lowering_report.json "$lowering_backup"
 cp out/ocaml_artifact_manifest.json "$manifest_backup"
 # The corruption helper updates the report and manifest; restore both originals.
-trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; cp "$manifest_backup" out/ocaml_artifact_manifest.json; rm -f "$inspection_report" "$lowering_backup" "$manifest_backup"' EXIT
+trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; cp "$manifest_backup" out/ocaml_artifact_manifest.json; rm -f "$inspection_report" "$lowering_backup" "$manifest_backup"; rm -rf "$inspector_dir"' EXIT
+
+# Compile the strict inspector once; each report still gets a fresh process.
+(
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' -D reflaxe_runtime \
+		-main reflaxe.ocaml.tooling.ReflaxeOcamlRun --neko "$inspector_dir/inspect.n"
+)
 
 inspect() {
 	(
 		cd "$repo_root"
-		haxe -cp packages/reflaxe.ocaml/src \
-			--macro 'nullSafety("reflaxe.ocaml")' \
-			--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		neko "$inspector_dir/inspect.n" \
 			inspect --project "$fixture_root" --output out --require-lowering --json
 	)
 }
@@ -221,7 +228,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 51
+if (report.schemaVersion !== 52
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 5
 	|| report.summary.iMapInterfaceCallCount !== 55
@@ -320,7 +327,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapInterfaceConversions.find(conversion => conversion.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested conversion to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v117'
+nested.pipelineRevision = 'ocaml-function-plans-v118'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
@@ -399,7 +406,7 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapStorageAliases.find(alias => alias.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested storage alias to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v117'
+nested.pipelineRevision = 'ocaml-function-plans-v118'
 report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,

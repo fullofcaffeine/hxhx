@@ -1007,6 +1007,7 @@ typedef InspectionLowering = {
 	final iMapStorageAliases:Array<InspectionIMapStorageAlias>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
+	final callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport;
 	final containerElementRequiredConversionRevision:Null<String>;
 	final containerElementRequiredConversionIds:Array<String>;
 	final containerElementConversionRevision:Null<String>;
@@ -1066,6 +1067,9 @@ typedef InspectionSummary = {
 	final iMapInterfaceCallCount:Int;
 	final iMapStorageAliasCount:Int;
 	final localConversionCount:Int;
+	final callbackViewCount:Int;
+	final callbackUnsafeOperationCount:Int;
+	final callbackRuntimeUseCount:Int;
 	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;
 	final callCount:Int;

@@ -4,12 +4,13 @@ import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion;
-import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.OcamlCallableViewLocalDecision;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
-import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationReference;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalRepresentationReference;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
@@ -26,7 +27,8 @@ class CheckOcamlCallableLocalPlan {
 	/** The first stored view owns an actual source producer, not an invented input local. */
 	public static function selectOrigin(body:TypedExpr, localName:String):{
 		kind:reflaxe.ocaml.lowered.OcamlCallableOriginKind,
-		conversion:OcamlGenericValueConversion
+		conversion:OcamlGenericValueConversion,
+		report:String
 	} {
 		var selected:Null<{local:TVar, expression:TypedExpr}> = null;
 		function visit(expression:TypedExpr):Void {
@@ -96,7 +98,11 @@ class CheckOcamlCallableLocalPlan {
 		registry.beginProgram("reset-program");
 		expectRejected(() -> plan.callableViewConversionFor(binding, output.localId, Initializer, source, registry));
 		return switch (retained.input) {
-			case RawOrigin(kind): {kind: kind, conversion: retained.conversion};
+			case RawOrigin(kind): {
+					kind: kind,
+					conversion: retained.conversion,
+					report: reflaxe.ocaml.reports.OcamlReportJson.encode(reflaxe.ocaml.reports.OcamlCallableViewReport.localToReport(retained))
+				};
 			case _: throw "raw callback producer became an existing view";
 		};
 	}
@@ -183,6 +189,7 @@ class CheckOcamlCallableLocalPlan {
 		if (retained == null)
 			throw "callback conversion disappeared after mutating a detached copy";
 		requireRegistry(retained, registry, binding);
+		CheckOcamlCallableViewReports.verifyLocalReport(reflaxe.ocaml.reports.OcamlReportJson.encode(reflaxe.ocaml.reports.OcamlCallableViewReport.localToReport(retained)));
 		registry.beginProgram("reset-program");
 		expectRejected(() -> requireRegistry(retained, registry, binding));
 		expectRejected(() -> plan.callableViewConversionFor(binding, output.localId, Initializer, source, registry));

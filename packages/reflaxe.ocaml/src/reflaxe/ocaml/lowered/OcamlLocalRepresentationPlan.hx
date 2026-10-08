@@ -2,13 +2,14 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
-import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.OcamlCallableViewLocalDecision;
-import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.copy as copyCallableView;
-import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireBinding as requireCallableViewBinding;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.copy as copyCallableView;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.requireBinding as requireCallableViewBinding;
 import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry as requireCallableViewRegistry;
 
 /** How syntax construction must convert one value crossing a local-carrier boundary. */
@@ -65,13 +66,6 @@ enum abstract OcamlLocalCarrierConversion(String) from String to String {
 	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
-/** The source role that requires one local-carrier conversion. */
-enum abstract OcamlLocalConversionRole(String) from String to String {
-	final Initializer = "initializer";
-	final Assignment = "assignment";
-	final Read = "read";
-}
-
 /** Unsafe target mechanism justified by one admitted local conversion. */
 enum abstract OcamlUnsafeOperationKind(String) from String to String {
 	final ObjReprExactInt = "obj-repr-exact-int";
@@ -123,15 +117,6 @@ typedef OcamlLocalConversionDecision = {
 	final bodyRevision:String;
 	final pipelineRevision:String;
 	final unsafeOperation:Null<OcamlUnsafeOperationRecord>;
-}
-
-/** One function-local reference to a program-owned representation decision. */
-typedef OcamlLocalRepresentationReference = {
-	final localId:String;
-	final representationId:String;
-	final representationRevision:String;
-	final semanticTypeId:String;
-	final domain:OcamlRepresentationDomain;
 }
 
 /** Complete representation status for one admitted or mutated local. */
@@ -243,7 +228,7 @@ class OcamlLocalRepresentationPlan {
 		for (conversion in orderedCallableViews) {
 			if (conversionsById.exists(conversion.id) || callableViewsById.exists(conversion.id))
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: callback write "${conversion.id}" has another conversion owner';
-			for (reference in reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.localReferences(conversion)) {
+			for (reference in reflaxe.ocaml.lowered.OcamlCallableViewContract.localReferences(conversion)) {
 				final selected = referenceFor(reference.localId);
 				if (selected == null
 					|| selected.representationId != reference.representationId
@@ -270,17 +255,7 @@ class OcamlLocalRepresentationPlan {
 		counter, local name, or rendered expression text.
 	**/
 	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
-		return "local-conversion:" + Sha256.encode([
-			binding.functionId,
-			binding.programRevision,
-			binding.bodyRevision,
-			binding.pipelineRevision,
-			localId,
-			(role : String),
-			source.file,
-			Std.string(source.min),
-			Std.string(source.max)
-		].join("\n")).substr(0, 32);
+		return reflaxe.ocaml.lowered.OcamlLocalConversionIdentity.occurrenceId(binding, localId, role, source);
 	}
 
 	/**

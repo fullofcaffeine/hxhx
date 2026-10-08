@@ -152,6 +152,7 @@ class CheckOcamlCallableViewConversions {
 		checkConversion(macro :Int->Int, macro :Int->Int->Int, "null");
 		checkRegistry();
 		CheckOcamlCallableOrigins.verify(main);
+		CheckOcamlCallableLocalSelection.verify();
 		Sys.println("OCAML_CALLABLE_VIEW_CONVERSION:PASS");
 	}
 

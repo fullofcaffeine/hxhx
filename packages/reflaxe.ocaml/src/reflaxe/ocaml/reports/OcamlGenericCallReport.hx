@@ -221,7 +221,8 @@ private function readNode(value:Dynamic, depth:Int):{kind:String, parameter:Null
 	return {kind: kind, parameter: parameter, children: sequence(Reflect.field(value, "children"))};
 }
 
-private function text(value:Dynamic):String {
+/** Narrow a JSON scalar before it enters a report contract. */
+function text(value:Dynamic):String {
 	if (!Std.isOfType(value, String))
 		throw "Generic call report requires a String field.";
 	final selected:String = value;
@@ -230,13 +231,15 @@ private function text(value:Dynamic):String {
 	return selected;
 }
 
-private function sequence(value:Dynamic):Array<Dynamic> {
+/** Keep untrusted array entries at the decoding boundary until each has been validated. */
+function sequence(value:Dynamic):Array<Dynamic> {
 	if (!Std.isOfType(value, Array))
 		throw "Generic call report requires an Array field.";
 	return value;
 }
 
-private function requireFields(value:Dynamic, expected:Array<String>):Void {
+/** Reject missing and unknown object members before any domain value is constructed. */
+function requireFields(value:Dynamic, expected:Array<String>):Void {
 	if (Type.typeof(value) != TObject)
 		throw "Generic call report requires a plain object.";
 	final actual = Reflect.fields(value);

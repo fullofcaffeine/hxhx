@@ -345,7 +345,7 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v117";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v118";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
 
@@ -1928,7 +1928,25 @@ class OcamlFunctionPlanRegistry {
 		return [for (originId in originIds) cast plansByOrigin.get(originId)];
 	}
 
-	/** Returns every sealed local conversion in deterministic identity order. */
+	/** Publish callback local selections independently of their conversions, then validate complete coverage. */
+	public function callableViewInventory(representations:OcamlRepresentationRegistry):reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport {
+		final required:Array<reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewRequiredLocal> = [];
+		final conversions:Array<reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision> = [];
+		for (sealed in sealedFunctions) {
+			final binding = sealed.plan.binding;
+			for (reference in sealed.plan.localRepresentations.references()) {
+				if (representations.require(reference.representationId, binding.programRevision).boxingPolicy == CallableIdentityView)
+					required.push({binding: binding, reference: reference});
+			}
+			for (conversion in sealed.plan.localRepresentations.callableViewConversions()) {
+				reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry(conversion, representations, binding);
+				conversions.push(conversion);
+			}
+		}
+		return reflaxe.ocaml.reports.OcamlCallableViewInventory.build(required, conversions);
+	}
+
+	/** Returns every sealed primitive local conversion in deterministic identity order. */
 	public function localConversions():Array<OcamlLocalConversionDecision> {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
