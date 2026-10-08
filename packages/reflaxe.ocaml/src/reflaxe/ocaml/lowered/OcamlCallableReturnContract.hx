@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.validate;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.crossing;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlCallableValueOperation;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalRepresentationReference;
 
 /**
 	The exact recursive invocation layout of a selected declaration.
@@ -35,6 +36,7 @@ typedef OcamlCallableReturnBoundary = {
 enum OcamlCallableReturnInput {
 	Producer(kind:OcamlCallableOriginKind, layout:OcamlCallableViewDescriptor);
 	Parameter(index:Int);
+	LocalView(reference:OcamlLocalRepresentationReference, layout:OcamlCallableViewDescriptor);
 	CallResult(callId:String, boundary:OcamlCallableInvocationReference);
 }
 
@@ -69,6 +71,12 @@ function seal(selection:OcamlCallableReturnSelection):OcamlCallableReturnDecisio
 	};
 	requireDecision(decision);
 	return decision;
+}
+
+/** Preserve the sealed revision while detaching mutable arrays from registry clients. */
+function copy(decision:OcamlCallableReturnDecision):OcamlCallableReturnDecision {
+	requireDecision(decision);
+	return seal(decision);
 }
 
 /** Reject stale bodies, source occurrences, parameter slots, result layouts and producer changes. */
@@ -125,6 +133,10 @@ private function uncheckedOperation(selection:OcamlCallableReturnSelection, ?id:
 				case FunctionValue(arguments, _) if (index >= 0 && index < arguments.length): describe(arguments[index]);
 				case _: throw "reflaxe.ocaml [ocaml-callable-return:missing-parameter]: returned callback has no matching parameter slot";
 			}
+		case LocalView(reference, layout):
+			validate(layout);
+			OcamlCallableViewContract.requireReference(reference, layout);
+			layout;
 		case CallResult(callId, boundary):
 			if (callId.length == 0)
 				throw "reflaxe.ocaml [ocaml-callable-return:missing-call]: returned callback has no selected call occurrence";
@@ -179,6 +191,15 @@ private function copySelection(selection:OcamlCallableReturnSelection):OcamlCall
 				validate(layout);
 				Producer(kind, describe(layout.shape));
 			case Parameter(index): Parameter(index);
+			case LocalView(reference, layout):
+				validate(layout);
+				LocalView({
+					localId: reference.localId,
+					representationId: reference.representationId,
+					representationRevision: reference.representationRevision,
+					semanticTypeId: reference.semanticTypeId,
+					domain: reference.domain
+				}, describe(layout.shape));
 			case CallResult(id, boundary): CallResult(id, copyBoundary(boundary));
 		}
 	};
@@ -200,7 +221,7 @@ private function boundaryKey(boundary:OcamlCallableInvocationReference):String {
 
 private function fingerprint(id:String, selection:OcamlCallableReturnSelection):String {
 	return "sha256:" + Sha256.encode([
-		"ocaml-callable-return-v1",
+		"ocaml-callable-return-v2",
 		id,
 		selection.binding.functionId,
 		selection.binding.programRevision,
@@ -219,6 +240,12 @@ private function fingerprint(id:String, selection:OcamlCallableReturnSelection):
 				"producer\n" + Std.string(kind) + "\n" + layout.revision;
 			case Parameter(index):
 				"parameter\n" + index;
+			case LocalView(reference, layout):
+				validate(layout);
+				"local-view\n"
+				+ OcamlCallableViewContract.inputKey(ExistingView(reference))
+				+ "\n"
+				+ layout.revision;
 			case CallResult(callId, boundary):
 				"call-result\n" + callId + "\n" + boundaryKey(boundary);
 		}

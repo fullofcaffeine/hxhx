@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlCallableReturnControl;
 import haxe.ds.ObjectMap;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
@@ -76,6 +77,7 @@ enum abstract OcamlControlRuntimeTagPolicy(String) from String to String {
 enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final BoxAndRecoverNominalValue = "box-and-recover-nominal-value";
+	final BoxAndRecoverCallableView = "box-and-recover-callable-view";
 	final BoxAndRecoverTypedFunctionResult = "box-and-recover-typed-function-result";
 	final BoxBoolAndRecoverDynamicTypedFunctionResult = "box-bool-and-recover-dynamic-typed-function-result";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
@@ -225,6 +227,11 @@ typedef OcamlControlPayloadPlan = {
 
 	/** Exact native-enum and nullable representation join used by result control. */
 	final ?nullableEnumCarrier:OcamlNullableEnumCarrierReference;
+
+	/** Prepared callback return occurrence whose output enters the private signal. */
+	final ?callbackReturnId:String;
+
+	final ?callbackReturnRevision:String;
 
 	final conversion:OcamlControlPayloadConversion;
 	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
@@ -1054,6 +1061,10 @@ class OcamlControlPlan {
 
 	/** Validates one transfer independently for corruption and report tests. */
 	public static function requireDecision(decision:OcamlControlDecision):Void {
+		if (decision.payload != null
+			&& (decision.payload.callbackReturnId != null || decision.payload.callbackReturnRevision != null)
+			&& (decision.kind != Return || decision.payload.conversion != BoxAndRecoverCallableView))
+			throw "reflaxe.ocaml [ocaml-control:invalid-plan]: callback return evidence belongs only to its callback transfer";
 		if (decision.id.length == 0
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
@@ -1108,6 +1119,21 @@ class OcamlControlPlan {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete value payload crossing';
 				}
 				switch (payload.conversion) {
+					case BoxAndRecoverCallableView:
+						if (!samePayloadSides(payload)
+							|| payload.callbackReturnId == null
+							|| payload.callbackReturnRevision == null
+							|| !StringTools.startsWith(payload.callbackReturnId, "callable-return:")
+							|| !isSha256Revision(payload.callbackReturnRevision)
+							|| !isSha256Revision(payload.representationRevision ?? "")
+							|| payload.nominalRepresentation != null
+							|| payload.nullableEnumCarrier != null
+							|| payload.arrayDescriptorId != null
+							|| payload.arrayDescriptorRevision != null
+							|| payload.enumCatchOrigin != null
+							|| payload.proofId != OcamlCallableReturnControl.PROOF_ID
+							|| decision.proofId != OcamlCallableReturnControl.PROOF_ID)
+							throw "reflaxe.ocaml [ocaml-control:invalid-plan]: callback return has incomplete preparation evidence";
 					case BoxAndRecoverExactValue:
 						if (!isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
 							|| !samePayloadSides(payload)
@@ -1557,6 +1583,8 @@ class OcamlControlPlan {
 			arrayLiteralProducerPlanRevision: payload.arrayLiteralProducerPlanRevision,
 			enumCatchOrigin: copyEnumCatchOrigin(payload.enumCatchOrigin),
 			nullableEnumCarrier: payload.nullableEnumCarrier == null ? null : OcamlNullableEnumCarrier.copy(payload.nullableEnumCarrier),
+			callbackReturnId: payload.callbackReturnId,
+			callbackReturnRevision: payload.callbackReturnRevision,
 			conversion: payload.conversion,
 			nominalRepresentation: copyNominalRepresentation(payload.nominalRepresentation),
 			proofId: payload.proofId,
@@ -2176,6 +2204,8 @@ class OcamlControlPlan {
 	}
 
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
+		if (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverCallableView)
+			return reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(expression.t) != null;
 		if (payload.conversion == OcamlControlPayloadConversion.PreserveOpaqueAnonymousThrowCarrier) {
 			return OcamlAnonymousThrowCarrier.semanticTypeId(expression.t) == payload.inputSemanticTypeId
 				&& isAdmittedOpaqueAnonymousThrowPayload(payload);
@@ -2427,6 +2457,8 @@ class OcamlControlPlan {
 			payload.arrayLiteralProducerPlanRevision ?? "",
 			enumCatchOriginFingerprint(payload.enumCatchOrigin),
 			payload.nullableEnumCarrier == null ? "" : OcamlNullableEnumCarrier.fingerprint(payload.nullableEnumCarrier),
+			payload.callbackReturnId ?? "",
+			payload.callbackReturnRevision ?? "",
 			(payload.conversion : String),
 			nominalPayloadFingerprint(payload.nominalRepresentation),
 			payload.proofId,
@@ -2615,8 +2647,8 @@ class OcamlControlPlanner {
 		this.arrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 	}
 
-	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlFunctionResultBoundaryPlan>,
-			?typedBoundary:OcamlTypedFunctionResultBoundaryPlan):OcamlControlPlan {
+	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlFunctionResultBoundaryPlan>, ?typedBoundary:OcamlTypedFunctionResultBoundaryPlan,
+			?callbackReturns:Array<OcamlCallableReturnContract.OcamlCallableReturnDecision>):OcamlControlPlan {
 		if (body == null)
 			return OcamlControlPlan.notAdmitted(binding);
 		if (typedBoundary != null)
@@ -2781,8 +2813,18 @@ class OcamlControlPlanner {
 						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-payload-missing", returnOccurrenceId, returnSource));
 						return;
 					}
-					final representation = value == null ? null : returnRepresentation(value, boundary);
-					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
+					final callbackReturn = if (callbackReturns == null) null; else {
+						final source = OcamlLoweredOrigin.sourceSpan(value.pos);
+						final matches = callbackReturns.filter(returned -> returned.source.file == source.file && returned.source.min == source.min
+							&& returned.source.max == source.max);
+						if (matches.length != 1)
+							throw "reflaxe.ocaml [callback-return-control:missing-return]: early return lost its prepared callback";
+						matches[0];
+					};
+					final representation = callbackReturn == null ? returnRepresentation(value,
+						boundary) : representations.require(boundaryPayload.outputRepresentationId, binding.programRevision);
+					final payload = representation == null ? null : callbackReturn == null ? returnPayload(representation,
+						boundaryPayload) : callbackReturnPayload(representation, boundaryPayload, callbackReturn);
 					if (representation == null) {
 						if (typedValueBoundary) {
 							typedValueFallbackRequired = true;
@@ -3842,6 +3884,34 @@ class OcamlControlPlanner {
 		return null;
 	}
 
+	/** Conversion to the declared callback view occurs before the existing private return signal. */
+	static function callbackReturnPayload(representation:OcamlRepresentationDecision, output:OcamlCallValuePlan,
+			returned:OcamlCallableReturnContract.OcamlCallableReturnDecision):OcamlControlPayloadPlan {
+		final prepared = OcamlCallableReturnContract.operation(returned).outputLayout;
+		if (representation.semanticTypeId != prepared.semanticTypeId
+			|| representation.carrierTypeId != prepared.carrierTypeId
+			|| representation.boxingPolicy != CallableIdentityView
+			|| output.callableView == null
+			|| output.callableView.revision != prepared.revision)
+			throw "reflaxe.ocaml [callback-return-control:foreign-result]: prepared callback differs from its declared representation";
+		return {
+			inputSemanticTypeId: representation.semanticTypeId,
+			inputCarrierTypeId: representation.carrierTypeId,
+			inputRepresentationId: representation.id,
+			signalCarrierTypeId: "Obj.t",
+			outputSemanticTypeId: representation.semanticTypeId,
+			outputCarrierTypeId: representation.carrierTypeId,
+			outputRepresentationId: representation.id,
+			representationRevision: representation.revision,
+			callbackReturnId: returned.id,
+			callbackReturnRevision: returned.revision,
+			conversion: BoxAndRecoverCallableView,
+			nominalRepresentation: null,
+			proofId: OcamlCallableReturnControl.PROOF_ID,
+			proofClaim: "The callback return plan prepares the declared view once before the private signal. The matching function recovers that same view, preserving invocation conversions and original identity."
+		};
+	}
+
 	/** Builds one function-local fallback from Haxe's checked return assignment. */
 	static function typedFunctionReturnPayload(inputSemanticTypeId:String, boundary:OcamlTypedFunctionResultBoundaryPlan):OcamlControlPayloadPlan {
 		return {
@@ -3957,6 +4027,10 @@ class OcamlControlPlanner {
 		}
 		OcamlFunctionResultBoundary.require(boundary);
 		final result = boundary.result;
+		if (result.callableView != null) {
+			OcamlCallableDeclarationCarrier.requireValue(result);
+			return OcamlCallPlan.copyValue(result);
+		}
 		final anonymous = boundary.anonymousStructure;
 		final anonymousIdentity = anonymous != null
 			&& result.inputSemanticTypeId == anonymous.semanticTypeId

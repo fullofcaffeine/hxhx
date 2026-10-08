@@ -113,9 +113,9 @@ class ReflaxeOcamlInspection {
 	static inline final INT_UNARY_MODEL = "typed-ocaml-int-unary-v1";
 	static inline final INT_UNARY_PROOF_ID = "int-unary-runtime-use-v1";
 	static inline final DYNAMIC_BOOL_LITERAL_CAPABILITY = "haxe-dynamic-bool-literal";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v118";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v119";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v37";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v21";
 
 	/** Returns the control-plan schema selected by one report owner. */
 	static function controlPipelineRevision(functionId:String):String {
@@ -150,9 +150,11 @@ class ReflaxeOcamlInspection {
 			errorCount++;
 		}
 		errorCount += consistencyErrors.length;
+		final callbackCounts = reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.operationCounts(lowering.callableViews, lowering.calls,
+			lowering.callableBoundaries);
 
 		return {
-			schemaVersion: 52,
+			schemaVersion: 53,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -183,8 +185,13 @@ class ReflaxeOcamlInspection {
 				iMapStorageAliasCount: lowering.iMapStorageAliases.length,
 				localConversionCount: lowering.localConversions.length,
 				callbackViewCount: lowering.callableViews.entries.length,
-				callbackUnsafeOperationCount: Lambda.fold(lowering.callableViews.entries, (entry, count) -> count + entry.unsafeOperations.length, 0),
-				callbackRuntimeUseCount: Lambda.fold(lowering.callableViews.entries, (entry, count) -> count + entry.runtimeUses.length, 0),
+				callbackParameterCount: lowering.callableViews.parameters.length,
+				callbackComparisonCount: lowering.callableViews.comparisons.length,
+				callbackArgumentCount: callbackCounts.arguments,
+				callbackReturnCount: callbackCounts.returns,
+				callbackInvocationCount: callbackCounts.invocations,
+				callbackUnsafeOperationCount: callbackCounts.unsafeOperations,
+				callbackRuntimeUseCount: callbackCounts.runtimeUses,
 				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
@@ -246,7 +253,7 @@ class ReflaxeOcamlInspection {
 			}
 			lines.push('[PASS] IMap interfaces: ${report.lowering.iMapInterfaceConversions.length} concrete-to-interface conversion${report.lowering.iMapInterfaceConversions.length == 1 ? "" : "s"}, ${report.lowering.iMapInterfaceCalls.length} interface call${report.lowering.iMapInterfaceCalls.length == 1 ? "" : "s"}, and ${report.lowering.iMapStorageAliases.length} closed standard Map storage alias${report.lowering.iMapStorageAliases.length == 1 ? "" : "es"} were validated before target syntax.');
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
-			lines.push('[PASS] Callback views: ${report.summary.callbackViewCount} initializer conversions, ${report.summary.callbackUnsafeOperationCount} raw representation operations, and ${report.summary.callbackRuntimeUseCount} runtime-helper uses have source-bound evidence.');
+			lines.push('[PASS] Callback views: ${report.summary.callbackViewCount} initializer conversions, ${report.summary.callbackParameterCount} parameters, ${report.summary.callbackArgumentCount} arguments, ${report.summary.callbackReturnCount} returns, ${report.summary.callbackInvocationCount} invocations, ${report.summary.callbackComparisonCount} comparisons, ${report.summary.callbackUnsafeOperationCount} raw representation operations, and ${report.summary.callbackRuntimeUseCount} runtime-helper uses have source-bound evidence.');
 			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
 			for (operation in report.lowering.unsafeOperations) {
@@ -484,8 +491,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 93) {
-						throw 'Unsupported lowering report schema $version; expected 93.';
+					if (version != 94) {
+						throw 'Unsupported lowering report schema $version; expected 94.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -504,12 +511,12 @@ class ReflaxeOcamlInspection {
 					final structuralFields = ReflaxeOcamlStructuralFieldInspection.inspect(value);
 					final iMapInterfaces = ReflaxeOcamlIMapInterfaceInspection.inspect(value);
 					final localConversions = inspectLocalConversions(value);
+					final callInventory = inspectCalls(value, representation);
 					final callableViews = reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.inspect(Reflect.field(value, "callableViews"),
-						representation.decisions, FUNCTION_PLAN_PIPELINE_REVISION);
+						representation.decisions, FUNCTION_PLAN_PIPELINE_REVISION, callInventory.calls, callInventory.boundaries);
 					final containerElementRequiredConversionIds = inspectContainerElementRequiredConversions(value);
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
-					final callInventory = inspectCalls(value, representation);
 					final reflectCompare = inspectReflectCompare(value);
 					final stdIsOfType = inspectStdIsOfType(value);
 					final intUnary = inspectIntUnary(value);
@@ -523,7 +530,8 @@ class ReflaxeOcamlInspection {
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, arrayLiteralProducers, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
-						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, intUnary, controls, callableViews);
+						iMapInterfaces.storageAliases, callInventory.calls, reflectCompare, stdIsOfType, intUnary, controls, callableViews,
+						callInventory.boundaries);
 					{
 						status: "present",
 						required: required,
@@ -904,7 +912,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v27")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v28")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -943,6 +951,12 @@ class ReflaxeOcamlInspection {
 		for (target in targets)
 			targetById.set(target.id, target);
 		final controls = [for (entry in rawControls) controlDecision(entry)];
+		final callbackBoundaries = requiredArray(value, "callableBoundaries").filter(boundary -> Reflect.field(boundary, "callbackReturns") != null);
+		final callbackReturns = [
+			for (boundary in callbackBoundaries)
+				if (Reflect.field(boundary, "callbackReturns") != null) for (returned in requiredArray(boundary, "callbackReturns"))
+					reflaxe.ocaml.reports.OcamlCallableCallReport.returnFromReport(returned)
+		];
 		final catchChains = [for (entry in requiredArray(value, "controlCatches")) controlCatchChain(entry)];
 		final catchChainById:Map<String, InspectionControlCatchChain> = [];
 		for (chain in catchChains)
@@ -971,7 +985,29 @@ class ReflaxeOcamlInspection {
 				throw 'Control decision "${control.id}" disagrees with another decision owned by function "${control.functionId}" about its program, body, or pipeline revision.';
 			}
 			final payload = control.payload;
+			if (control.kind == "return"
+				&& Lambda.exists(callbackBoundaries, boundary -> Reflect.field(boundary, "functionId") == control.functionId)
+				&& (payload == null || payload.conversion != "box-and-recover-callable-view"))
+				throw "Callback return control lost its prepared view payload.";
 			if (payload != null) {
+				if ((payload.callbackReturnId != null || payload.callbackReturnRevision != null)
+					&& (control.kind != "return" || payload.conversion != "box-and-recover-callable-view"))
+					throw "Callback return evidence belongs only to a callback control transfer.";
+				if (payload.conversion == "box-and-recover-callable-view")
+					reflaxe.ocaml.lowered.OcamlCallableReturnControl.requireJoin({
+						binding: {
+							functionId: control.functionId,
+							programRevision: control.programRevision,
+							bodyRevision: control.bodyRevision,
+							pipelineRevision: control.pipelineRevision
+						},
+						source: {file: control.sourceFile, min: control.sourceMin, max: control.sourceMax},
+						returnId: payload.callbackReturnId,
+						returnRevision: payload.callbackReturnRevision,
+						semanticTypeId: payload.outputSemanticTypeId,
+						carrierTypeId: payload.outputCarrierTypeId,
+						representationId: payload.outputRepresentationId
+					}, callbackReturns);
 				if (payload.nullableEnumCarrier != null)
 					validateNullableEnumCarrierReference(payload.nullableEnumCarrier, representationById, 'Control decision "${control.id}"');
 				final producerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
@@ -1131,6 +1167,21 @@ class ReflaxeOcamlInspection {
 								|| (payload.conversion == "box-bool-and-recover-dynamic-typed-function-result"
 									&& payload.inputSemanticTypeId == "Bool"
 									&& payload.outputSemanticTypeId == "Dynamic");
+							final callbackRepresentation = representationById.get(payload.outputRepresentationId);
+							final callbackPayloadValid = payload.conversion == "box-and-recover-callable-view"
+								&& sameSides
+								&& payload.nominalRepresentation == null
+								&& payload.nullableEnumCarrier == null
+								&& payload.arrayDescriptorId == null
+								&& payload.arrayDescriptorRevision == null
+								&& payload.enumCatchOrigin == null
+								&& payload.callbackReturnId != null
+								&& payload.callbackReturnRevision != null
+								&& callbackRepresentation != null
+								&& callbackRepresentation.boxingPolicy == "callable-identity-view"
+								&& payload.representationRevision == callbackRepresentation.revision
+								&& payload.proofId == reflaxe.ocaml.lowered.OcamlCallableReturnControl.PROOF_ID
+								&& control.proofId == reflaxe.ocaml.lowered.OcamlCallableReturnControl.PROOF_ID;
 							final typedFunctionPayloadValid = payload.inputSemanticTypeId.length > 0
 								&& payload.outputSemanticTypeId.length > 0
 								&& payload.inputCarrierTypeId == OcamlTypedFunctionResultModel.INFERRED_CARRIER_TYPE_ID
@@ -1153,7 +1204,7 @@ class ReflaxeOcamlInspection {
 								|| payload.proofClaim.length == 0
 								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !nullableEnumPayloadValid
 									&& !anonymousPayloadValid && !dynamicPayloadValid && !nullableIntConversionValid && !nullableBoolConversionValid
-									&& !nullableEnumConversionValid && !typedFunctionPayloadValid)) {
+									&& !nullableEnumConversionValid && !typedFunctionPayloadValid && !callbackPayloadValid)) {
 								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, enum-to-nullable, anonymous-object, Dynamic-carrier, primitive-to-nullable, or typed-function payload crossing.';
 							}
 						case _:
@@ -1720,6 +1771,8 @@ class ReflaxeOcamlInspection {
 		final enumCatchOriginValue = Reflect.field(value, "enumCatchOrigin");
 		final nullableEnumCarrierValue = Reflect.field(value, "nullableEnumCarrier");
 		return {
+			callbackReturnId: optionalString(value, "callbackReturnId"),
+			callbackReturnRevision: optionalString(value, "callbackReturnRevision"),
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
 			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
 			inputRepresentationId: requiredString(value, "inputRepresentationId"),
@@ -2150,7 +2203,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v33")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v34")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -2269,6 +2322,9 @@ class ReflaxeOcamlInspection {
 			}
 			callIds.set(call.id, true);
 		}
+		ReflaxeOcamlCallableCallInspection.validateInventory(calls, boundaries);
+		if (requiredSha256Revision(value, "callRevision") != "sha256:" + hashUtf8(reportJson({calls: rawCalls, callableBoundaries: rawBoundaries})))
+			throw "Call report revision does not match its declared bodies and source occurrences.";
 		calls.sort((left, right) -> compareStrings(left.id, right.id));
 		boundaries.sort((left, right) -> compareStrings(left.calleeId, right.calleeId));
 		return {calls: calls, boundaries: boundaries};
@@ -2726,7 +2782,10 @@ class ReflaxeOcamlInspection {
 	static function sameFunctionResultValue(left:Null<InspectionCallValue>, right:Null<InspectionCallValue>):Bool {
 		if (left == null || right == null)
 			return left == null && right == null;
-		return left.index == right.index
+		return ReflaxeOcamlCallableCallInspection.sameLayout(left.callableView, right.callableView)
+			&& left.callbackArgument == null
+			&& right.callbackArgument == null
+			&& left.index == right.index
 			&& left.parameterOptional == right.parameterOptional
 			&& left.inputSemanticTypeId == right.inputSemanticTypeId
 			&& left.inputCarrierTypeId == right.inputCarrierTypeId
@@ -2823,9 +2882,12 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function callValue(value:Dynamic):InspectionCallValue {
+		final callback = ReflaxeOcamlCallableCallInspection.readValue(value);
 		final conversion = requiredString(value, "conversion");
 		final nullableEnumCarrierValue = Reflect.field(value, "nullableEnumCarrier");
 		return {
+			callableView: callback.layout,
+			callbackArgument: callback.argument,
 			index: requiredInt(value, "index"),
 			parameterOptional: requiredBool(value, "parameterOptional"),
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
@@ -2982,7 +3044,8 @@ class ReflaxeOcamlInspection {
 			standardArrayTarget: standardArrayTarget,
 			standardIMapTarget: standardIMapTarget,
 			structuralIteratorTarget: structuralIteratorTarget,
-			genericInstanceTarget: genericTarget
+			genericInstanceTarget: genericTarget,
+			callbackInvocation: ReflaxeOcamlCallableCallInspection.readInvocation(value)
 		};
 	}
 
@@ -3178,6 +3241,8 @@ class ReflaxeOcamlInspection {
 			throw 'Unsupported callable-boundary kind "$kind".';
 		final receiver = callReceiver(value, kind);
 		return {
+			callbackReturnCount: ReflaxeOcamlCallableCallInspection.readReturnCount(value),
+			callbackReturns: ReflaxeOcamlCallableCallInspection.readReturns(value),
 			id: requiredString(value, "id"),
 			calleeId: requiredString(value, "calleeId"),
 			sourceModuleId: requiredString(value, "sourceModuleId"),
@@ -3206,6 +3271,8 @@ class ReflaxeOcamlInspection {
 			validateNullableEnumCarrierReference(value.nullableEnumCarrier, representations, owner);
 		validateCallValueSide(value.inputRepresentationId, value.inputSemanticTypeId, value.inputCarrierTypeId, representations, owner + " input");
 		validateCallValueSide(value.outputRepresentationId, value.outputSemanticTypeId, value.outputCarrierTypeId, representations, owner + " output");
+		if (ReflaxeOcamlCallableCallInspection.validateValue(value))
+			return;
 		final sameSides = value.inputSemanticTypeId == value.outputSemanticTypeId
 			&& value.inputCarrierTypeId == value.outputCarrierTypeId
 			&& value.inputRepresentationId == value.outputRepresentationId;
@@ -3331,6 +3398,8 @@ class ReflaxeOcamlInspection {
 	static function validateCallSignature(kind:String, receiver:Null<InspectionCallValue>, arguments:Array<InspectionCallValue>, resultKind:String,
 			result:Null<InspectionCallValue>, proofId:String, representations:Map<String, InspectionRepresentationDecision>, isCallableBoundary:Bool,
 			owner:String):Void {
+		if (ReflaxeOcamlCallableCallInspection.validateSignature(kind, receiver, arguments, resultKind, result, proofId, isCallableBoundary))
+			return;
 		if (kind == "direct-static-haxe-method" && proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
 		if (kind == "direct-static-generic-identity") {
@@ -3689,7 +3758,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function sameCallableBoundary(callValue:InspectionCallValue, boundaryValue:InspectionCallValue, isResult:Bool):Bool {
-		return callValue.index == boundaryValue.index
+		return ReflaxeOcamlCallableCallInspection.sameLayout(callValue.callableView, boundaryValue.callableView)
+			&& callValue.index == boundaryValue.index
 			&& callValue.parameterOptional == boundaryValue.parameterOptional
 			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
 				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
@@ -4558,7 +4628,8 @@ class ReflaxeOcamlInspection {
 			structuralFields:Array<InspectionStructuralField>, iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>,
 			iMapStorageAliases:Array<InspectionIMapStorageAlias>, calls:Array<InspectionCall>, reflectCompare:Array<InspectionReflectCompare>,
 			stdIsOfType:Array<InspectionStdIsOfType>, intUnary:Array<InspectionIntUnary>, controls:Array<InspectionControl>,
-			callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport):Int {
+			callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport,
+			callableBoundaries:Array<InspectionCallableBoundary>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -4597,7 +4668,7 @@ class ReflaxeOcamlInspection {
 				throw 'Lowering report runtime requirement "$id" has no eligible profile.';
 		}
 		final referenced:Map<String, Bool> = [];
-		for (id in reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.validateRuntime(callableViews, requirements))
+		for (id in reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.validateRuntime(callableViews, requirements, calls, callableBoundaries))
 			referenced.set(id, true);
 		for (plan in plans) {
 			for (requirementId in plan.runtimeRequirementIds) {

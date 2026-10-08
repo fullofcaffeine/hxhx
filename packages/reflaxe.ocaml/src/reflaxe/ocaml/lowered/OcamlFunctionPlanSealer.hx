@@ -1,5 +1,6 @@
 package reflaxe.ocaml.lowered;
 
+import reflaxe.ocaml.lowered.OcamlCallableReturnControl;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
@@ -173,7 +174,13 @@ class OcamlFunctionPlanSealer {
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		registry.registerRootIdentityPlan(binding, localIdentities);
 		final callPlanner = new OcamlCallPlanner(representations, binding, null, null, null, registry.callableDeclaration);
-		final callableBoundary = callPlanner.boundaryFor(data);
+		final declaredBoundary = callPlanner.declarationBoundaryFor(data);
+		final hasCallbackResult = declaredBoundary != null
+			&& declaredBoundary.result != null
+			&& declaredBoundary.result.callableView != null;
+		// Callback returns need final local identities. Preserve the existing
+		// planning order for ordinary results and their preliminary call probes.
+		var callableBoundary = hasCallbackResult ? declaredBoundary : callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		telemetryCheckpoint("binding");
 		final functionResultType = switch (TypeTools.follow(data.field.type)) {
@@ -181,6 +188,8 @@ class OcamlFunctionPlanSealer {
 			case _: null;
 		};
 		if (data.expr == null) {
+			if (hasCallbackResult)
+				callableBoundary = callPlanner.boundaryFor(data);
 			final anonymousStructures = new OcamlAnonymousStructurePlan([], []);
 			final functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures, context);
 			final controls = OcamlControlPlan.notAdmitted(binding);
@@ -194,7 +203,7 @@ class OcamlFunctionPlanSealer {
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
-		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
+		var localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
 			callPlanner.preliminaryPreservesNullableBoolArgument, callPlanner.preliminaryProducesNullableBool, callPlanner.preliminaryProducesExactString,
 			expression -> {
 				final direct = OcamlNativeEnumRepresentation.selectDirectConstructor(expression, context);
@@ -203,7 +212,8 @@ class OcamlFunctionPlanSealer {
 					return direct.semanticTypeId;
 				}
 				return callPlanner.preliminaryProducesNativeEnum(expression);
-			});
+			},
+			{parameters: externalLocals, boundary: declaredBoundary, declaration: registry.callableDeclaration});
 		localRepresentations.requirePlanBinding(binding);
 		telemetryCheckpoint("locals");
 		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
@@ -248,7 +258,7 @@ class OcamlFunctionPlanSealer {
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations, localStorage);
 		telemetryCheckpoint("nested");
 		final nestedFunctionResults = representedNestedFunctionResults(data.expr);
-		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities, (callee, semanticTypeId) -> {
+		final finalCallPlanner = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities, (callee, semanticTypeId) -> {
 			final local = switch (unwrapTransparent(callee).expr) {
 				case TLocal(value): value;
 				case _: null;
@@ -261,7 +271,14 @@ class OcamlFunctionPlanSealer {
 				return false;
 			final result = nestedFunctionResults.get(local.id);
 			return result != null && result.outputSemanticTypeId == semanticTypeId;
-		}, registry.callableDeclaration).plan(data.expr, callPlanner);
+		}, registry.callableDeclaration);
+		final calls = finalCallPlanner.plan(data.expr, callPlanner);
+		if (hasCallbackResult)
+			callableBoundary = finalCallPlanner.boundaryFor(data);
+		final callbackExpressions = new OcamlCallableExpressionPlanner(representations, binding, localRepresentations, localIdentities,
+			(owner, field) -> registry.callableDeclaration(OcamlCallPlanner.calleeId(owner, field)), calls.decisionFor);
+		localRepresentations = localRepresentations.withCallableComparisons(callbackExpressions.comparisons(data.expr));
+		localRepresentations.requirePlanBinding(binding);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
 		for (decision in reflectCompare.decisions())
 			context.recordReflectCompareRuntimeRequirements(decision);
@@ -302,7 +319,23 @@ class OcamlFunctionPlanSealer {
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities, arrayLiteralProducers,
-			localStorage).plan(data.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromDeclaration(data, binding));
+			localStorage).plan(data.expr, functionResultBoundary, OcamlTypedFunctionResultBoundary.fromDeclaration(data, binding),
+				callableBoundary == null ? null : callableBoundary.callbackReturns);
+		for (control in controls.decisions()) {
+			final payload = control.payload;
+			if (hasCallbackResult && control.kind == Return && (payload == null || payload.conversion != BoxAndRecoverCallableView))
+				throw "reflaxe.ocaml [callback-return-control:missing-preparation]: callback return cannot use an ordinary function payload";
+			if (payload != null && payload.conversion == BoxAndRecoverCallableView)
+				OcamlCallableReturnControl.requireJoin({
+					binding: binding,
+					source: control.source,
+					returnId: payload.callbackReturnId,
+					returnRevision: payload.callbackReturnRevision,
+					semanticTypeId: payload.outputSemanticTypeId,
+					carrierTypeId: payload.outputCarrierTypeId,
+					representationId: payload.outputRepresentationId
+				}, callableBoundary == null || callableBoundary.callbackReturns == null ? [] : callableBoundary.callbackReturns);
+		}
 		requireCompleteCatchCoverage(controls, data.expr.pos);
 		functionResultBoundary = OcamlFunctionResultBoundary.retainAfterControlPlanning(functionResultBoundary,
 			Lambda.exists(controls.decisions(), decision -> decision.kind == OcamlControlTransferKind.Return));
@@ -358,10 +391,18 @@ class OcamlFunctionPlanSealer {
 			for (requirement in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.requirements(conversion))
 				context.runtimeRequirements.record(requirement);
 		}
+		if (callableBoundary != null && callableBoundary.callbackReturns != null)
+			for (returned in callableBoundary.callbackReturns)
+				for (requirement in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueRequirements(OcamlCallableReturnContract.operation(returned)))
+					context.runtimeRequirements.record(requirement);
 		for (conversion in containerElements.decisions())
 			context.recordContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
+			for (argument in call.arguments)
+				if (argument.callbackArgument != null)
+					for (requirement in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueRequirements(argument.callbackArgument.operation))
+						context.runtimeRequirements.record(requirement);
 			final runtimeUsePlan = calls.runtimeUsePlanFor(call.id);
 			if (runtimeUsePlan != null)
 				context.recordCallRuntimeRequirements(call, runtimeUsePlan);
@@ -812,6 +853,13 @@ class OcamlFunctionPlanSealer {
 	}
 
 	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {
+		if (value.callableView != null) {
+			OcamlCallableDeclarationCarrier.requireValue(value);
+			final representation = representations.require(value.outputRepresentationId, programRevision);
+			final layout = representations.requireCallableView(representation.id, representation.revision, programRevision);
+			if (!OcamlCallableDeclarationCarrier.same(layout, value.callableView))
+				fail('callback layout disagrees with its registered carrier for $owner', position);
+		}
 		if (value.nullableEnumCarrier != null) {
 			try {
 				OcamlNullableEnumCarrier.requireCurrent(value.nullableEnumCarrier, context, representations);

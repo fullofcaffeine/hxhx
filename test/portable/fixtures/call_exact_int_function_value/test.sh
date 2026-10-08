@@ -30,7 +30,7 @@ for (const [name, view] of [['closureCase', true], ['methodValueCase', true], ['
 	if (entries.length !== (view ? 1 : 0))
 		throw new Error(`${name} has unexpected callback storage evidence`)
 }
-if (report.schemaVersion !== 93 || report.callModel !== 'typed-ocaml-directional-call-boundary-v33') {
+if (report.schemaVersion !== 94 || report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	throw new Error('expected the function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call => call.kind === 'typed-function-value')

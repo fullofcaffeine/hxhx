@@ -2,8 +2,41 @@
 class M14StoredCallbackViewsTest {
 	static function main():Void {
 		verifySharedFixture("test/fixtures/ocaml_closed_callback_views", ".tmp/closed_callback_views");
+		final booleanRoot = ".tmp/callback_bool_boundaries";
+		verifySharedFixture("test/fixtures/ocaml_callback_bool_boundaries", booleanRoot);
+		requireSuccess("node_modules/.bin/haxe", [
+			"-cp",
+			"packages/reflaxe.ocaml/src",
+			"-cp",
+			"test",
+			"--run",
+			"CheckOcamlCallableBoolReports",
+			booleanRoot + "/standalone/ocaml_lowering_report.json"
+		]);
 		final root = ".tmp/stored_callback_views";
-		final fixture = verifySharedFixture("test/fixtures/stage3_stored_callback_views", root);
+		final earlyRoot = ".tmp/callback_early_returns";
+		verifySharedFixture("test/fixtures/ocaml_callback_early_returns", earlyRoot);
+		requireSuccess("node_modules/.bin/haxe", [
+			"-cp",
+			"packages/reflaxe.ocaml/src",
+			"-cp",
+			"test",
+			"--run",
+			"CheckOcamlCallableEarlyReturnReports",
+			earlyRoot + "/standalone/ocaml_lowering_report.json"
+		]);
+		final aliasRoot = ".tmp/callback_return_aliases";
+		verifySharedFixture("test/fixtures/ocaml_callback_return_aliases", aliasRoot);
+		requireSuccess("node_modules/.bin/haxe", [
+			"-cp",
+			"packages/reflaxe.ocaml/src",
+			"-cp",
+			"test",
+			"--run",
+			"CheckOcamlCallableReturnAliasReports",
+			aliasRoot + "/standalone/ocaml_lowering_report.json"
+		]);
+		final fixture = verifySharedFixture("test/fixtures/stage3_stored_callback_views", root, true);
 		final module = new ResolvedModule("Main", fixture.path, ParserStage.parse(fixture.source, fixture.path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
@@ -15,7 +48,7 @@ class M14StoredCallbackViewsTest {
 	}
 
 	/** Each complete source program must compile and execute before its output is accepted. */
-	static function verifySharedFixture(fixture:String, root:String):{source:String, path:String, expected:String} {
+	static function verifySharedFixture(fixture:String, root:String, verifyCallbackReports:Bool = false):{source:String, path:String, expected:String} {
 		sys.FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
 		final source = sys.io.File.getContent(fixture + "/Main.hx");
@@ -55,6 +88,16 @@ class M14StoredCallbackViewsTest {
 		requireSuccess("dune", ["build", "--root", standalone, "./standalone.exe"]);
 		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", standalone + "/_build/default/standalone.exe"], expected);
 		Sys.println("STORED_CALLBACK_VIEWS_SHARED_NATIVE:PASS " + fixture);
+		if (verifyCallbackReports)
+			requireSuccess("node_modules/.bin/haxe", [
+				"-cp",
+				"packages/reflaxe.ocaml/src",
+				"-cp",
+				"test",
+				"--run",
+				"CheckOcamlCallableInspection",
+				standalone + "/ocaml_lowering_report.json"
+			]);
 		if (sys.FileSystem.exists(fixture + "/verify-report.js"))
 			requireSuccess("node", [fixture + "/verify-report.js", standalone]);
 		return {source: source, path: path, expected: expected};

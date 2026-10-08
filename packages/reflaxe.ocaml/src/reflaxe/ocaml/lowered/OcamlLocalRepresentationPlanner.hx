@@ -347,8 +347,8 @@ class OcamlLocalRepresentationPlanner {
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storage:OcamlLocalStoragePlan,
 			representations:OcamlRepresentationRegistry, ?binding:OcamlFunctionPlanBinding, ?preservesNullableBoolArgument:(TypedExpr, Int) -> Bool,
-			?producesNullableBool:TypedExpr->Bool, ?producesExactString:TypedExpr->Bool,
-			?producesExactNativeEnum:TypedExpr->Null<String>):OcamlLocalRepresentationPlan {
+			?producesNullableBool:TypedExpr->Bool, ?producesExactString:TypedExpr->Bool, ?producesExactNativeEnum:TypedExpr->Null<String>,
+			?callbackContext:OcamlCallableLocalPlanner.OcamlCallableLocalContext):OcamlLocalRepresentationPlan {
 		final typeByLocalId:Map<Int, Type> = [];
 		final declaredLocalIds:Map<Int, Bool> = [];
 		final identityBoolInitializerByLocalId:Map<Int, Bool> = [];
@@ -1170,7 +1170,7 @@ class OcamlLocalRepresentationPlanner {
 		}
 		if (binding == null)
 			return new OcamlLocalRepresentationPlan(decisions, conversions);
-		final callbacks = reflaxe.ocaml.lowered.OcamlCallableLocalPlanner.plan(expression, localIdentities, storage, representations, binding);
+		final callbacks = reflaxe.ocaml.lowered.OcamlCallableLocalPlanner.plan(expression, localIdentities, storage, representations, binding, callbackContext);
 		return new OcamlLocalRepresentationPlan(decisions.concat(callbacks.locals), conversions, callbacks.writes);
 	}
 

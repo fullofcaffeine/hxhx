@@ -258,10 +258,10 @@ function callToReport(call:reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision
 		sourceTypeName: call.sourceTypeName,
 		sourceFieldName: call.sourceFieldName,
 		kind: call.kind,
-		receiver: call.receiver,
-		arguments: call.arguments,
+		receiver: call.receiver == null ? null : OcamlCallableBoundaryReport.valueToReport(call.receiver),
+		arguments: call.arguments.map(OcamlCallableBoundaryReport.valueToReport),
 		resultKind: call.resultKind,
-		result: call.result,
+		result: call.result == null ? null : OcamlCallableBoundaryReport.valueToReport(call.result),
 		resultMaterialization: call.resultMaterialization,
 		evaluationSchedule: call.evaluationSchedule,
 		profileEligibility: call.profileEligibility,
@@ -276,7 +276,8 @@ function callToReport(call:reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision
 		standardArrayTarget: call.standardArrayTarget,
 		standardIMapTarget: call.standardIMapTarget,
 		structuralIteratorTarget: call.structuralIteratorTarget,
-		genericInstanceTarget: call.genericInstanceTarget == null ? null : targetToReport(call.genericInstanceTarget)
+		genericInstanceTarget: call.genericInstanceTarget == null ? null : targetToReport(call.genericInstanceTarget),
+		callbackInvocation: call.callbackInvocation == null ? null : OcamlCallableCallReport.calleeToReport(call.callbackInvocation)
 	};
 }
 #end

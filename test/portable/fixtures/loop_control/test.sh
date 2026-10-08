@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 93
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
+if (report.schemaVersion !== 94
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -53,8 +53,8 @@ const nestedTransfers = report.controls.filter(control =>
 	&& control.functionId.includes('|nested-function|'))
 if (nestedTargets.length !== 1
 	|| nestedTransfers.length !== 2
-	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v36'
-	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v36')) {
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v37'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v37')) {
 	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 
@@ -79,7 +79,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v118') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v119') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
@@ -147,7 +147,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 52
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

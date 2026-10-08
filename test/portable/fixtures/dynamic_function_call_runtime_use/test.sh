@@ -10,8 +10,8 @@ const source = fs.readFileSync(process.argv[2], 'utf8')
 const lowering = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 const runtime = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))
 
-if (lowering.schemaVersion !== 93
-	|| lowering.callModel !== 'typed-ocaml-directional-call-boundary-v33') {
+if (lowering.schemaVersion !== 94
+	|| lowering.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	throw new Error('unexpected lowering-report contract for sealed Dynamic calls')
 }
 const calls = (lowering.calls ?? []).filter(call => call.kind === 'dynamic-function-value')

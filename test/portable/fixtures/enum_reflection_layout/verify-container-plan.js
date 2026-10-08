@@ -31,7 +31,7 @@ assert.doesNotMatch(arrayElementBuilder[0], /fromDirectValue/,
 	'array syntax must consume the sealed enum identity instead of classifying the typed constructor again')
 
 const conversions = lowering.containerElementConversions
-assert.equal(lowering.schemaVersion, 93)
+assert.equal(lowering.schemaVersion, 94)
 assert.equal(conversions.length, 4,
 	'the method-local and static-initializer enum values should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 0, 1, 1])
@@ -185,7 +185,7 @@ try {
 	assert.equal(reports.length, cases.length + 1, 'every evidence copy must receive an inspection result')
 	const inspectionReport = reports[0]
 	assert.equal(inspectionReport.summary.valid, true, JSON.stringify(inspectionReport))
-	assert.equal(inspectionReport.schemaVersion, 52)
+	assert.equal(inspectionReport.schemaVersion, 53)
 	assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
 	assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
 	for (const [index, entry] of cases.entries()) {

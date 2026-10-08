@@ -1,5 +1,6 @@
 package reflaxe.ocaml.lowered;
 
+import reflaxe.ocaml.lowered.OcamlCallableReturnControl;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
@@ -83,7 +84,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 93;
+	public static inline final SCHEMA_VERSION = 94;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -376,6 +377,17 @@ class OcamlLoweringReportWriter {
 			callableByCallee.set(boundary.calleeId, boundary);
 			callableById.set(boundary.id, boundary);
 		}
+		reflaxe.ocaml.reports.OcamlCallableViewInventory.requireParameterCoverage(callbackInventory, sortedCallableBoundaries.map(boundary -> {
+			id: boundary.id,
+			calleeId: boundary.calleeId,
+			binding: {
+				functionId: boundary.functionId,
+				programRevision: boundary.programRevision,
+				bodyRevision: boundary.bodyRevision,
+				pipelineRevision: boundary.pipelineRevision
+			},
+			arguments: boundary.arguments.map(argument -> argument.callableView)
+		}));
 		final sortedFunctionResultBoundaries = functionResultBoundaries.map(OcamlFunctionResultBoundary.copy);
 		sortedFunctionResultBoundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final functionResultByFunction:Map<String, OcamlFunctionResultBoundaryPlan> = [];
@@ -491,6 +503,28 @@ class OcamlLoweringReportWriter {
 		final controlById:Map<String, Bool> = [];
 		for (control in sortedControls) {
 			OcamlControlPlan.requireDecision(control);
+			if (control.payload != null && control.payload.conversion == BoxAndRecoverCallableView) {
+				final payload = control.payload;
+				final returns = [
+					for (boundary in sortedCallableBoundaries)
+						if (boundary.callbackReturns != null) for (returned in boundary.callbackReturns)
+							returned
+				];
+				OcamlCallableReturnControl.requireJoin({
+					binding: {
+						functionId: control.functionId,
+						programRevision: control.programRevision,
+						bodyRevision: control.bodyRevision,
+						pipelineRevision: control.pipelineRevision
+					},
+					source: control.source,
+					returnId: payload.callbackReturnId,
+					returnRevision: payload.callbackReturnRevision,
+					semanticTypeId: payload.outputSemanticTypeId,
+					carrierTypeId: payload.outputCarrierTypeId,
+					representationId: payload.outputRepresentationId
+				}, returns);
+			}
 			if (controlById.exists(control.id))
 				throw 'Control decision identity "${control.id}" occurs more than once.';
 			if (!controlAdmissionByFunction.exists(control.functionId))
@@ -686,11 +720,25 @@ class OcamlLoweringReportWriter {
 			requirementById.set(requirement.id, requirement);
 		}
 		final includedRequirementIds:Map<String, Bool> = [];
-		for (decision in reflaxe.ocaml.reports.OcamlCallableViewInventory.decisions(callbackInventory)) {
-			for (expected in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.requirements(decision)) {
+		final callbackOperations = reflaxe.ocaml.reports.OcamlCallableViewInventory.decisions(callbackInventory)
+			.map(reflaxe.ocaml.lowered.OcamlCallableViewContract.operation);
+		for (comparison in reflaxe.ocaml.reports.OcamlCallableViewInventory.comparisonDecisions(callbackInventory)) {
+			callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableComparison.operation(comparison, true));
+			callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableComparison.operation(comparison, false));
+		}
+		for (call in sortedCalls)
+			for (argument in call.arguments)
+				if (argument.callbackArgument != null)
+					callbackOperations.push(argument.callbackArgument.operation);
+		for (boundary in sortedCallableBoundaries)
+			if (boundary.callbackReturns != null)
+				for (returned in boundary.callbackReturns)
+					callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(returned));
+		for (decision in callbackOperations) {
+			for (expected in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueRequirements(decision)) {
 				final recorded = requirementById.get(expected.id);
 				if (recorded == null || reportJson(recorded) != reportJson(expected))
-					throw 'Callback write "${decision.id}" has missing or conflicting runtime requirement "${expected.id}".';
+					throw 'Callback operation "${decision.id}" has missing or conflicting runtime requirement "${expected.id}".';
 				includedRequirementIds.set(expected.id, true);
 			}
 		}
@@ -941,9 +989,11 @@ class OcamlLoweringReportWriter {
 			storageAliases: sortedIMapStorageAliases
 		});
 		final reportedCalls = sortedCalls.map(callToReport);
+		final reportedCallableBoundaries = sortedCallableBoundaries.map(reflaxe.ocaml.reports.OcamlCallableBoundaryReport.boundaryToReport);
+		final reportedFunctionResults = sortedFunctionResultBoundaries.map(reflaxe.ocaml.reports.OcamlCallableBoundaryReport.resultToReport);
 		final canonicalCalls = reportJson({
 			calls: reportedCalls,
-			callableBoundaries: sortedCallableBoundaries
+			callableBoundaries: reportedCallableBoundaries
 		});
 		final sortedReflectCompare = reflectCompare.copy();
 		sortedReflectCompare.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -957,7 +1007,7 @@ class OcamlLoweringReportWriter {
 		final canonicalReflectCompare = reportJson(sortedReflectCompare);
 		final canonicalStdIsOfType = reportJson(sortedStdIsOfType);
 		final canonicalIntUnary = reportJson(sortedIntUnary);
-		final canonicalFunctionResultBoundaries = reportJson(sortedFunctionResultBoundaries);
+		final canonicalFunctionResultBoundaries = reportJson(reportedFunctionResults);
 		final canonicalControlTargets = reportJson(sortedControlTargets);
 		final canonicalControls = reportJson({
 			targets: sortedControlTargets,
@@ -1018,13 +1068,13 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + hashUtf8(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v33",
+			callModel: "typed-ocaml-directional-call-boundary-v34",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + hashUtf8(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: reportedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
-			callableBoundaries: sortedCallableBoundaries,
+			callableBoundaries: reportedCallableBoundaries,
 			reflectCompareModel: OcamlReflectComparePlan.MODEL_REVISION,
 			reflectCompareRevision: "sha256:" + hashUtf8(canonicalReflectCompare),
 			reflectCompareCount: sortedReflectCompare.length,
@@ -1040,8 +1090,8 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaryModel: OcamlFunctionResultBoundary.MODEL,
 			functionResultBoundaryRevision: "sha256:" + hashUtf8(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
-			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v27",
+			functionResultBoundaries: reportedFunctionResults,
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v28",
 			controlRevision: "sha256:" + hashUtf8(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

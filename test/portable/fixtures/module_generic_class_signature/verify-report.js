@@ -10,8 +10,8 @@ const root = path.resolve(fixture, '../../../..')
 const output = path.join(fixture, 'out')
 const lowering = JSON.parse(fs.readFileSync(path.join(output, 'ocaml_lowering_report.json'), 'utf8'))
 const generic = report => report.calls.filter(call => call.kind === 'generic-instance-haxe-method')
-assert.equal(lowering.schemaVersion, 93)
-assert.equal(lowering.callModel, 'typed-ocaml-directional-call-boundary-v33')
+assert.equal(lowering.schemaVersion, 94)
+assert.equal(lowering.callModel, 'typed-ocaml-directional-call-boundary-v34')
 assert.equal(generic(lowering).length, 8)
 assert(generic(lowering).some(call => call.genericInstanceTarget.resultShape.kind === 'nullable-class'))
 
@@ -47,8 +47,8 @@ try {
 	corrupt('missing class identity', /Generic call report/, target => {
 		visitClass(target, value => { delete value.classTypeId })
 	})
-	corrupt('previous report schema', /Unsupported lowering report schema 92; expected 93/, (_, report) => {
-		report.schemaVersion = 92
+	corrupt('previous report schema', /Unsupported lowering report schema 93; expected 94/, (_, report) => {
+		report.schemaVersion = 93
 	})
 	const inspected = spawnSync(process.env.HAXE_BIN || 'haxe', [
 		'-cp', 'packages/reflaxe.ocaml/src', '-cp', path.join(fixture, '../module_generic_signature'),

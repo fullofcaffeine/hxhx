@@ -25,23 +25,29 @@ typedef CallableViewUnsafeOperation = {
 **/
 function unsafeOperations(decision:OcamlCallableViewLocalDecision):Array<CallableViewUnsafeOperation> {
 	requireDecision(decision);
+	return valueUnsafeOperations(reflaxe.ocaml.lowered.OcamlCallableViewContract.operation(decision));
+}
+
+/** Writes, arguments, returns and comparison operands enumerate the same selected native mechanisms. */
+function valueUnsafeOperations(operation:OcamlCallableValueOperation):Array<CallableViewUnsafeOperation> {
+	reflaxe.ocaml.lowered.OcamlCallableValueOperation.requireOperation(operation);
 	final result:Array<CallableViewUnsafeOperation> = [];
-	function add(role:String, operation:String, input:String, output:String):Void {
+	function add(role:String, mechanism:String, input:String, output:String):Void {
 		result.push({
-			id: '${decision.id}:unsafe:$role',
-			decisionId: decision.id,
+			id: '${operation.id}:unsafe:$role',
+			decisionId: operation.id,
 			role: role,
-			operation: operation,
+			operation: mechanism,
 			input: input,
 			output: output
 		});
 	}
-	switch (decision.input) {
-		case RawOrigin(FreshLiteral):
+	switch (operation.origin) {
+		case FreshLiteral:
 			add("origin-identity", "Obj.repr", "fresh-identity-cell", "identity-token");
-		case RawOrigin(StaticDeclaration(_)):
+		case StaticDeclaration(_):
 			add("origin-identity", "Obj.repr", "static-declaration-closure", "identity-token");
-		case ExistingView(_):
+		case null:
 	}
 	function visit(conversion:OcamlGenericValueConversion, input:OcamlGenericValueShape, output:OcamlGenericValueShape, role:String):Void {
 		switch (conversion) {
@@ -64,6 +70,6 @@ function unsafeOperations(decision:OcamlCallableViewLocalDecision):Array<Callabl
 			case Identity, BoxBoolean, UnboxBoolean:
 		}
 	}
-	visit(decision.conversion, decision.inputLayout.shape, decision.outputLayout.shape, "callback-write");
+	visit(operation.conversion, operation.inputLayout.shape, operation.outputLayout.shape, operation.role);
 	return result;
 }

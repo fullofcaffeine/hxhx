@@ -22,8 +22,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 93
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v27'
+if (report.schemaVersion !== 94
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v7') {
 	fail('unexpected enum catch-rethrow report contract')
 }
@@ -41,7 +41,7 @@ for (const control of controls) {
 	const origin = payload?.enumCatchOrigin
 	const chain = report.controlCatches.find(item => item.id === origin?.chainId)
 	const clause = chain?.clauses.find(item => item.id === origin?.clauseId)
-	if (control.pipelineRevision !== 'ocaml-function-plans-v118'
+	if (control.pipelineRevision !== 'ocaml-function-plans-v119'
 		|| payload?.conversion !== 'preserve-enum-catch-throw-carrier'
 		|| payload.proofId !== control.proofId
 		|| payload.inputRepresentationId !== `control-representation:enum-catch-v1:${payload.inputSemanticTypeId}`
@@ -92,7 +92,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const controls = report.lowering.controls.filter(item =>
 	item.proofId === 'exact-enum-catch-binding-rethrow-control-v1')
-if (report.schemaVersion !== 52
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| controls.length !== 6
 	|| controls.some(item => item.payload?.enumCatchOrigin?.localId == null)) {

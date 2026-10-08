@@ -400,6 +400,8 @@ typedef InspectionUnsafeOperation = {
 
 /** One directional argument or result crossing selected by the typed call plan. **/
 typedef InspectionCallValue = {
+	final callableView:Null<reflaxe.ocaml.reports.OcamlCallableViewReport.CallableViewLayoutReport>;
+	final callbackArgument:Null<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableArgumentReport>;
 	final index:Int;
 	final parameterOptional:Bool;
 	final inputSemanticTypeId:String;
@@ -659,6 +661,7 @@ typedef InspectionIMapStorageAlias = {
 
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
+	final callbackInvocation:Null<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableCalleeReport>;
 	final id:String;
 	final sourceFile:String;
 	final sourceMin:Int;
@@ -691,6 +694,8 @@ typedef InspectionCall = {
 
 /** One callable definition independently sealed against its final body. **/
 typedef InspectionCallableBoundary = {
+	final callbackReturnCount:Null<Int>;
+	final callbackReturns:Null<Array<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableReturnReport>>;
 	final id:String;
 	final calleeId:String;
 	final sourceModuleId:String;
@@ -847,6 +852,8 @@ typedef InspectionControlEnumCatchOrigin = {
 
 /** The exact value crossing carried by one private compiler-control signal. **/
 typedef InspectionControlPayload = {
+	final callbackReturnId:Null<String>;
+	final callbackReturnRevision:Null<String>;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;
 	final inputRepresentationId:String;
@@ -1068,6 +1075,11 @@ typedef InspectionSummary = {
 	final iMapStorageAliasCount:Int;
 	final localConversionCount:Int;
 	final callbackViewCount:Int;
+	final callbackParameterCount:Int;
+	final callbackComparisonCount:Int;
+	final callbackArgumentCount:Int;
+	final callbackReturnCount:Int;
+	final callbackInvocationCount:Int;
 	final callbackUnsafeOperationCount:Int;
 	final callbackRuntimeUseCount:Int;
 	final containerElementConversionCount:Int;

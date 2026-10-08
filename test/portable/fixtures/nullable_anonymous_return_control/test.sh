@@ -126,10 +126,10 @@ neko "$TMP_ROOT/inspect.n" \
 node - "$VALID_INSPECTION" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 52
+if (report.schemaVersion !== 53
 	|| report.summary?.valid !== true
 	|| report.lowering?.status !== 'present'
-	|| report.lowering?.schemaVersion !== 93) {
+	|| report.lowering?.schemaVersion !== 94) {
 	throw new Error('public inspection did not validate the nullable anonymous return report')
 }
 const boundaries = report.lowering.functionResultBoundaries.filter(item =>

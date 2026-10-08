@@ -63,7 +63,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 93
+if (report.schemaVersion !== 94
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v4'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -113,7 +113,7 @@ for (const operation of operations) {
 	]
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v118'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v119'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
@@ -224,7 +224,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_REPORT" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 52
+if (report.schemaVersion !== 53
 	|| !report.summary?.valid
 	|| report.summary.anonymousStructureCount !== report.lowering?.anonymousStructures?.length
 	|| report.summary.anonymousStructureOperationCount !== report.lowering?.anonymousStructureOperations?.length

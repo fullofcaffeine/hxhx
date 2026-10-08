@@ -922,6 +922,12 @@ class OcamlBuilder {
 				return callPlanInvariant("a native enum callable carrier reached syntax outside an OCaml module", position);
 			return OcamlNativeEnumRepresentation.typeExpr(representation, moduleIdToOcamlModuleName(ctx.currentModuleId));
 		}
+		if (representation.boxingPolicy == OcamlRepresentationBoxingPolicy.CallableIdentityView) {
+			final layout = representationRegistry.requireCallableView(representation.id, representation.revision, binding.programRevision);
+			if (!reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.same(layout, value.callableView))
+				return callPlanInvariant("callback type disagrees with its declaration layout", position);
+			return reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(layout);
+		}
 		if (OcamlMonomorphicClassMaterializer.isNominalClass(representation)) {
 			if (ctx.currentModuleId == null)
 				return callPlanInvariant("a nominal callable carrier reached syntax outside an OCaml module", position);
@@ -933,6 +939,27 @@ class OcamlBuilder {
 	/** Mechanically applies one conversion already selected by the call plan. */
 	function buildPlannedCallArgument(call:OcamlCallDecision, value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
+		if (value.callbackArgument != null) {
+			final prepared = value.callbackArgument;
+			reflaxe.ocaml.lowered.OcamlCallableArgumentPlan.requireArgument(prepared);
+			final operation = prepared.operation;
+			final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+			if (operation.id != call.id + ":callback-argument:" + value.index
+				|| operation.source.file != source.file
+				|| operation.source.min != source.min
+				|| operation.source.max != source.max)
+				return callPlanInvariant("callback preparation lost its exact argument occurrence", expression.pos);
+			requireCallableValueSource(prepared.input, operation.inputLayout, expression);
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(expression),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				buildExpr(expression);
@@ -1052,6 +1079,9 @@ class OcamlBuilder {
 						controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
 					else {
 						final payload = switch (selectedPayload.conversion) {
+							case BoxAndRecoverCallableView:
+								requirePreparedCallbackReturn(decision);
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildDirectFunctionResult(value)]);
 							case BoxAndRecoverExactValue, BoxAndRecoverNominalValue, BoxAndRecoverTypedFunctionResult:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case BoxBoolAndRecoverDynamicTypedFunctionResult:
@@ -1188,6 +1218,11 @@ class OcamlBuilder {
 		if (payload == null)
 			return controlPlanInvariant('return decision "${decision.id}" reached its function boundary without a sealed value payload', position);
 		return switch (payload.conversion) {
+			case BoxAndRecoverCallableView:
+				final returned = requirePreparedCallbackReturn(decision);
+				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
+					reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(returned)
+						.outputLayout));
 			case BoxAndRecoverExactValue, BoxAndRecoverNominalValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
@@ -1206,6 +1241,23 @@ class OcamlBuilder {
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${payload.conversion}', position);
 		}
+	}
+
+	/** Recheck the prepared callback occurrence before boxing it or recovering it at the function boundary. */
+	function requirePreparedCallbackReturn(decision:OcamlControlDecision):reflaxe.ocaml.lowered.OcamlCallableReturnContract.OcamlCallableReturnDecision {
+		final payload = decision.payload;
+		final binding = currentFunctionPlanBinding;
+		if (payload == null || binding == null)
+			throw "reflaxe.ocaml [callback-return-control:missing-binding]: callback transfer lost its final body";
+		return reflaxe.ocaml.lowered.OcamlCallableReturnControl.requireJoin({
+			binding: binding,
+			source: decision.source,
+			returnId: payload.callbackReturnId,
+			returnRevision: payload.callbackReturnRevision,
+			semanticTypeId: payload.outputSemanticTypeId,
+			carrierTypeId: payload.outputCarrierTypeId,
+			representationId: payload.outputRepresentationId
+		}, currentCallableBoundary == null || currentCallableBoundary.callbackReturns == null ? [] : currentCallableBoundary.callbackReturns);
 	}
 
 	/** Raises one exact Haxe value through its sealed private exception channel. */
@@ -1840,11 +1892,20 @@ class OcamlBuilder {
 				case OcamlCallEvaluationStepKind.MaterializeCallee:
 					if (call.kind != OcamlCallKind.TypedFunctionValue || callee == null || target != null || step.slotId == null)
 						return callPlanInvariant('call "${call.id}" has an invalid callee materialization step', position);
+					if (call.callbackInvocation != null) {
+						final selected = call.callbackInvocation;
+						final actual = OcamlLoweredOrigin.sourceSpan(callee.pos);
+						if (actual.file != selected.source.file || actual.min != selected.source.min || actual.max != selected.source.max)
+							return callPlanInvariant("callback invocation source changed after planning", position);
+						requireCallableValueSource(selected.input, selected.layout, callee);
+					} else if (isCallableViewLocal(callee))
+						return callPlanInvariant("callback invocation lost its selected local source", position);
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
 					final functionType = nullableCallableType(callee.t);
-					target = isCallableViewLocal(callee) ? reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(OcamlExpr.EIdent(name)) : functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
-						typeExprFromHaxeType(functionType), freshTmp);
+					target = call.callbackInvocation != null
+						|| isCallableViewLocal(callee) ? reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(OcamlExpr.EIdent(name)) : functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
+							typeExprFromHaxeType(functionType), freshTmp);
 				case OcamlCallEvaluationStepKind.MaterializeReceiver:
 					if (callee == null)
 						return callPlanInvariant('call "${call.id}" has no typed instance receiver occurrence', position);
@@ -3136,16 +3197,7 @@ class OcamlBuilder {
 			representationRegistry);
 		if (decision == null)
 			return localStorageInvariant("callback initializer has no exact write decision", rhs.pos);
-		switch (decision.input) {
-			case ExistingView(reference):
-				switch (unwrap(rhs).expr) {
-					case TLocal(local) if (stableLocalId(local.id, rhs.pos) == reference.localId):
-					case _: return localStorageInvariant("callback write changed its input local", rhs.pos);
-				}
-			case RawOrigin(kind):
-				if (Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(rhs)) != Std.string(kind))
-					return localStorageInvariant("callback write changed its typed producer", rhs.pos);
-		}
+		requireCallableValueSource(decision.input, decision.inputLayout, rhs);
 		final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.occurrences(decision);
 		return reflaxe.ocaml.ast.OcamlCallableViewWriteSyntax.build({
 			decision: decision,
@@ -3155,6 +3207,83 @@ class OcamlBuilder {
 			requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
 			finalRuntimeUses: ctx.finalRuntimeUses
 		});
+	}
+
+	/** Rejoin a retained callback producer before any write, argument, or equality emits its value. */
+	function requireCallableValueSource(input:reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewInput,
+			layout:reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor, expression:TypedExpr):Void {
+		switch (input) {
+			case ExistingView(reference):
+				switch (unwrap(expression).expr) {
+					case TLocal(local) if (stableLocalId(local.id, expression.pos) == reference.localId
+						&& isCallableViewLocal(expression)):
+						final selected = plannedLocalRepresentation(local.id, expression.pos);
+						if (selected == null
+							|| selected.id != reference.representationId
+							|| selected.revision != reference.representationRevision)
+							callPlanInvariant("callback value changed its selected local storage", expression.pos);
+						reflaxe.ocaml.lowered.OcamlCallableViewContract.requireReference(reference, layout);
+					case _: callPlanInvariant("callback value lost its selected local", expression.pos);
+				}
+			case RawOrigin(kind):
+				if (Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(expression)) != Std.string(kind))
+					callPlanInvariant("callback value changed its raw producer", expression.pos);
+			case DeclaredOrigin(declaration):
+				final published = functionPlanRegistry.callableDeclaration(declaration.calleeId);
+				if (published == null
+					|| published.programRevision != declaration.programRevision
+					|| published.pipelineRevision != declaration.pipelineRevision
+					|| Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(expression)) != Std.string(reflaxe.ocaml.lowered.OcamlCallableOriginKind.StaticDeclaration(declaration.calleeId)))
+					callPlanInvariant("callback value lost its published method", expression.pos);
+				reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.requireSignature(declaration.layout, published.arguments, published.result);
+			case CallResult(source):
+				final selected = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(expression));
+				if (selected == null
+					|| selected.result == null
+					|| selected.source.file != source.file
+					|| selected.source.min != source.min
+					|| selected.source.max != source.max
+					|| !reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.same(selected.result.callableView, layout))
+					callPlanInvariant("callback value lost its exact call result", expression.pos);
+		}
+	}
+
+	/** Evaluate both planned producers once, left first, and compare the preserved function identities. */
+	function buildCallableComparison(source:TypedExpr, left:TypedExpr, right:TypedExpr, notEqual:Bool):Null<OcamlExpr> {
+		final binding = currentLocalPlanBinding;
+		final plan = activeLocalRepresentationPlan(source.pos);
+		if (binding == null || plan == null)
+			return null;
+		final decision = plan.callableComparisonFor(binding, OcamlLoweredOrigin.sourceSpan(source.pos), notEqual);
+		if (decision == null) {
+			if (isCallableViewLocal(left) || isCallableViewLocal(right))
+				return callPlanInvariant("callback comparison has no exact producer decision", source.pos);
+			for (value in [left, right]) {
+				final call = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(value));
+				if (call != null && call.result != null && call.result.callableView != null)
+					return callPlanInvariant("returned callback comparison has no exact producer decision", source.pos);
+			}
+			return null;
+		}
+		function operand(expression:TypedExpr, isLeft:Bool):OcamlExpr {
+			final selected = isLeft ? decision.left : decision.right;
+			final actual = OcamlLoweredOrigin.sourceSpan(unwrap(expression).pos);
+			if (actual.file != selected.source.file || actual.min != selected.source.min || actual.max != selected.source.max)
+				return callPlanInvariant("callback comparison changed its operand occurrence", expression.pos);
+			requireCallableValueSource(selected.input, selected.layout, expression);
+			final operation = reflaxe.ocaml.lowered.OcamlCallableComparison.operation(decision, isLeft);
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(expression),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
+		return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(operand(left, true), operand(right, false),
+			(left, right) -> OcamlExpr.EBinop(notEqual ? OcamlBinop.PhysNeq : OcamlBinop.PhysEq, left, right), freshTmp);
 	}
 
 	/** Only a local with a resolved view decision may expose a view invocation or identity. */
@@ -7235,12 +7364,9 @@ class OcamlBuilder {
 			case OpUShr:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [toIntExpr(e1), toIntExpr(e2)]);
 			case OpEq:
-				if (isCallableViewLocal(e1) || isCallableViewLocal(e2)) {
-					if (!isCallableViewLocal(e1) || !isCallableViewLocal(e2))
-						return localStorageInvariant("callback comparison crossed unplanned storage", source.pos);
-					return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(buildExpr(e1), buildExpr(e2),
-						(left, right) -> OcamlExpr.EBinop(OcamlBinop.PhysEq, left, right), freshTmp);
-				}
+				final callbackComparison = buildCallableComparison(source, e1, e2, false);
+				if (callbackComparison != null)
+					return callbackComparison;
 				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
 					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("map comparison has no active function plan", source.pos);
@@ -7329,12 +7455,9 @@ class OcamlBuilder {
 					}
 				}
 			case OpNotEq:
-				if (isCallableViewLocal(e1) || isCallableViewLocal(e2)) {
-					if (!isCallableViewLocal(e1) || !isCallableViewLocal(e2))
-						return localStorageInvariant("callback comparison crossed unplanned storage", source.pos);
-					return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(buildExpr(e1), buildExpr(e2),
-						(left, right) -> OcamlExpr.EBinop(OcamlBinop.PhysNeq, left, right), freshTmp);
-				}
+				final callbackComparison = buildCallableComparison(source, e1, e2, true);
+				if (callbackComparison != null)
+					return callbackComparison;
 				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
 					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
 						return callPlanInvariant("map comparison has no active function plan", source.pos);
@@ -9063,6 +9186,31 @@ class OcamlBuilder {
 			nullable-primitive handling for functions outside that call matrix.
 		**/
 	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
+		final returns = currentCallableBoundary == null ? null : currentCallableBoundary.callbackReturns;
+		if (returns != null) {
+			final source = OcamlLoweredOrigin.sourceSpan(value.pos);
+			final matching = returns.filter(selected -> selected.source.file == source.file && selected.source.min == source.min
+				&& selected.source.max == source.max);
+			if (matching.length != 1 || currentFunctionPlanBinding == null)
+				return callPlanInvariant("callback return has no exact sealed source occurrence", value.pos);
+			final selected = matching[0];
+			reflaxe.ocaml.lowered.OcamlCallableReturnContract.requireBinding(selected, currentFunctionPlanBinding);
+			final operation = reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(selected);
+			switch (selected.input) {
+				case LocalView(reference, layout):
+					requireCallableValueSource(ExistingView(reference), layout, value);
+				case _:
+			}
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(value),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
 		final returnType = currentFunctionReturnType;
 		if (returnType == null || isVoidType(returnType))
 			return buildExpr(value);
@@ -9523,8 +9671,12 @@ class OcamlBuilder {
 		// describe these same parameters, while its instance result must not become
 		// the result of the effect-only Haxe constructor body.
 		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
-		final declarationSignature = preserveDeclarationSignature ? projectDeclarationSignature(args.map(argument -> argument.t),
-			expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType, ctx) : null;
+		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = !preserveDeclarationSignature ? null : callableBoundary != null
+			&& callableBoundary.proofId == reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.SIGNATURE_PROOF ? {
+				parameters: callableBoundary.arguments.map(value -> callableOutputType(value, bodyExpr.pos)),
+				result: callableBoundary.result == null ? OcamlTypeExpr.TIdent("unit") : callableOutputType(callableBoundary.result, bodyExpr.pos)
+			} : projectDeclarationSignature(args.map(argument -> argument.t), expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType,
+				ctx);
 		final params = if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {

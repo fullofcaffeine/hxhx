@@ -23,7 +23,7 @@ function run(command, args) {
 
 async function main() {
 	try {
-		assert.equal(lowering.schemaVersion, 93)
+		assert.equal(lowering.schemaVersion, 94)
 		assert.equal(lowering.callableViews.requiredLocals.length, 7)
 		assert.equal(lowering.callableViews.entries.length, 7)
 		assert.equal(lowering.callableViews.entries.reduce((sum, entry) => sum + entry.unsafeOperations.length, 0), 8)
@@ -44,7 +44,7 @@ async function main() {
 		}
 		const good = await inspect(output)
 		assert.equal(good.status, 0)
-		assert.equal(good.report.schemaVersion, 52)
+		assert.equal(good.report.schemaVersion, 53)
 		assert.equal(good.report.summary.valid, true)
 		assert.deepEqual(good.report.lowering.callableViews, lowering.callableViews)
 		const cases = [

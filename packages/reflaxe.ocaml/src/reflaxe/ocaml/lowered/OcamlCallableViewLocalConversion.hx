@@ -39,9 +39,8 @@ function sealProducer(registry:OcamlRepresentationRegistry, binding:OcamlFunctio
 	return sealInput(registry, binding, role, OcamlLoweredOrigin.sourceSpan(expression.pos), RawOrigin(kind), describe(shape), output);
 }
 
-private function sealInput(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole,
-		source:OcamlLoweredSourceSpan, input:OcamlCallableViewInput, inputLayout:OcamlCallableViewDescriptor,
-		output:OcamlLocalRepresentationReference):OcamlCallableViewLocalDecision {
+function sealInput(registry:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan,
+		input:OcamlCallableViewInput, inputLayout:OcamlCallableViewDescriptor, output:OcamlLocalRepresentationReference):OcamlCallableViewLocalDecision {
 	final outputLayout = registry.requireCallableView(output.representationId, output.representationRevision, binding.programRevision);
 	final decision = sealWithLayouts(binding, role, source, input, inputLayout, output, outputLayout);
 	requireRegistry(decision, registry, binding);
@@ -62,7 +61,7 @@ function requireRegistry(decision:OcamlCallableViewLocalDecision, registry:Ocaml
 	switch (decision.input) {
 		case ExistingView(reference):
 			requireRegistered(reference, decision.inputLayout);
-		case RawOrigin(_):
+		case RawOrigin(_), DeclaredOrigin(_), CallResult(_):
 	}
 	requireRegistered(decision.output, decision.outputLayout);
 }

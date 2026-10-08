@@ -56,19 +56,20 @@ assignments. A separate native syntax test consumes those selected conversions
 and checks identity, evaluation order, and captured-value lifetime. Passing
 that component test does not replace the complete source compilation test.
 
-Current limitation: the Stage3 diagnostic emitter stores the original function
-without adapting its input representation. Native compilation rejects the raw
-integer where the stored function requires `Obj.t`. A wrapper-only repair is
-insufficient because separate wrappers change function identity.
+The standalone result does not establish the behavior of the Stage3 diagnostic
+compiler. That separate source path still requires its combined acceptance run.
 
-The local standalone integration now compiles and executes this program, but
-still shares capture-free factory identity instead of matching eval. The
-complete source test remains failing. Reproduce that separate route from the
-repository root:
+The local standalone integration now compiles and executes this program with
+all 20 expected results. Its callback reports retain actual parameters,
+arguments, returns, comparisons, and the sources of computed calls. The report
+reader checks these relationships against declarations and local storage.
+This focused result does not complete the combined native acceptance suite.
+Reproduce the standalone route from the repository root:
 
 ```sh
-node_modules/.bin/haxe -cp test/fixtures/stage3_stored_callback_views -main Main --no-output -lib reflaxe.ocaml -D ocaml_no_build -D ocaml_output=.tmp/stored_callback_views/standalone
+node_modules/.bin/haxe -cp test/fixtures/stage3_stored_callback_views -main Main --no-output -lib reflaxe.ocaml -D ocaml_no_build -D ocaml_lowering_report -D ocaml_output=.tmp/stored_callback_views/standalone
 dune build --root .tmp/stored_callback_views/standalone ./standalone.exe
+node_modules/.bin/haxe -cp packages/reflaxe.ocaml/src -cp test --run CheckOcamlCallableInspection .tmp/stored_callback_views/standalone/ocaml_lowering_report.json
 ```
 
 Require the Dune command to pass before executing its output. The compiler can
@@ -76,6 +77,11 @@ report a failed automatic Dune build as a warning while returning success.
 After a successful native build, run `_build/default/standalone.exe` inside
 the output directory and compare its output with `expected.stdout`.
 
-This fixture belongs to `haxe_ocaml-v0zbr`. Repair the standalone target's
-callable storage/conversion contract and preserve the native host acceptance;
-this failing regression does not prove shared-target readiness.
+The report test first accepts the actual compiler output. It then attaches
+records to foreign call slots, source positions, local variables, and return
+bodies. Each changed report must fail its specific ownership check, even when
+its outer checksum is recomputed. The combined native regression also runs
+these checks after the standalone build.
+
+This fixture belongs to `haxe_ocaml-v0zbr`. The wider callback acceptance,
+report format migration, and shared-target readiness remain unfinished.

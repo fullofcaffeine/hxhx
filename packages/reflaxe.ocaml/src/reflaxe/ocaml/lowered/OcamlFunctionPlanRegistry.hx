@@ -345,9 +345,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v118";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v36";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v20";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v119";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v37";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v21";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -1937,19 +1937,52 @@ class OcamlFunctionPlanRegistry {
 	/** Publish callback local selections independently of their conversions, then validate complete coverage. */
 	public function callableViewInventory(representations:OcamlRepresentationRegistry):reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport {
 		final required:Array<reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewRequiredLocal> = [];
+		final parameters:Array<reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewParameterReport> = [];
 		final conversions:Array<reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision> = [];
+		final comparisons:Array<reflaxe.ocaml.lowered.OcamlCallableComparison.OcamlCallableComparisonDecision> = [];
 		for (sealed in sealedFunctions) {
 			final binding = sealed.plan.binding;
+			final boundary = sealed.plan.callableBoundary;
 			for (reference in sealed.plan.localRepresentations.references()) {
-				if (representations.require(reference.representationId, binding.programRevision).boxingPolicy == CallableIdentityView)
-					required.push({binding: binding, reference: reference});
+				if (representations.require(reference.representationId, binding.programRevision).boxingPolicy != CallableIdentityView)
+					continue;
+				required.push({binding: binding, reference: reference});
+				final identity = Lambda.find(sealed.localIdentities.identities(), identity -> identity.id == reference.localId);
+				if (identity == null)
+					throw "Selected callback storage lost its actual lexical identity.";
+				if (identity.kind == "function-argument") {
+					if (boundary == null || identity.ownerId != binding.functionId)
+						throw "Callback parameter lost its actual callable owner.";
+					final slots = [
+						for (index in 0...boundary.arguments.length)
+							if (identity.path == "argument/" + index) index
+					];
+					if (slots.length != 1)
+						throw "Callback parameter lost its actual argument position.";
+					final index = slots[0];
+					final layout = boundary.arguments[index].callableView;
+					if (layout == null)
+						throw "Callback parameter has no declared view layout.";
+					parameters.push({
+						binding: binding,
+						reference: reference,
+						boundaryId: boundary.id,
+						calleeId: boundary.calleeId,
+						index: index,
+						layout: reflaxe.ocaml.reports.OcamlCallableViewReport.layoutToReport(layout)
+					});
+				}
 			}
 			for (conversion in sealed.plan.localRepresentations.callableViewConversions()) {
 				reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry(conversion, representations, binding);
 				conversions.push(conversion);
 			}
+			for (comparison in sealed.plan.localRepresentations.callableComparisons()) {
+				reflaxe.ocaml.lowered.OcamlCallableComparison.requireBinding(comparison, binding);
+				comparisons.push(comparison);
+			}
 		}
-		return reflaxe.ocaml.reports.OcamlCallableViewInventory.build(required, conversions);
+		return reflaxe.ocaml.reports.OcamlCallableViewInventory.build(required, conversions, parameters, comparisons);
 	}
 
 	/** Returns every sealed primitive local conversion in deterministic identity order. */

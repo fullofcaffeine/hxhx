@@ -521,9 +521,22 @@ class OcamlCompiler extends DirectToStringCompiler {
 		callable boundary before the target command succeeds.
 	**/
 	function planCallableDeclarations(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>, programRevision:String):Void {
+		final classes = [
+			for (moduleId in moduleOrder)
+				for (owner in moduleToClasses.get(moduleId) ?? [])
+					owner
+		];
+		final callbacks = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select(classes);
+		final callbacksById = [for (selected in callbacks) selected.calleeId => selected];
 		// A shared enum carrier describes a type. Only the exact method's producer
 		// evidence can authorize exporting that carrier as its function result.
 		function registerMethod(classType:ClassType, field:ClassField, isStatic:Bool):Void {
+			final callback = isStatic ? callbacksById.get(OcamlCallPlanner.calleeId(classType, field)) : null;
+			if (callback != null && reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.changesInterface(callback.signature)) {
+				functionPlanRegistry.registerCallableDeclaration(reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.declaration(classType, field, callback,
+					representationRegistry, programRevision, OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+				return;
+			}
 			final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
 			if (candidate != null)
 				representationRegistry.selectNativeEnum(candidate.descriptor);

@@ -13,11 +13,18 @@ import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalRepresentationReference;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLocalConversionIdentity.occurrenceId;
+import reflaxe.ocaml.lowered.OcamlCallableReturnContract.OcamlCallableInvocationReference;
 
 /** A write either preserves an existing view's token or creates the producer's selected identity. */
 enum OcamlCallableViewInput {
 	ExistingView(reference:OcamlLocalRepresentationReference);
 	RawOrigin(kind:OcamlCallableOriginKind);
+
+	/** An exact published method already uses recursive views in its invocation signature. */
+	DeclaredOrigin(declaration:OcamlCallableInvocationReference);
+
+	/** The source call must resolve to a sealed result with this layout before syntax. */
+	CallResult(source:OcamlLoweredSourceSpan);
 }
 
 /** One source-bound callback write, including origin construction before signature adaptation. */
@@ -72,6 +79,16 @@ function requireDecision(decision:OcamlCallableViewLocalDecision):Void {
 					throw "reflaxe.ocaml [ocaml-callable-local:missing-declaration]: static origin lost its declaration identity";
 				case _:
 			}
+		case DeclaredOrigin(declaration):
+			validate(declaration.layout);
+			if (declaration.calleeId.length == 0
+				|| declaration.programRevision != decision.binding.programRevision
+				|| declaration.pipelineRevision.length == 0
+				|| declaration.layout.revision != decision.inputLayout.revision)
+				throw "reflaxe.ocaml [ocaml-callable-local:foreign-declaration]: callback producer changed its published invocation";
+		case CallResult(source):
+			if (source.file.length == 0 || source.min < 0 || source.max < source.min)
+				throw "reflaxe.ocaml [ocaml-callable-local:missing-call]: callback producer has no exact source call";
 	}
 	requireReference(decision.output, decision.outputLayout);
 	final binding = decision.binding;
@@ -124,7 +141,7 @@ function copy(decision:OcamlCallableViewLocalDecision):OcamlCallableViewLocalDec
 function localReferences(decision:OcamlCallableViewLocalDecision):Array<OcamlLocalRepresentationReference> {
 	return switch (decision.input) {
 		case ExistingView(reference): [copyReference(reference), copyReference(decision.output)];
-		case RawOrigin(_): [copyReference(decision.output)];
+		case RawOrigin(_), DeclaredOrigin(_), CallResult(_): [copyReference(decision.output)];
 	};
 }
 
@@ -137,19 +154,33 @@ function operation(decision:OcamlCallableViewLocalDecision):OcamlCallableValueOp
 		source: selected.source,
 		binding: selected.binding,
 		origin: switch (selected.input) {
-			case ExistingView(_): null;
+			case ExistingView(_), CallResult(_): null;
 			case RawOrigin(kind): kind;
+			case DeclaredOrigin(declaration): StaticDeclaration(declaration.calleeId);
 		},
 		inputLayout: selected.inputLayout,
 		outputLayout: selected.outputLayout,
-		conversion: selected.conversion
+		conversion: selected.conversion,
+		invocation: switch (selected.input) {
+			case DeclaredOrigin(declaration): declaration;
+			case _: null;
+		}
 	};
 }
 
-private function copyInput(input:OcamlCallableViewInput):OcamlCallableViewInput {
+function copyInput(input:OcamlCallableViewInput):OcamlCallableViewInput {
 	return switch (input) {
 		case ExistingView(reference): ExistingView(copyReference(reference));
 		case RawOrigin(kind): RawOrigin(kind);
+		case DeclaredOrigin(declaration):
+			validate(declaration.layout);
+			DeclaredOrigin({
+				calleeId: declaration.calleeId,
+				layout: describe(declaration.layout.shape),
+				programRevision: declaration.programRevision,
+				pipelineRevision: declaration.pipelineRevision
+			});
+		case CallResult(source): CallResult({file: source.file, min: source.min, max: source.max});
 	};
 }
 
@@ -157,7 +188,7 @@ private function isScalarArrow(shape:OcamlGenericValueShape):Bool {
 	return reflaxe.ocaml.lowered.OcamlCallableValueOperation.isScalarArrow(shape);
 }
 
-private function requireReference(reference:OcamlLocalRepresentationReference, layout:OcamlCallableViewDescriptor):Void {
+function requireReference(reference:OcamlLocalRepresentationReference, layout:OcamlCallableViewDescriptor):Void {
 	// The lexical-local-v1 wire schema is a lowercase SHA-256 identity, never a host TVar number.
 	if (!~/^lexical-local-v1:[0-9a-f]{64}$/.match(reference.localId)
 		|| reference.representationId.length == 0
@@ -211,7 +242,7 @@ private function fingerprint(id:String, binding:OcamlFunctionPlanBinding, role:O
 		input:OcamlCallableViewInput, output:OcamlLocalRepresentationReference, inputLayout:OcamlCallableViewDescriptor,
 		outputLayout:OcamlCallableViewDescriptor, conversion:OcamlGenericValueConversion):String {
 	return "sha256:" + Sha256.encode([
-		"ocaml-callable-local-conversion-v2",
+		"ocaml-callable-local-conversion-v3",
 		id,
 		binding.functionId,
 		binding.programRevision,
@@ -221,16 +252,28 @@ private function fingerprint(id:String, binding:OcamlFunctionPlanBinding, role:O
 		source.file,
 		Std.string(source.min),
 		Std.string(source.max),
-		switch (input) {
-			case ExistingView(reference):
-				"existing-view\n" + referenceKey(reference);
-			case RawOrigin(kind):
-				"raw-origin\n" + Std.string(kind);
-		},
+		inputKey(input),
 		referenceKey(output),
 		inputLayout.revision,
 		outputLayout.revision,
 		Std.string(conversion)
 	].join("\n"));
+}
+
+/** Stable source-producer identity shared by local writes and call argument preparation. */
+function inputKey(input:OcamlCallableViewInput):String {
+	return switch (input) {
+		case ExistingView(reference): "existing-view\n" + referenceKey(reference);
+		case RawOrigin(kind): "raw-origin\n" + Std.string(kind);
+		case DeclaredOrigin(declaration):
+			[
+				"declared-origin",
+				declaration.calleeId,
+				declaration.layout.revision,
+				declaration.programRevision,
+				declaration.pipelineRevision
+			].join("\n");
+		case CallResult(source): ["call-result", source.file, Std.string(source.min), Std.string(source.max)].join("\n");
+	};
 }
 #end
