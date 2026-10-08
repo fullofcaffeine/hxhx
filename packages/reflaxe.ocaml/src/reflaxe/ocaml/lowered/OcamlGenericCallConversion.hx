@@ -100,10 +100,12 @@ function shape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericV
 	This admission is separate from generic method declarations, whose proofs do
 	not yet cover Dynamic. Neither path turns an unresolved monomorph into Dynamic.
 	A typed Dynamic<T> object also needs its own storage proof. Conversion direction
-	remains owned by crossing for both callers.
+	remains owned by crossing for both callers. A generic storage shape is admitted
+	here only when the callback-layout owner can represent every nested leaf.
 **/
 function callableShape(type:Type, ?nominalProof:String->Null<String>):Null<OcamlGenericValueShape> {
-	return classifyShape(type, nominalProof, true);
+	final selected = classifyShape(type, nominalProof, true);
+	return selected != null && OcamlCallableViewRepresentation.supportsValue(selected) ? selected : null;
 }
 
 /** The admission choice follows aliases and nested functions without changing their storage. */

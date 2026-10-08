@@ -132,6 +132,20 @@ class CheckOcamlCallableViewConversions {
 		final dynamicShape = callableShape(dynamicType);
 		if (dynamicShape == null || shapeId(dynamicShape) != "Dynamic" || genericShape(dynamicType) != null)
 			throw "ordinary Dynamic changed generic declaration admission";
+		// Arrays retain their generic storage contract. Their presence anywhere
+		// in a callback signature must not authorize an unsupported view layout.
+		for (syntax in [
+			macro :Array<String>,
+			macro :(action:() -> Void, values:Array<String>)->Void,
+			macro :Array<Int>->Int,
+			macro :() -> Array<String>,
+			macro :(action:Array<String>->Int)->Int,
+			macro :() -> (Array<Int>->Int)
+		]) {
+			final type = Context.resolveType(syntax, Context.currentPos());
+			if (genericShape(type) == null || callableShape(type) != null)
+				throw "callback layout admission changed generic array storage or admitted an unproved array leaf";
+		}
 		for (unsupported in [
 			Context.makeMonomorph(),
 			Context.resolveType(macro :Dynamic<Int>, Context.currentPos()),

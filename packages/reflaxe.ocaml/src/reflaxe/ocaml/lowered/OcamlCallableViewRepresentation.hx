@@ -25,6 +25,18 @@ typedef OcamlCallableViewDescriptor = {
 **/
 final MODEL_REVISION = "ocaml-callable-identity-view-v1";
 
+/**
+	Tests whether every leaf has the carrier used by an identity-bearing callback.
+
+	The generic conversion model can describe arrays, nominal values and erased
+	parameters, but that does not supply their callback-layout proof. Admission
+	uses this same type constructor as emission, so unsupported signatures are
+	declined before a connected method component changes its calling convention.
+**/
+function supportsValue(shape:OcamlGenericValueShape):Bool {
+	return valueType(shape, true) != null;
+}
+
 /** Copy the signature before publishing a stable layout identity. */
 function describe(shape:OcamlGenericValueShape):OcamlCallableViewDescriptor {
 	switch (shape) {
@@ -33,7 +45,8 @@ function describe(shape:OcamlGenericValueShape):OcamlCallableViewDescriptor {
 			throw "reflaxe.ocaml [ocaml-callable-view:invalid-shape]: expected a closed function signature";
 	}
 	// Building the type checks every nested argument and result before selection.
-	valueType(shape, false);
+	if (valueType(shape, false) == null)
+		throw "reflaxe.ocaml [ocaml-callable-view:unproved-carrier]: callback leaf needs its own representation proof";
 	final detached = copyShape(shape);
 	final semanticTypeId = shapeId(detached);
 	final carrierTypeId = 'callable-view<$semanticTypeId>';
@@ -57,10 +70,13 @@ function validate(descriptor:OcamlCallableViewDescriptor):Void {
 /** Materialize structured native types only after the program registry resolves this descriptor. */
 function typeExpr(descriptor:OcamlCallableViewDescriptor):OcamlTypeExpr {
 	validate(descriptor);
-	return valueType(descriptor.shape, false);
+	final selected = valueType(descriptor.shape, false);
+	if (selected == null)
+		throw "reflaxe.ocaml [ocaml-callable-view:unproved-carrier]: callback leaf needs its own representation proof";
+	return selected;
 }
 
-private function valueType(shape:OcamlGenericValueShape, allowVoid:Bool):OcamlTypeExpr {
+private function valueType(shape:OcamlGenericValueShape, allowVoid:Bool):Null<OcamlTypeExpr> {
 	return switch (shape) {
 		case Integer: TIdent("int");
 		case Boolean: TIdent("bool");
@@ -69,15 +85,21 @@ private function valueType(shape:OcamlGenericValueShape, allowVoid:Bool):OcamlTy
 		case EffectOnly if (allowVoid): TIdent("unit");
 		case FunctionValue(arguments, result):
 			var invocation = valueType(result, true);
+			if (invocation == null)
+				return null;
 			if (arguments.length == 0)
 				invocation = TArrow(TIdent("unit"), invocation);
 			else {
 				var index = arguments.length;
-				while (index-- > 0)
-					invocation = TArrow(valueType(arguments[index], false), invocation);
+				while (index-- > 0) {
+					final argument = valueType(arguments[index], false);
+					if (argument == null)
+						return null;
+					invocation = TArrow(argument, invocation);
+				}
 			}
 			carrier(invocation, TIdent("Obj.t"));
-		case _: throw "reflaxe.ocaml [ocaml-callable-view:unproved-carrier]: callback leaf needs its own representation proof";
+		case _: null;
 	};
 }
 

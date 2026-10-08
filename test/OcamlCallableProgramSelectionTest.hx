@@ -38,6 +38,7 @@ class OcamlCallableProgramSelectionTest {
 			"main"
 		]);
 		check("OcamlCallableProgramSelectionTest.CallbackParameterAndReturn", ["factory", "preserve", "run"]);
+		check("OcamlCallableProgramSelectionTest.CallbackArrayParameter", []);
 		check("OcamlCallableProgramSelectionTest.CallbackEscapes", []);
 		check("OcamlCallableProgramSelectionTest.CallbackMutation", []);
 		check("OcamlCallableProgramSelectionTest.CallbackCapture", []);
@@ -53,6 +54,21 @@ class OcamlCallableProgramSelectionTest {
 		check("OcamlCallableProgramSelectionTest.CallbackReflectiveEscape", []);
 		check("OcamlCallableProgramSelectionTest.CallbackStringReflectiveEscape", []);
 		return macro null;
+	}
+}
+
+/** An unrepresented array argument must reject the connected callback producer and caller together. */
+private class CallbackArrayParameter {
+	static function factory():() -> Void
+		return () -> {};
+
+	static function apply(action:() -> Void, values:Array<String>):Void {
+		action();
+		values.push("kept");
+	}
+
+	static function run():Void {
+		apply(factory(), []);
 	}
 }
 
