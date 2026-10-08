@@ -35,6 +35,7 @@ class JsRuntimeTypePlan {
 	public function reference(target:TypedRuntimeTypeTarget):String {
 		return switch (target.getKind()) {
 			case Nominal(identity): inheritance.requireRuntimeClass(identity.getCanonicalName()).reference;
+			case ArrayCore: JsRuntimeTypeSupport.arrayReference();
 			case _: throw "JavaScript core runtime type operand is unsupported: " + target.getSemanticKey();
 		};
 	}

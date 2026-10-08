@@ -7,7 +7,24 @@ function emit(expression:HxExpr, scope:JsEmitScope):String {
 	final occurrence = scope.runtimeTypes.requireOccurrence(expression);
 	final reference = scope.runtimeTypes.reference(occurrence.getTarget());
 	final value = occurrence.getValue();
-	return value == null ? reference : "__hx_is_nominal(" + JsExprEmitter.emit(value, scope) + ", " + reference + ")";
+	if (value == null)
+		return reference;
+	final operand = JsExprEmitter.emit(value, scope);
+	return switch occurrence.getTarget().getKind() {
+		// Haxe's JavaScript Array check uses prototype identity, including its
+		// cross-realm behavior. Interface metadata cannot confer core membership.
+		case ArrayCore: "((" + operand + ") instanceof " + reference + ")";
+		case _: "__hx_is_nominal(" + operand + ", " + reference + ")";
+	};
+}
+
+/**
+	Read the native constructor at the occurrence, after any left-operand effects.
+	The accessor's dollar sign cannot occur in a mangled source local. Its outer
+	scope keeps an Array-named parameter from replacing the type operand.
+ */
+function arrayReference():String {
+	return "$hx_array_type()";
 }
 
 /**
@@ -16,6 +33,7 @@ function emit(expression:HxExpr, scope:JsEmitScope):String {
 	The evaluated operand is a function argument, so effects occur exactly once.
  */
 function emitDefinition(writer:JsWriter):Void {
+	writer.writeln("function $hx_array_type() { return Array; }");
 	writer.writeln("function __hx_is_nominal(value, type) {");
 	writer.pushIndent();
 	writer.writeln("if (value == null || typeof type !== \"function\") return false;");
