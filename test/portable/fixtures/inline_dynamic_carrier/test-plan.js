@@ -105,6 +105,8 @@ for (const boundary of dynamicCallableBoundaries) {
 	assert.deepEqual(boundary.arguments[0], {
 		parameterOptional: false,
 		nullableEnumCarrier: null,
+		callableView: null,
+		callbackArgument: null,
 		inputRepresentationId: 'representation:Dynamic:internal-value',
 		outputSemanticTypeId: 'Dynamic',
 		proofClaim: boundary.arguments[0].proofClaim,
