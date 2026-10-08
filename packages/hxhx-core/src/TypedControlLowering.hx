@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v25";
+	static final passIdentity = "source-control-v26";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -108,7 +108,17 @@ class TypedControlLowering {
 		final values = new Array<TypedExpr>();
 		final prefix = new Array<TypedStmt>();
 		for (expression in input.getExpressions()) {
-			final plan = input.getTag() == ForIn ? forIterable(expression, rootTarget) : value(expression, rootTarget);
+			final plan = switch input.getTag() {
+				case ForIn: forIterable(expression, rootTarget);
+				// A previously lowered function body retains its exact return target.
+				// It is already a statement region, not a source value to discard again.
+				case Expression if (rootTarget != null
+					&& expression.getTag() == ControlRegion
+					&& expression.getControlTarget() == rootTarget):
+					value(expression, rootTarget);
+				case Expression: discard(expression, rootTarget);
+				case _: value(expression, rootTarget);
+			};
 			if ((input.getTag() == While || input.getTag() == DoWhile) && (plan.steps.length != 0 || !plan.completes))
 				return repeatedStatement(input, plan);
 			if (plan.steps.length != 0) {
@@ -281,6 +291,17 @@ class TypedControlLowering {
 
 	/** Discard only the value; all observable work and abrupt control remains ordered. */
 	function discard(expression:TypedExpr, target:Null<TyControlTarget>):ControlValue {
+		// These wrappers do not consume a result. Keep the checking context while
+		// lowering their child, so a statement block never invents a result slot.
+		if (expression.getTag() == Untyped) {
+			final previousUntyped = untypedContext;
+			untypedContext = true;
+			final plan = discard(expression.getExpressions()[0], target);
+			untypedContext = previousUntyped;
+			return plan;
+		}
+		if (expression.getTag() == Parenthesized)
+			return discard(expression.getExpressions()[0], target);
 		if (expression.getTag() == SourceTry)
 			return tryValue(expression, target, false);
 		if (expression.getTag() == SourceGroup || expression.getTag() == Block)

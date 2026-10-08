@@ -4,6 +4,12 @@
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14DiscardedControlTest
+--interp
+--next
+-cp packages/hxhx-core/src
 -cp test
 -main M14ControlAssignmentTest
 --interp
