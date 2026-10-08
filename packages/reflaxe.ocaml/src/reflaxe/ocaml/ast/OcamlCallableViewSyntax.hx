@@ -1,6 +1,6 @@
 package reflaxe.ocaml.ast;
 
-import reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind;
+import reflaxe.ocaml.lowered.OcamlCallableOriginKind;
 
 /**
 	Constructs a typed invocation together with its originating function identity.

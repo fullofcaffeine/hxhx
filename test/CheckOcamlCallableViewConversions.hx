@@ -34,7 +34,7 @@ class CheckOcamlCallableViewConversions {
 			case _: throw "missing stored callback fixture";
 		};
 		final body = owner.statics.get().filter(field -> field.name == "main")[0].expr();
-		var selected:Null<reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind> = null;
+		var selected:Null<reflaxe.ocaml.lowered.OcamlCallableOriginKind> = null;
 		function visit(expression:TypedExpr):Void {
 			switch (expression.expr) {
 				case TVar(local, value) if (local.name == localName && value != null):

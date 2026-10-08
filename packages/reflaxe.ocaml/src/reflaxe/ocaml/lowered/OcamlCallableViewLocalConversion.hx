@@ -3,7 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.macro.Type.TypedExpr;
-import reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind;
+import reflaxe.ocaml.lowered.OcamlCallableOriginKind;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.validate;

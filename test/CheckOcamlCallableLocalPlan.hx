@@ -25,7 +25,7 @@ class CheckOcamlCallableLocalPlan {
 	#if macro
 	/** The first stored view owns an actual source producer, not an invented input local. */
 	public static function selectOrigin(body:TypedExpr, localName:String):{
-		kind:reflaxe.ocaml.lowered.OcamlCallableOrigin.OcamlCallableOriginKind,
+		kind:reflaxe.ocaml.lowered.OcamlCallableOriginKind,
 		conversion:OcamlGenericValueConversion
 	} {
 		var selected:Null<{local:TVar, expression:TypedExpr}> = null;
