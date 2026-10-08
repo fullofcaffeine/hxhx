@@ -199,12 +199,18 @@ for (const instanceCall of instanceCalls) {
 	}
 }
 
-if (!/let counter = let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+ in let read = fun \(\) -> \(counter : counter_t\)\.value/.test(source)) {
+if (!/let counter = let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+ in let read = let __callback_input_\d+ = fun \(\) -> \(counter : counter_t\)\.value/.test(source)) {
 	fail('the immutable captured Counter local did not retain its sealed nominal carrier inside the closure')
 }
-if (!/let reassignedCapturedLocalCase = fun \(\) -> ignore \(\([\s\S]*let counter = ref \(let __call_arg_0_\d+ = 10 in counter_create __call_arg_0_\d+\) in let read = fun \(\) -> \(!counter : counter_t\)\.value/.test(source)
+if (!/let reassignedCapturedLocalCase = fun \(\) -> ignore \(\([\s\S]*let counter = ref \(let __call_arg_0_\d+ = 10 in counter_create __call_arg_0_\d+\) in let read = let __callback_input_\d+ = fun \(\) -> \(!counter : counter_t\)\.value/.test(source)
 	|| !/let __assign_\d+ = let __call_arg_0_\d+ = 11 in counter_create __call_arg_0_\d+ in \([\s\S]*counter := __assign_\d+/.test(source)) {
 	fail('the captured-and-reassigned Counter local did not use one typed nominal ref cell')
+}
+for (const name of ['capturedLocalCase', 'reassignedCapturedLocalCase', 'excludedCarrierBoundaries']) {
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${name}|`))
+	const body = source.match(new RegExp(`\\nlet ${name} = ([\\s\\S]*?)(?=\\nlet |$)`))?.[1]
+	if (entries.length !== 1 || body == null || !/in Stdlib\.fst __call_callee_\d+ \(\)/.test(body))
+		fail(`${name} must retain one callback view and invoke its captured Counter reader`)
 }
 const reassignedStart = source.indexOf('let reassignedCapturedLocalCase')
 const reassignedEnd = source.indexOf('\nlet branchEarlyReturnCase', reassignedStart)
@@ -231,7 +237,7 @@ if (!/HxRuntime\.Hx_return \(Obj\.repr \(Obj\.magic \(HxRuntime\.hx_null\)\)\)/.
 	fail('the null-to-nominal return did not recover its Haxe-typed result through the private function boundary')
 }
 if (!/let ordinary = Obj\.magic \(let __call_arg_0_\d+ = 13 in counter_create __call_arg_0_\d+\)/.test(source)
-	|| !/let called = ref \(Obj\.magic \(let __call_arg_0_\d+ = 14 in counter_create __call_arg_0_\d+\)\) in let read = fun \(\) -> \(Obj\.magic \(!called\) : counter_t\)\.value/.test(source)
+	|| !/let called = ref \(Obj\.magic \(let __call_arg_0_\d+ = 14 in counter_create __call_arg_0_\d+\)\) in let read = let __callback_input_\d+ = fun \(\) -> \(Obj\.magic \(!called\) : counter_t\)\.value/.test(source)
 	|| !/let __assign_\d+ = Obj\.magic \(makeCounter \(\)\) in \([\s\S]*called := __assign_\d+/.test(source)) {
 	fail('ordinary mutable or call-produced captured Counter boundaries were admitted without their own typed proof')
 }
@@ -275,6 +281,7 @@ for (const fragment of forbiddenSource) {
 }
 NODE
 
+inspector_dir="$(mktemp -d)"
 first_report="$(mktemp)"
 inspection_report="$(mktemp)"
 invalid_inspection_log="$(mktemp)"
@@ -295,7 +302,7 @@ missing_constructor_boundary_log="$(mktemp)"
 missing_constructor_boundary_output="out-missing-constructor-boundary-$$"
 invalid_constructor_identity_log="$(mktemp)"
 invalid_constructor_identity_output="out-invalid-constructor-identity-$$"
-trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_control_nominal_log" "$invalid_captured_storage_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_control_nominal_output" "$invalid_captured_storage_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
+trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_control_nominal_log" "$invalid_captured_storage_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$inspector_dir" "$invalid_output" "$invalid_control_nominal_output" "$invalid_captured_storage_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
 
 cp "$report_file" "$first_report"
 haxe build.hxml -D ocaml_build=native
@@ -306,11 +313,14 @@ fi
 
 repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
+# Build once, then inspect each original or corrupted report in a fresh process.
+haxe -cp "$repo_root/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$inspector_dir/inspect.n"
 (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output out --require-lowering --json
 ) >"$inspection_report"
 node - "$inspection_report" <<'NODE'
@@ -349,9 +359,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_output" --require-lowering --json
 ) >"$invalid_inspection_log" 2>&1; then
 	echo "The external inspector accepted a nominal class carrier with a corrupted target type" >&2
@@ -380,9 +388,7 @@ haxe -cp "$repo_root/scripts/ci" -cp "$repo_root/packages/reflaxe.ocaml/src" --r
 	"$invalid_control_nominal_output/ocaml_lowering_report.json"
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_control_nominal_output" --require-lowering --json
 ) >"$invalid_control_nominal_log" 2>&1; then
 	echo "The external inspector accepted an early return bound to a stale class layout" >&2
@@ -413,9 +419,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_captured_storage_output" --require-lowering --json
 ) >"$invalid_captured_storage_log" 2>&1; then
 	echo "The external inspector accepted a captured nominal class carrier without shared-cell ownership" >&2
@@ -442,9 +446,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_receiver_output" --require-lowering --json
 ) >"$invalid_receiver_log" 2>&1; then
 	echo "The external inspector accepted a field plan with a missing nominal receiver decision" >&2
@@ -475,9 +477,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_call_receiver_output" --require-lowering --json
 ) >"$invalid_call_receiver_log" 2>&1; then
 	echo "The external inspector accepted a call with a corrupted nominal receiver" >&2
@@ -505,9 +505,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_call_schedule_output" --require-lowering --json
 ) >"$invalid_call_schedule_log" 2>&1; then
 	echo "The external inspector accepted arguments evaluated before the instance receiver" >&2
@@ -537,9 +535,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_constructor_result_output" --require-lowering --json
 ) >"$invalid_constructor_result_log" 2>&1; then
 	echo "The external inspector accepted a constructor with a primitive result" >&2
@@ -567,9 +563,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$missing_constructor_boundary_output" --require-lowering --json
 ) >"$missing_constructor_boundary_log" 2>&1; then
 	echo "The external inspector accepted constructor calls without their definition boundary" >&2
@@ -596,9 +590,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
 	cd "$repo_root"
-	haxe -cp packages/reflaxe.ocaml/src \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output "$invalid_constructor_identity_output" --require-lowering --json
 ) >"$invalid_constructor_identity_log" 2>&1; then
 	echo "The external inspector accepted a constructor boundary with the wrong source field" >&2
