@@ -15,6 +15,7 @@ fi
 
 node - "$report_file" "$main_source" <<'NODE'
 const fs = require('fs')
+const assert = require('node:assert/strict')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const source = fs.readFileSync(process.argv[3], 'utf8')
 // Local callbacks now carry a separate identity. Factory results remain raw
@@ -29,6 +30,32 @@ for (const [name, view] of [['closureCase', true], ['methodValueCase', true], ['
 	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${name}|`))
 	if (entries.length !== (view ? 1 : 0))
 		throw new Error(`${name} has unexpected callback storage evidence`)
+	const calls = report.calls.filter(call => call.kind === 'typed-function-value'
+		&& call.functionId.includes(`|function|${name}|`))
+	assert.equal(calls.length, 1, `${name} must retain exactly one computed invocation`)
+	const call = calls[0]
+	assert.equal(call.proofId, view ? 'typed-callable-view-invocation-v1'
+		: 'typed-function-value-signature-matrix-v1:(Int)->Int')
+	if (view) {
+		const invocation = call.callbackInvocation
+		const storage = entries[0].decision
+		assert.equal(invocation?.input.kind, 'existing-view')
+		assert.deepEqual(invocation.input.reference, storage.output)
+		assert.deepEqual(invocation.layout, {
+			shape: storage.adapter.output,
+			revision: storage.adapter.outputRevision,
+			semanticTypeId: storage.output.semanticTypeId,
+			carrierTypeId: `callable-view<${storage.output.semanticTypeId}>`
+		})
+		assert.equal(storage.output.semanticTypeId, '(Int)->Int')
+		for (const key of ['functionId', 'programRevision', 'bodyRevision', 'pipelineRevision'])
+			assert.equal(storage.binding[key], call[key], `${name} lost its containing body`)
+		assert.deepEqual(invocation.source, {
+			file: call.source.file, min: call.source.min, max: call.source.min + 'callback'.length
+		})
+	} else {
+		assert.equal(call.callbackInvocation, null, `${name} must retain its raw factory result`)
+	}
 }
 if (report.schemaVersion !== 94 || report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	throw new Error('expected the function-value-aware typed-call report schema')
@@ -46,8 +73,7 @@ for (const call of calls) {
 		|| call.result?.outputSemanticTypeId !== 'Int'
 		|| call.sourceModuleId !== ''
 		|| call.sourceTypeName !== ''
-		|| call.sourceFieldName !== ''
-		|| call.proofId !== 'typed-function-value-signature-matrix-v1:(Int)->Int') {
+		|| call.sourceFieldName !== '') {
 		throw new Error(`call ${call.id} did not preserve the exact Int -> Int contract`)
 	}
 	const kinds = (call.evaluationSchedule ?? []).map(step => step.kind)
