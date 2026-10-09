@@ -871,12 +871,17 @@ NODE
 repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
-trap 'rm -f "$inspection_report"' EXIT
+inspector_dir="$(mktemp -d)"
+trap 'rm -f "$inspection_report"; rm -rf "$inspector_dir"' EXIT
+# Compile the public inspector for Neko so report hashing uses its native
+# SHA-256 primitive. The fresh process still validates the complete artifact.
 (
 	cd "$repo_root"
 	haxe -cp packages/reflaxe.ocaml/src \
 		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		--neko "$inspector_dir/inspect.n"
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output out --require-lowering --json
 ) >"$inspection_report"
 node - "$inspection_report" <<'NODE'
@@ -922,7 +927,7 @@ if (voidCalls.length !== 2
 NODE
 
 oracle_output="$(mktemp)"
-trap 'rm -f "$inspection_report" "$oracle_output"' EXIT
+trap 'rm -f "$inspection_report" "$oracle_output"; rm -rf "$inspector_dir"' EXIT
 haxe -cp src --main Main --interp >"$oracle_output"
 diff -u expected.stdout "$oracle_output"
 
