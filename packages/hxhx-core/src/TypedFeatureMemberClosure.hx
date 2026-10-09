@@ -94,6 +94,13 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 		final identity = target == null ? null : target.getDeclarationIdentity();
 		if (identity != null)
 			retainNominal(identity);
+		final construction = node.getConstructorApplication();
+		if (node.getTag() == NewValue && construction != null) {
+			// An inherited constructor belongs to its parent. The allocated child
+			// still owns its runtime class and override implementations.
+			construction.assertResult(node.getType());
+			retainNominal(construction.getConstructedType().getNominalIdentity());
+		}
 		final declaration = node.getDeclaration();
 		if (declaration != null) {
 			final fn = declarations.get(declaration);

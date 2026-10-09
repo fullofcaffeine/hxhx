@@ -4,6 +4,7 @@ import sys.io.File;
 /** Dynamic replacement and bound receiver values must retain exact method contributions and runtime behavior. */
 class M14TypedFeatureDynamicTest {
 	static function main():Void {
+		check("FeatureInheritedAllocation", "child:on\nchild\n");
 		check("FeatureRecordCallback", "callback:on\nreceiver:on\ntrue\ntrue\ntrue\n");
 		check("FeatureBoundEmptyObject", "true\nobject\ntext\n");
 		check("FeatureBoundOptional", "1\nfirst\n2\nsecond\n1\nthird\ntrue\n7\nfalse\n9\n");

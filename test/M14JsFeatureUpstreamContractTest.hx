@@ -138,6 +138,7 @@ class M14JsFeatureUpstreamContractTest {
 			], output);
 			check("FeatureReferences", mode, ["hidden:on", "leaf:on", "callback:on", "true"], output);
 			check("FeatureRecordCallback", mode, ["callback:on", "receiver:on", "true", "true", "true"], output);
+			check("FeatureInheritedAllocation", mode, ["child:on", "child"], output);
 			check("FeatureRetention", mode, [
 				"init:on",
 				"kept:on",
