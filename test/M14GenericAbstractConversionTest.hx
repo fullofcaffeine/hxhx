@@ -12,7 +12,7 @@ class M14GenericAbstractConversionTest {
 		final upstream = @:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
 		require(StringTools.trim(upstream) == expected, "upstream generic conversion output changed");
 		final path = fixture + "/Main.hx";
-		final program = @:privateAccess M14PromotionPluginBuiltinEquivalenceIntegrationTest.makeProgram(sys.io.File.getContent(path), path);
+		final program = JsSourceProgramFixture.build({sources: [{path: "Main.hx", source: sys.io.File.getContent(path)}], requiredModules: ["Array"]});
 		final output = ".tmp/generic_abstract_conversion_" + Date.now().getTime();
 		final script = @:privateAccess M14PromotionPluginBuiltinEquivalenceIntegrationTest.emitWithBackend(new backend.js.JsBackend(), program, output);
 		final actual = @:privateAccess M14PromotionPluginBuiltinEquivalenceIntegrationTest.runNodeScript(script);

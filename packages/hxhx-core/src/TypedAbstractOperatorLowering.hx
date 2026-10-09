@@ -4,7 +4,7 @@
 	Unary lowering runs first so binary helper bodies already contain explicit
 	unary calls and mutation schedules. Binary lowering then resolves exact calls,
 	commutative order, and compound places. Required inline lowering then expands
-	static extern bodies and abstract methods that write directly to caller storage. Keeping this orchestration tiny avoids
+	extern inline bodies and abstract methods that write directly to caller storage. Keeping this orchestration tiny avoids
 	turning either semantic pass into a compiler-wide target IR.
 **/
 class TypedAbstractOperatorLowering {

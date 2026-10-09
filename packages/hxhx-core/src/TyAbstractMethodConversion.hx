@@ -12,11 +12,13 @@ class TyAbstractMethodConversion {
 	final declaration:TyDeclarationInfo;
 	final actual:TyType;
 	final callable:TyType;
+	final index:TyperIndex;
 
-	function new(declaration:TyDeclarationInfo, actual:TyType, callable:TyType) {
+	function new(declaration:TyDeclarationInfo, actual:TyType, callable:TyType, index:TyperIndex) {
 		this.declaration = declaration;
 		this.actual = actual;
 		this.callable = callable;
+		this.index = index;
 	}
 
 	public function getDeclaration():TyDeclarationInfo
@@ -33,12 +35,18 @@ class TyAbstractMethodConversion {
 		if (expression.getType().getSemanticKey() != actual.getSemanticKey())
 			throw "abstract method conversion received a different source type";
 		final position = expression.getPosition();
+		// Conversion selection already solved the callable. Publish its exact
+		// argument proof so inline expansion never has to guess generic inputs.
+		final values = declaration.getIsStatic() ? [expression] : [];
+		final binding = new TypedNamedCallBinding(declaration, null,
+			TyCallbackArgumentContext.publish(TyCallableSignature.fromFunctionValue(callable), values.map(TypedSourceSyntax.expression),
+				values.map(value -> value.getType()), index));
 		if (!declaration.getIsStatic()) {
 			final receiver = TypedExpr.instanceMethodRead(expression, declaration.getSignature().getName(), declaration, callable, position);
-			return TypedExpr.call(receiver, [], declaration, getResultType(), position);
+			return TypedExpr.call(receiver, [], declaration, getResultType(), position).withNamedArguments(binding);
 		}
 		final callee = TypedExpr.staticMethodRead(declaration.getSignature().getName(), declaration, callable, position, true);
-		return TypedExpr.call(callee, [expression], declaration, getResultType(), position, true);
+		return TypedExpr.call(callee, [expression], declaration, getResultType(), position, true).withNamedArguments(binding);
 	}
 
 	/** Select an already concrete conversion without borrowing any caller inference variables. */
@@ -148,7 +156,7 @@ class TyAbstractMethodConversion {
 			if (!valid)
 				continue;
 			final callable = candidate.requireSolved(applied(signature));
-			final plan = new TyAbstractMethodConversion(declaration, candidate.requireSolved(actual), callable);
+			final plan = new TyAbstractMethodConversion(declaration, candidate.requireSolved(actual), callable, index);
 			solver.commit(candidate);
 			return plan;
 		}

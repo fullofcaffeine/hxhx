@@ -37,7 +37,8 @@ function fieldType(index:TyperIndex, field:TyFieldInfo, receiver:TyType):TyType 
 	return owner == null ? effective : applyType(index, owner, receiver, effective);
 }
 
-private function receiverBindings(index:TyperIndex, owner:TyNominalInfo, receiver:TyType):Null<haxe.ds.StringMap<TyType>> {
+/** Shared signature checking and inline expansion use the same declaring-owner view of an applied receiver. */
+function receiverBindings(index:TyperIndex, owner:TyNominalInfo, receiver:TyType):Null<haxe.ds.StringMap<TyType>> {
 	final parameters = parameterIds(owner);
 	if (receiver == null || parameters.length == 0)
 		return null;

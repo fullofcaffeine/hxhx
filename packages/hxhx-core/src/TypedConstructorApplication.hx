@@ -59,11 +59,13 @@ class TypedConstructorApplication {
 			for (index in 0...parameters.length)
 				{parameter: parameters[index], argument: arguments[index]}
 		];
+		// Selection and publication consume the same checked body inputs. The
+		// original declaration header remains the immutable identity for retention.
+		final signature = operands == null ? declaration.getSignature() : operands.index.getMethodBodyResults().signature(declaration);
 		this.parameterTypes = [
-			for (type in declaration.getSignature().getArgs())
+			for (type in signature.getArgs())
 				TyTypeSubstitution.apply(type, bindings)
 		];
-		final signature = declaration.getSignature();
 		callableSignature = TyCallableSignature.fromDeclaration(declaration,
 			new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames(), parameterTypes, signature.getArgOptional(),
 				signature.getArgRest(), TyTypeSubstitution.apply(signature.getReturnType(), bindings), signature.getPos()));
@@ -88,6 +90,38 @@ class TypedConstructorApplication {
 
 	public function getConstructedType():TyType
 		return constructedType;
+
+	/**
+		Instantiate a construction inside an inline body without selecting a different
+		constructor or argument layout. Revalidate the exact declaration and ancestry
+		against the index, then require the resulting proof to equal substitution of
+		the original proof. Multi-type factory reselection needs a separate contract.
+	 */
+	public function specialize(index:TyperIndex, bindings:haxe.ds.StringMap<TyType>, original:Array<TypedExpr>,
+			rewritten:Array<TypedExpr>):TypedConstructorApplication {
+		if (multiType != null)
+			throw "inline multi-type construction requires retained factory specialization";
+		final oldKinds = TypedExpr.operandKinds(original);
+		final expected = requireArgumentBinding(TypedExpr.operandTypes(original, oldKinds), oldKinds).substituteTypes(bindings);
+		final applied = TyTypeSubstitution.apply(constructedType, bindings);
+		final path = TypedConstructorPath.select(index, applied);
+		if (path == null
+			|| !path.getOwner().getIdentity().equals(declaration.getOwner())
+			|| path.getOwnerType().getSemanticKey() != TyTypeSubstitution.apply(ownerType, bindings).getSemanticKey()
+			|| CompilerCacheIdentity.encode([for (type in path.getForwardedTypes()) type.getSemanticKey()]) != CompilerCacheIdentity.encode([
+				for (type in forwardedTypes)
+					TyTypeSubstitution.apply(type, bindings).getSemanticKey()
+			]))
+			throw "inline construction changed its declaring owner or initializer path";
+		final kinds = TypedExpr.operandKinds(rewritten);
+		final types = TypedExpr.operandTypes(rewritten, kinds);
+		final result = new TypedConstructorApplication(path.getOwner(), declaration, applied,
+			{index: index, arguments: rewritten.map(TypedSourceSyntax.expression), types: types}, path);
+		if (result.getMultiTypeConstruction() != null
+			|| result.requireArgumentBinding(types, kinds).getSemanticKey() != expected.getSemanticKey())
+			throw "inline construction changed its checked argument mapping";
+		return result;
+	}
 
 	/** Constructor parameter binders belong to this applied ancestor, not necessarily the allocated child. */
 	public function getOwnerType():TyType

@@ -7,6 +7,7 @@ class TypedNamedCallBinding {
 
 	@:allow(TypedNamedCallPlan)
 	@:allow(TypedMultiTypeConstruction)
+	@:allow(TyAbstractMethodConversion)
 	function new(declaration:TyDeclarationInfo, extensionProvider:Null<TyNominalTypeId>, arguments:TyCallArgumentBinding) {
 		this.declaration = declaration;
 		this.extensionProvider = extensionProvider;

@@ -84,6 +84,18 @@ class TyDeclarationInfo {
 	public function getIsInline():Bool
 		return isInline;
 
+	/** Member-level extern authority; an enclosing extern class is a separate owner fact. */
+	public function getIsExtern():Bool {
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			if (clean == "extern")
+				return true;
+		}
+		return false;
+	}
+
 	/** Whether Haxe permits the method implementation to be replaced per instance. **/
 	public function getIsDynamic():Bool {
 		for (entry in metadata) {

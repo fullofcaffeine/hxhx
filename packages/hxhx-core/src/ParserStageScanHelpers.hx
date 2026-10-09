@@ -1772,7 +1772,10 @@ class ParserStageScanHelpers {
 				case "dynamic":
 					noteDeclarationStart(t.startPos);
 					sawDynamic = true;
-				case "extern" | "override":
+				case "extern":
+					noteDeclarationStart(t.startPos);
+					pendingMetadata.push("extern");
+				case "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 					noteDeclarationStart(t.startPos);
 				case "var" | "final":

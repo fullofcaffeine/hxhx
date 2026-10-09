@@ -4470,9 +4470,12 @@ class HxParser {
 									metadata.push("dynamic");
 									bump();
 									keep = true;
-								case TIdent(name) if (name == "extern" || name == "override"):
-									// These context-sensitive modifiers are accepted at class-member scope but
-									// are not modeled in the current bring-up AST.
+								case TIdent(name) if (name == "extern"):
+									// A member-level extern inline body must expand even on an ordinary class.
+									metadata.push("extern");
+									bump();
+									keep = true;
+								case TIdent(name) if (name == "override"):
 									bump();
 									keep = true;
 								case TIdent(name) if (name == "overload"):

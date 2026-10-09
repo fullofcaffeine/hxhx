@@ -1,7 +1,8 @@
 /**
 	Select the nearest declared constructor and retain its applied owner facts.
 
-	Owner arguments specialize the candidate signature before ordinary call scoring.
+	Checked body inputs and owner arguments specialize the candidate signature before
+	ordinary call scoring, just as they do for an ordinary instance method.
 	The application retains the original declaration, so specialization cannot
 	invent a new constructor identity. Missing providers and tied or
 	inapplicable candidates remain unresolved for a later diagnostic/publication boundary.
@@ -27,7 +28,6 @@ function select(index:TyperIndex, constructed:TyType, arguments:Array<TyType>, s
 	}
 	if (parameters.length != appliedOwner.getTypeArguments().length)
 		return null;
-	final substitutions = TyTypeSubstitution.bind(parameters, appliedOwner.getTypeArguments(), identity.getCanonicalName());
 	var bestScore = -1;
 	final selectedGroups = new Array<TyDeclarationInfo>();
 	var best:Null<TyDeclarationInfo> = null;
@@ -36,11 +36,7 @@ function select(index:TyperIndex, constructed:TyType, arguments:Array<TyType>, s
 		final declaration = owner.declarationForSignature(signature);
 		if (declaration == null || declaration.getIsStatic() || !declaration.getOwner().equals(identity))
 			continue;
-		final applied = new TyFunSig(signature.getName(), false, signature.getArgNames(), [
-			for (argument in signature.getArgs())
-				TyTypeSubstitution.apply(argument, substitutions)
-		],
-			signature.getArgOptional(), signature.getArgRest(), TyTypeSubstitution.apply(signature.getReturnType(), substitutions), signature.getPos());
+		final applied = TyNominalApplication.signature(index, owner, appliedOwner, signature);
 		final alignment = TyCallbackArgumentContext.align(TyCallableSignature.fromDeclaration(declaration, applied), sources, arguments, index);
 		final ranked = new Array<TyType>();
 		switch alignment {

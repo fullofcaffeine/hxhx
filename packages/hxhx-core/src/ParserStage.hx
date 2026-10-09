@@ -276,6 +276,6 @@ class ParserStage {
 		compiler process now has exactly one parser.
 	**/
 	public static function cacheConfigurationRevision():String {
-		return "hxhx-parser-schema-v10|frontend=haxe";
+		return "hxhx-parser-schema-v11|frontend=haxe";
 	}
 }

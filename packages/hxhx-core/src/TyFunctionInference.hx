@@ -630,8 +630,11 @@ class TyFunctionInference {
 			final declaration = input.provider.declarationForSignature(signature);
 			if (declaration == null || declaration.getIsStatic() || !declaration.getOwner().equals(input.provider.getIdentity()))
 				continue;
+			// Omitted constructor annotations can still expose owner binders through
+			// checked field assignments. Use those facts before solving the allocation.
+			final checkedSignature = input.index.getMethodBodyResults().signature(declaration);
 			final candidate = fork();
-			if (!candidate.constrainMember(input.expression, input.provider, signature, input.argumentTypes, input.environment, input.index))
+			if (!candidate.constrainMember(input.expression, input.provider, checkedSignature, input.argumentTypes, input.environment, input.index))
 				continue;
 			final applied = TyNominalApplication.signature(input.index, input.provider, candidate.solver.preview(term), signature);
 			final score = input.score(applied, TyMethodGenericBinding.inferableTypeParameters(declaration));
