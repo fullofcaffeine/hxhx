@@ -658,13 +658,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (Context.defined("reflaxe_ocaml_shared_program_report")) {
 			sharedTargetDeclarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes("stock-haxe-filter-types", moduleTypes);
 			final sharedFieldCount = HaxeOcamlTargetFieldInitializerAdapter.captureModuleTypes(moduleTypes, targetFieldInitializerCatalog);
-			final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
 			profileLogLine("reflaxe.ocaml: shared_target_fields count=" + Std.string(sharedFieldCount));
-			profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
 		} else {
 			targetFieldInitializerCatalog.beginRequest();
-			targetFunctionCatalog.beginRequest();
 		}
+		// Admitted bodies use the shared lowerer during ordinary compilation too.
+		// The optional whole-program comparison report must not select semantics.
+		final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
+		profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
 		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
@@ -2856,8 +2857,27 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case _: f.expr.t;
 					};
 					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-					final builtMethod = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
-						preserveInstanceSignature);
+					final sharedMethod = targetFunctionCatalog.find(f.id);
+					#if macro
+					if (Context.definedValue("reflaxe_ocaml_target_function_test_require_shared") == classType.module
+						+ "|"
+						+ classType.name
+						+ "::"
+						+ f.field.name && sharedMethod == null)
+						Context.error("reflaxe.ocaml: required instance method did not enter the shared target route", f.field.pos);
+					#end
+					final builtMethod:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedMethod == null) {
+						builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
+							preserveInstanceSignature);
+					} else {
+						if (sharedMethod.role != InstanceMethod || !HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedMethod))
+							throw 'reflaxe.ocaml: shared instance method "${f.id}" lost its role or preprocessor envelope';
+						{
+							expression: ctx.lowerSharedTargetFunction(sharedMethod),
+							signature: signatureFromTypes(argInfo.map(argument -> ocamlTypeExprFromHaxeType(argument.t)),
+								ocamlTypeExprFromHaxeType(methodReturnType))
+						};
+					};
 					// Instance calls pass the selected record before the source arguments.
 					// Keep the builder's unit parameter for a zero-argument Haxe method.
 					if (preserveInstanceSignature && builtMethod.signature != null)

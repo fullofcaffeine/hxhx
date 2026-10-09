@@ -5,7 +5,7 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
 
 /**
-	Copies static functions with exact primitive parameters and results.
+	Copies static functions and instance-method bodies with exact value types.
 
 	The body may contain the same locals, reads, and lexical blocks as the stock
 	Haxe adapter. Missing or unsupported facts reject the whole function; this
@@ -22,7 +22,7 @@ class HxhxOcamlTargetFunctionAdapter {
 			return null;
 		final signature = declaration.getSignature();
 		final returnType = signature.getReturnType().getCanonicalDisplay();
-		if (!signature.getIsStatic()
+		if (signature.getName() == "new"
 			|| !OcamlTargetFunctionFact.admitsResult(returnType)
 			|| declaration.getTypeParameterIds().length != 0
 			|| fn.getDefaults().length != 0)
@@ -38,7 +38,7 @@ class HxhxOcamlTargetFunctionAdapter {
 			moduleId: owner.getModulePath(),
 			sourceTypeName: owner.getShortName(),
 			sourceFunctionName: signature.getName(),
-			role: OcamlTargetFunctionRole.StaticFunction,
+			role: signature.getIsStatic() ? OcamlTargetFunctionRole.StaticFunction : OcamlTargetFunctionRole.InstanceMethod,
 			argumentTypeDisplays: argumentTypes,
 			returnTypeDisplay: returnType
 		};

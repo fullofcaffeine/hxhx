@@ -10,7 +10,13 @@ typedef OcamlTargetLoweredFunction = {
 	final runtimeRequirements:Array<OcamlRuntimeRequirement>;
 }
 
-/** Lowers the first complete shared-target function family into OCaml syntax. **/
+/**
+	Lowers admitted source arguments and bodies into OCaml function syntax.
+
+	Instance-method output has only the source arguments. The class emitter must
+	prepend its existing receiver parameter and preserve its record layout and dispatch.
+	This lowerer does not construct objects or bind method values to receivers.
+**/
 class OcamlTargetFunctionLowerer {
 	public static function lower(fact:OcamlTargetFunctionFact, profile:String, ?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetLoweredFunction {
 		if (fact == null)

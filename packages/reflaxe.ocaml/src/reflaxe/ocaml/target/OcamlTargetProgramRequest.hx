@@ -161,6 +161,8 @@ class OcamlTargetProgramRequest {
 			}
 		for (declaration in mainClass.copyMethods()) {
 			final fn = functionsByName.get(declaration.name);
+			if (fn == null)
+				throw 'OCaml target program revision 1 cannot lower function "${declaration.name}"';
 			if (!declaration.isStatic
 				|| declaration.copyTypeParameters().length != 0
 				|| !declaration.hasBody
@@ -168,7 +170,7 @@ class OcamlTargetProgramRequest {
 				|| declaration.isDynamic
 				|| declaration.isEnumConstructor
 				|| declaration.noImportGlobal
-				|| fn == null)
+				|| fn.role != StaticFunction)
 				throw 'OCaml target program revision 1 cannot lower function "${declaration.name}"';
 			final arguments = declaration.copyArguments();
 			final parameters = fn.copyParameters();

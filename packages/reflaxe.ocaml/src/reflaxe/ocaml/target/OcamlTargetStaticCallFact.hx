@@ -63,7 +63,8 @@ class OcamlTargetStaticCallFact {
 
 	/** The referenced declaration must have the exact represented call signature. **/
 	public function matchesFunction(fn:OcamlTargetFunctionFact):Bool {
-		if (!belongsTo(fn.moduleId, fn.sourceTypeName)
+		if (fn.role != StaticFunction
+			|| !belongsTo(fn.moduleId, fn.sourceTypeName)
 			|| sourceFunctionName != fn.sourceFunctionName
 			|| returnTypeDisplay != fn.returnTypeDisplay)
 			return false;

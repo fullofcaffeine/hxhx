@@ -5,6 +5,7 @@ import haxe.crypto.Sha256;
 /** Function roles admitted by the first shared-target function contract. **/
 enum OcamlTargetFunctionRole {
 	StaticFunction;
+	InstanceMethod;
 }
 
 /** Named source signature copied without host compiler object identity. **/
@@ -21,10 +22,12 @@ typedef OcamlTargetFunctionSignature = {
 	One immutable function copied independently from either compiler host.
 
 	Primitive and nullable Int parameters and terminal returns cross this boundary with
-	ordered binding identities. Receiver state and captures remain unsupported.
+	ordered binding identities. An instance-method fact describes its source
+	parameters and body; the class owner supplies the receiver argument and layout.
+	Receiver reads, construction and captures remain outside this body contract.
 **/
 class OcamlTargetFunctionFact {
-	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-function-v2";
+	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-function-v3";
 
 	public final moduleId:String;
 	public final sourceTypeName:String;
@@ -59,8 +62,7 @@ class OcamlTargetFunctionFact {
 			throw "OCaml target function requires every ordered parameter binding";
 		this.parameters = parameters.copy();
 		targetIdentity = identityFor(signature);
-		if (role != StaticFunction
-			|| !admitsResult(returnTypeDisplay)
+		if (!admitsResult(returnTypeDisplay)
 			|| body.path != OcamlTargetExpressionPath.ROOT
 			|| body.kind != BlockStatement
 			|| !body.admitsFunctionResult(returnTypeDisplay))
@@ -128,6 +130,7 @@ class OcamlTargetFunctionFact {
 	static function roleName(role:OcamlTargetFunctionRole):String {
 		return switch (role) {
 			case StaticFunction: "StaticFunction";
+			case InstanceMethod: "InstanceMethod";
 		};
 	}
 

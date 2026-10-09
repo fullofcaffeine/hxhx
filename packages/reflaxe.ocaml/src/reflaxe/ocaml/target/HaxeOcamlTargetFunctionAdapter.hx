@@ -48,7 +48,7 @@ class HaxeOcamlTargetFunctionAdapter {
 
 	public static function fromSourceBeforePreprocessing(data:ClassFuncData):Null<OcamlTargetFunctionFact> {
 		final body = data == null ? null : data.expr;
-		if (data == null || body == null || !data.isStatic || data.field.params.length != 0)
+		if (data == null || body == null || data.field.name == "new" || data.field.params.length != 0)
 			return null;
 		final returnType = TypeTools.toString(data.ret);
 		if (!OcamlTargetFunctionFact.admitsResult(returnType))
@@ -64,7 +64,7 @@ class HaxeOcamlTargetFunctionAdapter {
 			moduleId: data.classType.module,
 			sourceTypeName: data.classType.name,
 			sourceFunctionName: data.field.name,
-			role: OcamlTargetFunctionRole.StaticFunction,
+			role: data.isStatic ? OcamlTargetFunctionRole.StaticFunction : OcamlTargetFunctionRole.InstanceMethod,
 			argumentTypeDisplays: argumentTypes,
 			returnTypeDisplay: returnType
 		};
