@@ -23,13 +23,15 @@ class M14CppManagedStringConcatTest {
 		rejects(() -> {
 			backend.cpp.CppManagedStringConcat.resultType(integer, integer);
 		}, "exact String operand");
-		for (name in ["Float", "Dynamic", "Rendered"])
+		for (name in ["Float", "Rendered"])
 			rejects(() -> {
 				backend.cpp.CppManagedStringConcat.resultType(text, TyType.fromHintText(name));
 			}, "supported exact value formatting contract");
 
 		if (backend.cpp.CppManagedStringConcat.resultType(text, TyType.fromHintText("Null<Int>")).getSemanticKey() != "primitive:String")
 			throw "existing nullable integer formatting lost its String result";
+		if (backend.cpp.CppManagedStringConcat.resultType(text, TyType.fromHintText("Dynamic")).getSemanticKey() != "primitive:String")
+			throw "runtime-tagged concatenation lost its String result";
 
 		final expected = sys.io.File.getContent("test/oracle/managed_string_concat_seed/expected.stdout");
 		final upstream = new sys.io.Process("haxe", ["-cp", "test/oracle/managed_string_concat_seed/src", "-main", "Main", "--interp"]);
@@ -49,7 +51,7 @@ class M14CppManagedStringConcatTest {
 				throw "repeated String concatenation lowering changed control or local identities";
 		}
 		final context = new BackendContext(".tmp/managed-string-concat", null, "Main", true, true, fixture.defines);
-		final result = CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false), context);
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "String concatenation fixture requires a native executable";
 		for (i in 0...functions.length)
@@ -70,6 +72,7 @@ class M14CppManagedStringConcatTest {
 			marker: "MANAGED_STRING_NULL_NATIVE:PASS"
 		});
 		Sys.println("MANAGED_STRING_CONCAT_NATIVE:PASS");
+		M14CppDynamicStringConcatTest.run();
 	}
 
 	static function main():Void
