@@ -4602,8 +4602,8 @@ class HxParser {
 		  - `Unknown` placeholder.
 
 		How
-		- This is still not the full grammar: we skip non-class declarations and
-		  tolerate unsupported constructs inside class bodies by skipping to the
+		- Abstract headers retain metadata and binders; their bodies and enums still
+		  use declaration enrichment. Unsupported class constructs skip to the
 		  next likely boundary.
 	**/
 	public function parseModule(?expectedMainClass:String):HxModuleDecl {
@@ -4659,7 +4659,6 @@ class HxParser {
 			structured parser and do not enter this scanner boundary.
 		**/
 		function skipScannedTypeDeclaration():Void {
-			bump(); // `enum` or `abstract`
 			var bodyDepth = 0;
 			var parenDepth = 0;
 			var bracketDepth = 0;
@@ -4864,8 +4863,23 @@ class HxParser {
 				case TIdent("typedef"):
 					typedefs.push(new HxTypedefParser(this).declaration(moduleMemberVisibility, pendingTypeMetadata, typeIsExtern));
 					pendingTypeMetadata = [];
-				case TIdent("enum") | TIdent("abstract"):
+				case TIdent("abstract"):
+					// Preserve the authored header here. The temporary abstract scanner
+					// still supplies backing types and members, but cannot reconstruct
+					// metadata payloads or declaration-bound type parameter syntax.
+					final metadata = pendingTypeMetadata.copy();
 					pendingTypeMetadata = [];
+					metadata.push("__hxhx_abstract");
+					bump();
+					final name = readIdent("abstract name");
+					final parameters = new HxTypedefParser(this).parameters();
+					if (parameters.length > 0)
+						metadata.push("__hxhx_type_params=" + parameters.map(parameter -> parameter.name).join(","));
+					classes.push(new HxClassDecl(name, false, [], [], "", metadata, false, [], moduleMemberVisibility, [], typeIsExtern, null, parameters));
+					skipScannedTypeDeclaration();
+				case TIdent("enum"):
+					pendingTypeMetadata = [];
+					bump();
 					skipScannedTypeDeclaration();
 				case TKeyword(KFunction):
 					pendingTypeMetadata = [];
@@ -4899,6 +4913,12 @@ class HxParser {
 				}
 			}
 		}
+		if (chosen == null)
+			for (candidate in classes)
+				if (HxClassDecl.getMetadata(candidate).indexOf("__hxhx_abstract") < 0) {
+					chosen = candidate;
+					break;
+				}
 		if (chosen == null && classes.length > 0)
 			chosen = classes[0];
 		if (moduleFunctions.length > 0 || moduleFields.length > 0) {

@@ -216,7 +216,9 @@ class ParserStage {
 			}
 			for (c in abstractDecls) {
 				final nm = HxClassDecl.getName(c);
-				if (nm == expectedMainClass) {
+				// Prefer the parser-owned header, already enriched above, so selecting
+				// an abstract as the module entry cannot discard its metadata.
+				if (nm == expectedMainClass && mainName != expectedMainClass) {
 					main = c;
 					mainName = nm;
 					changed = true;
@@ -274,6 +276,6 @@ class ParserStage {
 		compiler process now has exactly one parser.
 	**/
 	public static function cacheConfigurationRevision():String {
-		return "hxhx-parser-schema-v9|frontend=haxe";
+		return "hxhx-parser-schema-v10|frontend=haxe";
 	}
 }
