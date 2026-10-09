@@ -2,6 +2,7 @@ import haxe.Json;
 import reflaxe.ocaml.reports.OcamlReportJson.encode;
 import reflaxe.ocaml.reports.OcamlReportJson.digest;
 import reflaxe.ocaml.reports.OcamlReportJson.render;
+import reflaxe.ocaml.reports.OcamlReportJson.hashBytes;
 
 /** Independent byte expectations for the report digest encoding on each host. */
 class ReportJsonFixture {
@@ -38,6 +39,15 @@ class ReportJsonFixture {
 			throw "Report encoding accepted a function.";
 		Sys.println(expected);
 		Sys.println(digest(Json.parse(expected)));
+		// Padding edges and every byte value are checked independently by Node.
+		final hashes = new Array<String>();
+		for (length in [0, 1, 55, 56, 63, 64, 65, 255, 256, 1025]) {
+			final bytes = haxe.io.Bytes.alloc(length);
+			for (index in 0...length)
+				bytes.set(index, index % 256);
+			hashes.push(hashBytes(bytes));
+		}
+		Sys.println(Json.stringify(hashes));
 		Sys.println("OCAML_REPORT_JSON:PASS");
 	}
 }

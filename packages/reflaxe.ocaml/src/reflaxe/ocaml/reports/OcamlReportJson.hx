@@ -50,7 +50,22 @@ function digest(value:Dynamic):String {
 
 /** Hashes already-encoded report material as UTF-8 bytes, never host string units. */
 function hashUtf8(value:String):String {
-	return Sha256.make(Bytes.ofString(value)).toHex();
+	return hashBytes(Bytes.ofString(value));
+}
+
+/**
+	Hashes exact bytes without changing the report or artifact digest contract.
+
+	Neko's interpreted SHA-256 is costly for large reports. Its standard SSL
+	primitive computes the same digest in native code. A missing primitive fails
+	validation; it never skips hashing or accepts an unchecked artifact.
+**/
+function hashBytes(value:Bytes):String {
+	#if neko
+	return sys.ssl.Digest.make(value, sys.ssl.DigestAlgorithm.SHA256).toHex();
+	#else
+	return Sha256.make(value).toHex();
+	#end
 }
 
 /** Validates host tags before the boundary casts; recursion is explicitly bounded. */

@@ -954,6 +954,11 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
 	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
 	--neko "$INSPECTOR_DIR/inspect.n"
+# Resealing validates the full artifact inventory too. Neko uses the same
+# native SHA-256 primitive as inspection; each corruption gets a fresh process.
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	-D reflaxe_runtime -main RecomputeLoweringControlRevision \
+	--neko "$INSPECTOR_DIR/reseal.n"
 neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
@@ -1197,6 +1202,8 @@ NODE
 	fi
 done
 
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS function-result cases=9"
+
 for mutation in duplicate missing-family edited-count stale-revision; do
 	invalid_output="$INVALID_ADMISSION_ROOT/$mutation"
 	cp -R out "$invalid_output"
@@ -1246,6 +1253,8 @@ NODE
 	fi
 done
 
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS control-admission cases=4"
+
 for mutation in semantic carrier representation layout proof; do
 	invalid_output="$INVALID_NOMINAL_ROOT/$mutation"
 	cp -R out "$invalid_output"
@@ -1286,7 +1295,7 @@ switch (mutation) {
 }
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-	haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+	neko "$INSPECTOR_DIR/reseal.n" \
 		"$invalid_output/ocaml_lowering_report.json"
 	invalid_log="$INVALID_NOMINAL_ROOT/$mutation.log"
 	if neko "$INSPECTOR_DIR/inspect.n" \
@@ -1300,6 +1309,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS nominal-return cases=5"
 
 for mutation in semantic carrier representation representation-revision descriptor descriptor-revision conversion tags proof program body binding; do
 	invalid_output="$INVALID_ARRAY_ROOT/$mutation"
@@ -1362,7 +1373,7 @@ switch (mutation) {
 }
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-	haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+	neko "$INSPECTOR_DIR/reseal.n" \
 		"$invalid_output/ocaml_lowering_report.json"
 	invalid_log="$INVALID_ARRAY_ROOT/$mutation.log"
 	if neko "$INSPECTOR_DIR/inspect.n" \
@@ -1376,6 +1387,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS array-throw cases=12"
 
 for mutation in missing-producer producer-id reordered-elements duplicated-element reordered-schedule stale-binding control-plan-revision; do
 	invalid_output="$INVALID_LITERAL_ROOT/$mutation"
@@ -1425,7 +1438,7 @@ switch (mutation) {
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 	if [ "$mutation" = "control-plan-revision" ]; then
-		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+		neko "$INSPECTOR_DIR/reseal.n" \
 			"$invalid_output/ocaml_lowering_report.json"
 	fi
 	invalid_log="$INVALID_LITERAL_ROOT/$mutation.log"
@@ -1440,6 +1453,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS int-literal-producer cases=7"
 
 for mutation in string-missing-producer string-control-plan-revision; do
 	invalid_output="$INVALID_LITERAL_ROOT/$mutation"
@@ -1470,7 +1485,7 @@ if (mutation === 'string-missing-producer') {
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 	if [ "$mutation" = "string-control-plan-revision" ]; then
-		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+		neko "$INSPECTOR_DIR/reseal.n" \
 			"$invalid_output/ocaml_lowering_report.json"
 	fi
 	invalid_log="$INVALID_LITERAL_ROOT/$mutation.log"
@@ -1486,4 +1501,8 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=56 producers=4"
+node - "$REPORT_FILE" <<'NODE'
+const report = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'))
+console.log('EARLY_RETURN_CORRUPTION_GROUP:PASS string-literal-producer cases=2')
+console.log(`REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=${report.functionResultBoundaryCount} producers=4`)
+NODE

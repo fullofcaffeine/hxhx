@@ -4,6 +4,7 @@ package reflaxe.ocaml.artifacts;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Path;
+import reflaxe.ocaml.reports.OcamlReportJson.hashBytes;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactClaim;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
@@ -229,7 +230,7 @@ class OcamlArtifactManifestSchema {
 			throw 'Registered OCaml artifact "$path" is missing or is not a file.';
 		final bytes = File.getBytes(path);
 		return {
-			sha256: "sha256:" + Sha256.make(bytes).toHex(),
+			sha256: "sha256:" + hashBytes(bytes),
 			bytes: bytes.length
 		};
 	}
