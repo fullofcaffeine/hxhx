@@ -12,6 +12,19 @@ class M14EmptyArrayInferenceTest {
 			+ 'static function collect<T>(value:T):Array<T>{var values=[];values.push(value);return values;}';
 		for (entry in [
 			{
+				name: "typed_callback",
+				body: 'var copy=function(xs:Array<Int>){var out:Array<Int>=[];for(x in xs){out.push(x);}return out;};' +
+				'var copied=copy([8,3]);trace(copied.length);trace(copied[0]);trace(copied[1]);trace(copy([]).length);',
+				output: "2\n8\n3\n0\n",
+				accepted: true
+			},
+			{
+				name: "typed_block",
+				body: 'var result={var values:Array<Int>=[];values.push(7);values;};trace(result.length);trace(result[0]);',
+				output: "1\n7\n",
+				accepted: true
+			},
+			{
 				name: "null_late_dynamic",
 				body: 'var args:Array<Dynamic>=[7];var values=[null];values.push(7);values.concat(args);',
 				output: "",

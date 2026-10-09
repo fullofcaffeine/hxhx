@@ -936,12 +936,15 @@ class TypedBodyBuilder {
 				for (declaration in declarations) {
 					final declarationPosition = exactPosition(HxExprVarDecl.getPosition(declaration));
 					final initializer = HxExprVarDecl.getInitializer(declaration);
-					var typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
-						typeResolver, callResolver, memberResolver);
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
-					final declarationType = writtenType.length > 0 ? typeResolver != null
-						&& environment != null ? typeResolver.declaredType(writtenType,
-							environment) : TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
+					final expected = writtenType.length == 0 ? null : typeResolver != null
+						&& environment != null ? typeResolver.declaredType(writtenType, environment) : TyType.fromHintText(writtenType);
+					// Replay the same initializer context used during inference. Empty
+					// collections need their written type in both phases.
+					final unchecked = expected != null && environment != null && environment.isUntypedContext();
+					var typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
+						typeResolver, callResolver, memberResolver, unchecked ? null : expected);
+					final declarationType = expected != null ? expected : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
 					if (writtenType.length > 0
 						&& environment != null
 						&& environment.isUntypedContext()
