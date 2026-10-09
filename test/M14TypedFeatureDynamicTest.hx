@@ -10,6 +10,7 @@ class M14TypedFeatureDynamicTest {
 		checkGenericConflict("FeatureBoundOptionalExtra", "FeatureBoundOptional", "captured callback argument count differs");
 		check("FeatureBoundUnused", "called\ncalled\ndone\n");
 		check("FeatureBoundNull", "true\ntrue\ntrue\nchild\ntrue\ntrue\nchild\n");
+		checkDirectConstraint("FeatureBoundNullConflict", "FeatureBoundNull", "Constraint check failure for select.T");
 		check("FeatureBoundCompound", "compound\n");
 		checkDirectConstraint("FeatureBoundCompoundMissingInterface", "FeatureBoundCompound");
 		checkDirectConstraint("FeatureBoundCompoundMissingBase", "FeatureBoundCompound");

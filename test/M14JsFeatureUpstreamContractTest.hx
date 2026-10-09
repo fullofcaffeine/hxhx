@@ -48,6 +48,7 @@ class M14JsFeatureUpstreamContractTest {
 			checkGenericConflict("FeatureBoundOptionalExtra", mode, output, "Too many arguments");
 			check("FeatureBoundUnused", mode, ["called", "called", "done"], output);
 			check("FeatureBoundNull", mode, ["true", "true", "true", "child", "true", "true", "child"], output);
+			checkGenericConflict("FeatureBoundNullConflict", mode, output, "Constraint check failure for select.T");
 			check("FeatureBoundCompound", mode, ["compound"], output);
 			checkGenericConflict("FeatureBoundCompoundMissingInterface", mode, output, "Constraint check failure for echo.T");
 			checkGenericConflict("FeatureBoundCompoundMissingBase", mode, output, "Constraint check failure for echo.T");

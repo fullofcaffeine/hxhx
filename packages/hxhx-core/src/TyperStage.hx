@@ -543,12 +543,18 @@ class TyperStage {
 					final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(actual),
 						context.getIndex());
 					if (inferredCall != null) {
-						// A later result or alias context may solve a method variable after
-						// selection. Recheck its declared bound before publishing that solution.
+						// Later contexts must still satisfy bounds, including for Dynamic
+						// arguments. Literal null supplies no such evidence: preserve it
+						// instead of treating the solved result as a concrete argument.
 						if (declaration.getResolvedTypeParameterConstraints().keys().hasNext()) {
 							final boundOwner = context.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
 							final boundReceiver = callReceiverType(declaration, callee, inferenceEnvironment, context, position);
-							final failure = TyMethodGenericBinding.constraintFailure(declaration, signature, inferredCall.getFunctionArguments(),
+							final solvedArguments = inferredCall.getFunctionArguments();
+							final evidence = [
+								for (source in 0...actual.length)
+									actual[source].isNullLiteral() ? actual[source] : solvedArguments[selection.order.parameterIndex(source)]
+							];
+							final failure = TyMethodGenericBinding.constraintFailure(declaration, signature, selection.order.rankedTypes(evidence),
 								bound -> TyNominalApplication.applyType(context.getIndex(), boundOwner, boundReceiver, bound),
 								(expected, actual) -> constraintAccepts(expected, actual, context.getIndex()), context.getIndex());
 							if (failure != null)
