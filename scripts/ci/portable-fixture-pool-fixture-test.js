@@ -33,8 +33,87 @@ async function waitUntilStopped(pid, timeoutMs) {
 	return !processExists(pid)
 }
 
+/** Proves actual shell-runner concurrency without touching repository goldens. */
+async function verifyParallelGoldenUpdates(repoRoot) {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'portable-golden-pool-'))
+	const fixtures = path.join(root, 'test/portable/fixtures')
+	const bin = path.join(root, 'bin')
+	const fixtureNames = ['first', 'second']
+	const prepare = () => {
+		for (const name of fixtureNames) {
+			const dir = path.join(fixtures, name)
+			fs.rmSync(dir, { recursive: true, force: true })
+			fs.rmSync(path.join(root, `${name}.started`), { force: true })
+			fs.mkdirSync(dir, { recursive: true })
+			fs.writeFileSync(path.join(dir, 'build.hxml'), '# isolated fake compiler input\n')
+			fs.writeFileSync(path.join(dir, 'expected.lowering.json'), JSON.stringify({ original: name }) + '\n')
+			fs.writeFileSync(path.join(dir, 'expected.stdout'), name + '\n')
+			fs.writeFileSync(path.join(dir, 'test.sh'), 'set -euo pipefail\nprintf checked > .checked\n')
+		}
+	}
+	try {
+		fs.mkdirSync(path.join(root, 'scripts/ci'), { recursive: true })
+		fs.mkdirSync(bin)
+		for (const file of ['scripts/test-portable.sh', 'scripts/ci/run-portable-fixtures.js']) {
+			fs.copyFileSync(path.join(repoRoot, file), path.join(root, file))
+		}
+		const compiler = path.join(bin, 'haxe')
+		fs.copyFileSync(path.join(repoRoot, 'scripts/ci/portable-golden-fixture-compiler.js'), compiler)
+		fs.chmodSync(compiler, 0o755)
+		for (const tool of ['dune', 'ocamlc']) {
+			fs.writeFileSync(path.join(bin, tool), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+		}
+		const run = (nondeterministic, update = '1') => runOwnedCommand({
+			name: 'isolated-golden-update', command: 'bash', args: [path.join(root, 'scripts/test-portable.sh')],
+			cwd: root, timeoutMs: 30000, activeChildren: new Map(),
+			env: {
+				...process.env, PATH: bin + path.delimiter + process.env.PATH, HAXE_BIN: compiler,
+				REFLAXE_SOURCE_ROOT: '', PORTABLE_NATIVE_SURFACE_STRICT: '0',
+				PORTABLE_FIXTURE_ALLOWLIST: fixtureNames.join(','), PORTABLE_JOBS: '2',
+				PORTABLE_PARALLEL_WORKER: '0', PORTABLE_UPDATE_LOWERING_GOLDENS: update,
+				PORTABLE_SHARD_INDEX: '0', PORTABLE_SHARD_COUNT: '1', PORTABLE_FIXTURE_TIMEOUT_SECONDS: '20',
+				HXHX_PORTABLE_GOLDEN_TEST_ROOT: root, HXHX_PORTABLE_GOLDEN_NONDETERMINISTIC: nondeterministic
+			}
+		})
+		prepare()
+		const positive = await run('')
+		assert.strictEqual(positive.status, 0, positive.combinedOutput)
+		assert.strictEqual(positive.timedOut, false)
+		for (const name of fixtureNames) {
+			const dir = path.join(fixtures, name)
+			assert.strictEqual(fs.readFileSync(path.join(dir, '.compiler-count'), 'utf8'), '2')
+			assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(dir, 'expected.lowering.json'), 'utf8')),
+				{ fixture: name, value: 42 })
+			assert.strictEqual(fs.readFileSync(path.join(dir, '.native-ran'), 'utf8'), 'ran\n')
+			assert.strictEqual(fs.readFileSync(path.join(dir, '.checked'), 'utf8'), 'checked')
+		}
+		const normal = await run('', '0')
+		assert.strictEqual(normal.status, 0, normal.combinedOutput)
+		assert.strictEqual(normal.timedOut, false)
+		for (const name of fixtureNames) {
+			const dir = path.join(fixtures, name)
+			assert.strictEqual(fs.readFileSync(path.join(dir, '.compiler-count'), 'utf8'), '4')
+			assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(dir, 'expected.lowering.json'), 'utf8')),
+				{ fixture: name, value: 42 })
+		}
+		prepare()
+		const golden = path.join(fixtures, 'first/expected.lowering.json')
+		const before = fs.readFileSync(golden)
+		const negative = await run('first')
+		assert.notStrictEqual(negative.status, 0)
+		assert.strictEqual(negative.timedOut, false)
+		assert.match(negative.combinedOutput, /Lowered semantic report is not deterministic/)
+		assert.deepStrictEqual(fs.readFileSync(golden), before, 'nondeterministic output must not replace its golden')
+		assert.strictEqual(fs.existsSync(path.join(fixtures, 'first/.native-ran')), false)
+		assert.strictEqual(fs.existsSync(path.join(fixtures, 'first/.checked')), false)
+	} finally {
+		fs.rmSync(root, { recursive: true, force: true })
+	}
+}
+
 async function main() {
 	const repoRoot = path.resolve(__dirname, '../..')
+	await verifyParallelGoldenUpdates(repoRoot)
 	assert.deepStrictEqual([...parseAllowlist(' be ta,alpha, beta ,,')].sort(), ['alpha', 'beta'])
 	assert.strictEqual(parseJobs(['--jobs', '3']), 3)
 	assert.throws(() => parseJobs(['--jobs', '0']), /positive integer/)
