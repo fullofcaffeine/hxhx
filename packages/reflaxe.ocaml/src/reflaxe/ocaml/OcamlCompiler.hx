@@ -44,6 +44,7 @@ import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+import reflaxe.ocaml.target.OcamlTargetConstructionLowerer.buildAllocation;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.hasInheritedDeclarationRecord;
@@ -2169,15 +2170,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final instanceVarsLocal = varFields.filter(v -> !v.isStatic);
 		final hasInstanceVarsLocal = instanceVarsLocal.length > 0;
 
-		// Default expressions are only available through `ClassVarData` for the class being compiled.
-		// Inherited fields therefore use their owner-bound implicit default decision.
-		final localVarInitByName:Map<String, TypedExpr> = [];
-		for (v in instanceVarsLocal) {
-			final init = v.findDefaultExpr();
-			if (init != null)
-				localVarInitByName.set(v.field.name, init);
-		}
-
 		var ctorFunc:Null<ClassFuncData> = null;
 		final instanceMethods:Array<ClassFuncData> = [];
 		for (f in funcFields) {
@@ -2698,10 +2690,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						for (entry in dispatchLayoutFields) {
 							switch (entry.kind) {
 								case "var":
-									final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
-									final value = init != null ? buildStandaloneExpression(builder,
-										fieldInitializerOwner(classType, entry.field, "instance") + ":" + emissionRole,
-										init) : instanceFieldDefault(classType, entry.field, emissionRole);
+									final value = instanceFieldDefault(classType, entry.field, emissionRole);
 									fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 								case "method":
 									final info = dispatchMethodDecl.get(entry.name);
@@ -2716,10 +2705,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 						}
 					} else {
 						for (v in instanceVarsLocal) {
-							final init = v.findDefaultExpr();
-							final value = init != null ? buildStandaloneExpression(builder,
-								fieldInitializerOwner(classType, v.field, "instance") + ":" + emissionRole,
-								init) : instanceFieldDefault(classType, v.field, emissionRole);
+							// Haxe already places authored field initializers in the typed
+							// constructor body. Allocate storage here without replaying them.
+							final value = instanceFieldDefault(classType, v.field, emissionRole);
 							fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 						}
 						if (isDispatchInstance) {
@@ -2782,12 +2770,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			if (!isAbstractImplementation) {
-				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
-					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
+				final selfInitializer = buildSelfInit("constructor-record");
 				// Keep checked call conversions authoritative. Other constructors may
 				// retain known declaration carriers; the recursive interface checks them
 				// against the allocator body and its selected instance record.
-				final createExpr = OcamlExpr.EFun(createParams, createBody);
+				final createExpr = buildAllocation({parameters: createParams, initializer: selfInitializer, body: ctorBody});
 				final annotatedSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
 				final createSignature = annotatedSignature != null ? annotatedSignature : (constructorDeclaration == null ? null : signatureFromTypes(constructorDeclaration.parameters,
 					OcamlTypeExpr.TIdent(instanceTypeName)));

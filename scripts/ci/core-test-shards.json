@@ -68,6 +68,7 @@
     "hxhx-e2e": "Q3"
   },
   "assignments": {
+    "test:reflaxe-ocaml:shared-construction": "compiler-packaging",
     "test:printer": "compiler-foundation",
     "test:m2": "compiler-foundation",
     "test:m3": "compiler-foundation",

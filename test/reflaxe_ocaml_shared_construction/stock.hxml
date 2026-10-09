@@ -1,0 +1,5 @@
+-cp source
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D ocaml_no_build
