@@ -1,6 +1,5 @@
 package reflaxe.ocaml.runtimegen;
 
-#if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /** Where the compiler learned that runtime support is required. **/
@@ -62,4 +61,3 @@ typedef OcamlRuntimeRequirement = {
 	final profileEligibility:Array<String>;
 	final explanation:String;
 }
-#end

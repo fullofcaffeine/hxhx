@@ -1,10 +1,8 @@
 package reflaxe.ocaml.runtimegen;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
-#end
 
 /** The target-syntax position in which one private runtime name may appear. */
 enum abstract OcamlRuntimeUseDomain(String) from String to String {
@@ -19,7 +17,7 @@ enum abstract OcamlRuntimeUseDomain(String) from String to String {
 	A restricted identifier accepted by the OCaml target AST.
 
 	The target AST can be compiled into either compiler host, so this inert token
-	type must always be available. Only the guarded compiler-side authorities can
+	type must always be available. Only the shared runtime-use authorities can
 	construct it after checking a sealed runtime-use plan.
 **/
 @:allow(reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority)
@@ -40,7 +38,6 @@ class OcamlRuntimeReference {
 	}
 }
 
-#if (macro || reflaxe_runtime || eval)
 /**
 	One planned appearance of a private compatibility-runtime name.
 
@@ -84,4 +81,3 @@ class OcamlRuntimeUseModel {
 		].map(value -> value.length + ":" + value).join("|"));
 	}
 }
-#end

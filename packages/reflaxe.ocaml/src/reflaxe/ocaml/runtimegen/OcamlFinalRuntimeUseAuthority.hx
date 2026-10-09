@@ -1,6 +1,5 @@
 package reflaxe.ocaml.runtimegen;
 
-#if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
@@ -529,4 +528,3 @@ class OcamlFinalRuntimeUseAuthority {
 		};
 	}
 }
-#end
