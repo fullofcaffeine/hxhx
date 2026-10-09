@@ -65,6 +65,11 @@ fi
 
 [ -x "$PROFILE_SCRIPT" ] || fail "missing profile script"
 
+# These fake builds own private lease files, even when a real build runner owns
+# the outer lease. Keep inherited ownership only in the regeneration child above
+# so the nested-capacity scenario still proves that a child reuses its parent.
+unset HXHX_HEAVY_RUN_LEASE_OWNER_PID HAXE_FAMILY_HEAVY_RUN_LEASE_OWNER_PID
+
 fixture_root="$(mktemp -d "${TMPDIR:-/tmp}/hxhx-stage0-profile-path.XXXXXX")"
 cleanup() {
 	rm -rf "$fixture_root"
