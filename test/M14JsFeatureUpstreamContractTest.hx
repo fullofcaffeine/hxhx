@@ -42,6 +42,7 @@ class M14JsFeatureUpstreamContractTest {
 			throw "feature contract requires the pinned Haxe 4.3.7 baseline";
 		final output = ".tmp/js_feature_upstream_" + Std.string(Date.now().getTime());
 		FileSystem.createDirectory(output);
+		M14TraceUpstreamContract.run(output);
 		for (mode in ["full", "std", "no"]) {
 			check("FeatureBoundOptional", mode, ["1", "first", "2", "second", "1", "third", "true", "7", "false", "9"], output);
 			checkGenericConflict("FeatureBoundOptionalMissing", mode, output, "Not enough arguments");
