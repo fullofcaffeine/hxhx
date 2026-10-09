@@ -6,6 +6,7 @@ class M14CallbackRecordArgumentTest {
 		reject("{item: () -> Int}", "{item: () -> true}");
 		reject("Array<() -> Int>", "[() -> true]");
 		check("ArgumentContract");
+		check("RecoveryContract");
 		check("Main");
 		Sys.println("CALLBACK_RECORD_ARGUMENT:PASS");
 	}

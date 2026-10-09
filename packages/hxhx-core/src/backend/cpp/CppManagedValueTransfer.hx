@@ -34,6 +34,13 @@ function accepts(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool {
 		return false;
 	if (target.isDynamic() || target.getSemanticKey() == source.getSemanticKey())
 		return true;
+	// A structural view keeps the already rooted common value, including null,
+	// missing fields and non-record values. Upstream native assignment does not
+	// inspect fields or allocate a copy. This is a transport permission, not a
+	// RecordPayload layout proof: field and callable consumers must still check
+	// the actual runtime representation before dereferencing it.
+	if (target.isAnonymous() && source.isDynamic())
+		return true;
 	// Shared typing and abstract lowering have already selected any authored
 	// conversion. An opaque backing value then copies its existing runtime tag.
 	if (casts != null && target.getNominalIdentity() != null && casts.representationType(target).isDynamic())
