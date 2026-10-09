@@ -70,6 +70,7 @@ class TyperStage {
 	static function arrayElementType(t:TyType):Null<TyType> {
 		if (t == null)
 			return null;
+		t = TyAliasExpansion.revealNonNullable(t);
 		final arguments = t.getTypeArguments();
 		if (arguments.length == 1) {
 			final identity = t.getNominalIdentity();
@@ -177,7 +178,7 @@ class TyperStage {
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
 		if (index == null || type == null)
 			return null;
-		final nominal = type.unwrapNull();
+		final nominal = TyAliasExpansion.revealNonNullable(type);
 		final identity = nominal.getNominalIdentity();
 		return identity == null ? index.getByFullName(nominal.getDisplay()) : index.getByFullName(identity.getCanonicalName());
 	}
@@ -469,6 +470,16 @@ class TyperStage {
 					return dynamicMemberWriteName(expression, environment, context, position) != null;
 				},
 				convertValue: function(value, expected) {
+					if (value.getTag() == RuntimeTypeValue && expected.getClassValueScheme() == null) {
+						final scheme = TyClassValueScheme.select(value.getRuntimeTypeTarget(), context.getIndex());
+						if (scheme != null && scheme.accepts(expected)) {
+							final declared = TyClassValueScheme.convert(value, TyType.classValue(scheme));
+							return TyClassValueScheme.convert(declared, expected);
+						}
+					}
+					final schemeContext = TyClassValueScheme.convert(value, expected);
+					if (schemeContext != null)
+						return schemeContext;
 					final classContext = TypedArrayClassContext.convert(value, expected);
 					if (classContext != null)
 						return classContext;
@@ -1326,6 +1337,11 @@ class TyperStage {
 	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, semanticIndex:TyperIndex):Int {
 		if (expected == null || actual == null)
 			return -1;
+		final classScheme = actual.getClassValueScheme();
+		if (classScheme != null
+			&& expected.unwrapNull().getNominalIdentity() != null
+			&& expected.unwrapNull().getNominalIdentity().getCanonicalName() == "Class")
+			return overloadArgScore(expected, classScheme.preview(), methodTypeParameters, semanticIndex);
 		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
 			return actual.isUnknown() || actual.isDynamic() || actual.isNullLiteral() ? 0 : 1;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
@@ -1603,7 +1619,12 @@ class TyperStage {
 			}));
 		final argTypes = receiver != null && receiver.argumentTypes != null ? receiver.argumentTypes.copy() : [
 			for (index in 0...args.length)
-				inferExprType(args[index], scope, ctx, pos, callbackContexts[index])
+				switch (args[index]) {
+					case ECall(EIdent("__hxhx_spread"), [container]):
+						inferExprType(container, scope, ctx, pos);
+					case argument:
+						inferExprType(argument, scope, ctx, pos, callbackContexts[index]);
+				}
 		];
 		if (argTypes.length != args.length)
 			throw "call selection requires one retained type per source argument";
@@ -1937,7 +1958,7 @@ class TyperStage {
 				}
 		];
 		scope.getInference().constrainInferredCallable(callee, args, argumentTypes, scope);
-		calleeType = scope.getInference().expressionType(callee, calleeType, scope);
+		calleeType = TyAliasExpansion.revealNonNullable(scope.getInference().expressionType(callee, calleeType, scope));
 		if (scope.getInference().isUncheckedCallable(callee, scope)
 			&& !calleeType.isUnknown()
 			&& !calleeType.isDynamic()
@@ -2374,6 +2395,15 @@ class TyperStage {
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):TyType {
 		final capture:Null<TyMethodCallCapture> = expr.match(ECall(_, _)) ? {selection: null} : null;
 		var result = inferExprValueType(expr, scope, ctx, pos, expectedResult, capture);
+		final classScheme = result.getClassValueScheme();
+		if (classScheme != null
+			&& expectedResult != null
+			&& !expectedResult.hasUnknownComponent()
+			&& classScheme.accepts(expectedResult)) {
+			TyClassArgumentBounds.validate(expectedResult, ctx.getIndex(), ctx.getFilePath(), pos,
+				(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()));
+			result = expectedResult;
+		}
 		// Unresolved calls and field values inside authored untyped syntax retain
 		// contextual constraints. Known declarations keep their written types.
 		if (result.isUnknown()
@@ -2471,6 +2501,13 @@ class TyperStage {
 				throw new TyperError(ctx.getFilePath(), pos, "class value does not satisfy its structural type");
 		}
 		if (expectedResult != null)
+			if (!scope.isUntypedContext()
+				&& !TyFieldAssignment.explicitlyUntyped(expr)
+				&& (expectedResult.getClassValueScheme() != null
+					|| TyMethodGenericBinding.sameTypeConstructor(expectedResult.unwrapNull(), result.unwrapNull()))
+				&& TyAssignmentCompatibility.classify(expectedResult, result, Unchecked) == Incompatible)
+				throw new TyperError(ctx.getFilePath(), pos, "value " + result.getDisplay() + " is not compatible with " + expectedResult.getDisplay());
+		if (expectedResult != null)
 			TyLambdaResultContract.check(result, expectedResult, ctx.getFilePath(), pos, isStrict());
 		return result;
 	}
@@ -2492,8 +2529,10 @@ class TyperStage {
 			case NotApplicable:
 		}
 		final runtimeTarget = TypedRuntimeTypeResolver.resolve(expr, scope, ctx, ValueExpression);
-		if (runtimeTarget != null)
-			return runtimeTarget.getValueType();
+		if (runtimeTarget != null) {
+			final scheme = TyClassValueScheme.select(runtimeTarget, ctx.getIndex());
+			return scheme == null ? runtimeTarget.getValueType() : TyType.classValue(scheme);
+		}
 		return switch (expr) {
 			case EParenthesized(inner, sourcePosition) | EPrivateAccess(inner, sourcePosition):
 				inferExprType(inner, scope, ctx, sourcePosition, expectedResult);
@@ -3011,9 +3050,11 @@ class TyperStage {
 				inferLambdaType(argNames, body, context == null ? [for (_ in argNames) TyType.unknown()] : context.getFunctionArguments(), scope, ctx, pos,
 					signature, context == null ? null : context.getFunctionReturn());
 			case EMacroExpr(inner, _wrappers):
-				TyType.fromHintText("haxe.macro.Expr");
+				// Resolve the public quotation type so fields such as expr retain
+				// their declared enum type without typing the quoted source as code.
+				typeFromHintInContext("haxe.macro.Expr", ctx, scope);
 			case EMacroType(_typeText):
-				TyType.fromHintText("haxe.macro.ComplexType");
+				typeFromHintInContext("haxe.macro.Expr.ComplexType", ctx, scope);
 			case ETryCatchRaw(raw):
 				final recovered = TypedBodyBuilder.recoveredOpaqueBlockStatements(raw);
 				if (recovered == null) {
@@ -3387,6 +3428,7 @@ class TyperStage {
 					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
 					accepts: (expected,
 						actual) -> actual.isDynamic()
+							|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 							|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
 							|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
 					filePath: ctx.getFilePath(),

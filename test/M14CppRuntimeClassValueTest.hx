@@ -85,7 +85,7 @@ class M14CppRuntimeClassValueTest {
 		});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		if (input.name == 'array_class_values')
-			M14CppArrayClassValueTransferContract.check(new backend.cpp.CppTypedProgramProjection(program));
+			M14CppArrayClassValueTransferContract.check(new backend.cpp.CppTypedProgramProjection(program), fixture.index);
 		final directory = ".tmp/cpp-runtime-class-value/" + input.name;
 		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, true, fixture.defines));
 		if (!result.builtExecutable)

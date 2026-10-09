@@ -66,6 +66,13 @@ class TyInferenceSolver {
 		return term;
 	}
 
+	/** An unconstrained use erases only at seal; later result contexts can still choose its instance argument. */
+	public function freshClassValueArgument():TyInferenceTerm {
+		final term = allocate(null);
+		visitDynamicUse(term, false);
+		return term;
+	}
+
 	/** Only a known method binder may remain open; constructors and ordinary solver variables require concrete solutions. */
 	public function freshMethodParameter(parameter:TyTypeParameterId):TyInferenceTerm {
 		return allocate(new TyOpenMethodParameterId(owner, variables.length, parameter));

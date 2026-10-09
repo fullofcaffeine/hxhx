@@ -20,9 +20,9 @@ class TyCallableSignature {
 		methodTypeParameters = declaration == null ? [] : declaration.getTypeParameterIds();
 	}
 
-	/** Keep function values distinct from named declarations, even when their shapes match. */
+	/** Reveal a recursive callable without replacing its stored value type or inventing a declaration. */
 	public static function fromFunctionValue(type:TyType):TyCallableSignature
-		return new TyCallableSignature(type, null);
+		return new TyCallableSignature(TyAliasExpansion.revealNonNullable(type), null);
 
 	/** Retain written omission rules when inference supplies a source function's argument and result types. */
 	public static function sourceFunctionType(names:Array<String>, source:Null<HxLambdaSignature>, arguments:Array<TyType>, result:TyType):TyType {

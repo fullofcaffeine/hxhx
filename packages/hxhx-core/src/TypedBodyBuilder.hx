@@ -701,8 +701,10 @@ class TypedBodyBuilder {
 			&& !expression.match(EParenthesized(_, _))
 			&& !expression.match(EPrivateAccess(_, _))) {
 			final target = typeResolver.runtimeTypeTarget(expression, environment, ValueExpression);
-			if (target != null)
-				return TypedExpr.runtimeTypeValue(target, position);
+			if (target != null) {
+				final literal = TypedExpr.runtimeTypeValue(target, position);
+				return typeResolver.convertValue(literal, nodeType);
+			}
 		}
 		final value = switch (expression) {
 			case ENull:
@@ -845,7 +847,9 @@ class TypedBodyBuilder {
 			case EEnumValue(name):
 				final local = environment == null ? null : environment.resolveSymbol(name);
 				if (local != null) {
-					TypedExpr.localRead(name, nodeType, position, local.toBinding());
+					local.getType()
+						.getClassValueScheme() == null ? TypedExpr.localRead(name, nodeType, position,
+							local.toBinding()) : typeResolver.convertValue(TypedExpr.localRead(name, local.getType(), position, local.toBinding()), nodeType);
 				} else {
 					final memberResolution = memberResolver == null
 						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
@@ -858,7 +862,9 @@ class TypedBodyBuilder {
 			case EIdent(name):
 				final local = environment == null ? null : environment.resolveSymbol(name);
 				if (local != null) {
-					TypedExpr.localRead(name, nodeType, position, local.toBinding());
+					local.getType()
+						.getClassValueScheme() == null ? TypedExpr.localRead(name, nodeType, position,
+							local.toBinding()) : typeResolver.convertValue(TypedExpr.localRead(name, local.getType(), position, local.toBinding()), nodeType);
 				} else {
 					final memberResolution = memberResolver == null
 						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
@@ -909,9 +915,12 @@ class TypedBodyBuilder {
 							nodeType) : typeResolver == null
 								|| environment == null ? null : typeResolver.callTargetType(callee, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, null, callable);
+					// Inspect the callable shape without changing a nested call's exact
+					// result type: its own argument binding still owns that result.
+					final isFunctionValue = TyAliasExpansion.revealNonNullable(typedCallee.getType()).isFunction();
 					final callback = resolution.getDeclaration() == null
 						&& typedCallee.getDeclaration() == null
-						&& typedCallee.getType().isFunction()
+						&& isFunctionValue
 						&& environment != null ? environment.getInference().callbackBinding(callee) : null;
 					var typedArguments = callee.match(EIdent("__hxhx_try")) ? buildStructuralTryArguments(arguments, diagnosticPosition, environment,
 						typeResolver, callResolver, memberResolver) : null;
@@ -924,7 +933,7 @@ class TypedBodyBuilder {
 						typedArguments = alignStructuralTryCatchResults(typedArguments, nodeType);
 					// A method read can retain its declaration even when no call candidate
 					// applies. Its open generic signature is not a function-value binding.
-					if (resolution.getDeclaration() == null && typedCallee.getDeclaration() == null && typedCallee.getType().isFunction())
+					if (resolution.getDeclaration() == null && typedCallee.getDeclaration() == null && isFunctionValue)
 						TypedExpr.functionValueCall(typedCallee, typedArguments, nodeType, position, callback);
 					else {
 						final call = TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position,

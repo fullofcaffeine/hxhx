@@ -39,6 +39,10 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 		return classify(expected.unwrapNull(), actual.unwrapNull(), nullPolicy);
 	if (expected.getSemanticKey() == actual.getSemanticKey())
 		return Compatible;
+	if (expected.getClassValueScheme() != null)
+		return Incompatible;
+	if (actual.getClassValueScheme() != null && actual.getClassValueScheme().accepts(expected))
+		return Compatible;
 	if (expected.isFunction() && actual.isFunction())
 		return functions(expected, actual, nullPolicy);
 	if (expected.isPrimitive() && actual.isPrimitive())
@@ -85,8 +89,8 @@ private function nominalArguments(expected:TyType, actual:TyType):TyCallArgument
 /**
 	Check the whole operand of a spread into a rest parameter.
 
-	Haxe 4.3.7 accepts exact Array and Rest element types, or an explicit Dynamic
-	container. Array<Int> cannot supply Rest<Float>, and Array<Dynamic> cannot
+	Haxe 4.3.7 accepts exact Array and Rest element types, an explicit Dynamic
+	destination element, or an explicit Dynamic container. Array<Int> cannot supply Rest<Float>, and Array<Dynamic> cannot
 	supply Rest<Int>. Container identity comes from resolution, never display text.
 	Other generic and abstract-container relationships remain unproved.
  */
@@ -104,7 +108,7 @@ function classifyRestSpread(expectedElement:TyType, actualContainer:TyType):TyCa
 		|| arguments.length != 1)
 		return Unknown;
 	final actualElement = arguments[0];
-	if (expectedElement.getSemanticKey() == actualElement.getSemanticKey())
+	if (expectedElement.isDynamic() || expectedElement.getSemanticKey() == actualElement.getSemanticKey())
 		return Compatible;
 	if (expectedElement.isPrimitive() && (actualElement.isPrimitive() || actualElement.isDynamic()))
 		return Incompatible;

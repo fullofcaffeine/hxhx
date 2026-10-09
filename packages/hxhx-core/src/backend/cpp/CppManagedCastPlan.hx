@@ -82,6 +82,11 @@ class CppManagedCastPlan {
 		return CppManagedClassValueType.permitsArrayErasure(program, target, source);
 	}
 
+	/** A checked generic class-value use keeps its descriptor while selecting its instance arguments. */
+	public function permitsClassSchemeContext(target:TyType, source:TyType):Bool {
+		return CppManagedClassValueType.permitsSchemeContext(program, target, source);
+	}
+
 	/** An upcast keeps one instance; each ancestor must match after substituting all inherited type arguments. */
 	public function permitsClassUpcast(target:TyType, source:TyType):Bool {
 		if (target.getNominalIdentity() == null || source.getNominalIdentity() == null)
@@ -109,6 +114,7 @@ class CppManagedCastPlan {
 			|| stored.isNullable()
 			|| stored.isAnonymous()
 			|| stored.isFunction()
+			|| CppManagedClassValueType.selects(program, stored)
 			|| stored.getSemanticKey() == 'primitive:String'
 			|| stored.getNominalIdentity() != null;
 	}

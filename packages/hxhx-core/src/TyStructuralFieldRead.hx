@@ -5,9 +5,7 @@
 	read through a nullable receiver still has the field's own type.
  */
 function resolve(receiver:TyType, name:String):Null<TyType> {
-	var value = receiver;
-	while (value.isNullable())
-		value = value.unwrapNull();
+	final value = TyAliasExpansion.revealNonNullable(receiver);
 	if (value.isDynamic())
 		return TyType.fromHintText("Dynamic");
 	if (!value.isAnonymous())

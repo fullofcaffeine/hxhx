@@ -25,12 +25,14 @@ class M14NamedRestMethodTest {
 		final declarations = 'import haxe.extern.Rest as Tail; @:native("Math") extern class Numbers {@:overload(function(prefix:String, values:Tail<String>):Int {}) public static function max(prefix:Int, values:Tail<Int>):Int;}'
 			+ 'typedef LocalTail<T>=Array<T>; extern class Fixed {public static function take(values:LocalTail<Int>):Int;}'
 			+ '@:native("console") extern class Console {public static function log(value:String):Void;}';
-		final source = declarations + 'class Main {static function main():Void {Console.log(""+Numbers.max(0)); Console.log(""+Numbers.max(0,2,7));}}';
+		final source = declarations
+			+
+			'class Main {static function main():Void {Console.log(""+Numbers.max(0)); Console.log(""+Numbers.max(0,2,7)); var values=[2,7]; Console.log(""+Numbers.max(0,...values));}}';
 		final path = root + "/Main.hx";
 		sys.io.File.saveContent(path, source);
 		final upstream = run("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "-js", root + "/upstream.js"]);
 		check(upstream.code == 0, upstream.stderr);
-		final expected = "0\n7\n";
+		final expected = "0\n7\n7\n";
 		check(run("node", [root + "/upstream.js"]).stdout == expected, "upstream rest result differs");
 		final arguments = Stage1Args.parse(["-main", "Main"], true);
 		final paths = Stage3SetupSupport.projectClassPaths({
@@ -63,7 +65,7 @@ class M14NamedRestMethodTest {
 				for (statement in method.getBody().getStatements())
 					for (expression in statement.getExpressions())
 						inspect(expression);
-		check(selectedCalls == 2, "rest calls did not retain exact selected declarations");
+		check(selectedCalls == 3, "rest calls did not retain exact selected declarations");
 		new JsBackend().emit(new MacroExpandedProgram([typed], false), new BackendContext(root, root + "/native.js", "Main", true, false, defines));
 		final native = run("node", [root + "/native.js"]);
 		check(native.code == 0 && native.stdout == expected, "native named rest result differs: " + native.stderr);

@@ -5,7 +5,7 @@ function resolve(call:TypedExpr):Array<Null<TyType>> {
 	final named = call.getNamedArguments();
 	if (call.getTag() != Call || children.length == 0 || (call.getExtensionProvider() != null && named == null))
 		return result;
-	final callable = named == null ? children[0].getType() : named.getArguments().getFunctionType();
+	final callable = TyAliasExpansion.revealNonNullable(named == null ? children[0].getType() : named.getArguments().getFunctionType());
 	if (!callable.isFunction())
 		return result;
 	final signature = TyCallableSignature.fromFunctionValue(callable);

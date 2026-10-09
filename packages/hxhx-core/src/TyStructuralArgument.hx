@@ -4,7 +4,7 @@
 	Keep this source rule separate from the shared member compatibility proof.
  */
 function literalFits(expression:HxExpr, expected:TyType):Bool {
-	final target = expected.unwrapNull();
+	final target = TyAliasExpansion.revealNonNullable(expected);
 	if (!target.isAnonymous() || target.getAnonymousFieldNames().length == 0)
 		return true;
 	return switch expression {
@@ -28,8 +28,8 @@ function literalFits(expression:HxExpr, expected:TyType):Bool {
 	field contract. Keep null literals and other categories with their normal checker.
  */
 function compatibility(index:TyperIndex, expected:TyType, actual:TyType):Null<TyCallArgumentCompatibility> {
-	final target = expected.unwrapNull();
-	final source = actual.unwrapNull();
+	final target = TyAliasExpansion.revealNonNullable(expected);
+	final source = TyAliasExpansion.revealNonNullable(actual);
 	if (!target.isAnonymous()
 		|| target.hasUnknownComponent()
 		|| source.hasUnknownComponent()

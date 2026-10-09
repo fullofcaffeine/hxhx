@@ -2,8 +2,25 @@ import haxe.io.Path;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.Stage3SetupSupport;
 
-/** Types in-memory fixture roots through the production JavaScript providers and verifies the required real dependencies. */
-function build(input:{sources:Array<{path:String, source:String}>, requiredModules:Array<String>}):MacroExpandedProgram {
+/** One immutable typed fixture can be checked under each retention policy without repeating provider loading. */
+typedef LoadedJsSourceProgram = {
+	final program:MacroExpandedProgram;
+	final sources:TypedFeatureSourceCatalog;
+	final entryPoint:TypedFunction;
+};
+
+/** Types in-memory fixture roots through real JavaScript providers, retaining all declarations by default. */
+function build(input:{
+	sources:Array<{path:String, source:String}>,
+	requiredModules:Array<String>,
+	?mode:String,
+	?defines:Array<String>
+}):MacroExpandedProgram {
+	return retain(load(input), input.mode == null ? "no" : input.mode);
+}
+
+/** Load and type once, verifying that required dependencies came from real files rather than fixture overrides. */
+function load(input:{sources:Array<{path:String, source:String}>, requiredModules:Array<String>, ?defines:Array<String>}):LoadedJsSourceProgram {
 	final filesystem = new CompilerSourceProvider();
 	final files = new haxe.ds.StringMap<String>();
 	final roots = new Array<String>();
@@ -32,7 +49,7 @@ function build(input:{sources:Array<{path:String, source:String}>, requiredModul
 		standardRoot: Stage1Args.getStandardLibraryRoot(args),
 		targetDefine: "js"
 	});
-	final defines = Stage3SetupSupport.buildDefinesMap([], "js", "js-native");
+	final defines = Stage3SetupSupport.buildDefinesMap(input.defines == null ? [] : input.defines, "js", "js-native");
 	final resolved = ResolverStage.parseProjectRoots(paths, roots, defines, provider);
 	// Let the loader discover signature-only dependencies before publishing types,
 	// including types used by declarations in the eagerly resolved standard library.
@@ -67,15 +84,21 @@ function build(input:{sources:Array<{path:String, source:String}>, requiredModul
 	if (entries.length != 1)
 		throw "JavaScript fixture requires one exact Main.main entry point";
 	final sources = new TypedFeatureSourceCatalog({program: program, classPaths: paths, standardRoot: Stage1Args.getStandardLibraryRoot(args)});
-	// Keep the complete provider graph under no DCE. Feature activation still uses
-	// source-aware reference closure: unused SDK definitions do not enable features.
+	return {program: program, sources: sources, entryPoint: entries[0]};
+}
+
+/** Apply ordinary reference closure, declaration retention, and feature selection to an independently reusable fixture. */
+function retain(input:LoadedJsSourceProgram, mode:String):MacroExpandedProgram {
+	final program = input.program;
+	// Feature activation uses source-aware reference closure even with DCE disabled:
+	// unused SDK definitions do not enable features.
 	final reachable = TypedFeatureMemberClosure.retain(TypedFeatureRoots.select({
 		program: program,
-		sources: sources,
-		entryPoint: entries[0],
-		mode: "no"
+		sources: input.sources,
+		entryPoint: input.entryPoint,
+		mode: mode
 	}));
 	final features = new TypedFeatureDiscovery(reachable);
-	final retained = new TypedEmissionRetention({reachable: reachable, mode: "no"}).apply(program);
+	final retained = new TypedEmissionRetention({reachable: reachable, mode: mode}).apply(program);
 	return TypedFeatureSelection.lower(retained, features.namesFor(program));
 }

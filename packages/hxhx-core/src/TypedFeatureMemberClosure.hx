@@ -2,8 +2,9 @@
 	Follow exact function and field references before feature branch selection.
 	The policy owner supplies entry declarations, including initialization and metadata
 	roots. This pass follows retained declaration facts in both selection branches,
-	but never macro quotations. It does not choose DCE roots. Referenced instance
-	members retain implementations in retained descendant classes. Static method values
+	but never executable references inside macro quotations. Quotation result types
+	retain their exact enum representation declarations. It does not choose DCE roots.
+	Referenced instance members retain implementations in retained descendant classes. Static method values
 	retain shared declaration facts; callable member
 	reads without those facts fail explicitly rather than silently losing features.
 	Record callbacks instead use the receiver's exact structural field type. Their
@@ -88,8 +89,11 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 		}
 	}
 	function expression(node:TypedExpr, selectedCallee:Bool = false):Void {
-		if (node.getTag() == MacroExpr || node.getTag() == MacroType)
+		if (node.getTag() == MacroExpr || node.getTag() == MacroType) {
+			for (owner in TypedQuotationEnumDependencies.find(node.getType(), nominalClasses))
+				retainClass(owner);
 			return;
+		}
 		final target = node.getRuntimeTypeTarget();
 		final identity = target == null ? null : target.getDeclarationIdentity();
 		if (identity != null)

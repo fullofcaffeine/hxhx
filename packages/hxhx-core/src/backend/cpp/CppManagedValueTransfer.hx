@@ -10,7 +10,7 @@ function retainsNull(type:TyType, ?casts:CppManagedCastPlan):Bool {
 		|| type.isFunction()
 		|| type.getSemanticKey() == 'primitive:String')
 		return true;
-	return type.getNominalIdentity() != null && casts != null && casts.retainsNull(type);
+	return (type.getNominalIdentity() != null || type.getClassValueScheme() != null) && casts != null && casts.retainsNull(type);
 }
 
 /**
@@ -41,6 +41,8 @@ function accepts(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool {
 	if (target.isFunction() && source.isFunction() && CppManagedCallableRepresentation.compatible(target, source))
 		return true;
 	if (casts != null && casts.permitsArrayClassErasure(target, source))
+		return true;
+	if (casts != null && casts.permitsClassSchemeContext(target, source))
 		return true;
 	if (casts != null && casts.permitsClassUpcast(target, source))
 		return true;

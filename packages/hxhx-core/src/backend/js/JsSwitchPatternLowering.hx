@@ -85,13 +85,13 @@ class JsSwitchPatternLowering {
 		final conds = [
 			scrutineeVar + " != null",
 			"typeof " + scrutineeVar + " === \"object\"",
-			scrutineeVar + ".__hx_ctor === " + JsNameMangler.quoteString(name),
-			"Array.isArray(" + scrutineeVar + ".__hx_params)"
+			"$hx_enum_name(" + scrutineeVar + ") === " + JsNameMangler.quoteString(name),
+			"$hx_enum_constructor(" + scrutineeVar + ") != null"
 		];
 		final bindings = new Array<JsSwitchPatternBinding>();
 		if (args != null) {
 			for (i in 0...args.length) {
-				final paramExpr = scrutineeVar + ".__hx_params[" + i + "]";
+				final paramExpr = "$hx_enum_parameters(" + scrutineeVar + ")[" + i + "]";
 				final lowered = lower(args[i], paramExpr);
 				if (lowered.cond != "true")
 					conds.push("(" + lowered.cond + ")");

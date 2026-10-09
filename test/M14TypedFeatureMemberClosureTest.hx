@@ -3,6 +3,7 @@ import sys.io.File;
 /** Derive features from entry-point references without supplying expected feature names to the compiler. */
 class M14TypedFeatureMemberClosureTest {
 	static function main():Void {
+		M14QuotationEnumDependenciesTest.run();
 		check("FeatureInheritedAllocation", "child:on\nchild\n");
 		check("FeatureContract",
 			"late:on\ndefine:effect\nabsent:off\nunused:off\nmethod:on\nclass:on\nvalue:effect\nselected\ndefinition-value\nvalue:on\nactive:called\n");

@@ -133,6 +133,9 @@ class TyTypeSubstitution {
 		if (arguments.length == 0)
 			return type;
 		final substitutedArguments = [for (argument in arguments) apply(argument, bindings)];
+		final alias = type.getAliasDefinition();
+		if (alias != null)
+			return TyType.aliasApplication(alias, substitutedArguments);
 		if (type.isAbstractMeta())
 			return TyType.abstractMeta(substitutedArguments[0]);
 		final nominalIdentity = type.getNominalIdentity();

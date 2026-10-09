@@ -23,6 +23,12 @@ class JsFunctionScope {
 	var controlProjection:Null<TypedBackendFunctionProjection> = null;
 	var allocationScope:Null<JsFunctionScope> = null;
 	var initializerPrefix:String = "";
+	var enumDeclarations:Null<String->JsClassInheritancePlan.JsClassInheritanceNode>;
+
+	/** Share the program's admitted enum owners with every expression and nested initializer. */
+	public function setEnumDeclarations(resolve:String->JsClassInheritancePlan.JsClassInheritanceNode):Void {
+		enumDeclarations = resolve;
+	}
 
 	/** Fields share their enclosing JavaScript variable scope, but never another field's local bindings. */
 	public static function initializer(parent:JsFunctionScope, projection:TypedBackendFieldInitializerProjection, types:JsRuntimeTypeScope):JsFunctionScope {
@@ -35,6 +41,7 @@ class JsFunctionScope {
 			resolveClassRef: outer.resolveClassRef,
 			resolveSuperClassRef: outer.resolveSuperClassRef,
 			runtimeTypes: types,
+			enumDeclarations: outer.enumDeclarations,
 			methodUses: projection.findMethodUse,
 			lambdaUses: projection.findLambda,
 			requireExpression: projection.requireExpression,
@@ -170,6 +177,7 @@ class JsFunctionScope {
 			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name),
 			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef(),
 			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes,
+			enumDeclarations: enumDeclarations != null ? enumDeclarations : parentScope == null ? null : parentScope.enumDeclarations,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
 			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
 			requireExpression: initializerLambdas != null ? null : controlProjection != null ? controlProjection.requireExpression : parentScope == null ? null : parentScope.requireExpression,

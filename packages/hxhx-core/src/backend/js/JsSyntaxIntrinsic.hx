@@ -13,6 +13,18 @@ function emit(call:TypedExactStaticCall, operand:HxExpr->String, inlineCode:Arra
 		return null;
 	if (call.method == "code")
 		return inlineCode(call.arguments);
+	if (call.method == "construct") {
+		if (call.arguments.length == 0)
+			throw "JavaScript construct requires its selected constructor operand";
+		// The API's literal-string overload names native syntax. Every other
+		// operand is a runtime constructor expression, evaluated once before
+		// its arguments. Parentheses keep calls and member accesses grouped.
+		final constructor = switch call.arguments[0] {
+			case EString(name): name;
+			case value: operand(value);
+		};
+		return "new (" + constructor + ")(" + call.arguments.slice(1).map(operand).join(", ") + ")";
+	}
 	if (call.method != "typeof")
 		return null;
 	if (call.arguments.length != 1 || call.resultType != "String")

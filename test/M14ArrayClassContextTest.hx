@@ -53,7 +53,7 @@ class M14ArrayClassContextTest {
 			} catch (error:haxe.Exception) {
 				if (entry.accepted)
 					throw error;
-				final diagnostic = entry.name == "wrong_element" ? "No compatible method signature for take" : "selected call conversion does not satisfy its retained parameter";
+				final diagnostic = entry.name == "wrong_element" ? "No compatible method signature for take" : "value Class<Array<Dynamic>> is not compatible with Class<Array<Bool>>";
 				if (error.message.indexOf(diagnostic) < 0)
 					throw "unexpected rejection for " + entry.name + ": " + error.message;
 			}

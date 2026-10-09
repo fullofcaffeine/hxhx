@@ -33,6 +33,9 @@ class TypedRequiredInlineLowering {
 	final allocator:TyCompilerTemporaryAllocator;
 	final active:Array<String> = [];
 	final semanticIndex:TyperIndex;
+	final ownerIdentity:String;
+	var loopOrdinal:Int = 0;
+	var loopTargets:StringMap<TyControlTarget> = new StringMap();
 	var typeBindings:StringMap<TyType> = new StringMap();
 
 	function new(helpers:StringMap<TypedFunction>, selected:RequiredInlineSelection, owner:String, index:TyperIndex) {
@@ -40,6 +43,7 @@ class TypedRequiredInlineLowering {
 		this.selected = selected.calls;
 		this.writers = selected.writers;
 		semanticIndex = index;
+		ownerIdentity = owner;
 		allocator = new TyCompilerTemporaryAllocator(owner, "abstract-receiver-v1", "__hxhx_inline_receiver_");
 	}
 
@@ -78,6 +82,10 @@ class TypedRequiredInlineLowering {
 		final conversion = TyImplicitConversionPlan.select(semanticIndex, expected, value.getType());
 		if (conversion != null)
 			return conversion.apply(value);
+		// Call selection already proves this core enum relationship. Saving an
+		// inline parameter must preserve the same enum object and its source type.
+		if (TyEnumValueCompatibility.accepts(semanticIndex, expected, value.getType()))
+			return TypedExpr.castValue(value, "", expected, value.getPosition(), true);
 		// Ordinary assignment also admits Dynamic inputs and compatible nullable
 		// views. Preserve both types for target storage without adding a runtime
 		// checked cast or treating an unresolved relationship as permission.
@@ -180,6 +188,32 @@ class TypedRequiredInlineLowering {
 		return false;
 	}
 
+	/** Each expansion gets caller-owned loop destinations; nested jumps retain the selected loop. */
+	function introduceLoop(statement:TypedStmt):TyControlTarget {
+		final source = statement.getControlTarget();
+		if (source == null || source.getKind() != Loop)
+			throw "required inline loop lacks its selected source destination";
+		final parent = source.getParent();
+		final target = new TyControlTarget({
+			ownerIdentity: ownerIdentity,
+			sourceRevision: "required-inline-loops-v1",
+			ordinal: loopOrdinal++,
+			kind: Loop,
+			sourceIdentity: source.getCanonicalIdentity(),
+			parent: parent == null ? null : loopTargets.get(parent.getCanonicalIdentity())
+		});
+		loopTargets.set(source.getCanonicalIdentity(), target);
+		return target;
+	}
+
+	function selectedLoop(statement:TypedStmt):TyControlTarget {
+		final source = statement.getControlTarget();
+		final target = source == null ? null : loopTargets.get(source.getCanonicalIdentity());
+		if (target == null)
+			throw "required inline jump lost its selected loop destination";
+		return target;
+	}
+
 	/** Keep ordinary conditional effects linear; distribute the continuation only around helper returns. */
 	function body(statements:Array<TypedStmt>, receiver:Null<TypedExpr>, locals:StringMap<TyLocalBinding>, resultType:TyType):TypedExpr {
 		final output = new Array<TypedExpr>();
@@ -226,8 +260,32 @@ class TypedRequiredInlineLowering {
 					final no = body((children.length == 2 ? [children[1]] : []).concat(remaining), receiver, locals.copy(), resultType);
 					output.push(TypedExpr.sourceIf(condition, yes, no, resultType, position));
 					return TypedExpr.block(output, resultType, position);
+				case ForIn | ForKeyValue | While | DoWhile:
+					if (hasReturn(statement))
+						throw "Cannot inline a not final return while expanding " + active.join(" -> ");
+					final target = introduceLoop(statement);
+					final loopLocals = locals.copy();
+					// The iterable and condition see the enclosing scope, before new iteration bindings.
+					final input = substitute(values[0], receiver, locals);
+					final bindings = [
+						for (binding in statement.getLocalBindings()) {
+							final fresh = allocator.allocate("iteration", TyTypeSubstitution.apply(binding.getType(), typeBindings));
+							loopLocals.set(binding.getIdentity().getCanonicalKey(), fresh);
+							fresh;
+						}
+					];
+					final loopBody = body(children, receiver, loopLocals, voidType());
+					output.push(statement.getTag() == ForIn
+						|| statement.getTag() == ForKeyValue ? TypedExpr.sourceFor(HxForBinding.fromNames(bindings.map(binding -> binding.getSourceName())),
+							input, loopBody, voidType(), position, bindings,
+							target) : TypedExpr.whileExpr(input, [loopBody], true, voidType(), position, statement.getTag() == DoWhile ? DoWhile : Normal)
+							.withControlTarget(target));
+				case Break | Continue:
+					output.push((statement.getTag() == Break ? TypedExpr.breakExpr(position) : TypedExpr.continueExpr(position))
+						.withControlTarget(selectedLoop(statement)));
+					return TypedExpr.block(output, TyType.noNormalCompletion(), position);
 				case _:
-					throw "required inline requires shared support for statement " + Std.string(statement.getTag());
+					throw "required inline requires shared support for statement " + Std.string(statement.getTag()) + " while expanding " + active.join(" -> ");
 			}
 		}
 		if (!resultType.isVoid())
@@ -325,6 +383,8 @@ class TypedRequiredInlineLowering {
 		if (named != null && expression.getExtensionProvider() != null)
 			selectedParameters.unshift(arguments[0].getType());
 		final previousBindings = typeBindings;
+		final previousLoops = loopTargets;
+		loopTargets = new StringMap();
 		typeBindings = TyMethodGenericBinding.inlineBindings(declaration, selectedParameters, expression.getType(), semanticIndex);
 		for (identity => type in ownerBindings)
 			typeBindings.set(identity, type);
@@ -366,6 +426,7 @@ class TypedRequiredInlineLowering {
 		prefix.push(body(helper.getBody().getStatements(), receiver, locals, expression.getType()));
 		active.pop();
 		typeBindings = previousBindings;
+		loopTargets = previousLoops;
 		return TypedExpr.block(prefix, expression.getType(), expression.getPosition());
 	}
 

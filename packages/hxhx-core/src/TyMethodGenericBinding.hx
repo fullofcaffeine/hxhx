@@ -110,6 +110,10 @@ class TyMethodGenericBinding {
 			index:TyperIndex):Bool {
 		if (expected == null || actual == null)
 			return true;
+		final scheme = actual.getClassValueScheme();
+		final context = expected.unwrapNull().getNominalIdentity();
+		if (scheme != null && context != null && context.getCanonicalName() == "Class")
+			return collect(expected, scheme.preview(), methodTypeParameters, bindings, index);
 		// Null carries no concrete type evidence, even for a bare T parameter.
 		// Candidate legality is checked separately by overload selection.
 		if (actual.isNullLiteral())

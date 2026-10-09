@@ -16,6 +16,15 @@ private typedef InferredOccurrence = {
 	final ?callDeclarationKey:String;
 }
 
+/** Context belongs to one class-value use, while the local itself remains a reusable declaration scheme. */
+private typedef InferredClassValueUse = {
+	final expression:HxExpr;
+	final term:TyInferenceTerm;
+	final sourceFingerprint:String;
+	final sourceKey:String;
+	final schemeKey:String;
+}
+
 /** A direct call retains its callable parameters as well as the result shared with local uses. */
 private typedef InferredDirectCall = {
 	final expression:HxExpr;
@@ -43,6 +52,7 @@ class TyFunctionInference {
 	final owner:String;
 	var solver:TyInferenceSolver;
 	var occurrences:Array<InferredOccurrence> = [];
+	var classValueUses:Array<InferredClassValueUse> = [];
 	var directCalls:Array<InferredDirectCall> = [];
 	var receiverCalls:Array<TyReceiverCallContext> = [];
 	var capturedCalls:Array<InferredCapturedCall> = [];
@@ -259,6 +269,7 @@ class TyFunctionInference {
 		candidate.solver = solver.isSealed() ? solver : solver.fork();
 		candidate.speculativeReplay = solver.isSealed();
 		candidate.occurrences = occurrences.copy();
+		candidate.classValueUses = classValueUses.copy();
 		candidate.directCalls = directCalls.copy();
 		candidate.receiverCalls = receiverCalls.copy();
 		candidate.capturedCalls = capturedCalls.copy();
@@ -353,6 +364,14 @@ class TyFunctionInference {
 
 	/** Resolve initializer provenance before its new local becomes visible. */
 	public function sourceTerm(expression:HxExpr, environment:TyFunctionEnv):Null<TyInferenceTerm> {
+		for (entry in classValueUses)
+			if (entry.expression == expression) {
+				if (entry.sourceKey != classValueSourceKey(expression, environment))
+					throw "class-value use changed its lexical declaration";
+				if (entry.sourceFingerprint != TypedBodyFingerprint.exactExpression(expression))
+					throw "class-value source changed during inference";
+				return entry.term;
+			}
 		return switch expression {
 			case ESourceFunction(_, _, _, _):
 				var term:Null<TyInferenceTerm> = null;
@@ -389,6 +408,38 @@ class TyFunctionInference {
 				final projected = parent == null ? null : solver.field(parent, name);
 				projected == null ? occurrence(expression) : projected;
 			case _: occurrence(expression);
+		};
+	}
+
+	/** Class aliases keep their declaration scheme; only this exact contextual use owns fresh variables. */
+	function classValueTerm(expression:HxExpr, scheme:TyClassValueScheme, environment:TyFunctionEnv):TyInferenceTerm {
+		for (entry in classValueUses)
+			if (entry.expression == expression && entry.schemeKey != scheme.getSemanticKey())
+				throw "class-value use changed its generic declaration";
+		final existing = sourceTerm(expression, environment);
+		if (existing != null)
+			return existing;
+		if (solver.isSealed())
+			throw "class-value application is absent from sealed inference";
+		final arguments = [for (_ in scheme.getParameters()) solver.freshClassValueArgument()];
+		final term = Nominal(new TyNominalTypeId("Class"), [Nominal(scheme.getIdentity(), arguments)]);
+		classValueUses.push({
+			expression: expression,
+			term: term,
+			sourceFingerprint: TypedBodyFingerprint.exactExpression(expression),
+			sourceKey: classValueSourceKey(expression, environment),
+			schemeKey: scheme.getSemanticKey()
+		});
+		return term;
+	}
+
+	static function classValueSourceKey(expression:HxExpr, environment:TyFunctionEnv):String {
+		return switch expression {
+			case EParenthesized(inner, _) | EPrivateAccess(inner, _): classValueSourceKey(inner, environment);
+			case EIdent(name):
+				final symbol = environment.resolveSymbol(name);
+				symbol == null ? "literal" : symbol.getIdentity().getCanonicalKey() + ":" + symbol.getType().getSemanticKey();
+			case _: "literal";
 		};
 	}
 
@@ -483,11 +534,17 @@ class TyFunctionInference {
 			final terms = [
 				for (offset in 0...input.arguments.length) {
 					final argument = input.arguments[offset];
-					final term = candidate.sourceTerm(switch argument {
+					var term = candidate.sourceTerm(switch argument {
 						case ECall(EIdent("__hxhx_spread"), [container]): container;
 						case _: argument;
 					}, input.environment);
 					final actual = input.actual[offset];
+					final scheme = actual.getClassValueScheme();
+					final parameter = input.callable.getFunctionArguments()[input.order.parameterIndex(offset)].unwrapNull();
+					if (term == null
+						&& scheme != null
+						&& parameter.getNominalIdentity() != null
+						&& parameter.getNominalIdentity().getCanonicalName() == "Class") term = candidate.classValueTerm(argument, scheme, input.environment);
 					// Ordinary written values need no inference occurrence, but their
 					// known types still constrain the selected method's parameters.
 					term == null
@@ -508,6 +565,7 @@ class TyFunctionInference {
 			switch instantiated {
 				case Function(_, result, _):
 					solver.commit(candidate.solver);
+					classValueUses = candidate.classValueUses;
 					directCalls.push({expression: expression, declaration: declaration, callable: instantiated});
 					occurrences.push({expression: expression, term: result});
 				case _:

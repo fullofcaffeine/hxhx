@@ -66,7 +66,11 @@ class TyMethodArgumentOrder {
 		};
 	}
 
-	/** Null here is an omission fact for ranking, not an expression or a generic type argument. */
+	/**
+		Rank each supplied value against its parameter. A checked spread contributes
+		its container's element type because the parameter view exposes rest elements.
+		Null here records omission, not an expression or a generic type argument.
+	 */
 	public function rankedTypes(types:Array<TyType>):Array<TyType> {
 		if (types.length != sourceCount)
 			throw "method argument order has a stale source count";
@@ -75,8 +79,12 @@ class TyMethodArgumentOrder {
 			switch slot {
 				case Omitted:
 					result.push(TyType.fromHintText("Null"));
-				case Supplied(source) | RestSpread(source):
+				case Supplied(source):
 					result.push(types[source]);
+				case RestSpread(source):
+					final container = types[source];
+					final elements = container.getTypeArguments();
+					result.push(container.isDynamic() || elements.length != 1 ? container : elements[0]);
 				case RestElements(sources):
 					for (source in sources)
 						result.push(types[source]);

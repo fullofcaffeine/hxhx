@@ -54,7 +54,7 @@ function inferred(name:String, type:TyType):TyAnonymousField {
 	Method-local parameters use scope depth and ordinal for this comparison;
 	the stored types retain their exact declaration identities for substitution.
  */
-function semanticKey(field:TyAnonymousField, ?enclosingScopes:Array<Array<TyTypeParameterId>>):String {
+function semanticKey(field:TyAnonymousField, ?enclosingScopes:Array<Array<TyTypeParameterId>>, ?aliases:Array<TyAliasDefinition>):String {
 	var scopes = enclosingScopes == null ? [] : enclosingScopes;
 	final kind = switch (field.kind) {
 		case Variable(finalField, get, set):
@@ -63,12 +63,8 @@ function semanticKey(field:TyAnonymousField, ?enclosingScopes:Array<Array<TyType
 			scopes = scopes.concat([parameters]);
 			"method<" + parameters.length + ">:";
 	};
-	return (field.visibility == Private ? "private:" : "")
-		+ (field.isOptional ? "?" : "")
-		+ field.name
-		+ ":"
-		+ kind
-		+ field.type.semanticKeyInScopes(scopes);
+	return (field.visibility == Private ? "private:" : "") + (field.isOptional ? "?" : "") + field.name + ":" + kind
+		+ field.type.semanticKeyInScopes(scopes, aliases);
 }
 
 /** Render the retained member contract for diagnostics and typed source projections. */

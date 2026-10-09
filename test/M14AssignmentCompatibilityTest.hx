@@ -208,6 +208,10 @@ class M14AssignmentCompatibilityTest {
 		final floating = TyType.fromHintText("Float");
 		final dynamicType = TyType.fromHintText("Dynamic");
 		final cases:Array<{expected:TyType, actual:TyType, wanted:TyCallArgumentCompatibility}> = [
+			{expected: dynamicType, actual: TyType.nominal(new TyNominalTypeId("Array"), [integer]), wanted: Compatible},
+			{expected: dynamicType, actual: TyType.nominal(new TyNominalTypeId("haxe.Rest"), [integer]), wanted: Compatible},
+			{expected: dynamicType, actual: TyType.nominal(new TyNominalTypeId("custom.Container"), [integer], "Array"), wanted: Unknown},
+			{expected: dynamicType, actual: TyType.nominal(new TyNominalTypeId("Array"), [TyType.unknown()]), wanted: Unknown},
 			{expected: integer, actual: TyType.nominal(new TyNominalTypeId("Array"), [integer]), wanted: Compatible},
 			{expected: floating, actual: TyType.nominal(new TyNominalTypeId("Array"), [integer]), wanted: Incompatible},
 			{expected: integer, actual: TyType.nominal(new TyNominalTypeId("Array"), [floating]), wanted: Incompatible},

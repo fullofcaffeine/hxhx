@@ -15,6 +15,9 @@ typedef JsClassInheritanceNode = {
 
 	/** The admitted abstract wrapper stores the source-level receiver in its backing slot. */
 	final abstractReceiver:Bool;
+
+	/** Enum-only declaration data, copied from exact checked facts before rendering. */
+	final enumConstructors:Null<Array<JsEnumDeclaration.JsEnumConstructorPlan>>;
 };
 
 /**
@@ -66,6 +69,24 @@ class JsClassInheritancePlan {
 					reference: reference,
 					isExtern: facts.getIsExtern(),
 					usesHostPath: hostReference != null,
+					enumConstructors: switch (facts.getNominalKind()) {
+						case EnumValue: [
+								for (constructor in facts.copyEnumConstructors())
+									{
+										index: constructor.index,
+										name: constructor.name,
+										parameters: switch (constructor.member) {
+											case Singleton(_): null;
+											case Callable(method): method.arguments.map(argument -> argument.name);
+										},
+										optional: switch (constructor.member) {
+											case Singleton(_): [];
+											case Callable(method): method.arguments.map(argument -> argument.isOptional);
+										}
+									}
+							];
+						case _: null;
+					},
 					abstractReceiver: switch (facts.getNominalKind()) {
 						case AbstractValue(_): true;
 						case _: false;
@@ -129,6 +150,14 @@ class JsClassInheritancePlan {
 			throw "JavaScript runtime type has no exact class provider: " + identity;
 		if (facts.getIsExtern() && facts.getIsInterface())
 			throw "JavaScript extern interface runtime type is unsupported: " + identity;
+		return node;
+	}
+
+	/** Macro adapters must name the exact enum owner; presentation aliases cannot authorize a constructor. */
+	public function requireRuntimeEnum(identity:String):JsClassInheritanceNode {
+		final node = byIdentity.get(identity);
+		if (node == null || node.enumConstructors == null)
+			throw "JavaScript enum has no exact retained provider: " + identity;
 		return node;
 	}
 

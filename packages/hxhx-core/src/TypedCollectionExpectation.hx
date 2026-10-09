@@ -16,14 +16,16 @@ function select(expression:HxExpr, expected:Null<TyType>):Null<TyType> {
 		return null;
 	if (!isEmpty(expression))
 		return null;
-	final type = expected.unwrapNull();
+	final type = TyAliasExpansion.revealNonNullable(expected);
 	final identity = type.getNominalIdentity();
 	if (identity == null || type.hasUnknownComponent())
 		return null;
 	final arity = type.getTypeArguments().length;
 	return switch identity.getCanonicalName() {
-		case "Array" if (arity == 1): type;
-		case "haxe.ds.Map" if (arity == 2): type;
+		// Validate the revealed constructor while preserving the selected alias
+		// as the literal's storage contract, including recursive element identity.
+		case "Array" if (arity == 1): expected.unwrapNull();
+		case "haxe.ds.Map" if (arity == 2): expected.unwrapNull();
 		case _: null;
 	};
 }

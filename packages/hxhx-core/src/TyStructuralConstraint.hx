@@ -7,6 +7,13 @@ private enum StructuralDirection {
 	Exact;
 }
 
+/** Only complete, directed comparisons can close a recursive proof already on this path. */
+private typedef StructuralComparison = {
+	final expected:String;
+	final actual:String;
+	final direction:StructuralDirection;
+};
+
 /**
 	Constrain a class value against a structural contract on a caller-owned fork.
 	Member lookup uses declared owners and applied superclass types. The original
@@ -14,7 +21,7 @@ private enum StructuralDirection {
 	The caller commits only after every required member succeeds.
 **/
 function constrain(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType):Bool {
-	return value(index, solver, actual, expected, Output);
+	return value(index, solver, actual, expected, Output, []);
 }
 
 /** Exact binding discharges earlier field reads against real class members, without replacing the nominal identity with a record. */
@@ -82,8 +89,39 @@ private function inferredMember(index:TyperIndex, receiver:TyInferenceTerm, name
 	};
 }
 
-private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType, direction:StructuralDirection):Bool {
+private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType, direction:StructuralDirection,
+		proof:Array<StructuralComparison>):Bool {
+	// Exact template equivalence is sufficient in either assignment direction.
+	// Check before unfolding so growing applications retain their finite binders.
+	switch actual {
+		case Known(type) if (TyAliasEquivalence.equivalentApplications(expected, type)):
+			return true;
+		case _:
+	}
+	expected = TyAliasExpansion.reveal(expected);
+	actual = switch actual {
+		case Known(type) if (type.getAliasDefinition() != null): TyInferenceSolver.fromType(TyAliasExpansion.reveal(type));
+		case _: actual;
+	};
+	final preview = solver.preview(actual);
+	if (!preview.hasUnknownComponent() && !expected.hasUnknownComponent()) {
+		final expectedKey = expected.getSemanticKey();
+		final actualKey = preview.getSemanticKey();
+		if (expectedKey == actualKey)
+			return true;
+		for (ancestor in proof)
+			if (ancestor.expected == expectedKey && ancestor.actual == actualKey && ancestor.direction == direction)
+				return true;
+		proof = proof.concat([{expected: expectedKey, actual: actualKey, direction: direction}]);
+	}
 	if (expected.isAnonymous() && direction != Input) {
+		final wantedFields = expected.getAnonymousFields();
+		if (!preview.hasUnknownComponent() && !expected.hasUnknownComponent())
+			wantedFields.sort((left, right) -> {
+				final a = hasAlias(left.type);
+				final b = hasAlias(right.type);
+				return a != b ? (a ? 1 : -1) : left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
+			});
 		return switch actual {
 			case Nominal(identity, arguments):
 				final owner = index.getByFullName(identity.getCanonicalName());
@@ -96,17 +134,17 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 				final bindings = new StringMap<TyInferenceTerm>();
 				for (i in 0...parameters.length)
 					bindings.set(parameters[i].getCanonicalKey(), arguments[i]);
-				for (wanted in expected.getAnonymousFields()) {
+				for (wanted in wantedFields) {
 					final supplied = member(index, symbolic, wanted.name, []);
 					if (supplied == null
 						|| !memberRules(wanted, supplied)
-						|| !value(index, solver, term(supplied.type, bindings), wanted.type, memberDirection(wanted)))
+						|| !value(index, solver, term(supplied.type, bindings), wanted.type, memberDirection(wanted), proof))
 						return false;
 				}
 				true;
 			case Structure(fields, signature):
 				final supplied = signature.getAnonymousFields();
-				for (wanted in expected.getAnonymousFields()) {
+				for (wanted in wantedFields) {
 					var found = -1;
 					for (i in 0...supplied.length)
 						if (supplied[i].name == wanted.name)
@@ -117,7 +155,7 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 						return false;
 					}
 					if (!memberRules(wanted, supplied[found])
-						|| !value(index, solver, fields[found], wanted.type, memberDirection(wanted)))
+						|| !value(index, solver, fields[found], wanted.type, memberDirection(wanted), proof))
 						return false;
 				}
 				true;
@@ -135,18 +173,18 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 					if (wanted[i].isRest != supplied[i].isRest || (wanted[i].isOptional && !supplied[i].isOptional))
 						return false;
 					final argumentDirection = direction == Exact || wanted[i].isRest ? Exact : direction == Output ? Input : Output;
-					if (!value(index, solver, arguments[i], wanted[i].type, argumentDirection))
+					if (!value(index, solver, arguments[i], wanted[i].type, argumentDirection, proof))
 						return false;
 				}
 				return expected.getFunctionReturn().isVoid()
 					&& direction == Output
-					|| value(index, solver, result, expected.getFunctionReturn(), direction);
+					|| value(index, solver, result, expected.getFunctionReturn(), direction, proof);
 			case _:
 		}
 	final concrete = solver.preview(actual);
 	if (!concrete.hasUnknownComponent()) {
 		if (direction == Exact)
-			return concrete.getSemanticKey() == expected.getSemanticKey();
+			return TyAliasEquivalence.equivalentTypes(concrete, expected);
 		final compatibility = direction == Output ? TyAssignmentCompatibility.classify(expected, concrete,
 			Unchecked) : TyAssignmentCompatibility.classify(concrete, expected, Unchecked);
 		if (compatibility != Unknown)
@@ -154,10 +192,24 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 		// Callback inputs reverse nominal assignment as well as primitive
 		// assignment: a function accepting Base can serve a Child caller.
 		if (direction == Input && !expected.hasUnknownComponent())
-			return value(index, solver, TyInferenceSolver.fromType(expected), concrete, Output);
+			return value(index, solver, TyInferenceSolver.fromType(expected), concrete, Output, proof);
 	}
 	final projected = direction == Input ? actual : TyInferenceNominalContext.view(index, actual, expected);
 	return projected != null && constrainExact(index, solver, projected, expected);
+}
+
+/** Check concrete payloads before recursive member obligations; incomplete inference keeps its original order. */
+private function hasAlias(type:TyType):Bool {
+	if (type.getAliasDefinition() != null)
+		return true;
+	if (type.isNullable() && hasAlias(type.unwrapNull()))
+		return true;
+	if (type.isFunction() && hasAlias(type.getFunctionReturn()))
+		return true;
+	for (child in type.getTypeArguments().concat(type.getFunctionArguments()).concat(type.getAnonymousFieldTypes()))
+		if (hasAlias(child))
+			return true;
+	return false;
 }
 
 /** Mutable fields require exact value types; methods and read-only fields provide output values. */

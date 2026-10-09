@@ -19,11 +19,11 @@ function isNullOnly(values:Array<HxExpr>):Bool {
 	return values.length > 0 && values.filter(value -> !isNull(value)).length == 0;
 }
 
-/** Only a resolved Array declaration supplies element context to nested literals. */
+/** Reveal alias references before requiring a resolved Array declaration for child context. */
 function elementType(expected:Null<TyType>):Null<TyType> {
 	if (expected == null)
 		return null;
-	final type = expected.unwrapNull();
+	final type = TyAliasExpansion.revealNonNullable(expected);
 	final identity = type.getNominalIdentity();
 	final arguments = type.getTypeArguments();
 	return identity != null

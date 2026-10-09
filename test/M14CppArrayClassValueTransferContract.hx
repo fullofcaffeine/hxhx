@@ -4,7 +4,7 @@ import backend.cpp.CppManagedValueTransfer.accepts;
 import backend.cpp.CppTypedProgramProjection;
 
 /** Preserve the distinction between an owned polymorphic literal and a stored erased class value. */
-function check(program:CppTypedProgramProjection):Void {
+function check(program:CppTypedProgramProjection, index:TyperIndex):Void {
 	final owner = program.requireClass(program.requireClassIdentity('Main'));
 	final initializers = owner.getFieldInitializers().filter(value -> value.getField().getName() == 'selected');
 	if (initializers.length != 1)
@@ -28,6 +28,19 @@ function check(program:CppTypedProgramProjection):Void {
 		throw 'Array class transfer admitted unrelated concrete arguments or class identities';
 	final copied = new TypedBackendRuntimeTypeOccurrence(initializer.getStableIdentity(), initializer.getBodyRevision(), occurrence.getTarget());
 	rejected(() -> classes.acceptsClassLiteral(copied, concrete), 'another program or occurrence');
+	final scheme = TyType.classValue(TyClassValueScheme.select(occurrence.getTarget(), index));
+	if (!classes.isClassValue(scheme)
+		|| !classes.acceptsClassLiteral(occurrence, scheme)
+		|| !accepts(concrete, scheme, casts)
+		|| !accepts(stringArray, scheme, casts)
+		|| !accepts(scheme, TyType.fromHintText('Null'), casts))
+		throw 'generic class scheme lost its descriptor or independently checked contexts';
+	if (accepts(scheme, erased, casts) || accepts(scheme, concrete, casts) || accepts(stringClass, scheme, casts))
+		throw 'class scheme admitted stored narrowing or an unrelated declaration';
+	rejected(() -> classes.acceptsClassLiteral(copied, scheme), 'another program or occurrence');
+	final changed = new ResolvedModule('Array', 'Array.hx', ParserStage.parse('extern class Array<A,B> {}', 'Array.hx'));
+	final stale = TyType.classValue(TyClassValueScheme.select(occurrence.getTarget(), TyperIndex.build([changed])));
+	rejected(() -> classes.isClassValue(stale), 'scheme differs from its current declaration');
 	Sys.println('CPP_ARRAY_CLASS_VALUE_TRANSFER:PASS');
 }
 

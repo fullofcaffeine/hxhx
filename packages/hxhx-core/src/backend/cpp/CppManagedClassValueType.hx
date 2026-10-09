@@ -10,6 +10,7 @@ package backend.cpp;
  */
 function selects(program:CppTypedProgramProjection, type:TyType):Bool {
 	CppManagedClosureAbi.assertComplete(type);
+	type = descriptorView(program, type);
 	final identity = type.getNominalIdentity();
 	if (identity == null || identity.getCanonicalName() != "Class")
 		return false;
@@ -25,11 +26,32 @@ function selects(program:CppTypedProgramProjection, type:TyType):Bool {
 	}
 }
 
+/**
+	Validate the shared generic declaration before selecting its erased descriptor
+	storage. This view never replaces the semantic source type and cannot grant a
+	stored erased handle the scheme's independently contextual uses.
+ */
+private function descriptorView(program:CppTypedProgramProjection, type:TyType):TyType {
+	final scheme = type.getClassValueScheme();
+	if (scheme == null)
+		return type;
+	program.assertCurrent();
+	final facts = program.requireClass(program.requireClassIdentity(scheme.getIdentity().getCanonicalName())).requireSemanticFacts();
+	final parameters = facts.getTypeParameterIds();
+	final selected = scheme.getParameters();
+	if (!facts.getNominalKind().match(ClassInstance) || parameters.length != selected.length)
+		throw "managed class scheme differs from its current declaration";
+	for (index in 0...parameters.length)
+		if (parameters[index].getCanonicalKey() != selected[index].getCanonicalKey())
+			throw "managed class scheme differs from its current declaration";
+	return scheme.application(parameters.map(_ -> TyType.fromHintText("Dynamic")));
+}
+
 /** Return the erased Array descriptor's element parameter only after checking both core declarations. */
 function arrayElement(program:CppTypedProgramProjection, type:TyType):Null<TyType> {
 	if (!selects(program, type))
 		return null;
-	final instance = type.getTypeArguments()[0];
+	final instance = descriptorView(program, type).getTypeArguments()[0];
 	final identity = instance.getNominalIdentity();
 	if (identity == null || identity.getCanonicalName() != 'Array')
 		return null;
@@ -46,15 +68,23 @@ function arrayElement(program:CppTypedProgramProjection, type:TyType):Null<TyTyp
 
 /** Widen a stored Array class handle; this never permits narrowing a stored erased handle. */
 function permitsArrayErasure(program:CppTypedProgramProjection, target:TyType, source:TyType):Bool {
+	if (target.getClassValueScheme() != null)
+		return false;
 	final element = arrayElement(program, target);
 	return element != null && element.isDynamic() && arrayElement(program, source) != null;
+}
+
+/** Only an existing shared scheme can acquire a contextual Class<T> view, never the reverse. */
+function permitsSchemeContext(program:CppTypedProgramProjection, target:TyType, source:TyType):Bool {
+	final scheme = source.getClassValueScheme();
+	return scheme != null && selects(program, source) && selects(program, target) && scheme.accepts(target);
 }
 
 /** Check a fresh ordinary class literal without requesting physical instance storage. */
 function acceptsNominalLiteral(program:CppTypedProgramProjection, identity:TyNominalTypeId, target:TyType):Bool {
 	if (!selects(program, target))
 		return false;
-	final instance = target.getTypeArguments()[0];
+	final instance = descriptorView(program, target).getTypeArguments()[0];
 	if (instance.getNominalIdentity() == null || instance.getNominalIdentity().getCanonicalName() != identity.getCanonicalName())
 		return false;
 	final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));

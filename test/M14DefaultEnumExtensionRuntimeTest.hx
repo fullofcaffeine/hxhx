@@ -1,4 +1,3 @@
-import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.Stage3SetupSupport;
 import backend.BackendContext;
 import backend.js.JsBackend;
@@ -17,36 +16,15 @@ class M14DefaultEnumExtensionRuntimeTest {
 		if (code != 0 || errors.length != 0 || !StringTools.endsWith(output, ": " + expected))
 			throw "upstream enum helpers differ: " + output + errors;
 		Sys.println("DEFAULT_ENUM_EXTENSION_UPSTREAM:PASS");
-		final args = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
-		final paths = Stage3SetupSupport.projectClassPaths({
-			explicitPaths: [root],
-			libraries: [],
-			cwd: Sys.getCwd(),
-			standardRoot: Stage1Args.getStandardLibraryRoot(args),
-			targetDefine: "js"
-		});
 		final defines = Stage3SetupSupport.buildDefinesMap(["js-es=5"], "js", "js-native");
-		final resolved = ResolverStage.parseProjectRoots(paths, ["Main"], defines);
-		final index = TyperIndex.buildHeaders(resolved);
-		final loader = new ModuleLoader(paths, defines, index);
-		loader.markResolvedAlready(resolved);
-		final pending = resolved.copy();
-		final typed = new Array<TypedModule>();
-		var cursor = 0;
-		var provider = false;
-		while (cursor < pending.length) {
-			final module = pending[cursor++];
-			if (ResolvedModule.getModulePath(module) == "haxe.EnumTools")
-				provider = true;
-			typed.push(TyperStage.typeResolvedModule(module, index, loader, true));
-			for (loaded in loader.drainNewModules())
-				pending.push(loaded);
-		}
-		if (!provider)
-			throw "authentic enum provider was not loaded";
+		final program = JsSourceProgramFixture.build({
+			sources: [{path: "Main.hx", source: sys.io.File.getContent(root + "/Main.hx")}],
+			requiredModules: ["haxe.EnumTools", "Type"],
+			defines: ["js-es=5"]
+		});
 		final outputRoot = ".tmp/default-enum-extension-runtime";
 		final script = outputRoot + "/main.js";
-		new JsBackend().emit(MacroStage.expandProgram(typed, []), new BackendContext(outputRoot, script, "Main", true, false, defines));
+		new JsBackend().emit(program, new BackendContext(outputRoot, script, "Main", true, false, defines));
 		final child = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["60", "node", script]);
 		final stdout = child.stdout.readAll().toString();
 		final stderr = child.stderr.readAll().toString();

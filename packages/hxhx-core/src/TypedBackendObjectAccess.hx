@@ -31,7 +31,7 @@ class TypedBackendObjectAccess {
 		};
 		if (selected.getTag() != FieldRead)
 			return false;
-		final receiverType = selected.getExpressions()[0].getType().unwrapNull();
+		final receiverType = TyAliasExpansion.revealNonNullable(selected.getExpressions()[0].getType());
 		return receiverType.isAnonymous() || receiverType.isDynamic();
 	}
 

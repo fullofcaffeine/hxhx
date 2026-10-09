@@ -18,6 +18,8 @@ class TyType {
 	static final KIND_NULLABLE = "nullable";
 	static final KIND_NOMINAL = "nominal";
 	static final KIND_ABSTRACT_META = "abstract-meta";
+	static final KIND_CLASS_VALUE = "class-value";
+	static final KIND_ALIAS_APPLICATION = "alias-application";
 	static final KIND_FUNCTION = "function";
 	static final KIND_ANONYMOUS = "anonymous";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
@@ -37,6 +39,8 @@ class TyType {
 	final anonymousFields:Array<TyAnonymousField>;
 	final typeParameterIdentity:Null<TyTypeParameterId>;
 	final openMethodParameterIdentity:Null<TyOpenMethodParameterId>;
+	final classValueScheme:Null<TyClassValueScheme>;
+	final aliasDefinition:Null<TyAliasDefinition>;
 
 	function new(input:TyTypeStorage) {
 		display = input.display;
@@ -50,7 +54,42 @@ class TyType {
 		anonymousFields = input.anonymousFields == null ? [] : [for (field in input.anonymousFields) TyAnonymousField.copy(field)];
 		typeParameterIdentity = input.typeParameterIdentity;
 		openMethodParameterIdentity = input.openMethodParameterIdentity;
+		classValueScheme = input.classValueScheme;
+		aliasDefinition = input.aliasDefinition;
 	}
+
+	/**
+		Retain an alias reference without unfolding its body. Definitions may still
+		be under construction here; semantic publication requires a sealed graph.
+		Ordinary getters never follow this edge implicitly.
+	 */
+	public static function aliasApplication(definition:TyAliasDefinition, arguments:Array<TyType>):TyType {
+		if (definition == null || arguments == null || definition.getParameterIds().length != arguments.length)
+			throw "alias application requires a definition and its exact argument count";
+		for (argument in arguments)
+			if (argument == null)
+				throw "alias application contains a missing argument";
+		final name = definition.getCanonicalName();
+		return new TyType({
+			display: name + (arguments.length == 0 ? "" : "<" + [for (argument in arguments) argument.getCanonicalDisplay()].join(",") + ">"),
+			kind: KIND_ALIAS_APPLICATION,
+			aliasDefinition: definition,
+			typeArguments: arguments
+		});
+	}
+
+	public function getAliasDefinition():Null<TyAliasDefinition>
+		return aliasDefinition;
+
+	/** Store a generic class declaration without selecting its instance arguments. */
+	public static function classValue(scheme:TyClassValueScheme):TyType {
+		if (scheme == null)
+			throw "class value requires a declaration scheme";
+		return new TyType({display: "Class<" + scheme.getIdentity().getCanonicalName() + ">", kind: KIND_CLASS_VALUE, classValueScheme: scheme});
+	}
+
+	public function getClassValueScheme():Null<TyClassValueScheme>
+		return classValueScheme;
 
 	public static function unknown():TyType {
 		return new TyType({display: "Unknown", kind: KIND_UNKNOWN});
@@ -245,15 +284,24 @@ class TyType {
 		return kind == KIND_OPEN_METHOD_PARAMETER;
 
 	/** Source-shaped target hints must explicitly erase open parameters without changing semantic facts. */
-	public function hasOpenMethodParameter():Bool {
-		if (isOpenMethodParameter())
+	public function hasOpenMethodParameter():Bool
+		return containsComponent(type -> type.isOpenMethodParameter(), []);
+
+	/** Walk each definition once; application arguments remain separate children. */
+	function containsComponent(predicate:TyType->Bool, visited:Array<TyAliasDefinition>):Bool {
+		if (predicate(this))
 			return true;
-		if (nullableInner != null && nullableInner.hasOpenMethodParameter())
+		if (aliasDefinition != null && visited.indexOf(aliasDefinition) < 0) {
+			visited.push(aliasDefinition);
+			if (aliasDefinition.getBody().containsComponent(predicate, visited))
+				return true;
+		}
+		if (nullableInner != null && nullableInner.containsComponent(predicate, visited))
 			return true;
-		if (functionReturn != null && functionReturn.hasOpenMethodParameter())
+		if (functionReturn != null && functionReturn.containsComponent(predicate, visited))
 			return true;
 		for (component in typeArguments.concat(getFunctionArguments()).concat(getAnonymousFieldTypes()))
-			if (component.hasOpenMethodParameter())
+			if (component.containsComponent(predicate, visited))
 				return true;
 		return false;
 	}
@@ -279,18 +327,8 @@ class TyType {
 		return kind == KIND_UNKNOWN;
 
 	/** An incomplete structural type cannot serve as a fully selected backend contract. */
-	public function hasUnknownComponent():Bool {
-		if (isUnknown())
-			return true;
-		if (nullableInner != null && nullableInner.hasUnknownComponent())
-			return true;
-		if (functionReturn != null && functionReturn.hasUnknownComponent())
-			return true;
-		for (component in typeArguments.concat(getFunctionArguments()).concat(getAnonymousFieldTypes()))
-			if (component.hasUnknownComponent())
-				return true;
-		return false;
-	}
+	public function hasUnknownComponent():Bool
+		return containsComponent(type -> type.isUnknown(), []);
 
 	public function isNoNormalCompletion():Bool
 		return kind == KIND_NO_NORMAL_COMPLETION;
@@ -380,7 +418,33 @@ class TyType {
 		scope depth and ordinal. Ordinary callers use getSemanticKey(). Free
 		parameters retain exact identities, so no caller or outer binding is captured.
 	 */
-	public function semanticKeyInScopes(scopes:Array<Array<TyTypeParameterId>>):String {
+	public function semanticKeyInScopes(scopes:Array<Array<TyTypeParameterId>>, ?aliases:Array<TyAliasDefinition>):String {
+		final path = aliases == null ? [] : aliases;
+		if (aliasDefinition != null) {
+			final body = aliasDefinition.getBody();
+			final name = aliasDefinition.getCanonicalName();
+			final previous = path.indexOf(aliasDefinition);
+			final ordinal = previous >= 0 ? previous : path.length;
+			if (previous < 0)
+				path.push(aliasDefinition);
+			final args = [for (argument in typeArguments) argument.semanticKeyInScopes(scopes, path)].join(",");
+			if (previous >= 0)
+				return "alias-ref:" + ordinal + ":" + name + "<" + args + ">";
+			// A definition is closed over its own parameters. Caller method scopes
+			// apply to arguments, never to the referenced declaration's body. Share
+			// the traversal table across siblings to serialize each body only once.
+			return "alias:"
+				+ ordinal
+				+ ":"
+				+ name
+				+ "<"
+				+ args
+				+ ">={"
+				+ body.semanticKeyInScopes([aliasDefinition.getParameterIds()], path)
+				+ "}";
+		}
+		if (classValueScheme != null)
+			return "class-value:" + classValueScheme.getSemanticKey();
 		if (kind == KIND_OPEN_METHOD_PARAMETER)
 			return "open-method-parameter:" + openMethodParameterIdentity.getCanonicalKey();
 		if (kind == KIND_PRIMITIVE)
@@ -404,17 +468,20 @@ class TyType {
 			return "type-parameter:" + (typeParameterIdentity == null ? "<missing>" : typeParameterIdentity.getCanonicalKey());
 		}
 		if (kind == KIND_NULLABLE)
-			return "nullable:" + (nullableInner == null ? "dynamic" : nullableInner.semanticKeyInScopes(scopes));
+			return "nullable:" + (nullableInner == null ? "dynamic" : nullableInner.semanticKeyInScopes(scopes, path));
 		if (kind == KIND_FUNCTION) {
 			final arguments = [
 				for (parameter in functionParameters)
-					(parameter.isRest ? "..." : parameter.isOptional ? "?" : "") + parameter.type.semanticKeyInScopes(scopes)
+					(parameter.isRest ? "..." : parameter.isOptional ? "?" : "") + parameter.type.semanticKeyInScopes(scopes, path)
 			].join(",");
-			return "function:(" + arguments + ")->" + (functionReturn == null ? "unknown" : functionReturn.semanticKeyInScopes(scopes));
+			return "function:("
+				+ arguments
+				+ ")->"
+				+ (functionReturn == null ? "unknown" : functionReturn.semanticKeyInScopes(scopes, path));
 		}
 		if (kind == KIND_ANONYMOUS)
-			return "anonymous:{" + [for (field in anonymousFields) TyAnonymousField.semanticKey(field, scopes)].join(",") + "}";
-		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.semanticKeyInScopes(scopes)].join(",") + ">";
+			return "anonymous:{" + [for (field in anonymousFields) TyAnonymousField.semanticKey(field, scopes, path)].join(",") + "}";
+		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.semanticKeyInScopes(scopes, path)].join(",") + ">";
 		if (kind == KIND_ABSTRACT_META)
 			return "abstract-meta" + args;
 		if (kind == KIND_NOMINAL)
@@ -430,6 +497,11 @@ class TyType {
 		type hint without asking each target to repeat import and alias resolution.
 	**/
 	public function getCanonicalDisplay():String {
+		if (aliasDefinition != null)
+			return aliasDefinition.getCanonicalName()
+				+ (typeArguments.length == 0 ? "" : "<" + [for (argument in typeArguments) argument.getCanonicalDisplay()].join(",") + ">");
+		if (classValueScheme != null)
+			return classValueScheme.getCanonicalDisplay();
 		// Source-shaped backend hints use the opaque carrier for a valid open
 		// parameter. The typed graph and revision key retain its exact identity;
 		// this rendering must never be fed back as semantic inference evidence.
@@ -830,4 +902,6 @@ private typedef TyTypeStorage = {
 	final ?anonymousFields:Array<TyAnonymousField>;
 	final ?typeParameterIdentity:TyTypeParameterId;
 	final ?openMethodParameterIdentity:TyOpenMethodParameterId;
+	final ?classValueScheme:TyClassValueScheme;
+	final ?aliasDefinition:TyAliasDefinition;
 };

@@ -7,9 +7,9 @@ function isLiteral(expression:HxExpr):Bool {
 	};
 }
 
-/** Match by authored name, since structural type fields use a canonical sorted order. */
+/** Match by authored name after revealing recursive aliases; structural fields use a canonical sorted order. */
 function fieldTypes(names:Array<String>, expected:Null<TyType>):Array<TyType> {
-	final type = expected == null ? null : expected.unwrapNull();
+	final type = expected == null ? null : TyAliasExpansion.revealNonNullable(expected);
 	final fields = type == null || !type.isAnonymous() ? [] : type.getAnonymousFieldNames();
 	final types = type == null || !type.isAnonymous() ? [] : type.getAnonymousFieldTypes();
 	return [
@@ -37,7 +37,7 @@ function infer(input:{
 }):TyType {
 	if (input.names.length != input.values.length)
 		throw "anonymous literal names do not cover its values";
-	final context = input.expected == null ? null : input.expected.unwrapNull();
+	final context = input.expected == null ? null : TyAliasExpansion.revealNonNullable(input.expected);
 	final fields = context == null || !context.isAnonymous() ? [] : context.getAnonymousFields();
 	final contexts = fieldTypes(input.names, context);
 	final types = new Array<TyType>();

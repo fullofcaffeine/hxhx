@@ -42,7 +42,7 @@ function receiverBindings(index:TyperIndex, owner:TyNominalInfo, receiver:TyType
 	final parameters = parameterIds(owner);
 	if (receiver == null || parameters.length == 0)
 		return null;
-	final actual = receiver.unwrapNull();
+	final actual = TyAliasExpansion.revealNonNullable(receiver);
 	final originalIdentity = actual.getNominalIdentity();
 	final applied = originalIdentity != null
 		&& originalIdentity.equals(owner.getIdentity()) ? actual : TyNominalAncestor.view(index, actual, owner.getIdentity());

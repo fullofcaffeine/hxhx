@@ -86,7 +86,7 @@ class TyCallArgumentBinding {
 
 	/** A rewrite must preserve the callable signature, source count, types, and spread shape. */
 	public function assertCurrent(calleeType:TyType, types:Array<TyType>, kinds:Array<TyCallOperandKind>):Void {
-		if (calleeType.getSemanticKey() != functionType.getSemanticKey()
+		if (TyAliasExpansion.revealNonNullable(calleeType).getSemanticKey() != functionType.getSemanticKey()
 			|| types.length != operandTypes.length
 			|| kinds.length != operandKinds.length)
 			throw "call argument binding has a stale signature or operand count";
