@@ -792,7 +792,15 @@ class TypedBodyBuilder {
 			case ESourceGroup(children, sourcePosition):
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedChildren = buildExpressions(children, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				final typedChildren = new Array<TypedExpr>();
+				var completesNormally = true;
+				for (index in 0...children.length) {
+					final context = index == children.length - 1 && completesNormally ? expected : null;
+					final child = buildExpr(children[index], null, sourcePosition, environment, typeResolver, callResolver, memberResolver, context);
+					typedChildren.push(child);
+					if (child.getType().isNoNormalCompletion())
+						completesNormally = false;
+				}
 				if (environment != null)
 					environment.exitLexicalScope();
 				TypedExpr.sourceGroup(typedChildren, nodeType, exactPosition(sourcePosition));
@@ -1015,7 +1023,8 @@ class TypedBodyBuilder {
 					&& patterns.filter(pattern -> TySwitchIrrefutable.proves(pattern, typedScrutinee.getType(), isCapture)).length > 0;
 				final exhaustive = irrefutable
 					|| (typeResolver != null
-						&& typeResolver.enumSwitchCoverage(typedScrutinee.getType(), patterns, diagnosticPosition, isCapture));
+						&& (TyBooleanSwitchCoverage.proves(typedScrutinee.getType(), patterns)
+							|| typeResolver.enumSwitchCoverage(typedScrutinee.getType(), patterns, diagnosticPosition, isCapture)));
 				final typedBranches = new Array<TypedExpr>();
 				final patternBindings = new Array<TyLocalBinding>();
 				final count = patterns == null
@@ -1025,7 +1034,8 @@ class TypedBodyBuilder {
 						environment.enterLexicalScope();
 					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
 						patternBindings.push(binding);
-					typedBranches.push(buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver));
+					typedBranches.push(buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+						expected));
 					if (environment != null)
 						environment.exitLexicalScope();
 				}

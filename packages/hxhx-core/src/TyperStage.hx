@@ -2553,8 +2553,11 @@ class TyperStage {
 			case ESourceGroup(children, sourcePosition):
 				scope.enterLexicalScope();
 				var result = children.length == 0 ? TyType.anonymous([], []) : TyType.fromHintText("Void");
-				for (child in children) {
-					final childType = inferExprType(child, scope, ctx, sourcePosition);
+				for (index in 0...children.length) {
+					// Only the reachable final value inherits the block's destination.
+					// Discarded effects and dead expressions keep their own types.
+					final expected = index == children.length - 1 && !result.isNoNormalCompletion() ? expectedResult : null;
+					final childType = inferExprType(children[index], scope, ctx, sourcePosition, expected);
 					if (!result.isNoNormalCompletion())
 						result = childType;
 				}

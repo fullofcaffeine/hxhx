@@ -1,8 +1,59 @@
-/** Compare finite enum coverage decisions with upstream; runtime evidence remains in the separate target test. */
+/** Compare finite boolean and enum coverage with upstream; runtime evidence remains in the separate target test. */
 class M14EnumSwitchCoverageProofTest {
 	static function main():Void {
+		// Literal spellings cannot prove a different input domain is exhausted.
+		for (type in [
+			TyType.unknown(),
+			TyType.fromHintText('Dynamic'),
+			TyType.fromHintText('Int'),
+			TyType.fromHintText('Null<Bool>')
+		])
+			if (TyBooleanSwitchCoverage.proves(type, [PBool(true), PBool(false)]))
+				throw 'boolean patterns incorrectly covered ' + type.getSemanticKey();
 		final simple = 'enum Choice{North;Middle;South;}';
 		final cases = [
+			{
+				name: 'bool_complete',
+				decl: '',
+				type: 'Bool',
+				arms: 'case true:1;case false:2;',
+				accepted: true
+			},
+			{
+				name: 'bool_alternatives',
+				decl: '',
+				type: 'Bool',
+				arms: 'case true | false:1;',
+				accepted: true
+			},
+			{
+				name: 'bool_capture',
+				decl: '',
+				type: 'Bool',
+				arms: 'case saved = true:1;case false:2;',
+				accepted: true
+			},
+			{
+				name: 'bool_missing',
+				decl: '',
+				type: 'Bool',
+				arms: 'case true:1;',
+				accepted: false
+			},
+			{
+				name: 'bool_duplicate',
+				decl: '',
+				type: 'Bool',
+				arms: 'case true | true:1;',
+				accepted: false
+			},
+			{
+				name: 'bool_guarded',
+				decl: '',
+				type: 'Bool',
+				arms: 'case true if(false):1;case false:2;',
+				accepted: false
+			},
 			{
 				name: 'singletons',
 				decl: simple,
