@@ -376,7 +376,7 @@
     "test:m14:js-static-init-ordering": "haxe test/m14_js_global_startup_test.hxml && haxe test/m14_js_class_initialization_scope_test.hxml && haxe test/m14_js_static_init_ordering_integration_test.hxml",
     "test:m14:js-stmt-try-throw": "haxe test/m14_js_stmt_emitter_try_throw_integration_test.hxml",
     "test:m14:js-stmt-multi-catch": "haxe test/m14_js_stmt_emitter_multi_catch_integration_test.hxml",
-    "test:m14:js-stmt-key-value-for": "haxe test/m14_js_stmt_emitter_key_value_for_integration_test.hxml",
+    "test:m14:js-stmt-key-value-for": "haxe test/m14_js_stmt_emitter_key_value_for_integration_test.hxml && haxe test/m14_js_array_pairs_test.hxml",
     "test:m14:js-expr-new-array": "haxe test/m14_js_expr_emitter_new_array_integration_test.hxml",
     "test:m14:js-expr-qualified-ctor": "haxe test/m14_js_expr_emitter_qualified_ctor_integration_test.hxml",
     "test:m14:js-generic-ctor-oracle": "bash scripts/ci/js-generic-constructor-oracle-test.sh",

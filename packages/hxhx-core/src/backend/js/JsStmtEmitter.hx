@@ -233,19 +233,17 @@ class JsStmtEmitter {
 
 	static function emitForKeyValue(writer:JsWriter, keyName:String, valueName:String, iterable:HxExpr, body:HxStmt, scope:JsFunctionScope):Void {
 		final sourceVar = scope.freshTemp("__iter");
-		final keysVar = scope.freshTemp("__keys");
-		final indexVar = scope.freshTemp("__i");
 		final keyLocal = scope.declareLocal(keyName);
 		final valueLocal = scope.declareLocal(valueName);
 		writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
-		writer.writeln("var " + keysVar + " = Object.keys(" + sourceVar + ");");
-		writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + keysVar + ".length; " + indexVar + "++) {");
-		writer.pushIndent();
-		writer.writeln("var " + keyLocal + " = " + keysVar + "[" + indexVar + "];");
-		writer.writeln("var " + valueLocal + " = " + sourceVar + "[" + keyLocal + "];");
-		emitStmtBlockContent(writer, body, scope);
-		writer.popIndent();
-		writer.writeln("}");
+		JsKeyValueIteration.emit({
+			writer: writer,
+			source: sourceVar,
+			key: keyLocal,
+			value: valueLocal,
+			fresh: scope.freshTemp,
+			body: () -> emitStmtBlockContent(writer, body, scope)
+		});
 	}
 
 	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, scope:JsFunctionScope):Void {

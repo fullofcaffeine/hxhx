@@ -1149,14 +1149,18 @@ class JsExprEmitter {
 		final iterable = emit(args[0], scope);
 		final body = emit(args[1], scope);
 		final continuation = emit(args[2], scope);
-		return "(function(){ var __iter = "
-			+ iterable
-			+ "; var __body = "
-			+ body
-			+
-			"; var __keys = Object.keys(__iter); for (var __i = 0; __i < __keys.length; __i++) { var __raw_key = __keys[__i]; var __key = Array.isArray(__iter) ? (__raw_key | 0) : __raw_key; __body(__key, __iter[__raw_key]); } return "
-			+ continuation
-			+ "; })()";
+		final writer = new JsWriter();
+		writer.writeln("(function(){ var __iter = " + iterable + "; var __body = " + body + ";");
+		JsKeyValueIteration.emit({
+			writer: writer,
+			source: "__iter",
+			key: "__key",
+			value: "__value",
+			fresh: name -> name,
+			body: () -> writer.writeln("__body(__key, __value);")
+		});
+		writer.writeln("return " + continuation + "; })()");
+		return writer.toString();
 	}
 
 	static function emitForInExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
