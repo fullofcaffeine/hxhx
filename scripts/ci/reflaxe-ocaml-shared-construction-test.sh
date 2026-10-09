@@ -18,6 +18,7 @@ trap cleanup EXIT
 cd "$ROOT"
 "$HAXE_BIN" test/reflaxe_ocaml_shared_construction/test.hxml
 cd test/reflaxe_ocaml_shared_construction
+"$HAXE_BIN" -cp source -cp src -main Main --no-output --macro 'ConstructorInputPhaseFixture.install()'
 "$HAXE_BIN" -cp source -main Main --interp > "$WORK_ROOT/upstream.stdout"
 diff -u expected.stdout "$WORK_ROOT/upstream.stdout"
 "$HAXE_BIN" stock.hxml -D "ocaml_output=$WORK_ROOT/out"

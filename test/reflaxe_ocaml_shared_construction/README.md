@@ -27,3 +27,17 @@ node_modules/.bin/haxe test/reflaxe_ocaml_shared_construction/test.hxml
 
 This extraction does not admit class construction in the complete native program wrapper.
 The original instance-call acceptance remains open under `haxe_ocaml-i1c2c`.
+
+## Constructor input phase
+
+The lifecycle command also checks Haxe's constructor input before and after generation.
+Haxe inserts instance field initializers after `onGenerate`, before Reflaxe consumes the program.
+The test checks that each initializer precedes the authored body and the child's `super()` call.
+This guards the shared-target migration against omitted or duplicated initialization effects.
+It does not claim that the native program adapter already supports complete construction.
+
+Run this focused check from this fixture directory:
+
+```sh
+haxe -cp source -cp src -main Main --no-output --macro 'ConstructorInputPhaseFixture.install()'
+```
