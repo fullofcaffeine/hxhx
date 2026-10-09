@@ -182,6 +182,12 @@
       "path": "test/fixtures/native_backend_plugin/hxhx_backend_plugin_fixture.ml",
       "kind": "native-adapter-test-fixture",
       "productionModule": "HxHxBackendPluginHost"
+    },
+    {
+      "path": "test/reflaxe_ocaml_shared_function_values/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "reflaxe.ocaml.target.OcamlTargetFunctionLowerer",
+      "whyOcaml": "An independent OCaml consumer checks the emitted parameter and result contract. It contains test assertions only and owns no compiler behavior."
     }
   ],
   "retiredHandwrittenModules": [
