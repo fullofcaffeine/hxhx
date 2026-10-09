@@ -6,6 +6,7 @@ class TypedNamedCallBinding {
 	final arguments:TyCallArgumentBinding;
 
 	@:allow(TypedNamedCallPlan)
+	@:allow(TypedMultiTypeConstruction)
 	function new(declaration:TyDeclarationInfo, extensionProvider:Null<TyNominalTypeId>, arguments:TyCallArgumentBinding) {
 		this.declaration = declaration;
 		this.extensionProvider = extensionProvider;

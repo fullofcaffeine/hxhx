@@ -1044,7 +1044,9 @@ class TypedBodyBuilder {
 				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final constructor = typeResolver == null ? null : typeResolver.constructorApplication(nodeType,
 					[for (argument in typedArguments) argument.getType()], arguments);
-				TypedExpr.newValue(typePath, typedArguments, nodeType, position, constructor);
+				final multiType = constructor == null ? null : constructor.getMultiTypeConstruction();
+				multiType == null ? TypedExpr.newValue(typePath, typedArguments, nodeType, position,
+					constructor) : multiType.apply(typedArguments, nodeType, position);
 			case EUnop(op, fixity, inner):
 				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), nodeType,
 					position);

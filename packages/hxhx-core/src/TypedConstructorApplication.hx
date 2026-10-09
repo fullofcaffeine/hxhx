@@ -24,6 +24,7 @@ class TypedConstructorApplication {
 	final callableSignature:TyCallableSignature;
 	final argumentBinding:Null<TyCallArgumentBinding>;
 	final underlyingType:Null<TyType>;
+	final multiType:Null<TypedMultiTypeConstruction>;
 
 	public function new(owner:TyNominalInfo, declaration:TyDeclarationInfo, constructedType:TyType,
 			?operands:{index:TyperIndex, arguments:Array<HxExpr>, types:Array<TyType>}, ?path:TypedConstructorPath) {
@@ -71,7 +72,16 @@ class TypedConstructorApplication {
 		argumentBinding = operands == null ? null : TyCallbackArgumentContext.publish(callableSignature, operands.arguments, operands.types, operands.index);
 		this.underlyingType = Std.isOfType(owner,
 			TyAbstractInfo) ? TyTypeSubstitution.apply((cast owner : TyAbstractInfo).getUnderlyingType(), bindings) : null;
+		multiType = operands == null ? null : switch TyMultiTypeSelection.select(operands.index, constructedType) {
+			case Ordinary: null;
+			case Rejected(reason): throw reason;
+			case Selected(selection): new TypedMultiTypeConstruction(selection, operands.index, operands.arguments, operands.types);
+		};
 	}
+
+	/** Multi-type abstracts allocate through a selected conversion, never through an empty wrapper constructor. */
+	public function getMultiTypeConstruction():Null<TypedMultiTypeConstruction>
+		return multiType;
 
 	public function getDeclaration():TyDeclarationInfo
 		return declaration;
@@ -123,6 +133,7 @@ class TypedConstructorApplication {
 			CompilerCacheIdentity.encode([for (type in forwardedTypes) type.getSemanticKey()]),
 			callableSignature.getFunctionType().getSemanticKey(),
 			argumentBinding == null ? null : argumentBinding.getSemanticKey(),
+			multiType == null ? null : multiType.getSemanticKey(),
 			underlyingType == null ? null : underlyingType.getSemanticKey()
 		].concat([
 			for (entry in ownerArguments)

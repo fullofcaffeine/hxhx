@@ -156,6 +156,7 @@ class TyAbstractMethodConversion {
 	}
 
 	/** Bounds require semantic proof; equal display names and an abstract's backing storage are insufficient. */
+	@:allow(TyMultiTypeSelection)
 	static function acceptsBound(index:TyperIndex, expected:TyType, actual:TyType):Bool {
 		if (!complete(expected) || !complete(actual))
 			return false;
@@ -168,6 +169,7 @@ class TyAbstractMethodConversion {
 		return ancestor != null && ancestor.getSemanticKey() == expected.getSemanticKey();
 	}
 
+	@:allow(TyMultiTypeSelection)
 	static function hasConversion(metadata:Array<String>, direction:String):Bool {
 		for (entry in metadata) {
 			var name = StringTools.trim(entry);
@@ -180,6 +182,7 @@ class TyAbstractMethodConversion {
 	}
 
 	/** Substitute exact method variables through all type constructors without parsing rendered types. */
+	@:allow(TyMultiTypeSelection)
 	static function term(type:TyType, variables:StringMap<TyInferenceTerm>):TyInferenceTerm {
 		final parameter = type.getTypeParameterIdentity();
 		if (parameter != null && variables.exists(parameter.getCanonicalKey()))
@@ -194,6 +197,7 @@ class TyAbstractMethodConversion {
 		return identity == null ? Known(type) : Nominal(identity, type.getTypeArguments().map(child -> term(child, variables)));
 	}
 
+	@:allow(TyMultiTypeSelection)
 	static function complete(type:TyType):Bool {
 		if (type == null || type.isUnknown() || type.isUnresolved())
 			return false;

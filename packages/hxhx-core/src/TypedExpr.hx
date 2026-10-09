@@ -330,6 +330,7 @@ class TypedExpr {
 	@:allow(TypedCallExpectedArguments)
 	@:allow(TypedBackendConstructorOccurrence)
 	@:allow(TypedNamedCallPlan)
+	@:allow(TypedMultiTypeConstruction)
 	static function operandKinds(arguments:Array<TypedExpr>):Array<TyCallAlignment.TyCallOperandKind> {
 		return [
 			for (argument in arguments) {
@@ -346,6 +347,7 @@ class TypedExpr {
 	@:allow(TypedCallExpectedArguments)
 	@:allow(TypedBackendConstructorOccurrence)
 	@:allow(TypedNamedCallPlan)
+	@:allow(TypedMultiTypeConstruction)
 	static function operandTypes(arguments:Array<TypedExpr>, kinds:Array<TyCallAlignment.TyCallOperandKind>):Array<TyType>
 		return [
 			for (index in 0...arguments.length)

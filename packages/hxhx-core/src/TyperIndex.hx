@@ -761,8 +761,10 @@ class TyperIndex {
 						semanticType(hint, packagePath, moduleName, directives, parameterIds)
 				];
 				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
-					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration),
-					enumConstants == null ? null : new TyEnumAbstractDomain(identity, enumMembers));
+					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration), {
+						enumDomain: enumConstants == null ? null : new TyEnumAbstractDomain(identity, enumMembers),
+						multiType: TyMultiTypePolicy.fromMetadata(classMetadata, parameterIds)
+					});
 				catalogOperators(info, ResolvedModule.getFilePath(module));
 				completed.push({source: classDeclaration, info: info});
 			} else {

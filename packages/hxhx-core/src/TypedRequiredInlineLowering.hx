@@ -1,11 +1,19 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
 
+/** Receiver writers retain caller storage; other required calls may save a receiver value. */
+private typedef RequiredInlineSelection = {
+	final calls:StringMap<Bool>;
+	final writers:StringMap<Bool>;
+};
+
 /**
 	Expands calls whose Haxe bodies cannot be replaced by ordinary target calls.
 
 	Static extern inline methods have no host implementation. Abstract methods
-	that replace `this` must write to the caller's backing storage. Both use one
+	that replace `this` must write to the caller's backing storage. Multi-type
+	abstract methods also need their authored bodies because the
+	selected provider does not own abstract-only methods. These calls use one
 	body expansion, with exact declaration and local identities.
 
 	Each this occurrence retains the caller's storage expression. Arguments are
@@ -18,14 +26,16 @@ import TypedExpr.TypedExprTag;
 class TypedRequiredInlineLowering {
 	final helpers:StringMap<TypedFunction>;
 	final selected:StringMap<Bool>;
+	final writers:StringMap<Bool>;
 	final allocator:TyCompilerTemporaryAllocator;
 	final active:Array<String> = [];
 	final semanticIndex:TyperIndex;
 	var typeBindings:StringMap<TyType> = new StringMap();
 
-	function new(helpers:StringMap<TypedFunction>, selected:StringMap<Bool>, owner:String, index:TyperIndex) {
+	function new(helpers:StringMap<TypedFunction>, selected:RequiredInlineSelection, owner:String, index:TyperIndex) {
 		this.helpers = helpers;
-		this.selected = selected;
+		this.selected = selected.calls;
+		this.writers = selected.writers;
 		semanticIndex = index;
 		allocator = new TyCompilerTemporaryAllocator(owner, "abstract-receiver-v1", "__hxhx_inline_receiver_");
 	}
@@ -35,6 +45,18 @@ class TypedRequiredInlineLowering {
 
 	static function voidType():TyType
 		return TyType.fromHintText("Void");
+
+	/** An implicit abstract call keeps its abstract owner even though explicit this reads expose backing storage. */
+	function usesImplicitReceiver(callee:TypedExpr, declaration:TyDeclarationInfo):Bool {
+		if (callee.getTag() == NameRead)
+			return true;
+		final owner = semanticIndex.getAbstractByFullName(declaration.getOwner().getCanonicalName());
+		return owner != null
+			&& owner.getMultiTypePolicy() != null
+			&& callee.getTag() == FieldRead
+			&& callee.getExpressions().length == 1
+			&& callee.getExpressions()[0].getTag() == ThisValue;
+	}
 
 	static function reads(binding:TyLocalBinding, position:Null<HxPos>):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
@@ -111,7 +133,10 @@ class TypedRequiredInlineLowering {
 		}
 		final rewritten = [for (child in children) substitute(child, receiver, locals)];
 		final declaration = expression.getDeclaration();
-		if (expression.getTag() == Call && declaration != null && !declaration.getIsStatic() && children[0].getTag() == NameRead) {
+		if (expression.getTag() == Call
+			&& declaration != null
+			&& !declaration.getIsStatic()
+			&& usesImplicitReceiver(children[0], declaration)) {
 			if (receiver == null)
 				throw "static inline body cannot call an implicit instance method";
 			rewritten[0] = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), children[0].getType(), children[0].getPosition());
@@ -205,15 +230,34 @@ class TypedRequiredInlineLowering {
 		if (environment == null)
 			throw "required inline call requires its exact environment: " + identity;
 		var receiver:Null<TypedExpr> = null;
+		final prefix = new Array<TypedExpr>();
+		final abstractOwner = semanticIndex.getAbstractByFullName(declaration.getOwner().getCanonicalName());
+		final multiType = !declaration.getIsStatic() && abstractOwner != null && abstractOwner.getMultiTypePolicy() != null;
+		var ownerBindings = new StringMap<TyType>();
 		if (!declaration.getIsStatic()) {
 			if (callee.getTag() != FieldRead || callee.getExpressions().length != 1)
 				throw "required inline call requires its exact receiver: " + identity;
 			receiver = callee.getExpressions()[0];
-			switch receiver.getTag() {
-				case LocalRead | NameRead | FieldRead | ArrayAccess | ThisValue:
-				case _:
-					throw "inline abstract receiver requires writable caller storage: " + identity;
+			if (multiType) {
+				if (receiver.getType().getNominalIdentity() == null
+					|| !receiver.getType().getNominalIdentity().equals(abstractOwner.getIdentity()))
+					throw "multi-type inline receiver belongs to another applied owner";
+				ownerBindings = TyTypeSubstitution.bind(abstractOwner.getTypeParameterIds(), receiver.getType().getTypeArguments(), identity);
 			}
+			if (multiType && !writers.exists(identity)) {
+				final backing = TyTypeSubstitution.apply(abstractOwner.getUnderlyingType(), ownerBindings);
+				// This abstract already stores the selected provider. Save the receiver
+				// before arguments so repeated this reads cannot repeat caller effects.
+				final stored = allocator.allocate("receiver", backing);
+				prefix.push(TypedExpr.temporary(stored.getSourceName(), backing.getDisplay(),
+					TypedExpr.castValue(receiver, "", backing, receiver.getPosition(), true), voidType(), receiver.getPosition(), stored));
+				receiver = reads(stored, receiver.getPosition());
+			} else
+				switch receiver.getTag() {
+					case LocalRead | NameRead | FieldRead | ArrayAccess | ThisValue:
+					case _:
+						throw "inline abstract receiver requires writable caller storage: " + identity;
+				}
 		}
 		final arguments = children.slice(1);
 		if (expression.getExtensionProvider() != null) {
@@ -232,8 +276,9 @@ class TypedRequiredInlineLowering {
 			selectedParameters.unshift(arguments[0].getType());
 		final previousBindings = typeBindings;
 		typeBindings = TyMethodGenericBinding.inlineBindings(declaration, selectedParameters, expression.getType(), semanticIndex);
+		for (identity => type in ownerBindings)
+			typeBindings.set(identity, type);
 		final locals = new StringMap<TyLocalBinding>();
-		final prefix = new Array<TypedExpr>();
 		for (index in 0...arguments.length) {
 			final value = storedValue(arguments[index], parameters[index].getType());
 			if (value.getType().hasUnknownComponent())
@@ -252,8 +297,11 @@ class TypedRequiredInlineLowering {
 	function expression(input:TypedExpr, implicitReceiver:Null<TypedExpr>):TypedExpr {
 		final children = [for (child in input.getExpressions()) expression(child, implicitReceiver)];
 		final declaration = input.getDeclaration();
-		if (input.getTag() == Call && declaration != null && !declaration.getIsStatic() && selected.exists(key(declaration))
-			&& children[0].getTag() == NameRead) {
+		if (input.getTag() == Call
+			&& declaration != null
+			&& !declaration.getIsStatic()
+			&& selected.exists(key(declaration))
+			&& usesImplicitReceiver(children[0], declaration)) {
 			if (implicitReceiver == null)
 				throw "required inline lost its implicit source receiver";
 			children[0] = TypedExpr.fieldRead(implicitReceiver, declaration.getSignature().getName(), children[0].getType(), children[0].getPosition());
@@ -265,14 +313,21 @@ class TypedRequiredInlineLowering {
 		return input.withChildren([for (value in input.getExpressions()) expression(value, receiver)],
 			[for (child in input.getStatements()) statement(child, receiver)]);
 
-	static function lower(classes:Array<TypedClass>, index:TyperIndex, helpers:StringMap<TypedFunction>, selected:StringMap<Bool>):Array<TypedClass> {
+	static function lower(classes:Array<TypedClass>, index:TyperIndex, helpers:StringMap<TypedFunction>, selected:RequiredInlineSelection):Array<TypedClass> {
 		return [
 			for (owner in classes) {
 				final functions = [
 					for (fn in owner.getFunctions()) {
 						final pass = new TypedRequiredInlineLowering(helpers, selected, fn.getStableIdentity(), index);
-						final abstractInfo = index.getAbstractByFullName(fn.getOwnerName());
-						final receiver = abstractInfo == null ? null : TypedExpr.thisValue(abstractInfo.getUnderlyingType(), null);
+						final abstractInfo = fn.getDeclaration() == null ? null : index.getAbstractByFullName(fn.getDeclaration()
+							.getOwner()
+							.getCanonicalName());
+						final receiverType = abstractInfo == null ? null : abstractInfo.getMultiTypePolicy() == null ? abstractInfo.getUnderlyingType() : TyType.nominal(abstractInfo.getIdentity(),
+							[
+							for (parameter in abstractInfo.getTypeParameterIds())
+								TyType.typeParameter(parameter)
+						]);
+						final receiver = receiverType == null ? null : TypedExpr.thisValue(receiverType, null);
 						fn.withBody(new TypedFunctionBody([for (item in fn.getBody().getStatements()) pass.statement(item, receiver)],
 							fn.getBody().getSourceFingerprint()),
 							[
@@ -305,12 +360,14 @@ class TypedRequiredInlineLowering {
 			}
 	}
 
-	static function select(helpers:StringMap<TypedFunction>):StringMap<Bool> {
+	static function select(helpers:StringMap<TypedFunction>, index:TyperIndex):RequiredInlineSelection {
 		final selected = new StringMap<Bool>();
 		// Every static helper in this inventory is an authored extern inline body.
-		for (identity => helper in helpers)
-			if (helper.getDeclaration().getIsStatic())
+		for (identity => helper in helpers) {
+			final declaration = helper.getDeclaration();
+			if (declaration.getIsStatic())
 				selected.set(identity, true);
+		}
 		var changed = true;
 		while (changed) {
 			changed = false;
@@ -323,20 +380,26 @@ class TypedRequiredInlineLowering {
 							break;
 						}
 		}
-		return selected;
+		final calls = selected.copy();
+		for (identity => helper in helpers) {
+			final owner = index.getAbstractByFullName(helper.getDeclaration().getOwner().getCanonicalName());
+			if (owner != null && owner.getMultiTypePolicy() != null)
+				calls.set(identity, true);
+		}
+		return {calls: calls, writers: selected};
 	}
 
 	public static function lowerClasses(classes:Array<TypedClass>, index:TyperIndex):Array<TypedClass> {
 		final helpers = new StringMap<TypedFunction>();
 		inventory(classes, index, helpers);
-		return lower(classes, index, helpers, select(helpers));
+		return lower(classes, index, helpers, select(helpers, index));
 	}
 
 	public static function lowerModules(modules:Array<TypedModule>, index:TyperIndex):Array<TypedModule> {
 		final helpers = new StringMap<TypedFunction>();
 		for (module in modules)
 			inventory(module.getTypedClasses(), index, helpers);
-		final selected = select(helpers);
+		final selected = select(helpers, index);
 		return [
 			for (module in modules)
 				module.withTypedClasses(lower(module.getTypedClasses(), index, helpers, selected))
