@@ -1,13 +1,14 @@
 package reflaxe.ocaml.target;
 
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
-import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.target.OcamlTargetExpressionLowerer.OcamlTargetLoweredExpression;
 
-/** A lowered function keeps its runtime dependencies beside its checked syntax. **/
+/** A lowered function retains its callable type for module interfaces and dependency checks. **/
 typedef OcamlTargetLoweredFunction = {
-	final expression:OcamlExpr;
-	final runtimeRequirements:Array<OcamlRuntimeRequirement>;
+	> OcamlTargetLoweredExpression,
+	final signature:OcamlTypeExpr;
 }
 
 /**

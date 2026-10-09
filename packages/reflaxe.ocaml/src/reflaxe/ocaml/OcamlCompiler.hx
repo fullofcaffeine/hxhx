@@ -2859,11 +2859,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					} else {
 						if (sharedMethod.role != InstanceMethod || !HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedMethod))
 							throw 'reflaxe.ocaml: shared instance method "${f.id}" lost its role or preprocessor envelope';
-						{
-							expression: ctx.lowerSharedTargetFunction(sharedMethod),
-							signature: signatureFromTypes(argInfo.map(argument -> ocamlTypeExprFromHaxeType(argument.t)),
-								ocamlTypeExprFromHaxeType(methodReturnType))
-						};
+						ctx.lowerSharedTargetFunction(sharedMethod);
 					};
 					// Instance calls pass the selected record before the source arguments.
 					// Keep the builder's unit parameter for a zero-argument Haxe method.
@@ -2989,7 +2985,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
-				{expression: ctx.lowerSharedTargetFunction(sharedFunction), signature: null};
+				ctx.lowerSharedTargetFunction(sharedFunction);
 			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {

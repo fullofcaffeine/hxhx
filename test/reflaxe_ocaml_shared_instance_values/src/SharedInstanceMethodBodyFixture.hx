@@ -28,6 +28,9 @@ class SharedInstanceMethodBodyFixture {
 					|| fact.getCanonicalIdentity() != matches[0].identity
 					|| new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact)) != matches[0].syntax)
 					throw "shared method role, facts or syntax differ between hosts";
+				// The class emitter adds the receiver; this signature covers only source arguments.
+				if (new OcamlASTPrinter().printType(OcamlTargetFunctionLowerer.lower(fact, "portable").signature) != "Obj.t -> int")
+					throw "shared instance method lost its nullable signature or captured its receiver too early";
 				final wrongStaticCall = new OcamlTargetStaticCallFact({
 					moduleId: fact.moduleId,
 					sourceTypeName: fact.sourceTypeName,

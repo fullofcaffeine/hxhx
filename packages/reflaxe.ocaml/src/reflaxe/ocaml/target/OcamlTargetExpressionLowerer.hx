@@ -6,6 +6,14 @@ import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+
+/** Checked expression syntax and the runtime dependencies its publisher must retain. **/
+typedef OcamlTargetLoweredExpression = {
+	final expression:OcamlExpr;
+	final runtimeRequirements:Array<OcamlRuntimeRequirement>;
+}
 
 /**
 	Lowers the first recursive host-neutral expression family into OCaml syntax.
@@ -76,7 +84,7 @@ class OcamlTargetExpressionLowerer {
 
 	/** Preserve field/expression runtime requirements for whole-program publication. **/
 	public static function lower(expression:OcamlTargetExpressionFact, ownerIdentity:String, profile:String,
-			?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetFunctionLowerer.OcamlTargetLoweredFunction {
+			?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetLoweredExpression {
 		if (expression == null)
 			throw "OCaml target expression lowering requires a normalized expression";
 		expression.validateClosedBindings();
@@ -90,7 +98,7 @@ class OcamlTargetExpressionLowerer {
 	public static function buildFunction(fact:OcamlTargetFunctionFact):OcamlExpr
 		return lowerFunction(fact, "portable").expression;
 
-	/** Return both checked syntax and the runtime requirements its caller must package. **/
+	/** Retain the same represented types in function syntax and its exported signature. **/
 	public static function lowerFunction(fact:OcamlTargetFunctionFact, profile:String,
 			?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetFunctionLowerer.OcamlTargetLoweredFunction {
 		final expressions = new Array<OcamlTargetExpressionFact>();
@@ -98,15 +106,21 @@ class OcamlTargetExpressionLowerer {
 		final parameters = fact.copyParameters();
 		final plan = new OcamlTargetRuntimePlan(fact.getTargetIdentity(), fact.getCanonicalIdentity(), expressions, profile, finalOutput);
 		final builder = new OcamlTargetExpressionLowerer(expressions, parameters, plan);
+		final argumentTypes = parameters.map(parameter -> primitiveType(parameter.semanticTypeDisplay));
+		final resultType = primitiveType(fact.returnTypeDisplay);
 		final patterns = [
-			for (parameter in parameters)
-				OcamlPat.PAnnot(OcamlPat.PVar(builder.bindingName(parameter)), primitiveType(parameter.semanticTypeDisplay))
+			for (index in 0...parameters.length)
+				OcamlPat.PAnnot(OcamlPat.PVar(builder.bindingName(parameters[index])), argumentTypes[index])
 		];
 		if (patterns.length == 0)
 			patterns.push(OcamlPat.PConst(OcamlConst.CUnit));
-		final result = OcamlExpr.EFun(patterns, OcamlExpr.EAnnot(builder.buildStatement(fact.body), primitiveType(fact.returnTypeDisplay)));
+		final result = OcamlExpr.EFun(patterns, OcamlExpr.EAnnot(builder.buildStatement(fact.body), resultType));
 		plan.reconcile(result);
-		return {expression: result, runtimeRequirements: plan.copyRequirements()};
+		return {
+			expression: result,
+			signature: signatureFromTypes(argumentTypes, resultType),
+			runtimeRequirements: plan.copyRequirements()
+		};
 	}
 
 	static function collectExpressions(statement:OcamlTargetStatementFact, output:Array<OcamlTargetExpressionFact>):Void {

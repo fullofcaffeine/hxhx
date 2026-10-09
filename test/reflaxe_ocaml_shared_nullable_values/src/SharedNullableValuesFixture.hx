@@ -46,6 +46,16 @@ class SharedNullableValuesFixture {
 				if (fact.getCanonicalIdentity() != matches[0].identity
 					|| new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact)) != matches[0].syntax)
 					throw "nullable host facts or syntax differ for " + name;
+				final expectedSignature = switch (name) {
+					case "select": "bool -> int -> Obj.t";
+					case "recover": "Obj.t -> int";
+					case "direct": "bool -> int";
+					case "retained": "Obj.t -> Obj.t";
+					case "main": "unit -> unit";
+					case _: throw "missing independent nullable signature expectation: " + name;
+				};
+				if (new OcamlASTPrinter().printType(OcamlTargetFunctionLowerer.lower(fact, "portable").signature) != expectedSignature)
+					throw "shared nullable function lost its represented signature: " + name;
 				compared++;
 			}
 		if (rejected.length != 0)

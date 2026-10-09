@@ -57,6 +57,21 @@ class SharedFunctionValuesFixture {
 				if (fact.getCanonicalIdentity() != matches[0].identity
 					|| new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact)) != matches[0].syntax)
 					throw "host function facts or syntax differ for " + name;
+				// Expected exported types are authored independently of the lowerer's type mapping.
+				final expectedSignature = switch (name) {
+					case "choose", "invoke": "int -> int -> int";
+					case "logical": "bool -> bool";
+					case "text": "string -> string";
+					case "scoped": "int -> int";
+					case "done", "main": "unit -> unit";
+					case "branch", "branchBlock", "branchReturn": "bool -> int -> int -> int";
+					case "branchBool": "bool -> bool -> bool -> bool";
+					case "branchText": "bool -> string -> string -> string";
+					case "nestedBranch": "bool -> bool -> int -> int";
+					case _: throw "missing independent function signature expectation: " + name;
+				};
+				if (new OcamlASTPrinter().printType(OcamlTargetFunctionLowerer.lower(fact, "portable").signature) != expectedSignature)
+					throw "shared function lost its represented signature: " + name;
 				compared++;
 			}
 		if (failures.length != 0)

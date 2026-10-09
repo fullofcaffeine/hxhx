@@ -550,15 +550,15 @@ class CompilationContext {
 		activeRuntimeRequirementProgramRevision = programRevision;
 	}
 
-	/** Lower shared syntax into this compile's final-use and runtime-packaging ledgers. **/
-	public function lowerSharedTargetFunction(fact:reflaxe.ocaml.target.OcamlTargetFunctionFact):reflaxe.ocaml.ast.OcamlExpr {
+	/** Retain shared function syntax and its signature while registering required runtime support. **/
+	public function lowerSharedTargetFunction(fact:reflaxe.ocaml.target.OcamlTargetFunctionFact):reflaxe.ocaml.ast.OcamlBuiltFunction {
 		final profile = activeRuntimeRequirementProfile;
 		if (profile == null || activeRuntimeRequirementProgramRevision == null)
 			throw "Shared target function lowering requires an active runtime program.";
 		final lowered = reflaxe.ocaml.target.OcamlTargetFunctionLowerer.lower(fact, profile, finalRuntimeUses);
 		for (requirement in lowered.runtimeRequirements)
 			runtimeRequirements.record(requirement);
-		return lowered.expression;
+		return {expression: lowered.expression, signature: lowered.signature};
 	}
 
 	/** Keep standalone shared expressions in the same runtime checks as function bodies. **/

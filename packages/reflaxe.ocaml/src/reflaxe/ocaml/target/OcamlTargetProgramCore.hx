@@ -162,7 +162,8 @@ class OcamlTargetProgramCore {
 				requirements.push(requirement);
 			functionBindings.push({
 				name: targetValueName(fn.moduleId, fn.sourceTypeName, fn.sourceFunctionName),
-				expr: lowered.expression
+				expr: lowered.expression,
+				signature: lowered.signature
 			});
 		}
 		bindings.sort((left, right) -> compareText(left.name, right.name));
