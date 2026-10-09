@@ -42,7 +42,7 @@ class M14GenericDynamicInferenceTest {
 		try
 			incomplete.seal()
 		catch (error:haxe.Exception)
-			rejected = error.message == "inference cannot publish an incomplete concrete type";
+			rejected = error.message == "inference cannot publish an incomplete concrete type in generic-destination-incomplete: unknown while sealing generic-destination-incomplete#0";
 		if (!rejected)
 			throw "generic destination converted missing concrete facts into Dynamic";
 		Sys.println("GENERIC_DYNAMIC_INFERENCE_TRANSACTIONS:PASS");
