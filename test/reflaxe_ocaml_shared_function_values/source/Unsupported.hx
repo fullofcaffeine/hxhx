@@ -12,4 +12,10 @@ class Unsupported {
 	public static function nullable(value:Null<Int>):Void {}
 
 	public static function floating(value:Float):Void {}
+
+	public static function earlyBranch(flag:Bool):Int {
+		if (flag)
+			return 3;
+		return 9;
+	}
 }

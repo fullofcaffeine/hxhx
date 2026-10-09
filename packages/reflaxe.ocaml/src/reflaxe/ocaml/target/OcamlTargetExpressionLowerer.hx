@@ -132,6 +132,9 @@ class OcamlTargetExpressionLowerer {
 
 	function buildNode(expression:OcamlTargetExpressionFact):OcamlExpr {
 		return switch (expression.kind) {
+			case ConditionalExpression:
+				final children = expression.copyChildren();
+				OcamlExpr.EIf(buildNode(children[0]), buildNode(children[1]), buildNode(children[2]));
 			case StaticCallExpression:
 				final call = expression.staticCall;
 				if (call == null)
@@ -175,7 +178,7 @@ class OcamlTargetExpressionLowerer {
 					final initializer = onlyChild(child);
 					result = OcamlExpr.ELet(bindingName(binding), buildNode(initializer), result, false);
 					hasResult = true;
-				case LiteralExpression | LocalReadExpression | BlockExpression | StaticCallExpression:
+				case LiteralExpression | LocalReadExpression | BlockExpression | StaticCallExpression | ConditionalExpression:
 					final built = buildNode(child);
 					if (!hasResult) {
 						result = built;

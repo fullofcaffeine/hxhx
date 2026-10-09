@@ -21,7 +21,7 @@ class SharedFunctionValuesFixture {
 					throw "native adapter admitted an unsupported signature or changed the stock inventory";
 				rejectedCount++;
 			}
-		if (rejectedCount != 6 || rejected.length != rejectedCount)
+		if (rejectedCount != 7 || rejected.length != rejectedCount)
 			throw "unsupported signature fixture lost a case";
 		if (Sys.command("node_modules/.bin/haxe", [
 			"-cp",
@@ -61,10 +61,11 @@ class SharedFunctionValuesFixture {
 			}
 		if (failures.length != 0)
 			throw "shared function arguments/results are incomplete: " + failures.join("; ");
-		if (compared != 7 || stock.length != compared)
+		if (compared != 13 || stock.length != compared)
 			throw "shared function values did not compare the complete authored inventory";
 		final request = HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram([typed], false), "Main");
 		FunctionValuesValidation.check(request);
+		ConditionalValuesValidation.check();
 		final plan = OcamlTargetProgramCore.lower(request);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != before)
 			throw "shared function value adaptation changed its original typed module";
@@ -73,7 +74,7 @@ class SharedFunctionValuesFixture {
 		if (Sys.command(executable, []) != 0)
 			throw "shared function value application failed";
 		File.copy("test/reflaxe_ocaml_shared_function_values/Observer.ml", output + "/Observer.ml");
-		File.saveContent(output + "/Order.ml", FunctionValuesValidation.orderObserverSource());
+		File.saveContent(output + "/Order.ml", FunctionValuesValidation.orderObserverSource() + ConditionalValuesValidation.observerSource());
 		final cwd = Sys.getCwd();
 		try {
 			Sys.setCwd(output);

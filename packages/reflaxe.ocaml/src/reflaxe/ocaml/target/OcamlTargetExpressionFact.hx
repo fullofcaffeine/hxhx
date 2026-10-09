@@ -9,17 +9,18 @@ enum OcamlTargetExpressionKind {
 	VariableDeclarationExpression;
 	BlockExpression;
 	StaticCallExpression;
+	ConditionalExpression;
 }
 
 /**
 	One immutable expression tree copied independently by either compiler host.
 
-	Revision 3 carries exact arguments and results for resolved static calls.
+	Revision 4 adds lazy conditional expressions with separate branch scopes.
 	Direct non-null literals, initialized locals, local reads, and lexical blocks
 	retain their value types. Function control lives in OcamlTargetStatementFact.
 **/
 class OcamlTargetExpressionFact {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v3";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v4";
 
 	public final path:String;
 	public final kind:OcamlTargetExpressionKind;
@@ -70,6 +71,14 @@ class OcamlTargetExpressionFact {
 	public static function block(path:String, semanticTypeDisplay:String, children:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact
 		return new OcamlTargetExpressionFact(path, BlockExpression, semanticTypeDisplay, null, null, children);
 
+	/** Keep condition and alternatives distinct so lowering cannot evaluate both branches. **/
+	public static function conditional(path:String, semanticTypeDisplay:String, condition:OcamlTargetExpressionFact, whenTrue:OcamlTargetExpressionFact,
+			whenFalse:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
+		if (condition == null || whenTrue == null || whenFalse == null)
+			throw "OCaml target conditional requires a condition and both branches";
+		return new OcamlTargetExpressionFact(path, ConditionalExpression, semanticTypeDisplay, null, null, [condition, whenTrue, whenFalse]);
+	}
+
 	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact, arguments:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact {
 		if (call == null || arguments == null || arguments.length != call.copyArgumentTypeDisplays().length)
 			throw "OCaml target static call arguments do not match its declaration";
@@ -109,6 +118,19 @@ class OcamlTargetExpressionFact {
 	static function validateShape(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
 			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Void {
 		switch (kind) {
+			case ConditionalExpression:
+				if (literal != null || binding != null || children.length != 3)
+					invalidShape("conditional");
+				final roles = ["condition", "then", "else"];
+				for (index in 0...children.length)
+					if (children[index].path != OcamlTargetExpressionPath.child(path, roles[index]))
+						throw "OCaml target conditional child path does not match its role";
+				if (children[0].semanticTypeDisplay != "Bool"
+					|| children[1].semanticTypeDisplay != semanticTypeDisplay
+					|| children[2].semanticTypeDisplay != semanticTypeDisplay)
+					throw "OCaml target conditional requires a Boolean condition and exact branch result types";
+				if (children[1].kind != BlockExpression || children[2].kind != BlockExpression)
+					throw "OCaml target conditional requires scoped branches";
 			case StaticCallExpression:
 				if (literal != null || binding != null)
 					invalidShape("static call");
@@ -193,6 +215,7 @@ class OcamlTargetExpressionFact {
 			case VariableDeclarationExpression: "VariableDeclarationExpression";
 			case BlockExpression: "BlockExpression";
 			case StaticCallExpression: "StaticCallExpression";
+			case ConditionalExpression: "ConditionalExpression";
 		};
 	}
 
@@ -200,7 +223,7 @@ class OcamlTargetExpressionFact {
 	static function validateNode(node:OcamlTargetExpressionFact, scopes:Array<Map<String, Bool>>, identities:Map<String, Bool>):Void {
 		switch (node.kind) {
 			case LiteralExpression:
-			case StaticCallExpression:
+			case StaticCallExpression | ConditionalExpression:
 				for (child in node.children) {
 					scopes.push([]);
 					validateNode(child, scopes, identities);

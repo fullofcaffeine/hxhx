@@ -60,6 +60,8 @@ class HxhxOcamlTargetExpressionAdapter {
 			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
 			final expressions = statement.getExpressions();
 			final child = switch (statement.getTag()) {
+				case If:
+					copyReturningConditional(statement, childPath);
 				case Var:
 					final bindings = statement.getLocalBindings();
 					final copied = bindings.length == 1
@@ -87,11 +89,78 @@ class HxhxOcamlTargetExpressionAdapter {
 		return OcamlTargetStatementFact.block(path, children);
 	}
 
+	/**
+		The native parser represents a returned if-expression as two returning
+		statement branches. Copy that exact terminal shape as one conditional value,
+		matching stock Haxe. A missing return or an early return still rejects it.
+	**/
+	function copyReturningConditional(statement:TypedStmt, path:String):Null<OcamlTargetStatementFact> {
+		final expressions = statement.getExpressions();
+		final branches = statement.getStatements();
+		if (expressions.length != 1 || branches.length != 2)
+			return null;
+		final valuePath = OcamlTargetExpressionPath.child(path, "return-value");
+		final condition = copyExpression(expressions[0], OcamlTargetExpressionPath.child(valuePath, "condition"));
+		final whenTrue = copyReturningBranch(branches[0], OcamlTargetExpressionPath.child(valuePath, "then"));
+		final whenFalse = copyReturningBranch(branches[1], OcamlTargetExpressionPath.child(valuePath, "else"));
+		if (condition == null
+			|| whenTrue == null
+			|| whenFalse == null
+			|| condition.semanticTypeDisplay != "Bool"
+			|| whenTrue.semanticTypeDisplay != whenFalse.semanticTypeDisplay)
+			return null;
+		return OcamlTargetStatementFact.returnValue(path,
+			OcamlTargetExpressionFact.conditional(valuePath, whenTrue.semanticTypeDisplay, condition, whenTrue, whenFalse));
+	}
+
+	/** Only a final payload return becomes a branch value; preceding effects keep source order. **/
+	function copyReturningBranch(statement:TypedStmt, path:String):Null<OcamlTargetExpressionFact> {
+		final statements = statement.getTag() == Block ? statement.getStatements() : [statement];
+		if (statements.length == 0 || statements[statements.length - 1].getTag() != Return)
+			return null;
+		final children = new Array<OcamlTargetExpressionFact>();
+		for (index in 0...statements.length) {
+			final current = statements[index];
+			final expressions = current.getExpressions();
+			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
+			final child = switch (current.getTag()) {
+				case Return if (index == statements.length - 1 && expressions.length == 1):
+					copyExpression(expressions[0], childPath);
+				case Expression if (expressions.length == 1):
+					copyExpression(expressions[0], childPath);
+				case Var: final bindings = current.getLocalBindings(); bindings.length == 1 && expressions.length == 1 ? copyDeclaration(bindings[0],
+						expressions[0], childPath) : null;
+				case _: null;
+			};
+			if (child == null)
+				return null;
+			children.push(child);
+		}
+		return OcamlTargetExpressionFact.block(path, children[children.length - 1].semanticTypeDisplay, children);
+	}
+
 	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
 		final literal = HxhxOcamlTargetLiteralAdapter.fromExpression(expression);
 		if (literal != null)
 			return isDirectLiteral(literal) ? OcamlTargetExpressionFact.literalExpression(path, literal) : null;
 		return switch (expression.getTag()) {
+			case Ternary | SourceIf:
+				final children = expression.getExpressions();
+				if (children.length != 3) {
+					null;
+				} else {
+					final condition = copyExpression(children[0], OcamlTargetExpressionPath.child(path, "condition"));
+					final whenTrue = copyBranch(children[1], OcamlTargetExpressionPath.child(path, "then"));
+					final whenFalse = copyBranch(children[2], OcamlTargetExpressionPath.child(path, "else"));
+					final resultType = expression.getType().getCanonicalDisplay();
+					condition == null
+					|| whenTrue == null
+					|| whenFalse == null
+					|| condition.semanticTypeDisplay != "Bool"
+					|| whenTrue.semanticTypeDisplay != resultType
+					|| whenFalse.semanticTypeDisplay != resultType ? null : OcamlTargetExpressionFact.conditional(path, resultType, condition, whenTrue,
+						whenFalse);
+				}
 			case Parenthesized: // Grouping adds no binding or runtime operation to the shared target facts.
 				final children = expression.getExpressions(); children.length == 1 && children[0].getType()
 					.getSemanticKey() == expression.getType()
@@ -140,6 +209,19 @@ class HxhxOcamlTargetExpressionAdapter {
 			}
 		}
 		return copyBlock(expression, flattened, path);
+	}
+
+	/** Normalize bare alternatives to blocks without flattening authored local scopes. **/
+	function copyBranch(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+		return switch (expression.getTag()) {
+			case Parenthesized: final children = expression.getExpressions(); children.length == 1 && children[0].getType()
+					.getSemanticKey() == expression.getType()
+					.getSemanticKey() ? copyBranch(children[0], path) : null;
+			case Block | SourceGroup: copyNativeBlock(expression, path);
+			case _:
+				final child = copyExpression(expression, OcamlTargetExpressionPath.indexed(path, "block-item", 0));
+				child == null ? null : OcamlTargetExpressionFact.block(path, child.semanticTypeDisplay, [child]);
+		};
 	}
 
 	/** Copy only a resolved bare static call; computed receivers must retain their effects. **/
