@@ -8,13 +8,15 @@ function selects(target:TyType, source:TyType):Bool {
 		&& target.getNominalIdentity() != null
 		&& target.getNominalIdentity().getCanonicalName() == "Array"
 		&& target.getTypeArguments().length == 1
-		&& target.getTypeArguments()[0].getSemanticKey() == "primitive:Bool";
+		&& (target.getTypeArguments()[0].getSemanticKey() == "primitive:Bool" || target.getTypeArguments()[0].isFunction());
 }
 
 /**
-	Recover a Boolean array using retained representation facts. Null/non-arrays
-	become null. Boolean and Dynamic arrays retain allocation identity. Other
-	admitted element representations convert into fresh rooted Boolean storage.
+	Recover a Boolean or callable array using retained representation facts.
+	Null/non-arrays become null. Dynamic arrays and arrays with the destination's
+	physical representation retain shared storage. Other admitted representations
+	convert into fresh rooted storage. Callable views preserve boxed elements;
+	invocation checks their callable layout, rather than recovery inspecting them.
 	The source stays rooted across allocation, and the result is published only
 	when all conversions succeed. Float conversion remains separately gated.
  */
@@ -27,7 +29,8 @@ function render(input:{
 	renderValue:(HxExpr, String, String) -> Array<String>
 }, indent:String):Array<String> {
 	if (!selects(input.target, input.source))
-		throw "managed array recovery requires its selected Dynamic-to-Boolean-array conversion";
+		throw "managed array recovery requires its selected Dynamic-to-Boolean-or-callable-array conversion";
+	final representation = input.target.getTypeArguments()[0].isFunction() ? "Reference" : "Boolean";
 	final root = input.destination + "_recovery_source";
 	final array = input.destination + "_recovery_array";
 	final result = input.destination + "_recovery_result";
@@ -50,7 +53,9 @@ function render(input:{
 	lines.push(indent
 		+ "    if ("
 		+ array
-		+ "->representation() == hxhx::managed::ArrayRepresentation::Boolean || "
+		+ "->representation() == hxhx::managed::ArrayRepresentation::"
+		+ representation
+		+ " || "
 		+ array
 		+ "->representation() == hxhx::managed::ArrayRepresentation::Dynamic) {");
 	lines.push(indent + "      " + input.destination + ".set(" + root + ".get());");
@@ -66,7 +71,14 @@ function render(input:{
 		+ "("
 		+ input.heap
 		+ ");");
-	lines.push(indent + "      " + input.heap + ".allocateInto(" + result + ", hxhx::managed::ArrayRepresentation::Boolean);");
+	lines.push(indent
+		+ "      "
+		+ input.heap
+		+ ".allocateInto("
+		+ result
+		+ ", hxhx::managed::ArrayRepresentation::"
+		+ representation
+		+ ");");
 	lines.push(indent + "      for (std::size_t " + index + " = 0; " + index + " < " + array + "->size(); ++" + index + ") {");
 	lines.push(indent
 		+ "        "
