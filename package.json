@@ -372,7 +372,7 @@
     "test:m14:portable-auto-metalization-planner": "haxe test/m14_portable_auto_metalization_planner_integration_test.hxml",
     "test:m14:metal-array-string-specialization": "haxe test/m14_metal_array_string_specialization_integration_test.hxml",
     "test:m14:hih-conditional-compilation-expr": "haxe test/m14_hih_conditional_compilation_expr_integration_test.hxml",
-    "test:m14:js-target-core-wiring": "haxe test/m14_js_extern_native_binding_test.hxml && haxe test/m14_js_target_core_wiring_integration_test.hxml && haxe test/m14_js_inheritance_test.hxml && haxe test/m14_js_static_inheritance_cycle_test.hxml",
+    "test:m14:js-target-core-wiring": "haxe test/m14_js_syntax_typeof_test.hxml && haxe test/m14_js_extern_native_binding_test.hxml && haxe test/m14_js_target_core_wiring_integration_test.hxml && haxe test/m14_js_inheritance_test.hxml && haxe test/m14_js_static_inheritance_cycle_test.hxml",
     "test:m14:js-static-init-ordering": "haxe test/m14_js_static_init_ordering_integration_test.hxml",
     "test:m14:js-stmt-try-throw": "haxe test/m14_js_stmt_emitter_try_throw_integration_test.hxml",
     "test:m14:js-stmt-multi-catch": "haxe test/m14_js_stmt_emitter_multi_catch_integration_test.hxml",

@@ -44,6 +44,9 @@ class JsExprEmitter {
 			return JsRuntimeTypeSupport.emit(expr, scope);
 		final staticCall = TypedExactStaticCallSource.decode(expr);
 		if (staticCall != null) {
+			final syntax = JsSyntaxIntrinsic.emit(staticCall, operand -> emitCallArg(operand, scope), arguments -> emitInlineJsCode(arguments, scope));
+			if (syntax != null)
+				return syntax;
 			// A bare static call inside an instance body is not a local function.
 			// Its selected owner also disambiguates imported aliases and shadowed names.
 			if (staticCall.callee.match(EIdent(_))) {
