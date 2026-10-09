@@ -6,7 +6,46 @@ class M14TypedFeatureMemberClosureTest {
 		check("FeatureContract",
 			"late:on\ndefine:effect\nabsent:off\nunused:off\nmethod:on\nclass:on\nvalue:effect\nselected\ndefinition-value\nvalue:on\nactive:called\n");
 		check("FeatureReferences", "hidden:on\nleaf:on\ncallback:on\ntrue\n");
+		check("FeatureRecordCallback", "callback:on\nreceiver:on\ntrue\ntrue\ntrue\n");
+		rejectUnownedCallableReads();
 		Sys.println("TYPED_FEATURE_MEMBER_CLOSURE:PASS");
+	}
+
+	/** A structural exception must not admit missing, mismatched, or declaration-less nominal members. */
+	static function rejectUnownedCallableReads():Void {
+		final path = "FeatureMissingDeclaration.hx";
+		final resolved = new ResolvedModule("FeatureMissingDeclaration", path,
+			ParserStage.parse("class FeatureMissingDeclaration { static function main():Void {} }", path));
+		final module = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final owner = module.getTypedClasses()[0];
+		final entry = owner.getFunctions()[0];
+		final callable = TyType.fromHintText("String->Bool");
+		final nominal = TyType.nominal(owner.getSemanticInfo().getIdentity(), [], null);
+		final reads = [
+			TypedExpr.nameRead("missing", callable, null),
+			TypedExpr.fieldRead(TypedExpr.thisValue(nominal, null), "test", callable, null),
+			TypedExpr.fieldRead(TypedExpr.thisValue(TyType.anonymous([], []), null), "test", callable, null),
+			TypedExpr.fieldRead(TypedExpr.thisValue(TyType.anonymous(["test"], [TyType.fromHintText("Int->Bool")]), null), "test", callable, null),
+			TypedExpr.fieldRead(TypedExpr.thisValue(TyType.fromHintText("Dynamic"), null), "test", callable, null)
+		];
+		for (read in reads) {
+			final replacement = entry.withBody(new TypedFunctionBody([TypedStmt.expressionStmt(read, null)], entry.getBody().getSourceFingerprint()));
+			final altered = module.withTypedClasses([owner.withFunctions([replacement])]);
+			final program = new MacroExpandedProgram([altered], false);
+			var diagnostic = "";
+			try
+				TypedFeatureMemberClosure.retain({
+					program: program,
+					classes: [],
+					functions: [replacement],
+					fields: []
+				})
+			catch (error:haxe.Exception)
+				diagnostic = error.message;
+			if (diagnostic != "feature member closure requires an exact method-value declaration")
+				throw "member closure admitted an unsupported callable read: " + diagnostic;
+		}
+		Sys.println("TYPED_FEATURE_CALLABLE_NEGATIVES:PASS");
 	}
 
 	static function check(name:String, expected:String):Void {

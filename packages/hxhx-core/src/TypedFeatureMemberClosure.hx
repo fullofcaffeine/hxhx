@@ -6,6 +6,8 @@
 	members retain implementations in retained descendant classes. Static method values
 	retain shared declaration facts; callable member
 	reads without those facts fail explicitly rather than silently losing features.
+	Record callbacks instead use the receiver's exact structural field type. Their
+	receiver and value expressions still contribute ordinary declaration references.
 	Class-object references retain their resolved ancestors and interfaces, including
 	class initialization, without making every instance method reachable.
 	Only declarations owned by this exact typed program can enter the work queue.
@@ -100,7 +102,7 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 			retainFunction(fn);
 		}
 		final field = node.getFieldInfo();
-		if (!selectedCallee && declaration == null && field == null && node.getType().isFunction())
+		if (!selectedCallee && declaration == null && field == null && node.getType().isFunction() && !isRecordCallback(node))
 			switch (node.getTag()) {
 				case NameRead | FieldRead | NullSafeFieldRead:
 					throw "feature member closure requires an exact method-value declaration";
@@ -191,4 +193,15 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 		functions: functions,
 		fields: fields
 	};
+}
+
+/** A callable record field has no class method declaration; require its exact selected field type instead. */
+private function isRecordCallback(node:TypedExpr):Bool {
+	if (node.getTag() != FieldRead || node.getExpressions().length != 1 || node.getTexts().length != 1)
+		return false;
+	final receiver = node.getExpressions()[0].getType().unwrapNull();
+	if (!receiver.isAnonymous())
+		return false;
+	final field = TyStructuralFieldRead.resolve(receiver, node.getTexts()[0]);
+	return field != null && field.isFunction() && field.getSemanticKey() == node.getType().getSemanticKey();
 }
