@@ -33,3 +33,14 @@ This route does not require the optional whole-program comparison report.
 
 The fast adapter check is included in `test:reflaxe-ocaml:target-definition`.
 Its success does not close construction or instance-call support in the native program wrapper.
+
+Class headers have a separate prerequisite check:
+
+```sh
+node_modules/.bin/haxe test/reflaxe_ocaml_shared_instance_values/class-headers.hxml
+```
+
+Both adapters must preserve interface and extern flags, secondary-class names, and the applied `Contract<Int>` relationship.
+The declaration identity includes these facts and owns a copy of the interface list.
+The current program emitter rejects interface relationships and extern or interface main types before selecting a layout.
+These checks do not prove interface dispatch, inheritance, or arbitrary generic type arguments.

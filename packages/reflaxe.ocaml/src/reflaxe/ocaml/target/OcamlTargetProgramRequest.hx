@@ -123,6 +123,8 @@ class OcamlTargetProgramRequest {
 
 	static function validateRevisionOne(mainClass:OcamlTargetClassFact, fieldInitializers:Array<OcamlTargetFieldInitializerFact>,
 			functions:Array<OcamlTargetFunctionFact>):Void {
+		if (mainClass.isInterface || mainClass.isExtern || mainClass.copyInterfaceTypeDisplays().length != 0)
+			throw "OCaml target program requires a generated class without interface relationships";
 		if (mainClass.copyTypeParameters().length != 0
 			|| mainClass.superClassIdentity != null
 			|| mainClass.superTypeIdentity != null

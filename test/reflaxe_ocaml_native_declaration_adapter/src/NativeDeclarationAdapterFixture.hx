@@ -115,6 +115,9 @@ class NativeDeclarationAdapterFixture {
 			{
 				canonicalIdentity: owner,
 				moduleIdentity: owner,
+				isInterface: false,
+				isExtern: false,
+				interfaceTypeDisplays: [],
 				typeParameters: [],
 				fields: [
 					{

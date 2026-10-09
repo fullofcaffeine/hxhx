@@ -48,6 +48,9 @@ class NativeTargetCoreRuntimeFixture {
 			{
 				canonicalIdentity: "Main",
 				moduleIdentity: "Main",
+				isInterface: false,
+				isExtern: false,
+				interfaceTypeDisplays: [],
 				typeParameters: [],
 				fields: [
 					{
