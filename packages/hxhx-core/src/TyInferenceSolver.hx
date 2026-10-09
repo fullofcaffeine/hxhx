@@ -95,9 +95,18 @@ class TyInferenceSolver {
 		};
 	}
 
-	/** A call through a cast-owned field shares that field's inferred result variable. */
-	public function uncheckedCallResult(term:TyInferenceTerm):Null<TyInferenceTerm> {
-		if (!isUncheckedCastResult(term))
+	/** Only untyped or hint-free cast results may acquire a callable shape; ordinary unknown inputs remain unproved. */
+	public function isInferredCallableResult(term:TyInferenceTerm):Bool {
+		assertOwned(term);
+		return switch term {
+			case Variable(identity): identity.kind == UncheckedCastResult || identity.kind == UntypedResult;
+			case _: false;
+		};
+	}
+
+	/** A call through an untyped or hint-free cast result shares the callable's inferred result variable. */
+	public function inferredCallResult(term:TyInferenceTerm):Null<TyInferenceTerm> {
+		if (!isInferredCallableResult(term))
 			return null;
 		return switch follow(term) {
 			case Function(_, result, _): result;

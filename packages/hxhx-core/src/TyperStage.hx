@@ -1929,7 +1929,7 @@ class TyperStage {
 						inferExprType(argument, scope, ctx, pos);
 				}
 		];
-		scope.getInference().constrainUncheckedCallable(callee, args, argumentTypes, scope);
+		scope.getInference().constrainInferredCallable(callee, args, argumentTypes, scope);
 		calleeType = scope.getInference().expressionType(callee, calleeType, scope);
 		if (scope.getInference().isUncheckedCallable(callee, scope)
 			&& !calleeType.isUnknown()

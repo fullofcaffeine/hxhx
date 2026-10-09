@@ -65,6 +65,9 @@ class M14UntypedCallControlTest {
 		}
 		assertClassGuard();
 		assertRejected('known_argument', 'untyped known("bad");', 'No compatible method signature for known');
+		assertRejected('stored_call_conflict', 'var handle:Handle=cast {};var fn=untyped handle.run;fn(1);fn("text");', 'String should be Int');
+		assertRejected('aliased_call_conflict', 'var handle:Handle=cast {};var fn=untyped handle.run;var alias=fn;fn(1);alias("text");',
+			'String should be Int');
 		assertRejected('outside_untyped', 'var handle:Handle=cast {};untyped 1;handle.missing(0,if(true)handle else handle);',
 			'control lowering cannot materialize an unresolved operand');
 	}
