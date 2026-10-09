@@ -122,7 +122,7 @@ class OcamlTargetProgramPlan {
 	fail before any file is written.
 **/
 class OcamlTargetProgramCore {
-	public static inline final CORE_ID = "reflaxe.ocaml.target-program-core.v1";
+	public static inline final CORE_ID = "reflaxe.ocaml.target-program-core.v2";
 	public static inline final REPORT_FILE = "ocaml_shared_target_report.json";
 	public static inline final MANIFEST_FILE = "ocaml_shared_target_manifest.json";
 	public static inline final ENTRY_NAME = "reflaxe_ocaml_entry";

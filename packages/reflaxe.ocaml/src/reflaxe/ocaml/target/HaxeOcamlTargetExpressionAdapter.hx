@@ -34,13 +34,53 @@ class HaxeOcamlTargetExpressionAdapter {
 		return fact;
 	}
 
+	/** Copy function control without interpreting a host return node as a runtime value. **/
+	public static function fromFunctionBody(ownerIdentity:String, body:TypedExpr, sourceOwner:ClassType, locals:Array<TVar>,
+			parameters:Array<OcamlTargetBindingFact>):Null<OcamlTargetStatementFact> {
+		if (locals.length != parameters.length)
+			throw "stock OCaml function parameter inventory mismatch";
+		final adapter = new HaxeOcamlTargetExpressionAdapter(ownerIdentity, sourceOwner);
+		for (index in 0...locals.length) {
+			if (adapter.bindingsByHostId.exists(locals[index].id))
+				throw "stock OCaml function repeats a parameter identity";
+			adapter.bindingsByHostId.set(locals[index].id, parameters[index]);
+		}
+		final statements = switch (body.expr) {
+			case TBlock(items): items;
+			case _: [body];
+		};
+		return adapter.copyStatements(statements, OcamlTargetExpressionPath.ROOT);
+	}
+
+	function copyStatements(statements:Array<TypedExpr>, path:String):Null<OcamlTargetStatementFact> {
+		final children = new Array<OcamlTargetStatementFact>();
+		for (index in 0...statements.length) {
+			final statement = statements[index];
+			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
+			final child = switch (statement.expr) {
+				case TBlock(items): copyStatements(items, childPath);
+				case TReturn(null): OcamlTargetStatementFact.returnValue(childPath, null);
+				case TReturn(value):
+					final copied = copyExpression(value, OcamlTargetExpressionPath.child(childPath, "return-value"));
+					copied == null ? null : OcamlTargetStatementFact.returnValue(childPath, copied);
+				case _:
+					final copied = copyExpression(statement, childPath);
+					copied == null ? null : OcamlTargetStatementFact.evaluate(copied);
+			};
+			if (child == null)
+				return null;
+			children.push(child);
+		}
+		return OcamlTargetStatementFact.block(path, children);
+	}
+
 	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
 		return switch (expression.expr) {
 			case TParenthesis(inner):
 				// Match native grouping without inventing a target-owned binding path.
 				TypeTools.toString(inner.t) == TypeTools.toString(expression.t) ? copyExpression(inner, path) : null;
-			case TCall(callee, []) if (TypeTools.toString(expression.t) == "Void"):
-				copyCall(callee, path);
+			case TCall(callee, arguments):
+				copyCall(callee, arguments, TypeTools.toString(expression.t), path);
 			case TConst(constant): final literal = HaxeOcamlTargetLiteralAdapter.fromConstant(constant,
 					expression.t); literal == null || !isDirectLiteral(literal) ? null : OcamlTargetExpressionFact.literalExpression(path, literal);
 			case TLocal(local): final binding = bindingsByHostId.get(local.id); final readType = TypeTools.toString(expression.t); binding == null || binding.semanticTypeDisplay != readType ? null : OcamlTargetExpressionFact.localRead(path,
@@ -78,7 +118,7 @@ class HaxeOcamlTargetExpressionAdapter {
 	}
 
 	/** The host must resolve an ordinary static declaration before we copy its identity. **/
-	function copyCall(callee:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyCall(callee:TypedExpr, arguments:Array<TypedExpr>, returnType:String, path:String):Null<OcamlTargetExpressionFact> {
 		return switch (callee.expr) {
 			case TField({expr: TTypeExpr(TClassDecl(receiver))}, FStatic(owner, reference)):
 				final cls = owner.get();
@@ -87,20 +127,35 @@ class HaxeOcamlTargetExpressionAdapter {
 					case FMethod(MethNormal): true;
 					case _: false;
 				};
-				final signature = switch (field.type) {
-					case TFun([], result): TypeTools.toString(result) == "Void";
-					case _: false;
+				final argumentTypes:Null<Array<String>> = switch (field.type) {
+					case TFun(args, result) if (TypeTools.toString(result) == returnType
+						&& OcamlTargetFunctionFact.admitsResult(returnType)):
+						var valid = args.length == arguments.length;
+						for (arg in args)
+							if (arg.opt || !OcamlTargetFunctionFact.admitsValue(TypeTools.toString(arg.t)))
+								valid = false;
+						valid ? [for (arg in args) TypeTools.toString(arg.t)] : null;
+					case _: null;
 				};
 				if (sourceOwner == null || cls.module != sourceOwner.module || cls.name != sourceOwner.name || receiver.get().module != cls.module
-					|| receiver.get().name != cls.name || cls.isExtern || cls.params.length != 0 || !ordinary || !signature || field.params.length != 0
-					|| field.expr() == null || field.meta.get().length != 0) {
+					|| receiver.get().name != cls.name || cls.isExtern || cls.params.length != 0 || !ordinary || argumentTypes == null
+					|| field.params.length != 0 || field.expr() == null || field.meta.get().length != 0) {
 					null;
 				} else {
+					final copied = new Array<OcamlTargetExpressionFact>();
+					for (index in 0...arguments.length) {
+						final argument = copyExpression(arguments[index], OcamlTargetExpressionPath.indexed(path, "argument", index));
+						if (argument == null || argument.semanticTypeDisplay != argumentTypes[index])
+							return null;
+						copied.push(argument);
+					}
 					OcamlTargetExpressionFact.directStaticCall(path, new OcamlTargetStaticCallFact({
 						moduleId: cls.module,
 						sourceTypeName: cls.name,
-						sourceFunctionName: field.name
-					}));
+						sourceFunctionName: field.name,
+						argumentTypeDisplays: argumentTypes,
+						returnTypeDisplay: returnType
+					}), copied);
 				}
 			case _: null;
 		};

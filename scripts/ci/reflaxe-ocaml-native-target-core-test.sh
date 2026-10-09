@@ -89,7 +89,7 @@ const manifest = readJson(nativeOutput, 'ocaml_shared_target_manifest.json')
 if (report.schemaVersion !== 1 || report.route !== 'native-target-core-runtime') {
 	throw new Error('native target-core report has the wrong schema or route')
 }
-if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v1') {
+if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v2') {
 	throw new Error('native target-core report has the wrong standalone core identity')
 }
 for (const key of ['normalizedInputIdentity', 'loweredPlanIdentity', 'runtimeReasonIdentity', 'outputManifestIdentity']) {
@@ -123,7 +123,7 @@ if ! grep -Fxq 'let value = let inner = 7 in inner' "$APP_OUTPUT/Main.ml"; then
 	exit 1
 fi
 
-if ! grep -Fxq 'let main = fun () -> Stdlib.ignore ()' "$APP_OUTPUT/Main.ml"; then
+if ! grep -Fxq 'let main = fun () -> (() : unit)' "$APP_OUTPUT/Main.ml"; then
 	echo "Native target-core fixture produced an unexpected Main.main function." >&2
 	exit 1
 fi

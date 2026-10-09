@@ -9,6 +9,20 @@ import sys.io.File;
 /** Require both hosts to preserve complete function facts before an independent native observer runs. */
 class SharedFunctionValuesFixture {
 	static function main():Void {
+		final rejected = StockFunctionValuesMacro.rejectedSignatures();
+		final unsupportedPath = "test/reflaxe_ocaml_shared_function_values/source/Unsupported.hx";
+		final unsupported = new ResolvedModule("Unsupported", unsupportedPath, ParserStage.parse(File.getContent(unsupportedPath), unsupportedPath));
+		final unsupportedModule = TyperStage.typeResolvedModule(unsupported, TyperIndex.build([unsupported]));
+		var rejectedCount = 0;
+		for (cls in unsupportedModule.getTypedClasses())
+			for (fn in cls.getFunctions()) {
+				if (rejected.indexOf(HxFunctionDecl.getName(fn.getSourceDeclaration())) < 0
+					|| HxhxOcamlTargetFunctionAdapter.fromFunction(cls.getSemanticInfo(), fn) != null)
+					throw "native adapter admitted an unsupported signature or changed the stock inventory";
+				rejectedCount++;
+			}
+		if (rejectedCount != 6 || rejected.length != rejectedCount)
+			throw "unsupported signature fixture lost a case";
 		if (Sys.command("node_modules/.bin/haxe", [
 			"-cp",
 			"test/reflaxe_ocaml_shared_function_values/source",
@@ -47,9 +61,10 @@ class SharedFunctionValuesFixture {
 			}
 		if (failures.length != 0)
 			throw "shared function arguments/results are incomplete: " + failures.join("; ");
-		if (compared != 4 || stock.length != compared)
+		if (compared != 7 || stock.length != compared)
 			throw "shared function values did not compare the complete authored inventory";
 		final request = HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram([typed], false), "Main");
+		FunctionValuesValidation.check(request);
 		final plan = OcamlTargetProgramCore.lower(request);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != before)
 			throw "shared function value adaptation changed its original typed module";
@@ -58,10 +73,11 @@ class SharedFunctionValuesFixture {
 		if (Sys.command(executable, []) != 0)
 			throw "shared function value application failed";
 		File.copy("test/reflaxe_ocaml_shared_function_values/Observer.ml", output + "/Observer.ml");
+		File.saveContent(output + "/Order.ml", FunctionValuesValidation.orderObserverSource());
 		final cwd = Sys.getCwd();
 		try {
 			Sys.setCwd(output);
-			if (Sys.command("ocamlopt", ["Main.ml", "Observer.ml", "-o", "observer.exe"]) != 0)
+			if (Sys.command("ocamlopt", ["Main.ml", "Observer.ml", "Order.ml", "-o", "observer.exe"]) != 0)
 				throw "shared function observer did not typecheck against the emitted module";
 			if (Sys.command("./observer.exe", []) != 0)
 				throw "shared function observer rejected an argument or result";

@@ -3,6 +3,8 @@ package backend.ocaml;
 import reflaxe.ocaml.target.OcamlTargetBindingFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionPath;
+import reflaxe.ocaml.target.OcamlTargetStatementFact;
+import reflaxe.ocaml.target.OcamlTargetFunctionFact;
 
 /** Copies the admitted native typed-expression family into target-owned facts. **/
 class HxhxOcamlTargetExpressionAdapter {
@@ -28,35 +30,51 @@ class HxhxOcamlTargetExpressionAdapter {
 	}
 
 	/**
-		Copy a typed function's statement tree using the existing expression contract.
+		Copy source statements and the exact immutable parameter bindings.
 
 		One adapter owns the whole body so local reads keep their exact declaration
 		identity across nested blocks. The shared target validates lexical visibility
 		and owns lowering. Unsupported statements reject the complete body.
 	**/
-	public static function fromFunctionBody(ownerIdentity:String, nativeFunctionIdentity:String, body:TypedFunctionBody,
-			sourceOwner:TyNominalInfo):Null<OcamlTargetExpressionFact> {
+	public static function fromFunctionBody(ownerIdentity:String, nativeFunctionIdentity:String, body:TypedFunctionBody, sourceOwner:TyNominalInfo,
+			nativeParameters:Array<TyLocalBinding>, parameters:Array<OcamlTargetBindingFact>):Null<OcamlTargetStatementFact> {
 		if (body == null)
 			throw "native OCaml expression adapter requires a typed function body";
 		final adapter = new HxhxOcamlTargetExpressionAdapter(ownerIdentity, requiredOwner(nativeFunctionIdentity), sourceOwner);
-		final fact = adapter.copyStatements(body.getStatements(), OcamlTargetExpressionPath.ROOT);
-		if (fact != null)
-			fact.validateClosedBindings();
-		return fact;
+		if (nativeParameters.length != parameters.length)
+			throw "native OCaml function parameter inventory mismatch";
+		for (index in 0...nativeParameters.length) {
+			final identity = nativeParameters[index].getIdentity();
+			if (identity.getOwnerIdentity() != nativeFunctionIdentity || adapter.bindingsByNativeKey.exists(identity.getCanonicalKey()))
+				throw "native OCaml function has a foreign or repeated parameter";
+			adapter.bindingsByNativeKey.set(identity.getCanonicalKey(), parameters[index]);
+		}
+		return adapter.copyStatements(body.getStatements(), OcamlTargetExpressionPath.ROOT);
 	}
 
 	/** Preserve source order and block nesting without adding target lowering decisions. **/
-	function copyStatements(statements:Array<TypedStmt>, path:String):Null<OcamlTargetExpressionFact> {
-		final children = new Array<OcamlTargetExpressionFact>();
+	function copyStatements(statements:Array<TypedStmt>, path:String):Null<OcamlTargetStatementFact> {
+		final children = new Array<OcamlTargetStatementFact>();
 		for (index in 0...statements.length) {
 			final statement = statements[index];
 			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
 			final expressions = statement.getExpressions();
 			final child = switch (statement.getTag()) {
-				case Var: final bindings = statement.getLocalBindings(); bindings.length == 1 && expressions.length == 1 ? copyDeclaration(bindings[0],
-						expressions[0], childPath) : null;
+				case Var:
+					final bindings = statement.getLocalBindings();
+					final copied = bindings.length == 1
+						&& expressions.length == 1 ? copyDeclaration(bindings[0], expressions[0], childPath) : null;
+					copied == null ? null : OcamlTargetStatementFact.evaluate(copied);
 				case Expression:
-					expressions.length == 1 ? copyExpression(expressions[0], childPath) : null;
+					final copied = expressions.length == 1 ? copyExpression(expressions[0], childPath) : null;
+					copied == null ? null : OcamlTargetStatementFact.evaluate(copied);
+				case ReturnVoid:
+					expressions.length == 0 ? OcamlTargetStatementFact.returnValue(childPath, null) : null;
+				case Return:
+					if (expressions.length == 1) {
+						final copied = copyExpression(expressions[0], OcamlTargetExpressionPath.child(childPath, "return-value"));
+						copied == null ? null : OcamlTargetStatementFact.returnValue(childPath, copied);
+					} else null;
 				case Block:
 					copyStatements(statement.getStatements(), childPath);
 				case _:
@@ -66,8 +84,7 @@ class HxhxOcamlTargetExpressionAdapter {
 				return null;
 			children.push(child);
 		}
-		final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
-		return OcamlTargetExpressionFact.block(path, resultType, children);
+		return OcamlTargetStatementFact.block(path, children);
 	}
 
 	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
@@ -131,11 +148,10 @@ class HxhxOcamlTargetExpressionAdapter {
 		final children = expression.getExpressions();
 		if (sourceOwner == null
 			|| declaration == null
-			|| children.length != 1
+			|| children.length == 0
 			|| children[0].getTag() != NameRead
 			|| children[0].getExpressions().length != 0
 			|| expression.getExtensionProvider() != null
-			|| expression.getType().getCanonicalDisplay() != "Void"
 			|| !declaration.getOwner().equals(sourceOwner.getIdentity())
 			|| declaration.getModulePath() != sourceOwner.getModulePath()
 			|| !declaration.getIsStatic()
@@ -147,13 +163,31 @@ class HxhxOcamlTargetExpressionAdapter {
 			|| declaration.getMetadata().length != 0)
 			return null;
 		final signature = declaration.getSignature();
-		if (!signature.getIsStatic() || signature.getArgs().length != 0 || signature.getReturnType().getCanonicalDisplay() != "Void")
+		final argumentTypes = [for (type in signature.getArgs()) type.getCanonicalDisplay()];
+		final returnType = signature.getReturnType().getCanonicalDisplay();
+		if (!signature.getIsStatic()
+			|| argumentTypes.length != children.length - 1
+			|| !OcamlTargetFunctionFact.admitsResult(returnType)
+			|| returnType != expression.getType().getCanonicalDisplay())
 			return null;
+		final arguments = new Array<OcamlTargetExpressionFact>();
+		for (index in 0...argumentTypes.length) {
+			if (!OcamlTargetFunctionFact.admitsValue(argumentTypes[index])
+				|| signature.getArgOptional()[index]
+				|| signature.getArgRest()[index])
+				return null;
+			final argument = copyExpression(children[index + 1], OcamlTargetExpressionPath.indexed(path, "argument", index));
+			if (argument == null || argument.semanticTypeDisplay != argumentTypes[index])
+				return null;
+			arguments.push(argument);
+		}
 		return OcamlTargetExpressionFact.directStaticCall(path, new reflaxe.ocaml.target.OcamlTargetStaticCallFact({
 			moduleId: sourceOwner.getModulePath(),
 			sourceTypeName: sourceOwner.getShortName(),
-			sourceFunctionName: signature.getName()
-		}));
+			sourceFunctionName: signature.getName(),
+			argumentTypeDisplays: argumentTypes,
+			returnTypeDisplay: returnType
+		}), arguments);
 	}
 
 	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String):Null<OcamlTargetExpressionFact> {

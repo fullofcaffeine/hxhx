@@ -85,7 +85,7 @@ class NativeDeclarationAdapterFixture {
 		if (fields.length != 1 || fields[0].getCanonicalIdentity() != StockFieldInitializerMacro.expectedIdentity())
 			throw "stock and native hosts disagree on the authored initializer facts";
 		final source = OcamlTargetProgramCore.lower(request).copyFiles().filter(file -> file.path == "Main.ml");
-		if (source.length != 1 || source[0].contents != "let value = let inner = 7 in inner\n\nlet main = fun () -> Stdlib.ignore ()\n")
+		if (source.length != 1 || source[0].contents != "let value = let inner = 7 in inner\n\nlet main = fun () -> (() : unit)\n")
 			throw "authored initializer changed its scoped local or result value";
 	}
 
@@ -167,10 +167,10 @@ class NativeDeclarationAdapterFixture {
 			argumentTypeDisplays: [],
 			returnTypeDisplay: "Void"
 		};
-		final fn = new OcamlTargetFunctionFact(functionSignature, OcamlTargetExpressionFact.block(OcamlTargetExpressionPath.ROOT, "Void", []));
+		final fn = new OcamlTargetFunctionFact(functionSignature, reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", []), []);
 		final plan = OcamlTargetProgramCore.lower(new OcamlTargetProgramRequest("native-host", owner, declarations, [field], [fn]));
 		final mainSource = plan.copyFiles().filter(file -> file.path == "Main.ml");
-		if (mainSource.length != 1 || mainSource[0].contents != "let hx_type = 7\n\nlet main = fun () -> Stdlib.ignore ()\n")
+		if (mainSource.length != 1 || mainSource[0].contents != "let hx_type = 7\n\nlet main = fun () -> (() : unit)\n")
 			throw "shared target program core produced unexpected OCaml source";
 		if (plan.report("native-hxhx").targetCoreId != OcamlTargetProgramCore.CORE_ID)
 			throw "shared target program report lost the target core identity";
@@ -203,11 +203,15 @@ class NativeDeclarationAdapterFixture {
 		final bodyFact = HxhxOcamlTargetExpressionAdapter.fromExpression(targetIdentity, body);
 		if (bodyFact == null)
 			throw "native hxhx adapter rejected the shared target function body";
-		final fact = new OcamlTargetFunctionFact(signature, bodyFact);
+		final statements = reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", [
+			for (child in bodyFact.copyChildren())
+				reflaxe.ocaml.target.OcamlTargetStatementFact.evaluate(child)
+		]);
+		final fact = new OcamlTargetFunctionFact(signature, statements, []);
 		if (fact.getCanonicalIdentity() != BindingIdentityMacro.stockFunction())
 			throw "stock Haxe and native hxhx produced different target function facts";
 		final rendered = new OcamlASTPrinter().printExpr(OcamlTargetFunctionLowerer.build(fact));
-		if (rendered.indexOf("fun () -> Stdlib.ignore (let value = 7 in") != 0)
+		if (rendered.indexOf("fun () -> (let value = 7 in") != 0)
 			throw 'native hxhx could not execute the target function lowerer: $rendered';
 		final catalog = new OcamlTargetFunctionCatalog();
 		catalog.register("native-host-main", fact);

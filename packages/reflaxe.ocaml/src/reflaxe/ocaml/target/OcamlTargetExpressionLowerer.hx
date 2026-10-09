@@ -3,47 +3,131 @@ package reflaxe.ocaml.target;
 import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 
 /**
 	Lowers the first recursive host-neutral expression family into OCaml syntax.
 
-	Both compiler hosts call this target-owned implementation. Direct calls have
-	no receiver, arguments, or represented result. Other call families, mutation,
-	capture, conversions, null, and control flow remain unsupported here.
+	Both compiler hosts call this target-owned implementation. Direct static calls
+	evaluate arguments once, in Haxe source order. Function statements share the
+	same binding allocator as their parameters and value expressions.
 **/
 class OcamlTargetExpressionLowerer {
 	final localNames:Map<String, String>;
+	final occupied:Map<String, Bool>;
 
 	/** Reserve called functions before locals, so keyword escaping cannot redirect a call. **/
-	function new(expression:OcamlTargetExpressionFact) {
+	function new(expressions:Array<OcamlTargetExpressionFact>, parameters:Array<OcamlTargetBindingFact>) {
 		localNames = [];
-		final occupied:Map<String, Bool> = [];
-		for (call in expression.copyStaticCalls())
-			occupied.set(OcamlNameTools.normalizeValueIdentifier(OcamlNameTools.scopedValueName(call.moduleId, call.sourceTypeName, call.sourceFunctionName)),
-				true);
-		assignLocalNames(expression, occupied);
+		occupied = [];
+		for (expression in expressions)
+			for (call in expression.copyStaticCalls())
+				occupied.set(OcamlNameTools.normalizeValueIdentifier(OcamlNameTools.scopedValueName(call.moduleId, call.sourceTypeName,
+					call.sourceFunctionName)), true);
+		for (parameter in parameters) {
+			final used = expressions.filter(expression -> readsBinding(expression, parameter.getCanonicalIdentity())).length != 0;
+			assignBindingName(parameter, !used);
+		}
+		for (expression in expressions)
+			assignLocalNames(expression);
 	}
 
-	function assignLocalNames(expression:OcamlTargetExpressionFact, occupied:Map<String, Bool>):Void {
-		if (expression.kind == VariableDeclarationExpression) {
-			final binding = requireBinding(expression);
-			final base = binding.sourceName == "_" ? "_hx" : OcamlNameTools.normalizeValueIdentifier(binding.sourceName);
-			var name = base;
-			var suffix = 2;
-			while (occupied.exists(name))
-				name = base + "_" + suffix++;
-			occupied.set(name, true);
-			localNames.set(binding.getCanonicalIdentity(), name);
-		}
+	function assignLocalNames(expression:OcamlTargetExpressionFact):Void {
+		if (expression.kind == VariableDeclarationExpression)
+			assignBindingName(requireBinding(expression));
 		for (child in expression.copyChildren())
-			assignLocalNames(child, occupied);
+			assignLocalNames(child);
+	}
+
+	function assignBindingName(binding:OcamlTargetBindingFact, unused:Bool = false):Void {
+		var base = binding.sourceName == "_" ? "_hx" : OcamlNameTools.normalizeValueIdentifier(binding.sourceName);
+		if (unused && !StringTools.startsWith(base, "_"))
+			base = "_" + base;
+		localNames.set(binding.getCanonicalIdentity(), allocateName(base));
+	}
+
+	static function readsBinding(expression:OcamlTargetExpressionFact, identity:String):Bool {
+		if (expression.kind == LocalReadExpression && requireBinding(expression).getCanonicalIdentity() == identity)
+			return true;
+		for (child in expression.copyChildren())
+			if (readsBinding(child, identity))
+				return true;
+		return false;
+	}
+
+	function allocateName(base:String):String {
+		var name = base;
+		var suffix = 2;
+		while (occupied.exists(name))
+			name = base + "_" + suffix++;
+		occupied.set(name, true);
+		return name;
 	}
 
 	public static function build(expression:OcamlTargetExpressionFact):OcamlExpr {
 		if (expression == null)
 			throw "OCaml target expression lowering requires a normalized expression";
 		expression.validateClosedBindings();
-		return new OcamlTargetExpressionLowerer(expression).buildNode(expression);
+		return new OcamlTargetExpressionLowerer([expression], []).buildNode(expression);
+	}
+
+	/** Allocate parameters and locals together, then lower the validated terminal-return body. **/
+	public static function buildFunction(fact:OcamlTargetFunctionFact):OcamlExpr {
+		final expressions = new Array<OcamlTargetExpressionFact>();
+		collectExpressions(fact.body, expressions);
+		final parameters = fact.copyParameters();
+		final builder = new OcamlTargetExpressionLowerer(expressions, parameters);
+		final patterns = [
+			for (parameter in parameters)
+				OcamlPat.PAnnot(OcamlPat.PVar(builder.bindingName(parameter)), primitiveType(parameter.semanticTypeDisplay))
+		];
+		if (patterns.length == 0)
+			patterns.push(OcamlPat.PConst(OcamlConst.CUnit));
+		return OcamlExpr.EFun(patterns, OcamlExpr.EAnnot(builder.buildStatement(fact.body), primitiveType(fact.returnTypeDisplay)));
+	}
+
+	static function collectExpressions(statement:OcamlTargetStatementFact, output:Array<OcamlTargetExpressionFact>):Void {
+		if (statement.expression != null)
+			output.push(statement.expression);
+		for (child in statement.copyChildren())
+			collectExpressions(child, output);
+	}
+
+	static function primitiveType(type:String):OcamlTypeExpr {
+		return OcamlTypeExpr.TIdent(switch (type) {
+			case "Int": "int";
+			case "Bool": "bool";
+			case "String": "string";
+			case "Void": "unit";
+			case _: throw "OCaml target function has an unsupported represented type";
+		});
+	}
+
+	function buildStatement(statement:OcamlTargetStatementFact):OcamlExpr {
+		return switch (statement.kind) {
+			case ReturnStatement:
+				statement.expression == null ? OcamlExpr.EConst(OcamlConst.CUnit) : buildNode(statement.expression);
+			case ExpressionStatement:
+				if (statement.expression == null)
+					throw "OCaml target expression statement lost its expression";
+				OcamlExpr.EApp(OcamlExpr.EIdent("Stdlib.ignore"), [buildNode(statement.expression)]);
+			case BlockStatement:
+				var result = OcamlExpr.EConst(OcamlConst.CUnit);
+				final children = statement.copyChildren();
+				children.reverse();
+				for (child in children) {
+					final expression = child.expression;
+					if (child.kind == ExpressionStatement && expression != null && expression.kind == VariableDeclarationExpression) {
+						result = OcamlExpr.ELet(bindingName(requireBinding(expression)), buildNode(onlyChild(expression)), result, false);
+					} else if (child.endsInReturn()) {
+						result = buildStatement(child);
+					} else {
+						result = OcamlExpr.ESeq([buildStatement(child), result]);
+					}
+				}
+				result;
+		};
 	}
 
 	function buildNode(expression:OcamlTargetExpressionFact):OcamlExpr {
@@ -54,7 +138,16 @@ class OcamlTargetExpressionLowerer {
 					throw "OCaml target static call lost its declaration";
 				final name = OcamlNameTools.normalizeValueIdentifier(OcamlNameTools.scopedValueName(call.moduleId, call.sourceTypeName,
 					call.sourceFunctionName));
-				OcamlExpr.EApp(OcamlExpr.EIdent(name), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				final arguments = expression.copyChildren();
+				final names = [for (_ in arguments) allocateName("hx_arg")];
+				final values = arguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : [for (name in names) OcamlExpr.EIdent(name)];
+				var result = OcamlExpr.EApp(OcamlExpr.EIdent(name), values);
+				var index = arguments.length;
+				while (index > 0) {
+					index--;
+					result = OcamlExpr.ELet(names[index], buildNode(arguments[index]), result, false);
+				}
+				result;
 			case LiteralExpression:
 				final literal = expression.literal;
 				if (literal == null)

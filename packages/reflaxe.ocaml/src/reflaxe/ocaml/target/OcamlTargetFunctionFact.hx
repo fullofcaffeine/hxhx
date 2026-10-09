@@ -20,25 +20,26 @@ typedef OcamlTargetFunctionSignature = {
 /**
 	One immutable function copied independently from either compiler host.
 
-	Revision 1 admits only static, zero-argument, `Void` functions. This is enough
-	to prove the preprocessing and target-execution boundary without pretending
-	that arguments, receiver state, returns, or captures already cross it.
+	Exact primitive parameters and terminal returns cross this boundary with
+	ordered binding identities. Receiver state and captures remain unsupported.
 **/
 class OcamlTargetFunctionFact {
-	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-function-v1";
+	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-function-v2";
 
 	public final moduleId:String;
 	public final sourceTypeName:String;
 	public final sourceFunctionName:String;
 	public final role:OcamlTargetFunctionRole;
 	public final returnTypeDisplay:String;
-	public final body:OcamlTargetExpressionFact;
+	public final body:OcamlTargetStatementFact;
+
+	final parameters:Array<OcamlTargetBindingFact>;
 
 	final argumentTypeDisplays:Array<String>;
 	final targetIdentity:String;
 	final canonicalIdentity:String;
 
-	public function new(signature:OcamlTargetFunctionSignature, body:OcamlTargetExpressionFact) {
+	public function new(signature:OcamlTargetFunctionSignature, body:OcamlTargetStatementFact, parameters:Array<OcamlTargetBindingFact>) {
 		if (signature == null)
 			throw "OCaml target function requires a source signature";
 		this.moduleId = required(signature.moduleId, "module ID");
@@ -54,12 +55,37 @@ class OcamlTargetFunctionFact {
 		if (body == null)
 			throw "OCaml target function requires a normalized body";
 		this.body = body;
-		validateRevisionOne(role, argumentTypeDisplays, returnTypeDisplay, this.body);
+		if (parameters == null || parameters.length != argumentTypeDisplays.length)
+			throw "OCaml target function requires every ordered parameter binding";
+		this.parameters = parameters.copy();
+		targetIdentity = identityFor(signature);
+		if (role != StaticFunction
+			|| !admitsResult(returnTypeDisplay)
+			|| body.path != OcamlTargetExpressionPath.ROOT
+			|| body.kind != BlockStatement
+			|| !body.admitsFunctionResult(returnTypeDisplay))
+			throw "OCaml target function has unsupported signature or return control";
+		final names:Map<String, Bool> = [];
+		for (index in 0...parameters.length) {
+			final parameter = parameters[index];
+			if (parameter == null
+				|| parameter.role != Parameter
+				|| parameter.ownerIdentity != targetIdentity
+				|| parameter.declarationPath != OcamlTargetExpressionPath.indexed(OcamlTargetExpressionPath.ROOT, "parameter", index)
+				|| parameter.semanticTypeDisplay != argumentTypeDisplays[index]
+				|| !admitsValue(argumentTypeDisplays[index])
+				|| names.exists(parameter.sourceName))
+				throw "OCaml target function has inconsistent parameter facts";
+			names.set(parameter.sourceName, true);
+		}
+		body.validateBindings(targetIdentity, this.parameters);
 		for (call in body.copyStaticCalls())
 			if (!call.belongsTo(moduleId, sourceTypeName))
 				throw "OCaml target function does not admit cross-owner static calls";
-		targetIdentity = identityFor(signature);
-		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([SCHEMA_REVISION, targetIdentity, body.getCanonicalIdentity()]));
+		final parts:Array<Null<String>> = [SCHEMA_REVISION, targetIdentity, body.getCanonicalIdentity()];
+		for (parameter in this.parameters)
+			parts.push(parameter.getCanonicalIdentity());
+		canonicalIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode(parts));
 	}
 
 	public static function identityFor(signature:OcamlTargetFunctionSignature):String {
@@ -83,6 +109,15 @@ class OcamlTargetFunctionFact {
 	public function copyArgumentTypeDisplays():Array<String>
 		return argumentTypeDisplays.copy();
 
+	public function copyParameters():Array<OcamlTargetBindingFact>
+		return parameters.copy();
+
+	public static function admitsValue(typeDisplay:String):Bool
+		return typeDisplay == "Int" || typeDisplay == "Bool" || typeDisplay == "String";
+
+	public static function admitsResult(typeDisplay:String):Bool
+		return typeDisplay == "Void" || admitsValue(typeDisplay);
+
 	public function getTargetIdentity():String
 		return targetIdentity;
 
@@ -94,12 +129,6 @@ class OcamlTargetFunctionFact {
 		return switch (role) {
 			case StaticFunction: "StaticFunction";
 		};
-	}
-
-	static function validateRevisionOne(role:OcamlTargetFunctionRole, argumentTypeDisplays:Array<String>, returnTypeDisplay:String,
-			body:OcamlTargetExpressionFact):Void {
-		if (role != StaticFunction || argumentTypeDisplays.length != 0 || returnTypeDisplay != "Void" || body.semanticTypeDisplay != "Void")
-			throw "OCaml target function revision 1 requires a static zero-argument Void function and body";
 	}
 
 	static function required(value:String, label:String):String {

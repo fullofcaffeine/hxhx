@@ -43,7 +43,7 @@ class NativeTargetCoreRuntimeFixture {
 			argumentTypeDisplays: [],
 			returnTypeDisplay: "Void"
 		};
-		final fn = new OcamlTargetFunctionFact(functionSignature, OcamlTargetExpressionFact.block(OcamlTargetExpressionPath.ROOT, "Void", []));
+		final fn = new OcamlTargetFunctionFact(functionSignature, reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", []), []);
 		final declarations = new OcamlTargetDeclarationRequest("native-target-core-runtime", [
 			{
 				canonicalIdentity: "Main",

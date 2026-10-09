@@ -54,7 +54,11 @@ class BindingIdentityMacro {
 		}));
 		if (body == null)
 			Context.error("stock Haxe adapter rejected the shared target function body", Context.currentPos());
-		return macro $v{new OcamlTargetFunctionFact(signature, body).getCanonicalIdentity()};
+		final statements = reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", [
+			for (child in body.copyChildren())
+				reflaxe.ocaml.target.OcamlTargetStatementFact.evaluate(child)
+		]);
+		return macro $v{new OcamlTargetFunctionFact(signature, statements, []).getCanonicalIdentity()};
 	}
 
 	static function functionSignature():OcamlTargetFunctionSignature {

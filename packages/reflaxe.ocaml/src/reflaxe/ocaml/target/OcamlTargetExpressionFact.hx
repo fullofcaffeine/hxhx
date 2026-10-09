@@ -14,12 +14,12 @@ enum OcamlTargetExpressionKind {
 /**
 	One immutable expression tree copied independently by either compiler host.
 
-	Revision 2 adds resolved static zero-argument Void calls to direct non-null
-	literals, initialized locals, local reads, and lexical blocks. Unsupported
-	expressions and compiler temporaries remain outside this contract.
+	Revision 3 carries exact arguments and results for resolved static calls.
+	Direct non-null literals, initialized locals, local reads, and lexical blocks
+	retain their value types. Function control lives in OcamlTargetStatementFact.
 **/
 class OcamlTargetExpressionFact {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v2";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v3";
 
 	public final path:String;
 	public final kind:OcamlTargetExpressionKind;
@@ -70,8 +70,17 @@ class OcamlTargetExpressionFact {
 	public static function block(path:String, semanticTypeDisplay:String, children:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact
 		return new OcamlTargetExpressionFact(path, BlockExpression, semanticTypeDisplay, null, null, children);
 
-	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact):OcamlTargetExpressionFact
-		return new OcamlTargetExpressionFact(path, StaticCallExpression, "Void", null, null, [], call);
+	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact, arguments:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact {
+		if (call == null || arguments == null || arguments.length != call.copyArgumentTypeDisplays().length)
+			throw "OCaml target static call arguments do not match its declaration";
+		final types = call.copyArgumentTypeDisplays();
+		for (index in 0...arguments.length)
+			if (arguments[index] == null
+				|| arguments[index].semanticTypeDisplay != types[index]
+				|| arguments[index].path != OcamlTargetExpressionPath.indexed(path, "argument", index))
+				throw "OCaml target static call requires exact ordered argument facts";
+		return new OcamlTargetExpressionFact(path, StaticCallExpression, call.returnTypeDisplay, null, null, arguments, call);
+	}
 
 	/** Preserve source occurrence order when checking the enclosing program's call references. **/
 	public function copyStaticCalls():Array<OcamlTargetStaticCallFact> {
@@ -101,7 +110,7 @@ class OcamlTargetExpressionFact {
 			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Void {
 		switch (kind) {
 			case StaticCallExpression:
-				if (literal != null || binding != null || children.length != 0 || semanticTypeDisplay != "Void")
+				if (literal != null || binding != null)
 					invalidShape("static call");
 			case LiteralExpression:
 				if (literal == null) {
@@ -187,9 +196,16 @@ class OcamlTargetExpressionFact {
 		};
 	}
 
+	@:allow(reflaxe.ocaml.target.OcamlTargetStatementFact)
 	static function validateNode(node:OcamlTargetExpressionFact, scopes:Array<Map<String, Bool>>, identities:Map<String, Bool>):Void {
 		switch (node.kind) {
-			case LiteralExpression | StaticCallExpression:
+			case LiteralExpression:
+			case StaticCallExpression:
+				for (child in node.children) {
+					scopes.push([]);
+					validateNode(child, scopes, identities);
+					scopes.pop();
+				}
 			case LocalReadExpression:
 				final local = node.binding;
 				if (local == null || !isVisible(local.getCanonicalIdentity(), scopes))
