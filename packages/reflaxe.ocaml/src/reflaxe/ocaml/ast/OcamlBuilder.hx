@@ -8992,7 +8992,14 @@ class OcamlBuilder {
 
 		var i = index;
 		while (i < exprs.length) {
-			final e = exprs[i];
+			final original = exprs[i];
+			final unwrapped = unwrap(original);
+			// A wrapped return still terminates this block. Keep other wrappers
+			// intact because operation metadata can own assignment lowering.
+			final e = switch (unwrapped.expr) {
+				case TReturn(_): unwrapped;
+				case _: original;
+			};
 			final isLast = i == exprs.length - 1;
 
 			switch (e.expr) {

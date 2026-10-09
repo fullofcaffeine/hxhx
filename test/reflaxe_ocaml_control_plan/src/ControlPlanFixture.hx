@@ -728,6 +728,7 @@ class ControlPlanFixture {
 	}
 
 	public static macro function run():Expr {
+		ControlRootFixture.checkAll();
 		final first = returnDecision("control:return:first", 10);
 		final second = returnDecision("control:return:second", 30);
 		final loop = loopTarget("control-target:loop:first", 100);

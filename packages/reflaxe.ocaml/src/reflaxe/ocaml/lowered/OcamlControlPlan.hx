@@ -2750,6 +2750,8 @@ class OcamlControlPlanner {
 		function visit(expression:TypedExpr, directRootStatement:Bool, path:String):Void {
 			observeStatementResults(expression, path);
 			switch (expression.expr) {
+				case TMeta(_, child), TParenthesis(child):
+					visit(child, directRootStatement, path + "/child:0");
 				case TReturn(value):
 					if (value != null)
 						visit(value, false, path + "/return-value");
@@ -3162,13 +3164,20 @@ class OcamlControlPlanner {
 			}
 		}
 
-		switch (body.expr) {
-			case TBlock(expressions):
-				for (index => expression in expressions)
-					visit(expression, true, "root/block:" + index);
-			case _:
-				visit(body, true, "root");
+		// Wrappers preserve the direct result path, but still belong to the
+		// structural identity. Nested blocks and branches keep their own control.
+		function visitRoot(expression:TypedExpr, path:String):Void {
+			switch (expression.expr) {
+				case TMeta(_, child), TParenthesis(child):
+					visitRoot(child, path + "/child:0");
+				case TBlock(expressions):
+					for (index => child in expressions)
+						visit(child, true, path + "/block:" + index);
+				case _:
+					visit(expression, true, path);
+			}
 		}
+		visitRoot(body, "root");
 
 		if (typedValueFallbackRequired) {
 			if (typedBoundary == null || typedBoundary.resultKind != OcamlCallResultKind.Value)
