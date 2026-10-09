@@ -46,7 +46,6 @@ function lower(program:MacroExpandedProgram, activeFeatures:Array<String>):Macro
 				return node.withChildren(replacedExpressions, replacedStatements);
 		return node;
 	}
-	var changedProgram = false;
 	final modules = [
 		for (module in program.getTypedModules()) {
 			var changedModule = false;
@@ -77,9 +76,9 @@ function lower(program:MacroExpandedProgram, activeFeatures:Array<String>):Macro
 					changedClass ? owner.withMembers({functions: functions, fields: owner.getFields(), initializers: fields}) : owner;
 				}
 			];
-			if (changedModule) changedProgram = true;
 			changedModule ? module.withTypedClasses(classes) : module;
 		}
 	];
-	return changedProgram ? new MacroExpandedProgram(modules, program.macroMode, program.getGeneratedOcamlModules()) : program;
+	// Runtime setup can depend on a selected feature even when no expression changed.
+	return new MacroExpandedProgram(modules, program.macroMode, program.getGeneratedOcamlModules(), activeFeatures);
 }

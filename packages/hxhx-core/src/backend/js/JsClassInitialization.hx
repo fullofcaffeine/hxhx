@@ -1,15 +1,22 @@
 package backend.js;
 
 /**
-	Run retained class startup functions once after all class methods exist.
+	Emit retained class startup bodies once after all class methods exist.
 	The target calls this phase before static field values, as Haxe initialization
-	requires. The supplied projection contains only declarations selected for emission.
+	requires. Host declarations inside startup must share the program scope with
+	methods that read them. This preserves upstream JavaScript startup scope rather
+	than introducing a function boundary around each source initializer.
 **/
-function emit(writer:JsWriter, projection:TypedBackendClassProjection, reference:String):Void {
+function emit(writer:JsWriter, projection:TypedBackendClassProjection, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>,
+		runtimeTypes:JsRuntimeTypePlan):Void {
 	for (functionProjection in projection.getFunctions()) {
 		final declaration = functionProjection.getDeclaration();
-		if (HxFunctionDecl.getIsStatic(declaration) && HxFunctionDecl.getName(declaration) == "__init__")
-			writer.writeln(reference + JsNameMangler.propertySuffix("__init__") + "();");
+		if (!HxFunctionDecl.getIsStatic(declaration) || HxFunctionDecl.getName(declaration) != "__init__")
+			continue;
+		final scope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
+			runtimeTypes.forFunction(functionProjection), functionProjection.findMethodUse);
+		scope.setControlProjection(functionProjection);
+		JsStmtEmitter.emitFunctionBody(writer, functionProjection.getBody(), scope);
 	}
 }
 

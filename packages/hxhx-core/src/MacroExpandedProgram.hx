@@ -24,15 +24,34 @@ class MacroExpandedProgram {
 
 	final typedModules:Array<TypedModule>;
 	final typedProgramRevision:CompilerTypedProgramRevision;
+	final selectedRuntimeFeatures:Array<String>;
 
 	public final generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>;
 
-	public function new(typedModules:Array<TypedModule>, macroMode:Bool, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>) {
+	public function new(typedModules:Array<TypedModule>, macroMode:Bool, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>,
+			?selectedRuntimeFeatures:Array<String>) {
 		this.typedModules = typedModules == null ? [] : typedModules.copy();
 		this.typedProgramRevision = CompilerTypedProgramRevision.fromTypedModules(this.typedModules, macroMode);
 		this.macroMode = macroMode;
 		this.generatedOcamlModules = generatedOcamlModules == null ? [] : generatedOcamlModules.copy();
+		this.selectedRuntimeFeatures = [];
+		if (selectedRuntimeFeatures != null)
+			for (name in selectedRuntimeFeatures) {
+				if (name == null)
+					throw "selected runtime feature requires a literal name";
+				if (this.selectedRuntimeFeatures.indexOf(name) < 0)
+					this.selectedRuntimeFeatures.push(name);
+			}
+		this.selectedRuntimeFeatures.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
 	}
+
+	/**
+		Return feature-selection output for target-owned runtime setup. These literal
+		protocol names are emission inputs, not additional target-neutral typing facts.
+		Backends must not rediscover them from emitted or unused library bodies.
+	 */
+	public function getSelectedRuntimeFeatures():Array<String>
+		return selectedRuntimeFeatures.copy();
 
 	public function getTypedModules():Array<TypedModule> {
 		return typedModules.copy();

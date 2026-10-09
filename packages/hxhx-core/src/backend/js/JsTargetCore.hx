@@ -560,7 +560,8 @@ class JsTargetCore implements ITargetCore {
 				final constant = emitSimpleStaticFinalInitText(HxFieldDecl.getInitText(field));
 				constant == null ? "null" : constant;
 			} else if (init == null) {
-				"null";
+				// A declaration without a value must not erase assignments made by __init__.
+				null;
 			} else {
 				try {
 					JsFieldInitializerEmitter.emit(writer, unit.projection, field, staticScope, unit.runtimeTypes.forInitializer(field));
@@ -600,7 +601,7 @@ class JsTargetCore implements ITargetCore {
 	static function emitStaticFunctions(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
 		for (functionProjection in unit.projection.getFunctions()) {
 			final fn = functionProjection.getDeclaration();
-			if (!HxFunctionDecl.getIsStatic(fn))
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "__init__")
 				continue;
 
 			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
@@ -3492,8 +3493,6 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		if (fullName == "String")
 			return true;
-		if (fullName != null && StringTools.startsWith(fullName, "haxe.ds."))
-			return true;
 		if (fullName == "haxe.Rest")
 			return true;
 		if (fullName == "sys.io.Process")
@@ -3520,10 +3519,6 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
-		if (fullName == "haxe.Template")
-			return false;
-		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
-			return true;
 		if (JsBuiltinExternBinding.isNativeJsGlobalExtern(fullName))
 			return true;
 		if (isNativeJsExternPrototypeClass(fullName))
@@ -3595,12 +3590,8 @@ class JsTargetCore implements ITargetCore {
 		final classes = collectClassUnits(typedProgram);
 		final writer = new JsWriter();
 		final jsClassic = context.hasDefine("js-classic");
-
-		if (!jsClassic) {
-			writer.writeln("(function () {");
-			writer.pushIndent();
-			writer.writeln("\"use strict\";");
-		}
+		final bindings = JsProgramBindings.select(typedProgram);
+		JsProgramBindings.open(writer, bindings, jsClassic);
 
 		emitRuntimePrelude(writer);
 		JsRuntimeTypeSupport.emitDefinition(writer);
@@ -3628,7 +3619,7 @@ class JsTargetCore implements ITargetCore {
 				&& JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName) == null
 				&& JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName) == null
 				&& !JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
-				JsClassInitialization.emit(writer, unit.projection, unit.jsRef);
+				JsClassInitialization.emit(writer, unit.projection, classRefs, staticMemberRefs(unit), unit.runtimeTypes);
 
 		for (unit in classes.units)
 			emitClassInitialization(writer, unit, classRefs);
@@ -3638,10 +3629,7 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln(mainRef + JsNameMangler.propertySuffix("main") + "();");
 		}
 
-		if (!jsClassic) {
-			writer.popIndent();
-			writer.writeln("})();");
-		}
+		JsProgramBindings.close(writer, bindings, jsClassic);
 
 		sys.io.File.saveContent(outputPath, writer.toString());
 		final sourceMapPath = outputPath + ".map";
