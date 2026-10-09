@@ -54,6 +54,7 @@ class TyFunctionInference {
 		final fingerprint:String;
 		final type:TyType;
 		final arguments:Array<TyInferenceTerm>;
+		final result:TyInferenceTerm;
 	}> = [];
 
 	/** Preserve invocation-only evidence before later source uses solve the receiver. */
@@ -127,15 +128,32 @@ class TyFunctionInference {
 				return switch source {
 					case ESourceFunction(facts, _, _, _):
 						TyCallableSignature.sourceFunctionType(facts.getArguments(), facts.getSignature(), entry.arguments.map(solver.published),
-							entry.type.getFunctionReturn());
+							solver.published(entry.result));
 					case _: throw "source function signature requires its authored function occurrence";
 				};
 			}
 		return null;
 	}
 
-	/** Retain parameter terms so replay observes their final types, including constraints supplied after an earlier body call. */
-	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>):Void {
+	/**
+		Unresolved returns share the function's result constraints. Keep each
+		return's lexical term so a later callback annotation reaches every path.
+		Commit together: a conflicting return must not partially bind its peers.
+	 */
+	public function sourceFunctionResult(returns:Array<TyInferenceTerm>):Null<TyInferenceTerm> {
+		if (returns.length == 0)
+			return null;
+		final candidate = solver.fork();
+		final result = returns[0];
+		for (index in 1...returns.length)
+			if (!candidate.constrain(result, returns[index]))
+				throw "source function returns have incompatible inference constraints";
+		solver.commit(candidate);
+		return result;
+	}
+
+	/** Retain parameter and result terms so replay observes constraints supplied after an earlier body call. */
+	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>, ?result:TyInferenceTerm):Void {
 		if (solver.isSealed())
 			throw "source function signature is absent from sealed inference";
 		if (!type.isFunction())
@@ -155,7 +173,8 @@ class TyFunctionInference {
 					source: source,
 					fingerprint: fingerprint,
 					type: type,
-					arguments: arguments
+					arguments: arguments,
+					result: result == null ? TyInferenceSolver.fromType(type.getFunctionReturn()) : result
 				};
 				return;
 			}
@@ -163,7 +182,8 @@ class TyFunctionInference {
 			source: source,
 			fingerprint: fingerprint,
 			type: type,
-			arguments: arguments
+			arguments: arguments,
+			result: result == null ? TyInferenceSolver.fromType(type.getFunctionReturn()) : result
 		});
 	}
 
@@ -293,6 +313,18 @@ class TyFunctionInference {
 
 	/** Infer an untyped or hint-free cast callable from checked operands without revisiting their expressions. */
 	public function constrainInferredCallable(expression:HxExpr, arguments:Array<HxExpr>, actual:Array<TyType>, environment:TyFunctionEnv):Void {
+		// An unresolved host name under untyped has no declaration shared by its
+		// call occurrences. A stored local or an explicit wrapper does have an
+		// inference identity, so its calls must retain one consistent signature.
+		function unresolvedHostName(value:HxExpr):Bool {
+			return switch value {
+				case EIdent(name): environment.resolveSymbol(name) == null;
+				case EParenthesized(inner, _) | EPrivateAccess(inner, _): unresolvedHostName(inner);
+				case _: false;
+			};
+		}
+		if (unresolvedHostName(expression))
+			return;
 		final term = sourceTerm(expression, environment);
 		if (solver.isSealed() || term == null || !solver.isInferredCallableResult(term) || !solver.preview(term).isUnknown())
 			return;
@@ -322,6 +354,28 @@ class TyFunctionInference {
 	/** Resolve initializer provenance before its new local becomes visible. */
 	public function sourceTerm(expression:HxExpr, environment:TyFunctionEnv):Null<TyInferenceTerm> {
 		return switch expression {
+			case ESourceFunction(_, _, _, _):
+				var term:Null<TyInferenceTerm> = null;
+				for (entry in sourceFunctions)
+					if (entry.source == expression) {
+						if (entry.fingerprint != TypedBodyFingerprint.forExpression(expression))
+							throw "source function changed during inference";
+						final parameters = entry.type.getFunctionParameters();
+						final arguments = [
+							for (index in 0...entry.arguments.length) {
+								final argument = entry.arguments[index];
+								if (!parameters[index].isRest) argument; else switch argument {
+									case Nominal(_, [element]):
+										element;
+									case _:
+										throw "source rest parameter lost its inferred container";
+								};
+							}
+						];
+						term = Function(arguments, entry.result, entry.type);
+						break;
+					}
+				term;
 			case ECall(callee, _):
 				final recorded = occurrence(expression);
 				final callable = recorded == null ? sourceTerm(callee, environment) : null;
@@ -495,8 +549,13 @@ class TyFunctionInference {
 				break;
 			}
 		final optional = signature == null ? [] : signature.getArgOptional();
-		return switch captured {
-			case Function(parameters, result, _):
+		return switch solver.inferredCallable(captured) {
+			case Function(parameters, result, shape):
+				// Written omission and rest rules belong to callback alignment. Only
+				// inferred fixed-arity calls use the deferred positional constraints here.
+				if (signature == null
+					&& shape.getFunctionParameters().filter(parameter -> parameter.isOptional || parameter.isRest).length > 0)
+					return null;
 				if (actual.length > parameters.length
 					|| (signature == null ? parameters.length != actual.length : !signature.acceptsArity(actual.length)))
 					throw "captured callback argument count differs";
@@ -520,6 +579,11 @@ class TyFunctionInference {
 						if (!candidate.constrain(parameters[index], argument == null ? TyInferenceSolver.fromType(actual[index]) : argument))
 							throw "captured callback argument conflicts with its inferred type";
 					}
+					// Invoking an explicitly untyped or cast callable requires runtime
+					// carriers for its remaining holes. Defer these defaults until seal
+					// so later calls still constrain the same inputs and result.
+					if (candidate.isInferredCallableResult(captured))
+						candidate.observeDynamicUse(captured);
 					solver.commit(candidate);
 					// Publishing now would freeze a temporary type: a later alias use can
 					// still solve shared variables. Keep the source-owned terms until seal.
@@ -533,7 +597,7 @@ class TyFunctionInference {
 						index: index
 					});
 				}
-				solver.isSealed() ? solver.requireSolved(result) : solver.preview(result);
+				solver.isSealed() ? solver.published(result) : solver.preview(result);
 			case _: null;
 		};
 	}
@@ -658,9 +722,12 @@ class TyFunctionInference {
 					case _: term;
 				};
 				final projected = TyInferenceNominalContext.view(semanticIndex, value, context);
-				final direct = context.isAnonymous() ? TyStructuralConstraint.constrain(semanticIndex, candidate, value,
-					context) : projected != null
-					&& TyStructuralConstraint.constrainNominalAssignment(semanticIndex, candidate, projected, context);
+				// Callable assignment uses the existing parameter/result compatibility
+				// rules, including optional inputs, rather than exact solver equality.
+				final direct = context.isAnonymous()
+					|| context.isFunction() ? TyStructuralConstraint.constrain(semanticIndex, candidate, value,
+						context) : projected != null
+						&& TyStructuralConstraint.constrainNominalAssignment(semanticIndex, candidate, projected, context);
 				if (!direct
 					&& !TyInferenceAbstractDestination.constrain(semanticIndex, candidate, value, context)
 					&& TyAbstractMethodConversion.constrain(semanticIndex, candidate, value, context) == null)

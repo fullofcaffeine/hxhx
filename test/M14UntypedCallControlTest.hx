@@ -15,6 +15,7 @@ class M14UntypedCallControlTest {
 	}
 
 	static function main():Void {
+		M14UntypedCallbackInputTest.main();
 		// The unchecked cast models a foreign handle whose runtime object is known
 		// to the fixture. It does not declare the method on the opaque source type.
 		final initialize = 'var object={run:first};var handle:Handle=cast object;';
@@ -29,6 +30,28 @@ class M14UntypedCallControlTest {
 				expected: 'receiver\narg\n1\n'
 			},
 			{name: 'wrapped', body: initialize + 'output((untyped handle.run)(0,{' + replace + 'handle;}));', expected: '2\n'},
+			{
+				name: 'written_optional_untyped',
+				body: initialize + 'var fn:(Int,?Handle)->Int=untyped handle.run;output(fn(0));',
+				expected: '1\n'
+			},
+			{
+				name: 'written_optional_cast',
+				body: initialize + 'var fn:(Int,?Handle)->Int=cast object.run;output(fn(0));',
+				expected: '1\n'
+			},
+			{
+				name: 'unresolved_input',
+				body: 'var object={run:first,value:0};var handle:Handle=cast object;var value=untyped handle.value;' +
+				'var fn=untyped handle.run;output(fn(value,handle));',
+				expected: '1\n'
+			},
+			{
+				name: 'later_input_constraint',
+				body: 'var object={run:first,value:7};var handle:Handle=cast object;var value=untyped handle.value;' +
+				'var fn=untyped handle.run;var alias=fn;output(fn(value,handle));var concrete:Int=value;output(concrete);output(alias(1,handle));',
+				expected: '1\n7\n1\n'
+			},
 			{name: 'known_field', body: 'var object={run:firstInt};output(untyped object.run(1,{object.run=secondInt;3;}));', expected: '1\n'}
 		];
 		for (entry in cases) {
@@ -65,9 +88,13 @@ class M14UntypedCallControlTest {
 		}
 		assertClassGuard();
 		assertRejected('known_argument', 'untyped known("bad");', 'No compatible method signature for known');
-		assertRejected('stored_call_conflict', 'var handle:Handle=cast {};var fn=untyped handle.run;fn(1);fn("text");', 'String should be Int');
+		assertRejected('stored_call_conflict', 'var handle:Handle=cast {};var fn=untyped handle.run;fn(1);fn("text");',
+			'captured callback argument conflicts with its inferred type');
 		assertRejected('aliased_call_conflict', 'var handle:Handle=cast {};var fn=untyped handle.run;var alias=fn;fn(1);alias("text");',
-			'String should be Int');
+			'captured callback argument conflicts with its inferred type');
+		assertRejected('later_input_conflict',
+			'var handle:Handle=cast {};var value=untyped handle.value;var fn=untyped handle.run;' + 'fn(value);fn(1);fn("text");',
+			'captured callback argument conflicts with its inferred type');
 		assertRejected('outside_untyped', 'var handle:Handle=cast {};untyped 1;handle.missing(0,if(true)handle else handle);',
 			'control lowering cannot materialize an unresolved operand');
 	}

@@ -106,12 +106,17 @@ class TyInferenceSolver {
 
 	/** A call through an untyped or hint-free cast result shares the callable's inferred result variable. */
 	public function inferredCallResult(term:TyInferenceTerm):Null<TyInferenceTerm> {
-		if (!isInferredCallableResult(term))
+		if (!isInferredCallableResult(term) && !term.match(Function(_, _, _)))
 			return null;
 		return switch follow(term) {
 			case Function(_, result, _): result;
 			case _: null;
 		};
+	}
+
+	/** Keep shared input and result variables when an untyped or cast result becomes callable. */
+	public function inferredCallable(term:TyInferenceTerm):TyInferenceTerm {
+		return isInferredCallableResult(term) ? follow(term) : term;
 	}
 
 	function allocate(openMethodParameter:Null<TyOpenMethodParameterId>, kind:TyInferenceVariableKind = Required):TyInferenceTerm {
@@ -472,7 +477,7 @@ class TyInferenceSolver {
 				TyType.unknown();
 			case Known(type):
 				if (complete && !isComplete(type))
-					throw "inference cannot publish an incomplete concrete type";
+					throw "inference cannot publish an incomplete concrete type in " + owner + ": " + type.getSemanticKey();
 				type;
 			case Nominal(identity, arguments): TyType.nominal(identity, arguments.map(argument -> materialize(argument, complete, permitOmitted)));
 			case Nullable(inner): TyType.nullable(materialize(inner, complete, permitOmitted));
@@ -547,7 +552,11 @@ class TyInferenceSolver {
 		candidate.applyDynamicUses();
 		candidate.publishOpenMethods();
 		for (variable in candidate.variables)
-			candidate.materialize(Variable(variable), true, variable.allowsUnknown);
+			try {
+				candidate.materialize(Variable(variable), true, variable.allowsUnknown);
+			} catch (message:String) {
+				throw message + " while sealing " + variable.owner + "#" + variable.ordinal;
+			}
 		commit(candidate);
 		sealed = true;
 		revision++;

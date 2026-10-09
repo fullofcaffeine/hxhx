@@ -38,9 +38,11 @@ class M14CapturedCallbackPublicationTest {
 		var typed:Null<TypedModule> = null;
 		try {
 			typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
-		} catch (message:String) {
-			if (expected != null || message != "captured callback argument conflicts with its inferred type")
-				throw message;
+		} catch (error:TyperError) {
+			if (expected != null
+				|| error.message != "captured callback argument conflicts with its inferred type"
+				|| error.filePath != path)
+				throw error;
 		}
 		if (expected == null) {
 			if (typed != null)

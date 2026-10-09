@@ -72,9 +72,9 @@ class M14TypedFeatureDynamicTest {
 		var rejected = false;
 		try
 			TyperStage.typeResolvedModule(resolved[1], index)
-		catch (message:String) {
-			if (message != diagnostic)
-				throw message;
+		catch (error:TyperError) {
+			if (error.message != diagnostic || error.filePath != root + name + ".hx")
+				throw error;
 			rejected = true;
 		}
 		if (!rejected)

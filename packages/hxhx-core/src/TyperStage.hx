@@ -1936,9 +1936,15 @@ class TyperStage {
 			&& !calleeType.isDynamic()
 			&& !calleeType.isFunction())
 			throw new TyperError(ctx.getFilePath(), pos, "Inferred cast value " + calleeType.getDisplay() + " cannot be called");
-		final captured = scope.getInference()
-			.callCaptured(callee, args, argumentTypes, scope, ctx.getIndex(),
-				(expected, supplied) -> overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0);
+		// Inference owns shared constraints; this source boundary supplies the
+		// diagnostic location and preserves ordinary typed-error handling.
+		final captured = try {
+			scope.getInference()
+				.callCaptured(callee, args, argumentTypes, scope, ctx.getIndex(),
+					(expected, supplied) -> overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0);
+		} catch (message:String) {
+			throw new TyperError(ctx.getFilePath(), pos, message);
+		};
 		if (captured != null)
 			return captured;
 		// A call through an explicitly Dynamic value also has a Dynamic result.
@@ -2033,14 +2039,18 @@ class TyperStage {
 		final bodyType = TyEmptySourceGroup.isEmpty(body) ? TyType.fromHintText("Void") : inferExprType(body, scope, ctx, pos,
 			facts.getKind() == Arrow ? expected : null);
 		final returned = new Array<TyType>();
+		final returnTerms = new Array<TyInferenceTerm>();
 		for (evidence in controls.finishReturns(target)) {
 			final type = scope.getInference().termType(evidence.term);
 			TyLambdaResultContract.check(type, expected, ctx.getFilePath(), evidence.position, isStrict());
 			returned.push(type);
+			returnTerms.push(evidence.term);
 		}
 		if (facts.getKind() == Arrow && !bodyType.isNoNormalCompletion()) {
 			TyLambdaResultContract.check(bodyType, expected, ctx.getFilePath(), pos, isStrict());
 			returned.push(bodyType);
+			final bodyTerm = scope.getInference().sourceTerm(body, scope);
+			returnTerms.push(bodyTerm == null ? TyInferenceSolver.fromType(bodyType) : bodyTerm);
 		}
 		var inferred = TyType.fromHintText("Void");
 		if (returned.length > 0) {
@@ -2062,7 +2072,11 @@ class TyperStage {
 		final callableType = TyCallableSignature.sourceFunctionType(names, signature, argumentTypes, selected);
 		if (declared != null)
 			declared.setType(callableType);
-		scope.getInference().recordSourceFunction(source, callableType, parameterSymbols);
+		// Retain unresolved return terms from every path. A later callback
+		// annotation must constrain their original lexical inputs together.
+		final resultTerm = expected == null
+			&& selected.hasUnknownComponent() ? scope.getInference().sourceFunctionResult(returnTerms) : null;
+		scope.getInference().recordSourceFunction(source, callableType, parameterSymbols, resultTerm);
 		return callableType;
 	}
 
@@ -2355,7 +2369,10 @@ class TyperStage {
 		var result = inferExprValueType(expr, scope, ctx, pos, expectedResult, capture);
 		// Unresolved calls and field values inside authored untyped syntax retain
 		// contextual constraints. Known declarations keep their written types.
-		if (result.isUnknown() && scope.isUntypedContext() && (expr.match(ECall(_, _)) || expr.match(EField(_, _))))
+		if (result.isUnknown()
+			&& scope.isUntypedContext()
+			&& (expr.match(ECall(_, _)) || expr.match(EField(_, _)))
+			&& scope.getInference().sourceTerm(expr, scope) == null)
 			result = scope.getInference().untypedResult(expr);
 		// Field requirements belong to the receiver's inference variable, including
 		// reads through aliases. Resolve that shared fact before applying context.
