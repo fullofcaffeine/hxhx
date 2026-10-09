@@ -1249,7 +1249,7 @@
   ],
   "callCount": 44,
   "callModel": "typed-ocaml-directional-call-boundary-v34",
-  "callRevision": "sha256:c0fed4149ac7ee3a756fff6f9a3cb97defb47b4f28859041c8d1659b19772821",
+  "callRevision": "sha256:fa95b74fc83a3dc1c34b014e3ae0017b16221460c01d0b25fa6f127014ba480c",
   "callableBoundaries": [
     {
       "arguments": [],
@@ -2114,7 +2114,7 @@
           "proofId": "identity-call-carrier-v1"
         }
       ],
-      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
+      "bodyRevision": "13:44289c535c42dddd06fed1550f23ac69d3612ccdbece54604ae7f734dc483624",
       "callbackReturnCount": null,
       "callbackReturns": null,
       "calleeId": "StringTools|StringTools::quoteUnixArg",
@@ -2187,7 +2187,7 @@
           "proofId": "identity-call-carrier-v1"
         }
       ],
-      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
+      "bodyRevision": "13:be365735c8a211b3c95ff3f644141b8eae43af10a1d912d1728aea99ec00c4a7",
       "callbackReturnCount": null,
       "callbackReturns": null,
       "calleeId": "StringTools|StringTools::quoteWinArg",
@@ -2552,7 +2552,7 @@
           "proofId": "identity-call-carrier-v1"
         }
       ],
-      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "bodyRevision": "13:0f7fde2be48b63be572557d80d7e7b893de6ae8a5c77882413d429893dc6c6df",
       "callbackReturnCount": null,
       "callbackReturns": null,
       "calleeId": "StringTools|StringTools::trim",
@@ -2592,7 +2592,7 @@
     },
     {
       "arguments": [],
-      "bodyRevision": "12:569c016dda77756cb013d3ddc7e647369889e60be7441c37221a17fcf59a4a09",
+      "bodyRevision": "13:0f5d14c424fabde07c4fe8576e7edb58eb96d230e7b05b0155e412f262db3a43",
       "callbackReturnCount": null,
       "callbackReturns": null,
       "calleeId": "haxe.io.Eof|haxe.io.Eof::toString",
@@ -2656,109 +2656,6 @@
     "revision": "sha256:4e2a33334c9006c38ba464514ada33de615900ae12c1ba5e9003ec3bf616b554"
   },
   "calls": [
-    {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        },
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 1,
-          "inputCarrierTypeId": "bool",
-          "inputRepresentationId": "representation:Bool:internal-value",
-          "inputSemanticTypeId": "Bool",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "bool",
-          "outputRepresentationId": "representation:Bool:internal-value",
-          "outputSemanticTypeId": "Bool",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::_quoteWinArgOcaml",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:e3fc92e0a7886fe6adfc401b",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": 1,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:779e18cce01fcc274a215ab3",
-          "sourceArgumentIndex": 1
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
-      "genericInstanceTarget": null,
-      "id": "call:018df7de96c203893237c459",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity, Bool -> Bool via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 18253,
-        "min": 18204
-      },
-      "sourceFieldName": "_quoteWinArgOcaml",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
     {
       "arguments": [],
       "bodyRevision": "12:b33af7e2e4c5ed3e7beb0c84c791041ed98a52b320bc13616b046dfc0048eba1",
@@ -2918,87 +2815,6 @@
       "structuralIteratorTarget": null
     },
     {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::rtrim",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:3236009fb1ce3bfc31a6ec07",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:0f8ba3f6743f11c4e304779b",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 10685,
-        "min": 10677
-      },
-      "sourceFieldName": "rtrim",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
       "arguments": [],
       "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
       "callbackInvocation": null,
@@ -3074,87 +2890,6 @@
         "runtimeModule": "HxArray",
         "runtimeTakesUnitArgument": false
       },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::_quoteUnixArgOcaml",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:3658ce4bb97dacb8b4b08551",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|quoteUnixArg|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:26999b925c574f32bd3f331c",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 17159,
-        "min": 17131
-      },
-      "sourceFieldName": "_quoteUnixArgOcaml",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -4828,87 +4563,6 @@
       "structuralIteratorTarget": null
     },
     {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:f2d31e36a67be1ad4b2ef8292385b6fb521fac980590588c438c762890fe7f78",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::_urlEncodeOcaml",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:975ca3ee47ec97b2111470e5",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|urlEncode|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:85680a3093d1e0de796162eb",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 2678,
-        "min": 2660
-      },
-      "sourceFieldName": "_urlEncodeOcaml",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
       "arguments": [],
       "bodyRevision": "12:7d67675d884281b22bdaade4a33feaab24995d8ec58743720391c798c6a3557e",
       "callbackInvocation": null,
@@ -4962,6 +4616,87 @@
       "sourceFieldName": "index",
       "sourceModuleId": "Main",
       "sourceTypeName": "Main",
+      "standardArrayTarget": null,
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:da35d3ad4cf48b44a538ab623906de1c34463d7a6da46b2f85576cc7988d063f",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::_urlDecodeOcaml",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:2c31d7466bfdea973d8d32bc",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|urlDecode|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:919f35f9240f2df592cf4cec",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 4680,
+        "min": 4662
+      },
+      "sourceFieldName": "_urlDecodeOcaml",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
       "standardArrayTarget": null,
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
@@ -5064,15 +4799,15 @@
           "proofId": "identity-call-carrier-v1"
         }
       ],
-      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "bodyRevision": "13:4a57dd2c896fc9589bb1ff916d18c31018ab648f2115b5819f9325c7aa9a9e5f",
       "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::ltrim",
+      "calleeId": "StringTools|StringTools::_urlEncodeOcaml",
       "dynamicFunctionTarget": null,
       "evaluationSchedule": [
         {
           "argumentIndex": 0,
           "kind": "materialize-argument",
-          "slotId": "call-argument-slot:316659a2c513fd34234da9cf",
+          "slotId": "call-argument-slot:e6b2c535f18dac3cd8c7fe2b",
           "sourceArgumentIndex": 0
         },
         {
@@ -5082,9 +4817,9 @@
           "sourceArgumentIndex": null
         }
       ],
-      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
+      "functionId": "StringTools|StringTools|static|function|urlEncode|generics:0|required:String->String",
       "genericInstanceTarget": null,
-      "id": "call:9dd650e1caddea14c63a051a",
+      "id": "call:97e658cbda91010133064957",
       "kind": "direct-static-haxe-method",
       "pipelineRevision": "ocaml-function-plans-v119",
       "profileEligibility": [
@@ -5116,10 +4851,10 @@
       "resultMaterialization": null,
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 10686,
-        "min": 10671
+        "max": 2678,
+        "min": 2660
       },
-      "sourceFieldName": "ltrim",
+      "sourceFieldName": "_urlEncodeOcaml",
       "sourceModuleId": "StringTools",
       "sourceTypeName": "StringTools",
       "standardArrayTarget": null,
@@ -5364,87 +5099,6 @@
       "structuralIteratorTarget": null
     },
     {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:dccdf1b93450642e7eef85e93c09851a7919f0eaddcc45df847c33512fdc5d18",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::_urlDecodeOcaml",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:0facd9082ba9dbb28f4f88a2",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|urlDecode|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:be44a4e36ddfda8cac9256d1",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 4680,
-        "min": 4662
-      },
-      "sourceFieldName": "_urlDecodeOcaml",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
       "arguments": [],
       "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
       "callbackInvocation": null,
@@ -5520,6 +5174,168 @@
         "runtimeModule": "HxArray",
         "runtimeTakesUnitArgument": false
       },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:0f7fde2be48b63be572557d80d7e7b893de6ae8a5c77882413d429893dc6c6df",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::rtrim",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:815a3324a5321cd8e2393c46",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:cb61f2339e6cedf9ce7d99f9",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 10685,
+        "min": 10677
+      },
+      "sourceFieldName": "rtrim",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
+      "standardArrayTarget": null,
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:44289c535c42dddd06fed1550f23ac69d3612ccdbece54604ae7f734dc483624",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::_quoteUnixArgOcaml",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:11a8137c8738fcea90a46ea5",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|quoteUnixArg|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:ce31d952de3142be3dcf1ab3",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 17159,
+        "min": 17131
+      },
+      "sourceFieldName": "_quoteUnixArgOcaml",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
+      "standardArrayTarget": null,
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -5687,6 +5503,109 @@
         "runtimeModule": "HxArray",
         "runtimeTakesUnitArgument": false
       },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        },
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 1,
+          "inputCarrierTypeId": "bool",
+          "inputRepresentationId": "representation:Bool:internal-value",
+          "inputSemanticTypeId": "Bool",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "bool",
+          "outputRepresentationId": "representation:Bool:internal-value",
+          "outputSemanticTypeId": "Bool",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:be365735c8a211b3c95ff3f644141b8eae43af10a1d912d1728aea99ec00c4a7",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::_quoteWinArgOcaml",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:70520fdf0665dc78905558a7",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": 1,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:3c675b61aefcdac8319a8f31",
+          "sourceArgumentIndex": 1
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
+      "genericInstanceTarget": null,
+      "id": "call:e1afcbcb032b935ece7c1236",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity, Bool -> Bool via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 18253,
+        "min": 18204
+      },
+      "sourceFieldName": "_quoteWinArgOcaml",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
+      "standardArrayTarget": null,
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -6084,6 +6003,87 @@
       },
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:0f7fde2be48b63be572557d80d7e7b893de6ae8a5c77882413d429893dc6c6df",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::ltrim",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:7246a9639ea1dbe021cc92c0",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:ffb0df38c0c98d5b380b5ddb",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 10686,
+        "min": 10671
+      },
+      "sourceFieldName": "ltrim",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
+      "standardArrayTarget": null,
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
     }
   ],
   "containerElementConversionCount": 0,
@@ -6094,9 +6094,9 @@
   "containerElementRequiredConversionIds": [],
   "containerElementRequiredConversionModel": "typed-ocaml-required-container-element-conversions-v1",
   "containerElementRequiredConversionRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-  "controlAdmissionCount": 154,
+  "controlAdmissionCount": 152,
   "controlAdmissionModel": "typed-ocaml-control-admission-v1",
-  "controlAdmissionRevision": "sha256:31efa079d09403a20f8f0b29d73e0baa7531feb02796f1d5093ee85f0dc3933c",
+  "controlAdmissionRevision": "sha256:3d9d563895d9cb8e92c73860428b1884c32e88fd37ba4259106e85c4424e99de",
   "controlAdmissions": [
     {
       "bodyRevision": "12:f7db542a10f3db3dfa8b8e64f86b97df26b9af7e5f6298d01a391f918d84449f",
@@ -6205,38 +6205,6 @@
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
       "revision": "sha256:51c2492c0e4629be5551127bf9e3b1315d318d3757ab6fa3a8618143d5553518"
-    },
-    {
-      "bodyRevision": "0:2e5ec112ba96d5050d16778cbde9a482e097a07a309fc2420c972a5e53c1a122",
-      "catches": [],
-      "families": [
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "loop",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        },
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "return",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        },
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "throw",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        }
-      ],
-      "functionId": "standalone:field-initializer:instance:haxe.Exception|Exception::__skipStack:constructor-record",
-      "id": "control-admission:0c8ca4e757c008a45e35a0c8",
-      "pipelineRevision": "ocaml-standalone-expression-plans-v21",
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:c0997d4f2ed6d621ce96c1efd11444d65395847ce8a21bbf64580ded9b2e87d2"
     },
     {
       "bodyRevision": "12:8b633778bb00993f71e02d695497765135c3b0d66e2318481b82e9c25281e829",
@@ -6463,7 +6431,7 @@
       "revision": "sha256:ae7c4e90848338b071a8a6c81d611ca68f610eae20b758fa6138b186edc8a9f3"
     },
     {
-      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "bodyRevision": "13:b2e777951ad1785aa89894642ad61d30508efa198e282aab17c7e4a12eeef881",
       "catches": [],
       "families": [
         {
@@ -6492,7 +6460,7 @@
       "id": "control-admission:1c3f45d7a52a3029d98aaf76",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:d7284d6ed6abc2ead6d11abf571258393ca764fc15d4b824e9819ff64dfb4095"
+      "revision": "sha256:7c9b7c7808b7172ceb280db9682fb399e89c8d86b8178d610df25eef72f012ae"
     },
     {
       "bodyRevision": "12:c2d034c41c6d3c38d5741120abcba6d8b7cae22842fcf5ef8012064247809744",
@@ -6623,7 +6591,7 @@
       "revision": "sha256:c597d79f2e14c196b33cd472d91a4b21d851911611081038b8edcdd8fccf21d7"
     },
     {
-      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
+      "bodyRevision": "13:44289c535c42dddd06fed1550f23ac69d3612ccdbece54604ae7f734dc483624",
       "catches": [],
       "families": [
         {
@@ -6652,10 +6620,10 @@
       "id": "control-admission:25fb86e933ee0b329e986031",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:b917d39d0fc9ec30150a64beb7e9d04413ad29096540fb1de525e401bac36028"
+      "revision": "sha256:11aa9548b51b8c85ffc7d7ea028d6105e6e06a98a70db8ac0c3869edb0a7139a"
     },
     {
-      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "bodyRevision": "13:0f7fde2be48b63be572557d80d7e7b893de6ae8a5c77882413d429893dc6c6df",
       "catches": [],
       "families": [
         {
@@ -6684,7 +6652,7 @@
       "id": "control-admission:26bc37922a3bc7767108a811",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:37de57889b12bb0e814c8b190902a6020f8fd07f89df88be1cb8e7946c552b06"
+      "revision": "sha256:60c34ac673077b3d8e111208036571408fa06c8990305ecc80da3aa69b7c3578"
     },
     {
       "bodyRevision": "12:24e797b66fb188989b24dc41159bd668615f39063b8053ca67fed64ce76f109e",
@@ -6911,7 +6879,7 @@
       "revision": "sha256:1fc151b3d4b78d135157591fdcbac3948fcca5474749630b8d3215c9ddc239a8"
     },
     {
-      "bodyRevision": "12:f2d31e36a67be1ad4b2ef8292385b6fb521fac980590588c438c762890fe7f78",
+      "bodyRevision": "13:4a57dd2c896fc9589bb1ff916d18c31018ab648f2115b5819f9325c7aa9a9e5f",
       "catches": [],
       "families": [
         {
@@ -6940,7 +6908,7 @@
       "id": "control-admission:2f1f1cd8b9eb6f436267b282",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:44a06300aaba7ab61037ad2da192691ce22fa4a7c9193d7f82148836a6136340"
+      "revision": "sha256:267ee94d03d4e88e051e91ead4fa036272945e4c642cb06358cc3ce69a49bffa"
     },
     {
       "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
@@ -7295,7 +7263,7 @@
       "revision": "sha256:cadb6f6b6bb99753a74f261f11d2a41520e46938494d0acf54b15c2767bf1ce7"
     },
     {
-      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "bodyRevision": "13:c2302e2ef81750dc4a7ddf96e401589a56d4d7aeca6fcb49601d5c7a5fde9909",
       "catches": [],
       "families": [
         {
@@ -7324,7 +7292,7 @@
       "id": "control-admission:480011d539b2ab774d83e2ef",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:0419592bd989a141382c34eff85fd80d2c2f0f2d1ef1810707bf5fe5cd4ec967"
+      "revision": "sha256:9ebd99dd9b9a2348fd97f41eaf4bca851aca0c980695bd20e17b5ddeb85cf867"
     },
     {
       "bodyRevision": "12:26df1e66dc071beb11bcd7c41b60b09e78b5c76d1de586fcfc78cf2411b7d047",
@@ -7863,38 +7831,6 @@
       "revision": "sha256:5d9cb0b11f0b6015afcc45ad19c0eff10af0bf2e28497c791a8ce9650d8456c7"
     },
     {
-      "bodyRevision": "0:2e5ec112ba96d5050d16778cbde9a482e097a07a309fc2420c972a5e53c1a122",
-      "catches": [],
-      "families": [
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "loop",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        },
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "return",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        },
-        {
-          "blockers": [],
-          "decisionCount": 0,
-          "family": "throw",
-          "occurrenceCount": 0,
-          "status": "not-needed"
-        }
-      ],
-      "functionId": "standalone:field-initializer:instance:haxe.Exception|Exception::__skipStack:empty-instance-record",
-      "id": "control-admission:5e272ccb35ab598c32ef6079",
-      "pipelineRevision": "ocaml-standalone-expression-plans-v21",
-      "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:9d75f57bfc7e619314d47eb2343e4e354f7c1c15a4a69e5ace90bdf5a09dfa9f"
-    },
-    {
       "bodyRevision": "12:8e120cdc621fa773f26f47cf37e1da845d375b201dc284b94f4603cc67fbcf55",
       "catches": [],
       "families": [
@@ -7959,7 +7895,7 @@
       "revision": "sha256:59c2f01e4e366638657b3f04368c6f942ff55203d66beb27d61eedfca4fdd8a3"
     },
     {
-      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "bodyRevision": "13:6622b24a9181efa97331eee67895d14e48ac07394967e1f09f5bc75db0c8ae77",
       "catches": [],
       "families": [
         {
@@ -7988,7 +7924,7 @@
       "id": "control-admission:62e3aebd8bbe139f0e8b0d2a",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:7a3d0286c8a3027f09f76eea1a5c49b89bc7338c64ab4dd1b5266bafb5e1f483"
+      "revision": "sha256:3ed339b18e191a4cc857ec69745c30ce7930d0e03e92a8c1400900266c84741b"
     },
     {
       "bodyRevision": "12:9f90c082bc2ec09b7072b84500d08c4bebb16b08e02b8da3acd8f3003015735f",
@@ -8151,7 +8087,7 @@
       "revision": "sha256:0c84b9d01a1fda757237a6bd1f634f32095ee558362c7c3c273c58d488fd7810"
     },
     {
-      "bodyRevision": "12:569c016dda77756cb013d3ddc7e647369889e60be7441c37221a17fcf59a4a09",
+      "bodyRevision": "13:0f5d14c424fabde07c4fe8576e7edb58eb96d230e7b05b0155e412f262db3a43",
       "catches": [],
       "families": [
         {
@@ -8180,7 +8116,7 @@
       "id": "control-admission:6b1eac0265cadf3dea29a398",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:a4d4746269724e88c765c0bafb42fa45cd8a1cb2f558d9c4a3d14a2695e67730"
+      "revision": "sha256:949a0ba30f70e2efb9fbef08cd328e2c0eb23789a7a416254f8c0a4873873e1d"
     },
     {
       "bodyRevision": "12:24e797b66fb188989b24dc41159bd668615f39063b8053ca67fed64ce76f109e",
@@ -9079,7 +9015,7 @@
       "revision": "sha256:1d64af092642fe2ac44e025f46abe778f4b1c65b018216f09a19fca242dea749"
     },
     {
-      "bodyRevision": "12:dccdf1b93450642e7eef85e93c09851a7919f0eaddcc45df847c33512fdc5d18",
+      "bodyRevision": "13:da35d3ad4cf48b44a538ab623906de1c34463d7a6da46b2f85576cc7988d063f",
       "catches": [],
       "families": [
         {
@@ -9108,7 +9044,7 @@
       "id": "control-admission:9820715f5ccdf0702c61e981",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:52dc125b910607a05974e7a11f764aea6f30aded16eef7f9c8ed225059af920a"
+      "revision": "sha256:9d0d9b70c00866d81015cc9669f74788512038d7672e640651ff79792a8ebeaa"
     },
     {
       "bodyRevision": "12:ac63c236a81e09a4b536d1097368e35dc2aa070e7b48763495f3aabf4771bb87",
@@ -9431,7 +9367,7 @@
       "revision": "sha256:51de135806a9b73ea1d8329c887cbf850383f80cd9b3caf9b958d10f0b032ff6"
     },
     {
-      "bodyRevision": "12:10f5d3fd9810167a10fc0215aa929e183d59dd607a9e7fd22ad30e1a99556dde",
+      "bodyRevision": "13:e8d219f89f2434b6b3c50617ba1fb0f594339cdfc373fa857614f1ec979821bb",
       "catches": [],
       "families": [
         {
@@ -9460,7 +9396,7 @@
       "id": "control-admission:aa34e4280accf08f47e4b3f9",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:7798b8038636cd2c0e3a3ff8a150acdaeb3dae146bfab10185f8aa0c8fc2d174"
+      "revision": "sha256:d25012299a62ab28912a8df8b2c7ee00f62f3a48c0137cd076d9161fb46bf515"
     },
     {
       "bodyRevision": "12:a0e31001ea41d553cad707b8149ae999ebaf892353e48ab6f388dffe7cc13d2a",
@@ -9815,7 +9751,7 @@
       "revision": "sha256:2133901e10531aa53d0812b4f24b08d8ad04fd76ee6326cad11e87766abe9aeb"
     },
     {
-      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
+      "bodyRevision": "13:be365735c8a211b3c95ff3f644141b8eae43af10a1d912d1728aea99ec00c4a7",
       "catches": [],
       "families": [
         {
@@ -9844,7 +9780,7 @@
       "id": "control-admission:c15200c2a7f6ca379935aaf9",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:ab023415e6d1a49f3ac6da5dc3db7ba1bc5fff2cdc85d884298de6d44a636d50"
+      "revision": "sha256:b362e2900d667013a5ace55aa6ee8a544f2aff3dbcdb214e8bd3d75336f2b402"
     },
     {
       "bodyRevision": "12:d3f09f438df7634c94068dad3518e269fb7cab63fdae0357ac56f0b846177acc",
@@ -10851,7 +10787,7 @@
       "revision": "sha256:9a39b1cdfb5786cb5e8cf909b0a3a04326ebcbeb6164f857d4a174f830081751"
     },
     {
-      "bodyRevision": "12:8da1dc4926ba7842c6fba18e63d3c3a7f2782a8a703ff981b7091e71d43711db",
+      "bodyRevision": "13:2be0b0ff63b8fda6b8bc1f20eb28fd8b050ddcfa6083cbc6d414766a9a4d77f6",
       "catches": [],
       "families": [
         {
@@ -10880,7 +10816,7 @@
       "id": "control-admission:f5ff82249d2941fc07a2e9e7",
       "pipelineRevision": "ocaml-function-plans-v119",
       "programRevision": "eb639a5bd9f6f1f76cf214ff1cd7d98936bf56854112bd6ebce6dd5bee6015e6",
-      "revision": "sha256:64bb949be0a69adfb5ede38a1a35396886b016fbc61b09a0d9dcff82e9ec3699"
+      "revision": "sha256:d4210ac49f44e83ab47794c22ec881af017709b9dd0fe035b8d3ab5aa1f0d4f0"
     },
     {
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
@@ -14472,7 +14408,7 @@
     },
     {
       "anonymousStructure": null,
-      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
+      "bodyRevision": "13:44289c535c42dddd06fed1550f23ac69d3612ccdbece54604ae7f734dc483624",
       "callableBoundaryId": "callable-boundary:124f432adea8898d15f39b20",
       "functionId": "StringTools|StringTools|static|function|quoteUnixArg|generics:0|required:String->String",
       "id": "function-result-boundary:25fb86e933ee0b329e986031",
@@ -14510,7 +14446,7 @@
     },
     {
       "anonymousStructure": null,
-      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "bodyRevision": "13:0f7fde2be48b63be572557d80d7e7b893de6ae8a5c77882413d429893dc6c6df",
       "callableBoundaryId": "callable-boundary:e571994bbf0a0c982f613776",
       "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
       "id": "function-result-boundary:26bc37922a3bc7767108a811",
@@ -14913,7 +14849,7 @@
     },
     {
       "anonymousStructure": null,
-      "bodyRevision": "12:569c016dda77756cb013d3ddc7e647369889e60be7441c37221a17fcf59a4a09",
+      "bodyRevision": "13:0f5d14c424fabde07c4fe8576e7edb58eb96d230e7b05b0155e412f262db3a43",
       "callableBoundaryId": "callable-boundary:560030f7921680faf28ab55b",
       "functionId": "haxe.io.Eof|Eof|instance|function|toString|generics:0|->String",
       "id": "function-result-boundary:6b1eac0265cadf3dea29a398",
@@ -15209,7 +15145,7 @@
     },
     {
       "anonymousStructure": null,
-      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
+      "bodyRevision": "13:be365735c8a211b3c95ff3f644141b8eae43af10a1d912d1728aea99ec00c4a7",
       "callableBoundaryId": "callable-boundary:fd7646a762c98fda0f31d910",
       "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
       "id": "function-result-boundary:c15200c2a7f6ca379935aaf9",
@@ -15483,7 +15419,7 @@
   ],
   "functionResultBoundaryCount": 29,
   "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v7",
-  "functionResultBoundaryRevision": "sha256:e56b5a6a96b7aaa43963a702a38afb7aa24a8258f1fe8ccd1c70d859f8f64727",
+  "functionResultBoundaryRevision": "sha256:653b284a519819b11da677302ce221069d47baee5440243d39de3570079d79fb",
   "iMapInterfaceCallCount": 0,
   "iMapInterfaceCalls": [],
   "iMapInterfaceConversionCount": 0,
