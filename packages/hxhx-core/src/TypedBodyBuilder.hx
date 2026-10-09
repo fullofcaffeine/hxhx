@@ -683,6 +683,8 @@ class TypedBodyBuilder {
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>,
 			?expected:TyType, ?selectedCallType:TyType):TypedExpr {
+		if (typeResolver != null && TyTraceCall.isDisabled(expression, typeResolver.tracesDisabled))
+			return TypedExpr.block([], TyType.fromHintText("Void"), position);
 		final nodeType = selectedCallType == null ? expressionType(expression, diagnosticPosition, environment, typeResolver, expected) : selectedCallType;
 		// Quoted syntax has no semantic resolver and must preserve literal field access.
 		// Only the executable typing route may replace it with its constant value.

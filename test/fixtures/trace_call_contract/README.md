@@ -15,8 +15,14 @@ executes eval, JavaScript and Neko programs, and compares exact output.
 - `TraceShadow` shows that a same-named local does not shadow bare `trace` in the
   pinned baseline. With `no-traces`, trace operand effects also disappear.
 
-These are independent upstream expectations, not evidence that hxhx implements
-the behavior. `M14DynamicGenericCallTest` retains the local failure for
+- `TraceDisabled` proves that disabled bare traces do not type or execute their
+  operands. Qualified methods, parenthesized local calls, and empty local calls
+  named `trace` still execute. Run `haxe test/m14_trace_disabled_test.hxml` for
+  the matching hxhx JavaScript and Neko runtime regression.
+
+The upstream observer defines the expected behavior. The local runtime check
+proves the disabled-trace case only. `M14DynamicGenericCallTest` retains the
+local failure for
 `trace(fixed(block, block))`. Task `haxe_ocaml-hgtz2` owns the shared typed trace
 contract and its implementation. Do not remove that failure or bypass unresolved
 operand checks to make this upstream observer pass.

@@ -2710,8 +2710,14 @@ class NekoTargetCore {
 	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
 			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
-				// These wrappers emit no runtime operation. Expose a wrapped lambda
-				// so the ordinary callable renderer preserves its grouping.
+				// A wrapped local is a function value. Do not reinterpret its name
+				// as language syntax after removing the authored wrapper.
+				switch inner {
+					case EIdent(name) if (isLocalName(context, name)):
+						return NekoValueCall.render(context.typedProgram, renderExpr(context, inner), [for (arg in args) renderExpr(context, arg)]);
+					case _:
+				}
+				// Expose wrapped lambdas and selected declarations to their renderer.
 				return renderCall(context, inner, args, selectedStatic);
 			case EIdent("__hxhx_throw"):
 				return "$throw(" + (args.length > 0 ? renderExpr(context, args[0]) : "null") + ")";
@@ -2742,7 +2748,7 @@ class NekoTargetCore {
 		if (stringIntrinsic != null)
 			return stringIntrinsic;
 		switch (callee) {
-			case EIdent("trace"):
+			case EIdent("trace") if (args.length > 0):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(EIdent("Sys"), "args"):
 				return "$loader.args";

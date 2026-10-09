@@ -970,7 +970,7 @@ class JsExprEmitter {
 				return args.length > 0 ? "..." + emit(args[0], scope) : "";
 			case EIdent("__hxhx_optional_lambda") if (args.length >= 1):
 				return emit(args[0], scope);
-			case EIdent("trace"):
+			case EIdent("trace") if (args.length > 0):
 				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
 				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";

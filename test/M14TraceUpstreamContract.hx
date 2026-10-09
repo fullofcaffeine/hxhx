@@ -64,6 +64,7 @@ class M14TraceUpstreamContract {
 			check(output, "TraceShadow", target, false, "argument\n" + root + "/TraceShadow.hx:" + shadowLine + ": value\n");
 			check(output, "TraceOrder", target, true, "done\n");
 			check(output, "TraceShadow", target, true, "");
+			check(output, "TraceDisabled", target, true, "");
 		}
 	}
 }

@@ -435,6 +435,7 @@ class TyperStage {
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
 			final typeResolver:TypedExprTypeResolver = {
+				tracesDisabled: context.hasDefine("no-traces"),
 				lambdaType: function(names, body, argumentTypes, signature, position, lexicalEnvironment) {
 					return inferLambdaType(names, body, argumentTypes, lexicalEnvironment.copyForInference(), context, position, signature);
 				},
@@ -2699,6 +2700,8 @@ class TyperStage {
 				final fieldType = inferExprType(EField(obj, field), scope, ctx, pos);
 				fieldType.isNullable() ? fieldType : TyType.nullable(fieldType);
 			case ECall(sourceCallee, args):
+				if (TyTraceCall.isDisabled(expr, ctx.hasDefine("no-traces")))
+					return TyType.fromHintText("Void");
 				var callee = sourceCallee;
 				while (true)
 					switch callee {

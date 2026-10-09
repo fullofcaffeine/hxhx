@@ -1,5 +1,8 @@
 /** Shared type and runtime-target queries bound to the exact lexical and declaration context. */
 typedef TypedExprTypeResolver = {
+	/** Request-local language policy, applied before operand inference and binding replay. */
+	final tracesDisabled:Bool;
+
 	/** Select a callable contract with contextual arguments before replaying its body. */
 	final lambdaType:(names:Array<String>, body:HxExpr, argumentTypes:Array<TyType>, signature:Null<HxLambdaSignature>, diagnosticPosition:HxPos,
 		environment:TyFunctionEnv) -> TyType;
