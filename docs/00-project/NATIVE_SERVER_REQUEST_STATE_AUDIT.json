@@ -109,6 +109,8 @@
         "final:KIND_NULLABLE",
         "final:KIND_NOMINAL",
         "final:KIND_ABSTRACT_META",
+        "final:KIND_CLASS_VALUE",
+        "final:KIND_ALIAS_APPLICATION",
         "final:KIND_FUNCTION",
         "final:KIND_ANONYMOUS",
         "final:KIND_TYPE_PARAMETER",
