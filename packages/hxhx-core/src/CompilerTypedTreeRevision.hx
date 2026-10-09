@@ -22,13 +22,19 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v2");
+		facts.push("typed-function-body-v26");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
 		facts.push(Std.string(parameters.length));
 		for (parameter in parameters)
 			facts.push(parameter == null ? null : parameter.toBinding().getCanonicalIdentity());
+		final defaults = typedFunction.getDefaults();
+		facts.push(Std.string(defaults.length));
+		for (value in defaults) {
+			facts.push(Std.string(value.getParameterIndex()));
+			addExpression(facts, value.getExpression());
+		}
 		final statements = typedFunction.getBody().getStatements();
 		facts.push(Std.string(statements.length));
 		for (statement in statements)
@@ -41,7 +47,7 @@ class CompilerTypedTreeRevision {
 		if (ownerIdentity == null || ownerIdentity.length == 0)
 			throw "typed expression revision requires an owner identity";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-expression-v2");
+		facts.push("typed-expression-v22");
 		facts.push(ownerIdentity);
 		addExpression(facts, expression);
 		return CompilerCacheIdentity.encode(facts);
@@ -53,11 +59,15 @@ class CompilerTypedTreeRevision {
 			return;
 		}
 		out.push("statement:" + statementTagName(statement.getTag()));
+		out.push(statement.getSwitchHasExhaustiveCoverage() ? "exhaustive" : "partial");
+		final controlTarget = statement.getControlTarget();
+		out.push(controlTarget == null ? null : controlTarget.getCanonicalIdentity());
 		addStrings(out, statement.getNames());
 		addStrings(out, statement.getCatchNames());
 		addStrings(out, statement.getCatchTypeHints());
 		addStrings(out, statement.getMetadata());
 		addLocalBindings(out, statement.getLocalBindings());
+		addStrings(out, [for (use in statement.getCatchUses()) use.getCanonicalIdentity()]);
 		final patterns = statement.getPatterns();
 		out.push(Std.string(patterns.length));
 		for (pattern in patterns)
@@ -79,15 +89,40 @@ class CompilerTypedTreeRevision {
 		}
 		out.push("expression:" + expressionTagName(expression.getTag()));
 		out.push(expression.getType().getSemanticKey());
+		final lambdaSignature = expression.getLambdaSignature();
+		out.push(lambdaSignature == null ? null : lambdaSignature.getCanonicalIdentity());
+		final sourceFunction = expression.getSourceFunction();
+		out.push(sourceFunction == null ? null : sourceFunction.getCanonicalIdentity());
+		addStrings(out, [for (entry in expression.getSourceCatches()) entry.getCanonicalIdentity()]);
+		final controlTarget = expression.getControlTarget();
+		out.push(controlTarget == null ? null : controlTarget.getCanonicalIdentity());
+		final argumentBinding = expression.getArgumentBinding();
+		out.push(argumentBinding == null ? null : argumentBinding.getSemanticKey());
+		final namedArguments = expression.getNamedArguments();
+		out.push(namedArguments == null ? null : namedArguments.getSemanticKey());
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		out.push(runtimeTarget == null ? null : runtimeTarget.getSemanticKey());
+		out.push(runtimeTarget == null ? null : runtimeTarget.getSourceSpelling());
 		addStrings(out, expression.getTexts());
 		out.push(expression.getBoolValue() ? "true" : "false");
 		out.push(Std.string(expression.getIntValue()));
-		out.push(Std.string(expression.getFloatValue()));
+		if (expression.getTag() == FloatValue) {
+			// Decimal formatting can merge distinct payloads, including adjacent
+			// finite values on native hosts. Identity must preserve the stored bits.
+			final bits = haxe.io.FPHelper.doubleToI64(expression.getFloatValue());
+			out.push(CompilerCacheIdentity.encode([Std.string(bits.high), Std.string(bits.low)]));
+		} else {
+			out.push(Std.string(expression.getFloatValue()));
+		}
 		final declaration = expression.getDeclaration();
 		out.push(declaration == null ? null : declaration.getIdentity().getCanonicalKey());
+		final construction = expression.getConstructorApplication();
+		out.push(construction == null ? null : construction.getSemanticKey());
 		final fieldInfo = expression.getFieldInfo();
 		out.push(fieldInfo == null ? null : fieldInfo.getCanonicalKey());
+		out.push(fieldInfo == null ? null : fieldInfo.getConstant().getCanonicalIdentity());
 		addLocalBindings(out, expression.getLocalBindings());
+		addStrings(out, [for (use in expression.getCatchUses()) use.getCanonicalIdentity()]);
 		final extensionProvider = expression.getExtensionProvider();
 		out.push(extensionProvider == null ? null : extensionProvider.getCanonicalName());
 		out.push(unaryOperatorName(expression.getUnaryOperator()));
@@ -215,12 +250,16 @@ class CompilerTypedTreeRevision {
 
 	static function expressionTagName(tag:TypedExprTag):String {
 		return switch (tag) {
+			case Parenthesized: "parenthesized";
+			case PrivateAccess: "private-access";
 			case NullValue: "null";
 			case BoolValue: "bool";
 			case StringValue: "string";
 			case IntValue: "int";
 			case FloatValue: "float";
 			case EnumValue: "enum";
+			case RuntimeTypeValue: "runtime-type-value";
+			case RuntimeTypeTest: "runtime-type-test";
 			case ThisValue: "this";
 			case SuperValue: "super";
 			case LocalRead: "local-read";
@@ -228,9 +267,24 @@ class CompilerTypedTreeRevision {
 			case FieldRead: "field-read";
 			case NullSafeFieldRead: "null-safe-field-read";
 			case Call: "call";
+			case TargetScope: "target-scope";
+			case FeatureDefinition: "feature-definition";
+			case FeatureSelection: "feature-selection";
 			case MacroExpr: "macro-expr";
 			case MacroType: "macro-type";
 			case Lambda: "lambda";
+			case SourceGroup: "source-group";
+			case SourceIf: "source-if";
+			case SourceFor: "source-for";
+			case SourceTry: "source-try";
+			case ControlTry: "control-try";
+			case ControlFor: "control-for";
+			case ControlSwitch: "control-switch";
+			case ThrowExpr: "throw";
+			case ControlBranch: "control-branch";
+			case ControlWhile: "control-while";
+			case SourceFunction: "source-function";
+			case ControlRegion: "control-region";
 			case SwitchExpr: "switch";
 			case NewValue: "new";
 			case Unary: "unary";
@@ -240,9 +294,12 @@ class CompilerTypedTreeRevision {
 			case Ternary: "ternary";
 			case Anonymous: "anonymous";
 			case ArrayComprehension: "array-comprehension";
+			case ArrayAppend: "array-append";
+			case MapInsert: "map-insert";
 			case ArrayDecl: "array";
 			case ArrayAccess: "array-access";
 			case Range: "range";
+			case FixedRange: "fixed-range";
 			case Cast: "cast";
 			case Untyped: "untyped";
 			case Opaque: "opaque";

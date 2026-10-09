@@ -30,6 +30,10 @@ class ParsedModuleIntegrity {
 		add(out, Std.string(classes.length));
 		for (parsedClass in classes)
 			addClass(out, parsedClass);
+		final typedefs = HxModuleDecl.getTypedefs(module);
+		add(out, Std.string(typedefs.length));
+		for (declaration in typedefs)
+			ParsedTypedefIntegrity.appendDeclaration(out, declaration);
 	}
 
 	static function addClass(out:StringBuf, parsedClass:HxClassDecl):Void {
@@ -37,8 +41,12 @@ class ParsedModuleIntegrity {
 		add(out, HxClassDecl.getHasStaticMain(parsedClass) ? "static-main" : "no-static-main");
 		add(out, HxClassDecl.getExtendsPath(parsedClass));
 		add(out, HxClassDecl.getIsInterface(parsedClass) ? "interface" : "class");
+		add(out, HxClassDecl.getIsExtern(parsedClass) ? "extern" : "generated");
+		final enumDeclaration = HxClassDecl.getEnumDeclaration(parsedClass);
+		add(out, enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		add(out, HxClassDecl.getVisibility(parsedClass) == HxVisibility.Public ? "public" : "private");
 		addStrings(out, HxClassDecl.getImplementsPaths(parsedClass));
+		addStrings(out, HxClassDecl.getInterfaceExtendsPaths(parsedClass));
 		addStrings(out, HxClassDecl.getMetadata(parsedClass));
 
 		final fields = HxClassDecl.getFields(parsedClass);

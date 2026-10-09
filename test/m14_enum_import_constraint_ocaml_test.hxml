@@ -1,0 +1,2 @@
+-D enum_import_ocaml
+test/m14_enum_import_constraint_test.hxml

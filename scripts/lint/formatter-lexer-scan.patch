@@ -1,0 +1,59 @@
+diff --git a/src/haxeparser/HaxeLexer.hx b/src/haxeparser/HaxeLexer.hx
+index ca914d9..63f5517 100644
+--- a/src/haxeparser/HaxeLexer.hx
++++ b/src/haxeparser/HaxeLexer.hx
+@@ -347,0 +348,22 @@ class HaxeLexer extends Lexer implements hxparse.RuleBuilder {
++	/**
++		Markup needs a closing tag or a self-closing delimiter. Check their ASCII
++		bytes before decoding the remaining input: ordinary generic types often
++		have neither, and repeatedly decoding a large suffix creates quadratic
++		allocation. This is only a rejection check; the existing scan still decides
++		which tag closes the expression. Non-ASCII input keeps the decoder's
++		behavior, including malformed byte sequences. Do not retain results across
++		lexer calls.
++	**/
++	static function hasMarkupClosing(input:byte.ByteData, start:Int):Bool {
++		var index = start;
++		while (index < input.length) {
++			var current = input.readByte(index);
++			if (current >= 128) return true;
++			if (index + 1 < input.length
++				&& ((current == '<'.code && input.readByte(index + 1) == '/'.code)
++					|| (current == '/'.code && input.readByte(index + 1) == '>'.code))) return true;
++			index++;
++		}
++		return false;
++	}
++
+@@ -350,0 +373,5 @@ class HaxeLexer extends Lexer implements hxparse.RuleBuilder {
++		if (!hasMarkupClosing(lexer.input, startPos)) {
++			lexer.pos = startPos + 1;
++			lexer.current = "<";
++			return mk(lexer, Binop(OpLt));
++		}
+@@ -362,0 +390,8 @@ class HaxeLexer extends Lexer implements hxparse.RuleBuilder {
++		// The cursor only advances through this immutable string. Keep each next
++		// match until it is consumed, including an absent match (-1). Otherwise
++		// generic types repeatedly search the same suffix for nonexistent tags.
++		var nextStartTag = text.indexOf(startTag);
++		var nextEndTag = text.indexOf(endTag);
++		var nextSelfClosing = text.indexOf("/>");
++		var nextTagClosing = text.indexOf(">");
++		var nextOpenTag = text.indexOf("<");
+@@ -364,2 +399,4 @@ class HaxeLexer extends Lexer implements hxparse.RuleBuilder {
+-			var indexStartTag = text.indexOf(startTag, index);
+-			var indexEndTag = text.indexOf(endTag, index);
++			if (nextStartTag != -1 && nextStartTag < index) nextStartTag = text.indexOf(startTag, index);
++			if (nextEndTag != -1 && nextEndTag < index) nextEndTag = text.indexOf(endTag, index);
++			var indexStartTag = nextStartTag;
++			var indexEndTag = nextEndTag;
+@@ -384,3 +421,6 @@ class HaxeLexer extends Lexer implements hxparse.RuleBuilder {
+-				var indexSelfClosing = text.indexOf("/>", index);
+-				var indexTagClosing = text.indexOf(">", index);
+-				var indexOpenTag = text.indexOf("<", index);
++				if (nextSelfClosing != -1 && nextSelfClosing < index) nextSelfClosing = text.indexOf("/>", index);
++				if (nextTagClosing != -1 && nextTagClosing < index) nextTagClosing = text.indexOf(">", index);
++				if (nextOpenTag != -1 && nextOpenTag < index) nextOpenTag = text.indexOf("<", index);
++				var indexSelfClosing = nextSelfClosing;
++				var indexTagClosing = nextTagClosing;
++				var indexOpenTag = nextOpenTag;

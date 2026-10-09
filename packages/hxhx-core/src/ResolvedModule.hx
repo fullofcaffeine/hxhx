@@ -9,7 +9,7 @@
 
 	What:
 	- `modulePath`: logical Haxe module path (e.g. `demo.Util`).
-	- `filePath`: the resolved `.hx` file path on disk (relative or absolute).
+	- `filePath`: the selected source path, either a filesystem path or an immutable compiler-bundle path.
 	- `parsed`: the `ParsedModule` produced by `ParserStage`.
 	- `sourceOrigin`: the logical source module and class-path slot that won,
 	  without retaining an absolute path in dependency/cache identity.

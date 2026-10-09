@@ -1,4 +1,5 @@
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
 -main M14JsTargetCoreJsLibExternRuntimeIntegrationTest
 -neko .tmp/m14_js_target_core_js_lib_extern_runtime_integration_test.n

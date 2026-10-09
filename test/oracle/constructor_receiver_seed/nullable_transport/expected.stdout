@@ -1,0 +1,14 @@
+skipped-direct=null,null=true
+skipped-generic=null,null=true
+skipped-field=null,null=true
+skipped-record=null,null=true
+skipped-array=null,null=true
+skipped-erased=null,null=true
+assigned-direct=3,null=false
+assigned-generic=3,null=false
+assigned-field=3,null=false
+assigned-record=3,null=false
+assigned-array=3,null=false
+assigned-erased=3,null=false
+explicit-null=null,null=true
+explicit-zero=0,null=false

@@ -14,7 +14,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
 import reflaxe.ocaml.target.HaxeOcamlTargetLiteralAdapter;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseDecision;
 

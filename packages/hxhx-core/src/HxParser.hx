@@ -24,12 +24,12 @@
 class HxParser {
 	final source:String;
 	final lex:HxLexer;
-	final structuralTryCatch:Bool;
 	var cur:HxToken;
 	var peeked1:Null<HxToken> = null;
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
 	var capturedReturnStringLiteral:String = "";
+	var inMacroQuote:Bool = false;
 
 	static function keywordText(k:HxKeyword):String {
 		// IMPORTANT (bootstrap / backend independence)
@@ -84,9 +84,8 @@ class HxParser {
 		return c >= "A".code && c <= "Z".code;
 	}
 
-	public function new(source:String, structuralTryCatch:Bool = false) {
+	public function new(source:String) {
 		this.source = source == null ? "" : source;
-		this.structuralTryCatch = structuralTryCatch;
 		lex = new HxLexer(source);
 		cur = lex.next();
 	}
@@ -242,16 +241,12 @@ class HxParser {
 	}
 
 	/**
-		Parse a complete expression while lowering expression-level try/catch into
-		the existing structural lambda/call sentinel.
-
-		The ordinary syntax parser keeps `ETryCatchRaw` for its bootstrap-facing AST
-		contract. The typed-body builder uses this entry point once so operators,
-		calls, and mutation inside try/catch branches remain visible to semantic
-		passes without making `HxExpr` directly depend on `HxStmt`.
+		Parse a complete expression from a retained source slice for typed recovery.
+		Try bodies use the same source structure as ordinary parsing; this boundary
+		never creates helper functions or reconstructs control from generated code.
 	**/
 	public static function parseStructuralExprText(source:String):HxExpr {
-		final parser = new HxParser(source, true);
+		final parser = new HxParser(source);
 		final expression = parser.parseExpr(() -> parser.cur.kind.match(TEof));
 		if (!parser.cur.kind.match(TEof))
 			parser.fail("Unexpected trailing input after structural expression");
@@ -314,6 +309,33 @@ class HxParser {
 		return shifted;
 	}
 
+	/**
+		Read one unbraced function body with the ordinary statement grammar.
+		Declaration recovery needs the same closing boundary as the parser, including
+		braces inside a switch scrutinee. Keep the following declaration outside the
+		body and rebase source positions exactly as for a braced body slice.
+	 */
+	public static function parseUnbracedFunctionBodyAt(originalSource:String, start:Int):{
+		body:Array<HxStmt>,
+		bodyText:String,
+		nextPos:Int,
+		hasBody:Bool
+	} {
+		final parser = new HxParser("{\n" + originalSource.substr(start));
+		parser.bump();
+		final statement = parser.parseStmt(() -> parser.cur.kind.match(TEof));
+		if (parser.cur.kind.match(TSemicolon))
+			parser.bump();
+		final nextPos = start + parser.currentIndex() - 2;
+		final body = [rebaseFunctionBodyStmt(statement, sourcePosAt(originalSource, start), start)];
+		return {
+			body: body,
+			bodyText: StringTools.trim(originalSource.substring(start, nextPos)),
+			nextPos: nextPos,
+			hasBody: true
+		};
+	}
+
 	static function sourcePosAt(source:String, index:Int):HxPos {
 		var line = 1;
 		var lineStart = 0;
@@ -341,6 +363,7 @@ class HxParser {
 
 	static function rebaseFunctionBodyStmt(stmt:HxStmt, base:HxPos, bodyStartIndex:Int):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
@@ -363,11 +386,11 @@ class HxParser {
 				SWhile(cond, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SDoWhile(body, cond, pos):
 				SDoWhile(rebaseFunctionBodyStmt(body, base, bodyStartIndex), cond, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final shiftedBodies = new Array<HxStmt>();
 				for (body in bodies)
 					shiftedBodies.push(rebaseFunctionBodyStmt(body, base, bodyStartIndex));
-				SSwitch(scrutinee, patterns, shiftedBodies, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SSwitch(scrutinee, patterns, shiftedBodies, rebaseFunctionBodyPos(pos, base, bodyStartIndex), exhaustive);
 			case STry(tryBody, catches, pos):
 				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches)
@@ -396,12 +419,42 @@ class HxParser {
 
 	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos, bodyStartIndex:Int):HxExpr {
 		return switch (expr) {
+			case EPrivateAccess(inner, position):
+				EPrivateAccess(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case EParenthesized(inner, position):
+				EParenthesized(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ESourceTry(catches, bodies, position):
+				ESourceTry([
+					for (entry in catches)
+						new HxSourceCatch(entry.getName(), entry.getTypeHint(), rebaseFunctionBodyPos(entry.getPosition(), base, bodyStartIndex))
+				],
+					[for (body in bodies) rebaseFunctionBodyExprValue(body, base, bodyStartIndex)], rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ESourceFor(binding, iterable, body, position):
+				ESourceFor(binding, rebaseFunctionBodyExprValue(iterable, base, bodyStartIndex), rebaseFunctionBodyExprValue(body, base, bodyStartIndex),
+					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				ESourceIf(rebaseFunctionBodyExprValue(condition, base, bodyStartIndex), rebaseFunctionBodyExprValue(whenTrue, base, bodyStartIndex),
+					whenFalse == null ? null : rebaseFunctionBodyExprValue(whenFalse, base, bodyStartIndex),
+					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case EThrow(value, position):
+				EThrow(rebaseFunctionBodyExprValue(value, base, bodyStartIndex), rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ELoweredControl(kind, target, children, position):
+				ELoweredControl(kind, target, [for (child in children) rebaseFunctionBodyExprValue(child, base, bodyStartIndex)],
+					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ESourceGroup(children, position):
+				ESourceGroup([for (child in children) rebaseFunctionBodyExprValue(child, base, bodyStartIndex)],
+					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case ESourceFunction(facts, body, defaults, position):
+				ESourceFunction(facts, rebaseFunctionBodyExprValue(body, base, bodyStartIndex),
+					[for (value in defaults) rebaseFunctionBodyExprValue(value, base, bodyStartIndex)], rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case ECall(EIdent(name), args) if (StringTools.startsWith(name, "__hxhx_trace_at_")):
 				final line = Std.parseInt(name.substr("__hxhx_trace_at_".length));
 				final rebased = line == null ? 0 : base.getLine() + line - 2;
 				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExprValue(arg, base, bodyStartIndex)]);
 			case ECall(callee, args):
 				ECall(rebaseFunctionBodyExprValue(callee, base, bodyStartIndex), [for (arg in args) rebaseFunctionBodyExprValue(arg, base, bodyStartIndex)]);
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(rebaseFunctionBodyExprValue(effect, base, bodyStartIndex), rebaseFunctionBodyExprValue(continuation, base, bodyStartIndex));
 			case EReturn(value):
 				EReturn(value == null ? null : rebaseFunctionBodyExprValue(value, base, bodyStartIndex));
 			case EVars(declarations):
@@ -416,10 +469,10 @@ class HxParser {
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				HxExprVarDecl.make(name, typeHint, initializer == null ? null : rebaseFunctionBodyExprValue(initializer, base, bodyStartIndex),
 					rebaseFunctionBodyPos(position, base, bodyStartIndex), isFinal, isStatic);
-			case EWhile(condition, body, bodyIsBlock, position):
+			case EWhile(condition, body, bodyIsBlock, position, loopKind):
 				EWhile(rebaseFunctionBodyExprValue(condition, base, bodyStartIndex),
 					[for (entry in body) rebaseFunctionBodyExprValue(entry, base, bodyStartIndex)], bodyIsBlock,
-					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+					rebaseFunctionBodyPos(position, base, bodyStartIndex), loopKind);
 			case EBreak(position):
 				EBreak(rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case EContinue(position):
@@ -432,8 +485,8 @@ class HxParser {
 				EBinop(op, rebaseFunctionBodyExprValue(left, base, bodyStartIndex), rebaseFunctionBodyExprValue(right, base, bodyStartIndex));
 			case EUnop(op, fixity, value):
 				EUnop(op, fixity, rebaseFunctionBodyExprValue(value, base, bodyStartIndex));
-			case ELambda(args, body):
-				ELambda(args, rebaseFunctionBodyExprValue(body, base, bodyStartIndex));
+			case ELambda(args, body, signature):
+				ELambda(args, rebaseFunctionBodyExprValue(body, base, bodyStartIndex), signature);
 			case EArrayDecl(values):
 				EArrayDecl([for (value in values) rebaseFunctionBodyExprValue(value, base, bodyStartIndex)]);
 			case EArrayAccess(left, right):
@@ -466,8 +519,32 @@ class HxParser {
 		if (expr == null)
 			return null;
 		return switch (expr) {
+			case ESourceTry(catches, bodies, position):
+				ESourceTry([
+					for (entry in catches)
+						new HxSourceCatch(entry.getName(), entry.getTypeHint(), offsetFunctionBodyPosColumn(entry.getPosition(), delta))
+				],
+					[for (body in bodies) offsetFunctionBodyExprColumns(body, delta)], offsetFunctionBodyPosColumn(position, delta));
+			case ESourceFor(binding, iterable, body, position):
+				ESourceFor(binding, offsetFunctionBodyExprColumns(iterable, delta), offsetFunctionBodyExprColumns(body, delta),
+					offsetFunctionBodyPosColumn(position, delta));
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				ESourceIf(offsetFunctionBodyExprColumns(condition, delta), offsetFunctionBodyExprColumns(whenTrue, delta),
+					offsetFunctionBodyExprColumns(whenFalse, delta), offsetFunctionBodyPosColumn(position, delta));
+			case EThrow(value, position):
+				EThrow(offsetFunctionBodyExprColumns(value, delta), offsetFunctionBodyPosColumn(position, delta));
+			case ELoweredControl(kind, target, children, position):
+				ELoweredControl(kind, target, [for (child in children) offsetFunctionBodyExprColumns(child, delta)],
+					offsetFunctionBodyPosColumn(position, delta));
+			case ESourceGroup(children, position):
+				ESourceGroup([for (child in children) offsetFunctionBodyExprColumns(child, delta)], offsetFunctionBodyPosColumn(position, delta));
+			case ESourceFunction(facts, body, defaults, position):
+				ESourceFunction(facts, offsetFunctionBodyExprColumns(body, delta), [for (value in defaults) offsetFunctionBodyExprColumns(value, delta)],
+					offsetFunctionBodyPosColumn(position, delta));
 			case ECall(callee, args):
 				ECall(offsetFunctionBodyExprColumns(callee, delta), [for (arg in args) offsetFunctionBodyExprColumns(arg, delta)]);
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(offsetFunctionBodyExprColumns(effect, delta), offsetFunctionBodyExprColumns(continuation, delta));
 			case EReturn(value):
 				EReturn(offsetFunctionBodyExprColumns(value, delta));
 			case EVars(declarations):
@@ -481,9 +558,9 @@ class HxParser {
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				HxExprVarDecl.make(name, typeHint, offsetFunctionBodyExprColumns(initializer, delta), offsetFunctionBodyPosColumn(position, delta), isFinal,
 					isStatic);
-			case EWhile(condition, body, bodyIsBlock, position):
+			case EWhile(condition, body, bodyIsBlock, position, loopKind):
 				EWhile(offsetFunctionBodyExprColumns(condition, delta), [for (entry in body) offsetFunctionBodyExprColumns(entry, delta)], bodyIsBlock,
-					offsetFunctionBodyPosColumn(position, delta));
+					offsetFunctionBodyPosColumn(position, delta), loopKind);
 			case EBreak(position):
 				EBreak(offsetFunctionBodyPosColumn(position, delta));
 			case EContinue(position):
@@ -494,8 +571,8 @@ class HxParser {
 				ENullSafeField(offsetFunctionBodyExprColumns(object, delta), field);
 			case EMacroExpr(inner, wrappers):
 				EMacroExpr(offsetFunctionBodyExprColumns(inner, delta), wrappers);
-			case ELambda(arguments, body):
-				ELambda(arguments, offsetFunctionBodyExprColumns(body, delta));
+			case ELambda(arguments, body, signature):
+				ELambda(arguments, offsetFunctionBodyExprColumns(body, delta), signature);
 			case ESwitch(scrutinee, patterns, expressions):
 				ESwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, [for (branch in expressions) offsetFunctionBodyExprColumns(branch, delta)]);
 			case ENew(typePath, arguments):
@@ -522,6 +599,8 @@ class HxParser {
 				ECast(offsetFunctionBodyExprColumns(inner, delta), typeHint);
 			case EUntyped(inner):
 				EUntyped(offsetFunctionBodyExprColumns(inner, delta));
+			case EParenthesized(inner, position):
+				EParenthesized(offsetFunctionBodyExprColumns(inner, delta), offsetFunctionBodyPosColumn(position, delta));
 			case _:
 				expr;
 		};
@@ -529,6 +608,7 @@ class HxParser {
 
 	static function offsetFunctionBodyStmtColumns(stmt:HxStmt, delta:Int):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
@@ -553,11 +633,11 @@ class HxParser {
 				SWhile(offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SDoWhile(body, cond, pos):
 				SDoWhile(offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyPosColumn(pos, delta));
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final shiftedBodies = new Array<HxStmt>();
 				for (body in bodies)
 					shiftedBodies.push(offsetFunctionBodyStmtColumns(body, delta));
-				SSwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta));
+				SSwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta), exhaustive);
 			case STry(tryBody, catches, pos):
 				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches)
@@ -817,8 +897,8 @@ class HxParser {
 		return ors == null ? first : POr(ors);
 	}
 
-	function parseSwitchPatternAtom():HxSwitchPattern {
-		final extractor = tryParseSwitchExtractorPattern();
+	function parseSwitchPatternAtom(allowExtractor:Bool = true):HxSwitchPattern {
+		final extractor = allowExtractor ? tryParseSwitchExtractorPattern() : null;
 		if (extractor != null)
 			return extractor;
 
@@ -837,7 +917,8 @@ class HxParser {
 				switch (cur.kind) {
 					case TIdent(name):
 						bump();
-						PBind(name);
+						// Explicit `var` always captures, even when an enum member has this name.
+						PCapture(name, PWildcard);
 					case _:
 						PWildcard;
 				}
@@ -934,7 +1015,21 @@ class HxParser {
 				parseMacroExprSwitchPattern();
 			case TIdent(name):
 				bump();
-				if (isUpperStart(name) && cur.kind.match(TLParen)) {
+				// Preserve the owner so typing can reject a constructor from another
+				// enum even when both declarations use the same member name.
+				var patternName = name;
+				while (cur.kind.match(TDot)) {
+					bump();
+					switch (cur.kind) {
+						case TIdent(segment):
+							patternName += "." + segment;
+							bump();
+						case _:
+							fail("Expected pattern member after '.'");
+					}
+				}
+				final qualified = patternName != name;
+				if ((qualified || isUpperStart(name)) && cur.kind.match(TLParen)) {
 					bump();
 					final args = new Array<HxSwitchPattern>();
 					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) {
@@ -947,11 +1042,12 @@ class HxParser {
 					}
 					if (cur.kind.match(TRParen))
 						bump();
-					PEnumExtract(name, args);
-				} else if (!isUpperStart(name) && acceptOtherChar("=")) {
+					PEnumExtract(patternName, args);
+				} else if (!qualified && !isUpperStart(name) && acceptOtherChar("=")) {
 					PCapture(name, parseSwitchPatternAtom());
 				} else {
-					isUpperStart(name) ? PEnumValue(name) : PBind(name);
+					qualified
+					|| isUpperStart(name) ? PEnumValue(patternName) : PBind(name);
 				}
 			case _:
 				// Best-effort: consume one token and treat it as a wildcard.
@@ -1047,7 +1143,9 @@ class HxParser {
 		var braceDepth = 0;
 		while (!cur.kind.match(TEof)) {
 			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
-			if (atTop && (cur.kind.match(TColon) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)))
+			if (atTop
+				&& (cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KIf))
+					|| isOtherChar("|")))
 				break;
 			if (atTop && cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 				final extractorText = StringTools.trim(sliceSource(start, currentIndex()));
@@ -1075,6 +1173,13 @@ class HxParser {
 			}
 			bump();
 		}
+		// A qualified constructor and a static extractor share the same prefix.
+		// Without an arrow, parse the consumed slice with the ordinary pattern
+		// grammar. Disable only this outer probe so it cannot call itself again.
+		final memberParser = new HxParser(sliceSource(start, currentIndex()));
+		final memberPattern = memberParser.parseSwitchPatternAtom(false);
+		if (memberParser.cur.kind.match(TEof))
+			return memberPattern;
 		return PUnsupportedGuard(PWildcard);
 	}
 
@@ -1369,50 +1474,6 @@ class HxParser {
 		}
 	}
 
-	function readTypeParameterNamesFromCurrentAngles():Array<String> {
-		final params = new Array<String>();
-		if (!isOtherChar("<"))
-			return params;
-		var depth = 0;
-		var expectingName = true;
-		while (true) {
-			switch (cur.kind) {
-				case TEof:
-					fail("Unterminated angle bracket group");
-				case TOther(c) if (c == "<".code):
-					depth++;
-					bump();
-				case TOther(c) if (c == "-".code && peekKind().match(TOther(">".code))):
-					bump();
-					bump();
-				case TOther(c) if (c == ">".code):
-					depth--;
-					bump();
-					if (depth <= 0)
-						return params;
-				case TComma if (depth == 1):
-					expectingName = true;
-					bump();
-				case TColon if (depth == 1):
-					expectingName = false;
-					bump();
-				case TIdent(name) if (depth == 1 && expectingName):
-					params.push(name);
-					expectingName = false;
-					bump();
-				case TLParen:
-					bump();
-					skipBalancedParens();
-				case TLBrace:
-					bump();
-					skipBalancedBraces();
-				case _:
-					bump();
-			}
-		}
-		return params;
-	}
-
 	function skipBalancedBraces():Void {
 		// Called when current token is '{' already consumed by caller.
 		var depth = 1;
@@ -1435,13 +1496,14 @@ class HxParser {
 		}
 	}
 
-	function readTypeHintText(stop:() -> Bool):String {
+	function readTypeHintText(stop:() -> Bool, stopAtExpressionBody:Bool = false):String {
 		// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
 		final parts = new Array<String>();
 		var parenDepth = 0;
 		var braceDepth = 0;
 		var angleDepth = 0;
 		var bracketDepth = 0;
+		var previousCanEndType = false;
 		while (true) {
 			// Special-case structural/anonymous type hints that begin with `{ ... }`.
 			//
@@ -1452,6 +1514,10 @@ class HxParser {
 			// Our callers often use `stop()` predicates that stop on `{` (body start), so we
 			// allow a leading `{` to be consumed into the type-hint text.
 			final atTopLevel = parenDepth == 0 && braceDepth == 0 && angleDepth == 0 && bracketDepth == 0;
+			final isIdentifier = cur.kind.match(TIdent(_));
+			// Without type punctuation, a second top-level name starts the function body.
+			if (stopAtExpressionBody && atTopLevel && previousCanEndType && isIdentifier)
+				break;
 			if (atTopLevel && stop() && !(parts.length == 0 && cur.kind.match(TLBrace)))
 				break;
 			switch (cur.kind) {
@@ -1521,18 +1587,26 @@ class HxParser {
 					}
 					bump();
 			}
+			final last = parts.length == 0 ? "" : parts[parts.length - 1];
+			previousCanEndType = isIdentifier
+				|| last == ")"
+				|| last == "}"
+				|| (last == ">" && (parts.length < 2 || parts[parts.length - 2] != "-"));
 		}
 		return parts.join("");
 	}
 
 	function readFunctionReturnTypeHint(stop:() -> Bool):String {
 		// In signatures like `function f():Bytes untyped { ... }`, `untyped`
-		// modifies the function body. Keep it out of the raw return type while
-		// still consuming it before the body parser looks for `{` or `return`.
+		// modifies the function body. Leave the token for the body parser so
+		// the syntax tree retains the permission to use untyped expressions.
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
-		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis)));
-		acceptKeyword(KUntyped);
+		// Body metadata must reach the statement parser with its permission scope intact.
+		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis))
+			|| cur.kind.match(TKeyword(KSwitch)) || cur.kind.match(TKeyword(KIf)) || cur.kind.match(TKeyword(KFor)) || cur.kind.match(TKeyword(KWhile))
+			|| cur.kind.match(TKeyword(KDo)) || cur.kind.match(TKeyword(KTry)),
+			true);
 		return hint;
 	}
 
@@ -1540,21 +1614,13 @@ class HxParser {
 		return switch (cur.kind) {
 			case TLParen:
 				// Parenthesized expression: `(expr)`.
+				final position = cur.pos;
 				bump(); // '('
 				final inner = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				// Best-effort: resync to the closing `)`.
-				if (!cur.kind.match(TRParen)) {
-					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-						bump();
-				}
-				if (cur.kind.match(TRParen))
-					bump();
-				switch (inner) {
-					case EBinop(op, _, _) if (isAssignmentBinop(op)):
-						ECall(EIdent("__hxhx_parenthesized"), [inner]);
-					case _:
-						inner;
-				}
+				if (!cur.kind.match(TRParen))
+					fail("Expected closing parenthesis");
+				bump();
+				EParenthesized(inner, position);
 			case TLBrace:
 				parseBraceExpr();
 			case TKeyword(k):
@@ -1590,7 +1656,7 @@ class HxParser {
 					EReturn(value);
 				} else if (k == KInline) {
 					bump();
-					parsePrimaryExpr();
+					cur.kind.match(TKeyword(KFunction)) ? parseFunctionExpr(Value, true) : parsePrimaryExpr();
 				} else if (k == KNew) {
 					bump();
 					var typePath = readConstructorTypePath();
@@ -1624,14 +1690,11 @@ class HxParser {
 						}
 					}
 				} else if (k == KFor) {
-					parseForExprRaw();
+					parseSourceForExpr(() -> false);
 				} else if (k == KDo) {
 					parseDoWhileExpr();
 				} else if (k == KThrow) {
-					bump();
-					final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
-						|| cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)) || cur.kind.match(TComma) || cur.kind.match(TRParen));
-					ECall(EIdent("__hxhx_throw"), [thrown]);
+					parseThrowExpr(() -> false);
 				} else if (k == KAs) {
 					bump();
 					EIdent("as");
@@ -1642,9 +1705,9 @@ class HxParser {
 					bump();
 					EUnsupported(detail);
 				}
-			case TString(s, interpolate):
-				bump();
-				interpolate ? parseInterpolatedStringExpr(s) : EString(s);
+			case TString(s, interpolate): bump(); // The literal-only code operation checks decoded source text before interpolation.
+				// Keep its field-access syntax intact for macro quotation and later typing.
+				final literalCode = cur.kind.match(TDot) && peekKind().match(TIdent("code")); interpolate && !literalCode ? parseInterpolatedStringExpr(s) : EString(s);
 			case TInt(v):
 				final raw = cur.numericText;
 				final suffix = cur.numericSuffix;
@@ -1687,7 +1750,7 @@ class HxParser {
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c) if (c == "$".code):
-				parseMacroReificationExpr();
+				parseDollarExpression();
 			case TOther(c):
 				final raw = String.fromCharCode(c);
 				bump();
@@ -1700,20 +1763,18 @@ class HxParser {
 		}
 	}
 
-	/** Preserve expression-position do/while as structural lambdas and a shared loop call. **/
+	/** Keep the body and trailing condition in the original loop, without helper callables. */
 	function parseDoWhileExpr():HxExpr {
-		final start = currentIndex();
+		final position = cur.getPos();
 		bump(); // `do`
-		final body = parseStmt(() -> cur.kind.match(TKeyword(KWhile)) || cur.kind.match(TEof));
-		if (!acceptKeyword(KWhile) || !cur.kind.match(TLParen))
-			return EUnsupported("do_while_expr@idx=" + start);
-		bump(); // '('
+		final bodyIsBlock = cur.kind.match(TLBrace);
+		final body = parseWhileBody(() -> cur.kind.match(TSemicolon) || cur.kind.match(TKeyword(KWhile)) || cur.kind.match(TEof));
+		if (!acceptKeyword(KWhile))
+			fail("Expected while after do body");
+		expect(TLParen, "'(' after do/while");
 		final condition = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-		if (!cur.kind.match(TRParen))
-			return EUnsupported("do_while_expr@idx=" + start);
-		bump(); // ')'
-		final bodyExpression = lambdaBodyExprFromStmts([body]);
-		return ECall(EIdent("__hxhx_do_while"), [ELambda([], bodyExpression), ELambda([], condition)]);
+		expect(TRParen, "')' after do/while condition");
+		return EWhile(condition, body, bodyIsBlock, position, DoWhile);
 	}
 
 	/**
@@ -1730,16 +1791,22 @@ class HxParser {
 		expect(TLParen, "'(' after while");
 		final condition = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
 		expect(TRParen, "')' after while condition");
+		final bodyIsBlock = cur.kind.match(TLBrace);
+		return EWhile(condition, parseWhileBody(stop), bodyIsBlock, position, Normal);
+	}
 
+	/** Both loop kinds retain the same ordered brace body and single-expression body contract. */
+	function parseWhileBody(stop:() -> Bool):Array<HxExpr> {
 		final body = new Array<HxExpr>();
 		final bodyIsBlock = cur.kind.match(TLBrace);
 		if (bodyIsBlock) {
 			bump(); // '{'
 			while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
-				body.push(parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+				final entry = parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+				body.push(entry);
 				if (cur.kind.match(TSemicolon)) {
 					bump();
-				} else if (!cur.kind.match(TRBrace)) {
+				} else if (!cur.kind.match(TRBrace) && !endsWithSourceBrace(entry)) {
 					fail("Expected ';' or '}' after while body expression");
 				}
 			}
@@ -1747,12 +1814,16 @@ class HxParser {
 		} else {
 			if (stop() || cur.kind.match(TEof))
 				fail("Expected while body");
-			body.push(parseExpr(stop));
+			body.push(parseAuthoredControl(() -> parseExpr(stop)));
 		}
-		return EWhile(condition, body, bodyIsBlock, position);
+		return body;
 	}
 
-	function parseMacroReificationExpr():HxExpr {
+	/**
+		Dollar names are primitive identifiers in ordinary expressions and value
+		splices inside a macro quote. Braced splice payloads are ordinary expressions.
+	**/
+	function parseDollarExpression():HxExpr {
 		// Macro reification splice: `$i{name}`, `$e{expr}`, `$b{expr}`, ...
 		//
 		// Bring-up scope
@@ -1764,12 +1835,17 @@ class HxParser {
 		//   splice markers and let normal postfix parsing consume field/call suffixes.
 		if (!acceptOtherChar("$"))
 			return EUnsupported("$");
-		switch (cur.kind) {
-			case TIdent(name) if (!peekKind().match(TLBrace)):
-				bump();
-				return ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(name)]);
-			case _:
+		final dollarName = switch (cur.kind) {
+			case TIdent(name): name;
+			case TKeyword(keyword): keywordText(keyword);
+			case _: "";
 		}
+		if (dollarName.length > 0 && !peekKind().match(TLBrace)) {
+			bump();
+			return inMacroQuote ? ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(dollarName)]) : EIdent("$" + dollarName);
+		}
+		if (!inMacroQuote)
+			fail("Reification is not allowed outside of a macro expression");
 		final spliceKind = switch (cur.kind) {
 			case TIdent(name):
 				bump();
@@ -1779,13 +1855,14 @@ class HxParser {
 		}
 		final payload = if (cur.kind.match(TLBrace)) {
 			bump();
-			final inner = parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			final inner = withMacroQuoteContext(false, () -> parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 			if (cur.kind.match(TRBrace))
 				bump();
 			inner;
 		} else {
-			parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
-				|| cur.kind.match(TEof));
+			withMacroQuoteContext(false,
+				() -> parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
+					|| cur.kind.match(TEof)));
 		}
 		return switch (spliceKind) {
 			case "i":
@@ -1799,319 +1876,65 @@ class HxParser {
 		}
 	}
 
-	function parseFunctionExpr():HxExpr {
-		// Anonymous function expression:
-		//   function(arg0, arg1) return expr
-		//   function(arg0, arg1) { return expr; }
-		//
-		// Bring-up scope
-		// - Parse arg names plus optional type/default syntax.
-		// - Preserve an explicit function signature as an `ECast` type ascription around
-		//   `ELambda`; targets can erase the ascription after semantic consumers use it.
-		// - Block bodies are accepted when they can be reduced to a single expression/return.
+	/**
+		Keep full functions in their authored form until shared typing resolves control.
+
+		Defaults are parameter-entry expressions, not replacements for parameter reads.
+		An explicit return stays inside its original brace group so macros and lowering
+		can distinguish it from a normally completed value expression.
+	**/
+	function parseFunctionExpr(placement:HxSourceFunction.HxSourceFunctionPlacement = Value, isInline:Bool = false):HxExpr {
+		final position = cur.getPos();
 		if (!acceptKeyword(KFunction))
 			fail("Expected 'function'");
-		expect(TLParen, "'('");
-
-		final args = new Array<String>();
-		final argTypes = new Array<String>();
-		final optionalArgs = new Array<String>();
-		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
-		var defaultedArgCount = 0;
-		var restIndex = -1;
-		var hasExplicitType = false;
-		if (!cur.kind.match(TRParen)) {
-			while (true) {
-				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
-				if (isRest) {
-					bump();
-					bump();
-					bump();
-				}
-
-				final isOptional = acceptOtherChar("?");
-				var argumentIsOptional = isOptional;
-				final argName = readIdent("argument name");
-				args.push(argName);
-				if (isRest)
-					restIndex = args.length - 1;
-				if (isOptional && optionalArgs.indexOf(argName) < 0)
-					optionalArgs.push(argName);
-
-				var argType = "";
-				if (cur.kind.match(TColon)) {
-					bump();
-					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
-					hasExplicitType = true;
-				}
-				if (!isRest && isRestTypeHintText(argType))
-					restIndex = args.length - 1;
-
-				if (acceptOtherChar("=")) {
-					argumentIsOptional = true;
-					if (optionalArgs.indexOf(argName) < 0)
-						optionalArgs.push(argName);
-					if (!defaultedArgs.exists(argName))
-						defaultedArgCount++;
-					defaultedArgs.set(argName, parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
-				}
-				final normalizedArgType = argType.length == 0 ? "Dynamic" : argType;
-				argTypes.push(argumentIsOptional ? "?" + normalizedArgType : normalizedArgType);
-
-				if (cur.kind.match(TComma)) {
-					bump();
-					continue;
-				}
-				break;
-			}
-		}
-		expect(TRParen, "')'");
-
+		final name = switch cur.kind {
+			case TIdent(name):
+				bump();
+				name;
+			case _: null;
+		};
+		final generics = new HxSourceFunctionGenerics(new HxTypedefParser(this).parameters());
+		if (isInline && name == null)
+			fail("Inline source functions require a name");
+		final inputs = parseSourceFunctionParameters();
 		var returnType = "";
 		if (cur.kind.match(TColon)) {
 			bump();
 			returnType = readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
-			hasExplicitType = true;
 		}
-
-		final bodyExpr = if (acceptKeyword(KReturn)) {
-			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-		} else if (cur.kind.match(TLBrace)) {
-			bump();
-			lambdaBodyExprFromStmts(parseFunctionBodyStatements());
-		} else {
-			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-		}
-
-		function applyDefaultedArgs(expr:HxExpr):HxExpr {
-			return switch (expr) {
-				case EIdent(name) if (defaultedArgs.exists(name)):
-					ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));
-				case EUnop(op, fixity, inner):
-					EUnop(op, fixity, applyDefaultedArgs(inner));
-				case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
-					EBinop(op, left, applyDefaultedArgs(right));
-				case EBinop(op, left, right):
-					EBinop(op, applyDefaultedArgs(left), applyDefaultedArgs(right));
-				case ETernary(cond, thenExpr, elseExpr):
-					ETernary(applyDefaultedArgs(cond), applyDefaultedArgs(thenExpr), applyDefaultedArgs(elseExpr));
-				case ECall(callee, callArgs):
-					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
-				case EReturn(value):
-					EReturn(value == null ? null : applyDefaultedArgs(value));
-				case EVars(declarations):
-					EVars([
-						for (declaration in declarations)
-							HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
-								HxExprVarDecl.getInitializer(declaration) == null ? null : applyDefaultedArgs(HxExprVarDecl.getInitializer(declaration)),
-								HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration))
-					]);
-				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
-				case EWhile(condition, body, bodyIsBlock, position):
-					EWhile(applyDefaultedArgs(condition), [for (entry in body) applyDefaultedArgs(entry)], bodyIsBlock, position);
-				case EField(receiver, field):
-					EField(applyDefaultedArgs(receiver), field);
-				case ENullSafeField(receiver, field):
-					ENullSafeField(applyDefaultedArgs(receiver), field);
-				case EArrayAccess(receiver, index):
-					EArrayAccess(applyDefaultedArgs(receiver), applyDefaultedArgs(index));
-				case EArrayDecl(items):
-					EArrayDecl([for (item in items) applyDefaultedArgs(item)]);
-				case EAnon(fieldNames, fieldValues):
-					EAnon(fieldNames, [for (value in fieldValues) applyDefaultedArgs(value)]);
-				case ELambda(_, _):
-					expr;
-				case ECast(inner, typeHint):
-					ECast(applyDefaultedArgs(inner), typeHint);
-				case EUntyped(inner):
-					EUntyped(applyDefaultedArgs(inner));
-				case _:
-					expr;
-			};
-		}
-
-		final lambda:HxExpr = ELambda(args, defaultedArgCount == 0 ? bodyExpr : applyDefaultedArgs(bodyExpr));
-		final restAware = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
-		final wrapped = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
-			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
-		if (!hasExplicitType)
-			return wrapped;
-		final signatureParts = argTypes.length == 0 ? ["Void"] : argTypes.copy();
-		signatureParts.push(returnType.length == 0 ? "Dynamic" : returnType);
-		return ECast(wrapped, signatureParts.join("->"));
+		final body = parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen)
+			|| cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+		final facts = new HxSourceFunction({
+			kind: name == null ? Anonymous : Named(name, isInline),
+			placement: placement,
+			generics: generics,
+			arguments: inputs.arguments,
+			signature: new HxLambdaSignature(inputs.parameters, returnType.length == 0 ? null : returnType)
+		});
+		return ESourceFunction(facts, body, inputs.defaults, position);
 	}
 
-	function parseLocalFunctionStmt(pos:HxPos):HxStmt {
-		// Local function declaration: `function name(args)[:Ret] { ... }`.
-		//
-		// Bring-up lowering
-		// - Model it as a local binding to an `ELambda`, which is sufficient for
-		//   Stage3 JS-native bodies that define a helper and immediately call it.
-		if (!acceptKeyword(KFunction))
-			fail("Expected 'function'");
-		final name = readIdent("local function name");
-		if (isOtherChar("<"))
-			skipBalancedAngles();
-		expect(TLParen, "'('");
-
-		final args = new Array<String>();
-		final argTypeHints = new Array<String>();
-		final optionalArgs = new Array<String>();
-		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
-		var defaultedArgCount = 0;
-		var restIndex = -1;
-		var hasFunctionTypeHint = false;
-		if (!cur.kind.match(TRParen)) {
-			while (true) {
-				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
-				if (isRest) {
-					bump();
-					bump();
-					bump();
-				}
-				final isOptional = acceptOtherChar("?");
-				final argName = readIdent("argument name");
-				args.push(argName);
-				if (isRest)
-					restIndex = args.length - 1;
-				if (isOptional && optionalArgs.indexOf(argName) < 0)
-					optionalArgs.push(argName);
-
-				var argType = "";
-				if (cur.kind.match(TColon)) {
-					bump();
-					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
-				}
-				if (localFunctionArgTypeHintNeedsBackend(argType))
-					hasFunctionTypeHint = true;
-				argTypeHints.push((isOptional ? "?" : "") + (argType.length == 0 ? "Dynamic" : argType));
-				if (!isRest && isRestTypeHintText(argType))
-					restIndex = args.length - 1;
-
-				if (acceptOtherChar("=")) {
-					if (optionalArgs.indexOf(argName) < 0)
-						optionalArgs.push(argName);
-					if (!defaultedArgs.exists(argName))
-						defaultedArgCount++;
-					defaultedArgs.set(argName, parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
-				}
-
-				if (cur.kind.match(TComma)) {
-					bump();
-					continue;
-				}
-				break;
-			}
-		}
-		expect(TRParen, "')'");
-
-		var returnType = "";
-		if (cur.kind.match(TColon)) {
-			bump();
-			returnType = readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
-				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
-			if (StringTools.trim(returnType).length > 0)
-				hasFunctionTypeHint = true;
-		}
-
-		final bodyExpr = if (cur.kind.match(TLBrace)) {
-			bump();
-			lambdaBodyExprFromStmts(parseFunctionBodyStatements());
-		} else if (acceptKeyword(KReturn)) {
-			final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-			syncToStmtEnd();
-			expr;
-		} else {
-			final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-			syncToStmtEnd();
-			expr;
-		}
-
+	/** Named statements retain their function syntax until shared typing and lowering. */
+	function parseLocalFunctionStmt(pos:HxPos, isInline:Bool = false):HxStmt {
+		final expression = parseFunctionExpr(Declaration, isInline);
 		if (cur.kind.match(TSemicolon))
 			bump();
-
-		function applyDefaultedArgs(expr:HxExpr):HxExpr {
-			return switch (expr) {
-				case EIdent(argName) if (defaultedArgs.exists(argName)):
-					ETernary(EBinop("==", EIdent(argName), ENull), defaultedArgs.get(argName), EIdent(argName));
-				case EUnop(op, fixity, inner):
-					EUnop(op, fixity, applyDefaultedArgs(inner));
-				case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
-					EBinop(op, left, applyDefaultedArgs(right));
-				case EBinop(op, left, right):
-					EBinop(op, applyDefaultedArgs(left), applyDefaultedArgs(right));
-				case ETernary(cond, thenExpr, elseExpr):
-					ETernary(applyDefaultedArgs(cond), applyDefaultedArgs(thenExpr), applyDefaultedArgs(elseExpr));
-				case ECall(callee, callArgs):
-					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
-				case EReturn(value):
-					EReturn(value == null ? null : applyDefaultedArgs(value));
-				case EVars(declarations):
-					EVars([
-						for (declaration in declarations)
-							HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
-								HxExprVarDecl.getInitializer(declaration) == null ? null : applyDefaultedArgs(HxExprVarDecl.getInitializer(declaration)),
-								HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration))
-					]);
-				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
-				case EWhile(condition, body, bodyIsBlock, position):
-					EWhile(applyDefaultedArgs(condition), [for (entry in body) applyDefaultedArgs(entry)], bodyIsBlock, position);
-				case EField(receiver, field):
-					EField(applyDefaultedArgs(receiver), field);
-				case ENullSafeField(receiver, field):
-					ENullSafeField(applyDefaultedArgs(receiver), field);
-				case EArrayAccess(receiver, index):
-					EArrayAccess(applyDefaultedArgs(receiver), applyDefaultedArgs(index));
-				case EArrayDecl(items):
-					EArrayDecl([for (item in items) applyDefaultedArgs(item)]);
-				case EAnon(fieldNames, fieldValues):
-					EAnon(fieldNames, [for (value in fieldValues) applyDefaultedArgs(value)]);
-				case ELambda(_, _):
-					expr;
-				case ECast(inner, typeHint):
-					ECast(applyDefaultedArgs(inner), typeHint);
-				case EUntyped(inner):
-					EUntyped(applyDefaultedArgs(inner));
-				case _:
-					expr;
-			};
-		}
-
-		final lambda:HxExpr = ELambda(args, defaultedArgCount == 0 ? bodyExpr : applyDefaultedArgs(bodyExpr));
-		final restAware:HxExpr = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
-		final init:HxExpr = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
-			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
-		final functionTypeHint = !hasFunctionTypeHint ? "" : "(" + argTypeHints.join(", ") + ")->" + (returnType.length == 0 ? "Dynamic" : returnType);
-		return SVar(name, functionTypeHint, init, pos, []);
+		return SExpr(expression, pos);
 	}
 
-	function localFunctionArgTypeHintNeedsBackend(typeHint:String):Bool {
-		var hint = StringTools.trim(typeHint == null ? "" : typeHint);
-		while (StringTools.startsWith(hint, "?"))
-			hint = StringTools.trim(hint.substr(1));
-		final compact = StringTools.replace(hint, " ", "");
-		return hint == "Ref"
-			|| hint == "php.Ref"
-			|| hint == "\\php\\Ref"
-			|| StringTools.startsWith(hint, "Ref<")
-			|| StringTools.startsWith(hint, "php.Ref<")
-			|| StringTools.startsWith(hint, "\\php\\Ref<")
-			|| compact == "PosInfos"
-			|| compact == "haxe.PosInfos";
-	}
-
-	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {
+	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>, distinguishVoidCompletion:Bool = false):HxExpr {
+		// A function that falls through has no result. Keep the selected Void
+		// ascription distinct from an authored `return null` before typing.
+		final noValue:HxExpr = distinguishVoidCompletion ? ECast(ENull, "Void") : ENull;
 		if (stmts == null || stmts.length == 0)
-			return ENull;
+			return noValue;
 
-		var seqTempIndex = 0;
 		var unsupportedStmtKind = "function";
 
 		inline function stmtKindText(stmt:HxStmt):String {
 			return switch (stmt) {
+				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(_, _): "block";
 				case SVar(_, _, _, _): "var";
 				case SIf(_, _, _, _): "if";
@@ -2129,29 +1952,32 @@ class HxParser {
 				case SExpr(_, _): "expr";
 			};
 		}
-		inline function nextSeqTemp():String {
-			final name = "__hxhx_lambda_seq_" + Std.string(seqTempIndex);
-			seqTempIndex++;
-			return name;
-		}
-
 		function lowerStmtWithContinuation(stmt:HxStmt, continuation:HxExpr):Null<HxExpr> {
 			return switch (stmt) {
 				case SReturn(expr, _):
 					expr;
 				case SReturnVoid(_):
-					ENull;
+					noValue;
 				case SExpr(expr, _):
-					final temp = nextSeqTemp();
-					ECall(ELambda([temp], continuation), [expr]);
-				case SVar(name, _, init, _):
+					EDiscardThen(expr, continuation);
+				case SVar(name, typeHint, init, _):
 					final initExpr:HxExpr = switch (init) {
 						case null:
 							ENull;
 						case value:
 							value;
 					};
-					ECall(ELambda([name], continuation), [initExpr]);
+					// The lambda transports a source local. Keep its written type so
+					// immediate-call inference cannot narrow an explicit Dynamic binding.
+					final signature = new HxLambdaSignature([
+						{
+							typeHint: typeHint == null || StringTools.trim(typeHint).length == 0 ? null : typeHint,
+							isOptional: false,
+							isRest: false,
+							hasDefault: false
+						}
+					]);
+					ECall(ELambda([name], continuation, signature), [initExpr]);
 				case SBlock(inner, _):
 					var acc = continuation;
 					var index = inner.length - 1;
@@ -2199,8 +2025,8 @@ class HxParser {
 						loweredExprs.push(continuation);
 					}
 					ESwitch(scrutinee, loweredPatterns, loweredExprs);
-				case SThrow(expr, _):
-					ECall(EIdent("__hxhx_throw"), [expr]);
+				case SThrow(expr, position):
+					EThrow(expr, position);
 				case SBreak(_) | SContinue(_):
 					// Expression-lowered callback bodies use a continuation chain. During source
 					// target bring-up, preserve parseability for switch/loop branches that end in
@@ -2245,7 +2071,7 @@ class HxParser {
 			}
 		}
 
-		var result:HxExpr = ENull;
+		var result:HxExpr = noValue;
 		var index = stmts.length - 1;
 		while (index >= 0) {
 			final lowered = lowerStmtWithContinuation(stmts[index], result);
@@ -2428,94 +2254,14 @@ class HxParser {
 			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
 		}
 
-		function parenthesizedContainsTopLevelFatArrow():Bool {
-			final start = currentIndex();
-			if (start < 0 || start >= source.length || source.charCodeAt(start) != "(".code)
-				return false;
-			var i = start + 1;
-			var depth = 1;
-			while (i < source.length && depth > 0) {
-				final c = source.charCodeAt(i);
-				if (depth == 1 && c == "=".code && i + 1 < source.length && source.charCodeAt(i + 1) == ">".code)
-					return true;
-				switch (c) {
-					case "(".code:
-						depth++;
-					case ")".code:
-						depth--;
-					case _:
-				}
-				i++;
-			}
-			return false;
-		}
-
-		function tryReadParenthesizedMapEntry():Null<HxExpr> {
-			if (!cur.kind.match(TLParen) || !parenthesizedContainsTopLevelFatArrow())
-				return null;
-			bump(); // '('
-			final keyExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (!isFatArrowStart())
-				return keyExpr;
-			bump(); // '='
-			bump(); // '>'
-			final valueExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (cur.kind.match(TRParen))
-				bump();
-			return EBinop("=>", keyExpr, valueExpr);
-		}
-
-		// Array comprehension: `[for (name in iterable) expr]`
-		//
-		// This is required by upstream `tests/RunCi.hx` for computing the `tests` list.
+		// Comprehensions are authored array contents, not calls to a synthetic helper.
+		// The ordinary for parser preserves nested loops, guards, bindings, and groups.
 		if (cur.kind.match(TKeyword(KFor))) {
-			bump(); // `for`
-			expect(TLParen, "'('");
-			// Some code bases allow `for (var x in ...)` in comprehensions; accept `var`/`final` if present.
-			acceptKeyword(KVar);
-			acceptKeyword(KFinal);
-			final name = readIdent("comprehension variable name");
-			expect(TKeyword(KIn), "'in'");
-
-			inline function isTripleDotStart():Bool {
-				return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
-			}
-
-			// Match `for (i in start...end)` in comprehensions (same bring-up shape as statement for-in).
-			final startExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof) || isTripleDotStart());
-			var iterable:HxExpr = startExpr;
-			if (isTripleDotStart()) {
-				expect(TDot, "'.'");
-				expect(TDot, "'.'");
-				expect(TDot, "'.'");
-				final endExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				iterable = ERange(startExpr, endExpr);
-			}
-
-			expect(TRParen, "')'");
-			var guardExpr:Null<HxExpr> = null;
-			if (acceptKeyword(KIf)) {
-				expect(TLParen, "'('");
-				guardExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				expect(TRParen, "')'");
-			}
-			final mapEntryExpr = tryReadParenthesizedMapEntry();
-			final yieldExpr = mapEntryExpr == null ? parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof)) : mapEntryExpr;
-			var result:HxExpr = switch (yieldExpr) {
-				case EBinop("=>", keyExpr, valueExpr):
-					ECall(EIdent("__hxhx_map_comprehension"), [iterable, ELambda([name], EArrayDecl([keyExpr, valueExpr]))]);
-				case _:
-					EArrayComprehension(name, iterable, guardExpr, yieldExpr);
-			};
-			if (isFatArrowStart()) {
-				bump(); // '='
-				bump(); // '>'
-				final valueExpr = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
-				result = ECall(EIdent("__hxhx_map_comprehension"), [iterable, ELambda([name], EArrayDecl([yieldExpr, valueExpr]))]);
-			}
-			if (cur.kind.match(TOther("]".code)))
-				bump();
-			return result;
+			final loop = parseSourceForExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			if (!cur.kind.match(TOther("]".code)))
+				fail("Expected ']' after comprehension");
+			bump();
+			return EArrayDecl([loop]);
 		}
 
 		final values = new Array<HxExpr>();
@@ -2641,78 +2387,72 @@ class HxParser {
 		return EVars(declarations);
 	}
 
-	function parseBraceExpr():HxExpr {
-		// Expression-level `{ ... }` has two common shapes in upstream code:
-		// - anonymous object literal: `{ field: value }`
-		// - block expression initializer: `{ var h = ...; ...; h; }`
-		//
-		// Parse anon literals structurally. For block expressions, first try the same
-		// continuation lowering used by local function bodies so callbacks and side
-		// effects do not leak as raw Haxe syntax into JS-native output. If the statement
-		// subset is still too rich, keep the old opaque fallback.
-		final start = currentIndex();
-		expect(TLBrace, "'{'");
-		if (cur.kind.match(TRBrace)) {
-			bump();
-			return EAnon([], []);
-		}
+	/**
+		Preserve source braces as recursive groups; field-bearing braces remain objects.
 
+		Each child is parsed directly as source syntax. This avoids statement-to-value
+		rewrites that used to flatten groups and redirect returns through artificial lambdas.
+	**/
+	function parseBraceExpr():HxExpr {
+		final position = cur.getPos();
+		expect(TLBrace, "'{'");
 		final isAnonLiteral = switch (cur.kind) {
-			case TIdent(_):
-				peekKind().match(TColon);
-			case TString(_, _):
-				peekKind().match(TColon);
-			case _:
-				false;
+			case TIdent(_) | TString(_, _): peekKind().match(TColon);
+			case _: false;
 		}
 		if (isAnonLiteral)
 			return parseAnonExprAfterOpen();
-
-		final stmts = parseFunctionBodyStatementsBestEffort(false);
-		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex()));
-		if (blockExprShouldStayOpaque(stmts))
-			return ETryCatchRaw(raw);
-		final lowered = blockExprFromStmts(stmts);
-		return switch (lowered) {
-			case EUnsupported(_):
-				ETryCatchRaw(raw);
-			case _:
-				lowered;
-		}
-	}
-
-	function blockExprShouldStayOpaque(stmts:Array<HxStmt>):Bool {
-		if (stmts == null)
-			return false;
-		for (stmt in stmts) {
-			switch (stmt) {
-				case SVar(_, typeHint, init, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0
-					&& !isLocalFunctionInitExpr(init)):
-					// Compile-time type-error probes rely on the raw local type annotation. The
-					// expression-only block lowering intentionally drops type hints, so keep typed
-					// local blocks opaque instead of erasing the evidence.
-					return true;
-				case SVar(_, _, ENew(typePath, _), _) if (typePath == "haxe.ds.StringMap" || typePath == "StringMap"):
-					// Keep the upstream XML parser escape-table initializer on the existing opaque
-					// path. Stage3 OCaml intentionally stubs that runtime-heavy mutable map today;
-					// structurally lowering it turns the placeholder into module-init code.
-					return true;
-				case _:
+		final children = new Array<HxExpr>();
+		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+			if (cur.kind.match(TSemicolon)) {
+				bump();
+				continue;
+			}
+			final start = currentIndex();
+			final child = parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+			children.push(child);
+			if (currentIndex() == start)
+				fail("Expected source group expression");
+			if (cur.kind.match(TSemicolon))
+				bump();
+			else if (!cur.kind.match(TRBrace)) {
+				if (!endsWithSourceBrace(child))
+					fail("Expected ';' after source group expression");
 			}
 		}
-		return false;
+		expect(TRBrace, "'}' after source group");
+		return ESourceGroup(children, position);
 	}
 
-	function isLocalFunctionInitExpr(expr:Null<HxExpr>):Bool {
-		return switch (expr) {
-			case ELambda(_, _):
-				true;
-			case ECall(EIdent("__hxhx_optional_lambda"), [inner, EArrayDecl(_)]):
-				isLocalFunctionInitExpr(inner);
-			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(_, _), EInt(_)]):
-				true;
-			case _:
-				false;
+	/** A final source brace terminates an expression, including a function's returned block; parentheses do not. */
+	static function endsWithSourceBrace(expression:HxExpr):Bool {
+		return switch expression {
+			case ESourceTry(_, bodies, _): bodies.length > 0 && endsWithSourceBrace(bodies[bodies.length - 1]);
+			case ESourceGroup(_, _) | ESwitch(_, _, _): true;
+			case ESourceFunction(_, body, _, _): endsWithSourceBrace(body);
+			case EReturn(value): value != null && endsWithSourceBrace(value);
+			case ESourceIf(_, whenTrue, whenFalse, _): endsWithSourceBrace(whenFalse == null ? whenTrue : whenFalse);
+			case EWhile(_, body, bodyIsBlock, _, loopKind): loopKind == Normal && (bodyIsBlock
+					|| (body.length == 1 && endsWithSourceBrace(body[0])));
+			case ESourceFor(_, _, body, _): endsWithSourceBrace(body);
+			case EVars(declarations): final initializer = declarations.length == 0 ? null : HxExprVarDecl.getInitializer(declarations[declarations.length - 1]); initializer != null && endsWithSourceBrace(initializer);
+			case _: false;
+		};
+	}
+
+	/** Preserve a named function's declaration placement when it appears as a body entry. */
+	function parseAuthoredControl(parse:Void->HxExpr):HxExpr {
+		final startsFunction = cur.kind.match(TKeyword(KFunction)) || cur.kind.match(TKeyword(KInline));
+		final result = parse();
+		return switch result {
+			case ESourceFunction(facts, body, defaults, position) if (startsFunction && facts.getDeclaredName() != null):
+				ESourceFunction(new HxSourceFunction({
+					kind: facts.getKind(),
+					placement: Declaration,
+					arguments: facts.getArguments(),
+					signature: facts.getSignature()
+				}), body, defaults, position);
+			case _: result;
 		};
 	}
 
@@ -2776,7 +2516,7 @@ class HxParser {
 
 	static function binopPrec(op:String):Int {
 		return switch (op) {
-			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=": 1;
+			case "=>" | "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=": 1;
 			case "?": 2;
 			case "??": 2;
 			case "||": 2;
@@ -2803,7 +2543,7 @@ class HxParser {
 	}
 
 	static function isRightAssoc(op:String):Bool {
-		return isAssignmentBinop(op);
+		return op == "=>" || isAssignmentBinop(op);
 	}
 
 	function parsePostfixExpr(stop:() -> Bool):HxExpr {
@@ -2819,6 +2559,11 @@ class HxParser {
 
 		while (!stop()) {
 			switch (cur.kind) {
+				case TKeyword(KIn):
+					// Upstream binds 'in' to the immediately preceding expression,
+					// then reads its binary RHS before an outer ternary conditional.
+					bump();
+					e = EBinop("in", e, parseBinaryExpr(1, stop));
 				case TDot if (isTripleDotAhead()):
 					// Expression-level range: `start...end`.
 					//
@@ -2907,36 +2652,55 @@ class HxParser {
 				EContinue(position);
 			case TKeyword(k) if (k == KWhile):
 				parseWhileExpr(stop);
+			case TKeyword(KDo):
+				parseDoWhileExpr();
+			case TKeyword(KFor):
+				parseSourceForExpr(stop);
 			case TKeyword(k) if (k == KIf):
 				parseIfExpr(stop);
+			case TKeyword(k) if (k == KThrow):
+				parseThrowExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
 				parseSwitchExpr(stop);
+			case TKeyword(k) if (k == KTry):
+				// Assignment and binary operands enter here without passing through parseExpr.
+				// Reuse the same try body, catch boundaries, and structural recovery.
+				parseSourceTryExpr(stop);
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
 				//
 				// Bring-up semantics: retain a small marker so known helper macros such as
 				// `unit.HelperMacros.getMeta(@foo expr)` can observe the metadata. Normal
 				// runtime emission unwraps the marker and keeps the underlying expression.
-				final metaNames = new Array<String>();
-				final metaArgs = new Array<String>();
+				final metadata = new Array<{
+					name:String,
+					args:String,
+					position:HxPos,
+					privateAccess:Bool
+				}>();
 				while (cur.kind.match(TOther("@".code))) {
+					final position = cur.getPos();
 					bump();
-					if (cur.kind.match(TColon))
+					final compilerMetadata = cur.kind.match(TColon);
+					if (compilerMetadata)
 						bump();
 					final meta = readMetadataHead();
 					var argsText = "";
 					if (hasAttachedMetadataArgs(meta.name, meta.endIndex)) {
 						argsText = readBalancedParenBodyText();
 					}
-					if (meta.name != "privateAccess") {
-						metaNames.push(meta.name);
-						metaArgs.push(argsText);
-					}
+					metadata.push({
+						name: meta.name,
+						args: argsText,
+						position: position,
+						privateAccess: compilerMetadata && meta.name == "privateAccess"});
 				}
 				var inner = parseUnaryExpr(stop);
-				var i = metaNames.length - 1;
+				var i = metadata.length - 1;
 				while (i >= 0) {
-					inner = ECall(EIdent("__hxhx_expr_meta"), [EString(metaNames[i]), EString(metaArgs[i]), inner]);
+					final entry = metadata[i];
+					inner = entry.privateAccess ? EPrivateAccess(inner,
+						entry.position) : ECall(EIdent("__hxhx_expr_meta"), [EString(entry.name), EString(entry.args), inner]);
 					i--;
 				}
 				inner;
@@ -2980,7 +2744,18 @@ class HxParser {
 					case _: throw "unreachable unary operator";
 				};
 				bump();
-				EUnop(op, HxUnaryFixity.Prefix, parseUnaryExpr(stop));
+				// The minimum Int has an unsigned magnitude that the host's parseInt
+				// cannot represent. Upstream also exposes this signed literal as one
+				// CInt constant to macros, so retain its value before parsing an operand.
+				if (op == HxUnaryOperator.Negate
+					&& cur.kind.match(TInt(_))
+					&& cur.numericText == "2147483648"
+					&& (cur.numericSuffix == null || cur.numericSuffix.length == 0)) {
+					bump();
+					EInt(-2147483647 - 1);
+				} else {
+					EUnop(op, HxUnaryFixity.Prefix, parseUnaryExpr(stop));
+				}
 			case TOther(c) if (c == "+".code):
 				fail("Unexpected unary +");
 			case _:
@@ -3004,7 +2779,28 @@ class HxParser {
 		return readDottedPath();
 	}
 
+	/** Restores quote context after successful parsing or a recoverable parser error. */
+	function withMacroQuoteContext(quoted:Bool, parse:() -> HxExpr):HxExpr {
+		final previous = inMacroQuote;
+		inMacroQuote = quoted;
+		try {
+			final expression = parse();
+			inMacroQuote = previous;
+			return expression;
+		} catch (error:HxParseError) {
+			inMacroQuote = previous;
+			throw error;
+		} catch (error:String) {
+			inMacroQuote = previous;
+			throw error;
+		}
+	}
+
 	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {
+		return withMacroQuoteContext(true, () -> parseMacroQuoteContents(stop));
+	}
+
+	function parseMacroQuoteContents(stop:() -> Bool):HxExpr {
 		final wrappers = new Array<String>();
 		if (cur.kind.match(TKeyword(KUntyped))) {
 			bump();
@@ -3019,16 +2815,7 @@ class HxParser {
 		if (cur.kind.match(TKeyword(KClass)))
 			return parseMacroClassQuoteExpr();
 
-		final quoted = if (cur.kind.match(TLParen)) {
-			bump();
-			wrappers.push("parenthesis");
-			final inner = parseMacroQuotePayload(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			if (cur.kind.match(TRParen))
-				bump();
-			inner;
-		} else {
-			parseMacroQuotePayload(stop);
-		}
+		final quoted = parseMacroQuotePayload(stop);
 		return HxExpr.EMacroExpr(quoted, wrappers);
 	}
 
@@ -3084,13 +2871,7 @@ class HxParser {
 		if (cur.kind.match(TKeyword(KIf)))
 			return parseMacroQuoteIfPayload(stop);
 
-		final left = parseExpr(() -> stop() || cur.kind.match(TKeyword(KIn)));
-		if (cur.kind.match(TKeyword(KIn))) {
-			bump();
-			final right = parseExpr(stop);
-			return EBinop("in", left, right);
-		}
-		return left;
+		return parseExpr(stop);
 	}
 
 	function parseMacroQuoteIfPayload(stop:() -> Bool):HxExpr {
@@ -3148,7 +2929,7 @@ class HxParser {
 			case TOther(c):
 				switch (c) {
 					case "=".code:
-						nextIsOther("=".code) ? {op: "==", len: 2} : {op: "=", len: 1};
+						nextIsOther("=".code) ? {op: "==", len: 2} : nextIsOther(">".code) ? {op: "=>", len: 2} : {op: "=", len: 1};
 					case "!".code:
 						nextIsOther("=".code) ? {op: "!=", len: 2} : null;
 					case "<".code:
@@ -3210,6 +2991,35 @@ class HxParser {
 			bump();
 	}
 
+	/** Assignment permission covers its RHS without widening ordinary binary operands. */
+	function binaryExpression(op:String, left:HxExpr, right:HxExpr):HxExpr {
+		return switch left {
+			case EPrivateAccess(inner, position) if (isAssignmentBinop(op)):
+				EPrivateAccess(binaryExpression(op, inner, right), position);
+			case _: EBinop(op, left, right);
+		};
+	}
+
+	/** Preserve assignment precedence through source permission wrappers. */
+	function isAssignmentExpression(expression:HxExpr):Bool {
+		return switch expression {
+			case EPrivateAccess(inner, _): isAssignmentExpression(inner);
+			case EBinop(op, _, _): isAssignmentBinop(op) || op == "=>";
+			case _: false;
+		};
+	}
+
+	/** Attach the conditional to the assignment value, including nested permissions. */
+	function ternaryExpression(condition:HxExpr, whenTrue:HxExpr, whenFalse:HxExpr):HxExpr {
+		return switch condition {
+			case EBinop(op, left, right) if (isAssignmentBinop(op) || op == "=>"):
+				EBinop(op, left, ETernary(right, whenTrue, whenFalse));
+			case EPrivateAccess(inner, position) if (isAssignmentExpression(inner)):
+				EPrivateAccess(ternaryExpression(inner, whenTrue, whenFalse), position);
+			case _: ETernary(condition, whenTrue, whenFalse);
+		};
+	}
+
 	function parseBinaryExpr(minPrec:Int, stop:() -> Bool):HxExpr {
 		var left = parseUnaryExpr(stop);
 
@@ -3229,7 +3039,7 @@ class HxParser {
 			consumeBinop(peekedOp.len);
 			final nextMin = isRightAssoc(op) ? prec : (prec + 1);
 			final right = parseBinaryExpr(nextMin, stop);
-			left = EBinop(op, left, right);
+			left = binaryExpression(op, left, right);
 		}
 
 		return left;
@@ -3270,7 +3080,7 @@ class HxParser {
 		//     `try { <stmts> } catch(e:Dynamic) { <stmts> }`
 		// - Does not yet support `try expr catch ...` or multiple catches with advanced patterns.
 		if (!stop() && cur.kind.match(TKeyword(KTry))) {
-			return parseTryCatchExpr(stop);
+			return parseSourceTryExpr(stop);
 		}
 
 		// Stage 3 expansion: `switch (...) { ... }` as an *expression*.
@@ -3299,12 +3109,7 @@ class HxParser {
 			// Precedence fix (bring-up):
 			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
 			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.
-			e = switch (e) {
-				case EBinop(op, left, right) if (isAssignmentBinop(op)):
-					EBinop(op, left, ETernary(right, thenExpr, elseExpr));
-				case _:
-					ETernary(e, thenExpr, elseExpr);
-			}
+			e = ternaryExpression(e, thenExpr, elseExpr);
 		}
 		if (!stop() && cur.kind.match(TColon)) {
 			bump();
@@ -3315,68 +3120,162 @@ class HxParser {
 		return e;
 	}
 
+	/** Preserve authored branches, including a missing else and each original value group. */
 	function parseIfExpr(stop:() -> Bool):HxExpr {
-		// Stage 3 expansion: `if (cond) thenExpr else elseExpr` as an *expression*.
-		//
-		// Why
-		// - Upstream harness code uses `static final X = if (...) ... else ...;` patterns
-		//   (notably in runci/Config.hx and runci/System.hx).
-		// - The same shape can also appear where parsing is already inside unary/binary
-		//   precedence handling (for example `x + if (...) a else b`). Handling it at the
-		//   unary boundary prevents fallback to `EUnsupported("if")`.
-		//
-		// Bring-up scope
-		// - Branches are expressions (not statement blocks).
-		// - Missing `else` is treated as unsupported.
-		bump(); // `if`
-		expect(TLParen, "'('");
-		final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-		// Best-effort resync to `)`.
-		if (!cur.kind.match(TRParen)) {
-			while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-				bump();
-		}
-		if (cur.kind.match(TRParen))
-			bump();
-
-		final thenExpr = parseExpr(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof));
+		final position = cur.getPos();
+		bump();
+		expect(TLParen, "'(' after if");
+		final condition = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+		expect(TRParen, "')' after if condition");
+		if (stop()
+			|| cur.kind.match(TKeyword(KElse))
+			|| cur.kind.match(TSemicolon)
+			|| cur.kind.match(TRBrace)
+			|| cur.kind.match(TEof))
+			fail("Expected expression after if condition");
+		final whenTrue = parseExpr(() -> stop() || cur.kind.match(TKeyword(KElse)) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
+			|| cur.kind.match(TEof));
 		if (cur.kind.match(TSemicolon) && peekKind().match(TKeyword(KElse)))
 			bump();
-		if (!acceptKeyword(KElse))
-			return EUnsupported("if_missing_else");
-		final elseExpr = parseExpr(stop);
-		return ETernary(cond, thenExpr, elseExpr);
+		var whenFalse:Null<HxExpr> = null;
+		if (acceptKeyword(KElse)) {
+			if (stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof))
+				fail("Expected expression after else");
+			whenFalse = parseExpr(stop);
+		}
+		return ESourceIf(condition, whenTrue, whenFalse, position);
 	}
 
+	/** Keep the thrown operand inside its surrounding branch or argument boundary. */
+	function parseThrowExpr(stop:() -> Bool):HxExpr {
+		final position = cur.getPos();
+		bump();
+		if (stop()
+			|| cur.kind.match(TSemicolon)
+			|| cur.kind.match(TRBrace)
+			|| cur.kind.match(TEof)
+			|| cur.kind.match(TKeyword(KElse)))
+			fail("Expected thrown expression");
+		final value = parseExpr(() -> stop()
+			|| cur.kind.match(TSemicolon)
+			|| cur.kind.match(TRBrace)
+			|| cur.kind.match(TEof)
+			|| cur.kind.match(TKeyword(KElse | KCase | KDefault))
+			|| cur.kind.match(TComma)
+			|| cur.kind.match(TRParen));
+		return EThrow(value, position);
+	}
+
+	/** Both function spellings retain the same written parameters and ordered defaults. */
+	function parseSourceFunctionParameters():{
+		arguments:Array<String>,
+		parameters:Array<HxLambdaSignature.HxLambdaParameter>,
+		defaults:Array<HxExpr>
+	} {
+		expect(TLParen, "'('");
+		final args = new Array<String>();
+		final parameters = new Array<HxLambdaSignature.HxLambdaParameter>();
+		final defaults = new Array<HxExpr>();
+		if (!cur.kind.match(TRParen)) {
+			while (true) {
+				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+				if (isRest) {
+					bump();
+					bump();
+					bump();
+				}
+				final isOptional = acceptOtherChar("?");
+				args.push(readIdent("argument name"));
+				var typeHint = "";
+				if (cur.kind.match(TColon)) {
+					bump();
+					typeHint = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
+				}
+				final hasDefault = acceptOtherChar("=");
+				if (hasDefault)
+					defaults.push(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
+				parameters.push({
+					typeHint: typeHint.length == 0 ? null : typeHint,
+					isOptional: isOptional,
+					isRest: isRest,
+					hasDefault: hasDefault
+				});
+				if (!cur.kind.match(TComma))
+					break;
+				bump();
+			}
+		}
+		expect(TRParen, "')'");
+		return {arguments: args, parameters: parameters, defaults: defaults};
+	}
+
+	/** Authored arrows own a function scope; transport lambdas are created only by lowering. */
 	function tryReadArrowLambdaExpr(stop:() -> Bool):Null<HxExpr> {
 		if (stop())
 			return null;
+		final position = cur.getPos();
+		var inputs:{arguments:Array<String>, parameters:Array<HxLambdaSignature.HxLambdaParameter>, defaults:Array<HxExpr>};
 		switch (cur.kind) {
-			case TLParen:
-				final parenLambda = tryReadParenthesizedLambdaArgs();
-				if (parenLambda != null) {
-					consumeUntilIndex(parenLambda.endIndex);
-					final bodyLine = cur.getPos().getLine();
-					final body = parseExpr(stop);
-					final markedBody = markTraceExpressionLine(body, bodyLine);
-					final lambdaBody = parenLambda.defaultedArgCount == 0 ? markedBody : applyDefaultedLambdaArgs(markedBody, parenLambda.defaultedArgs);
-					final lambda:HxExpr = ELambda(parenLambda.args, lambdaBody);
-					return parenLambda.optionalArgs.length == 0 ? lambda : ECall(EIdent("__hxhx_optional_lambda"),
-						[lambda, EArrayDecl([for (arg in parenLambda.optionalArgs) EString(arg)])]);
-				}
-			case TIdent(name):
-				if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
-					// Consume `name ->`.
-					bump(); // ident
-					bump(); // '-'
-					bump(); // '>'
-					final bodyLine = cur.getPos().getLine();
-					final body = parseExpr(stop);
-					return ELambda([name], markTraceExpressionLine(body, bodyLine));
-				}
+			case TLParen if (parenthesizedArrowAhead()):
+				inputs = parseSourceFunctionParameters();
+			case TIdent(name) if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))):
+				bump();
+				inputs = {
+					arguments: [name],
+					parameters: [
+						{
+							typeHint: null,
+							isOptional: false,
+							isRest: false,
+							hasDefault: false
+						}
+					],
+					defaults: []
+				};
 			case _:
+				return null;
 		}
-		return null;
+		for (parameter in inputs.parameters)
+			if (parameter.isRest)
+				fail("Arrow rest parameters require a haxe.Rest<T> annotation");
+		if (!acceptOtherChar("-") || !acceptOtherChar(">"))
+			fail("Expected '->' after arrow parameters");
+		final bodyLine = cur.getPos().getLine();
+		final body = parseAuthoredControl(() -> parseExpr(stop));
+		final facts = new HxSourceFunction({
+			kind: Arrow,
+			placement: Value,
+			arguments: inputs.arguments,
+			signature: new HxLambdaSignature(inputs.parameters, null)
+		});
+		return ESourceFunction(facts, markTraceExpressionLine(body, bodyLine), inputs.defaults, position);
+	}
+
+	/** Inspect balanced tokens without consuming parser state or splitting parameter text. */
+	function parenthesizedArrowAhead():Bool {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		function next():HxTokenKind {
+			return index < pending.length ? pending[index++].kind : lookahead.next().kind;
+		}
+		var depth = 0;
+		while (true) {
+			switch next() {
+				case TLParen:
+					depth++;
+				case TRParen:
+					depth--;
+					if (depth == 0)
+						return next().match(TOther("-".code)) && next().match(TOther(">".code));
+				case TEof:
+					return false;
+				case _:
+			}
+		}
 	}
 
 	static function markTraceExpressionLine(expr:HxExpr, line:Int):HxExpr {
@@ -3388,281 +3287,57 @@ class HxParser {
 		};
 	}
 
-	function tryReadParenthesizedLambdaArgs():Null<{
-		args:Array<String>,
-		optionalArgs:Array<String>,
-		defaultedArgs:haxe.ds.StringMap<HxExpr>,
-		defaultedArgCount:Int,
-		endIndex:Int
-	}> {
-		if (!cur.kind.match(TLParen))
-			return null;
-		final start = currentIndex();
-		if (start < 0 || start >= source.length || source.charCodeAt(start) != "(".code)
-			return null;
-		var i = start + 1;
-		var depth = 1;
-		while (i < source.length && depth > 0) {
-			final c = source.charCodeAt(i);
-			switch (c) {
-				case "(".code:
-					// Keep this narrow: parenthesized lambda params stay flat.
-					return null;
-				case ")".code:
-					depth -= 1;
-					if (depth == 0)
-						break;
-				case _:
-			}
-			i += 1;
-		}
-		if (depth != 0)
-			return null;
-		final closeIndex = i;
-		var j = closeIndex + 1;
-		while (j < source.length) {
-			final code = source.charCodeAt(j);
-			if (code == " ".code || code == "\t".code || code == "\n".code || code == "\r".code) {
-				j += 1;
-				continue;
-			}
-			break;
-		}
-		if (j + 1 >= source.length || source.charCodeAt(j) != "-".code || source.charCodeAt(j + 1) != ">".code)
-			return null;
-
-		final rawArgs = StringTools.trim(source.substring(start + 1, closeIndex));
-		final args = new Array<String>();
-		final optionalArgs = new Array<String>();
-		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
-		var defaultedArgCount = 0;
-		if (rawArgs.length > 0) {
-			for (part in rawArgs.split(",")) {
-				final arg = parseLambdaArgInfo(part);
-				if (arg == null)
-					return null;
-				args.push(arg.name);
-				if (arg.isOptional && optionalArgs.indexOf(arg.name) < 0)
-					optionalArgs.push(arg.name);
-				if (arg.defaultExpr != null) {
-					if (optionalArgs.indexOf(arg.name) < 0)
-						optionalArgs.push(arg.name);
-					if (!defaultedArgs.exists(arg.name))
-						defaultedArgCount++;
-					defaultedArgs.set(arg.name, arg.defaultExpr);
-				}
-			}
-		}
-		return {
-			args: args,
-			optionalArgs: optionalArgs,
-			defaultedArgs: defaultedArgs,
-			defaultedArgCount: defaultedArgCount,
-			endIndex: j + 2
-		};
-	}
-
-	function parseLambdaArgInfo(raw:String):Null<{name:String, isOptional:Bool, defaultExpr:Null<HxExpr>}> {
-		var arg = StringTools.trim(raw == null ? "" : raw);
-		if (arg.length == 0)
-			return null;
-		var isOptional = false;
-		if (StringTools.startsWith(arg, "?")) {
-			isOptional = true;
-			arg = StringTools.trim(arg.substr(1));
-		}
-		final end = lambdaArgNameEnd(arg);
-		if (end <= 0)
-			return null;
-		final name = StringTools.trim(arg.substr(0, end));
-		if (!isValidLambdaArgName(name))
-			return null;
-		final eq = arg.indexOf("=");
-		final defaultExpr = if (eq >= 0) {
-			final defaultText = StringTools.trim(arg.substr(eq + 1));
-			defaultText.length == 0 ? null : HxParser.parseExprText(defaultText);
-		} else {
-			null;
-		};
-		return {name: name, isOptional: isOptional, defaultExpr: defaultExpr};
-	}
-
-	function parseLambdaArgName(raw:String):Null<String> {
-		var arg = StringTools.trim(raw == null ? "" : raw);
-		if (arg.length == 0)
-			return null;
-		if (StringTools.startsWith(arg, "?"))
-			arg = StringTools.trim(arg.substr(1));
-		final end = lambdaArgNameEnd(arg);
-		if (end <= 0)
-			return null;
-		final name = StringTools.trim(arg.substr(0, end));
-		return isValidLambdaArgName(name) ? name : null;
-	}
-
-	function lambdaArgNameEnd(arg:String):Int {
-		for (i in 0...arg.length) {
-			switch (arg.charCodeAt(i)) {
-				case ":".code | "=".code | " ".code | "\t".code | "\n".code | "\r".code:
-					return i;
-				case _:
-			}
-		}
-		return arg.length;
-	}
-
-	function applyDefaultedLambdaArgs(expr:HxExpr, defaultedArgs:haxe.ds.StringMap<HxExpr>):HxExpr {
-		return switch (expr) {
-			case EIdent(name) if (defaultedArgs.exists(name)):
-				ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));
-			case EUnop(op, fixity, inner):
-				EUnop(op, fixity, applyDefaultedLambdaArgs(inner, defaultedArgs));
-			case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
-				EBinop(op, left, applyDefaultedLambdaArgs(right, defaultedArgs));
-			case EBinop(op, left, right):
-				EBinop(op, applyDefaultedLambdaArgs(left, defaultedArgs), applyDefaultedLambdaArgs(right, defaultedArgs));
-			case ETernary(cond, thenExpr, elseExpr):
-				ETernary(applyDefaultedLambdaArgs(cond, defaultedArgs), applyDefaultedLambdaArgs(thenExpr, defaultedArgs),
-					applyDefaultedLambdaArgs(elseExpr, defaultedArgs));
-			case ECall(callee, callArgs):
-				ECall(applyDefaultedLambdaArgs(callee, defaultedArgs), [for (arg in callArgs) applyDefaultedLambdaArgs(arg, defaultedArgs)]);
-			case EReturn(value):
-				EReturn(value == null ? null : applyDefaultedLambdaArgs(value, defaultedArgs));
-			case EWhile(condition, body, bodyIsBlock, position):
-				EWhile(applyDefaultedLambdaArgs(condition, defaultedArgs), [for (entry in body) applyDefaultedLambdaArgs(entry, defaultedArgs)], bodyIsBlock,
-					position);
-			case EField(receiver, field):
-				EField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
-			case ENullSafeField(receiver, field):
-				ENullSafeField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
-			case EArrayAccess(receiver, index):
-				EArrayAccess(applyDefaultedLambdaArgs(receiver, defaultedArgs), applyDefaultedLambdaArgs(index, defaultedArgs));
-			case EArrayDecl(items):
-				EArrayDecl([for (item in items) applyDefaultedLambdaArgs(item, defaultedArgs)]);
-			case EAnon(fieldNames, fieldValues):
-				EAnon(fieldNames, [for (value in fieldValues) applyDefaultedLambdaArgs(value, defaultedArgs)]);
-			case ELambda(_, _):
-				expr;
-			case ECast(inner, typeHint):
-				ECast(applyDefaultedLambdaArgs(inner, defaultedArgs), typeHint);
-			case EUntyped(inner):
-				EUntyped(applyDefaultedLambdaArgs(inner, defaultedArgs));
-			case _:
-				expr;
-		};
-	}
-
-	function isValidLambdaArgName(name:String):Bool {
-		if (name == null || name.length == 0)
-			return false;
-		final first = name.charCodeAt(0);
-		final firstOk = (first >= "A".code && first <= "Z".code) || (first >= "a".code && first <= "z".code) || first == "_".code;
-		if (!firstOk)
-			return false;
-		for (i in 1...name.length) {
-			final c = name.charCodeAt(i);
-			final ok = (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || (c >= "0".code && c <= "9".code) || c == "_".code;
-			if (!ok)
-				return false;
-		}
-		return true;
-	}
-
-	function consumeUntilIndex(target:Int):Void {
-		while (!cur.kind.match(TEof) && currentIndex() < target)
-			bump();
-	}
-
+	/** Preserve switch arms as authored expression blocks, without adding return or loop helper functions. */
 	function parseSwitchExpr(stop:() -> Bool):HxExpr {
-		// `switch (<expr>) { case <pat>: <expr>; ... }` or `switch <expr> { ... }`
-		//
-		// Bring-up semantics:
-		// - Parse a small, structured subset so Stage3’s bootstrap emitter can execute
-		//   harness-style programs (notably upstream RunCi).
-		// - Keep parsing resilient: if we encounter unexpected shapes, we still consume
-		//   balanced braces so later statements remain parseable.
 		if (!cur.kind.match(TKeyword(KSwitch)))
 			return EUnsupported("switch");
 
 		bump(); // `switch`
 
-		// Upstream-style code commonly omits the parentheses:
-		//   switch Sys.systemName() { ... }
-		// Haxe accepts this, so Stage3 bring-up must too.
-		var scrutinee:HxExpr;
-		if (cur.kind.match(TLParen)) {
-			bump(); // '('
-			scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			// Best-effort resync to `)`.
-			if (!cur.kind.match(TRParen)) {
-				while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-					bump();
-			}
-			if (cur.kind.match(TRParen))
-				bump();
-		} else {
-			// Parse until the opening brace starts the switch block.
-			scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
-		}
+		// Parentheses belong to the operand expression and may have a field, call,
+		// or index suffix. Use the same complete grammar as statement switches.
+		final scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
 
 		// `{ <cases> }`
-		if (!cur.kind.match(TLBrace)) {
-			// Nothing more to consume deterministically.
-			return ESwitch(scrutinee, [], []);
-		}
-		bump(); // '{'
+		expect(TLBrace, "'{' before switch arms");
 
 		final patterns = new Array<HxSwitchPattern>();
 		final exprs = new Array<HxExpr>();
-		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !stop()) {
+		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
 				parseSwitchPattern();
 			} else if (acceptKeyword(KDefault)) {
 				// Haxe: `default:` (no pattern). Bring-up: treat as wildcard.
 				PWildcard;
 			} else {
-				// Bring-up: skip unknown tokens until we find `case` or `}`.
-				bump();
-				continue;
+				fail("Expected switch case or default");
+				PWildcard;
 			}
 			expect(TColon, "':'");
-			final caseStmts = new Array<HxStmt>();
+			final armPosition = cur.getPos();
+			final armExpressions = new Array<HxExpr>();
 			while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))) {
-				final braceStartsAnon = cur.kind.match(TLBrace)
-					&& ((peekKind().match(TIdent(_)) || peekKind().match(TString(_, _))) && peekKind2().match(TColon));
-				if (braceStartsAnon) {
-					final exprPos = cur.pos;
-					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
-						|| cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)));
-					if (cur.kind.match(TSemicolon))
-						bump();
-					caseStmts.push(SExpr(expr, exprPos));
-				} else {
-					parseStmtInto(caseStmts,
-						() -> cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)));
+				if (cur.kind.match(TSemicolon)) {
+					bump();
+					continue;
 				}
+				final start = currentIndex();
+				final expression = parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
+					|| cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault))));
+				if (currentIndex() == start)
+					fail("Expected switch arm expression");
+				armExpressions.push(expression);
+				if (cur.kind.match(TSemicolon))
+					bump();
+				else if (!cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))
+					&& !endsWithSourceBrace(expression))
+					fail("Expected ';' after switch arm expression");
 			}
 			patterns.push(pat);
-			exprs.push(switchCaseExprFromStmts(caseStmts));
+			exprs.push(ESourceGroup(armExpressions, armPosition));
 		}
-		if (cur.kind.match(TRBrace))
-			bump();
-
+		expect(TRBrace, "'}' after switch arms");
 		return ESwitch(scrutinee, patterns, exprs);
-	}
-
-	function switchCaseExprFromStmts(stmts:Array<HxStmt>):HxExpr {
-		// Expression-switch branches may contain setup statements before the final value:
-		//
-		//   case pattern:
-		//     var detail = compute();
-		//     trace(detail);
-		//     false;
-		//
-		// Reuse the local-function sequence lowering by rewriting a trailing expression
-		// statement into `return expr`; otherwise a final `false;` would be treated as a
-		// side-effect-only statement and the branch value would become `null`.
-		return blockExprFromStmts(stmts);
 	}
 
 	function blockExprFromStmts(stmts:Array<HxStmt>):HxExpr {
@@ -3683,11 +3358,11 @@ class HxParser {
 					final lastInner = rewrittenInner.length - 1;
 					rewrittenInner[lastInner] = markTailValue(rewrittenInner[lastInner]);
 					SBlock(rewrittenInner, pos);
-				case SSwitch(scrutinee, patterns, bodies, pos):
+				case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 					final rewrittenBodies = new Array<HxStmt>();
 					for (body in bodies)
 						rewrittenBodies.push(markTailValue(body));
-					SSwitch(scrutinee, patterns, rewrittenBodies, pos);
+					SSwitch(scrutinee, patterns, rewrittenBodies, pos, exhaustive);
 				case other:
 					other;
 			}
@@ -3699,284 +3374,57 @@ class HxParser {
 		return lambdaBodyExprFromStmts(rewritten);
 	}
 
-	function parseTryCatchExpr(stop:() -> Bool):HxExpr {
-		if (structuralTryCatch)
-			return parseStructuralTryCatchExpr(stop);
-
-		// `try { ... } catch(name[:Type]) { ... } ...`
-		//
-		// IMPORTANT (OCaml bootstrap constraints)
-		// - We intentionally do **not** parse try/catch blocks into `HxStmt` lists yet.
-		// - Having `HxExpr` reference `HxStmt` creates an OCaml module dependency cycle
-		//   in the Stage3 bootstrap snapshot (`HxStmt` already references `HxExpr`).
-		//
-		// Instead, we capture a canonical, token-based rendering of the entire expression.
-		// This keeps Stage3 parsing deterministic and avoids `EUnsupported("try")` drift in Gate2
-		// diagnostics, while deferring real semantics to later stages.
-
-		if (!cur.kind.match(TKeyword(KTry)))
-			return EUnsupported("try");
-
-		final raw = new StringBuf();
-
-		inline function tokText():String {
-			return switch (cur.kind) {
-				case TIdent(name):
-					name;
-				case TKeyword(k):
-					final text = keywordText(k);
-					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
-				case TString(s, _):
-					"\"" + s + "\"";
-				case TInt(v):
-					cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v);
-				case TFloat(v):
-					Std.string(v);
-				case TRegex(pattern, flags):
-					"~/" + pattern + "/" + flags;
-				case TLParen:
-					"(";
-				case TRParen:
-					")";
-				case TLBrace:
-					"{";
-				case TRBrace:
-					"}";
-				case TSemicolon:
-					";";
-				case TColon:
-					":";
-				case TDot:
-					".";
-				case TComma:
-					",";
-				case TOther(c):
-					String.fromCharCode(c);
-				case TEof:
-					"";
-			};
-		}
-
-		function consumeBalancedBraces():Void {
-			expect(TLBrace, "'{'");
-			raw.add("{");
-			var depth = 1;
-			// IMPORTANT
-			// - Do not use the outer `stop()` predicate here.
-			// - Callers often pass `stop` functions that return true on `}` (statement boundaries),
-			//   which would prematurely terminate brace consumption inside `try { ... }`.
-			while (depth > 0) {
-				switch (cur.kind) {
-					case TEof:
-						break;
-					case TLBrace:
-						raw.add("{");
-						bump();
-						depth++;
-					case TRBrace:
-						raw.add("}");
-						bump();
-						depth--;
-					case _:
-						raw.add(tokText());
-						bump();
-				}
-			}
-		}
-
-		function consumeBalancedParens():Void {
-			expect(TLParen, "'('");
-			raw.add("(");
-			var depth = 1;
-			// Same rationale as `consumeBalancedBraces`: ignore the outer `stop()` predicate
-			// so we can consume nested parentheses deterministically.
-			while (depth > 0) {
-				switch (cur.kind) {
-					case TEof:
-						break;
-					case TLParen:
-						raw.add("(");
-						bump();
-						depth++;
-					case TRParen:
-						raw.add(")");
-						bump();
-						depth--;
-					case _:
-						raw.add(tokText());
-						bump();
-				}
-			}
-		}
-
-		function consumeExpressionBlock(untilCatch:Bool):Void {
-			raw.add("{");
-			var parenDepth = 0;
-			var braceDepth = 0;
-			var bracketDepth = 0;
-			while (!cur.kind.match(TEof)) {
-				if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
-					if (untilCatch && cur.kind.match(TKeyword(KCatch)))
-						break;
-					if (!untilCatch && stop())
-						break;
-				}
-				switch (cur.kind) {
-					case TLParen:
-						parenDepth++;
-					case TRParen:
-						if (parenDepth > 0)
-							parenDepth--;
-					case TLBrace:
-						braceDepth++;
-					case TRBrace:
-						if (braceDepth > 0)
-							braceDepth--;
-					case TOther(c) if (c == "[".code):
-						bracketDepth++;
-					case TOther(c) if (c == "]".code):
-						if (bracketDepth > 0)
-							bracketDepth--;
-					case _:
-				}
-				raw.add(tokText());
-				bump();
-			}
-			raw.add(";}");
-		}
-
-		// `try`
-		raw.add("try");
-		bump();
-
-		// `{ ... }` or single-expression `try expr catch(...) expr`.
-		if (cur.kind.match(TLBrace)) {
-			consumeBalancedBraces();
-		} else {
-			consumeExpressionBlock(true);
-		}
-
-		// One or more `catch (...) { ... }`.
-		while (!stop() && cur.kind.match(TKeyword(KCatch))) {
-			raw.add("catch");
-			bump();
-			consumeBalancedParens();
-			if (cur.kind.match(TLBrace)) {
-				consumeBalancedBraces();
-			} else {
-				consumeExpressionBlock(false);
-			}
-		}
-
-		return ETryCatchRaw(raw.toString());
-	}
-
-	/** Lower expression-level try/catch to the shared expression-only sentinel. **/
-	function parseStructuralTryCatchExpr(stop:() -> Bool):HxExpr {
-		if (!cur.kind.match(TKeyword(KTry)))
-			return EUnsupported("try");
-		bump();
-
-		final tryExpression = if (cur.kind.match(TLBrace)) {
-			bump();
-			blockExprFromStmts(parseFunctionBodyStatements());
-		} else {
-			parseExpr(() -> cur.kind.match(TKeyword(KCatch)) || stop());
-		};
-
-		final catchEntries = new Array<HxExpr>();
+	/** Preserve handler order and lexical bodies without introducing helper functions. */
+	function parseSourceTryExpr(stop:() -> Bool):HxExpr {
+		final position = cur.getPos();
+		expect(TKeyword(KTry), "'try'");
+		if (stop() || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCatch)))
+			fail("Expected try body");
+		final bodies = [
+			parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TKeyword(KCatch)) || stop()))
+		];
+		final catches = new Array<HxSourceCatch>();
 		while (cur.kind.match(TKeyword(KCatch))) {
+			final catchPosition = cur.getPos();
 			bump();
-			var catchName = "e";
-			var catchTypeHint = "";
-			if (cur.kind.match(TLParen)) {
+			expect(TLParen, "'(' after catch");
+			final name = readIdent("catch variable");
+			var hint = "";
+			if (cur.kind.match(TColon)) {
 				bump();
-				switch (cur.kind) {
-					case TIdent(_):
-						catchName = readIdent("catch variable name");
-					case _:
-				}
-				if (cur.kind.match(TColon)) {
-					bump();
-					catchTypeHint = readTypeHintText(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				}
-				while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-					bump();
-				if (cur.kind.match(TRParen))
-					bump();
+				hint = readTypeHintText(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				if (StringTools.trim(hint).length == 0)
+					fail("Expected catch type after ':'");
 			}
-
-			final catchExpression = if (cur.kind.match(TLBrace)) {
-				bump();
-				blockExprFromStmts(parseFunctionBodyStatements());
-			} else {
-				parseExpr(stop);
-			};
-			catchEntries.push(EArrayDecl([
-				EString(catchName),
-				EString(catchTypeHint),
-				ELambda([catchName], catchExpression)
-			]));
+			expect(TRParen, "')' after catch variable");
+			if (stop() || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCatch)))
+				fail("Expected catch body");
+			catches.push(new HxSourceCatch(name, hint, catchPosition));
+			bodies.push(parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TKeyword(KCatch)) || stop())));
 		}
-
-		if (catchEntries.length == 0)
-			return EUnsupported("try_without_catch");
-		return ECall(EIdent("__hxhx_try"), [ELambda([], tryExpression), EArrayDecl(catchEntries), ENull]);
+		if (catches.length == 0)
+			fail("Expected at least one catch after try");
+		return ESourceTry(catches, bodies, position);
 	}
 
-	function parseForExprRaw():HxExpr {
-		// Expression-position `for` is most commonly seen inside compile-time macro probes,
-		// e.g. `HelperMacros.typeError(for (...) { })`. We do not model statement ASTs inside
-		// HxExpr yet, so consume the full construct and leave a targeted placeholder for the
-		// macro-call lowering seam instead of letting the body parser drift.
-		if (!cur.kind.match(TKeyword(KFor)))
-			return EUnsupported("for_expr");
-
-		inline function isIdentKind(kind:HxTokenKind):Bool {
-			return switch (kind) {
-				case TIdent(_): true;
-				case _: false;
-			};
-		}
-
-		if (peekKind().match(TLParen) && isIdentKind(peekKind2()) && peekKind3().match(TKeyword(KIn))) {
-			bump(); // `for`
-			expect(TLParen, "'('");
-			final name = readIdent("expression for-in loop variable");
-			expect(TKeyword(KIn), "'in'");
-			inline function isTripleDotStart():Bool {
-				return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
-			}
-			final startExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof) || isTripleDotStart());
-			var iterable:HxExpr = startExpr;
-			if (isTripleDotStart()) {
-				expect(TDot, "'.'");
-				expect(TDot, "'.'");
-				expect(TDot, "'.'");
-				final endExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				iterable = ERange(startExpr, endExpr);
-			}
-			expect(TRParen, "')'");
-			final body = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
-				|| cur.kind.match(TEof));
-			return ECall(EIdent("__hxhx_for_in"), [iterable, ELambda([name], body), ENull]);
-		}
-
-		final start = currentIndex();
-		bump(); // `for`
-
-		if (cur.kind.match(TLParen))
-			consumeBalancedParensForExpr();
-
-		if (cur.kind.match(TLBrace)) {
-			consumeBalancedBracesForExpr();
-		} else {
-			while (!cur.kind.match(TEof) && !cur.kind.match(TComma) && !cur.kind.match(TRParen) && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace))
-				bump();
-		}
-
-		final raw = StringTools.trim(sliceSource(start, currentIndex()));
-		return EUnsupported("for_expr:" + raw);
+	/** Retain the authored binding, iterable, and body without changing return ownership. */
+	function parseSourceForExpr(stop:() -> Bool):HxExpr {
+		final position = cur.getPos();
+		expect(TKeyword(KFor), "'for'");
+		expect(TLParen, "'(' after for");
+		final first = readIdent("for binding");
+		final binding:HxForBinding = if (cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
+			bump();
+			bump();
+			HxForBinding.KeyValue(first, readIdent("for value binding"));
+		} else HxForBinding.Value(first);
+		expect(TKeyword(KIn), "'in' after for binding");
+		final iterable = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+		expect(TRParen, "')' after for iterable");
+		if (stop() || cur.kind.match(TEof))
+			fail("Expected for body");
+		final body = parseAuthoredControl(() -> parseExpr(stop));
+		return ESourceFor(binding, iterable, body, position);
 	}
 
 	function consumeBalancedParensForExpr():Void {
@@ -4044,7 +3492,7 @@ class HxParser {
 
 			function ensureBranchReturns(s:HxStmt):HxStmt {
 				return switch (s) {
-					case SReturn(_, _) | SReturnVoid(_):
+					case SReturn(_, _) | SReturnVoid(_) | SThrow(_, _):
 						s;
 					case SExpr(e, p):
 						SReturn(e, p);
@@ -4063,7 +3511,7 @@ class HxParser {
 						} else {
 							final last = stmts[stmts.length - 1];
 							switch (last) {
-								case SReturn(_, _) | SReturnVoid(_):
+								case SReturn(_, _) | SReturnVoid(_) | SThrow(_, _):
 									s;
 								case SExpr(e, lp):
 									final copy = stmts.copy();
@@ -4337,16 +3785,28 @@ class HxParser {
 					expect(TRBrace, "'}'");
 					SBlock(ss, pos);
 				}
+			case TOther("@".code) if (peekKind().match(TColon) && peekKind2().match(TIdent("privateAccess"))):
+				// Use the expression grammar so annotated declarations retain their
+				// surrounding scope and assignment permission includes its RHS.
+				final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				if (cur.kind.match(TSemicolon))
+					bump();
+				SExpr(expr, pos);
+			case TKeyword(KUntyped):
+				// A wrapped block can end a function without a semicolon. Recovery
+				// scanning here would consume the next declaration or statement.
+				final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				if (cur.kind.match(TSemicolon))
+					bump();
+				SExpr(expr, pos);
 			case TKeyword(KReturn):
 				bump();
 				parseReturnStmt(pos);
 			case TKeyword(KInline):
-				// Local `inline function name(...) ...` is a modifier on a local helper.
-				// Stage3 does not model inlining here; it lowers to the same lambda binding
-				// as a normal local function so the body remains executable.
+				// Keep the written inline flag on the authored named function.
 				bump();
 				if (cur.kind.match(TKeyword(KFunction))) {
-					parseLocalFunctionStmt(pos);
+					parseLocalFunctionStmt(pos, true);
 				} else {
 					SExpr(EUnsupported("inline"), pos);
 				}
@@ -4398,19 +3858,9 @@ class HxParser {
 				// Upstream-style code commonly omits the parentheses:
 				//   switch Sys.systemName() { ... }
 				// Haxe accepts this, so Stage3 bring-up must too.
-				final scrutinee = if (cur.kind.match(TLParen)) {
-					bump(); // '('
-					final e = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-					if (!cur.kind.match(TRParen)) {
-						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-							bump();
-					}
-					if (cur.kind.match(TRParen))
-						bump();
-					e;
-				} else {
-					parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
-				};
+				// Use the complete expression grammar: a parenthesized receiver can have
+				// a field/call suffix before the switch's opening brace.
+				final scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
 
 				if (!cur.kind.match(TLBrace)) {
 					syncToStmtEnd();
@@ -4452,7 +3902,7 @@ class HxParser {
 				//
 				// Bring-up semantics
 				// - We ignore metadata and parse the following statement/expression.
-				while (cur.kind.match(TOther("@".code))) {
+				if (cur.kind.match(TOther("@".code))) {
 					bump();
 					// Optional `:` in `@:meta`.
 					if (cur.kind.match(TColon))
@@ -4730,6 +4180,12 @@ class HxParser {
 		}
 	}
 
+	/**
+		Recover statements and leave their closing brace as the current token.
+
+		Expression-block callers need that token's position before advancing past
+		comments. Standalone body recovery discards the parser after this call.
+	**/
 	function parseFunctionBodyStatementsBestEffort(wrapperCloseOnly:Bool = true):Array<HxStmt> {
 		// Like `parseFunctionBodyStatements`, but never throws.
 		//
@@ -4788,7 +4244,6 @@ class HxParser {
 					// Nested block expressions are parsed from the real source stream, not a synthetic
 					// wrapper, so their close brace is always a valid boundary for this helper.
 					if (isWrapperCloseBrace()) {
-						bump();
 						return out;
 					}
 					// Stray brace: consume it and continue so we don't silently truncate the body.
@@ -4872,65 +4327,10 @@ class HxParser {
 		}
 		// Generic function declarations can carry a type-parameter group immediately after the
 		// function name, e.g. `static function coalesce<T>(left:T, right:T):T;`.
-		final functionTypeMetadata = if (isOtherChar("<")) {
-			final genericStart = currentIndex();
-			readTypeParameterNamesFromCurrentAngles();
-			HxFunctionTypeParamMetadata.fromGenericText(sliceSource(genericStart, currentIndex()));
-		} else [];
-		expect(TLParen, "'('");
-
+		final functionTypeMetadata = HxFunctionTypeParamMetadata.fromParameters(new HxTypedefParser(this).parameters(), source);
 		final args = new Array<HxFunctionArg>();
-		if (!cur.kind.match(TRParen)) {
-			while (true) {
-				final argumentMetadata = new Array<String>();
-				while (isOtherChar("@"))
-					argumentMetadata.push(parseMetadataText());
-				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
-				if (isRest) {
-					// Rest argument: `...name:Type`
-					//
-					// Stage3 bring-up:
-					// - We lower rest args to a single `Array<T>` parameter.
-					// - Call sites are responsible for packing trailing arguments into an array.
-					bump();
-					bump();
-					bump();
-				}
-
-				var isOptional = acceptOtherChar("?");
-				final argName = readIdent("argument name");
-				var argType = "";
-				var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
-				var defaultValueText = "";
-
-				if (cur.kind.match(TColon)) {
-					bump();
-					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
-				}
-
-				if (acceptOtherChar("=")) {
-					final defaultStart = currentIndex();
-					defaultValue = HxDefaultValue.Default(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
-					defaultValueText = StringTools.trim(sliceSource(defaultStart, currentIndex()));
-				}
-
-				if (isRest) {
-					// Rest args are always omittable at call sites. Represent them as an `Array<T>`
-					// so later stages can use array intrinsics (`concat`, `join`, ...) during bring-up.
-					final inner = (argType == null || StringTools.trim(argType).length == 0) ? "Dynamic" : argType;
-					argType = "Array<" + inner + ">";
-					isOptional = true;
-				}
-
-				args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest, defaultValueText, argumentMetadata));
-				if (cur.kind.match(TComma)) {
-					bump();
-					continue;
-				}
-				break;
-			}
-		}
-		expect(TRParen, "')'");
+		for (argument in new HxFunctionSyntaxParser(this).readParenthesizedArguments())
+			args.push(HxFunctionSyntaxParser.methodArgument(argument.declaration));
 
 		var returnType = "";
 		if (cur.kind.match(TColon)) {
@@ -4959,16 +4359,16 @@ class HxParser {
 			case _:
 				hasBody = true;
 				// Expression-bodied function: `function f() return expr;`
+				final statementPosition = cur.getPos();
 				if (acceptKeyword(KReturn)) {
 					final bodyStart = currentIndex();
-					body.push(parseReturnStmt(HxPos.unknown()));
+					body.push(parseReturnStmt(statementPosition));
 					bodyText = "return " + StringTools.trim(sliceSource(bodyStart, currentIndex()));
 				} else {
 					final bodyStart = currentIndex();
-					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+					body.push(parseStmt(() -> cur.kind.match(TEof)));
 					if (cur.kind.match(TSemicolon))
 						bump();
-					body.push(SExpr(expr, HxPos.unknown()));
 					bodyText = StringTools.trim(sliceSource(bodyStart, currentIndex()));
 				}
 		}
@@ -5008,7 +4408,8 @@ class HxParser {
 		}
 	}
 
-	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
+	/** Extern members default to public; authored modifiers still override the owning class default. */
+	function parseClassMembers(defaultVisibility:HxVisibility):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		final funcs = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
 		while (true) {
@@ -5020,7 +4421,7 @@ class HxParser {
 					fail("Unexpected end of input in class body");
 				case _:
 					final memberStart = cur.getPos();
-					var visibility:HxVisibility = Private;
+					var visibility:HxVisibility = defaultVisibility;
 					var isStatic = false;
 					var sawFinal = false;
 					final metadata = new Array<String>();
@@ -5069,9 +4470,12 @@ class HxParser {
 									metadata.push("dynamic");
 									bump();
 									keep = true;
-								case TIdent(name) if (name == "extern" || name == "override"):
-									// These context-sensitive modifiers are accepted at class-member scope but
-									// are not modeled in the current bring-up AST.
+								case TIdent(name) if (name == "extern"):
+									// A member-level extern inline body must expand even on an ordinary class.
+									metadata.push("extern");
+									bump();
+									keep = true;
+								case TIdent(name) if (name == "override"):
 									bump();
 									keep = true;
 								case TIdent(name) if (name == "overload"):
@@ -5201,8 +4605,8 @@ class HxParser {
 		  - `Unknown` placeholder.
 
 		How
-		- This is still not the full grammar: we skip non-class declarations and
-		  tolerate unsupported constructs inside class bodies by skipping to the
+		- Abstract headers retain metadata and binders; their bodies and enums still
+		  use declaration enrichment. Unsupported class constructs skip to the
 		  next likely boundary.
 	**/
 	public function parseModule(?expectedMainClass:String):HxModuleDecl {
@@ -5242,28 +4646,28 @@ class HxParser {
 		//
 		// Notes
 		// - We still recognize module-level `function main(...)` for upstream unit tests.
-		// - Non-class declarations (typedef/enum/abstract/etc.) are ignored for now.
+		// - Typedefs retain structured syntax in their own declaration catalog.
 		final classes = new Array<HxClassDecl>();
+		final typedefs = new Array<HxTypedefDecl>();
 		final moduleFunctions = new Array<HxFunctionDecl>();
 		var pendingTypeMetadata = new Array<String>();
 		/**
 			Skip one non-class type declaration that `ParserStage` rebuilds through
 			its focused Haxe scanners.
 
-			`parseModule` still delegates typedef, enum, and abstract declaration
+			`parseModule` still delegates enum and abstract declaration
 			details to those scanners. It must nevertheless consume the complete
-			declaration here. Otherwise nested members such as `final locale:String`
-			inside an anonymous typedef look like module-level fields, and enum or
-			abstract methods can be merged into the following ordinary class.
+			declaration here. Otherwise enum fields or abstract methods can be
+			merged into the following ordinary class. Typedefs have their own
+			structured parser and do not enter this scanner boundary.
 		**/
 		function skipScannedTypeDeclaration():Void {
-			bump(); // `typedef`, `enum`, or `abstract`
 			var bodyDepth = 0;
 			var parenDepth = 0;
 			var bracketDepth = 0;
 			var angleDepth = 0;
 			// A generic type can contain an anonymous structure, such as `Array<{ value:Int }>`. Its
-			// field semicolons belong to that structure and must not end the surrounding typedef.
+			// field semicolons must not end the surrounding enum or abstract header.
 			var nestedTypeBraceDepth = 0;
 			while (!cur.kind.match(TEof)) {
 				if (bodyDepth > 0) {
@@ -5351,18 +4755,8 @@ class HxParser {
 				pendingTypeMetadata.push(parseMetadataText());
 				continue;
 			}
-			switch (cur.kind) {
-				case TKeyword(KFinal):
-					pendingTypeMetadata = [];
-					parseModuleField(true);
-					continue;
-				case TKeyword(KVar):
-					pendingTypeMetadata = [];
-					parseModuleField(false);
-					continue;
-				case _:
-			}
 			var moduleMemberVisibility:HxVisibility = Public;
+			var typeIsExtern = false;
 			final moduleFunctionMetadata = pendingTypeMetadata.copy();
 			var keepModuleModifiers = true;
 			while (keepModuleModifiers) {
@@ -5378,6 +4772,14 @@ class HxParser {
 				} else if (acceptKeyword(KInline)) {
 					moduleFunctionMetadata.push("inline");
 					keepModuleModifiers = true;
+				} else if (cur.kind.match(TKeyword(KFinal))
+					&& (peekKind().match(TKeyword(KClass))
+						|| peekKind().match(TKeyword(KPrivate))
+						|| peekKind().match(TIdent("extern")))) {
+					// A class modifier precedes class or another class modifier. A module final precedes its field name.
+					pendingTypeMetadata.push("final");
+					bump();
+					keepModuleModifiers = true;
 				} else {
 					switch (cur.kind) {
 						case TIdent(name) if (name == "overload"):
@@ -5385,6 +4787,8 @@ class HxParser {
 							bump();
 							keepModuleModifiers = true;
 						case TIdent(name) if (name == "extern" || name == "override"):
+							if (name == "extern")
+								typeIsExtern = true;
 							bump();
 							keepModuleModifiers = true;
 						case _:
@@ -5409,17 +4813,22 @@ class HxParser {
 					final isInterface = cur.kind.match(TIdent("interface"));
 					bump(); // 'class' / 'interface'
 					final className = readIdent("class name");
-					final classTypeParameters = readTypeParameterNamesFromCurrentAngles();
+					final classTypeParameters = new HxTypedefParser(this).parameters();
 					if (classTypeParameters.length > 0)
-						classMetadata.push("__hxhx_type_params=" + classTypeParameters.join(","));
+						classMetadata.push("__hxhx_type_params=" + classTypeParameters.map(parameter -> parameter.name).join(","));
 					var extendsPath = "";
+					final interfaceExtendsPaths = new Array<String>();
 					final implementsPaths = new Array<String>();
 					var readingImplements = false;
 					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
 						switch (cur.kind) {
 							case TIdent(name) if (name == "extends"):
 								bump();
-								extendsPath = readHeaderTypePath();
+								final parentPath = readHeaderTypePath();
+								if (isInterface)
+									interfaceExtendsPaths.push(parentPath);
+								else
+									extendsPath = parentPath;
 								readingImplements = false;
 							case TIdent(name) if (name == "implements"):
 								bump();
@@ -5440,7 +4849,7 @@ class HxParser {
 						break;
 					expect(TLBrace, "'{'");
 
-					final members = parseClassMembers();
+					final members = parseClassMembers(typeIsExtern ? Public : Private);
 					final functions = members.functions == null ? [] : members.functions;
 					final fields = members.fields == null ? [] : members.fields;
 					var hasStaticMain = false;
@@ -5452,10 +4861,28 @@ class HxParser {
 					}
 
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
-						moduleMemberVisibility));
+						moduleMemberVisibility, interfaceExtendsPaths, typeIsExtern, null, classTypeParameters));
 				// `parseClassMembers` consumes the closing `}`.
-				case TIdent("typedef") | TIdent("enum") | TIdent("abstract"):
+				case TIdent("typedef"):
+					typedefs.push(new HxTypedefParser(this).declaration(moduleMemberVisibility, pendingTypeMetadata, typeIsExtern));
 					pendingTypeMetadata = [];
+				case TIdent("abstract"):
+					// Preserve the authored header here. The temporary abstract scanner
+					// still supplies backing types and members, but cannot reconstruct
+					// metadata payloads or declaration-bound type parameter syntax.
+					final metadata = pendingTypeMetadata.copy();
+					pendingTypeMetadata = [];
+					metadata.push("__hxhx_abstract");
+					bump();
+					final name = readIdent("abstract name");
+					final parameters = new HxTypedefParser(this).parameters();
+					if (parameters.length > 0)
+						metadata.push("__hxhx_type_params=" + parameters.map(parameter -> parameter.name).join(","));
+					classes.push(new HxClassDecl(name, false, [], [], "", metadata, false, [], moduleMemberVisibility, [], typeIsExtern, null, parameters));
+					skipScannedTypeDeclaration();
+				case TIdent("enum"):
+					pendingTypeMetadata = [];
+					bump();
 					skipScannedTypeDeclaration();
 				case TKeyword(KFunction):
 					pendingTypeMetadata = [];
@@ -5489,6 +4916,12 @@ class HxParser {
 				}
 			}
 		}
+		if (chosen == null)
+			for (candidate in classes)
+				if (HxClassDecl.getMetadata(candidate).indexOf("__hxhx_abstract") < 0) {
+					chosen = candidate;
+					break;
+				}
 		if (chosen == null && classes.length > 0)
 			chosen = classes[0];
 		if (moduleFunctions.length > 0 || moduleFields.length > 0) {
@@ -5497,7 +4930,8 @@ class HxParser {
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
 				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base),
-				HxClassDecl.getVisibility(base));
+				HxClassDecl.getVisibility(base), HxClassDecl.getInterfaceExtendsPaths(base), HxClassDecl.getIsExtern(base),
+				HxClassDecl.getEnumDeclaration(base), HxClassDecl.getTypeParameters(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {
@@ -5510,7 +4944,7 @@ class HxParser {
 				classes.push(chosen);
 		}
 		final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
-		return new HxModuleDecl(packagePath, directives, mainClass, classes, false, hasToplevelMain);
+		return new HxModuleDecl(packagePath, directives, mainClass, classes, false, hasToplevelMain, typedefs);
 	}
 
 	static function isRestTypeHintText(typeHint:String):Bool {

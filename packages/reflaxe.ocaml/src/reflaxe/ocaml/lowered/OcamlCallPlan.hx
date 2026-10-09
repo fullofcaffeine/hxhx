@@ -1,6 +1,12 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.copy as genericCallCopy;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.decision as genericCallDecision;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.fingerprint as genericCallFingerprint;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.matches as genericCallMatches;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.requireCall as genericCallRequireCall;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
 import haxe.macro.Type;
@@ -13,7 +19,10 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUsePlan;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericInstanceCallTarget;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier.OcamlNullableEnumCarrierReference;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
@@ -29,6 +38,7 @@ enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
 	final DirectStaticGenericIdentity = "direct-static-generic-identity";
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
+	final GenericInstanceHaxeMethod = "generic-instance-haxe-method";
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
 	final DynamicFunctionValue = "dynamic-function-value";
@@ -124,6 +134,11 @@ typedef OcamlCallValuePlan = {
 	final conversion:OcamlCallCarrierConversion;
 	final proofId:String;
 	final proofClaim:String;
+	final ?nullableEnumCarrier:OcamlNullableEnumCarrierReference;
+	final ?callableView:OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
+
+	/** The source expression prepares this callback before the ordinary call consumes its carrier. */
+	final ?callbackArgument:OcamlCallableArgumentPlan;
 }
 
 /**
@@ -200,6 +215,11 @@ typedef OcamlCallableBoundaryPlan = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+
+	/** Count sealed from the final typed body; zero differs from an unplanned result. */
+	final ?callbackReturnCount:Int;
+
+	final ?callbackReturns:Array<OcamlCallableReturnContract.OcamlCallableReturnDecision>;
 }
 
 /** One typed call occurrence sealed against its exact caller body. */
@@ -229,6 +249,8 @@ typedef OcamlCallDecision = {
 	final ?standardArrayTarget:OcamlStandardArrayCallTarget;
 	final ?standardIMapTarget:OcamlStandardIMapCallTarget;
 	final ?structuralIteratorTarget:OcamlStructuralIteratorCallTarget;
+	final ?genericInstanceTarget:OcamlGenericInstanceCallTarget;
+	final ?callbackInvocation:OcamlCallableInvocationContract.OcamlCallableInvocationPlan;
 }
 
 /**
@@ -296,6 +318,8 @@ class OcamlCallPlan {
 	}
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
+		if (decision.kind == OcamlCallKind.GenericInstanceHaxeMethod)
+			return decision.genericInstanceTarget != null && genericCallMatches(decision.genericInstanceTarget, expression);
 		return switch (expression.expr) {
 			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.DynamicFunctionValue
 				&& decision.dynamicFunctionTarget != null): OcamlCallPlanner.matchesDynamicFunctionTarget(decision.dynamicFunctionTarget, callee, arguments,
@@ -336,8 +360,12 @@ class OcamlCallPlan {
 					programRevision: decision.programRevision,
 					bodyRevision: decision.bodyRevision,
 					pipelineRevision: decision.pipelineRevision
-				}; final signatureId = OcamlCallPlanner.functionValueSignatureIdForDecision(callee, arguments, expression.t,
-					decision.result); signatureId != null && OcamlCallPlanner.functionValueCalleeId(callee, binding, signatureId) == decision.calleeId;
+				}; final signatureId = decision.callbackInvocation == null ? OcamlCallPlanner.functionValueSignatureIdForDecision(callee, arguments,
+					expression.t,
+					decision.result) : reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(callee.t) == null ? null : reflaxe.ocaml.lowered.OcamlGenericCallConversion.shapeId(reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(callee.t)); signatureId != null && (decision.callbackInvocation == null
+					|| (signatureId == decision.callbackInvocation.layout.semanticTypeId
+						&& arguments.length == decision.arguments.length)) && OcamlCallPlanner.functionValueCalleeId(callee, binding,
+					signatureId) == decision.calleeId;
 			case _:
 				false;
 		}
@@ -361,6 +389,8 @@ class OcamlCallPlan {
 	}
 
 	static function suppliedArgumentCountForDecision(decision:OcamlCallDecision):Int {
+		if (decision.genericInstanceTarget != null)
+			return decision.genericInstanceTarget.arguments.length;
 		if (decision.dynamicFunctionTarget != null)
 			return decision.dynamicFunctionTarget.argumentSemanticTypeIds.length;
 		if (decision.standardArrayTarget != null)
@@ -402,6 +432,11 @@ class OcamlCallPlan {
 
 	/** Checks one already-selected call for an exact `Null<Bool>` result. */
 	public static function decisionProducesNullableBool(decision:Null<OcamlCallDecision>):Bool {
+		if (decision != null && decision.genericInstanceTarget != null)
+			return switch (decision.genericInstanceTarget.resultShape) {
+				case NullableBoolean: true;
+				case _: false;
+			};
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "Null<Bool>";
 		return decision != null
@@ -421,6 +456,11 @@ class OcamlCallPlan {
 
 	/** Checks one already-selected call for the exact core String result carrier. */
 	public static function decisionProducesExactString(decision:Null<OcamlCallDecision>):Bool {
+		if (decision != null && decision.genericInstanceTarget != null)
+			return switch (decision.genericInstanceTarget.resultShape) {
+				case Text(false): true;
+				case _: false;
+			};
 		if (decision != null && decision.standardIMapTarget != null)
 			return decision.standardIMapTarget.resultSemanticTypeId == "String";
 		return decision != null
@@ -469,6 +509,8 @@ class OcamlCallPlan {
 			decision.standardArrayTarget == null ? "" : OcamlStandardArrayCallContract.fingerprint(decision.standardArrayTarget),
 			decision.standardIMapTarget == null ? "" : OcamlStandardIMapCallContract.fingerprint(decision.standardIMapTarget),
 			decision.structuralIteratorTarget == null ? "" : OcamlStructuralIteratorCallContract.fingerprint(decision.structuralIteratorTarget),
+			decision.genericInstanceTarget == null ? "" : genericCallFingerprint(decision.genericInstanceTarget),
+			decision.callbackInvocation == null ? "" : OcamlCallableInvocationContract.fingerprint(decision.callbackInvocation),
 			decision.functionId,
 			decision.programRevision,
 			decision.bodyRevision,
@@ -505,7 +547,10 @@ class OcamlCallPlan {
 			value.outputRepresentationId,
 			(value.conversion : String),
 			value.proofId,
-			value.proofClaim
+			value.proofClaim,
+			value.nullableEnumCarrier == null ? "" : OcamlNullableEnumCarrier.fingerprint(value.nullableEnumCarrier),
+			value.callableView == null ? "" : value.callableView.revision,
+			value.callbackArgument == null ? "" : OcamlCallableArgumentPlan.fingerprint(value.callbackArgument)
 		].join(":");
 	}
 
@@ -542,6 +587,8 @@ class OcamlCallPlan {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision,
 			dynamicFunctionTarget: decision.dynamicFunctionTarget == null ? null : copyDynamicFunctionTarget(decision.dynamicFunctionTarget),
+			genericInstanceTarget: decision.genericInstanceTarget == null ? null : genericCallCopy(decision.genericInstanceTarget),
+			callbackInvocation: decision.callbackInvocation == null ? null : OcamlCallableInvocationContract.copy(decision.callbackInvocation),
 			standardArrayTarget: decision.standardArrayTarget == null ? null : OcamlStandardArrayCallContract.copy(decision.standardArrayTarget),
 			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget),
 			structuralIteratorTarget: decision.structuralIteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.structuralIteratorTarget)
@@ -580,7 +627,9 @@ class OcamlCallPlan {
 			functionId: boundary.functionId,
 			programRevision: boundary.programRevision,
 			bodyRevision: boundary.bodyRevision,
-			pipelineRevision: boundary.pipelineRevision
+			pipelineRevision: boundary.pipelineRevision,
+			callbackReturnCount: boundary.callbackReturnCount,
+			callbackReturns: boundary.callbackReturns == null ? null : boundary.callbackReturns.map(OcamlCallableReturnContract.copy)
 		};
 	}
 
@@ -609,7 +658,48 @@ class OcamlCallPlan {
 		return value == null ? null : copyValue(value);
 	}
 
+	/** Compares the complete published calling convention, including its revision and proof. */
+	public static function sameDeclaration(left:OcamlCallableDeclarationPlan, right:OcamlCallableDeclarationPlan):Bool {
+		if (left.id != right.id
+			|| left.calleeId != right.calleeId
+			|| left.kind != right.kind
+			|| left.sourceModuleId != right.sourceModuleId
+			|| left.sourceTypeName != right.sourceTypeName
+			|| left.sourceFieldName != right.sourceFieldName
+			|| left.programRevision != right.programRevision
+			|| left.pipelineRevision != right.pipelineRevision
+			|| left.proofId != right.proofId
+			|| left.proofClaim != right.proofClaim
+			|| left.reason != right.reason
+			|| left.resultKind != right.resultKind
+			|| left.arguments.length != right.arguments.length
+			|| left.profileEligibility.length != right.profileEligibility.length)
+			return false;
+		for (index in 0...left.profileEligibility.length)
+			if (left.profileEligibility[index] != right.profileEligibility[index])
+				return false;
+		if (left.receiver == null || right.receiver == null) {
+			if (left.receiver != null || right.receiver != null)
+				return false;
+		} else if (!sameValue(left.receiver, right.receiver))
+			return false;
+		if (left.result == null || right.result == null) {
+			if (left.result != null || right.result != null)
+				return false;
+		} else if (!sameValue(left.result, right.result))
+			return false;
+		for (index in 0...left.arguments.length)
+			if (!sameValue(left.arguments[index], right.arguments[index]))
+				return false;
+		return true;
+	}
+
 	public static function copyValue(value:OcamlCallValuePlan):OcamlCallValuePlan {
+		return copyValueWithCallbackArgument(value, value.callbackArgument);
+	}
+
+	/** Attach the source preparation separately from the declared argument's calling convention. */
+	public static function copyValueWithCallbackArgument(value:OcamlCallValuePlan, prepared:Null<OcamlCallableArgumentPlan>):OcamlCallValuePlan {
 		return {
 			index: value.index,
 			parameterOptional: value.parameterOptional,
@@ -621,8 +711,17 @@ class OcamlCallPlan {
 			outputRepresentationId: value.outputRepresentationId,
 			conversion: value.conversion,
 			proofId: value.proofId,
-			proofClaim: value.proofClaim
+			proofClaim: value.proofClaim,
+			nullableEnumCarrier: value.nullableEnumCarrier == null ? null : OcamlNullableEnumCarrier.copy(value.nullableEnumCarrier),
+			callableView: value.callableView == null ? null : copyCallableView(value.callableView),
+			callbackArgument: prepared == null ? null : OcamlCallableArgumentPlan.copy(prepared)
 		};
+	}
+
+	/** Validate before copying so a mutated descriptor cannot acquire a new valid revision. */
+	static function copyCallableView(value:OcamlCallableViewRepresentation.OcamlCallableViewDescriptor):OcamlCallableViewRepresentation.OcamlCallableViewDescriptor {
+		OcamlCallableViewRepresentation.validate(value);
+		return OcamlCallableViewRepresentation.describe(value.shape);
 	}
 
 	public static function copyEvaluationStep(step:OcamlCallEvaluationStep):OcamlCallEvaluationStep {
@@ -646,7 +745,17 @@ class OcamlCallPlan {
 			&& left.outputRepresentationId == right.outputRepresentationId
 			&& left.conversion == right.conversion
 			&& left.proofId == right.proofId
-			&& left.proofClaim == right.proofClaim;
+			&& left.proofClaim == right.proofClaim
+			&& sameNullableEnumCarrier(left.nullableEnumCarrier, right.nullableEnumCarrier)
+			&& OcamlCallableDeclarationCarrier.same(left.callableView, right.callableView)
+			&& (left.callbackArgument == null
+				|| right.callbackArgument == null ? left.callbackArgument == null && right.callbackArgument == null : OcamlCallableArgumentPlan.fingerprint(left.callbackArgument) == OcamlCallableArgumentPlan.fingerprint(right.callbackArgument));
+	}
+
+	static function sameNullableEnumCarrier(left:Null<OcamlNullableEnumCarrierReference>, right:Null<OcamlNullableEnumCarrierReference>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return OcamlNullableEnumCarrier.same(left, right);
 	}
 
 	/**
@@ -658,6 +767,7 @@ class OcamlCallPlan {
 	**/
 	public static function sameCallableBoundary(callValue:OcamlCallValuePlan, boundaryValue:OcamlCallValuePlan, isResult:Bool):Bool {
 		return callValue.index == boundaryValue.index
+			&& OcamlCallableDeclarationCarrier.same(callValue.callableView, boundaryValue.callableView)
 			&& callValue.parameterOptional == boundaryValue.parameterOptional
 			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
 				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
@@ -682,6 +792,7 @@ class OcamlCallPlan {
 	/** Returns whether a callable definition exports its declared result carrier. */
 	public static function sameBoundaryDeclaration(boundaryValue:OcamlCallValuePlan, declarationValue:OcamlCallValuePlan):Bool {
 		return boundaryValue.index == declarationValue.index
+			&& OcamlCallableDeclarationCarrier.same(boundaryValue.callableView, declarationValue.callableView)
 			&& boundaryValue.parameterOptional == declarationValue.parameterOptional
 			&& boundaryValue.outputSemanticTypeId == declarationValue.inputSemanticTypeId
 			&& boundaryValue.outputCarrierTypeId == declarationValue.inputCarrierTypeId
@@ -705,6 +816,20 @@ class OcamlCallPlan {
 	public static function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
 		if (value.index != expectedIndex || value.proofId.length == 0 || value.proofClaim.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid index or empty conversion proof';
+		if ((value.conversion == OcamlCallCarrierConversion.BoxExactEnumToNullableEnum) != (value.nullableEnumCarrier != null))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has missing or unrelated nullable-enum carrier evidence';
+		if (value.callableView != null || value.proofId == OcamlCallableDeclarationCarrier.VALUE_PROOF) {
+			OcamlCallableDeclarationCarrier.requireValue(value);
+			if (value.callbackArgument != null) {
+				OcamlCallableArgumentPlan.requireArgument(value.callbackArgument);
+				if (expectedIndex < 0
+					|| !OcamlCallableDeclarationCarrier.same(value.callableView, value.callbackArgument.operation.outputLayout))
+					throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback preparation disagrees with its argument slot";
+			}
+			return;
+		}
+		if (value.callbackArgument != null)
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: scalar carrier cannot own callback preparation";
 		switch (value.conversion) {
 			case Identity:
 				if (!sameRepresentationSides(value)
@@ -715,7 +840,8 @@ class OcamlCallPlan {
 						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !(expectedIndex < 0
-							&& isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)))
+							&& (isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+								|| isNullableNativeEnumSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))))
 					|| value.proofId != "identity-call-carrier-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
 				}
@@ -831,14 +957,19 @@ class OcamlCallPlan {
 		whose two semantic type names agree.
 	**/
 	public static function isExactEnumToNullableResult(value:OcamlCallValuePlan):Bool {
-		final nullableSemanticTypeId = 'Null<${value.inputSemanticTypeId}>';
+		final reference = value.nullableEnumCarrier;
+		if (reference == null)
+			return false;
+		OcamlNullableEnumCarrier.requireShape(reference);
+		final descriptor = reference.descriptor;
+		final nullableSemanticTypeId = 'Null<${descriptor.semanticTypeId}>';
 		return !value.parameterOptional
-			&& value.inputSemanticTypeId.length > 0
-			&& value.inputCarrierTypeId == 'haxe-enum-native-variant-carrier-v1:${value.inputSemanticTypeId}'
-			&& value.inputRepresentationId == 'representation:${value.inputSemanticTypeId}:internal-value'
+			&& value.inputSemanticTypeId == descriptor.semanticTypeId
+			&& value.inputCarrierTypeId == descriptor.targetTypeName
+			&& value.inputRepresentationId == reference.inputRepresentationId
 			&& value.outputSemanticTypeId == nullableSemanticTypeId
 			&& value.outputCarrierTypeId == "Obj.t"
-			&& value.outputRepresentationId == 'representation:$nullableSemanticTypeId:internal-value'
+			&& value.outputRepresentationId == reference.outputRepresentationId
 			&& value.conversion == OcamlCallCarrierConversion.BoxExactEnumToNullableEnum
 			&& value.proofId == "nullable-enum-function-result-box-v1";
 	}
@@ -855,7 +986,8 @@ class OcamlCallPlan {
 			declaration.receiver);
 		if (declaration.receiver != null)
 			requireCallValue(declaration.receiver, -2, 'callable declaration "${declaration.id}" receiver');
-		if (!Lambda.foreach(declaration.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
+		if (!Lambda.foreach(declaration.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity
+			&& value.callbackArgument == null)
 			|| (declaration.receiver != null && declaration.receiver.conversion != OcamlCallCarrierConversion.Identity)
 			|| (declaration.result != null && declaration.result.conversion != OcamlCallCarrierConversion.Identity)) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" must use identity carrier records';
@@ -864,6 +996,36 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireCall(call:OcamlCallDecision):Void {
+		if (call.callbackInvocation != null) {
+			if (call.kind != OcamlCallKind.TypedFunctionValue || call.proofId != OcamlCallableDeclarationCarrier.INVOCATION_PROOF)
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: view invocation requires its exact computed-call proof";
+			OcamlCallableInvocationContract.requireInvocation(call.callbackInvocation);
+			if (OcamlCallableInvocationContract.calleeId(call.callbackInvocation, {
+				functionId: call.functionId,
+				programRevision: call.programRevision,
+				bodyRevision: call.bodyRevision,
+				pipelineRevision: call.pipelineRevision
+			}) != call.calleeId)
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback invocation belongs to another callee occurrence";
+			OcamlCallableDeclarationCarrier.requireSignature(call.callbackInvocation.layout, call.arguments, call.result);
+		} else if (call.proofId == OcamlCallableDeclarationCarrier.INVOCATION_PROOF)
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: view invocation lost its recursive signature";
+		for (argument in call.arguments)
+			if (argument.callbackArgument != null) {
+				final operation = argument.callbackArgument.operation;
+				if (operation.id != call.id + ":callback-argument:" + argument.index
+					|| operation.binding.functionId != call.functionId
+					|| operation.binding.programRevision != call.programRevision
+					|| operation.binding.bodyRevision != call.bodyRevision
+					|| operation.binding.pipelineRevision != call.pipelineRevision)
+					throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback argument belongs to another caller body";
+			}
+		if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod) {
+			genericCallRequireCall(call);
+			return;
+		}
+		if (call.genericInstanceTarget != null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: ordinary call "${call.id}" owns a generic instance target';
 		if (call.kind == OcamlCallKind.DynamicFunctionValue) {
 			requireDynamicFunctionCall(call);
 			return;
@@ -1258,10 +1420,32 @@ class OcamlCallPlan {
 			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"', boundary.receiver);
 		if (boundary.receiver != null)
 			requireCallValue(boundary.receiver, -2, 'callable boundary "${boundary.id}" receiver');
-		if (!Lambda.foreach(boundary.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity))
+		if (!Lambda.foreach(boundary.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity
+			&& value.callbackArgument == null))
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" arguments must use identity carrier records';
 		if (boundary.functionId.length == 0 || boundary.bodyRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" has an empty function or body revision';
+		if (boundary.callbackReturns != null) {
+			if (boundary.result == null
+				|| boundary.result.callableView == null
+				|| boundary.callbackReturnCount == null
+				|| boundary.callbackReturnCount != boundary.callbackReturns.length)
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback returns require a declared view result";
+			final binding:OcamlFunctionPlanBinding = {
+				functionId: boundary.functionId,
+				programRevision: boundary.programRevision,
+				bodyRevision: boundary.bodyRevision,
+				pipelineRevision: boundary.pipelineRevision
+			};
+			for (returned in boundary.callbackReturns) {
+				OcamlCallableReturnContract.requireBinding(returned, binding);
+				OcamlCallableDeclarationCarrier.requireSignature(returned.boundary.layout, boundary.arguments, boundary.result);
+				if (returned.boundary.calleeId != boundary.calleeId
+					|| !OcamlCallableDeclarationCarrier.same(OcamlCallableReturnContract.operation(returned).outputLayout, boundary.result.callableView))
+					throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback return disagrees with its declaration";
+			}
+		} else if (boundary.callbackReturnCount != null || (boundary.result != null && boundary.result.callableView != null))
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: callback result has no sealed return occurrences";
 	}
 
 	static function requireCallCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
@@ -1276,7 +1460,7 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a static method';
 				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
-				if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
+				if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID && proofId != OcamlCallableDeclarationCarrier.SIGNATURE_PROOF)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-static signature proof';
 			case DirectStaticGenericIdentity:
 				if (receiver != null)
@@ -1333,11 +1517,18 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a function value';
 				if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns declaration fields to a first-class function value';
-				if (proofId.indexOf(FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX) != 0)
+				if (proofId.indexOf(FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX) != 0
+					&& proofId != OcamlCallableDeclarationCarrier.INVOCATION_PROOF)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched function-value signature proof';
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
 		}
+		final hasCallback = Lambda.exists(arguments, value -> value.callableView != null)
+			|| (result != null && result.callableView != null);
+		if (hasCallback
+			&& !(kind == OcamlCallKind.DirectStaticHaxeMethod && proofId == OcamlCallableDeclarationCarrier.SIGNATURE_PROOF)
+			&& !(kind == OcamlCallKind.TypedFunctionValue && proofId == OcamlCallableDeclarationCarrier.INVOCATION_PROOF))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has callback carriers without a selected callback declaration';
 		for (index in 0...arguments.length)
 			requireCallValue(arguments[index], index, '$owner argument $index');
 		var optionalSeen = false;
@@ -1368,7 +1559,7 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete typed-call proof';
 		if (programRevision.length == 0 || pipelineRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty program or pipeline revision';
-		if (kind == OcamlCallKind.TypedFunctionValue) {
+		if (kind == OcamlCallKind.TypedFunctionValue && proofId != OcamlCallableDeclarationCarrier.INVOCATION_PROOF) {
 			requireFunctionValueSignatureMatrix(arguments, resultKind, result, proofId, owner);
 		}
 	}
@@ -1389,13 +1580,18 @@ class OcamlCallPlan {
 			}
 		}
 		final directionalNullableEnumResult = result != null && isExactEnumToNullableResult(result);
+		final preservedNullableEnumResult = result != null
+			&& isNullableNativeEnumSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			&& isNullableNativeEnumSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId);
 		if (resultKind == OcamlCallResultKind.Value
 			&& (result == null
 				|| (!isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
 					&& !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					&& !preservedNullableEnumResult
 					&& !directionalNullableEnumResult)
 				|| (!isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
 					&& !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+					&& !preservedNullableEnumResult
 					&& !directionalNullableEnumResult)
 				|| (!directionalNullableEnumResult
 					&& (!sameRepresentationSides(result) || result.conversion != OcamlCallCarrierConversion.Identity)))) {
@@ -1486,6 +1682,17 @@ class OcamlCallPlan {
 			&& semanticTypeId.indexOf("<") < 0
 			&& carrierTypeId.length > 0
 			&& !isAdmittedInternalSide(semanticTypeId, carrierTypeId, representationId)
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
+	/** Recognizes one already-boxed nullable carrier paired with a native enum. */
+	public static function isNullableNativeEnumSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return false;
+		final nativeSemanticTypeId = semanticTypeId.substr(5, semanticTypeId.length - 6);
+		return nativeSemanticTypeId.length > 0
+			&& nativeSemanticTypeId.indexOf("<") < 0
+			&& carrierTypeId == "Obj.t"
 			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 
@@ -1615,6 +1822,8 @@ class OcamlCallPlanner {
 	final binding:OcamlFunctionPlanBinding;
 	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
 	final localIdentities:Null<LexicalLocalIdentityPlan>;
+	final provesFunctionValueResult:Null<(TypedExpr, String) -> Bool>;
+	final callableDeclaration:Null<String->Null<OcamlCallableDeclarationPlan>>;
 	final preliminaryDecisionsByExpression:ObjectMap<TypedExpr, OcamlCallDecision> = new ObjectMap();
 	final observedPreliminaryExpressions:ObjectMap<TypedExpr, Bool> = new ObjectMap();
 	#if reflaxe_lifecycle_test
@@ -1622,11 +1831,14 @@ class OcamlCallPlanner {
 	#end
 
 	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan,
-			?localIdentities:LexicalLocalIdentityPlan) {
+			?localIdentities:LexicalLocalIdentityPlan, ?provesFunctionValueResult:(TypedExpr, String) -> Bool,
+			?callableDeclaration:String->Null<OcamlCallableDeclarationPlan>) {
 		this.representations = representations;
 		this.binding = binding;
 		this.localRepresentations = localRepresentations;
 		this.localIdentities = localIdentities;
+		this.provesFunctionValueResult = provesFunctionValueResult;
+		this.callableDeclaration = callableDeclaration;
 	}
 
 	/**
@@ -1648,6 +1860,18 @@ class OcamlCallPlanner {
 	/** Checks one requested call for an exact core String result without a whole-body scan. */
 	public function preliminaryProducesExactString(expression:TypedExpr):Bool {
 		return OcamlCallPlan.decisionProducesExactString(preliminaryDecisionFor(expression));
+	}
+
+	/** Returns the native enum semantic identity produced by one sealed call. */
+	public function preliminaryProducesNativeEnum(expression:TypedExpr):Null<String> {
+		final decision = preliminaryDecisionFor(expression);
+		final result = decision == null ? null : decision.result;
+		if (result == null || result.conversion != OcamlCallCarrierConversion.Identity)
+			return null;
+		final representation = representations.nativeEnumValue(result.outputSemanticTypeId);
+		return representation != null
+			&& representation.id == result.outputRepresentationId
+			&& representation.carrierTypeId == result.outputCarrierTypeId ? representation.semanticTypeId : null;
 	}
 
 	function preliminaryDecisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
@@ -1672,12 +1896,15 @@ class OcamlCallPlanner {
 
 	/** Selects the callable boundary exported by this function, if admitted. */
 	public function boundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
-		final declaration = declarationFor(data.classType, data.field, data.isStatic, representations, binding.programRevision, binding.pipelineRevision);
+		final declaration = publishedMethodDeclaration(data.classType, data.field, data.isStatic);
 		if (declaration == null)
 			return null;
 		var result = OcamlCallPlan.copyOptionalValue(declaration.result);
 		var resultReason = "";
-		if (data.expr != null && declaration.resultKind == OcamlCallResultKind.Value) {
+		final callbackReturns = result != null
+			&& result.callableView != null ? OcamlCallableReturnPlanner.plan(data, declaration, binding, expression -> decisionFor(expression),
+				callableDeclaration, callbackExpressions().source) : null;
+		if (callbackReturns == null && data.expr != null && declaration.resultKind == OcamlCallResultKind.Value) {
 			if (result == null)
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable "${declaration.calleeId}" has a value result kind without a value crossing';
 			var resultExpression = straightLineResultExpression(data.expr);
@@ -1709,6 +1936,21 @@ class OcamlCallPlanner {
 				resultReason = ' Its final straight-line ${result.inputSemanticTypeId} body value crosses into the exported ${result.outputSemanticTypeId} carrier via ${result.conversion}.';
 			}
 		}
+		return definitionBoundary(declaration, result, resultReason, callbackReturns);
+	}
+
+	/**
+		Exposes declared parameter/result layouts while local storage is planned.
+		This provisional boundary must never be registered or emitted. boundaryFor
+		joins the final return occurrences after local representations exist.
+	**/
+	public function declarationBoundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
+		final declaration = publishedMethodDeclaration(data.classType, data.field, data.isStatic);
+		return declaration == null ? null : definitionBoundary(declaration, OcamlCallPlan.copyOptionalValue(declaration.result), "", null);
+	}
+
+	function definitionBoundary(declaration:OcamlCallableDeclarationPlan, result:Null<OcamlCallValuePlan>, resultReason:String,
+			callbackReturns:Null<Array<OcamlCallableReturnContract.OcamlCallableReturnDecision>>):OcamlCallableBoundaryPlan {
 		return {
 			id: "callable-boundary:" + Sha256.encode(declaration.calleeId).substr(0, 24),
 			calleeId: declaration.calleeId,
@@ -1727,7 +1969,9 @@ class OcamlCallPlanner {
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,
-			pipelineRevision: binding.pipelineRevision
+			pipelineRevision: binding.pipelineRevision,
+			callbackReturnCount: callbackReturns == null ? null : callbackReturns.length,
+			callbackReturns: callbackReturns
 		};
 	}
 
@@ -1808,7 +2052,7 @@ class OcamlCallPlanner {
 	public function constructionBoundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
 		if (data.field.name != "new" || data.isStatic)
 			return null;
-		final declaration = constructorDeclarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
+		final declaration = publishedConstructorDeclaration(data.classType, data.field);
 		if (declaration == null)
 			return null;
 		return {
@@ -2016,19 +2260,28 @@ class OcamlCallPlanner {
 
 		A preliminary planner may supply decisions it already evaluated for local
 		representation questions. A negative decision is reused only when local
-		representation planning cannot make that call newly admissible. The one
-		current dependent shape—an ordinary instance call through a local nominal
-		receiver—is always evaluated again.
+		planning cannot admit the call. Computed function calls must also be checked
+		again after a positive probe: selecting callback storage changes the callee
+		from a raw arrow to a view with its own invocation source evidence.
+
+		Only calls and constructors can have decisions. Restrict preliminary-map
+		lookups to those shapes: querying every non-call node in a large body can
+		cost more than computing the calls. Child traversal still visits every
+		expression, including calls inside blocks, arguments, and nested functions.
 	**/
 	public function plan(expression:TypedExpr, ?preliminary:OcamlCallPlanner):OcamlCallPlan {
 		if (preliminary != null)
 			requireReusablePreliminaryPlanner(preliminary);
 		final decisions:Array<OcamlCallDecision> = [];
 		function visit(current:TypedExpr):Void {
-			final reuse = preliminary == null ? null : preliminary.reusablePreliminaryDecisionFor(current);
-			final decision = reuse == null ? decisionFor(current) : reuse.decision;
-			if (decision != null)
-				decisions.push(decision);
+			switch (current.expr) {
+				case TCall(_, _), TNew(_, _, _):
+					final reuse = preliminary == null ? null : preliminary.reusablePreliminaryDecisionFor(current);
+					final decision = reuse == null ? decisionFor(current) : reuse.decision;
+					if (decision != null)
+						decisions.push(decision);
+				case _:
+			}
 			TypedExprTools.iter(current, visit);
 		}
 		visit(expression);
@@ -2052,23 +2305,33 @@ class OcamlCallPlanner {
 		if (!observedPreliminaryExpressions.exists(expression))
 			return null;
 		final decision = preliminaryDecisionsByExpression.get(expression);
-		if (decision == null && mayBecomeAdmittedAfterLocalPlanning(expression))
+		if ((decision == null || decision.kind == OcamlCallKind.TypedFunctionValue) && mayBecomeAdmittedAfterLocalPlanning(expression))
 			return null;
 		return {decision: decision};
 	}
 
-	static function mayBecomeAdmittedAfterLocalPlanning(expression:TypedExpr):Bool {
+	function mayBecomeAdmittedAfterLocalPlanning(expression:TypedExpr):Bool {
 		return switch (expression.expr) {
+			case TCall({expr: TField(_, FStatic(owner, field))}, _): final declaration = publishedMethodDeclaration(owner.get(), field.get(),
+					true); declaration != null && Lambda.exists(declaration.arguments, argument -> argument.callableView != null);
 			case TCall({expr: TField(receiver, FInstance(_, _, _))}, _):
 				switch (unwrapTransparent(receiver).expr) {
 					case TLocal(_): true;
 					case _: false;
 				}
+			case TCall(callee, _):
+				// Local planning can select a concrete carrier produced by a nested
+				// function body. Reevaluate the enclosing call after that selection;
+				// otherwise an earlier negative probe can hide a now-represented result.
+				functionValueCalleeForm(callee) != null;
 			case _: false;
 		}
 	}
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
+		final genericTarget = genericCallSelect(expression, representations);
+		if (genericTarget != null)
+			return genericCallDecision(expression, genericTarget, binding);
 		return switch (expression.expr) {
 			case TCall(callee, arguments) if (OcamlRepresentationRegistry.isExactDynamic(callee.t)):
 				dynamicFunctionCallDecision(expression, callee, arguments);
@@ -2076,8 +2339,7 @@ class OcamlCallPlanner {
 				final classType = classRef.get();
 				final constructor = classType.constructor == null ? null : classType.constructor.get();
 				final declaration = parameters.length == 0
-					&& constructor != null ? constructorDeclarationFor(classType, constructor, representations, binding.programRevision,
-						binding.pipelineRevision) : null;
+					&& constructor != null ? publishedConstructorDeclaration(classType, constructor) : null;
 				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| plannedArguments == null
@@ -2122,9 +2384,11 @@ class OcamlCallPlanner {
 				final genericIdentity = directStaticGenericIdentityDecision(expression, classType, field, arguments);
 				if (genericIdentity != null)
 					return genericIdentity;
-				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
-				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
-				final resultMaterialization = declaration == null ? null : directStaticResultMaterialization(expression.t, declaration);
+				final declaration = publishedMethodDeclaration(classType, field, true);
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations,
+					(argument, boundary,
+							index) -> callbackExpressions().argument(callOccurrenceId(expression, declaration.calleeId), argument, boundary, index));
+				final resultMaterialization = plannedArguments == null ? null : directStaticResultMaterialization(expression.t, declaration);
 				if (declaration == null
 					|| plannedArguments == null
 					|| (!sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)
@@ -2175,10 +2439,9 @@ class OcamlCallPlanner {
 				final standardIMapTarget = OcamlStandardIMapCallContract.select(classType, parameters, field, receiverExpression, arguments, expression.t);
 				if (standardIMapTarget != null)
 					return standardIMapCallDecision(expression, classType, field, standardIMapTarget);
-				final declaration = parameters.length == 0 ? declarationFor(classType, field, false, representations, binding.programRevision,
-					binding.pipelineRevision) : null;
+				final declaration = parameters.length == 0 ? publishedMethodDeclaration(classType, field, false) : null;
 				final receiver = declaration == null ? null : instanceReceiverValue(receiverExpression, declaration);
-				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				final plannedArguments = receiver == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| receiver == null
 					|| plannedArguments == null
@@ -2223,7 +2486,17 @@ class OcamlCallPlanner {
 				final target = OcamlStructuralIteratorCallContract.select(receiverExpression, field, arguments, expression.t);
 				target == null ? null : structuralIteratorCallDecision(expression, field, target);
 			case TCall(callee, arguments):
-				final signature = functionValueSignature(callee, arguments, expression.t, representations);
+				final callbackInvocation = callbackExpressions().invocation(callee);
+				if (callbackInvocation != null)
+					return callbackInvocationDecision(expression, callee, arguments, callbackInvocation);
+				var signature = functionValueSignature(callee, arguments, expression.t, representations);
+				if (signature != null
+					&& requiresFunctionValueResultProducer(signature, representations)
+					&& (signature.resultSemanticTypeId == null
+						|| provesFunctionValueResult == null
+						|| !provesFunctionValueResult(callee, signature.resultSemanticTypeId))) {
+					signature = null;
+				}
 				final plannedArguments = signature == null ? null : functionValueArguments(signature, arguments, representations);
 				final plannedResult = signature == null ? null : functionValueResult(signature, representations);
 				if (signature == null
@@ -2637,16 +2910,78 @@ class OcamlCallPlanner {
 	}
 
 	/**
-		Returns whether one callee and argument list fit a sealed function-value
-		family.
+		Returns whether one callee and argument list fit a builder-owned
+		function-value family.
 
-		The check is intentionally shape-only so planning and the builder's
-		fail-closed guard agree without sharing mutable compiler state. Instance
-		methods and arbitrary field expressions stay with their existing owners.
+		Enum result carriers require request-local producer evidence, which this
+		static builder guard cannot supply. Those calls are admitted only by the
+		final planner and consumed through their sealed occurrence decisions.
 	**/
 	public static function isAdmittedFunctionValueCall(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
 			?representations:OcamlRepresentationRegistry):Bool {
-		return functionValueSignature(callee, arguments, resultType, representations) != null;
+		final signature = functionValueSignature(callee, arguments, resultType, representations);
+		return signature != null && (representations == null || !requiresFunctionValueResultProducer(signature, representations));
+	}
+
+	/**
+		Uses the catalog's exact declaration after checking the typed source agrees.
+
+		A matching name alone cannot authorize argument or result representations.
+		Production callers supply the request-local catalog; isolated planner tests
+		can omit it when they exercise selection before catalog publication.
+	**/
+	function publishedDeclaration(candidate:Null<OcamlCallableDeclarationPlan>):Null<OcamlCallableDeclarationPlan> {
+		if (candidate == null || callableDeclaration == null)
+			return candidate;
+		final published = callableDeclaration(candidate.calleeId);
+		if (published == null)
+			return null;
+		OcamlCallPlan.requireCallableDeclarationPlan(published);
+		if (!OcamlCallPlan.sameDeclaration(candidate, published))
+			throw 'reflaxe.ocaml [ocaml-call:catalog-mismatch]: typed callable "${candidate.calleeId}" does not match its published declaration';
+		return OcamlCallPlan.copyDeclaration(published);
+	}
+
+	/**
+		Checks the callee against the ordinary function pipeline that publishes it.
+
+		Nested functions and static initializers have different caller pipelines.
+		Their call occurrences retain those revisions; the referenced declaration
+		still belongs to the ordinary function pipeline, not the caller's pipeline.
+	**/
+	function publishedMethodDeclaration(owner:ClassType, field:ClassField, isStatic:Bool):Null<OcamlCallableDeclarationPlan> {
+		final published = callableDeclaration == null ? null : callableDeclaration(calleeId(owner, field));
+		if (published != null && published.proofId == OcamlCallableDeclarationCarrier.SIGNATURE_PROOF) {
+			final shape = reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(field.type);
+			if (!isStatic || shape == null)
+				throw "reflaxe.ocaml [ocaml-call:catalog-mismatch]: callback declaration lost its static typed signature";
+			return publishedDeclaration(OcamlCallableDeclarationCarrier.declaration(owner, field,
+				{calleeId: published.calleeId, fieldName: field.name, signature: shape}, representations, binding.programRevision,
+				OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+		}
+		return publishedDeclaration(declarationFor(owner, field, isStatic, representations, binding.programRevision,
+			OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+	}
+
+	/** Constructors share the ordinary declaration pipeline, independently of their callers. */
+	function publishedConstructorDeclaration(owner:ClassType, field:ClassField):Null<OcamlCallableDeclarationPlan> {
+		return publishedDeclaration(constructorDeclarationFor(owner, field, representations, binding.programRevision,
+			OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+	}
+
+	/**
+		Reports whether a function-value result needs proof from its exact producer.
+
+		A registry entry identifies an enum carrier for the program. It does not prove
+		that an arbitrary local or call-produced function returns that carrier. The
+		final planner therefore admits these results only through its producer callback;
+		the builder consumes a sealed occurrence and never repeats this global check.
+	**/
+	static function requiresFunctionValueResultProducer(signature:OcamlAdmittedCallSignature, representations:OcamlRepresentationRegistry):Bool {
+		final semanticTypeId = signature.resultSemanticTypeId;
+		return semanticTypeId != null
+			&& (representations.nativeEnumValue(semanticTypeId) != null
+				|| representations.nullableNativeEnumValue(semanticTypeId) != null);
 	}
 
 	/**
@@ -2666,8 +3001,9 @@ class OcamlCallPlanner {
 	public static function functionValueSignatureIdForDecision(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
 			result:Null<OcamlCallValuePlan>):Null<String> {
 		final expectedNominalResult = result != null
-			&& OcamlCallPlan.isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId,
-				result.outputRepresentationId) ? result.outputSemanticTypeId : null;
+			&& (OcamlCallPlan.isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+				|| OcamlCallPlan.isNullableNativeEnumSide(result.outputSemanticTypeId, result.outputCarrierTypeId,
+					result.outputRepresentationId)) ? result.outputSemanticTypeId : null;
 		final signature = functionValueSignature(callee, arguments, resultType, null, expectedNominalResult);
 		return signature == null ? null : signature.id;
 	}
@@ -2681,7 +3017,7 @@ class OcamlCallPlanner {
 		if (signature == null || !functionValueArgumentsMatch(signature, arguments))
 			return null;
 		return switch (signature.resultKind) {
-			case Value: final actualResult = semanticTypeIdWithExpectedNominal(resultType, representations,
+			case Value: final actualResult = admittedFunctionResultSemanticTypeId(resultType, calleeForm, representations,
 					expectedNominalResult); signature.resultSemanticTypeId != null && actualResult == signature.resultSemanticTypeId ? signature : null;
 			case EffectOnlyVoid:
 				isExactVoid(resultType) ? signature : null;
@@ -2785,8 +3121,74 @@ class OcamlCallPlanner {
 		};
 	}
 
-	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>,
-			representations:OcamlRepresentationRegistry):Null<Array<OcamlCallValuePlan>> {
+	/** Resolve callback source values through the same final local and declaration owners. */
+	function callbackExpressions():OcamlCallableExpressionPlanner {
+		return new OcamlCallableExpressionPlanner(representations, binding, localRepresentations, localIdentities,
+			(owner, field) -> publishedMethodDeclaration(owner, field, true), expression -> decisionFor(expression));
+	}
+
+	function callOccurrenceId(expression:TypedExpr, calleeId:String):String {
+		return "call:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos)),
+			calleeId
+		].join("|")).substr(0, 24);
+	}
+
+	/** A selected higher-order view invokes its recursive parameter/result convention. */
+	function callbackInvocationDecision(expression:TypedExpr, callee:TypedExpr, arguments:Array<TypedExpr>,
+			invocation:OcamlCallableInvocationContract.OcamlCallableInvocationPlan):Null<OcamlCallDecision> {
+		final layout = invocation.layout;
+		final signature = switch (layout.shape) {
+			case FunctionValue(parameters, result): {parameters: parameters, result: result};
+			case _: throw "reflaxe.ocaml [callback-call:missing-signature]: view invocation is not callable";
+		};
+		if (signature.parameters.length != arguments.length)
+			return null;
+		final calleeId = OcamlCallableInvocationContract.calleeId(invocation, binding);
+		final id = callOccurrenceId(expression, calleeId);
+		final parameters = [
+			for (index in 0...signature.parameters.length)
+				OcamlCallableDeclarationCarrier.value(index, signature.parameters[index], representations)
+		];
+		final planned = callArgumentValues(arguments, parameters, representations,
+			(argument, boundary, index) -> callbackExpressions().argument(id, argument, boundary, index));
+		if (planned == null)
+			return null;
+		final result = signature.result == EffectOnly ? null : OcamlCallableDeclarationCarrier.value(-1, signature.result, representations);
+		final kind:OcamlCallResultKind = result == null ? EffectOnlyVoid : Value;
+		if (!sameResultExpressionType(expression.t, kind, result, representations))
+			return null;
+		return {
+			id: id,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			calleeId: calleeId,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: TypedFunctionValue,
+			receiver: null,
+			arguments: planned,
+			resultKind: kind,
+			result: result,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, arguments.length, [], true),
+			profileEligibility: ["metal", "portable"],
+			reason: "The selected callback view owns a recursive invocation signature. Evaluate the callee once, prepare each source argument once in order, and preserve its result carrier.",
+			proofId: OcamlCallableDeclarationCarrier.INVOCATION_PROOF,
+			proofClaim: "The exact local or call-result view supplies this invocation layout; every callback argument owns its producer and directional conversion.",
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision,
+			callbackInvocation: OcamlCallableInvocationContract.copy(invocation)
+		};
+	}
+
+	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>, representations:OcamlRepresentationRegistry,
+			?prepareCallback:(TypedExpr, OcamlCallValuePlan, Int) -> Null<OcamlCallValuePlan>):Null<Array<OcamlCallValuePlan>> {
 		final omittedTrailingOptional = arguments.length + 1 == boundaryValues.length
 			&& boundaryValues.length > 0
 			&& boundaryValues[boundaryValues.length - 1].parameterOptional;
@@ -2795,6 +3197,13 @@ class OcamlCallPlanner {
 		final planned:Array<OcamlCallValuePlan> = [];
 		for (index in 0...arguments.length) {
 			final boundary = boundaryValues[index];
+			if (boundary.callableView != null) {
+				final prepared = prepareCallback == null ? null : prepareCallback(arguments[index], boundary, index);
+				if (prepared == null)
+					return null;
+				planned.push(prepared);
+				continue;
+			}
 			final output = representationForSemanticType(boundary.outputSemanticTypeId, representations);
 			if (output == null)
 				return null;
@@ -2881,6 +3290,11 @@ class OcamlCallPlanner {
 
 	static function sameResultExpressionType(type:Type, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>,
 			representations:OcamlRepresentationRegistry):Bool {
+		if (resultKind == OcamlCallResultKind.Value && result != null && result.callableView != null) {
+			OcamlCallableDeclarationCarrier.requireValue(result);
+			final shape = reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(type);
+			return shape != null && reflaxe.ocaml.lowered.OcamlGenericCallConversion.shapeId(shape) == result.callableView.semanticTypeId;
+		}
 		return switch (resultKind) {
 			case Value: final representation = representationFor(type,
 					representations); result != null && representation != null && representation.semanticTypeId == result.outputSemanticTypeId;
@@ -2905,7 +3319,7 @@ class OcamlCallPlanner {
 		final exactProducer = switch (unwrapped.expr) {
 			case TNew(classRef, parameters, _): parameters.length == 0 && representations.monomorphicClassForType(unwrapped.t) != null;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
-				final producer = declarationFor(classRef.get(), fieldRef.get(), true, representations, binding.programRevision, binding.pipelineRevision);
+				final producer = publishedMethodDeclaration(classRef.get(), fieldRef.get(), true);
 				producer != null
 				&& producer.result != null
 				&& arguments.length == producer.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length
@@ -2917,6 +3331,8 @@ class OcamlCallPlanner {
 				&& reference.domain == OcamlRepresentationDomain.InternalValue
 				&& reference.representationId == boundary.inputRepresentationId
 				&& reference.semanticTypeId == boundary.inputSemanticTypeId;
+			case TConst(TThis):
+				true;
 			case _:
 				false;
 		}
@@ -3069,8 +3485,9 @@ class OcamlCallPlanner {
 	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>, ?representations:OcamlRepresentationRegistry,
 			?expectedNominalResult:String):Null<OcamlAdmittedCallSignature> {
 		return switch (TypeTools.follow(type)) {
-			case TFun(arguments, result) if (semanticTypeIdWithExpectedNominal(result, representations, expectedNominalResult) != null
-				|| isExactVoid(result)):
+			case TFun(arguments, result)
+				if (admittedFunctionResultSemanticTypeId(result, calleeForm, representations, expectedNominalResult) != null
+					|| isExactVoid(result)):
 				var optionalCount = 0;
 				var valid = true;
 				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
@@ -3114,8 +3531,8 @@ class OcamlCallPlanner {
 					null;
 				} else {
 					final resultKind = isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value;
-					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeIdWithExpectedNominal(result, representations,
-						expectedNominalResult) : null;
+					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? admittedFunctionResultSemanticTypeId(result, calleeForm,
+						representations, expectedNominalResult) : null;
 					final parameterIds = selectedArguments.map(argument -> (argument.optional ? "?" : "") + argument.semanticTypeId);
 					final resultId = resultKind == OcamlCallResultKind.EffectOnlyVoid ? "Void" : resultSemanticTypeId;
 					{
@@ -3129,6 +3546,28 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	/**
+		Selects the extra result family allowed only at a computed-call occurrence.
+
+		A registry-wide nullable enum decision proves a carrier, not a direct method
+		declaration. Local and call-produced function values already carry their own
+		sealed occurrence proof, so they may join that carrier here. Program methods
+		must still enter through the request-wide callable declaration catalog.
+	**/
+	static function admittedFunctionResultSemanticTypeId(type:Type, calleeForm:Null<String>, representations:Null<OcamlRepresentationRegistry>,
+			expectedNominalResult:Null<String>):Null<String> {
+		if (calleeForm != null) {
+			final nullableNativeEnum = nullableNativeEnumSemanticTypeId(type);
+			if (nullableNativeEnum != null
+				&& (representations != null
+					&& representations.nullableNativeEnumValue(nullableNativeEnum) != null
+					|| nullableNativeEnum == expectedNominalResult)) {
+				return nullableNativeEnum;
+			}
+		}
+		return semanticTypeIdWithExpectedNominal(type, representations, expectedNominalResult);
 	}
 
 	/**
@@ -3159,6 +3598,19 @@ class OcamlCallPlanner {
 		final primitive = semanticTypeId(type);
 		if (primitive != null || representations == null)
 			return primitive;
+		// Preserve the declared wrapper boundary. Following `Null<Enum>` here would
+		// erase nullability and make an unrelated direct method look like it exports
+		// the native enum carrier merely because that enum is registered elsewhere.
+		final nativeEnum = switch (type) {
+			case TEnum(reference, parameters) if (parameters.length == 0):
+				final declaration = reference.get();
+				final semanticTypeId = declaration.pack.concat([declaration.name]).join(".");
+				representations.nativeEnumValue(semanticTypeId);
+			case _:
+				null;
+		}
+		if (nativeEnum != null)
+			return nativeEnum.semanticTypeId;
 		final layout = representations.monomorphicClassForType(type);
 		return layout == null ? null : layout.semanticTypeId;
 	}
@@ -3181,6 +3633,27 @@ class OcamlCallPlanner {
 			return null;
 		final observed = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type);
 		return observed == expectedNominalResult ? observed : null;
+	}
+
+	/** Returns the stable semantic ID only for direct core `Null<Enum>` syntax. */
+	static function nullableNativeEnumSemanticTypeId(type:Type):Null<String> {
+		return switch (type) {
+			case TAbstract(abstractRef, [inner]):
+				final abstractType = abstractRef.get();
+				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
+					null;
+				} else {
+					switch (TypeTools.follow(inner)) {
+						case TEnum(enumRef, parameters) if (parameters.length == 0):
+							final declaration = enumRef.get();
+							'Null<${declaration.pack.concat([declaration.name]).join(".")}>';
+						case _:
+							null;
+					}
+				}
+			case _:
+				null;
+		};
 	}
 
 	static function classSemanticTypeId(classType:ClassType):String {
@@ -3209,7 +3682,14 @@ class OcamlCallPlanner {
 			case "Null<Bool>": representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
 			case "String": representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 			case "Dynamic": representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
-			case _: representations.monomorphicClassValue(semanticType);
+			case _:
+				final nullableNativeEnum = representations.nullableNativeEnumValue(semanticType);
+				if (nullableNativeEnum != null) {
+					nullableNativeEnum;
+				} else {
+					final nativeEnum = representations.nativeEnumValue(semanticType);
+					nativeEnum == null ? representations.monomorphicClassValue(semanticType) : nativeEnum;
+				}
 		}
 	}
 

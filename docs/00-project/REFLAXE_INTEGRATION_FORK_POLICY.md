@@ -279,6 +279,26 @@ Three fresh hxhx compiler profiles reduced the median fingerprint phase from
 generated-tree, bootstrap, native-binary, and watchdog evidence before treating
 that phase improvement as a complete bootstrap result.
 
+Fork PR #23 merged as `b4bb918bcb0381161ba94189d118244edd591d49`.
+The consumer pins that commit with content digest
+`affc2b7eea5e0f4aae6f45ad098f03fb73f95f3fecc8a1603e89f6484f07f0fe`.
+The framework copies ordinary normalization text in blocks and retains the
+next quote and bracket positions. It also uses the existing macro SHA-256
+implementation for local and nested-function identity payloads.
+
+All 16 focused text cases and the hosted Haxe 4.3.0/latest checks pass.
+A representative comparison preserves all 22,356,892 normalized characters
+and 69,291 local occurrences. The direct OCaml closure canary preserves
+generated source and runtime output. Complete consumer generation, native
+linking, and package evidence remain separate adoption gates under
+`haxe_ocaml-xmf73.2`.
+
+The immediate rollback pair is commit
+`f824253f37724523fa9576be0e8ba93046006d53` and content digest
+`cc40fe41916aa12e6f0f1fcbc12573c46f1e6f85c05f87afcf3861206376ac1b`.
+Restore both values together if adoption fails. Upstream was checked before
+this pin advance and remains at `73a983112e039daad46b37912ab238df6bf0cf53`.
+
 Fork PR #19 makes Haxe 4.3.7's all-null abstract resolve-hook placeholder an
 explicit fingerprint fact. A missing hook, the exact host placeholder, and a
 normal field now produce different identities. Any partially populated field,

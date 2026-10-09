@@ -10,7 +10,16 @@ import haxe.io.Path;
 
 private typedef JsClassUnit = {
 	final fullName:String;
+	final identity:String;
+	final superIdentity:Null<String>;
+	final declarationRank:Int;
+	final interfaceRefs:Array<String>;
+	final runtimeTypes:JsRuntimeTypePlan;
+	final enumDeclarations:String->JsClassInheritancePlan.JsClassInheritanceNode;
+	final receiverPlan:JsClassInheritancePlan.JsClassInheritanceNode;
 	final jsRef:String;
+	final externRef:Null<String>;
+	final usesHostPath:Bool;
 	final decl:HxClassDecl;
 	final projection:TypedBackendClassProjection;
 	final exposeToplevelMain:Bool;
@@ -60,6 +69,8 @@ class JsTargetCore implements ITargetCore {
 	static function collectClassUnits(program:GenIrProgram):{units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>} {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
+		final inheritance = new JsClassInheritancePlan(program);
+		final runtimeTypes = new JsRuntimeTypePlan(program, inheritance);
 		var units = new Array<JsClassUnit>();
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
@@ -72,23 +83,34 @@ class JsTargetCore implements ITargetCore {
 			final hasToplevelMain = HxModuleDecl.getHasToplevelMain(decl);
 			for (classProjection in moduleProjection.getClasses()) {
 				final cls = classProjection.getDeclaration();
+				final plan = inheritance.requireClass(classProjection);
 				final className = HxClassDecl.getName(cls);
-				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-				if (byFullName.exists(fullName))
-					continue;
-				final jsRef = JsNameMangler.classVarName(fullName);
+				final fullName = plan.fullName;
+				final jsRef = plan.reference;
 				byFullName.set(fullName, jsRef);
 				if (!bySimpleName.exists(className))
 					bySimpleName.set(className, jsRef);
 				units.push({
 					fullName: fullName,
+					identity: plan.identity,
+					superIdentity: plan.superIdentity,
+					declarationRank: inheritance.declarationRank(classProjection),
+					interfaceRefs: inheritance.interfaceReferences(classProjection),
+					runtimeTypes: runtimeTypes,
+					enumDeclarations: inheritance.requireRuntimeEnum,
+					receiverPlan: plan,
 					jsRef: jsRef,
+					externRef: JsExternBinding.reference(cls),
+					usesHostPath: plan.usesHostPath,
 					decl: cls,
 					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
 			}
 		}
-		units = orderClassUnitsByStaticInitDeps(units, byFullName);
+		// Source spellings remain presentation aliases; inheritance uses exact identities.
+		for (unit in units)
+			byFullName.set(unit.identity, unit.jsRef);
+		units = orderClassUnitsByStaticInitDeps(units, byFullName, JsClassInitialization.dependencies(program));
 
 		return {
 			units: units,
@@ -97,7 +119,8 @@ class JsTargetCore implements ITargetCore {
 		};
 	}
 
-	static function orderClassUnitsByStaticInitDeps(units:Array<JsClassUnit>, byFullName:haxe.ds.StringMap<String>):Array<JsClassUnit> {
+	static function orderClassUnitsByStaticInitDeps(units:Array<JsClassUnit>, byFullName:haxe.ds.StringMap<String>,
+			startupDeps:haxe.ds.StringMap<Array<String>>):Array<JsClassUnit> {
 		final bySimpleFullName = new haxe.ds.StringMap<String>();
 		for (unit in units) {
 			final simple = simpleName(unit.fullName);
@@ -116,9 +139,10 @@ class JsTargetCore implements ITargetCore {
 			var index = 0;
 			while (index < remaining.length) {
 				final unit = remaining[index];
-				if (staticInitDepsReady(unit, emitted, byFullName, bySimpleFullName)) {
+				if (staticInitDepsReady(unit, emitted, byFullName, bySimpleFullName, startupDeps)) {
 					ordered.push(unit);
 					emitted.set(unit.fullName, true);
+					emitted.set(unit.identity, true);
 					remaining.splice(index, 1);
 					progressed = true;
 				} else {
@@ -126,6 +150,9 @@ class JsTargetCore implements ITargetCore {
 				}
 			}
 			if (!progressed) {
+				// Static read cycles retain parent-before-child initialization, as
+				// upstream does. All class declarations already exist at this point.
+				remaining.sort((left, right) -> left.declarationRank - right.declarationRank);
 				for (unit in remaining)
 					ordered.push(unit);
 				break;
@@ -135,9 +162,13 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function staticInitDepsReady(unit:JsClassUnit, emitted:haxe.ds.StringMap<Bool>, byFullName:haxe.ds.StringMap<String>,
-			bySimpleFullName:haxe.ds.StringMap<String>):Bool {
+			bySimpleFullName:haxe.ds.StringMap<String>, startupDeps:haxe.ds.StringMap<Array<String>>):Bool {
 		final deps = staticInitClassDeps(unit, byFullName, bySimpleFullName);
-		final superDep = resolveStaticInitTypePath(HxClassDecl.getExtendsPath(unit.decl), byFullName, bySimpleFullName);
+		final startup = startupDeps.get(unit.identity);
+		if (startup != null)
+			for (dependency in startup)
+				deps.push(dependency);
+		final superDep = unit.superIdentity;
 		if (superDep != null)
 			deps.push(superDep);
 		for (dep in deps) {
@@ -207,7 +238,7 @@ class JsTargetCore implements ITargetCore {
 					collectStaticInitClassDeps(caseExpr, deps, byFullName, bySimpleFullName);
 			case EUnop(_, _, inner):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectStaticInitClassDeps(left, deps, byFullName, bySimpleFullName);
 				collectStaticInitClassDeps(right, deps, byFullName, bySimpleFullName);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -231,7 +262,7 @@ class JsTargetCore implements ITargetCore {
 			case ERange(start, end):
 				collectStaticInitClassDeps(start, deps, byFullName, bySimpleFullName);
 				collectStaticInitClassDeps(end, deps, byFullName, bySimpleFullName);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
 			case _:
 		}
@@ -315,99 +346,9 @@ class JsTargetCore implements ITargetCore {
 		return parts.length == 0 ? fullName : parts[parts.length - 1];
 	}
 
-	static inline function isNativeJsLibExtern(fullName:String):Bool {
-		return fullName != null && StringTools.startsWith(fullName, "js.lib.");
-	}
-
-	static inline function isNativeJsHtmlExtern(fullName:String):Bool {
-		return fullName != null && StringTools.startsWith(fullName, "js.html.");
-	}
-
-	static inline function isNativeJsGlobalExtern(fullName:String):Bool {
-		return isNativeJsLibExtern(fullName) || isNativeJsHtmlExtern(fullName);
-	}
-
-	static function nativeJsNodeRequireExternRef(fullName:String):Null<String> {
-		return switch (fullName) {
-			case "js.node.buffer.Buffer":
-				"require(\"buffer\").Buffer";
-			case "js.node.buffer.SlowBuffer":
-				"require(\"buffer\").SlowBuffer";
-			case "js.node.console.Console":
-				"require(\"console\").Console";
-			case "js.node.url.URL":
-				"require(\"url\").URL";
-			case "js.node.url.URLSearchParams":
-				"require(\"url\").URLSearchParams";
-			case _:
-				null;
-		}
-	}
-
-	/**
-		Provides the runtime facade for `js.Browser`.
-
-		Why
-		- Upstream JS treats `js.Browser.console` as a shortcut to the selected JS
-		  global's `console` object.
-		- Emitting `js.Browser` as an owned Haxe class initializes recovered static
-		  extern fields to `null`, so `js.Browser.console.log(...)` crashes under Node.
-
-		What
-		- Binds the recovered class symbol to a small facade over the active JS global.
-		- Keeps static field emission disabled for this extern, preventing synthetic
-		  `null` assignments from overwriting host-provided globals.
-	**/
-	static function nativeJsBrowserExternRef(fullName:String):Null<String> {
-		if (fullName != "js.Browser")
-			return null;
-		return [
-			"(function() {",
-			" var __hx_global = (typeof window !== \"undefined\") ? window : ((typeof global !== \"undefined\") ? global : ((typeof self !== \"undefined\") ? self : globalThis));",
-			" return {",
-			"self: __hx_global,",
-			"window: __hx_global.window,",
-			"document: __hx_global.document,",
-			"location: __hx_global.location,",
-			"navigator: __hx_global.navigator,",
-			"console: __hx_global.console,",
-			"supported: (typeof __hx_global.window !== \"undefined\" && __hx_global.window.location != null && typeof __hx_global.window.location.protocol === \"string\")",
-			"};",
-			" })()"
-		].join("");
-	}
-
-	static function nativeJsGlobalExternRef(fullName:String):String {
-		if (isNativeJsHtmlExtern(fullName))
-			return nativeJsSimpleGlobalRef(simpleName(fullName));
-		return nativeJsLibGlobalRef(fullName);
-	}
-
-	static function nativeJsSimpleGlobalRef(globalName:String):String {
-		final quoted = JsNameMangler.quoteString(globalName);
-		return "((globalThis != null && globalThis[" + quoted + "] != null) ? globalThis[" + quoted + "] : {})";
-	}
-
-	static function nativeJsLibGlobalRef(fullName:String):String {
-		final suffix = fullName.substr("js.lib.".length);
-		final parts = suffix.split(".");
-		var expr = "globalThis";
-		var guard = "(globalThis != null)";
-		for (i in 0...parts.length) {
-			final part = parts[i];
-			if (part == null || part.length == 0)
-				continue;
-			final globalPart = switch ([i, part]) {
-				case [0, "intl"]: "Intl";
-				case _: part;
-			};
-			expr += "[" + JsNameMangler.quoteString(globalPart) + "]";
-			guard = "(" + guard + " && " + expr + " != null)";
-		}
-		return "(" + guard + " ? " + expr + " : {})";
-	}
-
 	static function emitRuntimePrelude(writer:JsWriter):Void {
+		writer.writeln("var $hxEnums = Object.create(null);");
+		JsEnumRuntime.emit(writer);
 		writer.writeln("var __hx_exports = (typeof exports !== \"undefined\") ? exports : ((typeof globalThis !== \"undefined\") ? globalThis : {});");
 		writer.writeln("var __hx_classes = Object.create(null);");
 		writer.writeln("var __hx_type_placeholders = Object.create(null);");
@@ -488,27 +429,11 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("return __hx_fields;");
 		writer.popIndent();
 		writer.writeln("},");
-		writer.writeln("enumConstructor: function (value) {");
-		writer.pushIndent();
-		writer.writeln("if (value == null) return null;");
-		writer.writeln("if (typeof value === \"string\") return value;");
-		writer.writeln("if (typeof value === \"object\" && value.__hx_ctor != null) return String(value.__hx_ctor);");
-		writer.writeln("return null;");
-		writer.popIndent();
-		writer.writeln("},");
-		writer.writeln("enumIndex: function (value) {");
-		writer.pushIndent();
-		writer.writeln("if (value == null) return -1;");
-		writer.writeln("if (typeof value === \"number\") return value | 0;");
-		writer.writeln("if (typeof value === \"string\") return 0;");
-		writer.writeln("if (typeof value === \"object\" && typeof value.__hx_index === \"number\") return value.__hx_index | 0;");
-		writer.writeln("return -1;");
-		writer.popIndent();
-		writer.writeln("},");
+		writer.writeln("enumConstructor: $hx_enum_name,");
+		writer.writeln("enumIndex: function (value) { return value._hx_index; },");
 		writer.writeln("enumParameters: function (value) {");
 		writer.pushIndent();
-		writer.writeln("if (value != null && typeof value === \"object\" && Array.isArray(value.__hx_params)) return value.__hx_params.slice();");
-		writer.writeln("return [];");
+		writer.writeln("return $hx_enum_parameters(value);");
 		writer.popIndent();
 		writer.writeln("}");
 		writer.popIndent();
@@ -544,11 +469,11 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (typeof value === \"string\") return value;");
 		writer.writeln("if (Array.isArray(value)) return \"[\" + value.map(__hx_string).join(\",\") + \"]\";");
 		writer.writeln("if (typeof value === \"function\") return \"<function>\";");
-		writer.writeln("if (typeof value === \"object\" && value.__hx_ctor != null) {");
+		writer.writeln("if ($hx_enum_constructor(value) != null) {");
 		writer.pushIndent();
-		writer.writeln("var __hx_params = Array.isArray(value.__hx_params) ? value.__hx_params : [];");
-		writer.writeln("if (__hx_params.length === 0) return String(value.__hx_ctor);");
-		writer.writeln("return String(value.__hx_ctor) + \"(\" + __hx_params.map(__hx_string).join(\",\") + \")\";");
+		writer.writeln("var __hx_params = $hx_enum_parameters(value);");
+		writer.writeln("if (__hx_params.length === 0) return $hx_enum_name(value);");
+		writer.writeln("return $hx_enum_name(value) + \"(\" + __hx_params.map(__hx_string).join(\",\") + \")\";");
 		writer.popIndent();
 		writer.writeln("}");
 		writer.writeln("return String(value);");
@@ -557,14 +482,21 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
-		final nodeRequireRef = nativeJsNodeRequireExternRef(unit.fullName);
-		final browserRef = nativeJsBrowserExternRef(unit.fullName);
+		// A direct host reference owns its implementation and causes no startup read.
+		if (unit.usesHostPath)
+			return;
+		if (unit.receiverPlan.enumConstructors != null) {
+			JsEnumDeclaration.emit(writer, {constructors: unit.receiverPlan.enumConstructors, reference: unit.jsRef, runtimeName: unit.fullName});
+			return;
+		}
+		final nodeRequireRef = JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName);
+		final browserRef = JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName);
 		if (nodeRequireRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + nodeRequireRef + ";");
 		} else if (browserRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + browserRef + ";");
-		} else if (isNativeJsGlobalExtern(unit.fullName)) {
-			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
+		} else if (JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName)) {
+			writer.writeln("var " + unit.jsRef + " = " + JsBuiltinExternBinding.nativeJsGlobalExternRef(unit.fullName) + ";");
 		} else if (unit.fullName == "haxe.ds.Vector") {
 			emitVectorConstructor(writer, unit.jsRef);
 		} else if (unit.fullName == "EReg") {
@@ -578,23 +510,37 @@ class JsTargetCore implements ITargetCore {
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
-		if (nodeRequireRef != null || browserRef != null || isNativeJsGlobalExtern(unit.fullName))
+		if (nodeRequireRef != null || browserRef != null || JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
+		writer.writeln(unit.jsRef + ".prototype.__class__ = " + unit.jsRef + ";");
 		if (unit.fullName == "EReg")
 			emitERegPrototypeRuntime(writer, unit.jsRef);
 		final staticRefs = staticMemberRefs(unit);
 
 		emitStaticFunctions(writer, unit, classRefs, staticRefs);
-		emitStaticFields(writer, unit, classRefs, staticRefs);
-		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
 
 		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
 			emitPlainClassPrototypeMethods(writer, unit, classRefs);
 	}
 
+	/** Run values only after every class and method exists; retain target runtime setup after its fields. */
+	static function emitClassInitialization(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+		if (unit.receiverPlan.enumConstructors != null)
+			return;
+		if (unit.usesHostPath
+			|| unit.externRef != null
+			|| JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName) != null
+			|| JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName) != null
+			|| JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
+			return;
+		emitStaticFields(writer, unit, classRefs, staticMemberRefs(unit));
+		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
+	}
+
 	static function emitStaticFields(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
 		final staticScope = new JsFunctionScope(classRefs, staticRefs);
+		staticScope.setEnumDeclarations(unit.enumDeclarations);
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
 				continue;
@@ -609,10 +555,11 @@ class JsTargetCore implements ITargetCore {
 				final constant = emitSimpleStaticFinalInitText(HxFieldDecl.getInitText(field));
 				constant == null ? "null" : constant;
 			} else if (init == null) {
-				"null";
+				// A declaration without a value must not erase assignments made by __init__.
+				null;
 			} else {
 				try {
-					JsExprEmitter.emit(init, staticScope.exprScope());
+					JsFieldInitializerEmitter.emit(writer, unit.projection, field, staticScope, unit.runtimeTypes.forInitializer(field));
 				} catch (e:String) {
 					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
 						"null";
@@ -627,7 +574,8 @@ class JsTargetCore implements ITargetCore {
 					}
 				}
 			};
-			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
+			if (value != null)
+				writer.writeln(unit.jsRef + suffix + " = " + value + ";");
 		}
 	}
 
@@ -648,10 +596,13 @@ class JsTargetCore implements ITargetCore {
 	static function emitStaticFunctions(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
 		for (functionProjection in unit.projection.getFunctions()) {
 			final fn = functionProjection.getDeclaration();
-			if (!HxFunctionDecl.getIsStatic(fn))
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "__init__")
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog());
+			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
+				unit.runtimeTypes.forFunction(functionProjection), functionProjection.findMethodUse);
+			fnScope.setControlProjection(functionProjection);
+			fnScope.setEnumDeclarations(unit.enumDeclarations);
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 
@@ -695,25 +646,35 @@ class JsTargetCore implements ITargetCore {
 		final ctor = constructorProjection == null ? null : constructorProjection.getDeclaration();
 		final instanceFields = instanceFieldRefs(unit.decl);
 		final superRef = resolveSuperClassRef(unit, classRefs);
-		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog());
+		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog(),
+			constructorProjection == null ? null : constructorProjection.getFieldReadCatalog(),
+			constructorProjection == null ? null : unit.runtimeTypes.forFunction(constructorProjection),
+			constructorProjection == null ? null : constructorProjection.findMethodUse);
+		if (constructorProjection != null)
+			scope.setControlProjection(constructorProjection);
+		scope.setReceiverPlan(unit.receiverPlan);
+		scope.setEnumDeclarations(unit.enumDeclarations);
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
 
 		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
 		writer.pushIndent();
-		writer.writeln("this.__class__ = " + unit.jsRef + ";");
+		// Class identity belongs to the instance prototype so parent calls cannot overwrite it.
 		emitDefaultArgGuards(writer, args, params, scope);
 		emitInstanceFieldInitializers(writer, unit, scope);
 		if (ctor != null && emitKnownConstructorBody(writer, unit.fullName, params)) {
 			// Known constructor body emitted above.
 		} else if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
 			emitConstructorStatements(writer, split.beforeSuper, scope, unit.fullName);
-			if (superRef != null)
+			if (split.superCall != null)
+				emitConstructorStatements(writer, [split.superCall], scope, unit.fullName);
+			else if (superRef != null)
 				writer.writeln(superRef + ".call(this);");
 			emitConstructorStatements(writer, split.afterSuper, scope, unit.fullName);
 		} else if (superRef != null) {
-			writer.writeln(superRef + ".call(this);");
+			// An omitted constructor forwards every supplied operand; the parent owns defaults.
+			writer.writeln(superRef + (ctor == null ? ".apply(this, arguments);" : ".call(this);"));
 		}
 		writer.popIndent();
 		writer.writeln("};");
@@ -726,30 +687,37 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (typeof " + superRef + " === \"function\") {");
 		writer.pushIndent();
 		writer.writeln(unit.jsRef + ".prototype = Object.create(" + superRef + ".prototype);");
-		writer.writeln(unit.jsRef + ".prototype.constructor = " + unit.jsRef + ";");
+		// Define the child's own slot even when a host parent freezes its constructor property.
+		writer.writeln("Object.defineProperty(" + unit.jsRef + ".prototype, \"constructor\", {value: " + unit.jsRef
+			+ ", writable: true, configurable: true, enumerable: true});");
 		writer.writeln(unit.jsRef + ".__super__ = " + superRef + ";");
 		writer.popIndent();
 		writer.writeln("}");
 	}
 
 	static function resolveSuperClassRef(unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Null<String> {
-		final path = HxClassDecl.getExtendsPath(unit.decl);
-		if (path == null || path.length == 0)
+		if (unit.superIdentity == null)
 			return null;
-		final direct = classRefs.get(path);
-		if (direct != null)
-			return direct;
-		final parts = path.split(".");
-		return classRefs.get(parts[parts.length - 1]);
+		final reference = classRefs.get(unit.superIdentity);
+		if (reference == null)
+			throw "JavaScript superclass has no emitted provider: " + unit.superIdentity;
+		return reference;
 	}
 
-	static function splitConstructorBody(body:Array<HxStmt>):{beforeSuper:Array<HxStmt>, afterSuper:Array<HxStmt>, sawSuper:Bool} {
+	static function splitConstructorBody(body:Array<HxStmt>):{
+		beforeSuper:Array<HxStmt>,
+		afterSuper:Array<HxStmt>,
+		sawSuper:Bool,
+		superCall:Null<HxStmt>
+	} {
 		final before = new Array<HxStmt>();
 		final after = new Array<HxStmt>();
 		var sawSuper = false;
+		var superCall:Null<HxStmt> = null;
 		for (stmt in body) {
 			if (!sawSuper && isSuperConstructorCall(stmt)) {
 				sawSuper = true;
+				superCall = stmt;
 				continue;
 			}
 			if (sawSuper)
@@ -757,7 +725,12 @@ class JsTargetCore implements ITargetCore {
 			else
 				before.push(stmt);
 		}
-		return {beforeSuper: before, afterSuper: after, sawSuper: sawSuper};
+		return {
+			beforeSuper: before,
+			afterSuper: after,
+			sawSuper: sawSuper,
+			superCall: superCall
+		};
 	}
 
 	static function isSuperConstructorCall(stmt:HxStmt):Bool {
@@ -895,14 +868,18 @@ class JsTargetCore implements ITargetCore {
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog());
+			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog(),
+				functionProjection.getFieldReadCatalog(), unit.runtimeTypes.forFunction(functionProjection), functionProjection.findMethodUse);
+			fnScope.setControlProjection(functionProjection);
+			fnScope.setEnumDeclarations(unit.enumDeclarations);
+			fnScope.setReceiverPlan(unit.receiverPlan);
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
 			writer.writeln(unit.jsRef + ".prototype" + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
 			emitDefaultArgGuards(writer, args, params, fnScope);
-			if (emitKnownInstanceFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
+			if (emitKnownInstanceFunctionBody(writer, unit, HxFunctionDecl.getName(fn), params)) {
 				// Known body emitted above.
 			} else if (shouldEmitNeutralInstanceFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
 				writer.writeln("return null;");
@@ -985,14 +962,15 @@ class JsTargetCore implements ITargetCore {
 				"null";
 			} else {
 				try {
-					JsExprEmitter.emit(init, scope.exprScope());
+					JsFieldInitializerEmitter.emit(writer, unit.projection, field, scope, unit.runtimeTypes.forInitializer(field));
 				} catch (e:String) {
 					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				} catch (error:haxe.Exception) {
 					throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
 				}
 			};
-			writer.writeln(fieldRef + " = " + value + ";");
+			if (value != null)
+				writer.writeln(fieldRef + " = " + value + ";");
 		}
 	}
 
@@ -1046,6 +1024,7 @@ class JsTargetCore implements ITargetCore {
 		return params;
 	}
 
+	/** Defaults consume missing values; rest parameters collect all remaining JavaScript operands. */
 	static function emitDefaultArgGuards(writer:JsWriter, args:Array<HxFunctionArg>, params:Array<String>, scope:JsFunctionScope):Void {
 		final count = args.length < params.length ? args.length : params.length;
 		for (i in 0...count) {
@@ -1054,7 +1033,7 @@ class JsTargetCore implements ITargetCore {
 			switch (HxFunctionArg.getDefaultValue(arg)) {
 				case NoDefault:
 					if (HxFunctionArg.getIsRest(arg))
-						writer.writeln("if (" + param + " == null) " + param + " = [];");
+						writer.writeln(param + " = Array.prototype.slice.call(arguments, " + i + ");");
 				case Default(expr):
 					writer.writeln("if (" + param + " == null) " + param + " = " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			}
@@ -1343,7 +1322,8 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
-	static function emitKnownInstanceFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+	static function emitKnownInstanceFunctionBody(writer:JsWriter, unit:JsClassUnit, fnName:String, params:Array<String>):Bool {
+		final fullName = unit.fullName;
 		if (fullName == "Any" && fnName == "__promote") {
 			writer.writeln("return this;");
 			return true;
@@ -1385,7 +1365,7 @@ class JsTargetCore implements ITargetCore {
 			return emitUtestDispatcherInstanceFunctionBody(writer, fnName, params, fullName == "utest.Notifier");
 
 		if (fullName == "utest.TestHandler" && fnName == "execute") {
-			emitUtestTestHandlerExecuteBody(writer);
+			emitUtestTestHandlerExecuteBody(writer, unit.enumDeclarations("utest.Assertation"));
 			return true;
 		}
 
@@ -1567,7 +1547,8 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
-	static function emitUtestTestHandlerExecuteBody(writer:JsWriter):Void {
+	/** Existing framework adaptation must construct results through the checked enum provider. */
+	static function emitUtestTestHandlerExecuteBody(writer:JsWriter, assertion:JsClassInheritancePlan.JsClassInheritanceNode):Void {
 		final assertRef = JsNameMangler.classVarName("utest.Assert");
 		writer.writeln("var __hx_handler = this;");
 		writer.writeln("var __hx_fixture = this.fixture;");
@@ -1622,7 +1603,7 @@ class JsTargetCore implements ITargetCore {
 		writer.pushIndent();
 		writer.writeln("if (__hx_fixture != null && __hx_fixture.ignoringInfo != null && __hx_fixture.ignoringInfo.isIgnored === true) {");
 		writer.pushIndent();
-		writer.writeln("__hx_addResult({ __hx_ctor: \"Ignore\", __hx_index: 5, __hx_params: [__hx_fixture.ignoringInfo.ignoreReason] });");
+		writer.writeln("__hx_addResult(" + JsEnumDeclaration.construct(assertion, "Ignore", ["__hx_fixture.ignoringInfo.ignoreReason"]) + ");");
 		writer.popIndent();
 		writer.writeln("} else {");
 		writer.pushIndent();
@@ -1634,11 +1615,13 @@ class JsTargetCore implements ITargetCore {
 		writer.popIndent();
 		writer.writeln("} catch (__hx_error) {");
 		writer.pushIndent();
-		writer.writeln("__hx_addResult({ __hx_ctor: \"Error\", __hx_index: 2, __hx_params: [__hx_error, []] });");
+		writer.writeln("__hx_addResult(" + JsEnumDeclaration.construct(assertion, "Error", ["__hx_error", "[]"]) + ");");
 		writer.popIndent();
 		writer.writeln("}");
 		writer.writeln("__hx_dispatch(this.onPrecheck);");
-		writer.writeln("if (__hx_resultLength(this.results) === 0) __hx_addResult({ __hx_ctor: \"Warning\", __hx_index: 1, __hx_params: [\"no assertions\"] });");
+		writer.writeln("if (__hx_resultLength(this.results) === 0) __hx_addResult("
+			+ JsEnumDeclaration.construct(assertion, "Warning", ['"no assertions"'])
+			+ ");");
 		writer.writeln("__hx_dispatch(this.onTested);");
 		writer.writeln("this.finished = true;");
 		writer.writeln("this.executionTime = ((typeof Date.now === \"function\" ? Date.now() : new Date().getTime()) / 1000 - this.startTime) * 1000;");
@@ -1651,7 +1634,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (this.list == null) this.list = [];");
 		writer.writeln("if (typeof this.list.add === \"function\") this.list.add(__hx_assertation);");
 		writer.writeln("else if (typeof this.list.push === \"function\") this.list.push(__hx_assertation);");
-		writer.writeln("var __hx_ctor = __hx_assertation == null ? null : __hx_assertation.__hx_ctor;");
+		writer.writeln("var __hx_ctor = $hx_enum_name(__hx_assertation);");
 		writer.writeln("var __hx_stats = this.stats;");
 		writer.writeln("function __hx_addStat(name) {");
 		writer.pushIndent();
@@ -1888,7 +1871,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (Array.isArray(" + value + ")) return \"Array\";");
 		writer.writeln("if (typeof " + value + " === \"object\") {");
 		writer.pushIndent();
-		writer.writeln("if (" + value + ".__hx_enum_name != null) return String(" + value + ".__hx_enum_name);");
+		writer.writeln("if ($hx_enum_constructor(" + value + ") != null) return " + value + ".__enum__;");
 		writer.writeln("if (" + value + ".__hx_name != null) return String(" + value + ".__hx_name);");
 		writer.writeln("if (" + value + ".constructor != null && " + value + ".constructor.__hx_name != null) return String(" + value
 			+ ".constructor.__hx_name);");
@@ -1909,7 +1892,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (Array.isArray(v)) return \"Array\";");
 		writer.writeln("if (typeof v === \"object\") {");
 		writer.pushIndent();
-		writer.writeln("if (v.__hx_enum_name != null) return String(v.__hx_enum_name);");
+		writer.writeln("if ($hx_enum_constructor(v) != null) return v.__enum__;");
 		writer.writeln("if (v.__hx_name != null) return String(v.__hx_name);");
 		writer.writeln("if (v.constructor != null && v.constructor.__hx_name != null) return String(v.constructor.__hx_name);");
 		writer.writeln("return \"Object\";");
@@ -1981,11 +1964,12 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (typeof e === \"object\" && e != null) {");
 		writer.pushIndent();
 		writer.writeln("if (typeof v !== \"object\" || v == null) return __hx_setError(\"expected Object but it is \" + tv);");
-		writer.writeln("if (e.__hx_ctor != null || v.__hx_ctor != null) {");
+		writer.writeln("var ec = $hx_enum_constructor(e), vc = $hx_enum_constructor(v);");
+		writer.writeln("if (ec != null || vc != null) {");
 		writer.pushIndent();
-		writer.writeln("if (e.__hx_ctor !== v.__hx_ctor || (e.__hx_index | 0) !== (v.__hx_index | 0)) return __hx_setError(\"expected enum constructor \" + __hx_q(e.__hx_ctor) + \" but it is \" + __hx_q(v.__hx_ctor));");
-		writer.writeln("var ep = Array.isArray(e.__hx_params) ? e.__hx_params : [];");
-		writer.writeln("var vp = Array.isArray(v.__hx_params) ? v.__hx_params : [];");
+		writer.writeln("if (ec !== vc) return __hx_setError(\"expected enum constructor \" + __hx_q($hx_enum_name(e)) + \" but it is \" + __hx_q($hx_enum_name(v)));");
+		writer.writeln("var ep = $hx_enum_parameters(e);");
+		writer.writeln("var vp = $hx_enum_parameters(v);");
 		writer.writeln("if (ep.length !== vp.length) return __hx_setError(\"expected \" + ep.length + \" enum params but they are \" + vp.length);");
 		writer.writeln("var enumPath = " + status + ".path;");
 		writer.writeln("for (var ei = 0; ei < ep.length; ei++) {");
@@ -2037,8 +2021,8 @@ class JsTargetCore implements ITargetCore {
 		How
 		- Preserve the source-level switch semantics over `HeaderDisplayMode` and
 		  `SuccessResultsDisplayMode`.
-		- Accept both current Stage3 enum-like strings and object values carrying
-		  `__hx_ctor`, so the helper remains correct as enum lowering gets richer.
+		- Read the declared enum registry used by ordinary values and the Type provider.
+		  Strings and retired synthetic objects are not alternate enum representations.
 	**/
 	static function emitUtestReportToolsStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		switch (fnName) {
@@ -2073,9 +2057,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("function __hx_enumName(v) {");
 		writer.pushIndent();
 		writer.writeln("if (v == null) return \"\";");
-		writer.writeln("if (typeof v === \"string\") return v;");
-		writer.writeln("if (typeof v === \"object\" && v.__hx_ctor != null) return String(v.__hx_ctor);");
-		writer.writeln("return String(v);");
+		writer.writeln("return $hx_enum_name(v);");
 		writer.popIndent();
 		writer.writeln("}");
 	}
@@ -2154,17 +2136,17 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (__hx_type === \"function\") return \"<function>\";");
 		writer.writeln("if (__hx_type !== \"object\") return String(" + value + ");");
 		writer.writeln("var __hx_nextIndent = " + indent + " + \"\\t\";");
-		writer.writeln("if (" + value + ".__hx_ctor != null) {");
+		writer.writeln("if ($hx_enum_constructor(" + value + ") != null) {");
 		writer.pushIndent();
-		writer.writeln("var __hx_params = Array.isArray(" + value + ".__hx_params) ? " + value + ".__hx_params : [];");
-		writer.writeln("if (__hx_params.length === 0) return String(" + value + ".__hx_ctor);");
+		writer.writeln("var __hx_params = $hx_enum_parameters(" + value + ");");
+		writer.writeln("if (__hx_params.length === 0) return $hx_enum_name(" + value + ");");
 		writer.writeln("var __hx_enumParts = [];");
 		writer.writeln("for (var __hx_ep = 0; __hx_ep < __hx_params.length; __hx_ep++) {");
 		writer.pushIndent();
 		writer.writeln("__hx_enumParts.push(" + JsNameMangler.classVarName("js.Boot") + ".__string_rec(__hx_params[__hx_ep], __hx_nextIndent));");
 		writer.popIndent();
 		writer.writeln("}");
-		writer.writeln("return String(" + value + ".__hx_ctor) + \"(\" + __hx_enumParts.join(\",\") + \")\";");
+		writer.writeln("return $hx_enum_name(" + value + ") + \"(\" + __hx_enumParts.join(\",\") + \")\";");
 		writer.popIndent();
 		writer.writeln("}");
 		writer.writeln("if (Array.isArray(" + value + ")) {");
@@ -3512,8 +3494,6 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		if (fullName == "String")
 			return true;
-		if (fullName != null && StringTools.startsWith(fullName, "haxe.ds."))
-			return true;
 		if (fullName == "haxe.Rest")
 			return true;
 		if (fullName == "sys.io.Process")
@@ -3540,11 +3520,7 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
-		if (fullName == "haxe.Template")
-			return false;
-		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
-			return true;
-		if (isNativeJsGlobalExtern(fullName))
+		if (JsBuiltinExternBinding.isNativeJsGlobalExtern(fullName))
 			return true;
 		if (isNativeJsExternPrototypeClass(fullName))
 			return true;
@@ -3615,33 +3591,46 @@ class JsTargetCore implements ITargetCore {
 		final classes = collectClassUnits(typedProgram);
 		final writer = new JsWriter();
 		final jsClassic = context.hasDefine("js-classic");
-
-		if (!jsClassic) {
-			writer.writeln("(function () {");
-			writer.pushIndent();
-			writer.writeln("\"use strict\";");
-		}
+		final bindings = JsProgramBindings.select(typedProgram);
+		JsProgramBindings.open(writer, bindings, jsClassic);
 
 		emitRuntimePrelude(writer);
+		JsRuntimeTypeSupport.emitDefinition(writer);
+		JsMethodValueSupport.emitRuntime(writer);
 		final classRefs = buildClassRefs(classes.bySimpleName, classes.byFullName);
 
+		final declarationOrder = classes.units.copy();
+		declarationOrder.sort((left, right) -> left.declarationRank - right.declarationRank);
 		for (emitNative in [true, false]) {
-			for (unit in classes.units) {
-				if (isNativeJsLibExtern(unit.fullName) != emitNative)
+			for (unit in declarationOrder) {
+				if ((unit.externRef != null || JsBuiltinExternBinding.isNativeJsLibExtern(unit.fullName)) != emitNative)
 					continue;
 				emitClass(writer, unit, classRefs, classes.bySimpleName);
 			}
 		}
+
+		// All interface values exist before membership metadata or user initializers run.
+		for (unit in classes.units)
+			if (unit.externRef == null && unit.interfaceRefs.length > 0)
+				writer.writeln(unit.jsRef + ".__hx_interfaces = [" + unit.interfaceRefs.join(", ") + "];");
+
+		for (unit in classes.units)
+			if (!unit.usesHostPath
+				&& unit.externRef == null
+				&& JsBuiltinExternBinding.nativeJsNodeRequireExternRef(unit.fullName) == null
+				&& JsBuiltinExternBinding.nativeJsBrowserExternRef(unit.fullName) == null
+				&& !JsBuiltinExternBinding.isNativeJsGlobalExtern(unit.fullName))
+				JsClassInitialization.emit(writer, unit.projection, classRefs, staticMemberRefs(unit), unit.runtimeTypes);
+
+		for (unit in classes.units)
+			emitClassInitialization(writer, unit, classRefs);
 
 		final mainRef = resolveMainRef(context.mainModule, classes.bySimpleName, classes.byFullName);
 		if (mainRef != null) {
 			writer.writeln(mainRef + JsNameMangler.propertySuffix("main") + "();");
 		}
 
-		if (!jsClassic) {
-			writer.popIndent();
-			writer.writeln("})();");
-		}
+		JsProgramBindings.close(writer, bindings, jsClassic);
 
 		sys.io.File.saveContent(outputPath, writer.toString());
 		final sourceMapPath = outputPath + ".map";

@@ -2158,71 +2158,9 @@ class RuntimeMacroTypes {
 
 	static function metadataAccess(metadataEntries:Array<String>):MetaAccess {
 		final access = emptyMetaAccess();
-		if (metadataEntries == null || metadataEntries.length == 0)
-			return access;
-		for (raw in metadataEntries) {
-			final entry = parseMetadataEntry(raw);
-			if (entry != null)
-				access.add(entry.name, entry.params, entry.pos);
-		}
+		for (entry in RuntimeMacroExprs.parseMetadataEntries(metadataEntries))
+			access.add(entry.name, entry.params, entry.pos);
 		return access;
-	}
-
-	public static function parseMetadataEntries(metadataEntries:Array<String>):Metadata {
-		return metadataAccess(metadataEntries).get();
-	}
-
-	static function parseMetadataEntry(raw:String):Null<MetadataEntry> {
-		final text = StringTools.trim(raw == null ? "" : raw);
-		if (!StringTools.startsWith(text, "@:"))
-			return null;
-		final open = text.indexOf("(");
-		final close = text.lastIndexOf(")");
-		final name = if (open == -1) text.substr(1) else text.substr(1, open - 1);
-		if (name.length == 0)
-			return null;
-		final params = new Array<Expr>();
-		if (open != -1 && close > open) {
-			for (argText in splitMetadataArgs(text.substr(open + 1, close - open - 1))) {
-				final trimmed = StringTools.trim(argText);
-				if (trimmed.length == 0)
-					continue;
-				params.push(RuntimeMacroExprs.parseInlineString(trimmed, defaultPos()));
-			}
-		}
-		return {
-			name: name,
-			params: params,
-			pos: defaultPos()
-		};
-	}
-
-	static function splitMetadataArgs(raw:String):Array<String> {
-		final out = new Array<String>();
-		if (raw == null || raw.length == 0)
-			return out;
-		var depth = 0;
-		var start = 0;
-		var i = 0;
-		while (i < raw.length) {
-			final ch = raw.charAt(i);
-			switch (ch) {
-				case "(" | "[" | "{":
-					depth += 1;
-				case ")" | "]" | "}":
-					if (depth > 0)
-						depth -= 1;
-				case ",":
-					if (depth == 0) {
-						out.push(raw.substr(start, i - start));
-						start = i + 1;
-					}
-				case _:
-			}
-			i += 1;
-		}
-		out.push(raw.substr(start));
-		return out;
 	}
 
 	static function defaultPos():Position {

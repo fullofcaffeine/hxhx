@@ -46,8 +46,9 @@ class M14CppMetaCarrierErasureIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
-	static function typedSource(filePath:String, source:String):TypedModule {
-		return TyperStage.typeModule(ParserStage.parse(source, filePath));
+	static function resolvedSource(modulePath:String, source:String):ResolvedModule {
+		final filePath = modulePath + ".hx";
+		return new ResolvedModule(modulePath, filePath, ParserStage.parse(source, filePath));
 	}
 
 	static function program():GenIrProgram {
@@ -78,12 +79,14 @@ class M14CppMetaCarrierErasureIntegrationTest {
 			"  TUnknown;",
 			"}",
 		].join("\n");
-		return MacroStage.expandProgram([
-			typedSource("Main.hx", mainSource),
-			typedSource("Class.hx", classSource),
-			typedSource("Enum.hx", enumSource),
-			typedSource("Type.hx", typeSource)
-		], []);
+		final resolved = [
+			resolvedSource("Main", mainSource),
+			resolvedSource("Class", classSource),
+			resolvedSource("Enum", enumSource),
+			resolvedSource("Type", typeSource)
+		];
+		final index = TyperIndex.build(resolved);
+		return MacroStage.expandProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index)], []);
 	}
 
 	static function main():Void {

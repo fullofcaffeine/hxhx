@@ -8,6 +8,7 @@ import haxe.macro.Expr.Position;
 #if macro
 import haxe.macro.Context;
 #end
+#end
 
 /** Stable source information carried from target input into lowered nodes. */
 typedef OcamlLoweredSourceSpan = {
@@ -16,6 +17,7 @@ typedef OcamlLoweredSourceSpan = {
 	final max:Int;
 }
 
+#if (macro || reflaxe_runtime || eval)
 /**
 	Creates and reads stable target-lowering origins.
 

@@ -18,11 +18,13 @@ class TyFieldInfo {
 	final hasInitializer:Bool;
 	final propertyGet:String;
 	final propertySet:String;
+	final hasStorage:Bool;
 	final noImportGlobal:Bool;
 	final canonicalKey:String;
+	final constant:TyFieldConstant;
 
 	public function new(owner:TyNominalTypeId, modulePath:String, name:String, type:TyType, isStatic:Bool, isPublic:Bool, isFinal:Bool, isInline:Bool,
-			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "") {
+			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "", ?constant:TyFieldConstant, isVar:Bool = false) {
 		this.owner = owner;
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.name = name == null ? "" : StringTools.trim(name);
@@ -34,11 +36,22 @@ class TyFieldInfo {
 		this.hasInitializer = hasInitializer;
 		this.propertyGet = propertyGet == null ? "" : StringTools.trim(propertyGet);
 		this.propertySet = propertySet == null ? "" : StringTools.trim(propertySet);
+		// Accessor-only properties have no physical value. Either direct access
+		// mode, or explicit @:isVar, gives the declaration real backing storage.
+		this.hasStorage = isVar || directMode(this.propertyGet) || directMode(this.propertySet);
 		this.noImportGlobal = noImportGlobal;
+		this.constant = constant == null ? new TyFieldConstant(Ordinary) : constant;
 		final ownerName = owner == null ? "" : owner.getCanonicalName();
 		canonicalKey = ownerName + "#" + (isStatic ? "static" : "instance") + "#" + this.name;
 		if (ownerName.length == 0 || this.modulePath.length == 0 || this.name.length == 0)
 			throw "typed field information requires owner, module, and field identities";
+		if (this.constant.isEnumValue()
+			&& (!isStatic
+				|| !isInline
+				|| this.propertySet != "never"
+				|| this.type.getNominalIdentity() == null
+				|| this.type.getNominalIdentity().getCanonicalName() != ownerName))
+			throw "enum constant requires an inline read-only field of its owning abstract: " + canonicalKey;
 	}
 
 	public function getOwner():TyNominalTypeId
@@ -76,6 +89,13 @@ class TyFieldInfo {
 	public function getPropertySet():String
 		return propertySet;
 
+	/** Whether this declaration owns a stored value in addition to any accessor calls. */
+	public function getHasStorage():Bool
+		return hasStorage;
+
+	static function directMode(mode:String):Bool
+		return mode == "" || mode == "default" || mode == "null";
+
 	/** Whether `import Owner.*` must withhold this field from bare-name lookup. **/
 	public function getNoImportGlobal():Bool
 		return noImportGlobal;
@@ -83,7 +103,11 @@ class TyFieldInfo {
 	public function getCanonicalKey():String
 		return canonicalKey;
 
+	/** Resolved constant evidence remains attached to this field's dependency identity. */
+	public function getConstant():TyFieldConstant
+		return constant;
+
 	/** Whether another module may compile the initializer value into a reader. **/
 	public function canEmbedCrossModuleValue():Bool
-		return isPublic && isStatic && hasInitializer && (isFinal || isInline);
+		return isPublic && isStatic && (hasInitializer || constant.isEnumValue()) && (isFinal || isInline);
 }

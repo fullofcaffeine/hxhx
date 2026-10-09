@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_RESULT_ROOT="$(mktemp -d)"
-trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_RESULT_ROOT"' EXIT
+INSPECTOR_DIR="$(mktemp -d)"
+trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_RESULT_ROOT" "$INSPECTOR_DIR"' EXIT
 
 # The upstream routes establish the observable virtual dispatch and early-return
 # behavior. The native build performed by the portable harness is checked below
@@ -27,7 +28,7 @@ const expected = [
 ]
 const stringResults = report.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-exact-string-declaration')
-if (report.schemaVersion !== 86 || stringResults.length !== expected.length) {
+if (report.schemaVersion !== 94 || stringResults.length !== expected.length) {
 	throw new Error(`expected ${expected.length} declaration-only instance String results, got ${stringResults.length}`)
 }
 
@@ -96,7 +97,7 @@ for (const item of expectedVoid) {
 	const body = item.source.slice(start, end)
 	if (start < 0
 		|| end < 0
-		|| !body.includes('raise (HxRuntime.Hx_return_void)')
+		|| !body.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		throw new Error(`${item.generatedName} did not mechanically consume its payloadless return boundary`)
@@ -104,9 +105,13 @@ for (const item of expectedVoid) {
 }
 NODE
 
+# Compile once, then inspect each report in a fresh process. The disposable
+# bytecode preserves isolation without rebuilding the same CLI seven times.
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
@@ -115,7 +120,7 @@ const stringResults = report.lowering.functionResultBoundaries.filter(boundary =
 	boundary.source === 'non-generic-instance-exact-string-declaration')
 const voidResults = report.lowering.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'non-generic-instance-effect-only-void-declaration')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| stringResults.length !== 3
 	|| voidResults.length !== 3
@@ -137,6 +142,7 @@ for mutation in int-source carrier callable-owner; do
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -162,13 +168,11 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted instance String result $mutation evidence" >&2
 		exit 1
@@ -185,6 +189,7 @@ for mutation in wrong-source value-carrier callable-owner; do
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -216,13 +221,11 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported mutation ${mutation}`)
 }
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/void-$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted instance Void result $mutation evidence" >&2
 		exit 1

@@ -1,3 +1,4 @@
+/** Preserve authored expression structure, token boundaries, and following statements. */
 class M14HihExprTextParserIntegrationTest {
 	static function fail(msg:String):Void {
 		throw msg;
@@ -8,22 +9,48 @@ class M14HihExprTextParserIntegrationTest {
 			fail(msg);
 	}
 
-	static function assertPushTryCatchRaw(stmts:Array<HxStmt>, msg:String):Void {
+	/** Source functions retain their written identity and signature before any lambda lowering. */
+	static function assertLocalFunction(facts:HxSourceFunction, name:String, args:Array<String>, ?returnType:String, isInline:Bool = false):Void {
+		assertTrue(facts.getPlacement() == Declaration && facts.getDeclaredName() == name, "local function lost declaration identity: " + name);
+		assertTrue(facts.getArguments().join(",") == args.join(","), "local function lost arguments: " + name);
+		assertTrue(facts.getKind().match(Named(_, true)) == isInline, "local function changed inline syntax: " + name);
+		if (returnType != null)
+			assertTrue(facts.getSignature().getReturnTypeHint() == returnType, "local function lost its written return type: " + name);
+	}
+
+	static function assertPushTryCatch(stmts:Array<HxStmt>, msg:String):Void {
 		assertTrue(stmts.length == 1, msg + ": expected one push statement");
 		switch (stmts[0]) {
-			case SExpr(ECall(EField(EIdent(receiver), field), [ETryCatchRaw(raw)]), _):
+			case SExpr(ECall(EField(EIdent(receiver), field), [ESourceTry(catches, [EThrow(_, _), EField(EIdent("e"), "stack")], _)]), _):
 				assertTrue(receiver == "result", msg + ": expected result.push receiver");
 				assertTrue(field == "push", msg + ": expected push call");
-				assertTrue(raw.indexOf("try{") == 0, msg + ": expected canonical try raw, got " + raw);
-				assertTrue(raw.indexOf("catch(e:Exception)") >= 0, msg + ": expected typed catch signature, got " + raw);
+				assertTrue(catches.length == 1 && catches[0].getName() == "e" && catches[0].getTypeHint() == "Exception",
+					msg + ": expected exact typed catch signature");
 			case SExpr(EUnsupported(raw), _):
 				fail(msg + ": try/catch expression parsed as unsupported: " + raw);
 			case _:
-				fail(msg + ": expected push call with raw try/catch expression");
+				fail(msg + ": expected push call retaining the thrown expression and catch field read");
 		}
 	}
 
 	static function main() {
+		final untypedTrySource = 'try { untyped probe(); } catch (error:String) { error; }';
+		for (expression in [
+			HxParser.parseExprText(untypedTrySource),
+			TypedBodyBuilder.recoveredStructuralExpression(untypedTrySource)
+		]) {
+			switch (expression) {
+				case ESourceTry(catches, [
+					ESourceGroup([EUntyped(ECall(EIdent("probe"), []))], _),
+					ESourceGroup([EIdent("error")], _)
+				], _):
+					assertTrue(catches.length == 1 && catches[0].getName() == "error" && catches[0].getTypeHint() == "String",
+						"try expression lost its written catch binding");
+				case _:
+					throw "try expression lost its untyped call or catch result structure";
+			}
+		}
+
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
@@ -53,7 +80,9 @@ class M14HihExprTextParserIntegrationTest {
 
 		final returnMacroArgument = HxParser.parseFunctionBodyText("shouldFail(return (null : Null<String>));");
 		switch (returnMacroArgument) {
-			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(ECast(ENull, "Null<String>"))]), _)]:
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EReturn(EParenthesized(ECast(ENull, "Null<String>"), _))]), _)
+			]:
 			case [SExpr(EUnsupported(raw), _)]:
 				fail("return macro argument stayed opaque: " + raw);
 			case _:
@@ -61,7 +90,7 @@ class M14HihExprTextParserIntegrationTest {
 		}
 		final standaloneTypedNullReturn = HxParser.parseFunctionBodyText("return (null : Null<String>);");
 		switch (standaloneTypedNullReturn) {
-			case [SReturn(ECast(ENull, "Null<String>"), _)]:
+			case [SReturn(EParenthesized(ECast(ENull, "Null<String>"), _), _)]:
 			case _:
 				fail("standalone typed-null return no longer parses as a return statement");
 		}
@@ -149,7 +178,7 @@ class M14HihExprTextParserIntegrationTest {
 		final whileMacroArgument = HxParser.parseFunctionBodyTextAt(whileMacroSource, whileMacroSource, 0);
 		switch (whileMacroArgument) {
 			case [
-				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), body, true, position)]), _)
+				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), body, true, position, loopKind)]), _)
 			]:
 				assertTrue(body.length == 0, "empty while macro body gained a synthetic expression");
 				assertTrue(position.getLine() == 1 && position.getColumn() == 12, "while macro expression lost its source position");
@@ -160,7 +189,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (nonEmptyWhileMacroArgument) {
 			case [
 				SExpr(ECall(EIdent("shouldFail"), [
-					EWhile(ECall(EIdent("ready"), []), [ECall(EIdent("ping"), []), EVars(declarations)], true, _)
+					EWhile(ECall(EIdent("ready"), []), [ECall(EIdent("ping"), []), EVars(declarations)], true, _, loopKind)
 				]), _)
 			]:
 				assertTrue(declarations.length == 1 && HxExprVarDecl.getName(declarations[0]) == "value",
@@ -250,7 +279,9 @@ class M14HihExprTextParserIntegrationTest {
 		final anonymousFunctionStmt = HxParser.parseFunctionBodyText("function() { return 1; }; after();");
 		assertTrue(anonymousFunctionStmt.length == 2, "expected anonymous function statement plus following statement");
 		switch (anonymousFunctionStmt[0]) {
-			case SExpr(ELambda([], EInt(1)), _):
+			case SExpr(ESourceFunction(facts, ESourceGroup([EReturn(EInt(1))], _), [], _), _):
+				assertTrue(facts.getKind() == Anonymous && facts.getPlacement() == Value && facts.getArguments().length == 0,
+					"anonymous function statement lost its source function facts");
 			case SExpr(EUnsupported(raw), _):
 				fail("anonymous function statement parsed as unsupported: " + raw);
 			case _:
@@ -259,8 +290,9 @@ class M14HihExprTextParserIntegrationTest {
 
 		final spacedFunctionLiteral = HxParser.parseExprText("function (x, y) return x + y");
 		switch (spacedFunctionLiteral) {
-			case ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y"))):
-			case ELambda(_, EBinop(_, EIdent(bad), _)) if (bad == "returnx"):
+			case ESourceFunction(facts, EReturn(EBinop("+", EIdent("x"), EIdent("y"))), [], _):
+				assertTrue(facts.getKind() == Anonymous && facts.getArguments().join(",") == "x,y", "spaced function literal lost its argument list");
+			case ESourceFunction(_, EReturn(EBinop(_, EIdent(bad), _)), _, _) if (bad == "returnx"):
 				fail("spaced function literal should not merge return with first body identifier");
 			case EUnsupported(raw):
 				fail("spaced function literal parsed as unsupported: " + raw);
@@ -304,12 +336,15 @@ class M14HihExprTextParserIntegrationTest {
 
 		final mutableMapBlockExpr = HxParser.parseExprText('{ var h = new haxe.ds.StringMap(); h.set("lt", "<"); h; }');
 		switch (mutableMapBlockExpr) {
-			case ETryCatchRaw(raw):
-				assertTrue(raw.indexOf("opaque_block_expr:") == 0, "expected mutable map block to stay opaque");
+			case ESourceGroup([
+				EVars([EVariableDeclaration("h", "", ENew("haxe.ds.StringMap", []), _, false, false)]),
+				ECall(EField(EIdent("h"), "set"), [EString("lt"), EString("<")]),
+				EIdent("h")
+			], _):
 			case EUnsupported(raw):
 				fail("mutable map block parsed as unsupported: " + raw);
 			case _:
-				fail("mutable map block should stay opaque for Stage3 poison/stub compatibility");
+				fail("mutable map block lost its declaration, mutation, or returned binding");
 		}
 
 		// A value-producing `if` branch may begin with an anonymous object literal.
@@ -628,33 +663,35 @@ class M14HihExprTextParserIntegrationTest {
 		final localFunctionStmts = HxParser.parseFunctionBodyText("function helper(v:Int):String { return Std.string(v); } eq(helper(3), \"3\");");
 		assertTrue(localFunctionStmts.length == 2, "expected local function plus call statement");
 		switch (localFunctionStmts[0]) {
-			case SVar(name, typeHint, ELambda(args, _), _):
-				assertTrue(name == "helper", "expected local function to lower to helper binding");
-				assertTrue(typeHint == "(Int)->String", "expected typed local function to preserve its backend function type hint");
-				assertTrue(args.length == 1 && args[0] == "v", "expected local function arg to be preserved");
+			case SExpr(ESourceFunction(facts, ESourceGroup([EReturn(ECall(EField(EIdent("Std"), "string"), [EIdent("v")]))], _), [], _), _):
+				assertLocalFunction(facts, "helper", ["v"], "String");
+				assertTrue(facts.getSignature().getParameters()[0].typeHint == "Int", "helper lost its written input type");
 			case SExpr(EUnsupported(raw), _):
 				fail("local function declaration parsed as unsupported: " + raw);
 			case _:
-				fail("expected local function declaration to lower to SVar lambda");
+				fail("expected local function declaration with its authored return");
 		}
 
 		final zeroArgLocalFunctionStmts = HxParser.parseFunctionBodyText('function returnText():String { return "ok"; } eq(returnText(), "ok");');
 		assertTrue(zeroArgLocalFunctionStmts.length == 2, "expected zero-arg local function plus call statement");
 		switch (zeroArgLocalFunctionStmts[0]) {
-			case SVar(name, typeHint, ELambda(args, _), _):
-				assertTrue(name == "returnText", "expected zero-arg local function name");
-				assertTrue(typeHint == "()->String", "expected zero-arg local function return type to be preserved");
-				assertTrue(args.length == 0, "expected zero-arg local function args");
+			case SExpr(ESourceFunction(facts, ESourceGroup([EReturn(EString("ok"))], _), [], _), _):
+				assertLocalFunction(facts, "returnText", [], "String");
 			case _:
-				fail("expected zero-arg local function declaration to lower to typed SVar lambda");
+				fail("expected zero-arg local function with its authored return");
 		}
 
 		final localBlockSwitchStmts = HxParser.parseFunctionBodyText('function accessText(va:VarAccess, getOrSet:String):String return { switch (va) { case AccNormal | AccCtor: "default"; case AccNo: "null"; case AccResolve: throw "Invalid"; case AccCall: getOrSet; } }\naccessText(AccCall, "get");');
 		assertTrue(localBlockSwitchStmts.length == 2, "expected local block-switch function plus call statement");
 		switch (localBlockSwitchStmts[0]) {
-			case SVar("accessText", "(VarAccess, String)->String", ELambda(["va", "getOrSet"], ESwitch(_, patterns, exprs)), _):
-				assertTrue(patterns.length == 5, "expected block switch local function patterns plus fallback");
-				assertTrue(exprs.length == 5, "expected block switch local function expressions plus fallback");
+			case SExpr(ESourceFunction(facts, EReturn(ESourceGroup([ESwitch(_, patterns, exprs)], _)), [], _), _):
+				assertLocalFunction(facts, "accessText", ["va", "getOrSet"], "String");
+				assertTrue(facts.getSignature()
+					.getParameters()
+					.map(parameter -> parameter.typeHint)
+					.join(",") == "VarAccess,String",
+					"block switch function lost its written parameter types");
+				assertTrue(patterns.length == 4 && exprs.length == 4, "source switch must preserve its four written cases without inventing a fallback");
 			case SVar(_, _, ELambda(_, ETryCatchRaw(raw)), _):
 				fail("block switch local function body should not stay opaque: " + raw);
 			case _:
@@ -666,18 +703,23 @@ class M14HihExprTextParserIntegrationTest {
 		switch (typedLocalFunctionBlockStmts[0]) {
 			case SReturn(ETryCatchRaw(raw), _):
 				fail("typed local function block expression should not stay opaque: " + raw);
-			case SReturn(ECall(ELambda(_, _), _), _):
+			case SReturn(ESourceGroup([
+				ESourceFunction(facts, EReturn(EString("ok")), [], _),
+				EVars([EVariableDeclaration("value", "", ECall(EIdent("helper"), []), _, false, false)]),
+				EIdent("value")
+			], _), _):
+				assertLocalFunction(facts, "helper", [], "String");
 			case other:
-				fail("expected typed local function block expression to lower through lambda continuations, got " + Type.enumConstructor(other));
+				fail("expected the typed local function, call, and result in source order, got " + Type.enumConstructor(other));
 		}
 
 		final localRestFunctionStmts = HxParser.parseFunctionBodyText("function pick(first:Int, second:Int, ...rest:Int) { return rest[2]; } eq(123, pick(1, 2, 0, 0, 123, 0));");
 		assertTrue(localRestFunctionStmts.length == 2, "expected local rest function plus call statement");
 		switch (localRestFunctionStmts[0]) {
-			case SVar(name, _, ECall(EIdent("__hxhx_rest_lambda"), [ELambda(args, EArrayAccess(EIdent("rest"), EInt(2))), EInt(restIndex)]), _):
-				assertTrue(name == "pick", "expected local rest function to lower to pick binding");
-				assertTrue(args.length == 3 && args[2] == "rest", "expected local rest arg to parse as runtime arg name");
-				assertTrue(restIndex == 2, "expected local rest arg index metadata");
+			case SExpr(ESourceFunction(facts, ESourceGroup([EReturn(EArrayAccess(EIdent("rest"), EInt(2)))], _), [], _), _):
+				assertLocalFunction(facts, "pick", ["first", "second", "rest"]);
+				final parameters = facts.getSignature().getParameters();
+				assertTrue(!parameters[0].isRest && !parameters[1].isRest && parameters[2].isRest, "rest marker moved to a different parameter");
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local rest function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):
@@ -689,9 +731,9 @@ class M14HihExprTextParserIntegrationTest {
 		final localKeyValueFunctionStmts = HxParser.parseFunctionBodyText("function collect(r:Array<Int>) { var keys = []; var values = []; for (k => v in r) { keys.push(k); values.push(v); } return {keys: keys, values: values}; } var got = collect([3, 2]);");
 		assertTrue(localKeyValueFunctionStmts.length == 2, "expected local key/value function plus call statement");
 		switch (localKeyValueFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, body), _):
-				assertTrue(name == "collect", "expected local key/value function name to parse");
-				assertTrue(args.length == 1 && args[0] == "r", "expected local key/value function arg");
+			case SExpr(ESourceFunction(facts, body, [], _), _):
+				assertLocalFunction(facts, "collect", ["r"]);
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(localKeyValueFunctionStmts), "key/value function contains unsupported syntax");
 				switch (body) {
 					case EUnsupported(raw):
 						fail("local key/value function body parsed as unsupported: " + raw);
@@ -706,9 +748,9 @@ class M14HihExprTextParserIntegrationTest {
 		final localForInFunctionStmts = HxParser.parseFunctionBodyText("function values(xs:Array<String>) { var out = []; for (x in xs) { out.push(x); } return out; } var got = values([\"a\"]);");
 		assertTrue(localForInFunctionStmts.length == 2, "expected local for-in function plus call statement");
 		switch (localForInFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, body), _):
-				assertTrue(name == "values", "expected local for-in function name to parse");
-				assertTrue(args.length == 1 && args[0] == "xs", "expected local for-in function arg");
+			case SExpr(ESourceFunction(facts, body, [], _), _):
+				assertLocalFunction(facts, "values", ["xs"]);
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(localForInFunctionStmts), "for-in function contains unsupported syntax");
 				switch (body) {
 					case EUnsupported(raw):
 						fail("local for-in function body parsed as unsupported: " + raw);
@@ -723,9 +765,9 @@ class M14HihExprTextParserIntegrationTest {
 		final localSwitchFunctionStmts = HxParser.parseFunctionBodyText("function label(kind:String) { var out = \"\"; switch (kind) { case \"a\": out = \"A\"; default: out = \"X\"; } return out; } var got = label(\"a\");");
 		assertTrue(localSwitchFunctionStmts.length == 2, "expected local switch function plus call statement");
 		switch (localSwitchFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, body), _):
-				assertTrue(name == "label", "expected local switch function name to parse");
-				assertTrue(args.length == 1 && args[0] == "kind", "expected local switch function arg");
+			case SExpr(ESourceFunction(facts, body, [], _), _):
+				assertLocalFunction(facts, "label", ["kind"]);
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(localSwitchFunctionStmts), "switch function contains unsupported syntax");
 				switch (body) {
 					case EUnsupported(raw):
 						fail("local switch function body parsed as unsupported: " + raw);
@@ -740,9 +782,8 @@ class M14HihExprTextParserIntegrationTest {
 		final spreadCallStmts = HxParser.parseFunctionBodyText("function spreadRest(r:Array<Int>) { return rest(...r); } var a = rest(...[1, 2, 3]); var b = new Parent(...[1, 2, 3]);");
 		assertTrue(spreadCallStmts.length == 3, "expected local spread function plus spread call and constructor");
 		switch (spreadCallStmts[0]) {
-			case SVar(name, _, ELambda(args, ECall(EIdent("rest"), [ECall(EIdent("__hxhx_spread"), [EIdent("r")])])), _):
-				assertTrue(name == "spreadRest", "expected local spread function name to parse");
-				assertTrue(args.length == 1 && args[0] == "r", "expected local spread function arg");
+			case SExpr(ESourceFunction(facts, ESourceGroup([EReturn(ECall(EIdent("rest"), [ECall(EIdent("__hxhx_spread"), [EIdent("r")])]))], _), [], _), _):
+				assertLocalFunction(facts, "spreadRest", ["r"]);
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local spread function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):
@@ -762,9 +803,9 @@ class M14HihExprTextParserIntegrationTest {
 		final localWhileFunctionStmts = HxParser.parseFunctionBodyText("function count(xs:Array<Int>) { var i = 0; while (i < xs.length) { i += 1; } return i; } var n = count([1, 2, 3]);");
 		assertTrue(localWhileFunctionStmts.length == 2, "expected local while function plus call statement");
 		switch (localWhileFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, body), _):
-				assertTrue(name == "count", "expected local while function name to parse");
-				assertTrue(args.length == 1 && args[0] == "xs", "expected local while function arg");
+			case SExpr(ESourceFunction(facts, body, [], _), _):
+				assertLocalFunction(facts, "count", ["xs"]);
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(localWhileFunctionStmts), "while function contains unsupported syntax");
 				switch (body) {
 					case EUnsupported(raw):
 						fail("local while function body parsed as unsupported: " + raw);
@@ -779,8 +820,10 @@ class M14HihExprTextParserIntegrationTest {
 		final inlineExprStmts = HxParser.parseFunctionBodyText("function stringify(value:Dynamic, max:Int) { return inline helper(value, max - 1); } var s = stringify(v, 10);");
 		assertTrue(inlineExprStmts.length == 2, "expected inline expression function plus call statement");
 		switch (inlineExprStmts[0]) {
-			case SVar(name, _, ELambda(_, ECall(EIdent("helper"), [EIdent("value"), EBinop("-", EIdent("max"), EInt(1))])), _):
-				assertTrue(name == "stringify", "expected inline expression function name to parse");
+			case SExpr(ESourceFunction(facts, ESourceGroup([
+				EReturn(ECall(EIdent("helper"), [EIdent("value"), EBinop("-", EIdent("max"), EInt(1))]))
+			], _), [], _), _):
+				assertLocalFunction(facts, "stringify", ["value", "max"]);
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("inline expression function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):
@@ -792,9 +835,9 @@ class M14HihExprTextParserIntegrationTest {
 		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
 		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
 		switch (localReturnFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, ECall(EField(EIdent("Int64"), "compare"), [EIdent("a"), ECall(EField(EIdent("Int64"), "make"), _)])), _):
-				assertTrue(name == "capture", "expected local return function name to parse");
-				assertTrue(args.length == 0, "expected zero-arg local return function");
+			case SExpr(ESourceFunction(facts, EReturn(ECall(EField(EIdent("Int64"), "compare"), [EIdent("a"), ECall(EField(EIdent("Int64"), "make"), _)])),
+				[], _), _):
+				assertLocalFunction(facts, "capture", []);
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local return function body parsed as unsupported: " + raw);
 			case _:
@@ -804,9 +847,8 @@ class M14HihExprTextParserIntegrationTest {
 		final localGenericReturnFunctionStmts = HxParser.parseFunctionBodyText("function box<T>(value:T):Box<T> return { get: function() return value; }; box(1);");
 		assertTrue(localGenericReturnFunctionStmts.length == 2, "expected local generic return function plus call statement");
 		switch (localGenericReturnFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, EAnon(names, _)), _):
-				assertTrue(name == "box", "expected local generic function name to parse");
-				assertTrue(args.length == 1 && args[0] == "value", "expected local generic function arg to parse");
+			case SExpr(ESourceFunction(facts, EReturn(EAnon(names, _)), [], _), _):
+				assertLocalFunction(facts, "box", ["value"], "Box<T>");
 				assertTrue(names.length == 1 && names[0] == "get", "expected expression-bodied return object to parse");
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local generic return function body parsed as unsupported: " + raw);
@@ -819,9 +861,8 @@ class M14HihExprTextParserIntegrationTest {
 		final inlineLocalFunctionStmts = HxParser.parseFunctionBodyText("inline function check(a:haxe.Int64, str:String) { eq(toHex(a), str); } check(x, \"0x21\");");
 		assertTrue(inlineLocalFunctionStmts.length == 2, "expected inline local function plus call statement");
 		switch (inlineLocalFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, _), _):
-				assertTrue(name == "check", "expected inline local function name to parse");
-				assertTrue(args.length == 2 && args[0] == "a" && args[1] == "str", "expected inline local function args");
+			case SExpr(ESourceFunction(facts, _, [], _), _):
+				assertLocalFunction(facts, "check", ["a", "str"], null, true);
 			case SExpr(EUnsupported(raw), _):
 				fail("inline local function declaration parsed as unsupported: " + raw);
 			case _:
@@ -934,37 +975,42 @@ class M14HihExprTextParserIntegrationTest {
 		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
 		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");
 		switch (localIfThrowStmts[0]) {
-			case SVar(name, _, ELambda(args, ETernary(_, ECall(EIdent(throwName), [_]), ENull)), _):
-				assertTrue(name == "negativeOnly", "expected local function name to parse");
-				assertTrue(args.length == 1 && args[0] == "i", "expected local function arg to parse");
-				assertTrue(throwName == "__hxhx_throw", "expected throw statement to lower to throw sentinel");
+			case SExpr(ESourceFunction(facts, ESourceGroup([
+				ESourceIf(EBinop(">=", EIdent("i"), EInt(0)), EThrow(ENew("ArgumentException", [EString("i")]), _), null, _)
+			], _), [], _), _):
+				assertLocalFunction(facts, "negativeOnly", ["i"]);
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local if/throw function body parsed as unsupported: " + raw);
 			case _:
-				fail("expected local if/throw function to lower to lambda ternary");
+				fail("expected local function to retain its condition and thrown exception");
 		}
 
 		final localBlockThrowFunctionStmts = HxParser.parseFunctionBodyText('function failBlock():String { throw "never"; }; var s = try failBlock() catch(e:String) e; eq(s, "never");');
 		assertTrue(localBlockThrowFunctionStmts.length == 3, "expected local block throw function, var, and assertion");
 		switch (localBlockThrowFunctionStmts[0]) {
-			case SVar("failBlock", _, ELambda([], ECall(EIdent("__hxhx_throw"), [EString("never")])), _):
+			case SExpr(ESourceFunction(facts, ESourceGroup([EThrow(EString("never"), _)], _), [], _), _):
+				assertLocalFunction(facts, "failBlock", [], "String");
 			case SExpr(EUnsupported(raw), _):
 				fail("local block throw function parsed as unsupported: " + raw);
 			case _:
-				fail("expected local block throw function to lower to throwing lambda");
+				fail("expected local block function to retain its throw");
 		}
 
 		final localTryFunctionStmts = HxParser.parseFunctionBodyText('function next() { try { var read = file.readBytes(buf, 0, len); return Std.string(read); } catch(e:haxe.io.Eof) { return Std.string("eof"); } catch(e:Dynamic) { return Std.string(e); } } eq("24", next());');
 		assertTrue(localTryFunctionStmts.length == 2, "expected local try function plus assertion");
 		switch (localTryFunctionStmts[0]) {
-			case SVar("next", _, ELambda([], ECall(EIdent("__hxhx_try"), args)), _):
-				assertTrue(args.length == 3, "expected try sentinel, catch table, and continuation");
+			case SExpr(ESourceFunction(facts, ESourceGroup([ESourceTry(catches, bodies, _)], _), [], _), _):
+				assertLocalFunction(facts, "next", []);
+				assertTrue(catches.length == 2 && bodies.length == 3, "expected try body and two catch bodies");
+				assertTrue(catches[0].getTypeHint() == "haxe.io.Eof"
+					&& catches[1].getTypeHint() == "Dynamic", "catch order or types changed");
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(localTryFunctionStmts), "try function contains unsupported syntax");
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local try function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):
 				fail("local try function parsed as unsupported statement: " + raw);
 			case _:
-				fail("expected local try function to lower to try sentinel lambda");
+				fail("expected local function to retain its try and catch bodies");
 		}
 
 		final inlineNekoElseThrowStmts = HxParser.parseFunctionBodyText('try { read(); } catch(e:haxe.io.Eof) { if (s.length == 0) #if neko neko.Lib.rethrow #else throw #end (e); }');
@@ -973,8 +1019,8 @@ class M14HihExprTextParserIntegrationTest {
 			case STry(_, catches, _):
 				assertTrue(catches.length == 1, "expected one inline neko/else throw catch");
 				switch (catches[0].body) {
-					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
-					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SThrow(EParenthesized(EIdent("e"), _), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EParenthesized(EIdent("e"), _), _)], _), null, _)], _):
 					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), null, _)], _):
 						fail("inline neko/else throw parsed as unsupported expression: " + raw);
 					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), null, _)], _):
@@ -1013,8 +1059,8 @@ class M14HihExprTextParserIntegrationTest {
 			case [SVar("s", _, _, _), STry(_, catches, _), SReturn(EIdent("s"), _)]:
 				assertTrue(catches.length == 1, "expected module inline neko/else catch");
 				switch (catches[0].body) {
-					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
-					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SThrow(EParenthesized(EIdent("e"), _), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EParenthesized(EIdent("e"), _), _)], _), null, _)], _):
 					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), _, _)], _):
 						fail("module inline neko/else throw parsed as unsupported expression: " + raw);
 					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), _, _)], _):
@@ -1028,7 +1074,8 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected module inline neko/else function body shape: " + Std.string(body));
 		}
 		switch (localBlockThrowFunctionStmts[1]) {
-			case SVar("s", _, ETryCatchRaw(_), _):
+			case SVar("s", _, ESourceTry(catches, [ECall(EIdent("failBlock"), []), EIdent("e")], _), _):
+				assertTrue(catches.length == 1 && catches[0].getName() == "e" && catches[0].getTypeHint() == "String", "following catch lost its binding");
 			case SExpr(EUnsupported(raw), _):
 				fail("try/catch after local block throw function parsed as unsupported: " + raw);
 			case _:
@@ -1038,13 +1085,14 @@ class M14HihExprTextParserIntegrationTest {
 		final localExprThrowFunctionStmts = HxParser.parseFunctionBodyText('function failExpr():String throw "never"; var s = try failExpr() catch(e:String) e; eq(s, "never");');
 		assertTrue(localExprThrowFunctionStmts.length == 3, "expected local expression throw function, var, and assertion");
 		switch (localExprThrowFunctionStmts[0]) {
-			case SVar("failExpr", _, ELambda([], ECall(EIdent("__hxhx_throw"), [EString("never")])), _):
+			case SExpr(ESourceFunction(facts, EThrow(EString("never"), _), [], _), _):
+				assertLocalFunction(facts, "failExpr", [], "String");
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local expression throw function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):
 				fail("local expression throw function parsed as unsupported: " + raw);
 			case _:
-				fail("expected local expression throw function to lower to throwing lambda");
+				fail("expected local expression function to retain its throw");
 		}
 
 		final nullCoalescingStmts = HxParser.parseFunctionBodyText('var value = left ?? right; left ??= fallback; final notNull = (one : Null<Float>) ?? throw "";');
@@ -1064,7 +1112,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected null coalescing assignment expression");
 		}
 		switch (nullCoalescingStmts[2]) {
-			case SVar("notNull", _, EBinop("??", ECast(EIdent("one"), "Null<Float>"), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
+			case SVar("notNull", _, EBinop("??", EParenthesized(ECast(EIdent("one"), "Null<Float>"), _), EThrow(EString(""), _)), _):
 			case SVar(_, _, EUnsupported(raw), _):
 				fail("null coalescing throw fallback parsed as unsupported: " + raw);
 			case _:
@@ -1124,7 +1172,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (numericSuffixStmts[3]) {
 			case SExpr(ECall(EIdent("eq"), [
 				ECall(EIdent("__hxhx_int_literal"), [EString("0xFFFFFFFF"), EString("u32")]),
-				ECast(EInt(-1), "UInt")
+				EParenthesized(ECast(EInt(-1), "UInt"), _)
 			]), _):
 			case _:
 				fail("expected u32 hex suffix and UInt cast to preserve numeric intent");
@@ -1143,10 +1191,10 @@ class M14HihExprTextParserIntegrationTest {
 		final arrowComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (i in 0...5) value -> value * i];");
 		assertTrue(arrowComprehensionStmts.length == 1, "expected range comprehension arrow assignment");
 		switch (arrowComprehensionStmts[0]) {
-			case SExpr(EBinop("=", EIdent("arr"),
-				EArrayComprehension("i", ERange(EInt(0), EInt(5)), null, ELambda(args, EBinop("*", EIdent("value"), EIdent("i"))))),
-				_):
-				assertTrue(args.length == 1 && args[0] == "value", "expected arrow comprehension arg name");
+			case SExpr(EBinop("=", EIdent("arr"), EArrayDecl([
+				ESourceFor(Value("i"), ERange(EInt(0), EInt(5)), ESourceFunction(facts, EBinop("*", EIdent("value"), EIdent("i")), [], _), _)
+			])), _):
+				assertTrue(facts.getKind() == Arrow && facts.getArguments().join(",") == "value", "expected arrow comprehension arg name");
 			case SExpr(EUnsupported(raw), _):
 				fail("range comprehension arrow parsed as unsupported: " + raw);
 			case _:
@@ -1156,7 +1204,9 @@ class M14HihExprTextParserIntegrationTest {
 		final guardComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (x in values) if (keep(x)) x];");
 		assertTrue(guardComprehensionStmts.length == 1, "expected guarded comprehension assignment");
 		switch (guardComprehensionStmts[0]) {
-			case SExpr(EBinop("=", EIdent("arr"), EArrayComprehension("x", EIdent("values"), ECall(EIdent("keep"), [EIdent("x")]), EIdent("x"))), _):
+			case SExpr(EBinop("=", EIdent("arr"), EArrayDecl([
+				ESourceFor(Value("x"), EIdent("values"), ESourceIf(ECall(EIdent("keep"), [EIdent("x")]), EIdent("x"), null, _), _)
+			])), _):
 			case SExpr(EUnsupported(raw), _):
 				fail("guarded comprehension parsed as unsupported: " + raw);
 			case _:
@@ -1166,15 +1216,13 @@ class M14HihExprTextParserIntegrationTest {
 		final mapComprehensionStmts = HxParser.parseFunctionBodyText('var map = [for (x in ["a", "b"]) x => x.toUpperCase()];');
 		assertTrue(mapComprehensionStmts.length == 1, "expected map comprehension declaration");
 		switch (mapComprehensionStmts[0]) {
-			case SVar("map", _, ECall(EIdent("__hxhx_map_comprehension"), [
-				EArrayDecl([EString("a"), EString("b")]),
-				ELambda(args, EArrayDecl([EIdent("x"), ECall(EField(EIdent("x"), "toUpperCase"), [])]))
+			case SVar("map", _, EArrayDecl([
+				ESourceFor(Value("x"), EArrayDecl([EString("a"), EString("b")]), EBinop("=>", EIdent("x"), ECall(EField(EIdent("x"), "toUpperCase"), [])), _)
 			]), _):
-				assertTrue(args.length == 1 && args[0] == "x", "expected map comprehension loop variable");
 			case SExpr(EUnsupported(raw), _) | SVar(_, _, EUnsupported(raw), _):
 				fail("map comprehension parsed as unsupported: " + raw);
 			case _:
-				fail("expected map comprehension to parse as helper call");
+				fail("expected map comprehension to preserve its loop binding and key/value expression");
 		}
 
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
@@ -1236,9 +1284,8 @@ class M14HihExprTextParserIntegrationTest {
 		final typeErrorForStmts = HxParser.parseFunctionBodyText("var s = HelperMacros.typeErrorText(for (key => value in 1) { }); eq(\"Int has no field keyValueIterator\", s);");
 		assertTrue(typeErrorForStmts.length == 2, "expected typeErrorText key/value for body plus assertion");
 		switch (typeErrorForStmts[0]) {
-			case SVar("s", _, ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]), _):
-				assertTrue(raw.indexOf("for_expr:") == 0, "expected expression-position for placeholder, got " + raw);
-				assertTrue(raw.indexOf("key => value") >= 0, "expected key/value bindings in raw for placeholder, got " + raw);
+			case SVar("s", _, ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [ESourceFor(KeyValue("key", "value"), EInt(1), ESourceGroup([], _), _)]),
+				_):
 			case SExpr(EUnsupported(raw), _):
 				fail("typeErrorText key/value for parsed as unsupported statement: " + raw);
 			case _:
@@ -1248,21 +1295,20 @@ class M14HihExprTextParserIntegrationTest {
 		final valueForExprStmts = HxParser.parseFunctionBodyText("exc(function() for (x in xml) null);");
 		assertTrue(valueForExprStmts.length == 1, "expected expression-position for-in callback");
 		switch (valueForExprStmts[0]) {
-			case SExpr(ECall(EIdent("exc"), [
-				ELambda(fnArgs, ECall(EIdent("__hxhx_for_in"), [EIdent("xml"), ELambda(loopArgs, _), ENull]))
-			]), _):
-				assertTrue(fnArgs.length == 0, "expected zero-arg callback");
-				assertTrue(loopArgs.length == 1 && loopArgs[0] == "x", "expected expression for-in loop binding");
+			case SExpr(ECall(EIdent("exc"), [ESourceFunction(facts, ESourceFor(Value("x"), EIdent("xml"), ENull, _), [], _)]), _):
+				assertTrue(facts.getKind() == Anonymous && facts.getArguments().length == 0, "expected zero-arg anonymous callback");
 			case SExpr(EUnsupported(raw), _):
 				fail("expression-position for-in parsed as unsupported: " + raw);
 			case _:
-				fail("expected expression-position for-in to lower to helper");
+				fail("expected expression-position for-in to preserve its binding and body");
 		}
 
 		final switchBreakCallback = HxParser.parseFunctionBodyText("run(async, () -> { for (i in 0...items.length) { switch [src.get(i), items.get(i)] { case [a, b] if (a != b): assert('bad'); break; case _: } } noAssert(); async.done(); });");
 		assertTrue(switchBreakCallback.length == 1, "expected callback with switch/break body");
 		switch (switchBreakCallback[0]) {
-			case SExpr(ECall(EIdent("run"), [_, ELambda(_, body)]), _):
+			case SExpr(ECall(EIdent("run"), [_, ESourceFunction(facts, body, [], _)]), _):
+				assertTrue(facts.getKind() == Arrow && facts.getArguments().length == 0, "expected zero-argument arrow callback");
+				assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(switchBreakCallback), "switch/break callback contains unsupported syntax");
 				switch (body) {
 					case ETryCatchRaw(raw):
 						fail("callback switch/break body should lower structurally instead of opaque raw block: " + raw);
@@ -1279,7 +1325,7 @@ class M14HihExprTextParserIntegrationTest {
 		final privateAccessStmts = HxParser.parseFunctionBodyText("result.push(@:privateAccess (Exception.thrown(''):Exception).stack);");
 		assertTrue(privateAccessStmts.length == 1, "expected privateAccess push statement");
 		switch (privateAccessStmts[0]) {
-			case SExpr(ECall(EField(EIdent(receiver), field), [EField(_, stackField)]), _):
+			case SExpr(ECall(EField(EIdent(receiver), field), [EPrivateAccess(EField(_, stackField), _)]), _):
 				assertTrue(receiver == "result", "expected result.push receiver");
 				assertTrue(field == "push", "expected push call");
 				assertTrue(stackField == "stack", "expected privateAccess expression field");
@@ -1301,9 +1347,9 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected cast-postfix call to parse");
 		}
 
-		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw new Exception('') catch(e:Exception) e.stack);"),
+		assertPushTryCatch(HxParser.parseFunctionBodyText("result.push(try throw new Exception('') catch(e:Exception) e.stack);"),
 			"single-expression try throw");
-		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),
+		assertPushTryCatch(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),
 			"single-expression try throw privateAccess cast");
 
 		final switchThrowExpr = HxParser.parseExprText("switch s { case v: throw 'unknown value $v'; }");
@@ -1311,12 +1357,11 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(_, patterns, exprs):
 				assertTrue(patterns.length == 1, "expected one switch throw pattern");
 				switch (exprs[0]) {
-					case ECall(EIdent(throwName), [_]):
-						assertTrue(throwName == "__hxhx_throw", "expected switch throw branch to lower to throw sentinel");
+					case ESourceGroup([EThrow(_, _)], _):
 					case EUnsupported(raw):
 						fail("switch throw expression parsed as unsupported: " + raw);
 					case _:
-						fail("expected switch throw branch to lower to sentinel call");
+						fail("expected switch branch to retain its authored throw");
 				}
 			case EUnsupported(raw):
 				fail("switch throw expression parsed as unsupported: " + raw);
@@ -1417,7 +1462,7 @@ class M14HihExprTextParserIntegrationTest {
 		final objectPatternReturnStmts = HxParser.parseFunctionBodyText("return switch (payload.expr) { case Wrap(Text(s)): s; case Group({ value : Wrap(Text(s)) }) | Raw({ value : Wrap(Text(s)) }): s; case Pick(_, name): name; case At(_, { value : Wrap(IntText(i) | FloatText(i)) }): Std.string(i); case InOp(In, _, { value : inner, pos : _ }): Std.string(inner); case _: \"none\"; };");
 		assertTrue(objectPatternReturnStmts.length == 1, "expected object-pattern switch return statement");
 		switch (objectPatternReturnStmts[0]) {
-			case SReturn(ESwitch(EField(EIdent(receiver), field), patterns, exprs), _):
+			case SReturn(ESwitch(EParenthesized(EField(EIdent(receiver), field), _), patterns, exprs), _):
 				assertTrue(receiver == "payload" && field == "expr", "expected expression switch scrutinee field access");
 				assertTrue(patterns.length == 6, "expected expression switch cases");
 				assertTrue(exprs.length == 6, "expected expression switch branch expressions");
@@ -1472,9 +1517,9 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(EIdent("values"), patterns, _):
 				assertTrue(patterns.length == 2, "expected guarded switch cases");
 				switch (patterns[0]) {
-					case PLengthGuard(PBind("rest"), "rest", 3):
+					case PLengthGuard(PCapture("rest", PWildcard), "rest", 3):
 					case _:
-						fail("expected guarded bind pattern with length comparison");
+						fail("expected explicit wildcard capture with length comparison");
 				}
 			case EUnsupported(raw):
 				fail("guarded switch expression parsed as unsupported: " + raw);
@@ -1495,6 +1540,11 @@ class M14HihExprTextParserIntegrationTest {
 					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
+				}
+				switch (patterns[2]) {
+					case PCapture("x", PWildcard):
+					case _:
+						fail("expected explicit var to retain its wildcard capture");
 				}
 				final comparePatternExpr = HxParser.parseExprText('switch v { case One(x) if (x <= 1): "<=1"; case One(x) if (x > 1): ">1"; case _: "_"; }');
 				switch (comparePatternExpr) {
@@ -1564,11 +1614,13 @@ class M14HihExprTextParserIntegrationTest {
 						fail("expected enum extractor with binder");
 				}
 				switch (exprs[0]) {
-					case ETernary(_, EString("null"), EString("not null")):
+					case ESourceGroup([
+						ESourceIf(EBinop("==", EIdent("x"), ENull), EString("null"), EString("not null"), _)
+					], _):
 					case EUnsupported(raw):
 						fail("switch if/else semicolon branch parsed as unsupported: " + raw);
 					case _:
-						fail("expected switch branch to parse as ternary expression");
+						fail("expected switch branch to preserve its if/else expression");
 				}
 			case EUnsupported(raw):
 				fail("switch if/else semicolon expression parsed as unsupported: " + raw);
@@ -1578,13 +1630,13 @@ class M14HihExprTextParserIntegrationTest {
 
 		final binaryIfExpr = HxParser.parseExprText('1 + if (flag) 2 else 3');
 		switch (binaryIfExpr) {
-			case EBinop("+", EInt(1), ETernary(EIdent("flag"), EInt(2), EInt(3))):
+			case EBinop("+", EInt(1), ESourceIf(EIdent("flag"), EInt(2), EInt(3), _)):
 			case EBinop("+", _, EUnsupported(raw)):
 				fail("binary RHS if expression parsed as unsupported: " + raw);
 			case EUnsupported(raw):
 				fail("binary if expression parsed as unsupported: " + raw);
 			case _:
-				fail("expected binary RHS if expression to parse as ternary");
+				fail("expected binary RHS to retain its if expression");
 		}
 
 		final emptyCaseSwitchExpr = HxParser.parseExprText('switch true { case true: case false: }');
@@ -1598,9 +1650,9 @@ class M14HihExprTextParserIntegrationTest {
 						fail("expected true literal switch pattern");
 				}
 				switch (exprs[0]) {
-					case ENull:
+					case ESourceGroup([], _):
 					case _:
-						fail("expected empty switch case body to lower to null expression");
+						fail("expected empty switch case to retain an empty body");
 				}
 			case EUnsupported(raw):
 				fail("empty switch case expression parsed as unsupported: " + raw);
@@ -1659,7 +1711,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro class follow-up field push to parse");
 		}
 		switch (macroClassVars[2]) {
-			case SExpr(EField(EAnon(names, _), "fields"), _):
+			case SExpr(EField(EParenthesized(EAnon(names, _), _), "fields"), _):
 				assertTrue(names.indexOf("fields") >= 0, "expected parenthesized macro class quote to expose fields");
 			case SExpr(EUnsupported(raw), _):
 				fail("parenthesized macro class field access parsed as unsupported: " + raw);
@@ -1670,7 +1722,8 @@ class M14HihExprTextParserIntegrationTest {
 		final macroTypePatternStmts = HxParser.parseFunctionBodyText('var info = switch (ct) { case macro:Sample<Int>: { name: "sample" }; case _: throw false; };');
 		assertTrue(macroTypePatternStmts.length == 1, "expected macro type pattern switch var to parse");
 		switch (macroTypePatternStmts[0]) {
-			case SVar("info", _, ESwitch(_, [PEnumValue("macro:Sample<Int>"), PWildcard], [EAnon(names, _), ECall(EIdent("__hxhx_throw"), [EBool(false)])]), _):
+			case SVar("info", _,
+				ESwitch(_, [PEnumValue("macro:Sample<Int>"), PWildcard], [ESourceGroup([EAnon(names, _)], _), ESourceGroup([EThrow(EBool(false), _)], _)]), _):
 				assertTrue(names.indexOf("name") >= 0, "expected macro type pattern switch body to parse anon object");
 			case SVar(_, _, EUnsupported(raw), _):
 				fail("macro type pattern switch parsed as unsupported: " + raw);
@@ -1681,7 +1734,7 @@ class M14HihExprTextParserIntegrationTest {
 		final conditionalClassSwitchStmts = HxParser.parseFunctionBodyText('switch (#if (neko || cs || python) Type.getClassName(c) #else c #end) { case #if (neko || cs || python) "Array" #else cast Array #end: value = 1; }');
 		assertTrue(conditionalClassSwitchStmts.length == 1, "expected conditional class switch to parse");
 		switch (conditionalClassSwitchStmts[0]) {
-			case SSwitch(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), [PString("Array")],
+			case SSwitch(EParenthesized(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), _), [PString("Array")],
 				[SBlock([SExpr(EBinop("=", EIdent("value"), EInt(1)), _)], _)], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("conditional class switch parsed as unsupported: " + raw);
@@ -1692,7 +1745,7 @@ class M14HihExprTextParserIntegrationTest {
 		final denseConditionalClassSwitchStmts = HxParser.parseFunctionBodyText('switch(#if(neko||cs||python)Type.getClassName(c)#else c #end){case #if(neko||cs||python)"Array"#else cast Array #end:value=1;}');
 		assertTrue(denseConditionalClassSwitchStmts.length == 1, "expected dense conditional class switch to parse");
 		switch (denseConditionalClassSwitchStmts[0]) {
-			case SSwitch(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), [PString("Array")], _):
+			case SSwitch(EParenthesized(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), _), [PString("Array")], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("dense conditional class switch parsed as unsupported: " + raw);
 			case _:
@@ -1702,7 +1755,7 @@ class M14HihExprTextParserIntegrationTest {
 		final castClassSwitchStmts = HxParser.parseFunctionBodyText('switch (c) { case cast Array: value = 1; case cast haxe.ds.StringMap: value = 2; }');
 		assertTrue(castClassSwitchStmts.length == 1, "expected cast class switch to parse");
 		switch (castClassSwitchStmts[0]) {
-			case SSwitch(EIdent("c"), [PEnumValue("Array"), PEnumValue("haxe.ds.StringMap")], _):
+			case SSwitch(EParenthesized(EIdent("c"), _), [PEnumValue("Array"), PEnumValue("haxe.ds.StringMap")], _):
 			case SExpr(EUnsupported(raw), _):
 				fail("cast class switch parsed as unsupported: " + raw);
 			case _:
@@ -1788,7 +1841,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (exprMetaCalls[0]) {
 			case SExpr(ECall(EIdent("eq"), [
 				EField(ECall(EIdent("readMeta"), [
-					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString(""), EString("value")])
+					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString(""), EParenthesized(EString("value"), _)])
 				]), "name"),
 				EString("tag")
 			]), _):

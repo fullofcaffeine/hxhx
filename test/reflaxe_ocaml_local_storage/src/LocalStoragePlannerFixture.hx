@@ -11,7 +11,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
-import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationKind;
@@ -722,12 +722,17 @@ class LocalStoragePlannerFixture {
 			"a nullable copy must not claim carrier preservation when its source local was excluded by a concrete-Bool boundary");
 		assertTrue(excludedNullableCopyPlan.conversions().length == 0,
 			"excluding a nullable source must also remove dependent carrier-preserving occurrence records");
-		final dynamicCarrierInput = Context.typeExpr(macro {
-			final text:Dynamic = cast("text" : String);
+		final dynamicCarrierInput = Context.typeExpr(macro {final text:Dynamic = cast("text" : String);
+			final nullableSource:Null<String> = null;
+			final nullableText:Dynamic = cast nullableSource;
 			final decimal:Dynamic = cast(1.5 : Float);
 			final flag:Dynamic = cast(true : Bool);
 			final empty:Dynamic = null;
-			Std.string(text) + Std.string(decimal) + Std.string(flag) + Std.string(empty);
+			Std.string(text)
+			+ Std.string(nullableText)
+			+ Std.string(decimal)
+			+ Std.string(flag)
+			+ Std.string(empty);
 		});
 		final dynamicCarrierBinding:OcamlFunctionPlanBinding = {
 			functionId: "fixture|dynamic-carrier",
@@ -741,15 +746,20 @@ class LocalStoragePlannerFixture {
 			representations, dynamicCarrierBinding);
 		final dynamicReferences = dynamicCarrierPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic");
 		final dynamicConversions = dynamicCarrierPlan.conversions();
-		assertTrue(dynamicReferences.length == 4
+		assertTrue(dynamicReferences.length == 5
 			&& dynamicReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue
 				&& reference.representationId == "representation:Dynamic:internal-value")
-				.length == 4,
+				.length == 5,
 			'each immutable Dynamic local should reference the one internal Obj.t representation; observed ${dynamicReferences.length} references and ${dynamicConversions.map(conversion -> conversion.conversion + ":" + conversion.inputSemanticTypeId).join(",")} conversions');
 		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
 			&& conversion.inputSemanticTypeId == "String")
 			.length == 1,
 			"a concrete String should enter Dynamic through one proof-backed Obj.repr conversion");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
+			&& conversion.inputSemanticTypeId == "Null<String>"
+			&& conversion.inputCarrierTypeId == "string")
+			.length == 1,
+			"a nullable String must retain its string carrier and null sentinel when entering Dynamic");
 		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
 			&& conversion.inputSemanticTypeId == "Float")
 			.length == 1,
@@ -763,7 +773,7 @@ class LocalStoragePlannerFixture {
 			.length == 1,
 			"the null sentinel should preserve the already-selected Dynamic carrier");
 		final dynamicUnsafe = dynamicCarrierPlan.unsafeOperations();
-		assertTrue(dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprConcreteToDynamic).length == 2
+		assertTrue(dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprConcreteToDynamic).length == 3
 			&& dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.BoxExactBoolToDynamic).length == 1,
 			"only concrete and Bool Dynamic crossings should publish unsafe-operation proof records");
 		final dynamicEnumInput = Context.typeExpr(macro {
@@ -802,6 +812,40 @@ class LocalStoragePlannerFixture {
 				&& requirement.subject.id == "LocalDynamicEnum",
 				"the runtime requirement should trace HxEnum back to the exact sealed source conversion");
 		}
+		final boolArrayInput = Context.typeExpr(macro {
+			final flag = false;
+			final factory = () -> true;
+			final nullable:Null<Bool> = null;
+			final exact:Array<Bool> = [false, true];
+			final payload:{items:Array<Dynamic>} = {items: [false, flag, factory(), 0, null, nullable]};
+			payload;
+		});
+		final boolArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|bool-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:bool-array-v1",
+			pipelineRevision: "ocaml-function-plans-v65"
+		};
+		final boolArrayPlan = OcamlContainerElementPlanner.planExpression(boolArrayInput, boolArrayBinding);
+		final boolConversions = boolArrayPlan.decisions();
+		assertTrue(boolConversions.length == 3, "Bool literals, local reads, and calls need boxes; nullable values and Array<Bool> do not use this proof");
+		OcamlContainerElementPlanner.requireCompleteness(boolArrayInput, boolArrayBinding, boolArrayPlan);
+		for (conversion in boolConversions) {
+			assertTrue(conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+				&& conversion.inputCarrierTypeId == "bool",
+				"Boolean array storage must retain its exact conversion");
+			final requirement = reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.requirement(conversion);
+			assertTrue(requirement.rootModules.join(",") == "HxRuntime" && requirement.decisionId == conversion.id,
+				"Boolean boxing must retain its source-owned runtime dependency");
+		}
+		expectFailure("missing Boolean array conversion", "missing-required-conversion",
+			() -> new OcamlContainerElementPlan([], boolArrayPlan.requiredConversionIds()));
+		final wrongBoolCarrier = haxe.Json.parse(haxe.Json.stringify(boolConversions[0]));
+		wrongBoolCarrier.inputCarrierTypeId = "int";
+		expectFailure("wrong Boolean array carrier", "invalid-proof", () -> new OcamlContainerElementPlan([cast wrongBoolCarrier]));
+		final wrongBoolProof = haxe.Json.parse(haxe.Json.stringify(boolConversions[0]));
+		wrongBoolProof.proofId = "dynamic-array-element-box-exact-enum-v1";
+		expectFailure("wrong Boolean array proof", "invalid-proof", () -> new OcamlContainerElementPlan([cast wrongBoolProof]));
 		final dynamicArrayInput = Context.typeExpr(macro {
 			final values:Array<Dynamic> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
 			values;

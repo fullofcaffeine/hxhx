@@ -30,6 +30,11 @@ on:
   schedule:
     - cron: '41 6 * * 6'
   workflow_dispatch:
+    inputs:
+      native_only:
+        description: 'Run only the native compiler promotion check'
+        type: boolean
+        default: false
 
 concurrency:
   group: reflaxe-ocaml-package-${{ github.ref }}
@@ -46,8 +51,72 @@ env:
   DUNE_VERSION: '3.24.0'
 
 jobs:
+  native_program_host:
+    name: Native compiler promotion (scheduled or manual)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      REFLAXE_OCAML_NATIVE_PROGRAM_HOST_WORK_ROOT: ${{ github.workspace }}/.artifacts/reflaxe-ocaml/native-program-host/work
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup OCaml toolchain (OCaml ${{ env.OCAML_VERSION }})
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ env.OCAML_VERSION }}
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y "dune.${DUNE_VERSION}" ocamlfind
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v5
+        with:
+          path: ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe and Reflaxe dependencies
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${HAXE_VERSION}"
+          npx lix use haxe "${HAXE_VERSION}"
+          echo "${PWD}/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Build and run the native frontend against stock Haxe
+        run: |
+          set -euo pipefail
+          evidence="${PWD}/.artifacts/reflaxe-ocaml/native-program-host"
+          mkdir -p "$evidence"
+          git rev-parse HEAD > "$evidence/revision.txt"
+          git diff --exit-code HEAD
+          timeout --kill-after=30s 75m npm run test:reflaxe-ocaml:native-program-host 2>&1 | tee "$evidence/validation.log"
+          git diff --exit-code HEAD
+      - name: Upload native compiler evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: reflaxe-ocaml-native-program-host-${{ github.sha }}
+          path: |
+            .artifacts/reflaxe-ocaml/native-program-host
+            !.artifacts/reflaxe-ocaml/native-program-host/**/_build/**
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
   package_artifact:
     name: Build immutable source package
+    if: github.event_name != 'workflow_dispatch' || !inputs.native_only
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

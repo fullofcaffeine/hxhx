@@ -4,12 +4,13 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
+INSPECTOR_DIR="$(mktemp -d)"
 REPORT_COPY="$(mktemp)"
 MANIFEST_FILE="out/ocaml_artifact_manifest.json"
 MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
-trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
+trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"; rm -rf "$INSPECTOR_DIR"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
 	echo "Missing generated Void-return source or lowering report" >&2
@@ -27,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
+if (report.schemaVersion !== 94
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
 }
@@ -55,7 +56,7 @@ for (const [name, expectedCount] of expectedRootByFunction) {
 const nestedControls = controls.filter(control => control.functionId.includes('|nested-function|'))
 if (nestedControls.length !== 1
 	|| !nestedControls[0].functionId.includes('|function|nestedClosure|')
-	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v33') {
+	|| nestedControls[0].pipelineRevision !== 'ocaml-nested-function-plans-v37') {
 	fail('the nested Void function did not receive its own effect-only return boundary')
 }
 
@@ -72,8 +73,8 @@ for (const control of controls) {
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.pipelineRevision !== (control.functionId.includes('|nested-function|')
-			? 'ocaml-nested-function-plans-v33'
-			: 'ocaml-function-plans-v113')
+			? 'ocaml-nested-function-plans-v37'
+			: 'ocaml-function-plans-v119')
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -102,7 +103,7 @@ for (const name of [
 	'pushAfterGuard'
 ]) {
 	const body = functionBody(name)
-	if (!body.includes('raise (HxRuntime.Hx_return_void)')
+	if (!body.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		fail(`${name} did not mechanically consume its payloadless return signal and boundary`)
@@ -115,13 +116,15 @@ if (!pushBody.includes('ignore (try ignore (')
 
 for (const name of ['throughTry', 'fromCatch']) {
 	const body = functionBody(name)
-	if (!body.includes('| HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)'))
+	if (!body.includes('| HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)'))
 		fail(`a source catch can intercept ${name}'s private Void-return signal`)
 }
 
 const closureBody = functionBody('nestedClosure')
-if (!closureBody.includes('let local = fun')
-	|| !closureBody.includes('raise (HxRuntime.Hx_return_void)')
+if (!/let local = let __callback_input_\d+ = fun /.test(closureBody)
+	|| report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes('|function|nestedClosure|')).length !== 1
+	|| !/in Stdlib\.fst __call_callee_\d+ /.test(closureBody)
+	|| !closureBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !closureBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| !closureBody.includes('"outer"')) {
 	fail('the nested anonymous function did not keep an independent return boundary')
@@ -137,9 +140,12 @@ if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	exit 1
 fi
 
+# Build once; positive and corrupted reports still run in separate processes.
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
 node - "$INSPECTION_COPY" <<'NODE'
@@ -149,7 +155,7 @@ const controls = report.lowering.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 6
@@ -172,9 +178,7 @@ fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
 
-if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+if neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$TAMPER_INSPECTION" 2>&1; then
 	echo "Public inspection accepted a payloadless return with a value-return mechanism" >&2
 	exit 1

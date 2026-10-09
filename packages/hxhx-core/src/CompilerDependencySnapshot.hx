@@ -47,7 +47,7 @@ class CompilerDependencySnapshot {
 	static function buildCanonicalIdentity(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>,
 			programConfiguration:CompilerProgramConfigurationObservation):String {
 		final values = new Array<Null<String>>();
-		values.push("compiler-dependency-snapshot-v7");
+		values.push("compiler-dependency-snapshot-v8");
 		values.push(programConfiguration.getCanonicalIdentity());
 		values.push(Std.string(modules.length));
 		for (module in modules)

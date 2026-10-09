@@ -55,7 +55,7 @@ class M14InheritanceModuleLoadingIntegrationTest {
 	} {
 		final rootFile = Path.join([root, rootModulePath.split(".").join("/") + ".hx"]);
 		final rootResolved = new ResolvedModule(rootModulePath, rootFile, ParserStage.parse(File.getContent(rootFile), rootFile));
-		final index = TyperIndex.build([rootResolved]);
+		final index = TyperIndex.buildHeaders([rootResolved]);
 		programIndexProbe = index;
 		final prepared = new Array<String>();
 		final loader = new ModuleLoader([root], new StringMap<String>(), index, function(_):Bool return false, false, null, function(module) {
@@ -131,8 +131,10 @@ class M14InheritanceModuleLoadingIntegrationTest {
 			});
 			final paths = modulePaths(program.modules);
 			assertTrue(paths.join(",") == "Base,IContract,Main,Middle", "typing Main should load and type its complete parent chain: " + paths.join(","));
-			assertTrue(program.prepared.join(",") == "Middle,IContract,Base",
-				"each lazily discovered parent module should run request-owned preparation exactly once in discovery order");
+			// Signature preparation visits sorted header dependencies before body typing.
+			// Middle then prepares Base before publishing its own indexed parent facts.
+			assertTrue(program.prepared.join(",") == "IContract,Middle,Base",
+				"each lazily discovered parent module should run request-owned preparation exactly once in discovery order: " + program.prepared.join(","));
 			assertTrue(program.prepared.indexOf("Unrelated") == -1,
 				"inheritance loading should not inspect an unrelated source file merely because it shares the class path");
 			assertTrue(!baseWasVisibleDuringPreparation, "a lazy base must be prepared before its declarations become visible to typing");
@@ -141,6 +143,32 @@ class M14InheritanceModuleLoadingIntegrationTest {
 			assertTrue(hasEdge(snapshot, "Main", "Middle", "extends:"), "Main should record its selected base-class dependency");
 			assertTrue(hasEdge(snapshot, "Main", "IContract", "implements:"), "Main should record its selected interface dependency");
 			assertTrue(hasEdge(snapshot, "Middle", "Base", "extends:"), "multi-level inheritance should record the transitive class edge");
+
+			// Both interface parents must load even when an alias names one branch.
+			saveSource(root, "contracts.Root", "package contracts; interface Root {}");
+			saveSource(root, "contracts.Left", "package contracts; interface Left extends Root {}");
+			saveSource(root, "contracts.Right", "package contracts; interface Right extends Root {}");
+			saveSource(root, "api.Joined", "package api; import contracts.Left as First; interface Joined extends First extends contracts.Right {}");
+			saveSource(root, "interfaceUse.Main",
+				"package interfaceUse; import api.Joined; class Main implements Joined { public static function main():Void {} }");
+			final interfaceProgram = typeFromRoot(root, "interfaceUse.Main");
+			assertModuleSet(interfaceProgram, [
+				"interfaceUse.Main",
+				"api.Joined",
+				"contracts.Left",
+				"contracts.Right",
+				"contracts.Root"
+			], "multiple interface parents must load their complete provider graph");
+			final interfaceSnapshot = CompilerDependencyCollector.collect(interfaceProgram.modules, interfaceProgram.index);
+			assertTrue(hasEdge(interfaceSnapshot, "api.Joined", "contracts.Left", "interface-extends:"), "aliased interface parent dependency was lost");
+			assertTrue(hasEdge(interfaceSnapshot, "api.Joined", "contracts.Right", "interface-extends:"), "second interface parent dependency was lost");
+			final interfaceFacts = [
+				for (module in interfaceProgram.modules)
+					for (declaration in module.getBackendProjection().getClasses())
+						declaration.requireSemanticFacts()
+			];
+			final interfaceGraph = new TypedBackendClassGraph("loaded-interfaces", interfaceFacts);
+			assertTrue(interfaceGraph.requireAssignableTypes("interfaceUse.Main").length == 5, "loaded interface membership closure was incomplete");
 
 			saveSource(root, "same.Base", "package same; class Base {}");
 			saveSource(root, "same.Main", "package same; class Main extends Base { public static function main():Void {} }");

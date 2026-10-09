@@ -1,0 +1,7 @@
+positive:1
+negative-left:-1
+negative-right:1
+negative-both:-1
+minimum-negative-one:0
+zero-divisor:throw:Invalid operation (%)
+zero-zero:throw:Invalid operation (%)

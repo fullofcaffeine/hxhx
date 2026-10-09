@@ -1,0 +1,10 @@
+empty=
+ints=1::-2::0
+bools=true|false
+strings=a|null||é
+nullable=1|null|-2
+null-separator=abc
+nested=[1,2]|[]|[3]
+objects=item1|item2
+object-effects=12
+recovered=false|true|false|false

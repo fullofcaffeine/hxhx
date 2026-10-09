@@ -116,7 +116,7 @@ class CppTypeModel {
 
 	static function primitiveLiteralExprCppType(expr:Null<HxExpr>):Null<String> {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				primitiveLiteralExprCppType(inner);
 			case EInt(_):
 				"int";
@@ -864,18 +864,23 @@ class CppTypeModel {
 	}
 
 	public static function isFunctionTypeHint(typeHint:String):Bool {
+		if (typeHint == null || typeHint.length == 0)
+			return false;
 		return splitTopLevelFunctionType(typeHint).length > 1;
 	}
 
+	/** Function storage must retain arbitrary Dynamic values in parameters and results. */
 	public static function cppFunctionTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final parts = splitTopLevelFunctionType(typeHint);
 		if (parts.length <= 1)
 			return "std::function<std::string()>";
-		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
+		final resultHint = parts[parts.length - 1];
+		final returnType = isDynamicOrAnyTypeHint(resultHint) ? "std::any" : cppTypeHint(resultHint, scope, classLookup);
 		final args = [
 			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1))) {
 				final typePart = functionArgTypePartType(arg);
-				functionArgTypePartIsOptional(arg) ? cppNullableTypeHint(typePart, scope, classLookup) : cppTypeHint(typePart, scope, classLookup);
+				isDynamicOrAnyTypeHint(typePart) ? (functionArgTypePartIsOptional(arg) ? "std::optional<std::any>" : "std::any") : functionArgTypePartIsOptional(arg) ? cppNullableTypeHint(typePart,
+					scope, classLookup) : cppTypeHint(typePart, scope, classLookup);
 			}
 		].filter(t -> t != "void");
 		return "std::function<" + returnType + "(" + args.join(", ") + ")>";

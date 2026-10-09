@@ -1,0 +1,5 @@
+class first=8
+function first=10
+mutual=4
+static result=3
+initializers=first,second

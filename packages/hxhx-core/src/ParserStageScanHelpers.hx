@@ -12,6 +12,8 @@
 	  into the immutable parsed declaration.
 	- Each scanner must remain deterministic and must eventually shrink as the main
 	  parser learns the corresponding declarations directly.
+	- Method declarations retain their captured bodies. Target support must not
+	  determine which source statements survive this parsing boundary.
 **/
 class ParserStageScanHelpers {
 	/**
@@ -59,6 +61,7 @@ class ParserStageScanHelpers {
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
 		var pendingTypeVisibility = HxVisibility.Public;
+		var pendingTypeExtern = false;
 		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
 			final colon = scanNextToken(source, j);
@@ -130,14 +133,21 @@ class ParserStageScanHelpers {
 					pendingTypeVisibility = HxVisibility.Public;
 					continue;
 				}
-				if (t.text == "extern" || t.text == "final")
+				if (t.text == "extern") {
+					pendingTypeExtern = true;
+					continue;
+				}
+				if (t.text == "final")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeExtern = false;
 				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final classMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final classExtern = pendingTypeExtern;
+			pendingTypeExtern = false;
 			final classVisibility = pendingTypeVisibility;
 			pendingTypeVisibility = HxVisibility.Public;
 
@@ -158,7 +168,7 @@ class ParserStageScanHelpers {
 			if (!alreadySeen)
 				seen.set(className, true);
 
-			final header = scanClassHeader(source, i);
+			final header = scanClassHeader(source, i, isInterface);
 			if (header.bodyStart < 0)
 				continue;
 
@@ -168,7 +178,7 @@ class ParserStageScanHelpers {
 			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
 				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
-					header.implementsPaths, classVisibility));
+					header.implementsPaths, classVisibility, header.interfaceExtendsPaths, classExtern));
 		}
 
 		return out;
@@ -216,14 +226,16 @@ class ParserStageScanHelpers {
 		return out;
 	}
 
-	static function scanClassHeader(source:String, start:Int):{
+	static function scanClassHeader(source:String, start:Int, isInterface:Bool):{
 		bodyStart:Int,
 		nextPos:Int,
 		extendsPath:String,
+		interfaceExtendsPaths:Array<String>,
 		implementsPaths:Array<String>,
 		typeParams:Array<String>
 	} {
 		var extendsPath = "";
+		final interfaceExtendsPaths = new Array<String>();
 		var mode = "";
 		var genericDepth = 0;
 		var path = "";
@@ -232,9 +244,12 @@ class ParserStageScanHelpers {
 		function flushPath():Void {
 			if (path.length == 0 || mode.length == 0)
 				return;
-			if (mode == "extends")
-				extendsPath = path;
-			else if (mode == "implements")
+			if (mode == "extends") {
+				if (isInterface)
+					interfaceExtendsPaths.push(path);
+				else
+					extendsPath = path;
+			} else if (mode == "implements")
 				implementsPaths.push(path);
 			path = "";
 		}
@@ -285,6 +300,7 @@ class ParserStageScanHelpers {
 			bodyStart: tok.text == "{" ? tok.nextPos : -1,
 			nextPos: tok.nextPos,
 			extendsPath: extendsPath,
+			interfaceExtendsPaths: interfaceExtendsPaths,
 			implementsPaths: implementsPaths,
 			typeParams: typeParams.params
 		};
@@ -451,9 +467,15 @@ class ParserStageScanHelpers {
 
 			final enumName = nameTok.text;
 			i = nameTok.nextPos;
-			final abstractTypeParams = isEnumAbstract ? scanTypeParameterNames(source, i) : {params: [], nextPos: i};
+			final enumTypeParams = scanTypeParameterNames(source, i);
+			// Keep constraints in the shared type grammar. Names alone cannot tell
+			// constructor inference which payload types the enum permits.
+			final enumParameters = enumTypeParams.nextPos == i ? [] : HxTypedefParser.parseParametersAt(source, i, enumTypeParams.nextPos);
+			final enumParameterNames = [for (parameter in enumParameters) parameter.name];
+			final enumValueType = enumName + (enumParameterNames.length == 0 ? "" : "<" + enumParameterNames.join(",") + ">");
 			final abstractUnderlying = isEnumAbstract ? scanAbstractUnderlyingType(source, i) : "";
 			final abstractConversions = isEnumAbstract ? scanAbstractHeaderConversions(source, i) : {fromTypes: [], toTypes: []};
+			i = enumTypeParams.nextPos;
 
 			if (enumName == null || enumName.length == 0)
 				continue;
@@ -484,13 +506,23 @@ class ParserStageScanHelpers {
 
 			final fields = isEnumAbstract ? [] : [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
 			final functions = new Array<HxFunctionDecl>();
+			var enumDeclaration:Null<HxEnumDeclaration> = null;
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
 				i = scanned.nextPos;
 				for (field in scanned.fields)
 					fields.push(field);
+				// Enum values have implicit public/static semantics supplied above.
+				// Methods use the same declaration scanner as ordinary abstracts so
+				// their signatures, operator metadata, and source bodies reach typing.
+				for (fn in scanned.functions)
+					functions.push(fn);
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
+				enumDeclaration = new HxEnumDeclaration([
+					for (ctor in scanned.ctors)
+						{name: ctor.name, arity: ctor.args == null ? 0 : ctor.args.length}
+				]);
 				i = scanned.nextPos;
 				fields.push(new HxFieldDecl("__hx_enum_ctors", HxVisibility.Public, true, "Dynamic",
 					EArrayDecl([for (ctor in scanned.ctors) EString(ctor.name)])));
@@ -503,7 +535,7 @@ class ParserStageScanHelpers {
 						continue;
 					final ctorArgs = ctor.args == null ? [] : ctor.args;
 					if (ctorArgs.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, []),
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, enumValueType, enumRuntimeValue(enumName, ctorName, ctorIndex, []),
 							ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
@@ -512,9 +544,9 @@ class ParserStageScanHelpers {
 							args.push(new HxFunctionArg(a.name, a.typeHint, HxDefaultValue.NoDefault, a.isOptional, false));
 						for (a in ctorArgs)
 							values.push(EIdent(a.name));
-						// Constructors conceptually return an enum value; during bring-up we keep the
-						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
-						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
+						// Target storage may differ, but constructor results retain the source
+						// enum and its binders before any backend chooses a representation.
+						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, enumValueType, [
 							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
 						], "", ctor.metadata));
 					}
@@ -522,7 +554,7 @@ class ParserStageScanHelpers {
 			}
 
 			final classMetadata = if (isEnumAbstract) {
-				final metadata = enumMetadata.concat(["__hxhx_abstract"]).concat(typeParamsMetadata(abstractTypeParams.params));
+				final metadata = enumMetadata.concat(["__hxhx_abstract", "__hxhx_enum_abstract"]).concat(typeParamsMetadata(enumParameterNames));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
 				for (fromType in abstractConversions.fromTypes)
@@ -531,9 +563,10 @@ class ParserStageScanHelpers {
 					metadata.push("__hxhx_abstract_to=" + toType);
 				metadata;
 			} else {
-				enumMetadata;
+				enumMetadata.concat(typeParamsMetadata(enumParameterNames));
 			};
-			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility, [], false, enumDeclaration,
+				enumParameters));
 		}
 
 		return out;
@@ -1425,110 +1458,31 @@ class ParserStageScanHelpers {
 		return {nextPos: i, ctors: ctors};
 	}
 
-	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+	/** Keep enum values and methods from one declaration scan; typing assigns omitted values. */
+	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
+		final scanned = scanClassBodyForStatics(source, start);
 		final fields = new Array<HxFieldDecl>();
-
-		var depth = 1; // we start just after `{`
-		var i = start;
-
-		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0)
-				return false;
-			final c = name.charCodeAt(0);
-			return c >= "A".code && c <= "Z".code;
-		}
-
-		while (true) {
-			final t = scanNextToken(source, i);
-			i = t.nextPos;
-			if (t.text.length == 0)
-				break;
-
-			if (!t.isIdent) {
-				switch (t.text) {
-					case "{":
-						depth += 1;
-					case "}":
-						depth -= 1;
-						if (depth <= 0)
-							break;
-					case _:
-				}
+		for (field in scanned.fields) {
+			if (HxFieldDecl.getIsStatic(field)) {
+				fields.push(field);
 				continue;
 			}
-
-			if (depth != 1)
-				continue;
-			if (t.text != "var")
-				continue;
-
-			// var <Name> ...
-			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent)
-				nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0)
-				continue;
-			final name = nameTok.text;
-			i = nameTok.nextPos;
-			if (!isUpperStart(name))
-				continue;
-
-			var init:Null<HxExpr> = null;
-			var scanPos = i;
-			var initStart = -1;
-			var parenDepth = 0;
-			var bracketDepth = 0;
-			var braceDepthInInit = 0;
-			while (true) {
-				final valueTok = scanNextToken(source, scanPos);
-				if (valueTok.text.length == 0) {
-					i = scanPos;
-					break;
-				}
-				scanPos = valueTok.nextPos;
-				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && valueTok.text == "=" && initStart < 0) {
-					initStart = valueTok.nextPos;
-					continue;
-				}
-				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && (valueTok.text == ";" || valueTok.text == ",")) {
-					if (initStart >= 0)
-						init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
-					i = valueTok.nextPos;
-					break;
-				}
-				switch (valueTok.text) {
-					case "(":
-						parenDepth += 1;
-					case ")":
-						parenDepth = parenDepth > 0 ? parenDepth - 1 : 0;
-					case "[":
-						bracketDepth += 1;
-					case "]":
-						bracketDepth = bracketDepth > 0 ? bracketDepth - 1 : 0;
-					case "{":
-						braceDepthInInit += 1;
-					case "}":
-						if (braceDepthInInit > 0) {
-							braceDepthInInit -= 1;
-						} else {
-							if (initStart >= 0)
-								init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
-							i = valueTok.nextPos;
-							depth -= 1;
-							break;
-						}
-					case _:
-				}
-			}
-			var fieldInit:HxExpr = EInt(0);
-			if (init != null)
-				fieldInit = init;
-			fields.push(new HxFieldDecl(name, HxVisibility.Public, true, "Dynamic", fieldInit));
+			// Preserve omitted initializers for shared typing: String and Int
+			// abstracts assign different implicit values. An explicit static field
+			// is an ordinary field, not an enum value.
+			fields.push(new HxFieldDecl(HxFieldDecl.getName(field), HxVisibility.Public, true, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field),
+				HxFieldDecl.getMetadata(field).concat(["__hxhx_enum_abstract_value", "inline"]), HxFieldDecl.getPos(field), HxFieldDecl.getEndPos(field),
+				false, "inline", "never", HxFieldDecl.getInitText(field)));
 		}
-
-		return {nextPos: i, fields: fields};
+		return {nextPos: scanned.nextPos, fields: fields, functions: scanned.functions};
 	}
 
+	/**
+		Read fields and methods after a type's opening brace, stopping at its close.
+		Despite the historical name, this retains instance and static methods for
+		classes and abstracts. Bodies and source ranges belong to the declaration;
+		later compiler phases decide whether their behavior is supported.
+	**/
 	public static function scanClassBodyForStatics(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
 		final fields = new Array<HxFieldDecl>();
 		final functions = new Array<HxFunctionDecl>();
@@ -1588,11 +1542,16 @@ class ParserStageScanHelpers {
 			var bracketDepth = 0;
 			var braceDepth = 0;
 			var angleDepth = 0;
+			var previousCanEndType = false;
 			while (true) {
 				final tok = scanNextToken(source, j);
 				if (tok.text.length == 0)
 					return {hint: parts.join(""), nextPos: j};
 				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				// Metadata after a return type belongs to the body. Leave it for the
+				// statement parser so scoped permissions survive declaration recovery.
+				if (atTop && stopAtUntypedBodyModifier && tok.text == "@")
+					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && tok.text == "return")
 					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && expressionBodyKeywordStartsWithoutReturn(tok.text))
@@ -1602,6 +1561,11 @@ class ParserStageScanHelpers {
 				// belongs to the body modifier, not to the return type.
 				if (atTop && stopAtUntypedBodyModifier && tok.isIdent && tok.text == "untyped")
 					return {hint: parts.join(""), nextPos: tok.nextPos};
+				// A completed return type needs punctuation before another type name.
+				// A bare identifier here starts an expression body, such as `Void log()`.
+				// Nested types and the result after `->` remain inside the type hint.
+				if (stopAtUntypedBodyModifier && atTop && tok.isIdent && previousCanEndType)
+					return {hint: parts.join(""), nextPos: j};
 				final startsStructuralType = atTop && tok.text == "{" && parts.length == 0;
 				if (atTop
 					&& (tok.text == ")"
@@ -1610,6 +1574,10 @@ class ParserStageScanHelpers {
 						|| tok.text == ";"
 						|| (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
+				previousCanEndType = tok.isIdent
+					|| tok.text == ")"
+					|| tok.text == "}"
+					|| (tok.text == ">" && (parts.length == 0 || parts[parts.length - 1] != "-"));
 				parts.push(tok.text);
 				j = tok.nextPos;
 				switch (tok.text) {
@@ -1804,7 +1772,10 @@ class ParserStageScanHelpers {
 				case "dynamic":
 					noteDeclarationStart(t.startPos);
 					sawDynamic = true;
-				case "extern" | "override":
+				case "extern":
+					noteDeclarationStart(t.startPos);
+					pendingMetadata.push("extern");
+				case "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 					noteDeclarationStart(t.startPos);
 				case "var" | "final":
@@ -2061,9 +2032,11 @@ class ParserStageScanHelpers {
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
-					final keepBody = fnName == "new" || !wantStaticFn || sawDynamic || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
-					final body = keepBody ? bodyCapture.body : [];
-					final bodyText = (keepBody || fnName == "__init__") ? bodyCapture.bodyText : "";
+					// Parsing owns the authored body, including branches and unsupported
+					// syntax nodes. Typing and target checks must see those nodes rather
+					// than an empty method that silently loses its behavior.
+					final body = bodyCapture.body;
+					final bodyText = bodyCapture.bodyText;
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -2316,114 +2289,31 @@ class ParserStageScanHelpers {
 		}
 	}
 
+	/** Declaration recovery delegates unbraced body boundaries to the statement parser. */
 	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{
 		body:Array<HxStmt>,
 		bodyText:String,
 		nextPos:Int,
 		hasBody:Bool
 	} {
-		var i = start;
-		var bodyStart = -1;
-		var returnExprStartsWithBrace = false;
-		var tok = scanNextToken(source, i);
-		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
-			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
-				bodyStart = tok.nextPos - tok.text.length;
-				returnExprStartsWithBrace = true;
-			} else if (bodyStart < 0 && expressionBodyKeywordStartsWithoutReturn(tok.text)) {
-				bodyStart = tok.nextPos - tok.text.length;
-			} else if (bodyStart >= 0) {
-				returnExprStartsWithBrace = false;
-			}
-			i = tok.nextPos;
-			tok = scanNextToken(source, i);
-		}
-		if (tok.text == ";") {
-			final rawStart = bodyStart >= 0 ? bodyStart : start;
-			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
-			final leading = leadingWhitespaceLength(rawExpr);
-			final exprText = StringTools.trim(rawExpr);
-			if (!capture)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: tok.nextPos,
-					hasBody: exprText.length > 0
-				};
-			if (exprText.length == 0)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: tok.nextPos,
-					hasBody: false
-				};
-			final bodyText = exprText + ";";
-			var body = new Array<HxStmt>();
-			try {
-				body = HxParser.parseFunctionBodyTextAt(bodyText, source, rawStart + leading);
-				if (hasUnsupportedStmtList(body))
-					body = [];
-			} catch (_:HxParseError) {
-				body = [];
-			} catch (_:String) {
-				body = [];
-			}
-			return {
-				body: body,
-				bodyText: bodyText,
-				nextPos: tok.nextPos,
-				hasBody: true
-			};
-		}
-		if (tok.text != "{")
+		final token = scanNextToken(source, start);
+		if (token.text == ";" || token.text.length == 0)
 			return {
 				body: [],
 				bodyText: "",
-				nextPos: tok.nextPos,
+				nextPos: token.nextPos,
 				hasBody: false
 			};
-
-		final block = scanBalancedBlock(source, tok.nextPos);
-		if (block.nextPos <= tok.nextPos)
-			return {
+		if (token.text != "{") {
+			final parsed = HxParser.parseUnbracedFunctionBodyAt(source, start);
+			return capture ? parsed : {
 				body: [],
 				bodyText: "",
-				nextPos: tok.nextPos,
-				hasBody: true
-			};
-		// `return { ... }` is an expression body, not a braced function body. Keep
-		// the return token and exact source text so a later native-protocol merge can
-		// replace its whitespace-free summary with this structural body.
-		if (returnExprStartsWithBrace && bodyStart >= 0) {
-			final next = scanNextToken(source, block.nextPos);
-			final nextPos = next.text == ";" ? next.nextPos : block.nextPos;
-			if (!capture)
-				return {
-					body: [],
-					bodyText: "",
-					nextPos: nextPos,
-					hasBody: true
-				};
-			final rawExpr = source.substring(bodyStart, block.nextPos);
-			final leading = leadingWhitespaceLength(rawExpr);
-			final bodyText = StringTools.trim(rawExpr) + ";";
-			var body = new Array<HxStmt>();
-			try {
-				body = HxParser.parseFunctionBodyTextAt(bodyText, source, bodyStart + leading);
-				if (hasUnsupportedStmtList(body))
-					body = [];
-			} catch (_:HxParseError) {
-				body = [];
-			} catch (_:String) {
-				body = [];
-			}
-			return {
-				body: body,
-				bodyText: bodyText,
-				nextPos: nextPos,
+				nextPos: parsed.nextPos,
 				hasBody: true
 			};
 		}
+		final block = scanBalancedBlock(source, token.nextPos);
 		if (!capture)
 			return {
 				body: [],
@@ -2431,11 +2321,10 @@ class ParserStageScanHelpers {
 				nextPos: block.nextPos,
 				hasBody: true
 			};
-
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
 			try {
-				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, tok.nextPos);
+				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, token.nextPos);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -2454,7 +2343,7 @@ class ParserStageScanHelpers {
 
 	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {
 		return switch (text) {
-			case "for" | "this":
+			case "for" | "this" | "switch" | "if" | "while" | "do" | "try":
 				true;
 			case _:
 				false;
@@ -2481,51 +2370,9 @@ class ParserStageScanHelpers {
 		return false;
 	}
 
-	static function scannedStaticBodyIsSafe(fnName:String, stmts:Array<HxStmt>):Bool {
-		if (stmts == null || stmts.length == 0)
-			return false;
-		if (StringTools.startsWith(fnName, "get_") && stmts.length == 1) {
-			return switch (stmts[0]) {
-				case SReturn(expr, _):
-					!hasUnsupportedExpr(expr);
-				case _:
-					false;
-			};
-		}
-		if (StringTools.startsWith(fnName, "set_") && stmts.length == 2) {
-			return switch [stmts[0], stmts[1]] {
-				case [SExpr(EBinop("=", EIdent(_), rhs), _), SReturn(ret, _)]: !hasUnsupportedExpr(rhs) && !hasUnsupportedExpr(ret);
-				case _:
-					false;
-			};
-		}
-		// Keep scanned static helper bodies only when they are linear and every
-		// statement is understood by the current source-native lowering path.
-		for (stmt in stmts) {
-			switch (stmt) {
-				case SVar(_, _, init, _):
-					if (hasUnsupportedExpr(init))
-						return false;
-				case SExpr(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case SReturn(expr, _):
-					if (hasUnsupportedExpr(expr))
-						return false;
-				case _:
-					return false;
-			}
-		}
-		return switch (stmts[stmts.length - 1]) {
-			case SReturn(_, _):
-				true;
-			case _:
-				false;
-		};
-	}
-
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				hasUnsupportedStmtList(stmts);
 			case SVar(_, _, init, _):
@@ -2563,7 +2410,8 @@ class ParserStageScanHelpers {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj), EReturn(obj):
+			case EPrivateAccess(obj, _), EParenthesized(obj, _), EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj),
+				EReturn(obj), EThrow(obj, _):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {
@@ -2579,7 +2427,7 @@ class ParserStageScanHelpers {
 						return true;
 				false;
 			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				if (hasUnsupportedExpr(condition)) true; else {
 					var found = false;
 					for (entry in body)
@@ -2588,8 +2436,16 @@ class ParserStageScanHelpers {
 					found;
 				}
 			case EBreak(_) | EContinue(_): false;
-			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
-			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
+			case ESourceTry(_, bodies, _):
+				var unsupported = false;
+				for (body in bodies)
+					unsupported = unsupported || hasUnsupportedExpr(body);
+				unsupported;
+			case ESourceFor(_, iterable, body, _): hasUnsupportedExpr(iterable) || hasUnsupportedExpr(body);
+			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right),
+				EDiscardThen(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
+			case ETernary(cond, thenExpr, elseExpr),
+				ESourceIf(cond, thenExpr, elseExpr, _): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):
 				for (value in values)
 					if (hasUnsupportedExpr(value))

@@ -3,8 +3,8 @@
 	current backend emitters.
 
 	This adapter is a migration seam: it reads only typed nodes, never a parsed
-	function body. Typed expression blocks become structural continuation calls,
-	so no source text is reparsed and later semantic lowering remains authoritative.
+	function body. Ordered effects remain name-free sequencing operations; only
+	value-bearing temporaries use continuation calls to retain their exact binding.
 **/
 class TypedBodySource {
 	static function sourcePosition(position:Null<HxPos>):HxPos
@@ -39,20 +39,24 @@ class TypedBodySource {
 		}
 	}
 
-	static function collectExpressionBindings(expression:TypedExpr, bindings:haxe.ds.StringMap<TyLocalBinding>):Void {
+	static function collectExpressionBindings(expression:TypedExpr, bindings:haxe.ds.StringMap<TyLocalBinding>, uses:Array<TypedCatchUse>):Void {
+		for (use in expression.getCatchUses())
+			uses.push(use);
 		for (binding in expression.getLocalBindings())
 			addBinding(bindings, binding);
 		for (child in expression.getExpressions())
-			collectExpressionBindings(child, bindings);
+			collectExpressionBindings(child, bindings, uses);
 	}
 
-	static function collectStatementBindings(statement:TypedStmt, bindings:haxe.ds.StringMap<TyLocalBinding>):Void {
+	static function collectStatementBindings(statement:TypedStmt, bindings:haxe.ds.StringMap<TyLocalBinding>, uses:Array<TypedCatchUse>):Void {
+		for (use in statement.getCatchUses())
+			uses.push(use);
 		for (binding in statement.getLocalBindings())
 			addBinding(bindings, binding);
 		for (expression in statement.getExpressions())
-			collectExpressionBindings(expression, bindings);
+			collectExpressionBindings(expression, bindings, uses);
 		for (child in statement.getStatements())
-			collectStatementBindings(child, bindings);
+			collectStatementBindings(child, bindings, uses);
 	}
 
 	static function collectExpressionFieldReads(expression:TypedExpr, reads:Array<TypedBackendFieldReadProjection>):Void {
@@ -78,38 +82,28 @@ class TypedBodySource {
 
 	static function fieldReadCatalog(typedFunction:TypedFunction):TypedBackendFieldReadCatalog {
 		final reads = new Array<TypedBackendFieldReadProjection>();
+		for (value in typedFunction.getDefaults())
+			collectExpressionFieldReads(value.getExpression(), reads);
 		for (statement in typedFunction.getBody().getStatements())
 			collectStatementFieldReads(statement, reads);
 		return new TypedBackendFieldReadCatalog(reads);
 	}
 
-	static function fieldReadCatalogForExpression(expression:TypedExpr):TypedBackendFieldReadCatalog {
-		final reads = new Array<TypedBackendFieldReadProjection>();
-		collectExpressionFieldReads(expression, reads);
-		return new TypedBackendFieldReadCatalog(reads);
-	}
-
 	static function localCatalog(typedFunction:TypedFunction, reservedProjectedNames:Array<String>):TypedBackendLocalCatalog {
 		final bindings = new haxe.ds.StringMap<TyLocalBinding>();
+		final uses = new Array<TypedCatchUse>();
 		final environment = typedFunction.getEnvironment();
 		if (environment != null)
 			for (parameter in environment.getParams())
 				addBinding(bindings, parameter.toBinding());
+		for (value in typedFunction.getDefaults())
+			collectExpressionBindings(value.getExpression(), bindings, uses);
 		for (statement in typedFunction.getBody().getStatements())
-			collectStatementBindings(statement, bindings);
+			collectStatementBindings(statement, bindings, uses);
 		final ordered = new Array<TyLocalBinding>();
 		for (binding in bindings)
 			ordered.push(binding);
-		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames);
-	}
-
-	static function localCatalogForExpression(expression:TypedExpr, reservedProjectedNames:Array<String>):TypedBackendLocalCatalog {
-		final bindings = new haxe.ds.StringMap<TyLocalBinding>();
-		collectExpressionBindings(expression, bindings);
-		final ordered = new Array<TyLocalBinding>();
-		for (binding in bindings)
-			ordered.push(binding);
-		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames);
+		return new TypedBackendLocalCatalog(ordered, reservedProjectedNames, uses);
 	}
 
 	/**
@@ -120,6 +114,44 @@ class TypedBodySource {
 	**/
 	static function canonicalTypeHint(type:TyType):String {
 		return type == null ? "" : type.getCanonicalDisplay();
+	}
+
+	/** Open method variables retain typed identities while legacy target hints select an opaque carrier. */
+	static function projectedTypeHint(type:TyType):String {
+		return type.hasOpenMethodParameter() ? canonicalTypeHint(type) : type.getDisplay();
+	}
+
+	/** Find source annotation facts through parser-owned callable wrappers only. */
+	static function callableSignature(value:TypedExpr):Null<HxLambdaSignature> {
+		if (value.getTag() == Lambda)
+			return value.getLambdaSignature();
+		final children = value.getExpressions();
+		if (value.getTag() == Cast && children.length == 1)
+			return callableSignature(children[0]);
+		if (value.getTag() == Call && children.length == 3 && children[0].getTag() == NameRead) {
+			final name = children[0].getTexts()[0];
+			if (name == "__hxhx_optional_lambda" || name == "__hxhx_rest_lambda")
+				return callableSignature(children[1]);
+		}
+		return null;
+	}
+
+	/** Transport selected types and omission flags without converting them into source annotations. */
+	static function callableTypeHint(type:TyType, signature:Null<HxLambdaSignature>):String {
+		final arguments = type.getFunctionArguments();
+		final parameters = signature == null ? [] : signature.getParameters();
+		final parts = new Array<String>();
+		for (index in 0...arguments.length)
+			parts.push((index < parameters.length && parameters[index].isOptional ? "?" : "") + canonicalTypeHint(arguments[index]));
+		return "(" + parts.join(", ") + ")->" + canonicalTypeHint(type.getFunctionReturn());
+	}
+
+	static function ascribeCallable(source:HxExpr, value:TypedExpr, suppress:Bool, ?projectionFacts:TypedBodyProjectionBuilder):HxExpr {
+		final type = value.getType();
+		if (suppress || !type.isFunction() || type.hasUnknownComponent())
+			return source;
+		final hint = callableTypeHint(type, callableSignature(value));
+		return projectionFacts == null ? ECast(source, hint) : projectionFacts.ascribeCallable(source, hint);
 	}
 
 	static function containsNominalType(type:TyType):Bool {
@@ -204,7 +236,7 @@ class TypedBodySource {
 	**/
 	static function resolvedTypeExpression(sourceName:String, identity:Null<TyNominalTypeId>):HxExpr {
 		final resolved = resolvedNameWhenAliased(sourceName, identity);
-		if (resolved == sourceName || resolved.indexOf(".") < 0)
+		if (resolved.indexOf(".") < 0)
 			return EIdent(resolved);
 		final parts = resolved.split(".");
 		var expression:HxExpr = EIdent(parts.shift());
@@ -233,7 +265,7 @@ class TypedBodySource {
 			return typeHint;
 		return switch (initializer.getTag()) {
 			case NewValue: typeHint;
-			case _: initializer.getType().getDisplay();
+			case _: projectedTypeHint(initializer.getType());
 		};
 	}
 
@@ -327,10 +359,11 @@ class TypedBodySource {
 		return projected;
 	}
 
-	static function expressionTail(expressions:Array<TypedExpr>, start:Int, ?catalog:TypedBackendLocalCatalog):Array<HxExpr> {
+	static function expressionTail(expressions:Array<TypedExpr>, start:Int, ?catalog:TypedBackendLocalCatalog,
+			?projectionFacts:TypedBodyProjectionBuilder):Array<HxExpr> {
 		final out = new Array<HxExpr>();
 		for (index in start...expressions.length)
-			out.push(expression(expressions[index], catalog));
+			out.push(expression(expressions[index], catalog, projectionFacts));
 		return out;
 	}
 
@@ -343,7 +376,8 @@ class TypedBodySource {
 		names must move with the lambda bindings or the target can silently lose
 		the optional default.
 	**/
-	static function optionalLambdaCall(expressions:Array<TypedExpr>, catalog:Null<TypedBackendLocalCatalog>):HxExpr {
+	static function optionalLambdaCall(expressions:Array<TypedExpr>, catalog:Null<TypedBackendLocalCatalog>,
+			?projectionFacts:TypedBodyProjectionBuilder):HxExpr {
 		if (expressions.length != 3)
 			throw "typed optional-lambda marker has an invalid structural payload";
 		final wrapped = expressions[1];
@@ -377,13 +411,16 @@ class TypedBodySource {
 				throw "typed optional-lambda marker references unknown parameter " + sourceName;
 			projectedOptionalNames.push(EString(projectedNames[index]));
 		}
-		return ECall(expression(expressions[0], catalog), [expression(wrapped, catalog), EArrayDecl(projectedOptionalNames)]);
+		return ECall(expression(expressions[0], catalog, projectionFacts), [
+			expression(wrapped, catalog, projectionFacts, true),
+			EArrayDecl(projectedOptionalNames)
+		]);
 	}
 
-	static function blockExpression(children:Array<TypedExpr>, ?catalog:TypedBackendLocalCatalog):HxExpr {
+	static function blockExpression(children:Array<TypedExpr>, resultType:TyType, ?catalog:TypedBackendLocalCatalog,
+			?projectionFacts:TypedBodyProjectionBuilder):HxExpr {
 		var continuation:HxExpr = ENull;
 		var hasContinuation = false;
-		var sequenceIndex = 0;
 		var index = children.length - 1;
 		while (index >= 0) {
 			final child = children[index];
@@ -394,19 +431,16 @@ class TypedBodySource {
 					if (texts.length != 2 || values.length != 1)
 						throw "typed temporary has an invalid structural payload";
 					final projectedName = exactProjectedName(catalog, child.getLocalBindings(), texts[0], "typed temporary");
-					var binder:HxExpr = ELambda([projectedName], continuation);
-					if (StringTools.trim(texts[1]).length > 0)
-						binder = ECast(binder, "(" + texts[1] + ")->Dynamic");
-					continuation = ECall(binder, [expression(values[0], catalog)]);
+					final storageType = child.getLocalBindings()[0].getType();
+					final binder:HxExpr = ECast(ELambda([projectedName], continuation), callableTypeHint(TyType.functionType([storageType], resultType), null));
+					continuation = ECall(binder, [expression(values[0], catalog, projectionFacts)]);
 					hasContinuation = true;
 				case _:
-					final projected = expression(child, catalog);
+					final projected = expression(child, catalog, projectionFacts);
 					if (!hasContinuation) {
 						continuation = projected;
 					} else {
-						final ignored = "__hxhx_lambda_seq_" + sequenceIndex;
-						sequenceIndex++;
-						continuation = ECall(ELambda([ignored], continuation), [projected]);
+						continuation = EDiscardThen(projected, continuation);
 					}
 					hasContinuation = true;
 			}
@@ -415,50 +449,193 @@ class TypedBodySource {
 		return continuation;
 	}
 
-	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog):HxExpr {
+	/** Constant embedding must not discard evaluation of a value receiver. */
+	static function constantTypeReceiver(receiver:TypedExpr):Bool {
+		if (receiver.getFieldInfo() != null || receiver.getLocalBindings().length != 0)
+			return false;
+		return switch (receiver.getTag()) {
+			case RuntimeTypeValue: true;
+			case NameRead: true;
+			case FieldRead: constantTypeReceiver(receiver.getExpressions()[0]);
+			case _: false;
+		};
+	}
+
+	/** Preserve the selected field and distinguish type qualification from receiver evaluation. */
+	static function projectFieldRead(source:TypedExpr, catalog:Null<TypedBackendLocalCatalog>, facts:Null<TypedBodyProjectionBuilder>,
+			use:TypedBackendMethodOccurrence.TypedMethodUse):HxExpr {
+		final children = source.getExpressions();
+		final field = source.getFieldInfo();
+		final method = source.getDeclaration();
+		// A class literal qualifies a static member; a class object in a local is a value.
+		final target = children[0].getTag() == RuntimeTypeValue ? children[0].getRuntimeTypeTarget() : null;
+		final owner = target == null ? null : target.getDeclarationIdentity();
+		// Undeclared fields access the runtime class object, including a replaced
+		// source binding. Only a selected static declaration permits qualification.
+		final declaredStatic = (field != null && field.getIsStatic()) || (method != null && method.getIsStatic());
+		var receiver = owner == null
+			|| !declaredStatic ? expression(children[0], catalog,
+				facts) : resolvedTypeExpression(target.getSourceSpelling(), field != null && field.getIsStatic() ? field.getOwner() : owner);
+		if (field != null && field.getIsStatic()) {
+			switch receiver {
+				case EIdent(name):
+					receiver = resolvedTypeExpression(name, field.getOwner());
+				case _:
+			}
+		}
+		final constant = field == null ? null : field.getConstant().project();
+		if (constant != null && !constantTypeReceiver(children[0]))
+			throw "enum constant read cannot discard a value receiver: " + field.getCanonicalKey();
+		final projected:HxExpr = constant == null ? EField(receiver, source.getTexts()[0]) : constant;
+		// Direct calls already retain their declaration on the call transport.
+		// Its temporary callee field does not survive that projection.
+		if (method != null && !method.getIsStatic() && facts != null && use != DirectCall)
+			return facts.projectMethod(source, projected, use);
+		if (constant == null && facts != null)
+			facts.projectObjectAccess(source, projected);
+		return constant != null
+			|| field == null
+			|| facts == null ? projected : facts.projectField(source, projected, constantTypeReceiver(children[0]) ? TypeQualifier : ValueReceiver);
+	}
+
+	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder,
+			suppressCallableAscription:Bool = false, use:TypedBackendMethodOccurrence.TypedMethodUse = ValueRead):HxExpr {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
 		return switch (typedExpression.getTag()) {
+			case ArrayAppend:
+				ELoweredControl(ArrayAppend, "", expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case MapInsert:
+				ELoweredControl(MapInsert, "", expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case Parenthesized:
+				EParenthesized(expression(expressions[0], catalog, projectionFacts, suppressCallableAscription, use),
+					typedExpression.getPosition() == null ? HxPos.unknown() : typedExpression.getPosition());
 			case NullValue: ENull;
+			case PrivateAccess:
+				throw "source access permission must be consumed before backend projection";
+			case FeatureDefinition | FeatureSelection:
+				throw "feature intrinsics require program-owned selection before backend projection";
+			case SourceGroup | SourceFunction | SourceIf | SourceFor | SourceTry:
+				throw "source control must be lowered before backend projection (haxe_ocaml-o25kr)";
+			case ControlTry:
+				final catches = typedExpression.getSourceCatches();
+				final names = exactProjectedNames(catalog, typedExpression.getLocalBindings(), [for (entry in catches) entry.getName()], "typed catch region");
+				ELoweredControl(Try([
+					for (index in 0...catches.length)
+						new HxSourceCatch(names[index], catches[index].getTypeHint(), catches[index].getPosition())
+				]), "",
+					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case ControlBranch:
+				ELoweredControl(Branch, "", expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case ControlWhile:
+				final target = typedExpression.getControlTarget();
+				if (target == null)
+					throw "lowered while requires an exact loop target";
+				ELoweredControl(While(typedExpression.getWhileKind()), target.getCanonicalIdentity(),
+					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case ThrowExpr:
+				if (expressions.length != 1)
+					throw "typed throw requires exactly one operand";
+				final operand = expression(expressions[0], catalog, projectionFacts);
+				ELoweredControl(Throw, "", [
+					projectionFacts == null ? operand : projectionFacts.projectThrownValue(expressions[0], operand)
+				], sourcePosition(typedExpression.getPosition()));
+			case ControlSwitch:
+				ELoweredControl(Switch(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+					typedExpression.getSwitchHasExhaustiveCoverage()),
+					"", [for (child in expressions) expression(child, catalog, projectionFacts)], typedExpression.getPosition());
+			case ControlFor:
+				final target = typedExpression.getControlTarget();
+				if (target == null)
+					throw "lowered for requires an exact loop target";
+				final names = exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed for bindings");
+				ELoweredControl(For(HxForBinding.fromNames(names)), target.getCanonicalIdentity(), expressionTail(expressions, 0, catalog, projectionFacts),
+					sourcePosition(typedExpression.getPosition()));
+			case ControlRegion:
+				final target = typedExpression.getControlTarget();
+				ELoweredControl(target == null ? Scope : FunctionBody, target == null ? "" : target.getCanonicalIdentity(),
+					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+			case TargetScope:
+				if (expressions.length != 1 || expressions[0].getTag() != ControlRegion)
+					throw "native syntax scope requires its lowered lexical body";
+				ELoweredControl(TargetScope(TypedTargetScope.kind(typedExpression)), "", expressionTail(expressions, 0, catalog, projectionFacts),
+					sourcePosition(typedExpression.getPosition()));
 			case BoolValue: EBool(typedExpression.getBoolValue());
 			case StringValue: EString(texts[0]);
 			case IntValue: EInt(typedExpression.getIntValue());
 			case FloatValue: EFloat(typedExpression.getFloatValue());
 			case EnumValue: EEnumValue(texts[0]);
+			case RuntimeTypeValue | RuntimeTypeTest:
+				if (projectionFacts == null)
+					throw "runtime type expression requires an exact executable projection";
+				final value = typedExpression.getTag() == RuntimeTypeTest ? expression(expressions[0], catalog, projectionFacts) : null;
+				final valueType = typedExpression.getTag() == RuntimeTypeTest ? expressions[0].getType() : null;
+				projectionFacts.projectRuntimeType(typedExpression.getRuntimeTypeTarget(), value, valueType);
 			case ThisValue: EThis;
 			case SuperValue: ESuper;
 			case LocalRead: EIdent(exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed local read"));
 			case NameRead:
 				final nameField = typedExpression.getFieldInfo();
-				if (nameField != null) {
-					typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
-						nameField.getName()) : EIdent(texts[0]);
+				final method = typedExpression.getDeclaration();
+				if (method != null) {
+					typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", method.getOwner()),
+						method.getSignature().getName()) : EIdent(method.getSignature().getName());
+				} else if (nameField != null) {
+					final constant = nameField.getConstant().project();
+					final projected:HxExpr = constant != null ? constant : typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("",
+						nameField.getOwner()), nameField.getName()) : EIdent(texts[0]);
+					constant != null
+					|| projectionFacts == null ? projected : projectionFacts.projectField(typedExpression, projected, ImplicitOwner);
 				} else {
 					final identity = typedExpression.getType().getNominalIdentity();
 					resolvedTypeExpression(texts[0], identity);
 				}
-			case FieldRead:
-				var receiver = expression(expressions[0], catalog);
-				final field = typedExpression.getFieldInfo();
-				if (field != null && field.getIsStatic()) {
-					switch (receiver) {
-						case EIdent(name): receiver = resolvedTypeExpression(name, field.getOwner());
-						case _:
-					}
-				}
-				EField(receiver, texts[0]);
-			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog), texts[0]);
+			case FieldRead: projectFieldRead(typedExpression, catalog, projectionFacts, use);
+			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog, projectionFacts), texts[0]);
 			case Call:
-				final callee = expression(expressions[0], catalog);
-				final arguments = expressionTail(expressions, 1, catalog);
+				if (expressions.length > 0 && expressions[0].getTag() == SuperValue) {
+					final arguments = expressionTail(expressions, 1, catalog, projectionFacts);
+					return projectionFacts == null ? ECall(ESuper, arguments) : projectionFacts.projectConstructor(typedExpression, "", arguments);
+				}
+				if (expressions.length == 3 && expressions[0].getTag() == NameRead) {
+					final marker = expressions[0].getTexts()[0];
+					if (marker == "__hxhx_optional_lambda")
+						return ascribeCallable(optionalLambdaCall(expressions, catalog, projectionFacts), typedExpression, suppressCallableAscription,
+							projectionFacts);
+					if (marker == "__hxhx_rest_lambda")
+						return ascribeCallable(ECall(EIdent(marker), [
+							expression(expressions[1], catalog, projectionFacts, true),
+							expression(expressions[2], catalog, projectionFacts)
+						]), typedExpression, suppressCallableAscription, projectionFacts);
+				}
 				final declaration = typedExpression.getDeclaration();
 				final extensionProvider = typedExpression.getExtensionProvider();
+				final sourceCallee = expressions[0];
+				final staticTypeQualifier = declaration != null
+					&& declaration.getIsStatic()
+					&& extensionProvider == null
+					&& sourceCallee.getTag() == FieldRead
+					&& sourceCallee.getExpressions()[0].getTag() == RuntimeTypeValue;
+				final callee:HxExpr = staticTypeQualifier ? EField(resolvedTypeExpression(sourceCallee.getExpressions()[0].getRuntimeTypeTarget()
+				.getSourceSpelling(), declaration.getOwner()),
+					declaration.getSignature().getName()) : expression(sourceCallee, catalog, projectionFacts, false, DirectCall);
+				final projectedArguments = expressionTail(expressions, 1, catalog, projectionFacts);
+				if (projectionFacts != null)
+					projectionFacts.projectCallArguments(typedExpression, projectedArguments);
+				final named = typedExpression.getNamedArguments();
+				final binding = named == null ? typedExpression.getArgumentBinding() : named.getArguments();
+				final positionalArguments = binding == null ? projectedArguments : TypedCallArgumentSource.arguments(binding, projectedArguments);
+				final arguments = declaration == null
+					&& sourceCallee.getTag() == NameRead ? TypedControlBodySource.arguments(sourceCallee.getTexts()[0],
+						positionalArguments) : positionalArguments;
 				if (extensionProvider != null) {
 					if (declaration == null || !declaration.getIsStatic())
 						throw "typed extension call is missing its exact static declaration";
 					switch (callee) {
 						case EField(receiver, _):
-							ECall(EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
+							TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+								declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()),
+								EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
 						case _:
 							throw "typed extension call does not retain its receiver field shape";
 					}
@@ -466,35 +643,49 @@ class TypedBodySource {
 					&& expressions[0].getTag() == NameRead
 					&& expressions[0].getTexts().length == 1
 					&& expressions[0].getTexts()[0] == "__hxhx_optional_lambda") {
-					optionalLambdaCall(expressions, catalog);
+					optionalLambdaCall(expressions, catalog, projectionFacts);
 				} else if (declaration != null && declaration.getIsEnumConstructor()) {
 					TypedExactEnumConstructorSource.encode(declaration.getOwner().getCanonicalName(), declaration.getModulePath(),
 						declaration.getIdentity().getCanonicalKey(), declaration.getSignature().getName(), callee, arguments);
 				} else if (declaration == null || declaration.getIsStatic()) {
 					if (declaration != null) {
-						switch (callee) {
+						final ordinary:HxExpr = switch (callee) {
 							case EIdent(_) if (typedExpression.getRequiresOwnerQualification()):
-								ECall(EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName()), arguments);
+								EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName());
 							case EField(EIdent(name), method):
-								ECall(EField(resolvedTypeExpression(name, declaration.getOwner()), method), arguments);
-							case _: ECall(callee, arguments);
-						}
+								EField(resolvedTypeExpression(name, declaration.getOwner()), method);
+							case _: callee;
+						};
+						TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+							declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()), ordinary, arguments);
 					} else {
 						ECall(callee, arguments);
 					}
 				} else {
 					switch (callee) {
 						case EField(receiver, method):
-							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
-								method, typedExpression.getType().getDisplay(), receiver, arguments);
-						case EIdent(method) if (typedExpression.getRequiresOwnerQualification()):
-							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
-								method, typedExpression.getType().getDisplay(), EThis, arguments);
+							final call = TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(),
+								declaration.getIdentity().getCanonicalKey(), method, projectedTypeHint(typedExpression.getType()), receiver, arguments);
+							projectionFacts == null ? call : projectionFacts.projectInstanceCall(typedExpression, call);
+						case EIdent(method):
+							// A selected instance declaration supplies an implicit this
+							// receiver even when no owner-name qualification is needed.
+							final call = TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(),
+								declaration.getIdentity().getCanonicalKey(), method, projectedTypeHint(typedExpression.getType()), EThis, arguments);
+							projectionFacts == null ? call : projectionFacts.projectInstanceCall(typedExpression, call);
 						case _:
 							ECall(callee, arguments);
 					}
 				}
-			case ReturnExpr: EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog));
+			case ReturnExpr:
+				final target = typedExpression.getControlTarget();
+				if (target == null) {
+					EReturn(expressions.length == 0 ? null : expression(expressions[0], catalog, projectionFacts));
+				} else {
+					final returned:HxExpr = ELoweredControl(Return, target.getCanonicalIdentity(), expressionTail(expressions, 0, catalog, projectionFacts),
+						sourcePosition(typedExpression.getPosition()));
+					projectionFacts == null ? returned : projectionFacts.projectReturn(typedExpression, returned);
+				}
 			case VariableDeclarations:
 				final declarations = new Array<HxExpr>();
 				for (declaration in expressions) {
@@ -503,47 +694,74 @@ class TypedBodySource {
 					final declarationTexts = declaration.getTexts();
 					final declarationValues = declaration.getExpressions();
 					final projectedName = exactProjectedName(catalog, declaration.getLocalBindings(), declarationTexts[0], "typed expression variable");
-					declarations.push(HxExprVarDecl.make(projectedName, declarationTexts[1],
-						declarationValues.length == 0 ? null : expression(declarationValues[0], catalog), sourcePosition(declaration.getPosition()),
+					var value = declarationValues.length == 0 ? null : expression(declarationValues[0], catalog, projectionFacts);
+					if (value != null && catalog != null && projectionFacts != null)
+						value = projectionFacts.projectLocalWrite(projectedName, declaration.getLocalBindings()[0], declarationValues[0], value);
+					declarations.push(HxExprVarDecl.make(projectedName, declarationTexts[1], value, sourcePosition(declaration.getPosition()),
 						declaration.getVariableIsFinal(), declaration.getVariableIsStatic()));
 				}
 				EVars(declarations);
 			case VariableDeclaration:
 				throw "typed variable declaration must be nested inside a declaration list";
 			case WhileExpr:
-				EWhile(expression(expressions[0], catalog), expressionTail(expressions, 1, catalog), typedExpression.getBoolValue(),
-					sourcePosition(typedExpression.getPosition()));
-			case BreakExpr: EBreak(sourcePosition(typedExpression.getPosition()));
-			case ContinueExpr: EContinue(sourcePosition(typedExpression.getPosition()));
-			case MacroExpr: EMacroExpr(expression(expressions[0], catalog), texts.copy());
+				EWhile(expression(expressions[0], catalog, projectionFacts), expressionTail(expressions, 1, catalog, projectionFacts),
+					typedExpression.getBoolValue(), sourcePosition(typedExpression.getPosition()), typedExpression.getWhileKind());
+			case BreakExpr | ContinueExpr:
+				final target = typedExpression.getControlTarget();
+				final position = sourcePosition(typedExpression.getPosition());
+				if (target == null) {
+					typedExpression.getTag() == BreakExpr ? EBreak(position) : EContinue(position);
+				} else {
+					ELoweredControl(typedExpression.getTag() == BreakExpr ? Break : Continue, target.getCanonicalIdentity(), [], position);
+				}
+			case MacroExpr: EMacroExpr(TypedSourceSyntax.expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda:
-				ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"), expression(expressions[0], catalog));
+				final lambda:HxExpr = ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"),
+					expression(expressions[0], catalog, projectionFacts), typedExpression.getLambdaSignature());
+				ascribeCallable(projectionFacts == null ? lambda : projectionFacts.projectLambda(typedExpression, lambda), typedExpression,
+					suppressCallableAscription, projectionFacts);
 			case SwitchExpr:
-				ESwitch(expression(expressions[0], catalog), projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
-					expressionTail(expressions, 1, catalog));
+				ESwitch(expression(expressions[0], catalog, projectionFacts),
+					projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+					expressionTail(expressions, 1, catalog, projectionFacts));
 			case NewValue:
 				final identity = typedExpression.getType().getNominalIdentity();
-				ENew(resolvedNameWhenAliased(texts[0], identity), expressionTail(expressions, 0, catalog));
-			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog));
-			case Binary: EBinop(texts[0], expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Assign: EBinop("=", expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case CompoundAssign: EBinop(texts[0], expression(expressions[0], catalog), expression(expressions[1], catalog));
+				final path = resolvedNameWhenAliased(texts[0], identity);
+				final arguments = expressionTail(expressions, 0, catalog, projectionFacts);
+				projectionFacts == null ? ENew(path, arguments) : projectionFacts.projectConstructor(typedExpression, path, arguments);
+			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog, projectionFacts));
+			case Binary: EBinop(texts[0], expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+			case Assign | CompoundAssign:
+				final target = expression(expressions[0], catalog, projectionFacts, false, WriteTarget);
+				var value = expression(expressions[1], catalog, projectionFacts);
+				if (projectionFacts != null && catalog != null && expressions[0].getTag() == LocalRead) {
+					final binding = expressions[0].getLocalBindings()[0];
+					value = projectionFacts.projectLocalWrite(catalog.projectedName(binding), binding, expressions[1], value);
+				}
+				final assignment:HxExpr = EBinop(typedExpression.getTag() == Assign ? "=" : texts[0], target, value);
+				projectionFacts == null ? assignment : projectionFacts.projectObjectAccess(typedExpression, assignment);
 			case Ternary:
-				ETernary(expression(expressions[0], catalog), expression(expressions[1], catalog), expression(expressions[2], catalog));
-			case Anonymous: EAnon(texts.copy(), expressionTail(expressions, 0, catalog));
+				ETernary(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
+					expression(expressions[2], catalog, projectionFacts));
+			case Anonymous:
+				final children = expressionTail(expressions, 0, catalog, projectionFacts);
+				projectionFacts == null ? EAnon(texts.copy(), children) : projectionFacts.projectAggregate(typedExpression, children);
 			case ArrayComprehension:
-				var guard:Null<HxExpr> = null;
-				if (typedExpression.getBoolValue())
-					guard = expression(expressions[1], catalog);
+				final children = expressionTail(expressions, 0, catalog, projectionFacts);
+				final guard = typedExpression.getBoolValue() ? children[1] : null;
 				final valueIndex = typedExpression.getBoolValue() ? 2 : 1;
 				final projectedName = exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed array comprehension");
-				EArrayComprehension(projectedName, expression(expressions[0], catalog), guard, expression(expressions[valueIndex], catalog));
-			case ArrayDecl: EArrayDecl(expressionTail(expressions, 0, catalog));
-			case ArrayAccess: EArrayAccess(expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Range: ERange(expression(expressions[0], catalog), expression(expressions[1], catalog));
-			case Cast: ECast(expression(expressions[0], catalog), texts[0]);
-			case Untyped: EUntyped(expression(expressions[0], catalog));
+				EArrayComprehension(projectedName, children[0], guard, children[valueIndex]);
+			case ArrayDecl:
+				final children = expressionTail(expressions, 0, catalog, projectionFacts);
+				projectionFacts == null ? EArrayDecl(children) : projectionFacts.projectAggregate(typedExpression, children);
+			case ArrayAccess: EArrayAccess(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+			case Range | FixedRange: ERange(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+			case Cast:
+				final operand = expression(expressions[0], catalog, projectionFacts);
+				projectionFacts == null ? ECast(operand, texts[0]) : projectionFacts.projectCast(typedExpression, operand);
+			case Untyped: EUntyped(expression(expressions[0], catalog, projectionFacts));
 			case Opaque:
 				switch (typedExpression.getOpaqueKind()) {
 					case TryCatch: ETryCatchRaw(texts[0]);
@@ -551,43 +769,52 @@ class TypedBodySource {
 					case Unsupported: EUnsupported(texts[0]);
 					case null: throw "typed opaque expression is missing its kind";
 				}
-			case Block: blockExpression(expressions, catalog);
+			case Block: blockExpression(expressions, typedExpression.getType(), catalog, projectionFacts);
 			case Temporary:
 				throw "typed temporary must be nested inside a typed block expression";
 		};
 	}
 
-	public static function statement(typedStatement:TypedStmt, ?catalog:TypedBackendLocalCatalog):HxStmt {
+	public static function statement(typedStatement:TypedStmt, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder):HxStmt {
 		final position = sourcePosition(typedStatement.getPosition());
 		final names = typedStatement.getNames();
 		final expressions = typedStatement.getExpressions();
 		final statements = typedStatement.getStatements();
-		return switch (typedStatement.getTag()) {
-			case Block: SBlock([for (entry in statements) statement(entry, catalog)], position);
+		final projected:HxStmt = switch (typedStatement.getTag()) {
+			case Block: SBlock([for (entry in statements) statement(entry, catalog, projectionFacts)], position);
 			case Var:
 				final typedInitializer = expressions.length == 1 ? expressions[0] : null;
-				final typeHint = variableTypeHint(names[1], typedInitializer);
+				final bindings = typedStatement.getLocalBindings();
+				final storageType = bindings.length == 1 ? bindings[0].getType() : null;
+				final typeHint = storageType != null
+					&& storageType.isFunction()
+					&& !storageType.hasUnknownComponent() ? callableTypeHint(storageType,
+						typedInitializer == null ? null : callableSignature(typedInitializer)) : variableTypeHint(names[1], typedInitializer);
 				var initializer:Null<HxExpr> = null;
 				if (expressions.length > 0)
-					initializer = expression(expressions[0], catalog);
+					initializer = expression(expressions[0], catalog, projectionFacts);
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed variable statement");
+				if (initializer != null && projectionFacts != null && catalog != null)
+					initializer = projectionFacts.projectLocalWrite(projectedName, bindings[0], expressions[0], initializer);
 				SVar(projectedName, typeHint, initializer, position, typedStatement.getMetadata());
 			case If:
 				var whenFalse:Null<HxStmt> = null;
 				if (statements.length > 1)
-					whenFalse = statement(statements[1], catalog);
-				SIf(expression(expressions[0], catalog), statement(statements[0], catalog), whenFalse, position);
+					whenFalse = statement(statements[1], catalog, projectionFacts);
+				SIf(expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), whenFalse, position);
 			case ForIn:
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed for-in statement");
-				SForIn(projectedName, expression(expressions[0], catalog), statement(statements[0], catalog), position);
+				SForIn(projectedName, expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), position);
 			case ForKeyValue:
 				final projectedNames = exactProjectedNames(catalog, typedStatement.getLocalBindings(), names, "typed key/value for-in statement");
-				SForKeyValue(projectedNames[0], projectedNames[1], expression(expressions[0], catalog), statement(statements[0], catalog), position);
-			case While: SWhile(expression(expressions[0], catalog), statement(statements[0], catalog), position);
-			case DoWhile: SDoWhile(statement(statements[0], catalog), expression(expressions[0], catalog), position);
+				SForKeyValue(projectedNames[0], projectedNames[1], expression(expressions[0], catalog, projectionFacts),
+					statement(statements[0], catalog, projectionFacts), position);
+			case While: SWhile(expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), position);
+			case DoWhile: SDoWhile(statement(statements[0], catalog, projectionFacts), expression(expressions[0], catalog, projectionFacts), position);
 			case Switch:
-				SSwitch(expression(expressions[0], catalog), projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
-					[for (body in statements) statement(body, catalog)], position);
+				SSwitch(expression(expressions[0], catalog, projectionFacts),
+					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
+					[for (body in statements) statement(body, catalog, projectionFacts)], position, typedStatement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = typedStatement.getCatchNames();
 				final catchTypeHints = typedStatement.getCatchTypeHints();
@@ -597,22 +824,28 @@ class TypedBodySource {
 					catches.push({
 						name: projectedCatchNames[index],
 						typeHint: catchTypeHints[index],
-						body: statement(statements[index + 1], catalog)
+						body: statement(statements[index + 1], catalog, projectionFacts)
 					});
-				STry(statement(statements[0], catalog), catches, position);
+				STry(statement(statements[0], catalog, projectionFacts), catches, position);
 			case Break: SBreak(position);
 			case Continue: SContinue(position);
-			case Throw: SThrow(expression(expressions[0], catalog), position);
+			case Throw:
+				final operand = expression(expressions[0], catalog, projectionFacts);
+				SThrow(projectionFacts == null ? operand : projectionFacts.projectThrownValue(expressions[0], operand), position);
 			case ReturnVoid: SReturnVoid(position);
-			case Return: SReturn(expression(expressions[0], catalog), position);
-			case Expression: SExpr(expression(expressions[0], catalog), position);
+			case Return: SReturn(expression(expressions[0], catalog, projectionFacts), position);
+			case Expression: SExpr(expression(expressions[0], catalog, projectionFacts), position);
 		};
+		return projectionFacts == null ? projected : projectionFacts.projectStatementControl(typedStatement, projected);
 	}
 
-	public static function statements(body:TypedFunctionBody, ?catalog:TypedBackendLocalCatalog):Array<HxStmt>
-		return [for (entry in body.getStatements()) statement(entry, catalog)];
+	public static function statements(body:TypedFunctionBody, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder):Array<HxStmt>
+		return [for (entry in body.getStatements()) statement(entry, catalog, projectionFacts)];
 
-	public static function functionDeclaration(typedFunction:TypedFunction, ?catalog:TypedBackendLocalCatalog):HxFunctionDecl {
+	public static function functionDeclaration(typedFunction:TypedFunction, ?catalog:TypedBackendLocalCatalog,
+			?projectionFacts:TypedBodyProjectionBuilder):HxFunctionDecl {
+		typedFunction.assertParsedBodyCurrent();
+		typedFunction = TypedControlLowering.functionBody(typedFunction);
 		final source = typedFunction.getSourceDeclaration();
 		var arguments = HxFunctionDecl.getArgs(source);
 		var returnTypeHint = HxFunctionDecl.getReturnTypeHint(source);
@@ -622,6 +855,7 @@ class TypedBodySource {
 		if (catalog != null && environment != null && parameterBindings.length != arguments.length)
 			throw "typed backend function projection parameter count mismatch for " + typedFunction.getStableIdentity();
 		final semanticArguments = declaration == null ? [] : declaration.getSignature().getArgs();
+		final defaults = typedFunction.getDefaults();
 		arguments = [
 			for (index in 0...arguments.length) {
 				final argument = arguments[index];
@@ -632,8 +866,12 @@ class TypedBodySource {
 					|| !containsAliasSpelling(semanticArguments[index]) ? sourceHint : canonicalTypeHint(semanticArguments[index]);
 				final projectedName = catalog == null
 					|| environment == null ? HxFunctionArg.getName(argument) : catalog.projectedName(parameterBindings[index]);
-				new HxFunctionArg(projectedName, renderedHint, HxFunctionArg.getDefaultValue(argument), HxFunctionArg.getIsOptional(argument),
-					HxFunctionArg.getIsRest(argument), HxFunctionArg.getDefaultValueText(argument), HxFunctionArg.getMetadata(argument));
+				var projectedDefault = HxDefaultValue.NoDefault;
+				for (value in defaults)
+					if (value.getParameterIndex() == index)
+						projectedDefault = HxDefaultValue.Default(expression(value.getExpression(), catalog, projectionFacts));
+				new HxFunctionArg(projectedName, renderedHint, projectedDefault, HxFunctionArg.getIsOptional(argument), HxFunctionArg.getIsRest(argument), "",
+					HxFunctionArg.getMetadata(argument));
 			}
 		];
 		if (declaration != null) {
@@ -642,12 +880,18 @@ class TypedBodySource {
 				returnTypeHint = canonicalTypeHint(signature.getReturnType());
 		}
 		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source), arguments,
-			returnTypeHint, statements(typedFunction.getBody(), catalog), HxFunctionDecl.getReturnStringLiteral(source), HxFunctionDecl.getMetadata(source),
-			HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
+			returnTypeHint, statements(typedFunction.getBody(), catalog, projectionFacts), HxFunctionDecl.getReturnStringLiteral(source),
+			HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
 	}
 
 	/** Project one function while keeping its exact local and bare field-read catalogs inseparable from the source-shaped body. **/
 	public static function functionProjection(typedFunction:TypedFunction):TypedBackendFunctionProjection {
+		typedFunction.assertParsedBodyCurrent();
+		final source = typedFunction;
+		final identity = typedFunction.getStableIdentity();
+		final revision = CompilerTypedTreeRevision.functionBody(typedFunction);
+		typedFunction = TypedControlLowering.functionBody(typedFunction);
+		final projectionFacts = new TypedBodyProjectionBuilder(identity, revision);
 		final fields = fieldReadCatalog(typedFunction);
 		final locals = localCatalog(typedFunction, fields.getReservedProjectedNames());
 		final environment = typedFunction.getEnvironment();
@@ -662,20 +906,23 @@ class TypedBodySource {
 			declaration == null ? TyType.fromHintText(HxFunctionDecl.getReturnTypeHint(typedFunction.getSourceDeclaration())) : declaration.getSignature()
 				.getReturnType();
 		};
-		return new TypedBackendFunctionProjection(typedFunction.getStableIdentity(), CompilerTypedTreeRevision.functionBody(typedFunction),
-			functionDeclaration(typedFunction, locals), locals, returnType, fields, parameterBindingIdentities);
+		final projectedDeclaration = functionDeclaration(typedFunction, locals, projectionFacts);
+		final facts = projectionFacts.seal(TypedRuntimeTypeSource.inFunction(projectedDeclaration), TypedConstructorSource.inFunction(projectedDeclaration));
+		return new TypedBackendFunctionProjection(source, typedFunction, projectedDeclaration, locals, returnType, fields, parameterBindingIdentities,
+			facts.runtimeTypes, facts.constructors, projectionFacts.getAggregates(), projectionFacts.getFields(), projectionFacts.getCasts(),
+			projectionFacts.getThrownValues(), projectionFacts.getLocalWrites(), projectionFacts.getObjectAccesses(), projectionFacts.getCallArguments(),
+			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls());
 	}
 
 	/** Project one field from its resolved type and typed initializer when available. **/
-	static function fieldDeclaration(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>, initializer:Null<TypedExpr>,
-			?catalog:TypedBackendLocalCatalog):HxFieldDecl {
+	static function fieldDeclaration(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>, initializer:Null<HxExpr>):HxFieldDecl {
 		var typeHint = HxFieldDecl.getTypeHint(source);
 		if (typeHint.length > 0 && semanticInfo != null) {
 			final fieldInfo = semanticInfo.fieldInfo(HxFieldDecl.getName(source));
 			if (fieldInfo != null && containsAliasSpelling(fieldInfo.getType()))
 				typeHint = canonicalTypeHint(fieldInfo.getType());
 		}
-		final projectedInitializer = initializer == null ? HxFieldDecl.getInit(source) : expression(initializer, catalog);
+		final projectedInitializer = initializer == null ? HxFieldDecl.getInit(source) : initializer;
 		return new HxFieldDecl(HxFieldDecl.getName(source), HxFieldDecl.getVisibility(source), HxFieldDecl.getIsStatic(source), typeHint,
 			projectedInitializer, HxFieldDecl.getMetadata(source), HxFieldDecl.getPos(source), HxFieldDecl.getEndPos(source), HxFieldDecl.getIsFinal(source),
 			HxFieldDecl.getPropertyGet(source), HxFieldDecl.getPropertySet(source), initializer == null ? HxFieldDecl.getInitText(source) : "");
@@ -684,13 +931,36 @@ class TypedBodySource {
 	static function fieldInitializerProjection(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>,
 			initializer:TypedFieldInitializer):TypedBackendFieldInitializerProjection {
 		final typedExpression = initializer.getExpression();
-		final fieldReads = fieldReadCatalogForExpression(typedExpression);
-		final locals = localCatalogForExpression(typedExpression, fieldReads.getReservedProjectedNames());
-		final declaration = fieldDeclaration(source, semanticInfo, typedExpression, locals);
+		final lowered = TypedControlLowering.fieldInitializer(initializer);
+		if (lowered.completes && lowered.value == null)
+			throw "field initializer requires a normally produced value";
+		final entries = lowered.steps.copy();
+		if (lowered.value != null)
+			entries.push(lowered.value);
+		final reads = new Array<TypedBackendFieldReadProjection>();
+		final bindings = new haxe.ds.StringMap<TyLocalBinding>();
+		final uses = new Array<TypedCatchUse>();
+		for (entry in entries) {
+			collectExpressionFieldReads(entry, reads);
+			collectExpressionBindings(entry, bindings, uses);
+		}
+		final fieldReads = new TypedBackendFieldReadCatalog(reads);
+		final locals = new TypedBackendLocalCatalog([for (binding in bindings) binding], fieldReads.getReservedProjectedNames(), uses);
 		final field = initializer.getField();
-		final identity = field.getCanonicalKey() + "|initializer";
+		// Typing and lowering already assign initializer locals to this exact field.
+		final identity = field.getCanonicalKey();
 		final revision = CompilerTypedTreeRevision.expression(field.getCanonicalKey(), typedExpression);
-		return new TypedBackendFieldInitializerProjection(identity, revision, field, declaration, locals, fieldReads);
+		final projectionFacts = new TypedBodyProjectionBuilder(identity, revision);
+		final projected = [for (entry in entries) expression(entry, locals, projectionFacts)];
+		final body:HxExpr = lowered.steps.length == 0
+			&& lowered.value != null ? projected[0] : ELoweredControl(Initializer(lowered.value != null), identity, projected,
+				sourcePosition(typedExpression.getPosition()));
+		final declaration = fieldDeclaration(source, semanticInfo, body);
+		final facts = projectionFacts.seal(TypedRuntimeTypeSource.inExpression(body), TypedConstructorSource.inExpression(body));
+		return new TypedBackendFieldInitializerProjection(initializer, lowered, identity, revision, field, declaration, locals, fieldReads,
+			facts.runtimeTypes, facts.constructors, projectionFacts.getFields(), projectionFacts.getAggregates(), projectionFacts.getCasts(),
+			projectionFacts.getObjectAccesses(), projectionFacts.getLocalWrites(), projectionFacts.getCallArguments(), projectionFacts.getMethods(),
+			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls());
 	}
 
 	static function projectedClassDeclaration(typedClass:TypedClass, functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>):HxClassDecl {
@@ -708,8 +978,18 @@ class TypedBodySource {
 			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceImplements[index];
 			}
 		];
+		final sourceInterfaceExtends = HxClassDecl.getInterfaceExtendsPaths(source);
+		final resolvedInterfaceExtends = typedClass.getResolvedInterfaceExtends();
+		final interfaceExtendsPaths = [
+			for (index in 0...sourceInterfaceExtends.length) {
+				final resolved = index < resolvedInterfaceExtends.length ? resolvedInterfaceExtends[index] : null;
+				resolved != null
+			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceInterfaceExtends[index];
+			}
+		];
 		return new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), functions, fields, extendsPath,
-			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source));
+			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source), interfaceExtendsPaths,
+			HxClassDecl.getIsExtern(source), HxClassDecl.getEnumDeclaration(source), HxClassDecl.getTypeParameters(source));
 	}
 
 	public static function classProjection(typedClass:TypedClass):TypedBackendClassProjection {
@@ -722,7 +1002,7 @@ class TypedBodySource {
 			initializerByField.set(initializer.getField().getName(), initializer);
 		final fieldInitializers = new Array<TypedBackendFieldInitializerProjection>();
 		final fields = new Array<HxFieldDecl>();
-		for (field in HxClassDecl.getFields(typedClass.getSourceDeclaration())) {
+		for (field in typedClass.getFields()) {
 			final initializer = initializerByField.get(HxFieldDecl.getName(field));
 			if (initializer == null) {
 				fields.push(fieldDeclaration(field, typedClass.getSemanticInfo(), null));
@@ -738,7 +1018,11 @@ class TypedBodySource {
 		// including class-parameter binder identities. The older projected
 		// `resolvedExtends` spelling may still contain unresolved type arguments
 		// and must not become a competing backend semantic input.
-		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null);
+		// Interface headers finish loading their providers during typing. Their
+		// resolved types retain the indexed generic binders and refine early names.
+		final interfaces = HxClassDecl.getIsInterface(typedClass.getSourceDeclaration()) ? typedClass.getResolvedInterfaceExtends() : typedClass.getResolvedImplements();
+		final semanticFacts = semanticInfo == null ? null : new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces,
+			HxClassDecl.getEnumDeclaration(typedClass.getSourceDeclaration()), typedClass.getDeclaredFieldTypes());
 		return new TypedBackendClassProjection(declaration, functions, fieldInitializers, semanticFacts);
 	}
 
@@ -750,7 +1034,8 @@ class TypedBodySource {
 			throw "typed module projection class count mismatch";
 		final source = parsed.getDecl();
 		final sourceMain = HxModuleDecl.getMainClass(source);
-		var mainClass:Null<HxClassDecl> = null;
+		// Empty class catalogs retain header metadata without inventing a typed class.
+		var mainClass:Null<HxClassDecl> = classes.length == 0 && HxModuleDecl.getClasses(source).length == 0 ? sourceMain : null;
 		for (index in 0...typedClasses.length)
 			if (typedClasses[index].getSourceDeclaration() == sourceMain) {
 				mainClass = classes[index];
@@ -764,10 +1049,13 @@ class TypedBodySource {
 					break;
 				}
 		}
-		if (mainClass == null)
-			throw "typed module projection is missing its main declaration";
+		if (mainClass == null) {
+			// Retention can leave only a secondary type. Preserve the module header
+			// name without copying removed executable bodies into the projection.
+			mainClass = projectedClassDeclaration(new TypedClass(sourceMain, null, []), [], []);
+		}
 		return new HxModuleDecl(HxModuleDecl.getPackagePath(source), HxModuleDecl.getDirectives(source), mainClass, classes,
-			HxModuleDecl.getHeaderOnly(source), HxModuleDecl.getHasToplevelMain(source));
+			HxModuleDecl.getHeaderOnly(source), HxModuleDecl.getHasToplevelMain(source), HxModuleDecl.getTypedefs(source));
 	}
 
 	/** Build the declaration plus exact typed-local and bare field-read catalogs consumed during backend migration. **/
@@ -790,31 +1078,47 @@ class TypedBodySource {
 	**/
 	public static function moduleDeclarationCatalog(parsed:ParsedModule, typedClasses:Array<TypedClass>):TypedBackendDeclarationCatalog {
 		final classes = new Array<HxClassDecl>();
-		final functionEntries = new Array<{
-			backendClass:HxClassDecl,
-			backendFunction:HxFunctionDecl,
-			stableIdentity:String
-		}>();
+		final runtimeTypeCatalogs = new Array<TypedBackendRuntimeTypeCatalog>();
+		final initializerProjections = new Array<TypedBackendFieldInitializerProjection>();
+		final functionEntries = new Array<TypedBackendDeclarationCatalog.TypedBackendFunctionDeclarationEntry>();
 		for (typedClass in typedClasses) {
 			final projectedFunctions = new Array<HxFunctionDecl>();
 			final classFunctions = new Array<{
 				declaration:HxFunctionDecl,
-				stableIdentity:String
+				stableIdentity:String,
+				bodyRevision:String,
+				constructorCatalog:TypedBackendConstructorCatalog
 			}>();
 			for (typedFunction in typedClass.getFunctions()) {
-				final projectedFunction = functionDeclaration(typedFunction);
+				final projectionFacts = new TypedBodyProjectionBuilder(typedFunction.getStableIdentity(),
+					CompilerTypedTreeRevision.functionBody(typedFunction));
+				final projectedFunction = functionDeclaration(typedFunction, null, projectionFacts);
+				final body = HxFunctionDecl.getBody(projectedFunction);
+				final facts = projectionFacts.seal(TypedRuntimeTypeSource.inStatements(body), TypedConstructorSource.inStatements(body));
+				runtimeTypeCatalogs.push(facts.runtimeTypes);
 				projectedFunctions.push(projectedFunction);
 				classFunctions.push({
 					declaration: projectedFunction,
-					stableIdentity: typedFunction.getStableIdentity()
+					stableIdentity: typedFunction.getStableIdentity(),
+					bodyRevision: CompilerTypedTreeRevision.functionBody(typedFunction),
+					constructorCatalog: facts.constructors
 				});
 			}
-			final initializerByField = new Map<String, TypedExpr>();
+			final initializerByField = new Map<String, TypedFieldInitializer>();
 			for (initializer in typedClass.getFieldInitializers())
-				initializerByField.set(initializer.getField().getName(), initializer.getExpression());
+				initializerByField.set(initializer.getField().getName(), initializer);
 			final projectedFields = [
-				for (field in HxClassDecl.getFields(typedClass.getSourceDeclaration()))
-					fieldDeclaration(field, typedClass.getSemanticInfo(), initializerByField.get(HxFieldDecl.getName(field)))
+				for (field in typedClass.getFields()) {
+					final initializer = initializerByField.get(HxFieldDecl.getName(field));
+					if (initializer == null) {
+						fieldDeclaration(field, typedClass.getSemanticInfo(), null);
+					} else {
+						final projection = fieldInitializerProjection(field, typedClass.getSemanticInfo(), initializer);
+						runtimeTypeCatalogs.push(projection.getRuntimeTypeCatalog());
+						initializerProjections.push(projection);
+						projection.getDeclaration();
+					}
+				}
 			];
 			final projectedClass = projectedClassDeclaration(typedClass, projectedFunctions, projectedFields);
 			classes.push(projectedClass);
@@ -822,9 +1126,12 @@ class TypedBodySource {
 				functionEntries.push({
 					backendClass: projectedClass,
 					backendFunction: classFunction.declaration,
-					stableIdentity: classFunction.stableIdentity
+					stableIdentity: classFunction.stableIdentity,
+					bodyRevision: classFunction.bodyRevision,
+					constructorCatalog: classFunction.constructorCatalog
 				});
 		}
-		return new TypedBackendDeclarationCatalog(projectedModuleDeclaration(parsed, typedClasses, classes), functionEntries);
+		return new TypedBackendDeclarationCatalog(projectedModuleDeclaration(parsed, typedClasses, classes), functionEntries, runtimeTypeCatalogs,
+			initializerProjections);
 	}
 }

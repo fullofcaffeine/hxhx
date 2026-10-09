@@ -83,6 +83,7 @@ class ResolverStage {
 	}
 
 	static function implicitSamePackageDeps(source:String, modulePath:String, decl:HxModuleDecl):Array<String> {
+		source = HxLexer.maskComments(source);
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final moduleName = modulePath == null ? "" : modulePath.split(".").pop();
 
@@ -169,33 +170,7 @@ class ResolverStage {
 		  positives low enough for bring-up.
 	**/
 	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
-		if (source == null || source.length == 0)
-			return [];
-
-		final candidates = new Map<String, Bool>();
-		// Skip metadata lines (`@:build(...)`, `@:autoBuild(...)`, etc.) so macro entrypoint
-		// paths do not widen the main compilation graph.
-		for (line in source.split("\n")) {
-			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:"))
-				continue;
-
-			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
-			var pos = 0;
-			while (re.matchSub(line, pos, -1)) {
-				final dep = re.matched(1);
-				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
-					candidates.set(dep, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
-		}
-
-		final out = new Array<String>();
-		for (dep in candidates.keys())
-			out.push(dep);
-		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
-		return out;
+		return HxImplicitDependencies.qualifiedTypePaths(source, defines);
 	}
 
 	/**
@@ -251,7 +226,26 @@ class ResolverStage {
 	}
 
 	/**
-		Resolve only the explicit root modules, without walking import or heuristic dependency closure.
+		Include the installed standard declarations before callers build type signatures.
+
+		Haxe implicitly exposes public types from `StdTypes`, such as `ArrayAccess`.
+		The `Class` declaration gives class values their parameterized `Class<T>` type.
+		Resolve that source through the request's normal provider so class-path selection
+		and source observations apply equally to implicit and explicit modules. Small
+		isolated projects with no standard-library path retain their supplied roots.
+	**/
+	static function withStandardTypesRoots(classPaths:Array<String>, roots:Array<String>, sources:CompilerSourceProvider):Array<String> {
+		final selected = roots == null ? [] : roots.copy();
+		if (selected.length == 0)
+			return selected;
+		for (modulePath in ["StdTypes", "Class"])
+			if (selected.indexOf(modulePath) < 0 && sources.resolveModule(classPaths, modulePath).filePath != null)
+				selected.push(modulePath);
+		return selected;
+	}
+
+	/**
+		Resolve the explicit roots and standard declarations, without walking their dependencies.
 
 		Why
 		- Stage3 `--hxhx-no-emit` is a no-output compiler-latency lane. It should behave closer to
@@ -288,9 +282,7 @@ class ResolverStage {
 			return out;
 		}
 
-		if (roots == null)
-			return out;
-		for (root in roots) {
+		for (root in withStandardTypesRoots(classPaths, roots, sources)) {
 			if (root == null)
 				continue;
 			final modulePath = StringTools.trim(root);
@@ -372,15 +364,13 @@ class ResolverStage {
 		}
 
 		final stack = new Array<String>();
-		if (roots != null) {
-			for (r in roots) {
-				if (r == null)
-					continue;
-				final m = StringTools.trim(r);
-				if (m.length == 0)
-					continue;
-				stack.push(m);
-			}
+		for (r in withStandardTypesRoots(classPaths, roots, sources)) {
+			if (r == null)
+				continue;
+			final m = StringTools.trim(r);
+			if (m.length == 0)
+				continue;
+			stack.push(m);
 		}
 
 		// Use an explicit worklist instead of recursion so widening the module graph (e.g. upstream suites)

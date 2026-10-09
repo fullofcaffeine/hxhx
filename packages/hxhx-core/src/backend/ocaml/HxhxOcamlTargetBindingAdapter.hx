@@ -21,6 +21,9 @@ class HxhxOcamlTargetBindingAdapter {
 		return switch (kind) {
 			case Parameter: Parameter;
 			case Variable: Variable;
+			// Source typing enforces named-function writability. This target role
+			// describes callable storage, as for upstream local function values.
+			case NamedFunction: Variable;
 			case LoopVariable: LoopVariable;
 			case CatchVariable: CatchVariable;
 			case PatternVariable: PatternVariable;

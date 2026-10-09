@@ -16,6 +16,19 @@ class OcamlTypeDeclarationPlannerTest {
 			{name: "value", params: [], kind: Record([{name: "label", isMutable: true, typ: TIdent("string")}])}
 		]);
 		assertEquals("value|holder|unrelated", declarationNames(orderedTypeGroups), "acyclic declarations");
+		final mixed = OcamlTypeDeclarationPlanner.plan([
+			{name: "link", params: [], kind: Variant([{name: "Next", args: [TIdent("node")]}])},
+			{name: "node", params: [], kind: Record([{name: "link", isMutable: false, typ: TIdent("link")}])},
+			{name: "holder", params: [], kind: Record([{name: "node", isMutable: false, typ: TIdent("node")}])}
+		]);
+		assertEquals("link+node|holder", declarationNames(mixed), "mixed recursive component before its user");
+		final nested = OcamlTypeDeclarationPlanner.plan([
+			{name: "node", params: [], kind: Record([{name: "kind", isMutable: false, typ: TIdent("kind")}])},
+			{name: "kind", params: [], kind: Variant([{name: "Fields", args: [TIdent("field")]}])},
+			{name: "field", params: [], kind: Variant([{name: "Value", args: [TIdent("node"), TIdent("leaf")]}])},
+			{name: "leaf", params: [], kind: Variant([{name: "End", args: []}])}
+		]);
+		assertEquals("leaf|node+kind+field", declarationNames(nested), "external dependency precedes the complete recursive group");
 
 		try {
 			final recursiveTypeGroups = OcamlTypeDeclarationPlanner.plan([
@@ -31,6 +44,6 @@ class OcamlTypeDeclarationPlannerTest {
 		Sys.println("OCAML_TYPE_DECLARATION_PLANNER:PASS");
 	}
 
-	static function declarationNames(declarations:Array<reflaxe.ocaml.ast.OcamlTypeDecl>):String
-		return declarations.map(declaration -> declaration.name).join("|");
+	static function declarationNames(groups:Array<Array<reflaxe.ocaml.ast.OcamlTypeDecl>>):String
+		return groups.map(group -> group.map(declaration -> declaration.name).join("+")).join("|");
 }

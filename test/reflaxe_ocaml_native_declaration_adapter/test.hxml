@@ -1,5 +1,6 @@
 -cp packages/reflaxe.ocaml/src
 -cp packages/hxhx-core/src
 -cp test/reflaxe_ocaml_native_declaration_adapter/src
+-cp test/reflaxe_ocaml_shared_expression/src
 --main NativeDeclarationAdapterFixture
 --interp

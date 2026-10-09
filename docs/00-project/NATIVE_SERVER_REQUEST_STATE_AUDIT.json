@@ -65,6 +65,9 @@
         "final:backendDialect"
       ],
       "request_reset_fields": [
+        "var:currentEnums",
+        "var:currentTypedFunction",
+        "var:currentTypedInitializer",
         "var:currentOcamlModuleName",
         "var:currentModuleFilePath",
         "var:currentFunctionName",
@@ -88,6 +91,15 @@
       "reason": "The current-module, current-function, lookup, and lowering fields describe one OCaml emission and are cleared before and after each serialized request. This duplicate bootstrap/diagnostic emitter is never a reusable cache payload or shared-target readiness path; haxe_ocaml-38gsp.1 owns its retirement from the product route. The module-init trace and stateless backend dialect are process configuration."
     },
     {
+      "path": "packages/hxhx-core/src/TypedControlLowering.hx",
+      "immutable_fields": [
+        "final:passIdentity"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "The fixed revision string identifies the control-lowering algorithm. Each lowerer owns its mutable counters, scopes and control targets; the revision string contains no request data."
+    },
+    {
       "path": "packages/hxhx-core/src/TyType.hx",
       "immutable_fields": [
         "final:KIND_UNKNOWN",
@@ -96,9 +108,13 @@
         "final:KIND_NULL",
         "final:KIND_NULLABLE",
         "final:KIND_NOMINAL",
+        "final:KIND_ABSTRACT_META",
+        "final:KIND_CLASS_VALUE",
+        "final:KIND_ALIAS_APPLICATION",
         "final:KIND_FUNCTION",
         "final:KIND_ANONYMOUS",
         "final:KIND_TYPE_PARAMETER",
+        "final:KIND_OPEN_METHOD_PARAMETER",
         "final:KIND_UNRESOLVED",
         "final:KIND_NO_NORMAL_COMPLETION"
       ],

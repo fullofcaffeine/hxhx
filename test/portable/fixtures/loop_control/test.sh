@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
+if (report.schemaVersion !== 94
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -53,8 +53,8 @@ const nestedTransfers = report.controls.filter(control =>
 	&& control.functionId.includes('|nested-function|'))
 if (nestedTargets.length !== 1
 	|| nestedTransfers.length !== 2
-	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v33'
-	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v33')) {
+	|| nestedTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v37'
+	|| nestedTransfers.some(control => control.pipelineRevision !== 'ocaml-nested-function-plans-v37')) {
 	fail(`expected one deferred nested-function loop target and two checked transfers, got ${nestedTargets.length} and ${nestedTransfers.length}`)
 }
 
@@ -79,7 +79,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v113') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v119') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
@@ -107,8 +107,8 @@ const tryEnd = source.indexOf('\nlet voidLoop =', tryStart)
 const tryBody = source.slice(tryStart, tryEnd)
 	if (tryStart < 0
 		|| tryEnd < 0
-		|| !/HxRuntime\.Hx_break -> raise \(HxRuntime\.Hx_break\)/.test(tryBody)
-		|| !/HxRuntime\.Hx_continue -> raise \(HxRuntime\.Hx_continue\)/.test(tryBody)) {
+		|| !/HxRuntime\.Hx_break -> Stdlib\.raise \(HxRuntime\.Hx_break\)/.test(tryBody)
+		|| !/HxRuntime\.Hx_continue -> Stdlib\.raise \(HxRuntime\.Hx_continue\)/.test(tryBody)) {
 	fail('a source catch can intercept a private loop-control signal')
 }
 
@@ -147,7 +147,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

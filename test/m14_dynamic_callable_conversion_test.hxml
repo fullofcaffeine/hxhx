@@ -1,0 +1,47 @@
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main CheckOcamlCallableCallReports
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OcamlCallableReturnContractTest
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-lib reflaxe
+-cp test
+-cp test/fixtures/stage3_stored_callback_views
+-main OcamlCallableProgramSelectionTest
+--macro CheckOcamlCallableDeclarationPlan.run()
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-lib reflaxe
+-cp test
+-cp test/fixtures/stage3_stored_callback_views
+--macro CheckOcamlCallableViewConversions.install()
+-main OcamlCallableViewSyntaxTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14StoredCallbackArgumentsTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14CallableParameterIdentityTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14DynamicCallableConversionTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14StoredCallbackViewsTest
+--interp

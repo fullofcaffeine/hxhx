@@ -80,6 +80,7 @@ class EmitterStageDebug {
 		if (!traceAll && fn != "emitToDir")
 			return;
 		final kindAndPos = switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, pos): {kind: "SBlock", pos: pos};
 			case SVar(_, _, _, pos): {kind: "SVar", pos: pos};
 			case SIf(_, _, _, pos): {kind: "SIf", pos: pos};

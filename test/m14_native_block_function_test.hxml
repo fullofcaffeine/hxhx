@@ -1,0 +1,9 @@
+-cp packages/hxhx-core/src
+-cp test
+-main M14BlockReturnConversionTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14NativeBlockFunctionTest
+--interp

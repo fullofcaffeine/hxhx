@@ -6,6 +6,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Built-in and registered JavaScript backends must emit and execute the same resolved program. */
 class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -30,10 +31,9 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
-		final parsed = ParserStage.parse(source, filePath);
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+	/** Array.length must come from the real provider before range lowering checks its type. */
+	static function makeProgram(source:String):MacroExpandedProgram {
+		return JsSourceProgramFixture.build({sources: [{path: "Main.hx", source: source}], requiredModules: ["Array"]});
 	}
 
 	static function runNodeScript(jsPath:String):String {
@@ -88,7 +88,7 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 				"  }",
 				"}"
 			].join("\n");
-			final program = makeProgram(source, "PromotionEquivalenceMain.hx");
+			final program = makeProgram(source);
 
 			final builtinBackend = new JsBackend();
 			final pluginBackend = JsBackend.providerRegistrations()[0].create();

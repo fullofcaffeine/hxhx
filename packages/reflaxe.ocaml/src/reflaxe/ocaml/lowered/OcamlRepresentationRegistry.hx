@@ -23,6 +23,11 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorage
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassDecision;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassField;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.OcamlNativeEnumDescriptor;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.describe as describeCallableView;
+import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.validate as validateCallableView;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
@@ -50,7 +55,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v21";
+	public static inline final MODEL_REVISION = "ocaml-representation-v24";
 	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
@@ -60,8 +65,136 @@ class OcamlRepresentationRegistry {
 	final representedArraysById:StringMap<OcamlRepresentedArrayDescriptor> = new StringMap();
 	final monomorphicClassesBySemanticType:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 	final monomorphicClassesById:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
+	final callableViewsByRepresentationId:StringMap<OcamlCallableViewDescriptor> = new StringMap();
 
 	public function new() {}
+
+	/**
+		Registers one closed, non-null callback layout for internal or local storage.
+
+		This describes storage only. Each producer, conversion, call and comparison
+		still needs exact occurrence evidence. No Dynamic function recovery, field,
+		container, implicit null default, or foreign ABI is authorized here.
+	**/
+	public function selectCallableView(shape:OcamlGenericValueShape, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final descriptor = describeCallableView(shape);
+		final mutation = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case _: throw "reflaxe.ocaml [ocaml-callable-view:unproved-domain]: callback storage needs a domain-specific proof";
+		};
+		final decision = register({
+			semanticTypeId: descriptor.semanticTypeId,
+			domain: domain,
+			carrierTypeId: descriptor.carrierTypeId,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: mutation,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.CallableIdentityView,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "A non-null callback view stores its typed invocation beside the originating function identity. Copies and conversions preserve that identity.",
+			proof: {
+				id: "ocaml-callable-identity-view-v1:" + descriptor.revision,
+				claim: "Every invocation argument and result has a closed scalar or nested callback carrier. Native collection owns the invocation, origin identity and captures. Occurrence plans must prove producers and all crossings."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+		callableViewsByRepresentationId.set(decision.id, descriptor);
+		return decision;
+	}
+
+	/** Resolve the exact registered layout; a type annotation alone cannot acquire this carrier. */
+	public function requireCallableView(representationId:String, representationRevision:String, programRevision:String):OcamlCallableViewDescriptor {
+		final decision = require(representationId, programRevision);
+		final descriptor = callableViewsByRepresentationId.get(representationId);
+		if (descriptor == null
+			|| decision.revision != representationRevision
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.CallableIdentityView)
+			throw "reflaxe.ocaml [ocaml-callable-view:missing-layout]: no matching callback representation was selected";
+		validateCallableView(descriptor);
+		if (decision.semanticTypeId != descriptor.semanticTypeId
+			|| decision.carrierTypeId != descriptor.carrierTypeId
+			|| decision.proof.id != "ocaml-callable-identity-view-v1:" + descriptor.revision)
+			throw "reflaxe.ocaml [ocaml-callable-view:stale-layout]: registered callback identity changed";
+		return describeCallableView(descriptor.shape);
+	}
+
+	/**
+		Registers a native enum type without admitting an arbitrary enum-typed value.
+		Only internal non-null values are described here. Call and local planners
+		must prove the producer before selecting this representation for an occurrence.
+	**/
+	public function selectNativeEnum(descriptor:OcamlNativeEnumDescriptor):OcamlRepresentationDecision {
+		OcamlNativeEnumRepresentation.validate(descriptor);
+		return register({
+			semanticTypeId: descriptor.semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: descriptor.targetTypeName,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "A separately proven enum value retains its declared native OCaml variant without a null or Dynamic wrapper.",
+			proof: {
+				id: OcamlNativeEnumRepresentation.MODEL_REVISION + ":" + descriptor.revision,
+				claim: "The closed ordinary enum has one canonical variant type; occurrence-level producer proof remains required."
+			},
+			profileEligibility: ["metal", "portable"],
+			nominalTargetModuleName: descriptor.targetModuleName,
+			nominalTargetTypeName: descriptor.targetTypeName,
+			nominalLayoutRevision: descriptor.revision
+		});
+	}
+
+	/** Selects the nullable `Obj.t` result paired with one exact native enum. */
+	public function selectNullableNativeEnum(descriptor:OcamlNativeEnumDescriptor):OcamlRepresentationDecision {
+		OcamlNativeEnumRepresentation.validate(descriptor);
+		final semanticTypeId = 'Null<${descriptor.semanticTypeId}>';
+		return register({
+			semanticTypeId: semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "An exact native enum result uses Obj.t only at its declared nullable boundary, preserving either the Haxe null sentinel or the same reference-bearing variant payload.",
+			proof: {
+				id: "nullable-native-enum-result-v1:" + descriptor.revision,
+				claim: "The paired descriptor and non-null registry decision identify one exact native variant before this result crosses once into the nullable Obj.t carrier."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/** Looks up only the explicitly registered native enum family for this program. */
+	public function nativeEnumValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
+		return decision == null
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier ? null : copyDecision(decision);
+	}
+
+	/** Looks up the nullable carrier registered for one exact native enum. */
+	public function nullableNativeEnumValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		if (!StringTools.startsWith(semanticTypeId, "Null<") || !StringTools.endsWith(semanticTypeId, ">"))
+			return null;
+		final nativeSemanticTypeId = semanticTypeId.substr(5, semanticTypeId.length - 6);
+		if (nativeEnumValue(nativeSemanticTypeId) == null)
+			return null;
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
+		return decision == null
+			|| decision.carrierTypeId != "Obj.t"
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer ? null : copyDecision(decision);
+	}
 
 	/** Starts one compilation request and discards every previous decision. */
 	public function beginProgram(programRevision:String):Void {
@@ -74,6 +207,7 @@ class OcamlRepresentationRegistry {
 		representedArraysById.clear();
 		monomorphicClassesBySemanticType.clear();
 		monomorphicClassesById.clear();
+		callableViewsByRepresentationId.clear();
 	}
 
 	/**
@@ -215,6 +349,13 @@ class OcamlRepresentationRegistry {
 			return null;
 		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
 		return decision == null ? null : copyDecision(decision);
+	}
+
+	/** Resolves only the opaque class transport proof; field and local planners cannot use it. */
+	public function genericClassValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.GenericCallValue));
+		return decision == null
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier ? null : copyDecision(decision);
 	}
 
 	function selectMonomorphicClassDecision(layout:OcamlMonomorphicClassDecision, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
@@ -534,6 +675,7 @@ class OcamlRepresentationRegistry {
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-int-domain]: generic class transport cannot select Int storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -633,6 +775,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectExactBool(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: generic class transport cannot select Bool storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -684,6 +827,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectNormalizedRepresentedArray(normalized:OcamlNormalizedRepresentedArray, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: generic class transport cannot select Array storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField, StaticField, ArrayElement:
@@ -763,6 +907,7 @@ class OcamlRepresentationRegistry {
 	**/
 	public function selectExactString(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: generic class transport cannot select String storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -1061,6 +1206,7 @@ class OcamlRepresentationRegistry {
 	function selectExactNullablePrimitive(domain:OcamlRepresentationDomain, semanticTypeId:String, reason:String,
 			proof:OcamlRepresentationProof):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: generic class transport cannot select nullable primitive storage";
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
@@ -1380,6 +1526,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactIntReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-int-domain]: generic class transport has no Int storage reason";
 			case InternalValue: "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.";
 			case MutableLocalStorage: "An exact, non-null Haxe Int uses OCaml int directly inside the mutable local cell selected by the function plan.";
 			case CapturedLocalStorage: "An exact, non-null Haxe Int uses OCaml int directly inside the one local cell shared with nested functions.";
@@ -1391,6 +1538,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactBoolReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: generic class transport has no Bool storage reason";
 			case InternalValue: "An exact, non-null Haxe Bool local uses OCaml bool directly; a later value is represented by a newer immutable binding.";
 			case MutableLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the mutable local cell selected by the function plan.";
 			case CapturedLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the one local cell shared with nested functions.";
@@ -1403,6 +1551,7 @@ class OcamlRepresentationRegistry {
 
 	static function representedArrayReason(descriptor:OcamlRepresentedArrayDescriptor, domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: generic class transport has no Array storage reason";
 			case InternalValue:
 				'An exact ${descriptor.arraySemanticTypeId} immutable binding stores the descriptor-owned ${descriptor.arrayCarrierTypeId} container; aliases share its element mutations while a later source assignment creates a newer binding.';
 			case MutableLocalStorage:
@@ -1416,6 +1565,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactNullIntReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: generic class transport has no nullable Int storage reason";
 			case InternalValue:
 				"An exact Null<Int> immutable binding uses Obj.t so one carrier can preserve Haxe null and boxed Int values across source rebindings.";
 			case MutableLocalStorage:
@@ -1433,6 +1583,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactNullBoolReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: generic class transport has no nullable Bool storage reason";
 			case InternalValue:
 				"An exact Null<Bool> immutable binding uses Obj.t so stored null remains distinct from boxed false and boxed true.";
 			case MutableLocalStorage:
@@ -1450,6 +1601,7 @@ class OcamlRepresentationRegistry {
 
 	static function exactStringReason(domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
+			case GenericCallValue: throw "reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: generic class transport has no String storage reason";
 			case InternalValue:
 				"An exact Haxe String internal value uses the nullable OCaml string carrier; non-null values are direct and the canonical null sentinel is materialized only through the sealed proof.";
 			case MutableLocalStorage:
@@ -1500,6 +1652,8 @@ class OcamlRepresentationRegistry {
 
 	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		switch (domain) {
+			case GenericCallValue:
+				throw "reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: generic class transport cannot admit nullable primitives";
 			case InternalValue, MutableLocalStorage, CapturedLocalStorage, InstanceField, StaticField:
 			case ArrayElement:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, local, instance-field, or static-field storage, not $domain';

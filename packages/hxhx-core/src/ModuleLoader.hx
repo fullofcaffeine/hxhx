@@ -1,3 +1,12 @@
+import TyTypeDeclaration.TyTypeResolutionContext;
+
+/** Dependency recursion may observe headers; only Ready permits completed signature use. */
+private enum SignaturePreparationState {
+	Preparing;
+	Ready;
+	Failed;
+}
+
 private typedef MissingTypeHook = {
 	function invoke(modulePath:String):Bool;
 }
@@ -33,7 +42,8 @@ private typedef ModulePreparationHook = {
 	- This loader is intentionally conservative:
 	  - It only attempts candidate module paths that are derivable from the current typing context
 		(fully-qualified, explicit imports, same-package).
-	  - It is cycle-safe via a `visited` set keyed by module path.
+	  - It tracks requested paths and selected source files separately. Secondary
+		types and static members cannot cause the same source to enter typing twice.
 	  - It applies `HxConditionalCompilation.filterSource` before parsing so inactive branches
 		don’t spuriously pull modules into the compilation.
 
@@ -61,10 +71,12 @@ class ModuleLoader extends LazyTypeLoader {
 
 	// Module-path based cycle/dup guard.
 	final visited:haxe.ds.StringMap<Bool>;
+	final visitedSourceFiles = new haxe.ds.StringMap<Bool>();
 	final typeNotFoundTried:haxe.ds.StringMap<Bool>;
 
 	// Newly loaded modules (drained by the Stage3 driver).
 	final pending:Array<ResolvedModule>;
+	final signatureStates = new haxe.ds.StringMap<SignaturePreparationState>();
 
 	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool,
 			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider, ?prepareModule:ResolvedModule->ResolvedModule) {
@@ -106,15 +118,140 @@ class ModuleLoader extends LazyTypeLoader {
 		return onMissingType == null ? false : onMissingType.invoke(mp);
 	}
 
+	/** Register prepared roots, then finish their signatures before body typing starts. */
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
 		if (resolved == null)
 			return;
+		index.registerResolvedModules(resolved);
 		for (m in resolved) {
 			final mp = ResolvedModule.getModulePath(m);
 			if (mp != null && mp.length > 0)
 				visited.set(mp, true);
+			visitedSourceFiles.set(haxe.io.Path.normalize(ResolvedModule.getFilePath(m)), true);
 		}
+		for (module in resolved)
+			prepareSignatureDependencies(module);
 	}
+
+	/**
+		Load declaration-only dependencies through ordinary contextual lookup.
+
+		Discover headers breadth first in declaration order. This preserves request
+		preparation order while ordinary class cycles see only header identities.
+		Publish signatures after every reachable declaration header is available.
+	**/
+	function prepareSignatureDependencies(module:ResolvedModule):Void {
+		if (index == null)
+			return;
+		final modulePath = ResolvedModule.getModulePath(module);
+		if (signatureStates.exists(modulePath)) {
+			switch (signatureStates.get(modulePath)) {
+				case Preparing | Ready:
+					return;
+				case Failed:
+					throw "signature preparation previously failed for " + modulePath;
+			}
+		}
+		final work = [module];
+		final queued = new haxe.ds.StringMap<Bool>();
+		queued.set(modulePath, true);
+		function failPreparation():Void {
+			for (entry in work)
+				if (signatureStates.get(entry.modulePath) == Preparing)
+					signatureStates.set(entry.modulePath, Failed);
+		}
+		try {
+			var cursor = 0;
+			while (cursor < work.length) {
+				final current = work[cursor++];
+				if (signatureStates.get(current.modulePath) == Ready)
+					continue;
+				if (signatureStates.get(current.modulePath) == Failed)
+					throw "signature preparation previously failed for " + current.modulePath;
+				signatureStates.set(current.modulePath, Preparing);
+				final declaration = current.parsed.getDecl();
+				final context:TyTypeResolutionContext = {
+					packagePath: HxModuleDecl.getPackagePath(declaration),
+					modulePath: current.modulePath,
+					directives: HxModuleDecl.getDirectives(declaration),
+					filePath: current.filePath,
+					position: HxPos.unknown(),
+					parameters: []
+				};
+				for (path in TySignatureDependencies.declared(declaration, current.filePath)) {
+					final dependency = declarationHeadersAvailable(path, context);
+					if (dependency == null || queued.exists(dependency.getModulePath()))
+						continue;
+					final owner = index.getRegisteredModule(dependency.getModulePath());
+					if (owner != null) {
+						queued.set(owner.modulePath, true);
+						work.push(owner);
+					}
+				}
+			}
+			for (entry in work) {
+				index.publishResolvedModule(entry);
+				signatureStates.set(entry.modulePath, Ready);
+			}
+		} catch (error:TyperError) {
+			failPreparation();
+			throw error;
+		} catch (error:String) {
+			failPreparation();
+			throw error;
+		} catch (error:haxe.Exception) {
+			failPreparation();
+			throw error;
+		}
+		// Body-only link dependencies are independent of the now-final signatures.
+		if (expandDependencies)
+			for (entry in work)
+				if (pending.indexOf(entry) >= 0)
+					for (dependency in depsForParsedModule(entry.parsed.getSource(), entry.parsed.getDecl(), moduleDefines(entry.modulePath, entry.filePath)))
+						if (resolveModuleFile(dependency) != null)
+							loadModuleByPath(dependency);
+	}
+
+	/** Load aliases and nominal declarations through the same contextual search. */
+	override public function ensureDeclarationAvailable(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration> {
+		final declaration = declarationHeadersAvailable(path, context);
+		if (declaration != null) {
+			final owner = index.getRegisteredModule(declaration.getModulePath());
+			if (owner != null)
+				prepareSignatureDependencies(owner);
+		}
+		return declaration;
+	}
+
+	/** Discover source headers without recursively publishing another module's signatures. */
+	function declarationHeadersAvailable(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration> {
+		var hit = index.resolveTypeDeclaration(path, context);
+		if (hit != null)
+			return hit;
+		final candidates = candidateModulePaths(path, context.packagePath, context.directives);
+		for (candidate in candidates) {
+			loadModuleHeadersByPath(candidate);
+			hit = index.resolveTypeDeclaration(path, context);
+			if (hit != null)
+				return hit;
+		}
+		if (onMissingType != null)
+			for (candidate in candidates) {
+				if (typeNotFoundTried.exists(candidate))
+					continue;
+				typeNotFoundTried.set(candidate, true);
+				if (invokeOnMissingType(candidate)) {
+					loadModuleHeadersByPath(candidate);
+					hit = index.resolveTypeDeclaration(path, context);
+					if (hit != null)
+						return hit;
+				}
+			}
+		return null;
+	}
+
+	override public function hasDefine(name:String):Bool
+		return defines.exists(name);
 
 	public function drainNewModules():Array<ResolvedModule> {
 		if (pending.length == 0)
@@ -137,43 +274,17 @@ class ModuleLoader extends LazyTypeLoader {
 		final raw = StringTools.trim(typePath);
 		if (raw.length == 0)
 			return null;
-		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
-
-		// Fast path: already indexed.
-		final pkg = packagePath == null ? "" : packagePath;
-		final hit0 = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
-		if (hit0 != null)
-			return hit0;
-
-		// Try deriving candidate module paths from the typing context.
-		final candidates = candidateModulePaths(raw, pkg, directives, resolvedDirectives);
-		if (trace)
-			Sys.println("loader_resolve type=" + raw + " pkg=" + pkg + " candidates=" + candidates.join(","));
-		for (mp in candidates) {
-			if (mp == null || mp.length == 0)
-				continue;
-			loadModuleByPath(mp);
-
-			final hit = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
-			if (hit != null)
-				return hit;
-		}
-
-		if (onMissingType != null) {
-			for (mp in candidates) {
-				if (mp == null || mp.length == 0 || typeNotFoundTried.exists(mp))
-					continue;
-				typeNotFoundTried.set(mp, true);
-				if (!invokeOnMissingType(mp))
-					continue;
-				loadModuleByPath(mp);
-				final hit = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
-				if (hit != null)
-					return hit;
-			}
-		}
-
-		return null;
+		final context:TyTypeResolutionContext = {
+			packagePath: packagePath == null ? "" : packagePath,
+			modulePath: "",
+			directives: directives == null ? [] : directives,
+			filePath: "<type lookup>",
+			position: HxPos.unknown(),
+			parameters: []
+		};
+		if (ensureDeclarationAvailable(raw, context) == null)
+			return null;
+		return index.resolveNominalProvider(raw, context);
 	}
 
 	function candidateModulePaths(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
@@ -215,8 +326,9 @@ class ModuleLoader extends LazyTypeLoader {
 						if (HxModuleDirective.getImportedLocalName(directive) == raw)
 							out.push(HxModuleDirective.getPath(directive));
 						final importPath = HxModuleDirective.getPath(directive);
-						if (index != null && index.getByModulePath(importPath).length > 0)
-							out.push(importPath);
+						// Loading this module can reveal a secondary declaration even
+						// when no same-named main type exists yet.
+						out.push(importPath);
 					case ImportAlias(_):
 						if (HxModuleDirective.getImportedLocalName(directive) == raw)
 							out.push(HxModuleDirective.getPath(directive));
@@ -281,29 +393,8 @@ class ModuleLoader extends LazyTypeLoader {
 		return uniq;
 	}
 
-	function loadModuleByPath(modulePath:String):Void {
-		if (modulePath == null || modulePath.length == 0)
-			return;
-		if (visited.exists(modulePath))
-			return;
-		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
-
-		final resolution = sourceProvider.resolveModule(classPaths, modulePath);
-		final filePath = resolution.filePath;
-		if (filePath == null) {
-			if (trace)
-				Sys.println("loader_load miss module=" + modulePath);
-			return;
-		}
-
-		final source = sourceProvider.readSource(filePath);
-		if (source == null) {
-			if (trace)
-				Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
-			return;
-		}
-		visited.set(modulePath, true);
-
+	/** Macro standard modules retain their existing conditional compilation policy. */
+	function moduleDefines(modulePath:String, filePath:String):haxe.ds.StringMap<String> {
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
 			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
 				return true;
@@ -320,7 +411,7 @@ class ModuleLoader extends LazyTypeLoader {
 			return out;
 		}
 
-		final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
+		return isMacroStdModule(modulePath, filePath) ? (() -> {
 			final m = cloneDefines(defines);
 			if (!m.exists("macro"))
 				m.set("macro", "1");
@@ -328,6 +419,46 @@ class ModuleLoader extends LazyTypeLoader {
 				m.set("eval", "1");
 			m;
 		})() : defines;
+	}
+
+	/** Complete one source module after its declaration headers have been discovered. */
+	function loadModuleByPath(modulePath:String):Void {
+		final module = loadModuleHeadersByPath(modulePath);
+		if (module != null)
+			prepareSignatureDependencies(module);
+	}
+
+	function loadModuleHeadersByPath(modulePath:String):Null<ResolvedModule> {
+		if (modulePath == null || modulePath.length == 0)
+			return null;
+		if (visited.exists(modulePath))
+			return index.getRegisteredModule(modulePath);
+		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
+
+		final resolution = sourceProvider.resolveModule(classPaths, modulePath);
+		final filePath = resolution.filePath;
+		if (filePath == null) {
+			if (trace)
+				Sys.println("loader_load miss module=" + modulePath);
+			return null;
+		}
+		// Resolve every new lookup before checking the source. Its observation must
+		// still record whether a direct file shadows a secondary-type fallback.
+		final selectedFileKey = haxe.io.Path.normalize(filePath);
+		if (visitedSourceFiles.exists(selectedFileKey)) {
+			visited.set(modulePath, true);
+			return null;
+		}
+
+		final source = sourceProvider.readSource(filePath);
+		if (source == null) {
+			if (trace)
+				Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
+			return null;
+		}
+		visited.set(modulePath, true);
+
+		final effectiveDefines = moduleDefines(modulePath, filePath);
 		final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 		final filtered = conditional.getFilteredSource();
 		final parsed = try {
@@ -340,72 +471,29 @@ class ModuleLoader extends LazyTypeLoader {
 		if (parsed == null) {
 			if (trace)
 				Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
-			return;
+			return null;
 		}
 
-		final parsedModule = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
+		// Match eager resolution: declarations belong to the source module, while
+		// the origin retains the exact lookup that selected that source.
+		final packagePath = HxModuleDecl.getPackagePath(parsed.getDecl());
+		final moduleName = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(filePath));
+		final canonicalModulePath = packagePath == null || packagePath.length == 0 ? moduleName : packagePath + "." + moduleName;
+		visited.set(canonicalModulePath, true);
+		visitedSourceFiles.set(selectedFileKey, true);
+		final parsedModule = new ResolvedModule(canonicalModulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
 		final rm = prepareResolvedModule(parsedModule);
 		pending.push(rm);
 		if (trace)
 			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
 
 		if (index != null)
-			index.addResolvedModule(rm);
-
-		// Keep lazily loaded modules link-safe by recursively loading their direct dependencies.
-		//
-		// Why
-		// - ResolverStage computes import closure only for the initial roots.
-		// - ModuleLoader can add additional modules during typing, but without dependency expansion
-		//   those modules may emit references to missing OCaml units (link-time failures).
-		//
-		// What
-		// - Follow explicit imports (including module-type fallback) and fully-qualified type path
-		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
-		if (expandDependencies) {
-			final preparedParsed = ResolvedModule.getParsed(rm);
-			final decl = preparedParsed.getDecl();
-			for (dep in depsForParsedModule(filtered, decl, effectiveDefines)) {
-				if (dep == null || dep.length == 0)
-					continue;
-				if (resolveModuleFile(dep) == null)
-					continue;
-				loadModuleByPath(dep);
-			}
-			// Dependency identities may not have existed during the provisional
-			// insertion above. Rebuild this module through the same index path so
-			// lazy signatures match an eager two-pass build.
-			if (index != null)
-				index.addResolvedModule(rm);
-		}
+			index.registerResolvedModules([rm]);
+		return rm;
 	}
 
 	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
-		if (source == null || source.length == 0)
-			return [];
-
-		final candidates = new haxe.ds.StringMap<Bool>();
-		for (line in source.split("\n")) {
-			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:"))
-				continue;
-
-			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
-			var pos = 0;
-			while (re.matchSub(line, pos, -1)) {
-				final dep = re.matched(1);
-				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
-					candidates.set(dep, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
-		}
-
-		final out = new Array<String>();
-		for (dep in candidates.keys())
-			out.push(dep);
-		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
-		return out;
+		return HxImplicitDependencies.qualifiedTypePaths(source, defines);
 	}
 
 	function depsForParsedModule(filteredSource:String, decl:HxModuleDecl, ?defines:haxe.ds.StringMap<String>):Array<String> {

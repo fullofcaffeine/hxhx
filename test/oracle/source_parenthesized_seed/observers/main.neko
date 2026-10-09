@@ -1,0 +1,35 @@
+var operation = function(node) {
+  var prefix = "";
+  var suffix = "";
+  while (node.__hx_ctor == "OpAssignOp") {
+    if ($asize(node.__hx_params) != 1) $throw("compound arity");
+    prefix = prefix + "OpAssignOp(";
+    suffix = suffix + ")";
+    node = node.__hx_params[0];
+  }
+  if ($asize(node.__hx_params) != 0) $throw("operator arity");
+  return prefix + node.__hx_ctor + suffix;
+};
+var check = function(token, value) {
+  var i = 0;
+  while (i < 2) {
+    if (value.expr.__hx_ctor != "EParenthesis" || $asize(value.expr.__hx_params) != 1)
+      $throw("parenthesis shape");
+    value = value.expr.__hx_params[0];
+    i = i + 1;
+  }
+  if (value.expr.__hx_ctor != "EBinop" || $asize(value.expr.__hx_params) != 3)
+    $throw("binary shape");
+  var args = value.expr.__hx_params;
+  i = 1;
+  while (i < 3) {
+    var leaf = args[i].expr;
+    var name = if (i == 1) "left" else "right";
+    if (leaf.__hx_ctor != "EConst" || leaf.__hx_params[0].__hx_ctor != "CIdent"
+        || leaf.__hx_params[0].__hx_params[0] != name)
+      $throw("operand order");
+    i = i + 1;
+  }
+  $print(token, "\t", operation(args[0]), "\n");
+};
+/*VALUES*/

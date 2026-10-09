@@ -45,6 +45,12 @@ class HaxeOcamlTargetDeclarationAdapter {
 		return {
 			canonicalIdentity: owner,
 			moduleIdentity: classType.module,
+			isInterface: classType.isInterface,
+			isExtern: classType.isExtern,
+			interfaceTypeDisplays: [
+				for (relation in classType.interfaces)
+					appliedInterfaceName(relation.t.get(), relation.params)
+			],
 			typeParameters: [for (parameter in classType.params) parameter.name],
 			superClassIdentity: superClass == null ? null : OcamlTargetDeclarationRequest.classIdentity(superClass.module,
 				superClass.pack.concat([superClass.name]).join(".")),
@@ -130,8 +136,26 @@ class HaxeOcamlTargetDeclarationAdapter {
 			case _: false;
 		};
 
-	static function typeText(type:Type):String
-		return TypeTools.toString(type);
+	/** Declared binders use their source names, without the stock host's synthetic owner prefix. **/
+	static function typeText(type:Type):String {
+		return switch (type) {
+			case TInst(reference, _):
+				final declaration = reference.get();
+				switch (declaration.kind) {
+					case KTypeParameter(_): declaration.name;
+					case _: TypeTools.toString(type);
+				}
+			case _: TypeTools.toString(type);
+		};
+	}
+
+	/** Use the complete source lookup path so secondary interfaces retain their module owner. **/
+	static function appliedInterfaceName(type:ClassType, parameters:Array<Type>):String {
+		final moduleParts = type.module.split(".");
+		final primaryName = moduleParts[moduleParts.length - 1];
+		final name = primaryName == type.name ? type.module : type.module + "." + type.name;
+		return name + (parameters.length == 0 ? "" : "<" + [for (parameter in parameters) typeText(parameter)].join(",") + ">");
+	}
 
 	static function accessName(access:VarAccess):String {
 		return switch (access) {

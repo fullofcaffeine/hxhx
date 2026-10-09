@@ -1,5 +1,11 @@
 package reflaxe.ocaml.ast;
 
+import reflaxe.ocaml.ast.OcamlGenericCallEmitter.emit as genericSyntaxEmit;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.select as genericCallSelect;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.representationsMatch as genericCallRepresentationsMatch;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
@@ -21,7 +27,7 @@ import reflaxe.ocaml.target.HaxeOcamlTargetLiteralAdapter;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact;
 import reflaxe.ocaml.target.OcamlTargetLiteralFact.OcamlTargetLiteralKind;
 import reflaxe.ocaml.target.OcamlTargetLiteralLowerer;
-import reflaxe.ocaml.target.OcamlTargetLiteralLowerer.OcamlTargetLiteralCarrier;
+import reflaxe.ocaml.target.OcamlTargetLiteralCarrier;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeUseContract;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
@@ -114,6 +120,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
@@ -126,15 +133,17 @@ import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementLook
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
-import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassMaterializer;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
@@ -156,8 +165,12 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCode
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeForm;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityKind;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
+import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan.OcamlEnumIdentityPlanner;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan.OcamlMapIdentityPlanner;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodDecision;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodOperation;
@@ -231,9 +244,12 @@ class OcamlBuilder {
 	var currentIntUnaryPlan:Null<OcamlIntUnaryPlan> = null;
 	var currentStringFromCharCodePlan:Null<OcamlStringFromCharCodePlan> = null;
 	var currentStringEqualityPlan:Null<OcamlStringEqualityPlan> = null;
+	var currentEnumIdentityPlan:Null<OcamlEnumIdentityPlan> = null;
+	var currentMapIdentityPlan:Null<OcamlMapIdentityPlan> = null;
 	var currentStringMethodPlan:Null<OcamlStringMethodPlan> = null;
 	var currentStringFieldPlan:Null<OcamlStringFieldPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
+	final currentEnumCatchCarriers:Map<String, String> = [];
 	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 	var currentArrayReadPlan:Null<OcamlArrayReadPlan> = null;
 	var currentArrayIteratorPlan:Null<OcamlArrayIteratorPlan> = null;
@@ -901,6 +917,17 @@ class OcamlBuilder {
 				callPlanInvariant('callable carrier ${value.outputSemanticTypeId}/${value.outputCarrierTypeId} does not match representation "${value.outputRepresentationId}"',
 				position);
 		}
+		if (representation.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier) {
+			if (ctx.currentModuleId == null)
+				return callPlanInvariant("a native enum callable carrier reached syntax outside an OCaml module", position);
+			return OcamlNativeEnumRepresentation.typeExpr(representation, moduleIdToOcamlModuleName(ctx.currentModuleId));
+		}
+		if (representation.boxingPolicy == OcamlRepresentationBoxingPolicy.CallableIdentityView) {
+			final layout = representationRegistry.requireCallableView(representation.id, representation.revision, binding.programRevision);
+			if (!reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.same(layout, value.callableView))
+				return callPlanInvariant("callback type disagrees with its declaration layout", position);
+			return reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(layout);
+		}
 		if (OcamlMonomorphicClassMaterializer.isNominalClass(representation)) {
 			if (ctx.currentModuleId == null)
 				return callPlanInvariant("a nominal callable carrier reached syntax outside an OCaml module", position);
@@ -912,6 +939,27 @@ class OcamlBuilder {
 	/** Mechanically applies one conversion already selected by the call plan. */
 	function buildPlannedCallArgument(call:OcamlCallDecision, value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
+		if (value.callbackArgument != null) {
+			final prepared = value.callbackArgument;
+			reflaxe.ocaml.lowered.OcamlCallableArgumentPlan.requireArgument(prepared);
+			final operation = prepared.operation;
+			final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+			if (operation.id != call.id + ":callback-argument:" + value.index
+				|| operation.source.file != source.file
+				|| operation.source.min != source.min
+				|| operation.source.max != source.max)
+				return callPlanInvariant("callback preparation lost its exact argument occurrence", expression.pos);
+			requireCallableValueSource(prepared.input, operation.inputLayout, expression);
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(expression),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				buildExpr(expression);
@@ -980,7 +1028,17 @@ class OcamlBuilder {
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				body;
-			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool, BoxExactEnumToNullableEnum:
+			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
+			case BoxExactEnumToNullableEnum:
+				final reference = value.nullableEnumCarrier;
+				if (reference == null)
+					return callPlanInvariant("a nullable-enum result reached syntax without its carrier reference", position);
+				try {
+					OcamlNullableEnumCarrier.requireCurrent(reference, ctx, representationRegistry);
+				} catch (error:Dynamic) {
+					return callPlanInvariant(Std.string(error), position);
+				}
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);
@@ -1021,6 +1079,9 @@ class OcamlBuilder {
 						controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
 					else {
 						final payload = switch (selectedPayload.conversion) {
+							case BoxAndRecoverCallableView:
+								requirePreparedCallbackReturn(decision);
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildDirectFunctionResult(value)]);
 							case BoxAndRecoverExactValue, BoxAndRecoverNominalValue, BoxAndRecoverTypedFunctionResult:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case BoxBoolAndRecoverDynamicTypedFunctionResult:
@@ -1157,6 +1218,11 @@ class OcamlBuilder {
 		if (payload == null)
 			return controlPlanInvariant('return decision "${decision.id}" reached its function boundary without a sealed value payload', position);
 		return switch (payload.conversion) {
+			case BoxAndRecoverCallableView:
+				final returned = requirePreparedCallbackReturn(decision);
+				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
+					reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(returned)
+						.outputLayout));
 			case BoxAndRecoverExactValue, BoxAndRecoverNominalValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
@@ -1175,6 +1241,23 @@ class OcamlBuilder {
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${payload.conversion}', position);
 		}
+	}
+
+	/** Recheck the prepared callback occurrence before boxing it or recovering it at the function boundary. */
+	function requirePreparedCallbackReturn(decision:OcamlControlDecision):reflaxe.ocaml.lowered.OcamlCallableReturnContract.OcamlCallableReturnDecision {
+		final payload = decision.payload;
+		final binding = currentFunctionPlanBinding;
+		if (payload == null || binding == null)
+			throw "reflaxe.ocaml [callback-return-control:missing-binding]: callback transfer lost its final body";
+		return reflaxe.ocaml.lowered.OcamlCallableReturnControl.requireJoin({
+			binding: binding,
+			source: decision.source,
+			returnId: payload.callbackReturnId,
+			returnRevision: payload.callbackReturnRevision,
+			semanticTypeId: payload.outputSemanticTypeId,
+			carrierTypeId: payload.outputCarrierTypeId,
+			representationId: payload.outputRepresentationId
+		}, currentCallableBoundary == null || currentCallableBoundary.callbackReturns == null ? [] : currentCallableBoundary.callbackReturns);
 	}
 
 	/** Raises one exact Haxe value through its sealed private exception channel. */
@@ -1214,7 +1297,7 @@ class OcamlBuilder {
 				OcamlExpr.ETuple([
 					buildAuthorizedThrowPayloadValue(decision, OcamlThrowRuntimeUseRole.UseCanonicalNullPayload, position)
 				]);
-			case PreserveAnonymousThrowCarrier:
+			case PreserveAnonymousThrowCarrier, PreserveOpaqueAnonymousThrowCarrier:
 				built;
 			case BoxRepresentedArrayThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
@@ -1230,6 +1313,12 @@ class OcamlBuilder {
 					OcamlExpr.EConst(OcamlConst.CString(selectedPayload.inputSemanticTypeId)),
 					represented
 				], position);
+			case PreserveEnumCatchThrowCarrier:
+				final origin = selectedPayload.enumCatchOrigin;
+				final carrierName = origin == null ? null : currentEnumCatchCarriers.get(origin.localId);
+				if (carrierName == null)
+					return controlPlanInvariant('enum catch rethrow decision "${decision.id}" has no active original exception carrier', position);
+				OcamlExpr.EIdent(carrierName);
 			case BoxRuntimeClassThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
@@ -1358,17 +1447,31 @@ class OcamlBuilder {
 		final originalTagFunctions:Map<String, OcamlExpr> = [];
 		final tagProofsByClause:Array<Array<OcamlExpr>> = [for (_ in chain.clauses) []];
 
-		final syntax:Array<{variableName:String, variableType:OcamlTypeExpr, body:OcamlExpr}> = [];
+		final syntax:Array<{
+			variableName:String,
+			variableType:OcamlTypeExpr,
+			enumCarrierName:Null<String>,
+			body:OcamlExpr
+		}> = [];
 		for (index in 0...catches.length) {
 			final entry = catches[index];
 			final clause = chain.clauses[index];
 			if (clause.order != index || clause.variableName != entry.v.name)
 				return controlPlanInvariant('catch chain "${chain.id}" clause $index no longer matches typed variable "${entry.v.name}"', position);
 			final variableName = renameVar(entry.v.name);
+			final enumCarrierName = clause.conversion == RecoverEnumValue
+				&& currentControlPlan != null
+				&& currentControlPlan.preservesEnumCatchCarrier(clause.id, clause.localId) ? freshTmp("enum_catch_carrier") : null;
+			if (enumCarrierName != null)
+				currentEnumCatchCarriers.set(clause.localId, enumCarrierName);
+			final branchBody = applyCatchBranchResultPolicy(clause.bodyResultPolicy, buildExpr(entry.expr), clause.id, position);
+			if (enumCarrierName != null)
+				currentEnumCatchCarriers.remove(clause.localId);
 			syntax.push({
 				variableName: variableName,
 				variableType: typeExprFromHaxeType(entry.v.t),
-				body: applyCatchBranchResultPolicy(clause.bodyResultPolicy, buildExpr(entry.expr), clause.id, position)
+				enumCarrierName: enumCarrierName,
+				body: branchBody
 			});
 		}
 
@@ -1414,50 +1517,52 @@ class OcamlBuilder {
 							copyForNativeChannel);
 						OcamlExpr.EBinop(OcamlBinop.Or, isValueException, OcamlExpr.EUnop(OcamlUnop.Not, isAnyException));
 				};
+				final inputValue = entry.enumCarrierName == null ? valueExpression : OcamlExpr.EIdent(entry.enumCarrierName);
 				final boundValue = switch (clause.conversion) {
 					case RecoverExactValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case RecoverCheckedBool:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [inputValue]);
 					case RecoverNominalValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case RecoverEnumValue:
 						final runtimeTag = clause.runtimeTag;
 						if (runtimeTag == null)
 							return controlPlanInvariant('enum catch clause "${clause.id}" has no sealed runtime tag', position);
 						final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
-							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), valueExpression]);
+							[OcamlExpr.EConst(OcamlConst.CString(runtimeTag)), inputValue]);
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
 					case RecoverRuntimeClassValue:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 					case PreserveDynamicCarrier:
-						valueExpression;
+						inputValue;
 					case PreserveOrWrapHaxeException:
 						final isAnyException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertAnyException, tagsExpression,
 							"haxe.Exception", copyForNativeChannel);
-						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-								[valueExpression, nullPrevious, valueExpression])
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"), [inputValue, nullPrevious, inputValue])
 						]);
 						OcamlExpr.EIf(isAnyException, asException, wrapped);
 					case PreserveOrWrapHaxeValueException:
 						final isValueException = runtimeTagTest(clause, index, OcamlCatchRuntimeTagUseRole.ConvertValueException, tagsExpression,
 							"haxe.ValueException", copyForNativeChannel);
-						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [inputValue]);
 						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
-							[valueExpression, nullPrevious, valueExpression]);
+							[inputValue, nullPrevious, inputValue]);
 						OcamlExpr.EIf(isValueException, asValueException, wrapped);
 				};
 				final annotated = OcamlExpr.EAnnot(boundValue, entry.variableType);
-				final body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([
+				var body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([
 					OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(entry.variableName)]),
 					entry.body
 				]), false);
+				if (entry.enumCarrierName != null)
+					body = OcamlExpr.ELet(entry.enumCarrierName, valueExpression, body, false);
 				current = OcamlExpr.EIf(condition, body, current);
 			}
 			return current;
@@ -1652,6 +1757,76 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Binds source values once, then emits only the generic conversions selected by the call owner. */
+	function buildPlannedGenericInstanceCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		final target = call.genericInstanceTarget;
+		if (target == null || callee == null || currentCallPlan == null)
+			return callPlanInvariant("generic instance call has no target, callee, or current inventory", position);
+		if (!genericCallRepresentationsMatch(target, representationRegistry, call.programRevision))
+			return callPlanInvariant("generic instance call lost its current receiver or class-value representation", position);
+		final receiver = switch (callee.expr) {
+			case TField(value, FInstance(_, _, _)): value;
+			case _: return callPlanInvariant("generic instance call has no instance receiver", position);
+		};
+		final runtimePlan = currentCallPlan.runtimeUsePlanFor(call.id);
+		var authority:Null<OcamlRuntimeUseAuthority> = null;
+		if (runtimePlan != null) {
+			OcamlCallRuntimeUseContract.requireForCall(call, runtimePlan);
+			authority = new OcamlRuntimeUseAuthority(runtimePlan.planRevision, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				ctx.runtimeRequirementsByIds(runtimePlan.runtimeRequirementIds), runtimePlan.runtimeUseOccurrences, ctx.finalRuntimeUses);
+		}
+		function runtimeIdentifier(role:String, symbol:String):OcamlExpr {
+			if (runtimePlan == null || authority == null)
+				return callPlanInvariant("generic conversion has no exact runtime owner", position);
+			final occurrences = runtimePlan.runtimeUseOccurrences.filter(use -> use.role == role && use.exactSymbol == symbol);
+			if (occurrences.length != 1)
+				return callPlanInvariant("generic conversion lost its exact runtime occurrence", position);
+			final occurrence = occurrences[0];
+			return OcamlExpr.ERuntimeIdent(authority.expressionIdentifier(occurrence.id, occurrence.planRevision, symbol));
+		}
+		final moduleName = moduleIdToOcamlModuleName(target.moduleId);
+		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+		final name = ctx.scopedValueName(target.moduleId, target.typeName, target.fieldName);
+		final method = selfModule == moduleName ? OcamlExpr.EIdent(name) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), name);
+		final receiverName = freshTmp("generic_receiver");
+		final materialized:Array<{name:String, value:OcamlExpr}> = [{name: receiverName, value: buildExpr(receiver)}];
+		final inputNames:Array<OcamlExpr> = [];
+		for (argument in arguments) {
+			final argumentName = freshTmp("generic_source_argument");
+			materialized.push({name: argumentName, value: buildExpr(argument)});
+			inputNames.push(OcamlExpr.EIdent(argumentName));
+		}
+		var output = genericSyntaxEmit(target, method, OcamlExpr.EIdent(receiverName), inputNames, freshTmp, runtimeIdentifier);
+		// Source expressions can contain helpers owned by nested calls. Reconcile
+		// this conversion subtree before those independently checked expressions enter it.
+		if (authority != null)
+			authority.reconcileExpression(output);
+		var index = materialized.length;
+		while (index-- > 0)
+			output = OcamlExpr.ELet(materialized[index].name, materialized[index].value, output, false);
+		return output;
+	}
+
+	/** Recognizes core Null<function> through aliases without following unrelated abstracts. */
+	static function nullableCallableType(type:Type):Null<Type> {
+		final declared = followNoAbstracts(type);
+		final inner = unwrapNullType(declared);
+		return switch (followNoAbstracts(inner)) {
+			case type = TFun(_, _) if (inner != declared): type;
+			case _: null;
+		}
+	}
+
+	/** Uses the shared nullable invocation sequence without changing other call forms. */
+	function buildFunctionValueCall(callee:TypedExpr, arguments:Array<OcamlExpr>):OcamlExpr {
+		final functionType = nullableCallableType(callee.t);
+		final value = buildExpr(callee);
+		if (isCallableViewLocal(callee))
+			return OcamlExpr.EApp(reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(value), arguments);
+		return functionType == null ? OcamlExpr.EApp(value,
+			arguments) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.call(value, arguments, typeExprFromHaxeType(functionType), freshTmp);
+	}
+
 	/**
 		Materializes one sealed typed call in its Haxe source order.
 
@@ -1662,6 +1837,8 @@ class OcamlBuilder {
 	function buildPlannedCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
+			if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod)
+				return buildPlannedGenericInstanceCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.DynamicFunctionValue)
 				return buildPlannedDynamicFunctionCall(call, callee, arguments, position);
 			if (call.kind == OcamlCallKind.StandardArrayMethod)
@@ -1704,6 +1881,8 @@ class OcamlBuilder {
 				return callPlanInvariant('standard IMap call "${call.id}" bypassed its specialized sealed target', position);
 			case OcamlCallKind.StructuralIteratorMethod:
 				return callPlanInvariant('structural Iterator call "${call.id}" bypassed its specialized sealed target', position);
+			case OcamlCallKind.GenericInstanceHaxeMethod:
+				return callPlanInvariant('generic instance call "${call.id}" bypassed its sealed target', position);
 		};
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
 		final applicationArguments:Array<OcamlExpr> = [];
@@ -1713,9 +1892,20 @@ class OcamlBuilder {
 				case OcamlCallEvaluationStepKind.MaterializeCallee:
 					if (call.kind != OcamlCallKind.TypedFunctionValue || callee == null || target != null || step.slotId == null)
 						return callPlanInvariant('call "${call.id}" has an invalid callee materialization step', position);
+					if (call.callbackInvocation != null) {
+						final selected = call.callbackInvocation;
+						final actual = OcamlLoweredOrigin.sourceSpan(callee.pos);
+						if (actual.file != selected.source.file || actual.min != selected.source.min || actual.max != selected.source.max)
+							return callPlanInvariant("callback invocation source changed after planning", position);
+						requireCallableValueSource(selected.input, selected.layout, callee);
+					} else if (isCallableViewLocal(callee))
+						return callPlanInvariant("callback invocation lost its selected local source", position);
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
-					target = OcamlExpr.EIdent(name);
+					final functionType = nullableCallableType(callee.t);
+					target = call.callbackInvocation != null
+						|| isCallableViewLocal(callee) ? reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(OcamlExpr.EIdent(name)) : functionType == null ? OcamlExpr.EIdent(name) : reflaxe.ocaml.ast.OcamlNullableFunctionSyntax.recover(OcamlExpr.EIdent(name),
+							typeExprFromHaxeType(functionType), freshTmp);
 				case OcamlCallEvaluationStepKind.MaterializeReceiver:
 					if (callee == null)
 						return callPlanInvariant('call "${call.id}" has no typed instance receiver occurrence', position);
@@ -2380,6 +2570,9 @@ class OcamlBuilder {
 		final decision = plannedLocalRepresentation(localId, position);
 		if (decision == null)
 			return typeExprFromHaxeType(type);
+		if (decision.boxingPolicy == CallableIdentityView)
+			return reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.typeExpr(representationRegistry.requireCallableView(decision.id, decision.revision,
+				decision.programRevision));
 		if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)) {
 			if (ctx.currentModuleId == null)
 				return localStorageInvariant('local $localId selected a nominal class carrier outside an OCaml module', position);
@@ -2521,6 +2714,8 @@ class OcamlBuilder {
 			case Required(_, conversion):
 				conversion;
 		};
+		if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic)
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(item)]);
 		OcamlEnumDynamicCarrier.requireIdentity(conversion.inputSemanticTypeId, conversion.inputCarrierTypeId);
 		final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(item)]);
 		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
@@ -2668,6 +2863,8 @@ class OcamlBuilder {
 					{semanticTypeId: "Float", carrierTypeId: "float"};
 				} else if (OcamlRepresentationRegistry.isExactString(payload.t)) {
 					{semanticTypeId: "String", carrierTypeId: "string"};
+				} else if (OcamlRepresentationRegistry.isExactNullString(payload.t)) {
+					{semanticTypeId: "Null<String>", carrierTypeId: "string"};
 				} else {
 					final layout = representationRegistry.monomorphicClassForType(payload.t);
 					if (layout != null) {
@@ -2944,6 +3141,8 @@ class OcamlBuilder {
 	**/
 	function coerceLocalInitializer(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
 		final representation = plannedLocalRepresentation(localId, rhs.pos);
+		if (representation != null && representation.boxingPolicy == CallableIdentityView)
+			return buildCallableViewWrite(localId, rhs);
 		if (representation != null && representation.semanticTypeId == "Null<Int>")
 			return buildNullIntWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
 		if (representation != null && representation.semanticTypeId == "Null<Bool>")
@@ -2988,10 +3187,118 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Resolve the sealed write before constructing identity and adapting its invocation. */
+	function buildCallableViewWrite(localId:Int, rhs:TypedExpr):OcamlExpr {
+		final binding = currentLocalPlanBinding;
+		final plan = activeLocalRepresentationPlan(rhs.pos);
+		if (binding == null || plan == null)
+			return localStorageInvariant("callback write has no owning function plan", rhs.pos);
+		final decision = plan.callableViewConversionFor(binding, stableLocalId(localId, rhs.pos), Initializer, OcamlLoweredOrigin.sourceSpan(rhs.pos),
+			representationRegistry);
+		if (decision == null)
+			return localStorageInvariant("callback initializer has no exact write decision", rhs.pos);
+		requireCallableValueSource(decision.input, decision.inputLayout, rhs);
+		final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.occurrences(decision);
+		return reflaxe.ocaml.ast.OcamlCallableViewWriteSyntax.build({
+			decision: decision,
+			value: buildExpr(rhs),
+			fresh: freshTmp,
+			profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+			requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+			finalRuntimeUses: ctx.finalRuntimeUses
+		});
+	}
+
+	/** Rejoin a retained callback producer before any write, argument, or equality emits its value. */
+	function requireCallableValueSource(input:reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewInput,
+			layout:reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor, expression:TypedExpr):Void {
+		switch (input) {
+			case ExistingView(reference):
+				switch (unwrap(expression).expr) {
+					case TLocal(local) if (stableLocalId(local.id, expression.pos) == reference.localId
+						&& isCallableViewLocal(expression)):
+						final selected = plannedLocalRepresentation(local.id, expression.pos);
+						if (selected == null
+							|| selected.id != reference.representationId
+							|| selected.revision != reference.representationRevision)
+							callPlanInvariant("callback value changed its selected local storage", expression.pos);
+						reflaxe.ocaml.lowered.OcamlCallableViewContract.requireReference(reference, layout);
+					case _: callPlanInvariant("callback value lost its selected local", expression.pos);
+				}
+			case RawOrigin(kind):
+				if (Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(expression)) != Std.string(kind))
+					callPlanInvariant("callback value changed its raw producer", expression.pos);
+			case DeclaredOrigin(declaration):
+				final published = functionPlanRegistry.callableDeclaration(declaration.calleeId);
+				if (published == null
+					|| published.programRevision != declaration.programRevision
+					|| published.pipelineRevision != declaration.pipelineRevision
+					|| Std.string(reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(expression)) != Std.string(reflaxe.ocaml.lowered.OcamlCallableOriginKind.StaticDeclaration(declaration.calleeId)))
+					callPlanInvariant("callback value lost its published method", expression.pos);
+				reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.requireSignature(declaration.layout, published.arguments, published.result);
+			case CallResult(source):
+				final selected = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(expression));
+				if (selected == null
+					|| selected.result == null
+					|| selected.source.file != source.file
+					|| selected.source.min != source.min
+					|| selected.source.max != source.max
+					|| !reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.same(selected.result.callableView, layout))
+					callPlanInvariant("callback value lost its exact call result", expression.pos);
+		}
+	}
+
+	/** Evaluate both planned producers once, left first, and compare the preserved function identities. */
+	function buildCallableComparison(source:TypedExpr, left:TypedExpr, right:TypedExpr, notEqual:Bool):Null<OcamlExpr> {
+		final binding = currentLocalPlanBinding;
+		final plan = activeLocalRepresentationPlan(source.pos);
+		if (binding == null || plan == null)
+			return null;
+		final decision = plan.callableComparisonFor(binding, OcamlLoweredOrigin.sourceSpan(source.pos), notEqual);
+		if (decision == null) {
+			if (isCallableViewLocal(left) || isCallableViewLocal(right))
+				return callPlanInvariant("callback comparison has no exact producer decision", source.pos);
+			for (value in [left, right]) {
+				final call = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(value));
+				if (call != null && call.result != null && call.result.callableView != null)
+					return callPlanInvariant("returned callback comparison has no exact producer decision", source.pos);
+			}
+			return null;
+		}
+		function operand(expression:TypedExpr, isLeft:Bool):OcamlExpr {
+			final selected = isLeft ? decision.left : decision.right;
+			final actual = OcamlLoweredOrigin.sourceSpan(unwrap(expression).pos);
+			if (actual.file != selected.source.file || actual.min != selected.source.min || actual.max != selected.source.max)
+				return callPlanInvariant("callback comparison changed its operand occurrence", expression.pos);
+			requireCallableValueSource(selected.input, selected.layout, expression);
+			final operation = reflaxe.ocaml.lowered.OcamlCallableComparison.operation(decision, isLeft);
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(expression),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
+		return reflaxe.ocaml.ast.OcamlCallableViewSyntax.compare(operand(left, true), operand(right, false),
+			(left, right) -> OcamlExpr.EBinop(notEqual ? OcamlBinop.PhysNeq : OcamlBinop.PhysEq, left, right), freshTmp);
+	}
+
+	/** Only a local with a resolved view decision may expose a view invocation or identity. */
+	function isCallableViewLocal(expression:TypedExpr):Bool {
+		return switch (unwrap(expression).expr) {
+			case TLocal(local): final decision = plannedLocalRepresentation(local.id,
+					expression.pos); decision != null && decision.boxingPolicy == CallableIdentityView;
+			case _: false;
+		};
+	}
+
 	/**
 		Builds one planned raw Map initializer without guessing from its source type.
 
-		For a nullable static Map field, the field read is evaluated once. A null
+		For a proven nullable Map producer, the expression is evaluated once. A null
 		value raises the same catchable `Null Access` error used by other checked
 		OCaml-target reads; a non-null value keeps the already-proven `HxMap` carrier.
 	**/
@@ -4050,6 +4357,8 @@ class OcamlBuilder {
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, callee, arguments, e.pos);
+			case TCall(_, _) if (genericCallSelect(e, representationRegistry) != null):
+				callPlanInvariant("a generic instance call reached syntax without its sealed storage conversion plan", e.pos);
 			case TCall(_, _) if (OcamlCallPlanner.isDirectStaticGenericIdentityCall(e)):
 				callPlanInvariant("a direct generic identity call reached syntax without its sealed concrete carrier plan", e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
@@ -5096,7 +5405,7 @@ class OcamlBuilder {
 												for (a in args)
 													builtArgs.push(buildExpr(a));
 											}
-											OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+											buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 									case TField(objExpr, FInstance(clsRef, _, cfRef)):
 										final cf = cfRef.get();
@@ -5318,7 +5627,7 @@ class OcamlBuilder {
 												final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
 												if (expectsNoArgs)
 													builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-												OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+												buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 									case TField(_, FEnum(eRef, ef)):
 										final en = eRef.get();
@@ -5366,8 +5675,19 @@ class OcamlBuilder {
 												for (a in args)
 													builtArgs.push(buildExpr(a));
 											}
-											(builtArgs.length > 1) ? OcamlExpr.EApp(buildExpr(fn),
-												[OcamlExpr.ETuple(builtArgs)]) : OcamlExpr.EApp(buildExpr(fn), builtArgs);
+											if (en.pack.length > 0 && en.pack[0] == "ocaml")
+												return (builtArgs.length > 1) ? OcamlExpr.EApp(buildExpr(fn),
+													[OcamlExpr.ETuple(builtArgs)]) : OcamlExpr.EApp(buildExpr(fn), builtArgs);
+											if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
+												return callPlanInvariant("enum construction has no active function plan", e.pos);
+											OcamlEnumConstruction.build({
+												plan: currentEnumIdentityPlan,
+												binding: currentFunctionPlanBinding,
+												expression: e,
+												constructor: buildExpr(fn),
+												arguments: builtArgs,
+												freshTmp: freshTmp
+											});
 										} else {
 											// Enum constructors: coerce arguments (optional args must be fully applied,
 											// and optional enum args use the nullable (Obj.t) representation).
@@ -5428,8 +5748,19 @@ class OcamlBuilder {
 													builtArgs.push(buildExpr(a));
 											}
 
-											(builtArgs.length > 1) ? OcamlExpr.EApp(buildExpr(fn),
-												[OcamlExpr.ETuple(builtArgs)]) : OcamlExpr.EApp(buildExpr(fn), builtArgs);
+											if (en.pack.length > 0 && en.pack[0] == "ocaml")
+												return (builtArgs.length > 1) ? OcamlExpr.EApp(buildExpr(fn),
+													[OcamlExpr.ETuple(builtArgs)]) : OcamlExpr.EApp(buildExpr(fn), builtArgs);
+											if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
+												return callPlanInvariant("enum construction has no active function plan", e.pos);
+											OcamlEnumConstruction.build({
+												plan: currentEnumIdentityPlan,
+												binding: currentFunctionPlanBinding,
+												expression: e,
+												constructor: buildExpr(fn),
+												arguments: builtArgs,
+												freshTmp: freshTmp
+											});
 										}
 									case _:
 										final isDynamicCall = switch (followNoAbstracts(unwrap(fn).t)) {
@@ -5472,7 +5803,7 @@ class OcamlBuilder {
 											final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
 											if (expectsNoArgs)
 												builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-											OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+											buildFunctionValueCall(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 										}
 								}
 						}
@@ -5998,12 +6329,15 @@ class OcamlBuilder {
 		if (OcamlStaticStringPlanner.semanticTypeId(inner.t) != null)
 			return buildStaticStringConversion(inner, buildExpr(inner), sourceKind);
 
+		// Int and haxe.Int32 share the integer carrier. Build the original
+		// expression once so conversion preserves its value and side effects.
+		if (isIntType(inner.t))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
+
 		return switch (e.t) {
 			case TAbstract(aRef, params):
 				final a = aRef.get();
 				switch (a.name) {
-					case "Int":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
 					case "Float":
 						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(inner)]);
 					case "Bool":
@@ -7030,6 +7364,35 @@ class OcamlBuilder {
 			case OpUShr:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [toIntExpr(e1), toIntExpr(e2)]);
 			case OpEq:
+				final callbackComparison = buildCallableComparison(source, e1, e2, false);
+				if (callbackComparison != null)
+					return callbackComparison;
+				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
+					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("map comparison has no active function plan", source.pos);
+					return OcamlMapEqualityBuilder.build({
+						plan: currentMapIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
+				if (OcamlEnumIdentityPlanner.selection(e1, e2) != null) {
+					if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("enum comparison has no active function plan", source.pos);
+					return OcamlEnumEqualityBuilder.build({
+						context: ctx,
+						plan: currentEnumIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						left: e1,
+						right: e2,
+						negate: false,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
 				// Null checks must use physical equality (==) so we don't accidentally invoke
 				// specialized structural equality (notably for strings).
 				if (isNullExpr(e1) || isNullExpr(e2)) {
@@ -7092,6 +7455,35 @@ class OcamlBuilder {
 					}
 				}
 			case OpNotEq:
+				final callbackComparison = buildCallableComparison(source, e1, e2, true);
+				if (callbackComparison != null)
+					return callbackComparison;
+				if (OcamlMapIdentityPlanner.selection(e1.t, e2.t) != null) {
+					if (currentMapIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("map comparison has no active function plan", source.pos);
+					return OcamlMapEqualityBuilder.build({
+						plan: currentMapIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
+				if (OcamlEnumIdentityPlanner.selection(e1, e2) != null) {
+					if (currentEnumIdentityPlan == null || currentFunctionPlanBinding == null)
+						return callPlanInvariant("enum comparison has no active function plan", source.pos);
+					return OcamlEnumEqualityBuilder.build({
+						context: ctx,
+						plan: currentEnumIdentityPlan,
+						binding: currentFunctionPlanBinding,
+						expression: source,
+						left: e1,
+						right: e2,
+						negate: true,
+						buildExpr: buildExpr,
+						freshTmp: freshTmp
+					});
+				}
 				if (isNullExpr(e1) || isNullExpr(e2)) {
 					OcamlExpr.EBinop(OcamlBinop.PhysNeq, buildExpr(e1), buildExpr(e2));
 				} else {
@@ -7251,6 +7643,13 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final nullableFunction = nullableCallableType(lhsType);
+		if (nullableFunction != null) {
+			// Present functions enter the same Obj.t storage used by absent callbacks.
+			// Delegate to the non-null signature first so Void adaptation remains intact.
+			return nullableCallableType(rhs.t) != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.repr"),
+				[coerceForAssignment(nullableFunction, rhs)]);
+		}
 		// A standard `Map` inline expansion can pass its hidden `IMap` local to a
 		// target-owned raw-map operation. The sealed alias proves this exact argument
 		// occurrence, so the ordinary class/interface cast must not re-box it.
@@ -7285,6 +7684,10 @@ class OcamlBuilder {
 		}
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
+		// Nullable Bool uses an ordinary bool behind Obj.t. Select it before
+		// the generic abstract branch, which uses tagged Dynamic Boolean storage.
+		if (lhsKind == "bool" && rhsKind == null && isBoolType(rhs.t))
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
 			case TDynamic(_):
 				true;
@@ -7695,9 +8098,6 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 				case "float" if (isIntType(rhs.t)):
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(rhs)])]);
-				case "bool" if (isBoolType(rhs.t)):
-					// Box bools to avoid int/bool ambiguity when carried as `Obj.t`.
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(rhs)]);
 				case _:
 					buildExpr(rhs);
 			}
@@ -8592,7 +8992,14 @@ class OcamlBuilder {
 
 		var i = index;
 		while (i < exprs.length) {
-			final e = exprs[i];
+			final original = exprs[i];
+			final unwrapped = unwrap(original);
+			// A wrapped return still terminates this block. Keep other wrappers
+			// intact because operation metadata can own assignment lowering.
+			final e = switch (unwrapped.expr) {
+				case TReturn(_): unwrapped;
+				case _: original;
+			};
 			final isLast = i == exprs.length - 1;
 
 			switch (e.expr) {
@@ -8786,6 +9193,31 @@ class OcamlBuilder {
 			nullable-primitive handling for functions outside that call matrix.
 		**/
 	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
+		final returns = currentCallableBoundary == null ? null : currentCallableBoundary.callbackReturns;
+		if (returns != null) {
+			final source = OcamlLoweredOrigin.sourceSpan(value.pos);
+			final matching = returns.filter(selected -> selected.source.file == source.file && selected.source.min == source.min
+				&& selected.source.max == source.max);
+			if (matching.length != 1 || currentFunctionPlanBinding == null)
+				return callPlanInvariant("callback return has no exact sealed source occurrence", value.pos);
+			final selected = matching[0];
+			reflaxe.ocaml.lowered.OcamlCallableReturnContract.requireBinding(selected, currentFunctionPlanBinding);
+			final operation = reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(selected);
+			switch (selected.input) {
+				case LocalView(reference, layout):
+					requireCallableValueSource(ExistingView(reference), layout, value);
+				case _:
+			}
+			final uses = reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueOccurrences(operation);
+			return reflaxe.ocaml.ast.OcamlCallableValueSyntax.build({
+				operation: operation,
+				value: buildExpr(value),
+				fresh: freshTmp,
+				profile: OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile),
+				requirements: ctx.runtimeRequirementsByIds(uses.map(use -> use.requirementId)),
+				finalRuntimeUses: ctx.finalRuntimeUses
+			});
+		}
 		final returnType = currentFunctionReturnType;
 		if (returnType == null || isVoidType(returnType))
 			return buildExpr(value);
@@ -8812,6 +9244,7 @@ class OcamlBuilder {
 		**/
 	public function buildStandaloneExpr(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
+		final previousCallPlan = currentCallPlan;
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
@@ -8833,6 +9266,8 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -8841,6 +9276,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
@@ -8861,11 +9297,14 @@ class OcamlBuilder {
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
+		currentEnumIdentityPlan = validatedPlan.enumIdentity;
+		currentMapIdentityPlan = validatedPlan.mapIdentity;
 		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
+		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -8887,6 +9326,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -8903,6 +9344,7 @@ class OcamlBuilder {
 		**/
 	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
+		final previousCallPlan = currentCallPlan;
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
@@ -8924,6 +9366,8 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -8932,6 +9376,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
@@ -8952,11 +9397,14 @@ class OcamlBuilder {
 		currentIntUnaryPlan = validatedPlan.intUnary;
 		currentStringFromCharCodePlan = validatedPlan.stringFromCharCode;
 		currentStringEqualityPlan = validatedPlan.stringEquality;
+		currentEnumIdentityPlan = validatedPlan.enumIdentity;
+		currentMapIdentityPlan = validatedPlan.mapIdentity;
 		currentStringMethodPlan = validatedPlan.stringMethods;
 		currentStringFieldPlan = validatedPlan.stringFields;
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
+		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -8978,6 +9426,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -9111,13 +9561,21 @@ class OcamlBuilder {
 		return out;
 	}
 
+	/**
+			Builds one planned function and preserves its represented static signature.
+			Parameter and result types come from the active checked callable boundary.
+			Static declarations can also retain known structural and nominal carriers.
+			A recursive module interface checks the actual function against that projection.
+			An unsupported declaration still has no signature and cannot enter a recursive group.
+		**/
 	public function buildFunctionFromArgsAndExpr(args:Array<{
 		id:Int,
 		name:String,
 		t:Type,
 		value:Null<TypedExpr>
 	}>,
-			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>):OcamlExpr {
+			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>,
+			preserveDeclarationSignature:Bool = false):OcamlBuiltFunction {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -9149,6 +9607,8 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousControlPlan = currentControlPlan;
@@ -9185,6 +9645,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = functionPlan.intUnary;
 		currentStringFromCharCodePlan = functionPlan.stringFromCharCode;
 		currentStringEqualityPlan = functionPlan.stringEquality;
+		currentEnumIdentityPlan = functionPlan.enumIdentity;
+		currentMapIdentityPlan = functionPlan.mapIdentity;
 		currentStringMethodPlan = functionPlan.stringMethods;
 		currentStringFieldPlan = functionPlan.stringFields;
 		currentControlPlan = functionPlan.controls;
@@ -9212,21 +9674,31 @@ class OcamlBuilder {
 		final completionResult:Null<OcamlCallValuePlan> = functionResultBoundary != null ? functionResultBoundary.result : (callableBoundary == null ? null : callableBoundary.result);
 		final previousCallableBoundary = currentCallableBoundary;
 		currentCallableBoundary = callableBoundary;
-		final params = if (callableBoundary == null) {
+		// Constructors have a separate checked allocator boundary. Its arguments
+		// describe these same parameters, while its instance result must not become
+		// the result of the effect-only Haxe constructor body.
+		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
+		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = !preserveDeclarationSignature ? null : callableBoundary != null
+			&& callableBoundary.proofId == reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.SIGNATURE_PROOF ? {
+				parameters: callableBoundary.arguments.map(value -> callableOutputType(value, bodyExpr.pos)),
+				result: callableBoundary.result == null ? OcamlTypeExpr.TIdent("unit") : callableOutputType(callableBoundary.result, bodyExpr.pos)
+			} : projectDeclarationSignature(args.map(argument -> argument.t), expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType,
+				ctx);
+		final params = if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
-			if (args.length != callableBoundary.arguments.length) {
+			if (args.length != parameterBoundary.arguments.length) {
 				return
-					callPlanInvariant('callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} planned parameters but ${args.length} typed parameters',
+					callPlanInvariant('parameter boundary "${parameterBoundary.id}" has ${parameterBoundary.arguments.length} planned parameters but ${args.length} typed parameters',
 					bodyExpr.pos);
 			}
 			for (index in 0...args.length)
-				requireCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index', bodyExpr.pos);
-			if (callableBoundary.result != null)
+				requireCallValue(parameterBoundary.arguments[index], index, 'parameter boundary "${parameterBoundary.id}" argument $index', bodyExpr.pos);
+			if (callableBoundary != null && callableBoundary.result != null)
 				requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...args.length)
-					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), callableOutputType(callableBoundary.arguments[index], bodyExpr.pos))
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), callableOutputType(parameterBoundary.arguments[index], bodyExpr.pos))
 			];
 		}
 
@@ -9351,6 +9823,24 @@ class OcamlBuilder {
 		body = ctx.finalRuntimeUses.distinctRepeatedRolesForOutput(body, repeatedRuntimeUseOutputRoles(functionPlan.binding.functionId, false),
 			ctx.activateStagedTypeRuntimeUse);
 
+		// Preserve the same represented types used above while their owning plan is active.
+		function signatureForResult(result:OcamlTypeExpr):Null<OcamlTypeExpr> {
+			return parameterBoundary == null
+				&& declarationSignature != null ? signatureFromTypes(declarationSignature.parameters, result) : signatureFromParameters(params, result);
+		}
+		final signature = if (!preserveDeclarationSignature
+			&& (callableBoundary == null || callableBoundary.kind != OcamlCallKind.DirectStaticHaxeMethod)) {
+			null;
+		} else if (completionResultKind == OcamlCallResultKind.EffectOnlyVoid) {
+			signatureForResult(OcamlTypeExpr.TIdent("unit"));
+		} else if (completionResult != null) {
+			signatureForResult(callableOutputType(completionResult, bodyExpr.pos));
+		} else if (declarationSignature != null) {
+			signatureForResult(declarationSignature.result);
+		} else {
+			null;
+		};
+
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -9376,6 +9866,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentControlPlan = previousControlPlan;
@@ -9391,7 +9883,7 @@ class OcamlBuilder {
 		if (profMatch)
 			log("reflaxe.ocaml: builder_fn_total dt_ms=" + Std.string(Std.int((t6 - t0) * 1000)));
 		#end
-		return OcamlExpr.EFun(params, body);
+		return {expression: OcamlExpr.EFun(params, body), signature: signature};
 	}
 
 	/**
@@ -9458,6 +9950,8 @@ class OcamlBuilder {
 		final previousIntUnaryPlan = currentIntUnaryPlan;
 		final previousStringFromCharCodePlan = currentStringFromCharCodePlan;
 		final previousStringEqualityPlan = currentStringEqualityPlan;
+		final previousEnumIdentityPlan = currentEnumIdentityPlan;
+		final previousMapIdentityPlan = currentMapIdentityPlan;
 		final previousStringMethodPlan = currentStringMethodPlan;
 		final previousStringFieldPlan = currentStringFieldPlan;
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
@@ -9479,6 +9973,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = nestedDisposition == null ? null : nestedDisposition.intUnary;
 		currentStringFromCharCodePlan = nestedDisposition == null ? null : nestedDisposition.stringFromCharCode;
 		currentStringEqualityPlan = nestedDisposition == null ? null : nestedDisposition.stringEquality;
+		currentEnumIdentityPlan = nestedDisposition == null ? null : nestedDisposition.enumIdentity;
+		currentMapIdentityPlan = nestedDisposition == null ? null : nestedDisposition.mapIdentity;
 		currentStringMethodPlan = nestedDisposition == null ? null : nestedDisposition.stringMethods;
 		currentStringFieldPlan = nestedDisposition == null ? null : nestedDisposition.stringFields;
 		if (nestedDisposition != null) {
@@ -9594,6 +10090,8 @@ class OcamlBuilder {
 		currentIntUnaryPlan = previousIntUnaryPlan;
 		currentStringFromCharCodePlan = previousStringFromCharCodePlan;
 		currentStringEqualityPlan = previousStringEqualityPlan;
+		currentEnumIdentityPlan = previousEnumIdentityPlan;
+		currentMapIdentityPlan = previousMapIdentityPlan;
 		currentStringMethodPlan = previousStringMethodPlan;
 		currentStringFieldPlan = previousStringFieldPlan;
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
@@ -9647,6 +10145,13 @@ class OcamlBuilder {
 			final e = exprs[i];
 			if (exprReadsLocalId(e, id))
 				return true;
+			// Block emission stops at a direct return. Its value can read this
+			// local, but later expressions cannot keep an earlier binding alive.
+			switch (e.expr) {
+				case TReturn(_):
+					return false;
+				case _:
+			}
 			if (exprWritesLocalId(e, id))
 				return false;
 		}
@@ -9714,6 +10219,10 @@ class OcamlBuilder {
 		return visit(e, false);
 	}
 
+	/**
+			Builds branches only for the selected output form. Building an expression
+			activates its runtime uses, so an omitted default must not be built speculatively.
+		**/
 	function buildSwitch(scrutinee:TypedExpr, cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>, edef:Null<TypedExpr>, switchType:Type):OcamlExpr {
 		final wantUnit = isVoidType(switchType);
 
@@ -9726,8 +10235,10 @@ class OcamlBuilder {
 			return wantUnit ? exprAsStatement(expr, source) : expr;
 		}
 
-		final defaultExpr:OcamlExpr = edef != null ? buildExpr(edef) : (wantUnit ? OcamlExpr.EConst(OcamlConst.CUnit) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"),
-			[OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+		function buildDefaultExpr():OcamlExpr {
+			return edef != null ? buildExpr(edef) : (wantUnit ? OcamlExpr.EConst(OcamlConst.CUnit) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"),
+				[OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+		}
 
 		// Enum pattern matching: Haxe's pattern matcher often lowers enum switches to:
 		// switch (TEnumIndex(e)) { case 0: ...; case 1: ... }
@@ -9738,9 +10249,14 @@ class OcamlBuilder {
 				switch (enumValueExpr.t) {
 					case TEnum(eRef, _):
 						final enumType = eRef.get();
+						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
+						final defaultArm:Null<OcamlMatchCase> = isExhaustive ? null : {
+							pat: OcamlPat.PAny,
+							guard: null,
+							expr: wrapCaseExpr(edef, buildDefaultExpr())
+						};
 						final scrut = buildExpr(enumValueExpr);
 						final arms:Array<OcamlMatchCase> = [];
-						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
 
 						for (c in cases) {
 							final patRes = buildEnumIndexCasePats(enumType, c.values, c.expr.pos);
@@ -9757,13 +10273,8 @@ class OcamlBuilder {
 							arms.push({pat: pat, guard: null, expr: expr});
 						}
 
-						if (!isExhaustive) {
-							arms.push({
-								pat: OcamlPat.PAny,
-								guard: null,
-								expr: wrapCaseExpr(edef, defaultExpr)
-							});
-						}
+						if (defaultArm != null)
+							arms.push(defaultArm);
 
 						return OcamlExpr.EMatch(scrut, arms);
 					case _:
@@ -9832,7 +10343,7 @@ class OcamlBuilder {
 			final scrutTmp = freshTmp("switch");
 			final scrutVar = OcamlExpr.EIdent(scrutTmp);
 			final scrutObj = toDynamicObjExpr(scrutinee.t, scrutVar);
-			var chain = edef == null ? defaultExpr : buildBranch(edef);
+			var chain = edef == null ? buildDefaultExpr() : buildBranch(edef);
 
 			for (ci in 0...cases.length) {
 				final c = cases[cases.length - 1 - ci];
@@ -9854,6 +10365,7 @@ class OcamlBuilder {
 
 			return OcamlExpr.ELet(scrutTmp, buildExpr(scrutinee), chain, false);
 		}
+		final defaultExpr = buildDefaultExpr();
 		for (c in cases) {
 			// NOTE: For now, only support enum-parameter binding for a single pattern.
 			final patRes = c.values.length == 1 ? buildSwitchValuePatAndEnumParams(c.values[0]) : null;

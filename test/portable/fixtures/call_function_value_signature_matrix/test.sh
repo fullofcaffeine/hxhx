@@ -10,6 +10,7 @@ fi
 
 node - "$main_source" "$report_file" <<'NODE'
 const fs = require('fs')
+const assert = require('node:assert/strict')
 const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
 
@@ -17,28 +18,33 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 86 || report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 94 || report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	fail('unexpected lowering report or call-model version')
 }
 
 const proofPrefix = 'typed-function-value-signature-matrix-v1:'
-const calls = (report.calls ?? []).filter(call =>
-	call.kind === 'typed-function-value' && call.proofId?.startsWith(proofPrefix))
+const calls = (report.calls ?? []).filter(call => call.kind === 'typed-function-value')
 if (calls.length !== 11) {
 	fail(`expected eleven signature-matrix calls, got ${calls.length}`)
 }
-const expectedProofCounts = new Map([
-	['typed-function-value-signature-matrix-v1:(Bool,Int)->String', 2],
-	['typed-function-value-signature-matrix-v1:()->Bool', 2],
-	['typed-function-value-signature-matrix-v1:(Null<Int>)->Null<Int>', 1],
-	['typed-function-value-signature-matrix-v1:(?Null<Int>)->Int', 2],
-	['typed-function-value-signature-matrix-v1:(?Null<Bool>)->Bool', 2],
-	['typed-function-value-signature-matrix-v1:(String)->Void', 2]
+// Signatures remain exact when local callbacks acquire a separate identity.
+// Derive the inventory from argument/result types, then check the proof and
+// storage evidence for each authored case below.
+const signature = call => `(${call.arguments.map(argument =>
+	`${argument.parameterOptional ? '?' : ''}${argument.outputSemanticTypeId}`).join(',')})->${
+	call.resultKind === 'effect-only-void' ? 'Void' : call.result?.outputSemanticTypeId}`
+const expectedSignatureCounts = new Map([
+	['(Bool,Int)->String', 2],
+	['()->Bool', 2],
+	['(Null<Int>)->Null<Int>', 1],
+	['(?Null<Int>)->Int', 2],
+	['(?Null<Bool>)->Bool', 2],
+	['(String)->Void', 2]
 ])
-for (const [proofId, expected] of expectedProofCounts) {
-	const actual = calls.filter(call => call.proofId === proofId).length
+for (const [type, expected] of expectedSignatureCounts) {
+	const actual = calls.filter(call => signature(call) === type).length
 	if (actual !== expected) {
-		fail(`expected ${expected} calls for ${proofId}, got ${actual}`)
+		fail(`expected ${expected} calls for ${type}, got ${actual}`)
 	}
 }
 
@@ -90,10 +96,51 @@ const callLines = source.split('\n').filter(line => line.includes('let __call_ca
 if (callLines.length !== 11) {
 	fail(`expected eleven syntax-level callee bindings, got ${callLines.length}`)
 }
-for (const line of callLines) {
-	const callee = line.match(/let (__call_callee_[0-9]+) =/)?.[1]
-	if (callee == null || !line.includes(` in ${callee} `)) {
-		fail(`planned call did not bind then invoke its computed callee: ${line}`)
+const viewCases = ['mixedLocalCase', 'zeroLocalCase', 'nullableIntCase', 'effectLocalCase']
+const rawCases = ['mixedFactoryCase', 'zeroFactoryCase', 'optionalIntOmittedCase', 'optionalIntFactorySuppliedCase',
+	'optionalBoolOmittedCase', 'optionalBoolFactorySuppliedCase', 'effectFactoryCase']
+const expectedSignatures = new Map([
+	['mixedLocalCase', '(Bool,Int)->String'], ['mixedFactoryCase', '(Bool,Int)->String'],
+	['zeroLocalCase', '()->Bool'], ['zeroFactoryCase', '()->Bool'],
+	['nullableIntCase', '(Null<Int>)->Null<Int>'],
+	['optionalIntOmittedCase', '(?Null<Int>)->Int'], ['optionalIntFactorySuppliedCase', '(?Null<Int>)->Int'],
+	['optionalBoolOmittedCase', '(?Null<Bool>)->Bool'], ['optionalBoolFactorySuppliedCase', '(?Null<Bool>)->Bool'],
+	['effectLocalCase', '(String)->Void'], ['effectFactoryCase', '(String)->Void']
+])
+for (const name of [...viewCases, ...rawCases]) {
+	const body = source.match(new RegExp(`\\nlet ${name} = ([\\s\\S]*?)(?=\\nlet |$)`))?.[1]
+	const callee = body?.match(/let (__call_callee_[0-9]+) =/)?.[1]
+	const view = viewCases.includes(name)
+	const invocation = view ? `Stdlib.fst ${callee}` : callee
+	if (callee == null || !body.includes(` in ${invocation} `))
+		fail(`${name} did not bind then invoke its ${view ? 'view' : 'raw'} computed callee`)
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${name}|`))
+	if (entries.length !== (view ? 1 : 0))
+		fail(`${name} has unexpected callback storage evidence`)
+	const selected = calls.filter(call => call.functionId.includes(`|function|${name}|`))
+	assert.equal(selected.length, 1, `${name} must retain exactly one computed invocation`)
+	const call = selected[0]
+	assert.equal(signature(call), expectedSignatures.get(name), `${name} lost its exact signature`)
+	assert.equal(call.proofId, view ? 'typed-callable-view-invocation-v1' : proofPrefix + signature(call))
+	if (view) {
+		const invocation = call.callbackInvocation
+		const storage = entries[0].decision
+		assert.equal(invocation?.input.kind, 'existing-view')
+		assert.deepEqual(invocation.input.reference, storage.output)
+		assert.deepEqual(invocation.layout, {
+			shape: storage.adapter.output,
+			revision: storage.adapter.outputRevision,
+			semanticTypeId: storage.output.semanticTypeId,
+			carrierTypeId: `callable-view<${storage.output.semanticTypeId}>`
+		})
+		assert.equal(storage.output.semanticTypeId, expectedSignatures.get(name))
+		for (const key of ['functionId', 'programRevision', 'bodyRevision', 'pipelineRevision'])
+			assert.equal(storage.binding[key], call[key], `${name} lost its containing body`)
+		assert.deepEqual(invocation.source, {
+			file: call.source.file, min: call.source.min, max: call.source.min + 'callback'.length
+		})
+	} else {
+		assert.equal(call.callbackInvocation, null, `${name} must retain its raw function carrier`)
 	}
 }
 const factoryLines = callLines.filter(line =>
@@ -130,9 +177,7 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (!report.summary?.valid) {
 	throw new Error('reflaxe.ocaml inspection rejected the sealed function-value matrix report')
 }
-const calls = report.lowering?.calls?.filter(call =>
-	call.kind === 'typed-function-value'
-	&& call.proofId?.startsWith('typed-function-value-signature-matrix-v1:')) ?? []
+const calls = report.lowering?.calls?.filter(call => call.kind === 'typed-function-value') ?? []
 if (calls.length !== 11) {
 	throw new Error(`reflaxe.ocaml inspection retained ${calls.length} matrix calls instead of eleven`)
 }

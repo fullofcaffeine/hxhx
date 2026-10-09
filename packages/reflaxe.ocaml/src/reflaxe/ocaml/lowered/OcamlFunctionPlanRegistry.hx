@@ -4,10 +4,14 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
 import haxe.ds.StringMap;
+import haxe.macro.Type.ClassField;
+import haxe.macro.Type.ClassType;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.lowered.OcamlNativeEnumResultAdmission.OcamlEnumResultCandidate;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
@@ -81,7 +85,11 @@ import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodeDecision;
 import reflaxe.ocaml.lowered.OcamlStringFromCharCodePlan.OcamlStringFromCharCodePlanner;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan;
+import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlStringEqualityPlan.OcamlStringEqualityPlanner;
+import reflaxe.ocaml.lowered.OcamlEnumIdentityPlan.OcamlEnumIdentityPlanner;
+import reflaxe.ocaml.lowered.OcamlMapIdentityPlan.OcamlMapIdentityPlanner;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan;
 import reflaxe.ocaml.lowered.OcamlStringMethodPlan.OcamlStringMethodPlanner;
 import reflaxe.ocaml.lowered.OcamlStringFieldPlan;
@@ -129,6 +137,8 @@ typedef OcamlSealedFunctionPlan = {
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
+	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 	final controls:OcamlControlPlan;
@@ -165,7 +175,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final occurrenceId:String;
 	final parentBinding:OcamlFunctionPlanBinding;
 	final binding:OcamlFunctionPlanBinding;
-	final callableBoundary:OcamlCallableBoundaryPlan;
+	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final ?functionResultBoundary:OcamlFunctionResultBoundaryPlan;
 	final controls:OcamlControlPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
@@ -180,6 +190,8 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
+	final ?enumIdentity:OcamlEnumIdentityPlan;
+	final ?mapIdentity:OcamlMapIdentityPlan;
 	final ?stringMethods:OcamlStringMethodPlan;
 	final ?stringFields:OcamlStringFieldPlan;
 	final imapInterfaces:OcamlIMapInterfacePlan;
@@ -223,6 +235,8 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 	final ?intUnary:OcamlIntUnaryPlan;
 	final ?stringFromCharCode:OcamlStringFromCharCodePlan;
 	final ?stringEquality:OcamlStringEqualityPlan;
+	final ?enumIdentity:OcamlEnumIdentityPlan;
+	final ?mapIdentity:OcamlMapIdentityPlan;
 	final ?stringMethods:OcamlStringMethodPlan;
 	final ?stringFields:OcamlStringFieldPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
@@ -237,6 +251,7 @@ typedef OcamlNestedFunctionSyntaxDisposition = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final calls:OcamlCallPlan;
 	final controls:OcamlControlPlan;
 	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
@@ -257,6 +272,8 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
+	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 }
@@ -298,6 +315,8 @@ private typedef OcamlNestedFunctionRecord = {
 	final intUnary:OcamlIntUnaryPlan;
 	final stringFromCharCode:OcamlStringFromCharCodePlan;
 	final stringEquality:OcamlStringEqualityPlan;
+	final enumIdentity:OcamlEnumIdentityPlan;
+	final mapIdentity:OcamlMapIdentityPlan;
 	final stringMethods:OcamlStringMethodPlan;
 	final stringFields:OcamlStringFieldPlan;
 	final plan:Null<OcamlSealedNestedFunctionPlan>;
@@ -326,9 +345,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v113";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v33";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v16";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v119";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v37";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v21";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -345,6 +364,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	var currentProgramRevision:Null<String> = null;
+	final nativeEnumResults = new OcamlNativeEnumResultAdmission();
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
 	final originsByFunction:StringMap<Array<String>> = new StringMap();
 	final sealedFunctions:StringMap<OcamlSealedFunctionRecord> = new StringMap();
@@ -366,6 +386,7 @@ class OcamlFunctionPlanRegistry {
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 	final standaloneStructuralFieldsById:StringMap<OcamlStructuralFieldDecision> = new StringMap();
 	final standaloneReflectCompareById:StringMap<OcamlReflectCompareDecision> = new StringMap();
+	final standaloneCallsByRoot:StringMap<OcamlCallPlan> = new StringMap();
 	final standaloneStdIsOfTypeById:StringMap<OcamlStdIsOfTypeDecision> = new StringMap();
 	final standaloneIntUnaryById:StringMap<OcamlIntUnaryDecision> = new StringMap();
 	final standaloneStringFromCharCodeById:StringMap<OcamlStringFromCharCodeDecision> = new StringMap();
@@ -378,6 +399,7 @@ class OcamlFunctionPlanRegistry {
 		if (programRevision.length == 0)
 			throw "reflaxe.ocaml [ocaml-lowering:missing-program-revision]: the target-selected program revision is empty";
 		currentProgramRevision = programRevision;
+		nativeEnumResults.beginProgram(programRevision);
 		plansByOrigin.clear();
 		originsByFunction.clear();
 		sealedFunctions.clear();
@@ -396,10 +418,31 @@ class OcamlFunctionPlanRegistry {
 		standaloneAnonymousOperationsById.clear();
 		standaloneStructuralFieldsById.clear();
 		standaloneReflectCompareById.clear();
+		standaloneCallsByRoot.clear();
 		standaloneStdIsOfTypeById.clear();
 		standaloneIntUnaryById.clear();
 		standaloneStringFromCharCodeById.clear();
 		standaloneControlsByFunctionId.clear();
+	}
+
+	/** Records one ordinary method for request-wide native enum result analysis. */
+	public function observeNativeEnumResult(owner:ClassType, field:ClassField, isStatic:Bool, context:CompilationContext):Void {
+		nativeEnumResults.add(owner, field, isStatic, context);
+	}
+
+	/** Closes native enum result dependencies before callable declarations are selected. */
+	public function finishNativeEnumResults():Void {
+		nativeEnumResults.finish();
+	}
+
+	/** Returns the closed producer evidence for one callable declaration. */
+	public function nativeEnumResultCandidate(calleeId:String):Null<OcamlEnumResultCandidate> {
+		return nativeEnumResults.candidate(calleeId);
+	}
+
+	/** Rechecks one final preprocessed body before its enum result can be published. */
+	public function requireFinalNativeEnumResult(data:ClassFuncData, context:CompilationContext):Void {
+		nativeEnumResults.requireFinal(data, context);
 	}
 
 	/**
@@ -441,7 +484,8 @@ class OcamlFunctionPlanRegistry {
 			dynamicEquality:OcamlDynamicEqualityPlan, controls:OcamlControlPlan, reason:String, ?dynamicString:OcamlDynamicStringPlan,
 			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
-			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
+			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan,
+			?mapIdentity:OcamlMapIdentityPlan):Void {
 		if (reason.length == 0)
 			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
 		requireNestedFunctionIdentity(expression, identity, localIdentities);
@@ -465,7 +509,11 @@ class OcamlFunctionPlanRegistry {
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		sealedStringFromCharCode.requirePlanBinding(identity.binding);
 		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
+		final sealedEnumIdentity = enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = mapIdentity ?? new OcamlMapIdentityPlan([]);
 		sealedStringEquality.requirePlanBinding(identity.binding);
+		sealedEnumIdentity.requirePlanBinding(identity.binding);
+		sealedMapIdentity.requirePlanBinding(identity.binding);
 		final sealedStringMethods = stringMethods ?? new OcamlStringMethodPlan([]);
 		sealedStringMethods.requirePlanBinding(identity.binding);
 		final sealedStringFields = stringFields ?? new OcamlStringFieldPlan([]);
@@ -487,6 +535,8 @@ class OcamlFunctionPlanRegistry {
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
+			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			plan: null,
@@ -509,19 +559,28 @@ class OcamlFunctionPlanRegistry {
 			binding: plan.binding
 		};
 		requireNestedFunctionIdentity(expression, identity, localIdentities);
-		OcamlCallPlan.requireCallableBoundary(plan.callableBoundary);
-		requireBoundaryBinding(plan.callableBoundary, plan.binding);
-		final functionResultBoundary = plan.functionResultBoundary ?? OcamlFunctionResultBoundary.fromCallable(plan.callableBoundary);
-		OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, plan.callableBoundary);
-		final callableResult = plan.callableBoundary.result;
+		final callable = plan.callableBoundary;
+		final functionResultBoundary = plan.functionResultBoundary ?? (callable == null ? null : OcamlFunctionResultBoundary.fromCallable(callable));
+		if (functionResultBoundary == null)
+			throw 'reflaxe.ocaml [ocaml-nested-function:missing-result-boundary]: nested function "${plan.binding.functionId}" has no result proof';
+		OcamlFunctionResultBoundary.require(functionResultBoundary);
+		requireFunctionResultBinding(functionResultBoundary, plan.binding);
+		if (callable != null) {
+			OcamlCallPlan.requireCallableBoundary(callable);
+			requireBoundaryBinding(callable, plan.binding);
+			OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, callable);
+		} else if (functionResultBoundary.source != OcamlFunctionResultBoundarySource.NestedNullableEnumResult) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-result-boundary]: nested function "${plan.binding.functionId}" has no independent result proof';
+		}
+		final callableResult = functionResultBoundary.result;
 		final representedResult = callableResult != null
 			&& (callableResult.conversion == OcamlCallCarrierConversion.Identity
 				&& callableResult.inputSemanticTypeId == callableResult.outputSemanticTypeId
 				&& callableResult.inputCarrierTypeId == callableResult.outputCarrierTypeId
 				&& callableResult.inputRepresentationId == callableResult.outputRepresentationId
 				|| OcamlCallPlan.isExactEnumToNullableResult(callableResult));
-		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
-			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
+		if ((callable != null && callable.kind != OcamlCallKind.TypedFunctionValue)
+			|| functionResultBoundary.resultKind != OcamlCallResultKind.Value
 			|| !representedResult) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
@@ -545,13 +604,17 @@ class OcamlFunctionPlanRegistry {
 		final sealedStringFromCharCode = plan.stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		sealedStringFromCharCode.requirePlanBinding(plan.binding);
 		final sealedStringEquality = plan.stringEquality ?? new OcamlStringEqualityPlan([]);
+		final sealedEnumIdentity = plan.enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = plan.mapIdentity ?? new OcamlMapIdentityPlan([]);
 		sealedStringEquality.requirePlanBinding(plan.binding);
+		sealedEnumIdentity.requirePlanBinding(plan.binding);
+		sealedMapIdentity.requirePlanBinding(plan.binding);
 		final sealedStringMethods = plan.stringMethods ?? new OcamlStringMethodPlan([]);
 		sealedStringMethods.requirePlanBinding(plan.binding);
 		final sealedStringFields = plan.stringFields ?? new OcamlStringFieldPlan([]);
 		sealedStringFields.requirePlanBinding(plan.binding);
 		plan.imapInterfaces.requirePlanBinding(plan.binding);
-		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
+		if (!plan.controls.returnFamilyAdmitted || (callable != null && !plan.controls.hasReturnTransfers()))
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
 		// The planner omits unsupported transfers and catch chains. Validate both
 		// the family flags and observed catch count so a surviving return cannot
@@ -562,19 +625,20 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted catch occurrence';
 		final returnBoundary = plan.controls.returnBoundaryDecision();
 		final returnPayload = returnBoundary == null ? null : returnBoundary.payload;
-		if (returnBoundary == null
-			|| returnPayload == null
-			|| callableResult == null
-			|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
-			|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
-			|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId) {
+		if (plan.controls.hasReturnTransfers()
+			&& (returnBoundary == null
+				|| returnPayload == null
+				|| callableResult == null
+				|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
+				|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
+				|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId)) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:return-boundary-mismatch]: nested function "${plan.binding.functionId}" has callable and control plans for different result carriers: control=${returnPayload == null ? "missing" : returnPayload.outputSemanticTypeId + "/" + returnPayload.outputCarrierTypeId + "/" + returnPayload.outputRepresentationId}, callable=${callableResult == null ? "missing" : callableResult.outputSemanticTypeId + "/" + callableResult.outputCarrierTypeId + "/" + callableResult.outputRepresentationId}';
 		}
 		final stored:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: plan.occurrenceId,
 			parentBinding: copyBinding(plan.parentBinding),
 			binding: copyBinding(plan.binding),
-			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
+			callableBoundary: callable == null ? null : OcamlCallPlan.copyBoundary(callable),
 			functionResultBoundary: OcamlFunctionResultBoundary.copy(functionResultBoundary),
 			controls: plan.controls,
 			arrayLiteralProducers: plan.arrayLiteralProducers,
@@ -589,6 +653,8 @@ class OcamlFunctionPlanRegistry {
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
+			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			imapInterfaces: plan.imapInterfaces
@@ -610,6 +676,8 @@ class OcamlFunctionPlanRegistry {
 			intUnary: sealedIntUnary,
 			stringFromCharCode: sealedStringFromCharCode,
 			stringEquality: sealedStringEquality,
+			enumIdentity: sealedEnumIdentity,
+			mapIdentity: sealedMapIdentity,
 			stringMethods: sealedStringMethods,
 			stringFields: sealedStringFields,
 			plan: stored,
@@ -694,6 +762,26 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/**
+		Returns the represented result sealed for one exact nested function literal.
+
+		Call planning uses this request-local lookup only after every nested function
+		in the ordinary root has a final represented or deferred disposition. A
+		deferred literal returns no producer evidence, even when another function in
+		the program registered the same enum carrier.
+	**/
+	public function representedNestedFunctionResultFor(expression:TypedExpr):Null<OcamlCallValuePlan> {
+		final record = nestedFunctionsByExpression.get(expression);
+		if (record == null
+			|| record.plan == null
+			|| record.plan.functionResultBoundary == null
+			|| record.plan.functionResultBoundary.result == null)
+			return null;
+		if (currentProgramRevision == null || record.binding.programRevision != currentProgramRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-result-producer]: nested function "${record.binding.functionId}" belongs to another program';
+		return OcamlCallPlan.copyValue(record.plan.functionResultBoundary.result);
+	}
+
+	/**
 		Returns the parent identity and behavior choice for one exact function literal.
 
 		The caller supplies the ordinary-root binding that `functionSyntaxInputFor`
@@ -725,6 +813,8 @@ class OcamlFunctionPlanRegistry {
 			intUnary: record.intUnary,
 			stringFromCharCode: record.stringFromCharCode,
 			stringEquality: record.stringEquality,
+			enumIdentity: record.enumIdentity,
+			mapIdentity: record.mapIdentity,
 			stringMethods: record.stringMethods,
 			stringFields: record.stringFields,
 			plan: record.plan
@@ -817,7 +907,9 @@ class OcamlFunctionPlanRegistry {
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, expression);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]),
+		final calls = new OcamlCallPlanner(representations, binding, null, localIdentities, null, callableDeclaration).plan(expression);
+		requireStandaloneCalls(calls, binding);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls,
 			new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap()), anonymousStructures, representations,
 			localIdentities).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
@@ -836,9 +928,13 @@ class OcamlFunctionPlanRegistry {
 		final intUnary = new OcamlIntUnaryPlanner(binding).plan(expression);
 		final stringFromCharCode = new OcamlStringFromCharCodePlanner(binding).plan(expression);
 		final stringEquality = new OcamlStringEqualityPlanner(binding).plan(expression);
+		final enumIdentity = new OcamlEnumIdentityPlanner(binding).plan(expression);
+		final mapIdentity = new OcamlMapIdentityPlanner(binding).plan(expression);
 		final stringMethods = new OcamlStringMethodPlanner(binding).plan(expression);
 		final stringFields = new OcamlStringFieldPlanner(binding).plan(expression);
-		final controls = new OcamlControlPlanner(representations, new OcamlLocalRepresentationPlan([]), binding, localIdentities).plan(expression, null);
+		final localStorage = OcamlLocalStoragePlanner.planExpression(expression, localIdentities);
+		final controls = new OcamlControlPlanner(representations, new OcamlLocalRepresentationPlan([]), binding, localIdentities, null,
+			localStorage).plan(expression, null);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
@@ -864,6 +960,8 @@ class OcamlFunctionPlanRegistry {
 		intUnary.requirePlanBinding(binding);
 		stringFromCharCode.requirePlanBinding(binding);
 		stringEquality.requirePlanBinding(binding);
+		enumIdentity.requirePlanBinding(binding);
+		mapIdentity.requirePlanBinding(binding);
 		stringMethods.requirePlanBinding(binding);
 		stringFields.requirePlanBinding(binding);
 		controls.requirePlanBinding(binding);
@@ -875,8 +973,10 @@ class OcamlFunctionPlanRegistry {
 		recordStandaloneIntUnary(intUnary);
 		recordStandaloneStringFromCharCode(stringFromCharCode);
 		standaloneControlsByFunctionId.set(binding.functionId, controls);
+		standaloneCallsByRoot.set(binding.functionId, calls);
 		return {
 			binding: binding,
+			calls: calls,
 			controls: controls,
 			containerElements: containerElements,
 			anonymousStructures: anonymousStructures,
@@ -897,6 +997,8 @@ class OcamlFunctionPlanRegistry {
 			intUnary: intUnary,
 			stringFromCharCode: stringFromCharCode,
 			stringEquality: stringEquality,
+			enumIdentity: enumIdentity,
+			mapIdentity: mapIdentity,
 			stringMethods: stringMethods,
 			stringFields: stringFields
 		};
@@ -1010,6 +1112,10 @@ class OcamlFunctionPlanRegistry {
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		final sealedCalls = standaloneCallsByRoot.get(expected.functionId);
+		if (plan.calls == null || sealedCalls == null || plan.calls.revision != sealedCalls.revision)
+			throw 'reflaxe.ocaml [ocaml-call:missing-standalone-inventory]: standalone root "${expected.functionId}" lost its sealed call inventory';
+		requireStandaloneCalls(plan.calls, expected);
 		plan.containerElements.requirePlanBinding(expected);
 		OcamlContainerElementPlanner.requireCompleteness(expression, expected, plan.containerElements);
 		plan.anonymousStructures.requirePlanBinding(expected);
@@ -1035,6 +1141,8 @@ class OcamlFunctionPlanRegistry {
 		plan.intUnary.requirePlanBinding(expected);
 		plan.stringFromCharCode.requirePlanBinding(expected);
 		plan.stringEquality.requirePlanBinding(expected);
+		plan.enumIdentity.requirePlanBinding(expected);
+		plan.mapIdentity.requirePlanBinding(expected);
 		plan.stringMethods.requirePlanBinding(expected);
 		plan.stringFields.requirePlanBinding(expected);
 		plan.controls.requirePlanBinding(expected);
@@ -1193,7 +1301,8 @@ class OcamlFunctionPlanRegistry {
 			?arrayIterators:OcamlArrayIteratorPlan, ?dynamicEquality:OcamlDynamicEqualityPlan, ?dynamicString:OcamlDynamicStringPlan,
 			?staticString:OcamlStaticStringPlan, ?reflectRuntimeUses:OcamlReflectRuntimeUsePlan, ?stdIsOfType:OcamlStdIsOfTypePlan, ?typeOf:OcamlTypeOfPlan,
 			?intUnary:OcamlIntUnaryPlan, ?stringFromCharCode:OcamlStringFromCharCodePlan, ?stringEquality:OcamlStringEqualityPlan,
-			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan):Void {
+			?stringMethods:OcamlStringMethodPlan, ?stringFields:OcamlStringFieldPlan, ?enumIdentity:OcamlEnumIdentityPlan,
+			?mapIdentity:OcamlMapIdentityPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -1220,6 +1329,8 @@ class OcamlFunctionPlanRegistry {
 		final sealedIntUnary = intUnary ?? new OcamlIntUnaryPlan([]);
 		final sealedStringFromCharCode = stringFromCharCode ?? new OcamlStringFromCharCodePlan([]);
 		final sealedStringEquality = stringEquality ?? new OcamlStringEqualityPlan([]);
+		final sealedEnumIdentity = enumIdentity ?? new OcamlEnumIdentityPlan([]);
+		final sealedMapIdentity = mapIdentity ?? new OcamlMapIdentityPlan([]);
 		final sealedStringMethods = stringMethods ?? new OcamlStringMethodPlan([]);
 		final sealedStringFields = stringFields ?? new OcamlStringFieldPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
@@ -1243,6 +1354,8 @@ class OcamlFunctionPlanRegistry {
 		sealedIntUnary.requirePlanBinding(binding);
 		sealedStringFromCharCode.requirePlanBinding(binding);
 		sealedStringEquality.requirePlanBinding(binding);
+		sealedEnumIdentity.requirePlanBinding(binding);
+		sealedMapIdentity.requirePlanBinding(binding);
 		sealedStringMethods.requirePlanBinding(binding);
 		sealedStringFields.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
@@ -1294,6 +1407,8 @@ class OcamlFunctionPlanRegistry {
 				intUnary: sealedIntUnary,
 				stringFromCharCode: sealedStringFromCharCode,
 				stringEquality: sealedStringEquality,
+				enumIdentity: sealedEnumIdentity,
+				mapIdentity: sealedMapIdentity,
 				stringMethods: sealedStringMethods,
 				stringFields: sealedStringFields,
 				controls: controls,
@@ -1346,6 +1461,12 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function hasCallableDeclaration(calleeId:String):Bool {
 		return declaredCallableByCallee.exists(calleeId);
+	}
+
+	/** Returns a detached copy of the calling convention published for this request. */
+	public function callableDeclaration(calleeId:String):Null<OcamlCallableDeclarationPlan> {
+		final declaration = declaredCallableByCallee.get(calleeId);
+		return declaration == null ? null : OcamlCallPlan.copyDeclaration(declaration);
 	}
 
 	/** Returns whether one declaration needs the sealed optional-call hard cut. */
@@ -1440,6 +1561,9 @@ class OcamlFunctionPlanRegistry {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
 		final calls:Array<OcamlCallDecision> = [];
+		for (plan in standaloneCallsByRoot)
+			for (call in plan.decisions())
+				calls.push(call);
 		for (functionId in functionIds) {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed != null) {
@@ -1750,7 +1874,8 @@ class OcamlFunctionPlanRegistry {
 				boundaries.push(OcamlFunctionResultBoundary.copy(record.plan.functionResultBoundary));
 		}
 		for (record in nestedFunctionsByOccurrence) {
-			if (record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumCallable)
+			if (record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumCallable
+				|| record.functionResultBoundary.source == OcamlFunctionResultBoundarySource.NestedNullableEnumResult)
 				boundaries.push(OcamlFunctionResultBoundary.copy(record.functionResultBoundary));
 		}
 		boundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -1809,7 +1934,58 @@ class OcamlFunctionPlanRegistry {
 		return [for (originId in originIds) cast plansByOrigin.get(originId)];
 	}
 
-	/** Returns every sealed local conversion in deterministic identity order. */
+	/** Publish callback local selections independently of their conversions, then validate complete coverage. */
+	public function callableViewInventory(representations:OcamlRepresentationRegistry):reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport {
+		final required:Array<reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewRequiredLocal> = [];
+		final parameters:Array<reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewParameterReport> = [];
+		final conversions:Array<reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision> = [];
+		final comparisons:Array<reflaxe.ocaml.lowered.OcamlCallableComparison.OcamlCallableComparisonDecision> = [];
+		for (sealed in sealedFunctions) {
+			final binding = sealed.plan.binding;
+			final boundary = sealed.plan.callableBoundary;
+			for (reference in sealed.plan.localRepresentations.references()) {
+				if (representations.require(reference.representationId, binding.programRevision).boxingPolicy != CallableIdentityView)
+					continue;
+				required.push({binding: binding, reference: reference});
+				final identity = Lambda.find(sealed.localIdentities.identities(), identity -> identity.id == reference.localId);
+				if (identity == null)
+					throw "Selected callback storage lost its actual lexical identity.";
+				if (identity.kind == "function-argument") {
+					if (boundary == null || identity.ownerId != binding.functionId)
+						throw "Callback parameter lost its actual callable owner.";
+					final slots = [
+						for (index in 0...boundary.arguments.length)
+							if (identity.path == "argument/" + index) index
+					];
+					if (slots.length != 1)
+						throw "Callback parameter lost its actual argument position.";
+					final index = slots[0];
+					final layout = boundary.arguments[index].callableView;
+					if (layout == null)
+						throw "Callback parameter has no declared view layout.";
+					parameters.push({
+						binding: binding,
+						reference: reference,
+						boundaryId: boundary.id,
+						calleeId: boundary.calleeId,
+						index: index,
+						layout: reflaxe.ocaml.reports.OcamlCallableViewReport.layoutToReport(layout)
+					});
+				}
+			}
+			for (conversion in sealed.plan.localRepresentations.callableViewConversions()) {
+				reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry(conversion, representations, binding);
+				conversions.push(conversion);
+			}
+			for (comparison in sealed.plan.localRepresentations.callableComparisons()) {
+				reflaxe.ocaml.lowered.OcamlCallableComparison.requireBinding(comparison, binding);
+				comparisons.push(comparison);
+			}
+		}
+		return reflaxe.ocaml.reports.OcamlCallableViewInventory.build(required, conversions, parameters, comparisons);
+	}
+
+	/** Returns every sealed primitive local conversion in deterministic identity order. */
 	public function localConversions():Array<OcamlLocalConversionDecision> {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
@@ -1892,6 +2068,16 @@ class OcamlFunctionPlanRegistry {
 		}
 		operations.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return operations;
+	}
+
+	/** Initializer calls use the same declaration and revision checks as function calls. */
+	function requireStandaloneCalls(calls:OcamlCallPlan, binding:OcamlFunctionPlanBinding):Void {
+		for (call in calls.decisions()) {
+			OcamlCallPlan.requireCall(call);
+			requireCallBinding(call, binding);
+			if (requiresDeclaredCallable(call))
+				requireCallableDeclaration(call);
+		}
 	}
 
 	static function requireCallBinding(call:OcamlCallDecision, binding:OcamlFunctionPlanBinding):Void {

@@ -1,10 +1,13 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
 /** Where one Haxe value is stored or passed inside the OCaml target. */
 enum abstract OcamlRepresentationDomain(String) from String to String {
 	/** An ordinary value used inside a function. */
 	final InternalValue = "internal-value";
+
+	/** An opaque class reference passed through a proved generic call boundary. */
+	final GenericCallValue = "generic-call-value";
 
 	/** A value stored in a mutable local cell. */
 	final MutableLocalStorage = "mutable-local-storage";
@@ -108,6 +111,9 @@ enum abstract OcamlRepresentationValueMutationPolicy(String) from String to Stri
 
 /** Whether the Haxe value needs an additional target box or wrapper. */
 enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
+	/** A typed invocation and its originating function identity travel together. */
+	final CallableIdentityView = "callable-identity-view";
+
 	/** The carrier stores the value directly without a wrapper or Dynamic box. */
 	final DirectUnboxed = "direct-unboxed";
 
@@ -125,6 +131,13 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		The carrier does not imply source-visible reference identity or aliasing.
 	**/
 	final DirectNominalValueCarrier = "direct-nominal-value-carrier";
+
+	/**
+		An ordinary non-null Haxe enum uses its declared OCaml variant directly.
+		This family preserves constructor identity without a Dynamic or null box.
+		Every admitted value still requires an independent producer proof.
+	**/
+	final DirectNativeEnumCarrier = "direct-native-enum-carrier";
 
 	/**
 		Primitive values are boxed only when they enter this nullable carrier.
@@ -154,6 +167,13 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		null-to-record crossing is not implied by the carrier decision.
 	**/
 	final NullableNominalRecordCarrier = "nullable-nominal-record-carrier";
+
+	/**
+		An ordinary class record crosses a generic call without copying its fields.
+		The declaration identity fixes its named carrier. This family grants no
+		direct-field, local-storage, inheritance, or container-layout optimization.
+	**/
+	final NullableNominalCallCarrier = "nullable-nominal-call-carrier";
 
 	/**
 		Haxe Dynamic stores one already-produced target value in `Obj.t`.
@@ -210,13 +230,13 @@ typedef OcamlRepresentationSelection = {
 	final proof:OcamlRepresentationProof;
 	final profileEligibility:Array<String>;
 
-	/** Canonical OCaml module that owns an admitted nominal record carrier. */
+	/** Canonical OCaml module that owns an admitted record or variant carrier. */
 	final ?nominalTargetModuleName:String;
 
-	/** Unqualified record type inside the canonical target module. */
+	/** Unqualified nominal type inside the canonical target module. */
 	final ?nominalTargetTypeName:String;
 
-	/** Revision of the exact field layout represented by the nominal carrier. */
+	/** Revision of the selected record layout or native variant identity. */
 	final ?nominalLayoutRevision:String;
 
 	/** Program-owned array shape used by this representation, when it is an array. */

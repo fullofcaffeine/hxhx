@@ -19,7 +19,7 @@ let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte ((Obj.m
 )
 
 let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> (try (
-  ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if len <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try ignore (while !i < len do ignore ((
       ignore (let __bytes_access_receiver_6 = buf in let __bytes_access_arg_0_7 = HxInt.add pos (!i) in let __bytes_access_arg_1_8 = (Obj.magic self : t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_6 __bytes_access_arg_0_7 __bytes_access_arg_1_8);
@@ -28,10 +28,10 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
         __old_9
       )
     )) done) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_2 -> raise (HxRuntime.Hx_return __ret_2)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_2 -> Stdlib.raise (HxRuntime.Hx_return __ret_2)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_3, __exn_tags_4) -> if HxRuntime.tags_has __exn_tags_4 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_3 : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore (if !i = 0 then HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"] else ())
@@ -39,7 +39,7 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
       | __exn_5 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_5) : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore (if !i = 0 then HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"] else ())
-      ) else raise (__exn_5));
+      ) else Stdlib.raise (__exn_5));
     !i
   )
 ) with

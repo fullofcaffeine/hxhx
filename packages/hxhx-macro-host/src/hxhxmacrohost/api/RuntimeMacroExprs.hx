@@ -23,7 +23,7 @@ import haxe.macro.Expr;
 	  - identifiers / bare enum-like values / `this` / `super`
 	  - ordinary and null-safe field access and call chains
 	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
-	  - `while` syntax passed to a macro, including its structured condition and block
+	  - `while` and `do/while` syntax, including the original loop kind and structured body
 	  - expression-position `break` and `continue` control syntax
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
@@ -47,7 +47,7 @@ class RuntimeMacroExprs {
 	public static function parse(expr:String, pos:Position):Expr {
 		if (expr == null)
 			throw "runtime macro parse: null source";
-		final parsed = HxParser.parseExprText(expr);
+		final parsed = HxParser.parseCompleteExprText(expr);
 		return convert(parsed, pos == null ? defaultPos() : pos);
 	}
 
@@ -216,9 +216,12 @@ class RuntimeMacroExprs {
 		final calleeText = StringTools.trim(expr.substr(0, open));
 		if (calleeText.length == 0)
 			return null;
+		// A trailing parenthesized condition is not a call. Let the source parser
+		// prove that the preceding text is complete before splitting inline arguments.
+		final callee = try HxParser.parseCompleteExprText(calleeText) catch (_:HxParseError) return null;
 		final argTexts = splitTopLevelArgs(expr.substr(open + 1, close - open - 2));
 		return {
-			expr: ECall(parse(calleeText, pos), [for (arg in argTexts) parseInlineString(arg, pos)]),
+			expr: ECall(convert(callee, pos), [for (arg in argTexts) parseInlineString(arg, pos)]),
 			pos: pos
 		};
 	}
@@ -596,6 +599,14 @@ class RuntimeMacroExprs {
 
 	static function convertDef(expr:HxExpr, pos:Position):ExprDef {
 		return switch (expr) {
+			case EPrivateAccess(_, _) | EParenthesized(_, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) |
+				ESourceFor(_, _, _, _) | HxExpr.EThrow(_, _) | HxExpr.EWhile(_, _, _, _, _):
+				final definition = HxSourceMacroSyntax.definition(expr, child -> convert(child, pos), parseOptionalComplexType, parseMetadataEntries);
+				if (definition == null)
+					throw "source macro mapper did not handle authored control syntax";
+				definition;
+			case EDiscardThen(_, _) | ELoweredControl(_, _, _, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
 			case ENull:
 				EConst(CIdent("null"));
 			case EBool(value):
@@ -663,7 +674,9 @@ class RuntimeMacroExprs {
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				EUnop(macroUnop(op), fixity == HxUnaryFixity.Postfix, convert(inner, pos));
 			case EBinop(op, left, right):
-				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
+				EBinop(HxMacroBinaryOperator.parse(op), convert(left, pos), convert(right, pos));
+			case ERange(left, right):
+				EBinop(OpInterval, convert(left, pos), convert(right, pos));
 			case EReturn(value):
 				EReturn(value == null ? null : convert(value, pos));
 			case EVars(declarations):
@@ -681,21 +694,11 @@ class RuntimeMacroExprs {
 				]);
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw "runtime macro parse: variable declaration must be nested inside EVars";
-			case EWhile(condition, body, bodyIsBlock, _position):
-				final usePos = pos == null ? defaultPos() : pos;
-				final convertedBody:Expr = if (bodyIsBlock) {
-					{expr: EBlock([for (entry in body) convert(entry, usePos)]), pos: usePos};
-				} else {
-					if (body.length != 1)
-						throw "runtime macro parse: non-block while body must contain exactly one expression";
-					convert(body[0], usePos);
-				}
-				EWhile(convert(condition, usePos), convertedBody, true);
 			case EBreak(_):
 				EBreak;
 			case EContinue(_):
 				EContinue;
-			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
+			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESourceTry(_, _, _) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) |
 				EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";
 		};
@@ -758,36 +761,70 @@ class RuntimeMacroExprs {
 		};
 	}
 
-	static function parseBinop(op:String):Binop {
-		if (op != null && op.length > 1 && StringTools.endsWith(op, "="))
-			return OpAssignOp(parseBinop(op.substr(0, op.length - 1)));
-		return switch (op) {
-			case "+": OpAdd;
-			case "-": OpSub;
-			case "*": OpMult;
-			case "/": OpDiv;
-			case "%": OpMod;
-			case "=": OpAssign;
-			case "==": OpEq;
-			case "!=": OpNotEq;
-			case ">": OpGt;
-			case ">=": OpGte;
-			case "<": OpLt;
-			case "<=": OpLte;
-			case "&&": OpBoolAnd;
-			case "||": OpBoolOr;
-			case "&": OpAnd;
-			case "|": OpOr;
-			case "^": OpXor;
-			case "<<": OpShl;
-			case ">>": OpShr;
-			case ">>>": OpUShr;
-			case "in": OpIn;
-			case "...": OpInterval;
-			case "??": OpNullCoal;
-			case _:
-				throw "runtime macro parse: unsupported binary operator " + op;
+	/** Parses stored metadata through the expression parser without loading the runtime type model.
+		Entries retain their source order, duplicate names, and the existing synthetic macro positions. */
+	public static function parseMetadataEntries(metadataEntries:Array<String>):Metadata {
+		final entries:Metadata = [];
+		if (metadataEntries != null)
+			for (raw in metadataEntries) {
+				final entry = parseMetadataEntry(raw);
+				if (entry != null)
+					entries.push(entry);
+			}
+		return entries;
+	}
+
+	static function parseMetadataEntry(raw:String):Null<MetadataEntry> {
+		final text = StringTools.trim(raw == null ? "" : raw);
+		if (!StringTools.startsWith(text, "@:"))
+			return null;
+		final open = text.indexOf("(");
+		final close = text.lastIndexOf(")");
+		final name = if (open == -1) text.substr(1) else text.substr(1, open - 1);
+		if (name.length == 0)
+			return null;
+		final params = new Array<Expr>();
+		if (open != -1 && close > open) {
+			for (argText in splitMetadataArgs(text.substr(open + 1, close - open - 1))) {
+				final trimmed = StringTools.trim(argText);
+				if (trimmed.length == 0)
+					continue;
+				params.push(parseInlineString(trimmed, defaultPos()));
+			}
+		}
+		return {
+			name: name,
+			params: params,
+			pos: defaultPos()
 		};
+	}
+
+	static function splitMetadataArgs(raw:String):Array<String> {
+		final out = new Array<String>();
+		if (raw == null || raw.length == 0)
+			return out;
+		var depth = 0;
+		var start = 0;
+		var i = 0;
+		while (i < raw.length) {
+			final ch = raw.charAt(i);
+			switch (ch) {
+				case "(" | "[" | "{":
+					depth += 1;
+				case ")" | "]" | "}":
+					if (depth > 0)
+						depth -= 1;
+				case ",":
+					if (depth == 0) {
+						out.push(raw.substr(start, i - start));
+						start = i + 1;
+					}
+				case _:
+			}
+			i += 1;
+		}
+		out.push(raw.substr(start));
+		return out;
 	}
 
 	static function defaultPos():Position {

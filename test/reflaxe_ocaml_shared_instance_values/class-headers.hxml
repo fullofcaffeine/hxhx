@@ -1,0 +1,7 @@
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx-core/src
+-cp test/reflaxe_ocaml_shared_instance_values/src
+-cp test/reflaxe_ocaml_shared_instance_values/source
+-lib reflaxe
+--main SharedClassKindsFixture
+--interp

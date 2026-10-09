@@ -83,6 +83,8 @@ class ArrayReadPlanFixture {
 		proveCallableRead(fields);
 		proveDynamicRead(fields);
 
+		expectThrows('reflaxe.ocaml [ocaml-array-read:invalid-decision]: Array read "<null>" has incomplete type, order, runtime, proof, or binding facts',
+			() -> OcamlArrayReadContract.requireDecision(null));
 		expectThrows("duplicate-decision", () -> new OcamlArrayReadPlan([decision, decision]));
 		expectThrows("stale-plan", () -> new OcamlArrayReadPlan([decision]).requirePlanBinding({
 			functionId: owner.functionId,

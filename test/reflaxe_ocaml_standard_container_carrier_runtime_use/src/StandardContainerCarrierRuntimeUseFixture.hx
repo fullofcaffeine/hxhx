@@ -44,6 +44,7 @@ class StandardContainerCarrierRuntimeUseFixture {
 		proveRuntimeUse(array, "HxArray");
 		proveRuntimeUse(bytes, "HxBytes");
 		proveFinalActivation(array, bytes);
+		proveSignatureOutput(array);
 		if (array.id == nestedArray.id)
 			throw "Nested Array carriers must keep independent owner identities.";
 
@@ -152,6 +153,60 @@ class StandardContainerCarrierRuntimeUseFixture {
 			], false)
 		], "corrupted-standard-container-carrier-fixture",
 			corruptedContext.activateStagedTypeRuntimeUse));
+	}
+
+	/** Interfaces copy printed types, but activate metadata-only types exactly once. */
+	static function proveSignatureOutput(decision:OcamlStandardContainerCarrierDecision):Void {
+		final reference = checkedReference(decision);
+		final type = OcamlTypeExpr.TRuntimeApp(reference, [OcamlTypeExpr.TIdent("int")]);
+		final printed = new CompilationContext();
+		printed.beginRuntimeRequirementProgram(PROGRAM_REVISION, "portable");
+		printed.stageStandardContainerCarrierRuntimeUse(decision);
+		printed.finalRuntimeUses.observeModuleItems([IType([{name: "t", params: [], kind: Alias(type)}], false)], "record-body",
+			printed.activateStagedTypeRuntimeUse);
+		final copied = printed.finalRuntimeUses.signatureTypeForOutput(type, "module-signature:Record:type:t", printed.activateStagedTypeRuntimeUse);
+		switch (copied) {
+			case TRuntimeApp(output, [TIdent("int")]):
+				if (output.id == reference.id || output.exactSymbol != reference.exactSymbol)
+					throw "The interface must copy the checked Array identity without changing its symbol.";
+			case _:
+				throw "The interface changed the Array type arguments.";
+		}
+		printed.finalRuntimeUses.finishProgram();
+		final duplicateCopy = new CompilationContext();
+		duplicateCopy.beginRuntimeRequirementProgram(PROGRAM_REVISION, "portable");
+		duplicateCopy.stageStandardContainerCarrierRuntimeUse(decision);
+		duplicateCopy.finalRuntimeUses.observeModuleItems([IType([{name: "t", params: [], kind: Alias(type)}], false)], "record-body",
+			duplicateCopy.activateStagedTypeRuntimeUse);
+		duplicateCopy.finalRuntimeUses.signatureTypeForOutput(type, "same-copy-site", duplicateCopy.activateStagedTypeRuntimeUse);
+		expectFailure("repeated signature copy", "duplicate final runtime use",
+			() -> duplicateCopy.finalRuntimeUses.signatureTypeForOutput(type, "same-copy-site", duplicateCopy.activateStagedTypeRuntimeUse));
+
+		final metadata = new CompilationContext();
+		metadata.beginRuntimeRequirementProgram(PROGRAM_REVISION, "portable");
+		metadata.stageStandardContainerCarrierRuntimeUse(decision);
+		final retained = metadata.finalRuntimeUses.signatureTypeForOutput(type, "module-signature:Record:value:read", metadata.activateStagedTypeRuntimeUse);
+		switch (retained) {
+			case TRuntimeApp(output, _):
+				if (output.id != reference.id)
+					throw "A metadata-only type must spend its original occurrence at its first output.";
+			case _:
+				throw "The signature lost its checked type.";
+		}
+		if (metadata.runtimeRequirementsByIds(decision.runtimeRequirementIds).length != 1)
+			throw "A signature-only Array must activate its runtime requirement.";
+		metadata.finalRuntimeUses.finishProgram();
+
+		final duplicate = new CompilationContext();
+		duplicate.beginRuntimeRequirementProgram(PROGRAM_REVISION, "portable");
+		duplicate.stageStandardContainerCarrierRuntimeUse(decision);
+		duplicate.finalRuntimeUses.signatureTypeForOutput(type, "same-interface-site", duplicate.activateStagedTypeRuntimeUse);
+		expectFailure("repeated signature output", "duplicate final runtime use",
+			() -> duplicate.finalRuntimeUses.signatureTypeForOutput(type, "same-interface-site", duplicate.activateStagedTypeRuntimeUse));
+
+		final unplanned = new CompilationContext();
+		unplanned.beginRuntimeRequirementProgram(PROGRAM_REVISION, "portable");
+		expectFailure("unplanned signature output", "unplanned final runtime use", () -> unplanned.finalRuntimeUses.signatureTypeForOutput(type, "unplanned"));
 	}
 
 	static function checkedReference(decision:OcamlStandardContainerCarrierDecision):OcamlRuntimeReference {

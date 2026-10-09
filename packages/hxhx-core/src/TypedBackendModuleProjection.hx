@@ -28,6 +28,16 @@ class TypedBackendModuleProjection {
 	public function getClasses():Array<TypedBackendClassProjection>
 		return classes.copy();
 
+	/** Reject unsupported type operations before a target publishes any generated file. */
+	public function assertRuntimeTypeOperandsAbsent(consumer:String):Void {
+		for (owner in classes) {
+			for (fn in owner.getFunctions())
+				fn.getRuntimeTypeCatalog().assertUnsupportedAbsent(consumer);
+			for (initializer in owner.getFieldInitializers())
+				initializer.getRuntimeTypeCatalog().assertUnsupportedAbsent(consumer);
+		}
+	}
+
 	/** Select the strict class projection paired with an exact projected declaration. **/
 	public function findClass(declaration:HxClassDecl):Null<TypedBackendClassProjection> {
 		for (projection in classes)

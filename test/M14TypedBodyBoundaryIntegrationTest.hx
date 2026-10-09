@@ -163,7 +163,9 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(call.getTag() == TypedExprTag.Call, "shouldFail call was not kept as a structural typed call");
 		final returnExpression = call.getExpressions()[1];
 		assertTrue(returnExpression.getTag() == TypedExprTag.ReturnExpr, "return macro argument lost its typed return node");
-		final typedCast = returnExpression.getExpressions()[0];
+		final parentheses = returnExpression.getExpressions()[0];
+		assertTrue(parentheses.getTag() == TypedExprTag.Parenthesized, "return macro argument lost its written parentheses");
+		final typedCast = parentheses.getExpressions()[0];
 		assertTrue(typedCast.getTag() == TypedExprTag.Cast && typedCast.getType().getDisplay() == "Null<String>",
 			"return macro argument lost its Null<String> cast");
 		assertTrue(typedCast.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return cast lost its null child");
@@ -262,16 +264,18 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.LocalRead && loop.getExpressions()[0].getTexts()[0] == "a",
 			"typed while macro condition was not resolved as the function parameter");
 		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
-		switch (TypedBodySource.statements(body)[0]) {
-			case SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position)]), _):
+		switch (ordinaryStatements(body)[0]) {
+			case SExpr(ECall(EIdent("shouldFail"), [
+				EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position, loopKind)
+			]), _):
 				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
 			case _:
 				throw "typed-body source projection changed the while macro argument";
 		}
 		final position = new HxPos(0, 1, 1);
-		final emptyFingerprint = TypedBodyFingerprint.forStatements([SExpr(EWhile(EIdent("a"), [], true, position), position)]);
+		final emptyFingerprint = TypedBodyFingerprint.forStatements([SExpr(EWhile(EIdent("a"), [], true, position, HxWhileKind.Normal), position)]);
 		final bodyFingerprint = TypedBodyFingerprint.forStatements([
-			SExpr(EWhile(EIdent("a"), [ECall(EIdent("tick"), [])], true, position), position)
+			SExpr(EWhile(EIdent("a"), [ECall(EIdent("tick"), [])], true, position, HxWhileKind.Normal), position)
 		]);
 		assertTrue(emptyFingerprint != bodyFingerprint, "body fingerprint ignored the while macro body");
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
@@ -315,7 +319,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(continueInitializer.getType().getSemanticKey() == "primitive:String"
 			&& breakInitializer.getType().getSemanticKey() == "primitive:String",
 			"loop control changed the value type of the non-null branch");
-		switch (TypedBodySource.statements(body)[0]) {
+		switch (ordinaryStatements(body)[0]) {
 			case SForIn(_, _, SBlock([
 				SVar("value", "String", EBinop("??", _, EContinue(continuePosition)), _, _),
 				SVar("other", "String", EBinop("??", _, EBreak(breakPosition)), _, _)
@@ -448,21 +452,38 @@ class M14TypedBodyBoundaryIntegrationTest {
 				continue;
 			block = statement.getExpressions()[0];
 		}
-		assertTrue(block != null && block.getTag() == TypedExprTag.Block, "typed expression block remained an opaque source payload");
+		assertTrue(block != null && block.getTag() == TypedExprTag.SourceGroup, "typed expression block lost its authored source group");
 		final children = block.getExpressions();
-		assertTrue(children.length == 2
-			&& children[0].getTag() == TypedExprTag.Temporary, "typed expression block did not expose its temporary declaration");
-		assertTrue(children[0].getTexts()[0] == "text" && children[0].getTexts()[1] == "String", "typed temporary lost its name or declared type");
-		final initializer = children[0].getExpressions()[0];
+		assertTrue(children.length == 2 && children[0].getTag() == TypedExprTag.VariableDeclarations,
+			"typed expression block did not expose its source declaration");
+		final local = children[0].getExpressions()[0];
+		assertTrue(local.getTag() == TypedExprTag.VariableDeclaration && local.getTexts()[0] == "text" && local.getTexts()[1] == "String",
+			"typed local lost its name or declared type");
+		final initializer = local.getExpressions()[0];
 		assertTrue(initializer.getTag() == TypedExprTag.Binary && initializer.getTexts()[0] == "+",
 			"operator inside expression block was not structurally typed");
 		assertTrue(children[1].getTag() == TypedExprTag.LocalRead && children[1].getType().getSemanticKey() == "primitive:String",
 			"expression-block result did not resolve through its lexical temporary");
-		final projected = TypedBodySource.expression(block);
-		assertTrue(switch (projected) {
-			case ECall(ECast(ELambda(["text"], EIdent("text")), "(String)->Dynamic"), [EBinop("+", EIdent("prefix"), EString(":ok"))]): true;
+		final projection = TypedBodySource.functionProjection(main);
+		assertTrue(switch (projection.getBody()) {
+			case [
+				SVar("prefix", _, EString("value"), _),
+				SVar(temporary, "String", null, _),
+				SBlock([
+					SVar("text", "String", EBinop("+", EIdent("prefix"), EString(":ok")), _),
+					SExpr(EBinop("=", EIdent(assigned), EIdent("text")), _)
+				], _),
+				SVar("result", _, EIdent(read), _)
+			]:
+				final binding = projection.getLocalCatalog().findByProjectedName(temporary);
+				temporary != "result"
+				&& assigned == temporary
+				&& read == temporary
+				&& binding != null
+				&& binding.getBinding().getIdentity().isCompilerTemporary();
 			case _: false;
-		}, "typed expression block projection did not preserve its structural binding");
+		},
+			"typed expression block projection lost its scope, exact result temporary, or selected String value");
 	}
 
 	static function assertStructuralDoWhileExpression():Void {
@@ -476,7 +497,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 		].join("\n"), "TypedDoWhile.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final run = variableInitializer(findFunction(findClass(typed, "Main"), "main").getBody(), "run");
-		assertTrue(containsCallNamed(run, "__hxhx_do_while"), "expression-position do/while did not become a structural shared call");
+		assertTrue(containsTag(run, TypedExprTag.WhileExpr), "expression-position do/while lost its authored loop");
+		assertTrue(!containsCallNamed(run, "__hxhx_do_while"), "expression-position do/while introduced a helper function");
 		assertTrue(containsTag(run, TypedExprTag.CompoundAssign), "do/while body hid its compound assignment from typed traversal");
 		assertTrue(!containsTag(run, TypedExprTag.Opaque), "expression-position do/while retained an opaque source payload");
 	}
@@ -534,7 +556,9 @@ class M14TypedBodyBoundaryIntegrationTest {
 		].join("\n"), "TypedTry.hx");
 		final typedFunction = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "main");
 		final result = variableInitializer(typedFunction.getBody(), "result");
-		assertTrue(containsCallNamed(result, "__hxhx_try"), "expression-level try/catch did not become a structural shared call");
+		assertTrue(result.getTag() == TypedExprTag.SourceTry
+			&& result.getSourceCatches().length == 1, "expression-level try/catch lost its authored handler");
+		assertTrue(!containsCallNamed(result, "__hxhx_try"), "expression-level try/catch introduced a synthetic helper call");
 		assertTrue(containsTag(result, TypedExprTag.CompoundAssign), "try body hid its mutation from typed traversal");
 		assertTrue(containsTag(result, TypedExprTag.Binary), "catch body hid its string concatenation from typed traversal");
 		assertTrue(!containsTag(result, TypedExprTag.Opaque), "expression-level try/catch retained an opaque source payload");
@@ -542,9 +566,21 @@ class M14TypedBodyBoundaryIntegrationTest {
 		// This isolated printer check supplies the same typed catalog as full emission.
 		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false,
 			name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
-		final ocaml = @:privateAccess EmitterStage.exprToOcaml(TypedBodySource.expression(result, projection.getLocalCatalog()));
+		// Executable emission consumes the complete lowered statement projection.
+		// Rendering the authored initializer directly bypasses its result storage and control regions.
+		final localTypes = new Map<String, TyType>();
+		for (entry in projection.getLocalCatalog().getEntries())
+			localTypes.set(entry.getProjectedName(), entry.getBinding().getType());
+		final ocaml = try {
+			@:privateAccess EmitterStage.stmtListToOcaml(projection.getBody(), new Map(), "Return", new Map(), localTypes, new Map(), "", new Map(),
+				new Map(), localTypes, new Map());
+		} catch (error:haxe.Exception) {
+			EmitterStage.resetRequestState();
+			throw error;
+		}
 		EmitterStage.resetRequestState();
-		assertTrue(ocaml.indexOf("HxRuntime.hx_try") >= 0, "OCaml backend did not consume the structural try/catch call");
+		// Native execution in M14Stage3ExceptionIntegrationTest proves handler selection and control propagation.
+		assertTrue(ocaml.indexOf("with HxRuntime.Hx_exception") >= 0, "OCaml backend did not emit exception handling for the projected try/catch: " + ocaml);
 		assertTrue(ocaml.indexOf("__hxhx_try") < 0, "OCaml backend leaked the shared structural sentinel into generated source");
 	}
 
@@ -563,13 +599,54 @@ class M14TypedBodyBoundaryIntegrationTest {
 		].join("\n"), "NekoStartupTry.hx");
 		final startup = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "startup");
 		final available = variableInitializer(startup.getBody(), "available");
-		assertTrue(containsCallNamed(available, "__hxhx_try"), "Neko startup try/catch did not become a structural shared call");
+		assertTrue(available.getTag() == TypedExprTag.SourceTry && available.getSourceCatches().length == 1,
+			"Neko startup try/catch lost its authored handler");
+		assertTrue(!containsCallNamed(available, "__hxhx_try"), "Neko startup try/catch introduced a synthetic helper call");
 		assertTrue(containsFieldCallNamed(available, "load"), "Neko startup try/catch hid its loader call");
 		assertTrue(containsTag(available, TypedExprTag.Binary), "Neko startup try/catch hid its null comparison");
 		assertTrue(!containsTag(available, TypedExprTag.Opaque), "Neko startup try/catch retained an opaque source payload");
 		assertTrue(available.getType().getSemanticKey() == "primitive:Bool", "Neko startup try/catch lost its Boolean result type");
 		assertTrue(available.getPosition() != null && available.getPosition().getLine() == 6, "Neko startup try/catch lost its source line");
 		TypedBodyInvariant.assertFunction(startup);
+	}
+
+	/** Assignment operands must expose their try body and catch fallback to typed traversal. */
+	static function assertAssignmentTryExpressions():Void {
+		final parsed = ParserStage.parse([
+			"class Main {",
+			"  static var saved:Bool = false;",
+			"  static function load():Bool return true;",
+			"  static function assigned():Bool {",
+			"    var result = false;",
+			"    result = try load() catch (error:Dynamic) false;",
+			"    Main.saved = try load() catch (error:Dynamic) false;",
+			"    return result;",
+			"  }",
+			"}",
+		].join("\n"), "AssignmentTry.hx");
+		final method = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "assigned");
+		var assignments = 0;
+		for (statement in method.getBody().getStatements()) {
+			if (statement.getTag() != TypedStmtTag.Expression)
+				continue;
+			final expression = statement.getExpressions()[0];
+			if (expression.getTag() != TypedExprTag.Assign)
+				continue;
+			final value = expression.getExpressions()[1];
+			assertTrue(value.getTag() == TypedExprTag.SourceTry
+				&& value.getSourceCatches().length == 1, "assignment lost its structural try expression");
+			assertTrue(!containsCallNamed(value, "__hxhx_try"), "assignment try expression introduced a synthetic helper call");
+			assertTrue(containsCallNamed(value, "load"), "assignment lost the call inside its try expression");
+			assertTrue(!containsTag(value, TypedExprTag.Opaque), "assignment retains opaque executable syntax");
+			assertTrue(value.getType().getSemanticKey() == "primitive:Bool", "assignment try result lost its Boolean type");
+			assertTrue(statement.getPosition() != null && statement.getPosition().getLine() == 6 + assignments,
+				"assignment try expression lost its source line");
+			assignments++;
+		}
+		assertTrue(assignments == 2, "local or field assignment disappeared");
+		final statements = method.getBody().getStatements();
+		assertTrue(statements[statements.length - 1].getTag() == TypedStmtTag.Return, "try parsing consumed the following return");
+		TypedBodyInvariant.assertFunction(method);
 	}
 
 	static function assertStructuralTerminalReturnBlock():Void {
@@ -620,7 +697,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "untyped statement block hid its indexed read");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Untyped), "untyped statement block lost its explicit typing escape hatch");
 		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "untyped statement block retained an opaque source payload");
-		final projected = TypedBodySource.statements(body);
+		final projected = ordinaryStatements(body);
 		final projectedStatements = switch (projected[0]) {
 			case SBlock(statements, _): statements;
 			case _: [];
@@ -730,11 +807,25 @@ class M14TypedBodyBoundaryIntegrationTest {
 
 	/**
 		Keep method-only generic parameters inside the selected call until argument
-		types bind them. A parameter that remains unbound must not escape as a
-		caller-visible nominal type or collide with an unrelated class of the same
-		name.
+		types bind them. An unused parameter retains its own open call identity,
+		without selecting an unrelated class with the same name. Projected carrier
+		hints must not replace these semantic facts.
 	**/
 	static function assertMethodGenericResultSpecialization():Void {
+		final invalidSource = 'class Main { static function same<T>(left:T,right:T):T return left;' + 'static function main():Void { same(1,"x"); } }';
+		genericReference("conflict", invalidSource, null);
+		var rejectedConflict = false;
+		try {
+			final invalid = new ResolvedModule("Main", "Main.hx", ParserStage.parse(invalidSource, "Main.hx"));
+			TyperStage.typeResolvedModule(invalid, TyperIndex.build([invalid]));
+		} catch (error:haxe.Exception)
+			rejectedConflict = error.message.indexOf("No compatible method signature for same") >= 0;
+		assertTrue(rejectedConflict, "conflicting method-generic arguments must be rejected before publication");
+		genericReference("independent",
+			'class A {} class Main { static function unbound<A>(value:Dynamic):Array<A> return [];' +
+			'static function main():Void { var first=unbound({}); var second=unbound({});' +
+			'first.push(7); second.push("x"); Sys.println(first[0]); Sys.println(second[0]); } }',
+			"7\nx\n");
 		final filePath = "checks/GenericMethodResults.hx";
 		final parsed = ParserStage.parse([
 			"class Array<T> {",
@@ -750,9 +841,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"  static function main() {",
 			"    var scalar = identity(7);",
 			"    var nested = wrap([\"x\"]);",
-			"    var conflict = same(1, \"x\");",
-			"    var unsupportedConstraint = constrained(1);",
+			"    var compatible = same(1, 2);",
+			"    var constrainedResult = constrained(1);",
 			"    var unresolved = unbound({});",
+			"    var secondUnresolved = unbound({});",
 			"  }",
 			"}",
 		].join("\n"), filePath);
@@ -760,7 +852,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 		final index = TyperIndex.build([resolved]);
 		final loader = new ModuleLoader(["checks"], new StringMap<String>(), index, function(_):Bool return false);
 		loader.markResolvedAlready([resolved]);
-		final body = findFunction(findClass(TyperStage.typeResolvedModule(resolved, index, loader), "GenericResultOwner"), "main").getBody();
+		final method = findFunction(findClass(TyperStage.typeResolvedModule(resolved, index, loader), "GenericResultOwner"), "main");
+		final body = method.getBody();
 		final scalar = variableInitializer(body, "scalar");
 		assertTrue(scalar.getType().getSemanticKey() == "primitive:Int", "direct method-generic result did not specialize to the argument type");
 		assertTrue(scalar.getDeclaration() != null && scalar.getDeclaration().getSignature().getName() == "identity",
@@ -773,29 +866,64 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& nestedArguments[0].getSemanticKey() == "primitive:String",
 			"nested method-generic result did not specialize Array<T> to Array<String>");
 
-		final conflict = variableInitializer(body, "conflict");
-		assertTrue(conflict.getType().isUnknown(), "conflicting method-generic arguments produced a false common result");
-		assertTrue(conflict.getDeclaration() == null, "conflicting method-generic arguments selected an inapplicable declaration");
+		final compatible = variableInitializer(body, "compatible");
+		assertTrue(compatible.getType().getSemanticKey() == "primitive:Int" && compatible.getDeclaration() != null,
+			"compatible repeated method-generic arguments lost their selected Int result");
 
-		final unsupportedConstraint = variableInitializer(body, "unsupportedConstraint");
-		assertTrue(unsupportedConstraint.getType().isUnknown(), "unsupported constrained generic inference produced a false concrete result");
-		assertTrue(unsupportedConstraint.getDeclaration() == null,
-			"unsupported constrained generic inference selected a declaration without proving its constraint");
+		final constrainedResult = variableInitializer(body, "constrainedResult");
+		assertTrue(constrainedResult.getType().getSemanticKey() == "primitive:Int", "valid Int-constrained call lost its concrete result");
+		assertTrue(constrainedResult.getDeclaration() != null
+			&& constrainedResult.getDeclaration().getSignature().getName() == "constrained",
+			"valid Int-constrained call lost its exact selected declaration");
 
 		final unresolved = variableInitializer(body, "unresolved");
-		assertTrue(unresolved.getType().isUnknown(), "unbound method-generic result escaped as a caller-visible nominal type");
+		final openArguments = unresolved.getType().getTypeArguments();
+		final secondArguments = variableInitializer(body, "secondUnresolved").getType().getTypeArguments();
+		assertTrue(unresolved.getType().getNominalIdentity() != null
+			&& unresolved.getType().getNominalIdentity().getCanonicalName() == "GenericMethodResults.Array"
+			&& openArguments.length == 1
+			&& openArguments[0].isOpenMethodParameter()
+			&& secondArguments.length == 1
+			&& secondArguments[0].isOpenMethodParameter()
+			&& openArguments[0].getSemanticKey() != secondArguments[0].getSemanticKey(),
+			"unused method calls must retain separate open parameters without selecting the unrelated class A");
 		assertTrue(unresolved.getDeclaration() != null && unresolved.getDeclaration().getSignature().getName() == "unbound",
 			"unknown generic result lost the exact selected declaration");
-		var keptBlankHint = false;
-		for (statement in body.getStatements()) {
-			if (statement.getTag() != TypedStmtTag.Var || statement.getNames()[0] != "unresolved")
-				continue;
-			keptBlankHint = switch (TypedBodySource.statement(statement)) {
-				case SVar("unresolved", "", _, _): true;
-				case _: false;
-			};
-		}
-		assertTrue(keptBlankHint, "unbound method generic became a false source-level local annotation");
+		var keptCarrierHint = false;
+		// Executable projection owns control lowering, including an empty object argument.
+		final projection = TypedBodySource.functionProjection(method);
+		for (statement in projection.getBody())
+			TypedBackendSourceWalk.statement(statement, _ -> {}, entry -> {
+				switch entry {
+					case SVar(name, "GenericMethodResults.Array<Dynamic>", _, _):
+						final local = projection.getLocalCatalog().findByProjectedName(name);
+						if (local != null
+							&& local.getBinding()
+								.getSourceName() == "unresolved") keptCarrierHint = local.getBinding()
+								.getType()
+								.getSemanticKey() == unresolved.getType()
+								.getSemanticKey();
+					case _:
+				}
+			});
+		assertTrue(keptCarrierHint, "projected generic carrier must preserve the original open semantic type in its local catalog");
+	}
+
+	/** Compare generic acceptance with upstream before asserting the compiler's retained type facts. */
+	static function genericReference(name:String, source:String, expected:Null<String>):Void {
+		final root = ".tmp/typed_body_generic_" + name;
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		final process = new sys.io.Process("haxe", ["-cp", root, "-main", "Main", "--interp"]);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		assertTrue(expected == null ? code != 0 && errors.indexOf("String should be Int") >= 0 : code == 0 && output == expected,
+			"upstream generic contract differs: "
+			+ name
+			+ output
+			+ errors);
 	}
 
 	/** A field's nominal value type must not make its variable name look like a type alias. **/
@@ -822,6 +950,14 @@ class M14TypedBodyBoundaryIntegrationTest {
 			case _:
 				throw "nominal field value was rewritten as its TreeNode type";
 		}
+	}
+
+	/** Syntax checks unwrap transport metadata while separate assertions verify its exact declaration facts. */
+	static function ordinaryStatements(body:TypedFunctionBody):Array<HxStmt> {
+		return backend.source.SourceFunctionBodyRewriter.body(TypedBodySource.statements(body), expression -> {
+			final call = TypedExactStaticCallSource.decode(expression);
+			return call == null ? expression : TypedExactStaticCallSource.ordinaryCall(call);
+		});
 	}
 
 	static function main():Void {
@@ -872,8 +1008,17 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& operand.getTexts()[0] == "value", "postfix operand was not a typed local read");
 		expectCompoundAssignment(mainFunction.getBody());
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
-		assertTrue(TypedBodyFingerprint.forStatements(TypedBodySource.statements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
-			"typed-body source projection changed ordinary syntax before backend cutover");
+		assertTrue(TypedBodyFingerprint.forStatements(ordinaryStatements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
+			"unwrapping static-call metadata changed the function's ordinary source syntax");
+		final projectedCall = TypedExactStaticCallSource.decode(TypedBodySource.expression(call));
+		assertTrue(projectedCall != null
+			&& projectedCall.owner == "demo.TypedBodyMain.Helper"
+			&& projectedCall.declaration == declaration.getIdentity().getCanonicalKey()
+			&& projectedCall.resultType == "Int",
+			"static-call projection lost its selected owner, declaration, or result");
+		assertTrue(TypedExactStaticCallSource.ordinaryCall(projectedCall)
+			.match(ECall(EField(EIdent("Helper"), "bump"), [EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("value"))])),
+			"unwrapping the static-call record changed its ordinary callee or postfix argument");
 		assertLoweringNodeSet();
 		assertNullableSourceProjection();
 		assertInferredConstructorSourceProjection();
@@ -883,6 +1028,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
 		assertNekoStartupTryCatchExpression();
+		assertAssignmentTryExpressions();
 		assertStructuralTerminalReturnBlock();
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();

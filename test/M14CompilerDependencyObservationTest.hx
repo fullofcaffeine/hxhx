@@ -27,6 +27,29 @@ class M14CompilerDependencyObservationTest {
 		]);
 	}
 
+	/** A callback nested in a record still consumes the nominal types in its signature. */
+	static function assertStructuralCallbackDependencies():Void {
+		function make(fieldType:String) {
+			return typedSources([
+				{modulePath: "Api", filePath: "Api.hx", source: "class Api { public var value:" + fieldType + "; }"},
+				{modulePath: "Unused", filePath: "Unused.hx", source: "class Unused {}"},
+				{
+					modulePath: "Main",
+					filePath: "Main.hx",
+					source: "typedef Shape={callback:(...values:Api)->Api}; class Main { static function take(shape:Shape):Void {} }"
+				}
+			]);
+		}
+		final program = make("Int");
+		final snapshot = CompilerDependencyCollector.collect(program.modules, program.index);
+		assertTrue(hasEdge(snapshot, PublicInterface, "signature:"), "structural callback lost its nominal provider dependency");
+		assertTrue(!hasAnyEdgeBetween(snapshot, "Main", "Unused", PublicInterface), "structural traversal added an unrelated provider");
+		final changed = make("String");
+		final comparison = CompilerDependencyInvalidator.compare(snapshot, CompilerDependencyCollector.collect(changed.modules, changed.index));
+		assertTrue(comparison.isAffected("Main"), "provider signature edit did not reach its unchanged structural callback consumer");
+		assertTrue(!comparison.isAffected("Unused"), "provider signature edit invalidated an unrelated module");
+	}
+
 	static function typedSources(sources:Array<DependencyTestSource>):{modules:Array<TypedModule>, index:TyperIndex} {
 		final resolved = [
 			for (source in sources)
@@ -143,6 +166,90 @@ class M14CompilerDependencyObservationTest {
 	}
 
 	static function main():Void {
+		final defaultProgram = typedProgram("class Api { public static inline var DEFAULT:Int = 4; }",
+			"class Main { public static function choose(value:Int = Api.DEFAULT):Int return value; }");
+		final defaultSnapshot = CompilerDependencyCollector.collect(defaultProgram.modules, defaultProgram.index);
+		assertTrue(hasEdge(defaultSnapshot, CompilerDependencyKind.ConstantValue, "DEFAULT"),
+			"a parameter default must retain the constant provider dependency even when its body never reads that provider");
+		final changedDefaultProgram = typedProgram("class Api { public static inline var DEFAULT:Int = 5; }",
+			"class Main { public static function choose(value:Int = Api.DEFAULT):Int return value; }");
+		assertTrue(CompilerDependencyInvalidator.compare(defaultSnapshot,
+			CompilerDependencyCollector.collect(changedDefaultProgram.modules, changedDefaultProgram.index))
+			.isAffected("Main"),
+			"a changed default constant did not invalidate its unchanged declaration consumer");
+		function constrained(bound:String):{modules:Array<TypedModule>, index:TyperIndex} {
+			return typedSources([
+				{modulePath: "BoundsOne", filePath: "BoundsOne.hx", source: "class BoundsOne {}"},
+				{modulePath: "BoundsTwo", filePath: "BoundsTwo.hx", source: "class BoundsTwo {}"},
+				{
+					modulePath: "ConstraintApi",
+					filePath: "ConstraintApi.hx",
+					source: "import " + bound + " as Bound; class ConstraintApi { public static function echo<T:Bound>(value:T):T { return value; } }"
+				}
+			]);
+		}
+		final constrainedOne = constrained("BoundsOne");
+		final constrainedTwo = constrained("BoundsTwo");
+		final constraintSnapshot = CompilerDependencyCollector.collect(constrainedOne.modules, constrainedOne.index);
+		var constraintEdge = false;
+		for (edge in constraintSnapshot.getEdges())
+			if (edge.consumerModule == "ConstraintApi"
+				&& edge.providerModule == "BoundsOne"
+				&& StringTools.startsWith(edge.factIdentity, "method-constraint:"))
+				constraintEdge = true;
+		assertTrue(constraintEdge, "resolved method constraints must retain their exact provider dependency");
+		assertTrue(constraintSnapshot.findModule("ConstraintApi")
+			.publicInterfaceRevision != CompilerDependencyCollector.collect(constrainedTwo.modules, constrainedTwo.index)
+			.findModule("ConstraintApi")
+			.publicInterfaceRevision,
+			"changing the resolved bound behind the same alias must change the public interface revision");
+		Sys.println("METHOD_CONSTRAINT_DEPENDENCY:PASS");
+		function compound(second:String):{modules:Array<TypedModule>, index:TyperIndex} {
+			return typedSources([
+				{modulePath: "ConstraintBase", filePath: "ConstraintBase.hx", source: "class ConstraintBase {}"},
+				{modulePath: "FirstNamed", filePath: "FirstNamed.hx", source: "interface FirstNamed {}"},
+				{modulePath: "SecondNamed", filePath: "SecondNamed.hx", source: "interface SecondNamed {}"},
+				{
+					modulePath: "CompoundApi",
+					filePath: "CompoundApi.hx",
+					source: "import " + second +
+					" as Named; class CompoundApi { public static function echo<T:ConstraintBase & Named>(value:T):T { return value; } }"
+				}
+			]);
+		}
+		final compoundOne = compound("FirstNamed");
+		final compoundTwo = compound("SecondNamed");
+		final compoundSnapshot = CompilerDependencyCollector.collect(compoundOne.modules, compoundOne.index);
+		for (provider in ["ConstraintBase", "FirstNamed"]) {
+			var found = false;
+			for (edge in compoundSnapshot.getEdges())
+				if (edge.consumerModule == "CompoundApi"
+					&& edge.providerModule == provider
+					&& StringTools.startsWith(edge.factIdentity, "method-constraint:"))
+					found = true;
+			assertTrue(found, "each compound bound must retain its provider: " + provider);
+		}
+		assertTrue(compoundSnapshot.findModule("CompoundApi")
+			.publicInterfaceRevision != CompilerDependencyCollector.collect(compoundTwo.modules, compoundTwo.index)
+			.findModule("CompoundApi")
+			.publicInterfaceRevision,
+			"changing only the second resolved bound must change the public interface revision");
+		Sys.println("COMPOUND_METHOD_CONSTRAINT_DEPENDENCY:PASS");
+		final groupedFunction = typedProgram("class Api { public static function answer():Int return 42; }",
+			"class Main { static function main():Void { var read = function():Int { { return ((Api.answer())); } }; } }");
+		final groupedSnapshot = CompilerDependencyCollector.collect(groupedFunction.modules, groupedFunction.index);
+		assertTrue(hasEdge(groupedSnapshot, CompilerDependencyKind.PublicInterface, "answer"),
+			"a selected call inside a source function and nested group must retain its provider dependency");
+		assertStructuralCallbackDependencies();
+		final catchOnly = typedProgram("class Api { public function new() {} }",
+			"class Main { static function main():Void { try { throw 1; } catch (unused:Api) {} var result = try 1 catch (alsoUnused:Api) 2; } }");
+		final catchSnapshot = CompilerDependencyCollector.collect(catchOnly.modules, catchOnly.index);
+		var catchEdges = 0;
+		for (edge in catchSnapshot.getEdges())
+			if (edge.consumerModule == "Main" && edge.providerModule == "Api" && edge.factIdentity.indexOf("catch-binding:") == 0)
+				catchEdges++;
+		if (catchEdges != 2)
+			throw "both unused catch declarations must retain their provider dependency";
 		assertFunctionBodyRevisionPreservesTreeBoundaries();
 		final apiA = [
 			"class Api {",

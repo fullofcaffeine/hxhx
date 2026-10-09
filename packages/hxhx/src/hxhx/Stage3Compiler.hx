@@ -463,7 +463,13 @@ class Stage3Compiler {
 		}
 		requestContext.registerCleanup("macro-session", closeMacroSession);
 
-		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
+		final classPaths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: Stage1Args.getExplicitClassPaths(parsed),
+			libraries: libsResolved,
+			cwd: cwd,
+			standardRoot: Stage1Args.getStandardLibraryRoot(parsed),
+			targetDefine: backendTargetDefine
+		});
 
 		// Defines available for conditional compilation filtering.
 		//
@@ -545,7 +551,7 @@ class Stage3Compiler {
 			#end
 		}
 
-		final typerIndex = TyperIndex.build(resolvedForTyping);
+		final typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
 			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
 		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);

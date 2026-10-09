@@ -4,8 +4,6 @@ import haxe.ds.StringMap;
 
 typedef CppLocalTypeInferenceApi = {
 	final copyStringMap:StringMap<String>->StringMap<String>;
-	final copyIntMap:StringMap<Int>->StringMap<Int>;
-	final sanitizeIdentifier:String->String;
 	final sanitizeTypePath:String->String;
 	final typeBaseName:String->String;
 	final isInferredMapClassName:String->Bool;
@@ -17,8 +15,6 @@ typedef CppLocalTypeInferenceApi = {
 	final anonStructName:(Array<String>, Array<HxExpr>, CppRenderScope) -> String;
 	final inferredLambdaCppFunctionType:(Array<String>, HxExpr, Array<String>, CppRenderScope) -> String;
 	final closureCallableArgType:(HxExpr, CppRenderScope) -> String;
-	final localCppName:(String, CppRenderScope) -> String;
-	final declareLocalName:(String, CppRenderScope) -> String;
 	final cppLocalTypeHint:(String, Null<HxExpr>, CppRenderScope) -> String;
 	final cppTypeHint:(String, CppRenderScope) -> String;
 	final staticReceiverClassName:(HxExpr, CppRenderScope) -> Null<String>;
@@ -36,7 +32,9 @@ typedef CppLocalTypeInferenceApi = {
 
 	`CppTargetCore` owns emission. This module owns focused pre-render inference
 	traversals that refine local type overrides without writing C++ source. This
-	includes key/value carriers already present in arrow-map literals. Exact typed
+	includes key/value carriers already present in arrow-map literals. Local facts
+	are keyed by exact projected source names, never emitted C++ symbols. Analysis
+	does not allocate names or advance the renderer's name counters. Exact typed
 	calls are only unwrapped to their ordinary structural shape; this pass never
 	selects or rebinds their declarations. Keep
 	new local/arg/return flow passes here when they are reusable analysis over
@@ -92,7 +90,7 @@ class CppLocalTypeInference {
 
 	static function qualifiedEnumCarrierCppTypeImpl(expr:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				qualifiedEnumCarrierCppTypeImpl(inner, scope, api);
 			case ECall(EField(receiver, constructorName), args) if (args != null && args.length > 0):
 				final owner = api.staticReceiverClassName(receiver, scope);
@@ -126,7 +124,7 @@ class CppLocalTypeInference {
 		final dynamicArgs = new StringMap<Bool>();
 		if (args != null)
 			for (arg in args) {
-				final name = api.sanitizeIdentifier(HxFunctionArg.getName(arg));
+				final name = HxFunctionArg.getName(arg);
 				if (candidates.exists(name) && api.isDynamicLikeTypeHint(HxFunctionArg.getTypeHint(arg)))
 					dynamicArgs.set(name, true);
 			}
@@ -140,6 +138,8 @@ class CppLocalTypeInference {
 
 	function collectErasedDynamicArgUsageNamesFromStmt(stmt:HxStmt, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectErasedDynamicArgUsageNamesFromStmt(s, dynamicArgs, used);
@@ -191,7 +191,7 @@ class CppLocalTypeInference {
 				markErasedDynamicArgIdent(args[0], dynamicArgs, used);
 				for (arg in args)
 					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectErasedDynamicArgUsageNamesFromExpr(left, dynamicArgs, used);
 				collectErasedDynamicArgUsageNamesFromExpr(right, dynamicArgs, used);
 			case ECall(callee, args):
@@ -211,7 +211,7 @@ class CppLocalTypeInference {
 				if (guardExpr != null)
 					collectErasedDynamicArgUsageNamesFromExpr(guardExpr, dynamicArgs, used);
 				collectErasedDynamicArgUsageNamesFromExpr(yieldExpr, dynamicArgs, used);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectErasedDynamicArgUsageNamesFromExpr(inner, dynamicArgs, used);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
@@ -232,7 +232,7 @@ class CppLocalTypeInference {
 	function markErasedDynamicArgIdent(expr:HxExpr, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
 		switch (expr) {
 			case EIdent(name):
-				final local = api.sanitizeIdentifier(name);
+				final local = name;
 				if (dynamicArgs.exists(local))
 					used.set(local, true);
 			case _:
@@ -245,31 +245,23 @@ class CppLocalTypeInference {
 			collectClosureVectorLocalCandidatesFromStmt(stmt, candidates);
 		if (!boolMapHasEntries(candidates))
 			return;
-		final savedLocalTypes = copyStringMap(scope.localTypes);
-		final savedLocalNames = copyStringMap(scope.localNames);
-		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
-		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
-		function restoreScope():Void {
-			scope.localTypes = copyStringMap(savedLocalTypes);
-			scope.localNames = copyStringMap(savedLocalNames);
-			scope.localNameCounts = copyIntMap(savedLocalNameCounts);
-			scope.localTypeOverrides = copyStringMap(savedLocalTypeOverrides);
-		}
 		final pushedValues = new StringMap<Array<HxExpr>>();
 		final callArgTypes = new StringMap<Array<Array<String>>>();
 		final inferredVectors = new StringMap<String>();
-		for (stmt in stmts)
-			collectClosureVectorEvidenceFromStmt(stmt, scope, candidates, pushedValues, callArgTypes);
-		restoreScope();
+		CppLocalScope.isolate(scope, () -> {
+			for (stmt in stmts)
+				collectClosureVectorEvidenceFromStmt(stmt, scope, candidates, pushedValues, callArgTypes);
+		});
 		final pushedTypes = new StringMap<Array<String>>();
-		for (stmt in stmts)
-			collectClosureVectorPushedTypesFromStmt(stmt, scope, candidates, callArgTypes, pushedTypes);
+		CppLocalScope.isolate(scope, () -> {
+			for (stmt in stmts)
+				collectClosureVectorPushedTypesFromStmt(stmt, scope, candidates, callArgTypes, pushedTypes);
+		});
 		for (local in pushedTypes.keys()) {
 			final elementType = firstNonEmptyType(pushedTypes.get(local));
 			if (elementType.length > 0)
 				inferredVectors.set(local, "std::vector<" + elementType + ">");
 		}
-		restoreScope();
 		for (local in inferredVectors.keys()) {
 			final inferred = inferredVectors.get(local);
 			final existing = scope.localTypeOverrides.get(local);
@@ -280,6 +272,8 @@ class CppLocalTypeInference {
 
 	function collectClosureVectorLocalCandidatesFromStmt(stmt:HxStmt, candidates:StringMap<Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorLocalCandidatesFromStmt(s, candidates);
@@ -299,9 +293,9 @@ class CppLocalTypeInference {
 				for (c in catches)
 					collectClosureVectorLocalCandidatesFromStmt(c.body, candidates);
 			case SVar(name, typeHint, init, _) if (isUnhintedEmptyArray(typeHint, init)):
-				candidates.set(sanitizeIdentifier(name), true);
+				candidates.set(name, true);
 			case SExpr(EBinop("=", EIdent(name), init), _) if (isEmptyArrayExpr(init)):
-				candidates.set(sanitizeIdentifier(name), true);
+				candidates.set(name, true);
 			case SVar(_, _, _, _) | SExpr(_, _) | SReturn(_, _) | SThrow(_, _) | SReturnVoid(_) | SBreak(_) | SContinue(_):
 		}
 	}
@@ -309,6 +303,8 @@ class CppLocalTypeInference {
 	function collectClosureVectorEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>, pushedValues:StringMap<Array<HxExpr>>,
 			callArgTypes:StringMap<Array<Array<String>>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorEvidenceFromStmt(s, scope, candidates, pushedValues, callArgTypes);
@@ -319,14 +315,14 @@ class CppLocalTypeInference {
 					collectClosureVectorEvidenceFromStmt(elseBranch, scope, candidates, pushedValues, callArgTypes);
 			case SForIn(name, iterable, body, _):
 				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
 				final loopTypes = keyValueLoopTypes(iterable, scope);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+				withScopedLocal(scope, keyName, loopTypes[0], () -> {
+					withScopedLocal(scope, valueName, loopTypes[1], () -> {
 						collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
 					});
 				});
@@ -347,7 +343,7 @@ class CppLocalTypeInference {
 			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectClosureVectorEvidenceFromExpr(init, scope, candidates, pushedValues, callArgTypes);
-				final local = sanitizeIdentifier(name);
+				final local = name;
 				if (!candidates.exists(local) || !isUnhintedEmptyArray(typeHint, init)) {
 					final localType = cppLocalTypeHint(typeHint, init, scope);
 					if (localType.length > 0)
@@ -362,21 +358,21 @@ class CppLocalTypeInference {
 	function collectClosureVectorEvidenceFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<Bool>, pushedValues:StringMap<Array<HxExpr>>,
 			callArgTypes:StringMap<Array<Array<String>>>):Void {
 		switch (expr) {
-			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
-				final local = sanitizeIdentifier(name);
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(name)):
+				final local = name;
 				if (!pushedValues.exists(local))
 					pushedValues.set(local, []);
 				pushedValues.get(local).push(value);
 				collectClosureVectorEvidenceFromExpr(value, scope, candidates, pushedValues, callArgTypes);
-			case ECall(EArrayAccess(EIdent(name), index), args) if (candidates.exists(sanitizeIdentifier(name))):
-				final local = sanitizeIdentifier(name);
+			case ECall(EArrayAccess(EIdent(name), index), args) if (candidates.exists(name)):
+				final local = name;
 				if (!callArgTypes.exists(local))
 					callArgTypes.set(local, []);
 				callArgTypes.get(local).push([for (arg in args) closureCallableArgType(arg, scope)]);
 				collectClosureVectorEvidenceFromExpr(index, scope, candidates, pushedValues, callArgTypes);
 				for (arg in args)
 					collectClosureVectorEvidenceFromExpr(arg, scope, candidates, pushedValues, callArgTypes);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectClosureVectorEvidenceFromExpr(left, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(right, scope, candidates, pushedValues, callArgTypes);
 			case ECall(callee, args):
@@ -393,7 +389,7 @@ class CppLocalTypeInference {
 					collectClosureVectorEvidenceFromExpr(element, scope, candidates, pushedValues, callArgTypes);
 			case EArrayComprehension(name, iterable, filter, body):
 				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					if (filter != null)
 						collectClosureVectorEvidenceFromExpr(filter, scope, candidates, pushedValues, callArgTypes);
 					collectClosureVectorEvidenceFromExpr(body, scope, candidates, pushedValues, callArgTypes);
@@ -412,7 +408,7 @@ class CppLocalTypeInference {
 				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(thenExpr, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(elseExpr, scope, candidates, pushedValues, callArgTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorEvidenceFromExpr(inner, scope, candidates, pushedValues, callArgTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -424,6 +420,8 @@ class CppLocalTypeInference {
 	function collectClosureVectorPushedTypesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>,
 			callArgTypes:StringMap<Array<Array<String>>>, pushedTypes:StringMap<Array<String>>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (s in stmts)
 					collectClosureVectorPushedTypesFromStmt(s, scope, candidates, callArgTypes, pushedTypes);
@@ -434,14 +432,14 @@ class CppLocalTypeInference {
 					collectClosureVectorPushedTypesFromStmt(elseBranch, scope, candidates, callArgTypes, pushedTypes);
 			case SForIn(name, iterable, body, _):
 				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
 				final loopTypes = keyValueLoopTypes(iterable, scope);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+				withScopedLocal(scope, keyName, loopTypes[0], () -> {
+					withScopedLocal(scope, valueName, loopTypes[1], () -> {
 						collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
 					});
 				});
@@ -462,7 +460,7 @@ class CppLocalTypeInference {
 			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectClosureVectorPushedTypesFromExpr(init, scope, candidates, callArgTypes, pushedTypes);
-				final local = sanitizeIdentifier(name);
+				final local = name;
 				if (!candidates.exists(local) || !isUnhintedEmptyArray(typeHint, init)) {
 					final localType = cppLocalTypeHint(typeHint, init, scope);
 					if (localType.length > 0)
@@ -477,13 +475,13 @@ class CppLocalTypeInference {
 	function collectClosureVectorPushedTypesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<Bool>,
 			callArgTypes:StringMap<Array<Array<String>>>, pushedTypes:StringMap<Array<String>>):Void {
 		switch (expr) {
-			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
-				final local = sanitizeIdentifier(name);
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(name)):
+				final local = name;
 				if (!pushedTypes.exists(local))
 					pushedTypes.set(local, []);
 				pushedTypes.get(local).push(closureVectorPushedValueType(value, callArgTypes.exists(local) ? callArgTypes.get(local) : [], scope));
 				collectClosureVectorPushedTypesFromExpr(value, scope, candidates, callArgTypes, pushedTypes);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectClosureVectorPushedTypesFromExpr(left, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(right, scope, candidates, callArgTypes, pushedTypes);
 			case ECall(callee, args):
@@ -500,7 +498,7 @@ class CppLocalTypeInference {
 					collectClosureVectorPushedTypesFromExpr(element, scope, candidates, callArgTypes, pushedTypes);
 			case EArrayComprehension(name, iterable, filter, body):
 				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					if (filter != null)
 						collectClosureVectorPushedTypesFromExpr(filter, scope, candidates, callArgTypes, pushedTypes);
 					collectClosureVectorPushedTypesFromExpr(body, scope, candidates, callArgTypes, pushedTypes);
@@ -519,7 +517,7 @@ class CppLocalTypeInference {
 				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(thenExpr, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(elseExpr, scope, candidates, callArgTypes, pushedTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorPushedTypesFromExpr(inner, scope, candidates, callArgTypes, pushedTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -623,19 +621,17 @@ class CppLocalTypeInference {
 	}
 
 	function inferStringMapLocalTypeOverridesFromStmtsImpl(scope:CppRenderScope, stmts:Array<HxStmt>):Void {
-		final savedLocalTypes = copyStringMap(scope.localTypes);
-		final savedLocalNames = copyStringMap(scope.localNames);
-		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
-		final candidates = new StringMap<String>();
-		for (stmt in stmts)
-			collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
-		scope.localTypes = savedLocalTypes;
-		scope.localNames = savedLocalNames;
-		scope.localNameCounts = savedLocalNameCounts;
+		CppLocalScope.inferOverrides(scope, () -> {
+			final candidates = new StringMap<String>();
+			for (stmt in stmts)
+				collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
+		});
 	}
 
 	function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				withStringMapInferenceScope(scope, candidates, () -> {
 					for (s in stmts)
@@ -648,14 +644,14 @@ class CppLocalTypeInference {
 					collectStringMapLocalTypeOverridesFromStmt(elseBranch, scope, candidates);
 			case SForIn(name, iterable, body, _):
 				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
 				final loopTypes = keyValueLoopTypes(iterable, scope);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+				withScopedLocal(scope, keyName, loopTypes[0], () -> {
+					withScopedLocal(scope, valueName, loopTypes[1], () -> {
 						collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
 					});
 				});
@@ -673,7 +669,7 @@ class CppLocalTypeInference {
 			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectStringMapLocalTypeOverridesFromExpr(init, scope, candidates);
-				final local = declareLocalName(name, scope);
+				final local = name;
 				final mapClass = mapClassNameFromNewExpr(init);
 				final unhinted = StringTools.trim(typeHint == null ? "" : typeHint).length == 0;
 				final arrowMapType = init == null ? "" : api.arrowMapLiteralCppType(init, scope);
@@ -695,21 +691,26 @@ class CppLocalTypeInference {
 	}
 
 	function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<String>):Void {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null) {
+			collectStringMapLocalTypeOverridesFromExpr(TypedExactStaticCallSource.ordinaryCall(staticCall), scope, candidates);
+			return;
+		}
 		final exact = TypedExactCallSource.decodeInstance(expr);
 		if (exact != null) {
 			collectStringMapLocalTypeOverridesFromExpr(TypedExactCallSource.ordinaryInstanceCall(exact), scope, candidates);
 			return;
 		}
 		switch (expr) {
-			case ECall(EField(EIdent(name), "set"), [key, value]) if (candidates.exists(localCppName(name, scope))):
+			case ECall(EField(EIdent(name), "set"), [key, value]) if (candidates.exists(name)):
 				collectStringMapLocalTypeOverridesFromExpr(key, scope, candidates);
 				collectStringMapLocalTypeOverridesFromExpr(value, scope, candidates);
-				final local = localCppName(name, scope);
+				final local = name;
 				final keyType = mapKeyTypeFromExpr(key, scope);
 				final valueType = stringMapValueTypeFromExpr(value, scope);
 				if (valueType.length > 0)
 					setStringMapLocalTypeOverride(scope, local, candidates.get(local), keyType, valueType);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectStringMapLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectStringMapLocalTypeOverridesFromExpr(right, scope, candidates);
 			case ECall(callee, args):
@@ -726,12 +727,12 @@ class CppLocalTypeInference {
 					collectStringMapLocalTypeOverridesFromExpr(element, scope, candidates);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
-				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+				withScopedLocal(scope, name, iterableElementType(iterable, scope), () -> {
 					if (guardExpr != null)
 						collectStringMapLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
 					collectStringMapLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectStringMapLocalTypeOverridesFromExpr(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
@@ -749,16 +750,13 @@ class CppLocalTypeInference {
 	}
 
 	function withStringMapInferenceScope(scope:CppRenderScope, candidates:StringMap<String>, fn:Void->Void):Void {
-		final savedLocalTypes = copyStringMap(scope.localTypes);
-		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
-		final savedLocalNames = copyStringMap(scope.localNames);
-		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
 		final savedCandidates = copyStringMap(candidates);
-		fn();
-		scope.localTypes = savedLocalTypes;
-		scope.localTypeOverrides = savedLocalTypeOverrides;
-		scope.localNames = savedLocalNames;
-		scope.localNameCounts = savedLocalNameCounts;
+		try {
+			CppLocalScope.isolate(scope, fn);
+		} catch (error:haxe.Exception) {
+			restoreStringMap(candidates, savedCandidates);
+			throw error;
+		}
 		restoreStringMap(candidates, savedCandidates);
 	}
 
@@ -855,14 +853,6 @@ class CppLocalTypeInference {
 		return api.copyStringMap(map);
 	}
 
-	inline function copyIntMap(map:StringMap<Int>):StringMap<Int> {
-		return api.copyIntMap(map);
-	}
-
-	inline function sanitizeIdentifier(name:String):String {
-		return api.sanitizeIdentifier(name);
-	}
-
 	inline function sanitizeTypePath(path:String):String {
 		return api.sanitizeTypePath(path);
 	}
@@ -901,14 +891,6 @@ class CppLocalTypeInference {
 
 	inline function closureCallableArgType(expr:HxExpr, scope:CppRenderScope):String {
 		return api.closureCallableArgType(expr, scope);
-	}
-
-	inline function localCppName(name:String, scope:CppRenderScope):String {
-		return api.localCppName(name, scope);
-	}
-
-	inline function declareLocalName(name:String, scope:CppRenderScope):String {
-		return api.declareLocalName(name, scope);
 	}
 
 	inline function cppLocalTypeHint(typeHint:String, init:Null<HxExpr>, scope:CppRenderScope):String {

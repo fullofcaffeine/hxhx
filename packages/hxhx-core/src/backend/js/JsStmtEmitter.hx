@@ -27,6 +27,8 @@ class JsStmtEmitter {
 
 	public static function emitStmt(writer:JsWriter, stmt:HxStmt, scope:JsFunctionScope):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				writer.writeln("{");
 				writer.pushIndent();
@@ -81,15 +83,21 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
-			case SExpr(ECall(ESuper, _), _):
-				// Stage3 does not retain class hierarchy metadata yet; keep emitted JS parseable.
-				writer.writeln("/* base constructor call omitted */");
+
 			case SBreak(_):
 				writer.writeln("break;");
 			case SContinue(_):
 				writer.writeln("continue;");
 			case SExpr(expr, _):
-				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				switch expr {
+					case ELoweredControl(ArrayAppend, _, _, _):
+						writer.writeln(JsArrayAppendSupport.emit(expr, scope.exprScope()) + ";");
+					case ELoweredControl(_, _, _, _):
+						emitStmt(writer,
+							TypedControlStatements.methodStatement(expr, scope.requireControlIdentity(), null, scope.exprScope().requireExpression), scope);
+					case _:
+						writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				}
 		}
 	}
 
@@ -225,19 +233,17 @@ class JsStmtEmitter {
 
 	static function emitForKeyValue(writer:JsWriter, keyName:String, valueName:String, iterable:HxExpr, body:HxStmt, scope:JsFunctionScope):Void {
 		final sourceVar = scope.freshTemp("__iter");
-		final keysVar = scope.freshTemp("__keys");
-		final indexVar = scope.freshTemp("__i");
 		final keyLocal = scope.declareLocal(keyName);
 		final valueLocal = scope.declareLocal(valueName);
 		writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
-		writer.writeln("var " + keysVar + " = Object.keys(" + sourceVar + ");");
-		writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + keysVar + ".length; " + indexVar + "++) {");
-		writer.pushIndent();
-		writer.writeln("var " + keyLocal + " = " + keysVar + "[" + indexVar + "];");
-		writer.writeln("var " + valueLocal + " = " + sourceVar + "[" + keyLocal + "];");
-		emitStmtBlockContent(writer, body, scope);
-		writer.popIndent();
-		writer.writeln("}");
+		JsKeyValueIteration.emit({
+			writer: writer,
+			source: sourceVar,
+			key: keyLocal,
+			value: valueLocal,
+			fresh: scope.freshTemp,
+			body: () -> emitStmtBlockContent(writer, body, scope)
+		});
 	}
 
 	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, scope:JsFunctionScope):Void {

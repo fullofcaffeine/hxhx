@@ -1,0 +1,3 @@
+-cp packages/hxhx-core/src
+-cp test
+--run M14MethodConstraintDeclarationTest

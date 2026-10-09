@@ -86,6 +86,17 @@ async function main() {
   assert(first.buckets.slice(4).every(bucket => bucket.oversized === false))
   assertExactCoverage(files, first.buckets)
 
+  const growingRepository = [
+    { path: 'Large.hx', lines: 16000 },
+    ...Array.from({ length: 300 }, (_, index) => ({ path: `Small${index}.hx`, lines: 1000 }))
+  ]
+  const growingPlan = buildFormatterBuckets(growingRepository, 4)
+  assert(growingPlan.buckets.some(bucket => bucket.oversized && bucket.files.length === 1 && bucket.files[0] === 'Large.hx'),
+    'adding ordinary files must not remove large-file isolation')
+  assert(growingPlan.buckets.filter(bucket => !bucket.oversized).every(bucket => bucket.lines <= 10000),
+    'ordinary batches must stay bounded independently of repository size')
+  assertExactCoverage(growingRepository, growingPlan.buckets)
+
   const parallel = await measureConcurrency(first.buckets, 4, bucket => (bucket.oversized ? 12 : 4))
   assert.strictEqual(parallel.maximum, 4)
   assert.strictEqual(parallel.maximumOversized, 2)

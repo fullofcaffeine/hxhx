@@ -1,0 +1,10 @@
+call-present=false
+snapshot-present=false
+snapshot-stable=true
+skip-one=true
+skip-all=true
+origin-present=false
+first-identity=true
+first-origin=true
+rethrow-identity=true
+rethrow-origin=true

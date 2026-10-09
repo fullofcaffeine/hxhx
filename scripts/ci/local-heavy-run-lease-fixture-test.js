@@ -294,7 +294,7 @@ try {
     )
     assert.strictEqual(wrapperTimedOut.status, 75, wrapperTimedOut.stderr)
     assert.strictEqual(
-      (wrapperTimedOut.stdout.match(/HAXE_FAMILY_HEAVY_RUN:WAITING/g) || []).length,
+      (wrapperTimedOut.stderr.match(/HAXE_FAMILY_HEAVY_RUN:WAITING/g) || []).length,
       1,
       wrapperTimedOut.stdout
     )
@@ -375,10 +375,10 @@ try {
     }
   )
   assert.strictEqual(nestedWrapper.status, 0, nestedWrapper.stderr)
-  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:ACQUIRED/)
-  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:REENTRANT/)
-  assert.match(nestedWrapper.stdout, /NESTED_WRAPPER_CHILD:PASS/)
-  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:LEASE_RELEASED/)
+  assert.match(nestedWrapper.stderr, /HAXE_FAMILY_HEAVY_RUN:ACQUIRED/)
+  assert.match(nestedWrapper.stderr, /HAXE_FAMILY_HEAVY_RUN:REENTRANT/)
+  assert.strictEqual(nestedWrapper.stdout, 'NESTED_WRAPPER_CHILD:PASS\n', 'scheduling diagnostics must not alter child stdout')
+  assert.match(nestedWrapper.stderr, /HAXE_FAMILY_HEAVY_RUN:LEASE_RELEASED/)
   assert.strictEqual(readLeaseSnapshot(nestedLease).status, 'missing')
 
   console.log('LOCAL_HEAVY_RUN_LEASE_FIXTURE:PASS')

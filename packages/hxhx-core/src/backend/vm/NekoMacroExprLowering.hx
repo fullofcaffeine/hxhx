@@ -24,8 +24,6 @@ class NekoMacroExprLowering {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						builder.macroEnum("EParenthesis", [builder.macroExprObject(exprDef)]);
 					case "untyped":
 						builder.macroEnum("EUntyped", [builder.macroExprObject(exprDef)]);
 					case _:
@@ -61,6 +59,13 @@ class NekoMacroExprBuilder {
 
 	public function macroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				// Preserve source braces independently of the sequence used for runtime evaluation.
+				macroEnum("EBlock", [
+					"$array(" + [for (child in children) macroExprObject(macroExprDef(child))].join(", ") + ")"
+				]);
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [quote(value), macroEnum("DoubleQuotes", [])])]);
 			case EInt(value):
@@ -80,15 +85,15 @@ class NekoMacroExprBuilder {
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) macroExprObject(macroExprDef(value))];
 				macroEnum("EArrayDecl", ["$array(" + items.join(", ") + ")"]);
-			case EBinop("in", left, right):
+			case EBinop(op, left, right):
 				macroEnum("EBinop", [
-					macroEnum("OpIn", []),
+					HxMacroBinaryOperator.render(op, macroEnum),
 					macroExprObject(macroExprDef(left)),
 					macroExprObject(macroExprDef(right))
 				]);
-			case EBinop("=>", left, right):
+			case ERange(left, right):
 				macroEnum("EBinop", [
-					macroEnum("OpArrow", []),
+					HxMacroBinaryOperator.render("...", macroEnum),
 					macroExprObject(macroExprDef(left)),
 					macroExprObject(macroExprDef(right))
 				]);
@@ -115,6 +120,8 @@ class NekoMacroExprBuilder {
 				macroEnum("ECall", [macroExprObject(macroExprDef(callee)), "$array(" + loweredArgs.join(", ") + ")"]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [macroExprObject(macroExprDef(inner))]);
+			case EParenthesized(inner, _):
+				macroEnum("EParenthesis", [macroExprObject(macroExprDef(inner))]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				macroEnum("EUnop", [

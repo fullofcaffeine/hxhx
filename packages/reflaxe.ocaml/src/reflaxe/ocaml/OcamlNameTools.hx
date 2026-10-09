@@ -21,6 +21,14 @@ package reflaxe.ocaml;
  * modules safe and deterministic.
  */
 class OcamlNameTools {
+	/** Names a declared OCaml variant type, including reserved Haxe enum names. */
+	public static function enumTypeName(haxeName:String):String {
+		final normalized = sanitizeLowerIdent(haxeName);
+		if (normalized.length == 0)
+			return "t";
+		return isOcamlReservedValueName(normalized) ? "hx_" + normalized : normalized;
+	}
+
 	/**
 		True if `name` is an OCaml reserved keyword (value identifier).
 
@@ -32,10 +40,10 @@ class OcamlNameTools {
 	public static function isOcamlReservedValueName(name:String):Bool {
 		return switch (name) {
 			// Keywords (OCaml 4.x/5.x)
-			case "and", "as", "assert", "asr", "begin", "class", "constraint", "do", "done", "downto", "else", "end", "exception", "external", "false", "for",
-				"fun", "function", "functor", "if", "in", "include", "inherit", "initializer", "land", "lazy", "let", "lor", "lsl", "lsr", "lxor", "match",
-				"method", "mod", "module", "mutable", "new", "nonrec", "object", "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true",
-				"try", "type", "val", "virtual", "when", "while", "with":
+			case "and", "as", "assert", "asr", "begin", "class", "constraint", "do", "done", "downto", "effect", "else", "end", "exception", "external",
+				"false", "for", "fun", "function", "functor", "if", "in", "include", "inherit", "initializer", "land", "lazy", "let", "lor", "lsl", "lsr",
+				"lxor", "match", "method", "mod", "module", "mutable", "new", "nonrec", "object", "of", "open", "or", "private", "rec", "sig", "struct",
+				"then", "to", "true", "try", "type", "val", "virtual", "when", "while", "with":
 				true;
 			case _:
 				false;
@@ -67,6 +75,7 @@ class OcamlNameTools {
 
 		Policy:
 		- Keep original spelling when already valid.
+		- Escape `effect` with an apostrophe, which cannot occur in a Haxe name.
 		- Prefix `hx_` when name is reserved or starts with an invalid value prefix.
 
 		This is intentionally minimal and stable (no lossy lowercasing), so we preserve
@@ -74,6 +83,8 @@ class OcamlNameTools {
 	**/
 	public static function normalizeValueIdentifier(name:String):String {
 		final base = (name == null || name.length == 0) ? "value" : name;
+		if (base == "effect")
+			return "effect'";
 		return (isOcamlReservedValueName(base) || !hasValidOcamlValueStart(base)) ? ("hx_" + base) : base;
 	}
 

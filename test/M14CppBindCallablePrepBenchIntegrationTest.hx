@@ -160,8 +160,9 @@ class M14CppBindCallablePrepBenchIntegrationTest {
 		final shadowed = new HxFunctionDecl("shadowed", Public, false, [], "Void", [
 			SVar("callback", "", ELambda(["value"], EIdent("value")), HxPos.unknown()),
 			SBlock([
-				SVar("callback", "Int->Int", ELambda(["value"], EIdent("value")), HxPos.unknown()),
-				SExpr(ECall(ECall(EField(EIdent("callback"), "bind"), [EInt(2)]), []), HxPos.unknown())
+				// Projection selects a distinct inner binding before this inference pass runs.
+				SVar("callback_2", "Int->Int", ELambda(["value_2"], EIdent("value_2")), HxPos.unknown()),
+				SExpr(ECall(ECall(EField(EIdent("callback_2"), "bind"), [EInt(2)]), []), HxPos.unknown())
 			], HxPos.unknown())
 		], "");
 		final shadowedOwner = new HxClassDecl("ShadowedBindCallableOwner", false, [shadowed], []);

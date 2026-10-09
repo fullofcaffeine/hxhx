@@ -7,12 +7,12 @@ import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetClassFact;
 	The first complete, host-neutral program input for the standalone OCaml target.
 
 	This revision deliberately accepts one primary class containing only static,
-	initialized final fields and static zero-argument `Void` functions. Both host
+	initialized final fields and static functions with primitive or nullable Int values. Both host
 	adapters may carry larger compiler programs into this constructor, but the
 	semantic identity contains only the selected main class and its exact bodies.
 **/
 class OcamlTargetProgramRequest {
-	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-program-v1";
+	public static inline final SCHEMA_REVISION = "reflaxe-ocaml-target-program-v2";
 
 	public final hostProgramRevision:String;
 	public final mainModuleId:String;
@@ -123,6 +123,8 @@ class OcamlTargetProgramRequest {
 
 	static function validateRevisionOne(mainClass:OcamlTargetClassFact, fieldInitializers:Array<OcamlTargetFieldInitializerFact>,
 			functions:Array<OcamlTargetFunctionFact>):Void {
+		if (mainClass.isInterface || mainClass.isExtern || mainClass.copyInterfaceTypeDisplays().length != 0)
+			throw "OCaml target program requires a generated class without interface relationships";
 		if (mainClass.copyTypeParameters().length != 0
 			|| mainClass.superClassIdentity != null
 			|| mainClass.superTypeIdentity != null
@@ -156,28 +158,39 @@ class OcamlTargetProgramRequest {
 		for (fn in functions)
 			for (call in fn.body.copyStaticCalls()) {
 				final callee = functionsByName.get(call.sourceFunctionName);
-				if (callee == null || !call.belongsTo(callee.moduleId, callee.sourceTypeName))
+				if (callee == null || !call.matchesFunction(callee))
 					throw 'OCaml target program has no admitted callee for "${call.sourceFunctionName}"';
 			}
 		for (declaration in mainClass.copyMethods()) {
 			final fn = functionsByName.get(declaration.name);
+			if (fn == null)
+				throw 'OCaml target program revision 1 cannot lower function "${declaration.name}"';
 			if (!declaration.isStatic
 				|| declaration.copyTypeParameters().length != 0
-				|| declaration.copyArguments().length != 0
-				|| declaration.returnTypeDisplay != "Void"
 				|| !declaration.hasBody
 				|| declaration.isInline
 				|| declaration.isDynamic
 				|| declaration.isEnumConstructor
 				|| declaration.noImportGlobal
-				|| fn == null)
+				|| fn.role != StaticFunction)
 				throw 'OCaml target program revision 1 cannot lower function "${declaration.name}"';
+			final arguments = declaration.copyArguments();
+			final parameters = fn.copyParameters();
+			if (arguments.length != parameters.length || declaration.returnTypeDisplay != fn.returnTypeDisplay)
+				throw "OCaml target program function signature differs from declaration";
+			for (index in 0...arguments.length)
+				if (arguments[index].isOptional
+					|| arguments[index].isRest
+					|| arguments[index].typeDisplay != parameters[index].semanticTypeDisplay
+					|| arguments[index].name != parameters[index].sourceName)
+					throw "OCaml target program parameter differs from declaration";
 			functionsByName.remove(declaration.name);
 		}
 		for (name in functionsByName.keys())
 			throw 'OCaml target program received a body for unknown function "$name"';
-		if (findFunction(functions, "main") == null)
-			throw "OCaml target program revision 1 requires a static main function";
+		final main = findFunction(functions, "main");
+		if (main == null || main.copyParameters().length != 0 || main.returnTypeDisplay != "Void")
+			throw "OCaml target program requires a static zero-argument Void main function";
 	}
 
 	static function findFunction(functions:Array<OcamlTargetFunctionFact>, name:String):Null<OcamlTargetFunctionFact> {

@@ -1,0 +1,3 @@
+-cp test/fixtures/expression_macro_while
+-main Main
+--interp

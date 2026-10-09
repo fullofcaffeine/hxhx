@@ -2,11 +2,13 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
+import haxe.macro.TypedExprTools;
 import haxe.ds.ObjectMap;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.OcamlCompiler;
+import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -33,6 +35,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardArrayCallModel.OcamlStandardArrayResultKind;
@@ -1501,14 +1504,17 @@ class CallPlanFixture {
 			PreliminaryCallFactsFixture.identity("first");
 			PreliminaryCallFactsFixture.identity("second");
 			PreliminaryCallFactsFixture.identity("third");
+			final nested = function() {
+				return PreliminaryCallFactsFixture.identity("nested");
+			};
 		});
 		final expressions = switch (typed.expr) {
 			case TBlock(children): children;
 			case _: Context.error("The preliminary-call fixture did not type as a block.", typed.pos);
 		}
 		final complete = new OcamlCallPlanner(representations, caller).plan(typed);
-		if (complete.decisions().length != 3)
-			Context.error("The complete call planner did not observe all three fixture calls.", typed.pos);
+		if (complete.decisions().length != 4)
+			Context.error("The complete call planner must observe three direct calls and the call inside a nested function.", typed.pos);
 
 		final preliminary = new OcamlCallPlanner(representations, caller);
 		if (!preliminary.preliminaryProducesExactString(expressions[0])
@@ -1526,6 +1532,108 @@ class CallPlanFixture {
 			Context.error("Reusing on-demand preliminary decisions changed the complete final call plan.", typed.pos);
 		final foreign = new OcamlCallPlanner(representations, binding("PreliminaryCallFactsFixture|foreign", "body:foreign"));
 		expectThrows("invalid-preliminary-reuse", () -> new OcamlCallPlanner(representations, caller).plan(typed, foreign));
+	}
+
+	/** Proves an enum carrier cannot admit an unrelated function-value producer. */
+	static function assertEnumFunctionValueRequiresProducer():Void {
+		final typed = Context.typeExpr(macro {
+			function parse(text:String):Null<PreliminaryCallFactsEnum> {
+				return text.length == 0 ? null : PreliminaryCallFactsEnum.Ready;
+			}
+			final parsed = parse("ready");
+		});
+		var call:Null<TypedExpr> = null;
+		var callee:Null<TypedExpr> = null;
+		var arguments:Null<Array<TypedExpr>> = null;
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TCall(foundCallee = {expr: TLocal(local)}, foundArguments) if (local.name == "parse"):
+					call = expression;
+					callee = foundCallee;
+					arguments = foundArguments;
+				case _:
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(typed);
+		if (call == null || callee == null || arguments == null)
+			Context.error("The enum function-value fixture has no typed call.", typed.pos);
+
+		final representations = new OcamlRepresentationRegistry();
+		representations.beginProgram(PROGRAM_REVISION);
+		final descriptor = OcamlNativeEnumRepresentation.select(Context.getType("PreliminaryCallFactsEnum"), new CompilationContext());
+		if (descriptor == null)
+			Context.error("The enum function-value fixture has no native enum descriptor.", typed.pos);
+		representations.selectNativeEnum(descriptor);
+		representations.selectNullableNativeEnum(descriptor);
+		final caller = binding("PreliminaryCallFactsFixture|PreliminaryCallFactsFixture::enumCaller", "body:enum-function-value");
+		if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, call.t, representations))
+			Context.error("A program-wide enum carrier was mistaken for occurrence-level function producer proof.", call.pos);
+		final unproven = new OcamlCallPlanner(representations, caller).plan(typed);
+		if (unproven.decisions().length != 0)
+			Context.error("An enum-returning function value was planned without its exact producer.", call.pos);
+		final proven = new OcamlCallPlanner(representations, caller, null, null,
+			(_, semanticTypeId) -> semanticTypeId == 'Null<${descriptor.semanticTypeId}>').plan(typed);
+		if (proven.decisions().length != 1
+			|| proven.decisions()[0].result == null
+			|| proven.decisions()[0].result.outputSemanticTypeId != 'Null<${descriptor.semanticTypeId}>'
+			|| proven.decisionFor(call) == null) {
+			Context.error("The exact nested-function producer did not authorize its enum result call.", call.pos);
+		}
+	}
+
+	/** Proves a direct call uses its exact published declaration, not only a matching name. */
+	static function assertEnumDirectCallRequiresDeclaration():Void {
+		final typed = Context.typeExpr(macro PreliminaryCallFactsEnumProducer.select("ready"));
+		final representations = new OcamlRepresentationRegistry();
+		representations.beginProgram(PROGRAM_REVISION);
+		final descriptor = OcamlNativeEnumRepresentation.select(Context.getType("PreliminaryCallFactsEnum"), new CompilationContext());
+		if (descriptor == null)
+			Context.error("The direct enum-call fixture has no native enum descriptor.", typed.pos);
+		representations.selectNativeEnum(descriptor);
+		final caller = binding("PreliminaryCallFactsFixture|PreliminaryCallFactsFixture::enumDirectCaller", "body:enum-direct-call");
+		final unpublished = new OcamlCallPlanner(representations, caller, null, null, null, _ -> null).plan(typed);
+		if (unpublished.decisions().length != 0)
+			Context.error("A program-wide enum carrier invented an unpublished direct method declaration.", typed.pos);
+		final declaration = switch (typed.expr) {
+			case TCall({expr: TField(_, FStatic(owner, field))}, _):
+				OcamlCallPlanner.declarationFor(owner.get(), field.get(), true, representations, caller.programRevision, caller.pipelineRevision);
+			case _: null;
+		};
+		if (declaration == null)
+			Context.error("The direct enum-call fixture did not produce its typed declaration.", typed.pos);
+		final published = new OcamlCallPlanner(representations, caller, null, null, null, _ -> declaration).plan(typed);
+		if (published.decisions().length != 1 || published.decisionFor(typed) == null)
+			Context.error("A published direct enum method did not retain its exact call decision.", typed.pos);
+		for (callerPipeline in [
+			OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION,
+			OcamlFunctionPlanRegistry.STANDALONE_PIPELINE_REVISION
+		]) {
+			final distinctCaller:OcamlFunctionPlanBinding = {
+				functionId: caller.functionId,
+				programRevision: caller.programRevision,
+				bodyRevision: caller.bodyRevision,
+				pipelineRevision: callerPipeline
+			};
+			final planned = new OcamlCallPlanner(representations, distinctCaller, null, null, null, _ -> declaration).plan(typed);
+			if (planned.decisions().length != 1 || planned.decisions()[0].pipelineRevision != callerPipeline)
+				Context.error("A nested or standalone caller lost its own pipeline when using an ordinary declaration.", typed.pos);
+		}
+		final incompatible = OcamlCallPlan.copyDeclaration(declaration);
+		incompatible.arguments.pop();
+		OcamlCallPlan.requireCallableDeclarationPlan(incompatible);
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, caller, null, null, null, _ -> incompatible).plan(typed));
+		final wrongCarrier = OcamlCallPlan.copyDeclaration(declaration);
+		wrongCarrier.arguments[0] = value(0);
+		OcamlCallPlan.requireCallableDeclarationPlan(wrongCarrier);
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, caller, null, null, null, _ -> wrongCarrier).plan(typed));
+		final otherRequest:OcamlFunctionPlanBinding = {
+			functionId: caller.functionId,
+			programRevision: "program:other-request",
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+		expectThrows("catalog-mismatch", () -> new OcamlCallPlanner(representations, otherRequest, null, null, null, _ -> declaration).plan(typed));
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {
@@ -1582,8 +1690,12 @@ class CallPlanFixture {
 	}
 
 	public static macro function run():Expr {
+		EnumFunctionProducerFixture.checkMutation();
+		EnumFunctionProducerFixture.checkDeclarationOrder();
 		assertFunctionSyntaxInputUsesOneObservation();
 		assertPreliminaryCallFactsAreLazy();
+		assertEnumFunctionValueRequiresProducer();
+		assertEnumDirectCallRequiresDeclaration();
 		final exactArrayType = Context.typeExpr(macro([] : Array<Int>)).t;
 		if (!OcamlStandardArrayCallContract.isArrayType(exactArrayType))
 			Context.error("The standard Array call contract rejected an exact Array<Int> receiver.", Context.currentPos());
@@ -2456,6 +2568,16 @@ class CallPlanFixture {
 		if (optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))
 			Context.error("The optional hard-cut guard reported an unregistered callable.", Context.currentPos());
 		optionalRegistry.registerCallableDeclaration(optionalDeclaration());
+		final exportedDeclaration = optionalRegistry.callableDeclaration(OPTIONAL_CALLEE_ID);
+		if (exportedDeclaration == null)
+			Context.error("The catalog did not return its registered declaration.", Context.currentPos());
+		exportedDeclaration.arguments.pop();
+		exportedDeclaration.profileEligibility.pop();
+		final retainedDeclaration = optionalRegistry.callableDeclaration(OPTIONAL_CALLEE_ID);
+		if (retainedDeclaration == null || !OcamlCallPlan.sameDeclaration(retainedDeclaration, optionalDeclaration()))
+			Context.error("A caller mutated the declaration retained by the request catalog.", Context.currentPos());
+		if (optionalRegistry.callableDeclaration("absent:callee") != null)
+			Context.error("The catalog invented a declaration for an absent callee.", Context.currentPos());
 		if (!optionalRegistry.hasCallableDeclaration(OPTIONAL_CALLEE_ID))
 			Context.error("The optional declaration guard did not expose the registered callable.", Context.currentPos());
 		if (!optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))
@@ -2809,6 +2931,7 @@ class CallPlanFixture {
 		expectThrows("missing-callable", () -> missingBoundaryRegistry.validateCallGraph());
 		expectPreWriteValidation(caller, selectedCall);
 
+		StandaloneCallPlanChecks.run();
 		Sys.println("REFLAXE_OCAML_CALL_PLAN_FIXTURE:PASS");
 		return macro null;
 	}

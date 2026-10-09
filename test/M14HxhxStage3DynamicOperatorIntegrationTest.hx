@@ -197,12 +197,26 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final numericCarrierMain = TyperStage.typeModule(ParserStage.parse(numericCarrierMainSource, numericCarrierMainPath));
 		final numericCarrierHelper = TyperStage.typeModule(ParserStage.parse(numericCarrierSource, numericCarrierPath));
 		final numericCarrierProgram = MacroStage.expandProgram([numericCarrierMain, numericCarrierHelper], []);
-		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, true);
+		// This regression checks the diagnostic mode that emits only the first
+		// return expression. Select it explicitly: a std/ path must not choose
+		// whether the caller receives complete function bodies.
+		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, false);
 		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
 		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
 		assertTrue(numericCarrierGenerated.indexOf(": Obj.t = Obj.repr (addBits") >= 0,
 			"A concrete nested integer result did not cross its inferred Dynamic return boundary exactly once.");
 		assertTrue(numericCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0, "Nested integer arguments were boxed before concrete integer parameters.");
+		// Full bodies carry a returned value through the function's return
+		// exception. Check the same conversion there without requiring the
+		// diagnostic mode's direct-return layout.
+		final fullCarrierOutputDir = haxe.io.Path.join([root, "out_numeric_carrier_full"]);
+		EmitterStage.emitToDir(numericCarrierProgram, fullCarrierOutputDir, true);
+		final fullCarrierGenerated = File.getContent(haxe.io.Path.join([fullCarrierOutputDir, "NestedIntegerCarrier.ml"]));
+		assertTrue(fullCarrierGenerated.indexOf("HxReturn_combine (Obj.repr (addBits") >= 0,
+			"A concrete nested integer result did not cross the full-body return boundary.");
+		assertTrue(fullCarrierGenerated.indexOf("Obj.repr (Obj.repr (addBits") < 0, "The full-body return boundary boxed the nested integer result twice.");
+		assertTrue(fullCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0,
+			"Full-body nested integer arguments were boxed before concrete integer parameters.");
 
 		final exprToolsSource = File.getContent(haxe.io.Path.join([stage0StdPath, "haxe", "macro", "ExprTools.hx"]));
 		for (shape in [
@@ -238,6 +252,17 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(generated.indexOf("not (read)") < 0 && generated.indexOf("-(read)") < 0 && generated.indexOf("HxInt.lognot (read)") < 0,
 			"The ExprTools-shaped Dynamic local still reached a raw OCaml operator.");
 
+		// Observe the operator program before a separate standard-library check can
+		// stop this runner. Both checks remain required for whole-test success.
+		final result = new sys.io.Process(executable, []);
+		final stdout = result.stdout.readAll().toString();
+		final stderr = result.stderr.readAll().toString();
+		final code = result.exitCode();
+		result.close();
+		assertTrue(code == 0, "Dynamic unary executable failed: " + stderr);
+		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
+		Sys.println("M14_STAGE3_DYNAMIC_OPERATOR_RUNTIME:PASS");
+
 		// DateTools projects this inferred local as an untyped temporary. Lack of a
 		// temporary type is not evidence that the source value uses Dynamic.
 		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
@@ -250,14 +275,6 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
 			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
 		assertTrue(generatedDateTools.indexOf("(hour) = (0)") >= 0, "An inferred Date.getHours() Int local did not keep primitive integer equality.");
-
-		final result = new sys.io.Process(executable, []);
-		final stdout = result.stdout.readAll().toString();
-		final stderr = result.stderr.readAll().toString();
-		final code = result.exitCode();
-		result.close();
-		assertTrue(code == 0, "Dynamic unary executable failed: " + stderr);
-		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
 
 		// Keep rejection evidence independent from Stage3 try/catch support. The
 		// failing program prints its operand before the checked runtime call, which

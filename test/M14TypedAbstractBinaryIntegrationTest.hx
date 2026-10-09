@@ -131,7 +131,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
 			"shadowing helper local lost its exact temporary binding");
 		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
-		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v1") >= 0
+		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v2") >= 0
 			&& implementationRevision.indexOf(argumentBindings[0].getCanonicalIdentity()) >= 0,
 			"typed-module implementation revision omitted the binary pass or generated binding identity");
 		final innerReadBindings = expressions[2].getLocalBindings();
@@ -312,8 +312,11 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& nativeTextResult.getType().getSemanticKey() == "nominal:Main.NativeText"
 			&& containsTag(nativeTextResult, TypedExprTag.Binary),
 			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
-		assertTrue(initializer(main, "typeTestControl").getTag() == TypedExprTag.Binary,
-			"ordinary type-test syntax was mistaken for a surviving abstract operator");
+		final typeTest = initializer(main, "typeTestControl");
+		assertTrue(typeTest.getTag() == TypedExprTag.RuntimeTypeTest
+			&& typeTest.getRuntimeTypeTarget().getSemanticKey() == "runtime-core:String"
+			&& typeTest.getType().getSemanticKey() == "primitive:Bool",
+			"ordinary type-test syntax lost its exact String target or became an abstract operator");
 		assertTrue(initializer(main, "invalidNativeProbe").getTag() == TypedExprTag.BoolValue
 			&& initializer(main, "invalidNativeProbe").getBoolValue(),
 			"typeError did not capture an incompatible bodyless binary result carrier");

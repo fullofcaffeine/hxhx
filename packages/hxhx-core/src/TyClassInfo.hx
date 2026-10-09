@@ -8,17 +8,49 @@
 class TyClassInfo extends TyNominalInfo {
 	final superType:Null<TyType>;
 	final typeParameters:Array<TyTypeParameterId>;
+	final isInterface:Bool;
+	final isExtern:Bool;
+	final interfaceTypes:Array<TyType>;
+	final declaredInterfaceTypes:Array<TyType>;
+	final dynamicMemberType:Null<TyType>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public, isEnum:Bool = false, ?superType:TyType,
-			?typeParameters:Array<TyTypeParameterId>) {
+			?typeParameters:Array<TyTypeParameterId>, ?interfaces:TyClassInterfaces, isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
-			visibility, isEnum);
+			visibility, isEnum, enumDeclaration);
 		this.superType = superType;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
+		this.isInterface = interfaces != null && interfaces.isInterface;
+		this.isExtern = isExtern;
+		this.declaredInterfaceTypes = interfaces == null ? [] : interfaces.types.copy();
+		final relationships = TyClassRelationships.resolve(declaredInterfaceTypes, this.isInterface, isExtern);
+		this.interfaceTypes = relationships.interfaces;
+		this.dynamicMemberType = relationships.dynamicMemberType;
+		if (this.isInterface && superType != null)
+			throw "an interface cannot own a superclass constructor edge";
 	}
+
+	/** Whether this declaration describes a target-owned definition. */
+	public function getIsExtern():Bool
+		return isExtern;
+
+	public function getIsInterface():Bool
+		return isInterface;
+
+	/** Implemented or extended interfaces, with exact applied types retained. */
+	public function getInterfaceTypes():Array<TyType>
+		return interfaceTypes.copy();
+
+	/** Complete indexed header, including markers, for final provider identity checks. */
+	public function getDeclaredInterfaceTypes():Array<TyType>
+		return declaredInterfaceTypes.copy();
+
+	/** Declared fallback for undeclared instance members; null means no local marker. */
+	public function getDynamicMemberType():Null<TyType>
+		return dynamicMemberType;
 
 	/** Exact superclass selected while the program declaration index is built. **/
 	public function getSuperType():Null<TyType>

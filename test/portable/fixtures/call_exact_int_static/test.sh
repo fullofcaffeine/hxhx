@@ -197,7 +197,7 @@ if [ "$(printf '%s\n' "$checked_result_source" | grep -c 'HxRuntime.nullable_int
 	echo "The checked Null<Int> result must unwrap exactly once on normal fall-through" >&2
 	exit 1
 fi
-if ! printf '%s\n' "$checked_result_source" | grep -Fq 'raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
+if ! printf '%s\n' "$checked_result_source" | grep -Fq 'Stdlib.raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
 	echo "The exact Int early return must keep its sealed private return-control path" >&2
 	exit 1
 fi
@@ -223,7 +223,7 @@ if printf '%s\n' "$dynamic_result_source" | grep -Fq 'Obj.magic'; then
 	exit 1
 fi
 all_path_source="$(sed -n '/^let allPathNullable =/,/^let main =/p' "$main_source")"
-if [ "$(printf '%s\n' "$all_path_source" | grep -c 'raise (HxRuntime.Hx_return')" -ne 3 ]; then
+if [ "$(printf '%s\n' "$all_path_source" | grep -c 'Stdlib.raise (HxRuntime.Hx_return')" -ne 3 ]; then
 	echo "Every all-path nullable branch must use its sealed private return signal" >&2
 	exit 1
 fi
@@ -276,52 +276,12 @@ if [ -f all-path-negative-out/AllPathResultControlRejected.ml ]; then
 fi
 rm -f "$all_path_negative_log"
 
-optional_negative_log="$(mktemp)"
-rm -rf optional-negative-out
-if haxe optional-negative.hxml >"$optional_negative_log" 2>&1; then
-	echo "An optional static-initializer call unexpectedly fell back to builder-time argument padding" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-if ! grep -Fq '[ocaml-call:plan-invariant]' "$optional_negative_log" \
-	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$optional_negative_log"; then
-	echo "The unplanned optional call did not report the stable hard-cut diagnostic" >&2
-	cat "$optional_negative_log" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-if [ -f optional-negative-out/OptionalOccurrenceRejected.ml ]; then
-	echo "The unplanned optional call reached OCaml module output" >&2
-	rm -f "$optional_negative_log"
-	exit 1
-fi
-rm -f "$optional_negative_log"
-
-void_negative_log="$(mktemp)"
-rm -rf void-negative-out
-if haxe void-negative.hxml >"$void_negative_log" 2>&1; then
-	echo "A Void static-initializer call unexpectedly fell back to unplanned target syntax" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-if ! grep -Fq '[ocaml-call:plan-invariant]' "$void_negative_log" \
-	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$void_negative_log"; then
-	echo "The unplanned Void call did not report the stable hard-cut diagnostic" >&2
-	cat "$void_negative_log" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-if [ -f void-negative-out/VoidOccurrenceRejected.ml ]; then
-	echo "The unplanned Void call reached OCaml module output" >&2
-	rm -f "$void_negative_log"
-	exit 1
-fi
-rm -f "$void_negative_log"
+# Planned optional and Void initializer calls run in standalone_static_calls.
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 86 || report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 94 || report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -460,7 +420,7 @@ if (!checkedResultBoundary
 	|| checkedResult.proofId !== 'nullable-int-call-checked-unbox-v1'
 	|| typeof checkedResultBoundary.bodyRevision !== 'string'
 	|| typeof checkedResultBoundary.programRevision !== 'string'
-	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v113') {
+	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v119') {
 	throw new Error('the callable boundary did not seal the checked Null<Int>-to-Int result crossing')
 }
 if (checkedResultCalls.length !== 2 || checkedResultCalls.some(call =>
@@ -522,7 +482,7 @@ if (!allPathBoundary
 	|| !isIdentity(allPathBoundary.arguments[0], 'String', 'string')
 	|| !isIdentity(allPathBoundary.result, 'Null<Int>', 'Obj.t')
 	|| !allPathBoundary.reason?.includes('Every path in its final typed body exits through sealed return control')
-	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v113'
+	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v119'
 	|| typeof allPathBoundary.bodyRevision !== 'string'
 	|| typeof allPathBoundary.programRevision !== 'string') {
 	throw new Error('the all-path nullable function did not retain one declared callable result boundary')
@@ -911,12 +871,17 @@ NODE
 repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
-trap 'rm -f "$inspection_report"' EXIT
+inspector_dir="$(mktemp -d)"
+trap 'rm -f "$inspection_report"; rm -rf "$inspector_dir"' EXIT
+# Compile the public inspector for Neko so report hashing uses its native
+# SHA-256 primitive. The fresh process still validates the complete artifact.
 (
 	cd "$repo_root"
 	haxe -cp packages/reflaxe.ocaml/src \
 		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		--neko "$inspector_dir/inspect.n"
+	neko "$inspector_dir/inspect.n" \
 		inspect --project "$fixture_root" --output out --require-lowering --json
 ) >"$inspection_report"
 node - "$inspection_report" <<'NODE'
@@ -962,7 +927,7 @@ if (voidCalls.length !== 2
 NODE
 
 oracle_output="$(mktemp)"
-trap 'rm -f "$inspection_report" "$oracle_output"' EXIT
+trap 'rm -f "$inspection_report" "$oracle_output"; rm -rf "$inspector_dir"' EXIT
 haxe -cp src --main Main --interp >"$oracle_output"
 diff -u expected.stdout "$oracle_output"
 

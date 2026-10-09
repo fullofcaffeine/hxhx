@@ -32,6 +32,7 @@ class PhpThisValueSlotFacts {
 
 	static function statementNeedsValueSlot(statement:HxStmt):Bool {
 		return switch (statement) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(statements, _):
 				statementListNeedsValueSlot(statements);
 			case SVar(_, _, initializer, _): initializer != null && expressionNeedsValueSlot(initializer);
@@ -82,7 +83,7 @@ class PhpThisValueSlotFacts {
 				expressionListNeedsValueSlot(arguments);
 			case EUnop(_, _, inner):
 				expressionNeedsValueSlot(inner);
-			case EBinop(_, left, right): expressionNeedsValueSlot(left) || expressionNeedsValueSlot(right);
+			case EBinop(_, left, right) | EDiscardThen(left, right): expressionNeedsValueSlot(left) || expressionNeedsValueSlot(right);
 			case ETernary(condition, thenExpression, elseExpression): expressionNeedsValueSlot(condition) || expressionNeedsValueSlot(thenExpression) || expressionNeedsValueSlot(elseExpression);
 			case EAnon(_, fieldValues):
 				expressionListNeedsValueSlot(fieldValues);
@@ -91,7 +92,7 @@ class PhpThisValueSlotFacts {
 			case EArrayDecl(values):
 				expressionListNeedsValueSlot(values);
 			case EArrayAccess(receiver, index): expressionNeedsValueSlot(receiver) || expressionNeedsValueSlot(index);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				expressionNeedsValueSlot(inner);
 			case _:
 				false;

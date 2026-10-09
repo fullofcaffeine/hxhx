@@ -153,7 +153,8 @@ enum HxStmt {
 		- This uses a restricted pattern subset (see `HxSwitchPattern`).
 		- Lowered by the bootstrap emitter to nested `if ... then ... else ...` chains.
 	**/
-	SSwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, pos:HxPos);
+	// Only a typed projection supplies coverage; parsed switches leave it absent.
+	SSwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, pos:HxPos, ?exhaustive:Bool);
 
 	/**
 		Try/catch statement: `try stmt catch(name[:Type]) stmt ...`.
@@ -206,4 +207,7 @@ enum HxStmt {
 	SReturnVoid(pos:HxPos);
 	SReturn(expr:HxExpr, pos:HxPos);
 	SExpr(expr:HxExpr, pos:HxPos);
+
+	/** Backend-only lexical scope. Parsing and macro quotation never manufacture this statement. */
+	STargetScope(kind:HxTargetScopeKind, body:HxStmt, pos:HxPos);
 }

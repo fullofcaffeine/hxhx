@@ -132,7 +132,8 @@ class TypeTools {
 		Apply type parameters to a type.
 
 		Bring-up behavior
-		- Macro-eval: best-effort identity (callers that need real behavior should use macro-eval-only paths).
+		- Macro-eval: uses the compiler's type-parameter identities for substitution.
+		  Returning the input unchanged breaks generic type checks in target macros.
 		- Runtime: recursively substitutes synthetic `KTypeParameter` instances by name through the
 		  current runtime `Type` model.
 	**/
@@ -142,7 +143,12 @@ class TypeTools {
 			throw "typeParameters and concreteTypes must have the same length";
 		}
 		#if macro
-		return t;
+		if (typeParameters.length == 0)
+			return t;
+		// Haxe 4.3.7 exposes this operation through its dynamically loaded macro API.
+		// Compiler-owned Type parameters enter here and the API returns a Type;
+		// keep the dynamic call inside this typed, compile-time-only boundary.
+		return @:privateAccess Context.load("apply_params", 3)(typeParameters, concreteTypes, t);
 		#else
 		return RuntimeMacroTypes.applyTypeParameters(t, typeParameters, concreteTypes);
 		#end

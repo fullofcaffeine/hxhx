@@ -2,10 +2,16 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlLocalConversionModel;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.OcamlCallableViewLocalDecision;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.copy as copyCallableView;
+import reflaxe.ocaml.lowered.OcamlCallableViewContract.requireBinding as requireCallableViewBinding;
+import reflaxe.ocaml.lowered.OcamlCallableViewLocalConversion.requireRegistry as requireCallableViewRegistry;
+import reflaxe.ocaml.lowered.OcamlCallableComparison.OcamlCallableComparisonDecision;
 
 /** How syntax construction must convert one value crossing a local-carrier boundary. */
 enum abstract OcamlLocalCarrierConversion(String) from String to String {
@@ -61,13 +67,6 @@ enum abstract OcamlLocalCarrierConversion(String) from String to String {
 	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
-/** The source role that requires one local-carrier conversion. */
-enum abstract OcamlLocalConversionRole(String) from String to String {
-	final Initializer = "initializer";
-	final Assignment = "assignment";
-	final Read = "read";
-}
-
 /** Unsafe target mechanism justified by one admitted local conversion. */
 enum abstract OcamlUnsafeOperationKind(String) from String to String {
 	final ObjReprExactInt = "obj-repr-exact-int";
@@ -121,15 +120,6 @@ typedef OcamlLocalConversionDecision = {
 	final unsafeOperation:Null<OcamlUnsafeOperationRecord>;
 }
 
-/** One function-local reference to a program-owned representation decision. */
-typedef OcamlLocalRepresentationReference = {
-	final localId:String;
-	final representationId:String;
-	final representationRevision:String;
-	final semanticTypeId:String;
-	final domain:OcamlRepresentationDomain;
-}
-
 /** Complete representation status for one admitted or mutated local. */
 enum OcamlLocalRepresentationChoice {
 	/** Syntax must resolve this exact program-owned decision. */
@@ -156,20 +146,35 @@ typedef OcamlLocalRepresentationDecision = {
 	validate and consume the answer without reclassifying the Haxe type. Carrier
 	conversions are sealed separately so initialization, whole-value
 	replacement, and reads cannot fall back to generic same-class casts.
+
+	Callback-view writes retain their structured adapter and both registered
+	layouts in a separate conversion family. Primitive conversion and unsafe
+	operation accessors do not enumerate that family. Production planners must
+	also supply its producer, runtime-use, report and syntax consumers before
+	selecting it for a compiled function.
 **/
 class OcamlLocalRepresentationPlan {
 	final orderedDecisions:Array<OcamlLocalRepresentationDecision>;
 	final decisionsByLocalId:Map<String, OcamlLocalRepresentationDecision> = [];
 	final orderedConversions:Array<OcamlLocalConversionDecision>;
 	final conversionsById:Map<String, OcamlLocalConversionDecision> = [];
+	final orderedCallableViews:Array<OcamlCallableViewLocalDecision>;
+	final callableViewsById:Map<String, OcamlCallableViewLocalDecision> = [];
+	final orderedCallableComparisons:Array<OcamlCallableComparisonDecision>;
+	final callableComparisonsById:Map<String, OcamlCallableComparisonDecision> = [];
 
 	public final count:Int;
 	public final admittedCount:Int;
+
+	/** Number of primitive local conversions; callback adapters have their own count below. */
 	public final conversionCount:Int;
+
 	public final unsafeOperationCount:Int;
+	public final callableViewConversionCount:Int;
 	public final revision:String;
 
-	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>) {
+	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>,
+			?callableViews:Array<OcamlCallableViewLocalDecision>, ?callableComparisons:Array<OcamlCallableComparisonDecision>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> Reflect.compare(left.localId, right.localId));
 		var admitted = 0;
@@ -221,7 +226,49 @@ class OcamlLocalRepresentationPlan {
 		}
 		conversionCount = orderedConversions.length;
 		unsafeOperationCount = unsafeCount;
-		revision = "sha256:" + Sha256.encode(orderedDecisions.map(decisionFingerprint).concat(orderedConversions.map(conversionFingerprint)).join("\n"));
+		orderedCallableViews = callableViews == null ? [] : callableViews.map(copyCallableView);
+		orderedCallableViews.sort((left, right) -> Reflect.compare(left.id, right.id));
+		for (conversion in orderedCallableViews) {
+			if (conversionsById.exists(conversion.id) || callableViewsById.exists(conversion.id))
+				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: callback write "${conversion.id}" has another conversion owner';
+			for (reference in reflaxe.ocaml.lowered.OcamlCallableViewContract.localReferences(conversion)) {
+				final selected = referenceFor(reference.localId);
+				if (selected == null
+					|| selected.representationId != reference.representationId
+					|| selected.representationRevision != reference.representationRevision
+					|| selected.semanticTypeId != reference.semanticTypeId
+					|| selected.domain != reference.domain)
+					throw "reflaxe.ocaml [ocaml-representation:foreign-callable-local]: callback conversion does not use this function's selected local storage";
+			}
+			callableViewsById.set(conversion.id, conversion);
+		}
+		callableViewConversionCount = orderedCallableViews.length;
+		orderedCallableComparisons = (callableComparisons ?? []).map(OcamlCallableComparison.copy);
+		orderedCallableComparisons.sort((left, right) -> Reflect.compare(left.id, right.id));
+		for (comparison in orderedCallableComparisons) {
+			if (callableComparisonsById.exists(comparison.id))
+				throw "reflaxe.ocaml [callback-comparison:duplicate-occurrence]: equality has more than one owner";
+			for (operand in [comparison.left, comparison.right]) {
+				switch (operand.input) {
+					case ExistingView(reference):
+						final selected = referenceFor(reference.localId);
+						if (selected == null
+							|| selected.representationId != reference.representationId
+							|| selected.representationRevision != reference.representationRevision
+							|| selected.semanticTypeId != reference.semanticTypeId
+							|| selected.domain != reference.domain)
+							throw "reflaxe.ocaml [callback-comparison:foreign-local]: equality does not use this function's selected local";
+					case _:
+				}
+			}
+			callableComparisonsById.set(comparison.id, comparison);
+		}
+		revision = "sha256:"
+			+ Sha256.encode(orderedDecisions.map(decisionFingerprint)
+				.concat(orderedConversions.map(conversionFingerprint))
+				.concat(orderedCallableViews.map(conversion -> conversion.revision))
+				.concat(orderedCallableComparisons.map(comparison -> comparison.revision))
+				.join("\n"));
 	}
 
 	/**
@@ -232,17 +279,7 @@ class OcamlLocalRepresentationPlan {
 		counter, local name, or rendered expression text.
 	**/
 	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
-		return "local-conversion:" + Sha256.encode([
-			binding.functionId,
-			binding.programRevision,
-			binding.bodyRevision,
-			binding.pipelineRevision,
-			localId,
-			(role : String),
-			source.file,
-			Std.string(source.min),
-			Std.string(source.max)
-		].join("\n")).substr(0, 32);
+		return reflaxe.ocaml.lowered.OcamlLocalConversionIdentity.occurrenceId(binding, localId, role, source);
 	}
 
 	/**
@@ -254,6 +291,10 @@ class OcamlLocalRepresentationPlan {
 		OCaml syntax can consume the plan.
 	**/
 	public function requirePlanBinding(binding:OcamlFunctionPlanBinding):Void {
+		for (comparison in orderedCallableComparisons)
+			OcamlCallableComparison.requireBinding(comparison, binding);
+		for (conversion in orderedCallableViews)
+			requireCallableViewBinding(conversion, binding);
 		for (conversion in orderedConversions) {
 			if (conversion.functionId != binding.functionId
 				|| conversion.programRevision != binding.programRevision
@@ -275,6 +316,41 @@ class OcamlLocalRepresentationPlan {
 	/** Returns every conversion in deterministic identity order. */
 	public function conversions():Array<OcamlLocalConversionDecision> {
 		return orderedConversions.map(copyConversion);
+	}
+
+	/** Resolve one source-bound callback write and validate both layouts against the live program registry. */
+	public function callableViewConversionFor(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan,
+			registry:OcamlRepresentationRegistry):Null<OcamlCallableViewLocalDecision> {
+		final decision = callableViewsById.get(occurrenceId(binding, localId, role, source));
+		if (decision == null)
+			return null;
+		requireCallableViewRegistry(decision, registry, binding);
+		return copyCallableView(decision);
+	}
+
+	/** Callback adapters are a separate family from primitive local conversions and their unsafe-operation ledger. */
+	public function callableViewConversions():Array<OcamlCallableViewLocalDecision> {
+		return orderedCallableViews.map(copyCallableView);
+	}
+
+	/** Attach final-call comparisons without changing any selected local or write. */
+	public function withCallableComparisons(comparisons:Array<OcamlCallableComparisonDecision>):OcamlLocalRepresentationPlan {
+		return new OcamlLocalRepresentationPlan(orderedDecisions, orderedConversions, orderedCallableViews, comparisons);
+	}
+
+	/** Return the exact comparison selected for this source occurrence and operator. */
+	public function callableComparisonFor(binding:OcamlFunctionPlanBinding, source:OcamlLoweredSourceSpan,
+			notEqual:Bool):Null<OcamlCallableComparisonDecision> {
+		final decision = callableComparisonsById.get(OcamlCallableComparison.occurrenceId(binding, source, notEqual));
+		if (decision == null)
+			return null;
+		OcamlCallableComparison.requireBinding(decision, binding);
+		return OcamlCallableComparison.copy(decision);
+	}
+
+	/** Detached comparisons in deterministic order for report and runtime inventory consumers. */
+	public function callableComparisons():Array<OcamlCallableComparisonDecision> {
+		return orderedCallableComparisons.map(OcamlCallableComparison.copy);
 	}
 
 	/** Returns the admitted unsafe-operation ledger in conversion order. */

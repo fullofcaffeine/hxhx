@@ -1,28 +1,39 @@
 /**
-	Deterministic structural fingerprint for parsed function bodies.
+	Deterministic compact fingerprints and exact identities for parsed bodies.
 
-	The fingerprint is a lifecycle guard, not a persistent cache key. It walks
-	every parsed node and scalar explicitly so native targets never depend on a
-	target-specific `Array.toString` implementation. Retyping creates a new
-	`TypedModule` revision instead of mutating a sealed typed body.
+	Both forms walk every parsed node and scalar explicitly. The compact hash
+	retains existing revision diagnostics but can collide. Freshness checks and
+	capture publication also compare the complete framed identity, including Float
+	payload bits. These are process-local checks, not persistent cache keys.
 **/
 class TypedBodyFingerprint {
-	static function addInt(state:Array<Int>, value:Int):Void {
-		state[0] = state[0] * 31 + value;
-		state[1]++;
-	}
+	/** Keep revision behavior outside the scalar enum module so HxExpr has no reverse dependency on this walker. */
+	static function loweredControlName(kind:HxLoweredControlKind):String
+		return switch kind {
+			case FunctionBody: "function-body";
+			case Initializer(hasValue): hasValue ? "initializer-value" : "initializer-abrupt";
+			case Scope: "scope";
+			case TargetScope(CsUnsafe): "cs-unsafe";
+			case Return: "return";
+			case Branch: "branch";
+			case Throw: "throw";
+			case While(kind): kind == DoWhile ? "do-while" : "while";
+			case For(binding): CompilerCacheIdentity.encode(["for"].concat(HxForBinding.names(binding)));
+			case Switch(patterns, exhaustive): "switch:" + (exhaustive == true ? "complete:" : "partial:") + forExpression(ESwitch(ENull, patterns, []));
+			case Try(catches): CompilerCacheIdentity.encode(["try"].concat([for (entry in catches) entry.getCanonicalIdentity()]));
+			case Break: "break";
+			case Continue: "continue";
+			case ArrayAppend: "array-append";
+			case MapInsert: "map-insert";
+		};
 
-	static function addString(state:Array<Int>, value:Null<String>):Void {
-		if (value == null) {
-			addInt(state, -1);
-			return;
-		}
-		addInt(state, value.length);
-		for (index in 0...value.length)
-			addInt(state, value.charCodeAt(index));
-	}
+	static function addInt(state:BodyIdentityState, value:Int):Void
+		state.addInt(value);
 
-	static function addPosition(state:Array<Int>, position:HxPos):Void {
+	static function addString(state:BodyIdentityState, value:Null<String>):Void
+		state.addString(value);
+
+	static function addPosition(state:BodyIdentityState, position:HxPos):Void {
 		if (position == null) {
 			addInt(state, -1);
 			return;
@@ -32,14 +43,14 @@ class TypedBodyFingerprint {
 		addInt(state, position.getColumn());
 	}
 
-	static function addStrings(state:Array<Int>, values:Array<String>):Void {
+	static function addStrings(state:BodyIdentityState, values:Array<String>):Void {
 		addInt(state, values == null ? -1 : values.length);
 		if (values != null)
 			for (value in values)
 				addString(state, value);
 	}
 
-	static function addUnaryOperator(state:Array<Int>, op:HxUnaryOperator):Void {
+	static function addUnaryOperator(state:BodyIdentityState, op:HxUnaryOperator):Void {
 		addString(state, switch (op) {
 			case Increment: "increment";
 			case Decrement: "decrement";
@@ -49,21 +60,21 @@ class TypedBodyFingerprint {
 		});
 	}
 
-	static function addUnaryFixity(state:Array<Int>, fixity:HxUnaryFixity):Void {
+	static function addUnaryFixity(state:BodyIdentityState, fixity:HxUnaryFixity):Void {
 		addString(state, switch (fixity) {
 			case Prefix: "prefix";
 			case Postfix: "postfix";
 		});
 	}
 
-	static function addPatterns(state:Array<Int>, patterns:Array<HxSwitchPattern>):Void {
+	static function addPatterns(state:BodyIdentityState, patterns:Array<HxSwitchPattern>):Void {
 		addInt(state, patterns == null ? -1 : patterns.length);
 		if (patterns != null)
 			for (pattern in patterns)
 				addPattern(state, pattern);
 	}
 
-	static function addPattern(state:Array<Int>, pattern:HxSwitchPattern):Void {
+	static function addPattern(state:BodyIdentityState, pattern:HxSwitchPattern):Void {
 		switch (pattern) {
 			case PNull:
 				addString(state, "pattern-null");
@@ -139,14 +150,14 @@ class TypedBodyFingerprint {
 		}
 	}
 
-	static function addExpressions(state:Array<Int>, expressions:Array<HxExpr>):Void {
+	static function addExpressions(state:BodyIdentityState, expressions:Array<HxExpr>):Void {
 		addInt(state, expressions == null ? -1 : expressions.length);
 		if (expressions != null)
 			for (expression in expressions)
 				addExpression(state, expression);
 	}
 
-	static function addExpression(state:Array<Int>, expression:HxExpr):Void {
+	static function addExpression(state:BodyIdentityState, expression:HxExpr):Void {
 		switch (expression) {
 			case ENull:
 				addString(state, "expr-null");
@@ -161,7 +172,15 @@ class TypedBodyFingerprint {
 				addInt(state, value);
 			case EFloat(value):
 				addString(state, "expr-float");
-				addString(state, Std.string(value));
+				if (state.isExact()) {
+					// Metadata identity preserves the host value's payload, without choosing
+					// target arithmetic or decimal formatting behavior.
+					final bits = haxe.io.FPHelper.doubleToI64(value);
+					addInt(state, bits.high);
+					addInt(state, bits.low);
+				} else {
+					addString(state, Std.string(value));
+				}
 			case EEnumValue(name):
 				addString(state, "expr-enum-value");
 				addString(state, name);
@@ -184,6 +203,52 @@ class TypedBodyFingerprint {
 				addString(state, "expr-call");
 				addExpression(state, callee);
 				addExpressions(state, arguments);
+			case EDiscardThen(effect, continuation):
+				addString(state, "expr-discard-then");
+				addExpression(state, effect);
+				addExpression(state, continuation);
+			case ESourceGroup(expressions, position):
+				addString(state, "expr-source-group");
+				addPosition(state, position);
+				addExpressions(state, expressions);
+			case EParenthesized(inner, position):
+				addString(state, "expr-parenthesized");
+				addPosition(state, position);
+				addExpression(state, inner);
+			case EPrivateAccess(inner, position):
+				addString(state, "expr-private-access");
+				addPosition(state, position);
+				addExpression(state, inner);
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				addString(state, "expr-source-if");
+				addPosition(state, position);
+				addExpression(state, condition);
+				addExpression(state, whenTrue);
+				addInt(state, whenFalse == null ? 0 : 1);
+				if (whenFalse != null)
+					addExpression(state, whenFalse);
+			case EThrow(value, position):
+				addString(state, "expr-throw");
+				addPosition(state, position);
+				addExpression(state, value);
+			case ELoweredControl(kind, target, expressions, position):
+				addString(state, "expr-lowered-control");
+				addString(state, loweredControlName(kind));
+				if (state.isExact())
+					switch kind {
+						case Switch(patterns): addPatterns(state, patterns);
+						case _:
+					}
+				addString(state, target);
+				addPosition(state, position);
+				addExpressions(state, expressions);
+			case ESourceFunction(facts, body, defaults, position):
+				facts.assertDefaultCount(defaults.length);
+				addString(state, "expr-source-function");
+				addString(state, facts.getCanonicalIdentity());
+				addPosition(state, position);
+				addExpression(state, body);
+				addExpressions(state, defaults);
 			case EReturn(value):
 				addString(state, "expr-return");
 				addInt(state, value == null ? 0 : 1);
@@ -205,11 +270,21 @@ class TypedBodyFingerprint {
 				addInt(state, initializer == null ? 0 : 1);
 				if (initializer != null)
 					addExpression(state, initializer);
-			case EWhile(condition, body, bodyIsBlock, position):
+			case EWhile(condition, body, bodyIsBlock, position, loopKind):
 				addString(state, "expr-while");
+				addInt(state, loopKind == DoWhile ? 1 : 0);
 				addExpression(state, condition);
 				addExpressions(state, body);
 				addInt(state, bodyIsBlock ? 1 : 0);
+				addPosition(state, position);
+			case ESourceFor(binding, iterable, body, position):
+				addString(state, "source-for");
+				final names = HxForBinding.names(binding);
+				addInt(state, names.length);
+				for (name in names)
+					addString(state, name);
+				addExpression(state, iterable);
+				addExpression(state, body);
 				addPosition(state, position);
 			case EBreak(position):
 				addString(state, "expr-break");
@@ -224,10 +299,16 @@ class TypedBodyFingerprint {
 			case EMacroType(typeText):
 				addString(state, "expr-macro-type");
 				addString(state, typeText);
-			case ELambda(arguments, body):
+			case ELambda(arguments, body, signature):
 				addString(state, "expr-lambda");
+				addString(state, signature == null ? null : signature.getCanonicalIdentity());
 				addStrings(state, arguments);
 				addExpression(state, body);
+			case ESourceTry(catches, bodies, position):
+				addString(state, "source-try");
+				addPosition(state, position);
+				addStrings(state, [for (entry in catches) entry.getCanonicalIdentity()]);
+				addExpressions(state, bodies);
 			case ETryCatchRaw(raw):
 				addString(state, "expr-try-raw");
 				addString(state, raw);
@@ -294,15 +375,19 @@ class TypedBodyFingerprint {
 		}
 	}
 
-	static function addStatements(state:Array<Int>, statements:Array<HxStmt>):Void {
+	static function addStatements(state:BodyIdentityState, statements:Array<HxStmt>):Void {
 		addInt(state, statements == null ? -1 : statements.length);
 		if (statements != null)
 			for (statement in statements)
 				addStatement(state, statement);
 	}
 
-	static function addStatement(state:Array<Int>, statement:HxStmt):Void {
+	static function addStatement(state:BodyIdentityState, statement:HxStmt):Void {
 		switch (statement) {
+			case STargetScope(kind, body, position):
+				addString(state, loweredControlName(TargetScope(kind)));
+				addPosition(state, position);
+				addStatement(state, body);
 			case SBlock(statements, position):
 				addString(state, "stmt-block");
 				addStatements(state, statements);
@@ -350,8 +435,9 @@ class TypedBodyFingerprint {
 				addStatement(state, body);
 				addExpression(state, condition);
 				addPosition(state, position);
-			case SSwitch(scrutinee, patterns, bodies, position):
+			case SSwitch(scrutinee, patterns, bodies, position, exhaustive):
 				addString(state, "stmt-switch");
+				addString(state, exhaustive == true ? "complete" : "partial");
 				addExpression(state, scrutinee);
 				addPatterns(state, patterns);
 				addStatements(state, bodies);
@@ -392,18 +478,84 @@ class TypedBodyFingerprint {
 	}
 
 	public static function forStatements(statements:Array<HxStmt>):String {
-		final state = [17, 0];
+		final state = new BodyIdentityState(false);
 		addStatements(state, statements);
-		return state[1] + ":" + state[0];
+		return state.fingerprint();
 	}
 
 	/** Fingerprint one parsed expression for enclosing immutable-artifact checks. **/
 	public static function forExpression(expression:Null<HxExpr>):String {
-		final state = [17, 0];
+		final state = new BodyIdentityState(false);
 		if (expression == null)
 			addInt(state, -1);
 		else
 			addExpression(state, expression);
-		return state[1] + ":" + state[0];
+		return state.fingerprint();
+	}
+
+	/** Exact structure for source freshness and capture publication; compact hashes alone cannot authorize either boundary. */
+	public static function exactStatements(statements:Array<HxStmt>):String {
+		final state = new BodyIdentityState(true);
+		addStatements(state, statements);
+		return state.identity();
+	}
+
+	/** Exact structure detects nested edits before a backend consumes retained expression facts. */
+	public static function exactExpression(expression:HxExpr):String {
+		final state = new BodyIdentityState(true);
+		addExpression(state, expression);
+		return state.identity();
+	}
+}
+
+/** One structural walk can retain exact typed tokens or preserve the existing compact lifecycle fingerprint. */
+private class BodyIdentityState {
+	var hash:Int = 17;
+	var count:Int = 0;
+	final tokens:Null<Array<Null<String>>>;
+
+	public function new(exact:Bool) {
+		tokens = exact ? ["source-body-exact-v1"] : null;
+	}
+
+	public function isExact():Bool
+		return tokens != null;
+
+	function hashInt(value:Int):Void {
+		hash = hash * 31 + value;
+		count++;
+	}
+
+	public function addInt(value:Int):Void {
+		if (tokens != null) {
+			tokens.push("int");
+			tokens.push(Std.string(value));
+		} else {
+			hashInt(value);
+		}
+	}
+
+	public function addString(value:Null<String>):Void {
+		if (tokens != null) {
+			tokens.push("string");
+			tokens.push(value);
+			return;
+		}
+		if (value == null) {
+			hashInt(-1);
+			return;
+		}
+		hashInt(value.length);
+		for (index in 0...value.length)
+			hashInt(value.charCodeAt(index));
+	}
+
+	public function fingerprint():String
+		return count + ":" + hash;
+
+	public function identity():String {
+		if (tokens == null)
+			throw "exact body identity was not requested";
+		return CompilerCacheIdentity.encode(tokens);
 	}
 }

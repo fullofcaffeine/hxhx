@@ -1,0 +1,6 @@
+-cp source
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D ocaml_no_build
+-D reflaxe_ocaml_target_function_test_require_shared=Main|Sink::put

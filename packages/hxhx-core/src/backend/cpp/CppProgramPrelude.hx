@@ -895,7 +895,8 @@ class CppProgramPrelude {
 		out.push("static std::string __hxhx_stringify(const std::optional<T>& value);");
 		out.push("");
 		out.push("static std::string __hxhx_stringify(const std::any& value) {");
-		out.push("  if (!value.has_value()) return std::string();");
+		// Empty erased storage represents Haxe null, which must remain distinct from an empty string.
+		out.push("  if (!value.has_value()) return std::string(\"null\");");
 		out.push("  const std::type_info& type = value.type();");
 		out.push("  if (type == typeid(std::string)) return std::any_cast<std::string>(value);");
 		out.push("  if (type == typeid(const char*)) return __hxhx_stringify(std::any_cast<const char*>(value));");
@@ -915,6 +916,9 @@ class CppProgramPrelude {
 		out.push("}");
 		out.push("");
 		for (line in CppRuntimeSupport.enumValueDynamicLines())
+			out.push(line);
+		out.push("");
+		for (line in CppNullRuntime.lines())
 			out.push(line);
 		out.push("");
 		out.push("static std::string __hxhx_enum_constructor(const std::any& value) {");

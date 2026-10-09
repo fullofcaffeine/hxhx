@@ -170,7 +170,8 @@ bootstrap, native-runtime, and example results remain separate.
   `Tests` aggregate. They do not install an OCaml/Haxe toolchain or build
   `hxhx`.
 - **Q1:** standalone `reflaxe.ocaml` examples, package consumers, and authoring
-  tools add Guardrails and the installed-package compile/build/run proof. The
+  tools add Guardrails, the independent standalone target matrix, and the
+  installed-package compile/build/run proof. The
   hxhx-only Gate 1, Gate 3, JS-oracle, and KPI workflows stay asleep; standalone
   OCaml workload, stdlib, semantic-diff, performance, and security checks keep
   their own normal trigger contracts.
@@ -211,9 +212,9 @@ The same guard owns a narrower Q1 ignore list for workflows whose only purpose
 is exercising `hxhx`; mixed changes and hxhx-specific examples still escalate
 to Q2 and wake those consumers.
 
-At Q2, the Core workflow runs 106 of the 107 canonical `npm test` commands as
-three clean-runner shards after Guardrails: focused compiler regressions,
-macro-host integration, and portable/snapshot/example coverage. Stage0-free,
+At Q2, the Core workflow runs 144 of the 145 canonical `npm test` commands
+across compiler foundations, packaging, focused regressions, macro-host integration,
+portable fixtures, and snapshot/example shards. These jobs start after routing. Stage0-free,
 JS-native, and strict plugin canaries remain required at that tier. Q3 adds the
 single `test:hxhx-targets` shard, whose large application/bootstrap workload
 measured about 24 runner minutes. Q4 inherits the complete Q3 set.
@@ -226,12 +227,28 @@ and then removes the executable. Running any of those npm tests directly still
 builds its own narrow host. This removes duplicate native compilation without
 introducing a global cache or making standalone developer tests depend on CI.
 
+After routing, Core guardrails, smoke tests, plugin checks, and test shards can
+run concurrently on separate runners. They consume no artifacts from the guard
+job, so a long guard run does not delay the first compiler failures. Runner
+availability still controls actual start times. This can use more runner time
+when guards fail, because independent tests already started.
+
+The standalone target matrix gives doctor/tooling, target-reuse, and complete-program
+server checks separate runners, each with a 60-minute budget. Each group owns
+its fixture outputs and consumes no artifacts from preceding guards. The server
+checks retain clean/warm comparisons, edits, memory, source maps, and lifecycle coverage.
+The remaining guard job keeps package installation and runner smoke tests.
+Local `npm run ci:guards` still runs both core and standalone groups, with every
+original command exactly once. The split preserves every scenario; final CI
+durations must establish whether the required work fits the budgets.
+
 The historical check name `Tests` is a fail-closed aggregate. Its versioned
 manifest records the minimum tier for every prerequisite, so only a skip
 authorized by the exact route is accepted. A failed route, secret scan,
 required job, cancelled job, unexpected skip, or missing result fails the
-aggregate. Local `npm test` remains the canonical complete serialized command
-with all 107 entries. The measured baseline and shard rationale are recorded in
+aggregate. Guardrails and the standalone target matrix remain required at Q1
+and above, even when every other test succeeds. Local `npm test` remains the canonical complete serialized command
+with every inventoried entry. The measured baseline and shard rationale are recorded in
 `docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
 
 Stable success markers used by required lanes:

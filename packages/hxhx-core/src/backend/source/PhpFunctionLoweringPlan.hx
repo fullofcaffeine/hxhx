@@ -96,6 +96,10 @@ class PhpFunctionLoweringPlan {
 	final stringExtensionOwners:haxe.ds.StringMap<String>;
 	final fieldReads:Array<PhpFunctionPlanFieldReadFact>;
 	final enumConstructors:PhpFunctionPlanEnumConstructorCatalog;
+	final runtimeTypes:TypedBackendRuntimeTypeCatalog;
+	final captureStorage:PhpCaptureStorage;
+	final rootControl:Null<Void->String>;
+	final selectRuntimeType:HxExpr->TypedBackendRuntimeTypeOccurrence;
 	final canonicalIdentity:String;
 
 	public function new(programFacts:PhpProgramRenderFacts, moduleFacts:PhpModuleRenderFacts, classGraph:TypedBackendClassGraph,
@@ -112,8 +116,13 @@ class PhpFunctionLoweringPlan {
 		classIdentity = normalize(classFacts.getClassIdentity());
 		classFactsIdentity = normalize(classFacts.getCanonicalIdentity());
 		final initializerMode = fieldInitializerProjection != null;
+		rootControl = initializerMode ? null : functionProjection.requireRootControlIdentity;
+		captureStorage = initializerMode ? PhpCaptureStorage.forInitializer(fieldInitializerProjection) : PhpCaptureStorage.forFunction(functionProjection);
 		functionIdentity = normalize(initializerMode ? fieldInitializerProjection.getStableIdentity() : functionProjection.getStableIdentity());
 		bodyRevision = normalize(initializerMode ? fieldInitializerProjection.getBodyRevision() : functionProjection.getBodyRevision());
+		runtimeTypes = initializerMode ? fieldInitializerProjection.getRuntimeTypeCatalog() : functionProjection.getRuntimeTypeCatalog();
+		runtimeTypes.assertOwner(functionIdentity, bodyRevision);
+		selectRuntimeType = initializerMode ? fieldInitializerProjection.requireRuntimeType : functionProjection.requireRuntimeType;
 		if (programRevision.length == 0 || moduleRevision.length == 0 || moduleIdentity.length == 0 || classIdentity.length == 0
 			|| classFactsIdentity.length == 0 || functionIdentity.length == 0 || bodyRevision.length == 0)
 			throw "PHP function lowering plan contains an incomplete revision or semantic identity";
@@ -189,7 +198,7 @@ class PhpFunctionLoweringPlan {
 			localIndex.set(fact.targetName, copyLocal(fact));
 			locals.push(copyLocal(fact));
 		}
-		requireExactParameters(methodArguments, parameterBindingIdentities);
+		requireExactParameters(methodArguments, parameterBindingIdentities, initializerMode ? [] : HxFunctionDecl.getArgs(functionProjection.getDeclaration()));
 
 		instanceFieldTypeHints = new haxe.ds.StringMap<String>();
 		for (field in classFacts.copyFields())
@@ -245,6 +254,11 @@ class PhpFunctionLoweringPlan {
 		identityFacts.push(classGraph.getCanonicalIdentity());
 		identityFacts.push(functionIdentity);
 		identityFacts.push(bodyRevision);
+		identityFacts.push("runtime-type-operands");
+		for (occurrence in runtimeTypes.getEntries()) {
+			identityFacts.push(occurrence.getTarget().getSemanticKey());
+			identityFacts.push(occurrence.getValue() == null ? "value" : "test");
+		}
 		identityFacts.push(emittedClassName);
 		identityFacts.push("class-uses-this-value-slot");
 		identityFacts.push(boolText(classUsesThisValueSlot));
@@ -324,7 +338,20 @@ class PhpFunctionLoweringPlan {
 	}
 
 	public function getSchemaRevision():String
-		return "php-function-lowering-plan-v5";
+		return "php-function-lowering-plan-v7";
+
+	public function getCaptureStorage():PhpCaptureStorage
+		return captureStorage;
+
+	public function requireRootControlIdentity():String {
+		if (rootControl == null)
+			throw "PHP initializer has no method return destination";
+		return rootControl();
+	}
+
+	/** Reject copied, foreign, or changed operands before PHP-specific syntax rewrites. */
+	public function requireRuntimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence
+		return selectRuntimeType(expression);
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
@@ -622,7 +649,11 @@ class PhpFunctionLoweringPlan {
 	function hasCurrentInstanceContext():Bool
 		return currentMethod != null && (!currentMethod.isStatic || currentMethod.name == "new");
 
-	function requireExactParameters(arguments:Array<TypedBackendClassMethodArgumentFact>, parameterBindings:Array<String>):Void {
+	/** Validate the value entering the body, retaining the signature's separate call and omission contract. */
+	function requireExactParameters(arguments:Array<TypedBackendClassMethodArgumentFact>, parameterBindings:Array<String>,
+			declarations:Array<HxFunctionArg>):Void {
+		if (declarations.length != arguments.length)
+			throw "PHP function lowering plan received conflicting parameter declaration count in " + functionIdentity;
 		var parameterCount = 0;
 		for (local in locals)
 			if (local.declarationKind.match(Parameter))
@@ -641,7 +672,8 @@ class PhpFunctionLoweringPlan {
 				throw "PHP function lowering plan cannot find exact parameter binding " + parameterIdentity + " in " + functionIdentity;
 			if (!match.declarationKind.match(Parameter))
 				throw "PHP function lowering plan received non-parameter binding " + parameterIdentity + " for " + argument.name;
-			if (match.typeIdentity != argument.typeIdentity)
+			final entryType = TyFunctionParameter.declarationBodyType(argument.semanticType, declarations[index]);
+			if (match.typeIdentity != entryType.getSemanticKey())
 				throw "PHP function lowering plan received conflicting parameter type for " + argument.name + " in " + functionIdentity;
 		}
 	}
@@ -998,6 +1030,7 @@ class PhpFunctionLoweringPlan {
 	static function copyField(field:TypedBackendClassFieldFact):TypedBackendClassFieldFact
 		return {
 			canonicalIdentity: field.canonicalIdentity,
+			constantIdentity: field.constantIdentity,
 			name: field.name,
 			semanticType: field.semanticType,
 			typeIdentity: field.typeIdentity,
@@ -1009,6 +1042,7 @@ class PhpFunctionLoweringPlan {
 			hasInitializer: field.hasInitializer,
 			propertyGet: field.propertyGet,
 			propertySet: field.propertySet,
+			hasStorage: field.hasStorage,
 			noImportGlobal: field.noImportGlobal
 		};
 

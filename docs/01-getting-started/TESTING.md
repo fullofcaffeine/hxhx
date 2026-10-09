@@ -74,6 +74,80 @@ For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
 `npm test` when the change is ready for complete local evidence.
 
+### Native compiler promotion
+
+Run `npm run test:reflaxe-ocaml:native-program-host` to compile the Haxe-authored
+frontend into a native executable, then use it to compile a small application.
+The gate builds and runs that application and compares its shared-target
+reports, manifests, generated source bytes, diagnostics, and behavior with
+the stock-Haxe route. It excludes the independent Stage3 emitter.
+
+The Reflaxe OCaml package workflow runs this compiler-scale gate in its
+`native_program_host` job on the weekly schedule and manual dispatches.
+Ordinary push and pull-request runs skip this job. The command has a 75-minute
+limit inside a 90-minute job. Failures fail the workflow.
+For an isolated manual validation, select the `native_only` input. This skips
+the package producer and its dependent jobs; scheduled runs retain the whole
+matrix. For example:
+
+```bash
+gh workflow run reflaxe-ocaml-package-matrix.yml --ref <branch> -f native_only=true
+```
+
+The job retains its exact commit, validation log, generation progress,
+diagnostics, generated sources, and reports as
+`reflaxe-ocaml-native-program-host-<commit>`. Native build directories are
+excluded from the upload. A manual run proves the configured job; a scheduled
+run remains separate execution evidence.
+
+This gate proves the admitted revision-one application through the native
+frontend and the shared standalone target. It does not prove general target
+compatibility, native Genes, compiler self-promotion, or a performance gain.
+Its elapsed time includes compiler preparation and background scheduling.
+
+### Abstract method declarations
+
+Run `npm run test:m14:typer-abstract-catalog` when you change abstract declaration
+parsing or operator indexing. The command checks ordinary abstracts and enum
+abstracts, both as primary types and as additional types in a module.
+
+The original `test/enum_abstract_catalog` fixture runs with upstream Haxe 4.3.7.
+The catalog test checks method signatures, generic constraints, modifiers,
+operator metadata, bodies, source ranges, enum values, and loading order.
+The native test generates OCaml and executes branching static methods against
+the upstream result. These checks do not establish full target compatibility
+or prove a freshly rebuilt native compiler.
+
+### Runtime-use process cleanup
+
+Run `node scripts/ci/reflaxe-ocaml-runtime-use-authority-runner-fixture-test.js`
+to check timeout and process-tree cleanup without compiling Haxe fixtures.
+The test observes parent and grandchild readiness before advancing its test
+clock. It covers delayed startup and startup failure with real child processes.
+A separate real-clock case checks the production timeout path without readiness.
+
+This fixture belongs to `npm run test:reflaxe-ocaml:runtime-use-authority`.
+The production runner still measures its phase deadline from process creation.
+
+### Function bodies after return types
+
+Run `npm run test:m14:parser-stage-scan-expression-body` to check function body
+boundaries in the parser and helper scanner. The test checks call expressions,
+nested return types, and preservation of the following method. Static methods
+with a structured body must retain that body without an explicit final `return`.
+
+The Python static-member test below also runs a helper with a single-expression
+body. It compares the generated program with upstream Haxe behavior.
+
+### Python static members
+
+Run `npm run test:m14:python-entry-members` to check static calls and fields on
+the program's entry class. The test also checks local-name collisions and
+references to the entry function during static initialization.
+It compares authored output with upstream Haxe and generated Python execution.
+See the [fixture guide](../../test/python_entry_members/README.md) for prerequisites
+and the limits of this evidence.
+
 ### Array membership
 
 Use this command when you change OCaml `Array.contains` lowering or runtime
@@ -110,6 +184,18 @@ types, instance members, and a static lambda. It builds and runs generated OCaml
 and compares the output with upstream Haxe 4.3.7. It also rejects stale types,
 foreign function bindings, and reordered parameters. This focused check does
 not replace current-source compiler builds or the upstream compatibility suites.
+
+To check shared variable identities and catch types, run:
+
+```bash
+npm run test:m14:typed-local-identity
+```
+
+Catch variables must keep their declared types in statement and expression
+forms. An omitted type selects `haxe.Exception`. The fixtures also check nested
+catches, captured variables, and ordinary lambda parameters. These checks prove
+the facts supplied to targets; target runtime checks must also prove exception
+wrapping, handler selection, and rethrow behavior.
 
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
@@ -351,7 +437,10 @@ much more and is usually the wrong tradeoff without dedicated benchmarks.
 
 ## Formatting Haxe code
 
-Use the official Haxe formatter through `haxelib`.
+Use the pinned Haxe Formatter build. After installing npm dependencies and
+Haxe 4.3.7 through Lix, run `npm run setup:formatter`.
+The [local validation guide](FAST_LOCAL_VALIDATION.md#haxe-formatting) explains
+the source pin, lexer performance repair, and artifact verification.
 
 For files you just changed:
 
@@ -371,7 +460,7 @@ script is only the stable npm/CI entrypoint: it moves to the repo root and calls
 `scripts/lint/hx-format-guard.js`.
 
 The Node helper does not define its own style rules. It still delegates to
-`haxelib run formatter --check`. It isolates files large enough to dominate one
+the pinned formatter with `--check`. It isolates files large enough to dominate one
 formatter process, line-balances the remaining files, and feeds those deterministic
 tasks to a bounded worker queue because Haxe Formatter does not provide a built-in
 jobs flag. A free worker can start the next task without waiting for the slowest
@@ -591,6 +680,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
     - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb`, `stage0_observability.heartbeat_peak_tree_rss_mb`, and `stage0_observability.heartbeat_trace_file` (plus heartbeat samples/interval)
+    - `stage0_observability.heartbeat_peak_tree_cpu_pct` sums unique observed client/server PIDs at each sample, then reports the largest sample.
+    - The heartbeat trace and its summary distinguish the attached client from the observed server worker. See [resource field meanings](../00-project/STAGE0_POLICY.md#read-client-and-server-resource-reports).
     - watchdog configuration and outcome: `stall_timeout_seconds`, `hard_timeout_seconds`,
       `progress_poll_seconds`, `timeout_kind`, `timeout_elapsed_seconds`,
       `last_progress_elapsed_seconds`, `last_progress_reason`, and `timeout_cleanup`
@@ -602,7 +693,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - Set `stage0_failfast_secs` when the complete source graph needs more than the default 3,600-second emit limit.
     - The benchmark report remains the timing and provenance record.
     - `warm` reuses generated output, not compiler-server state: every measured sample gets a fresh server matched to the selected upstream-Haxe wrapper/direct-binary policy.
-    - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The current peak-RSS column excludes the server process.
+    - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The peak-RSS column now describes the observed focus process, including an owned server worker. It is not total job memory.
     - Bootstrap regeneration asks Reflaxe to keep its generated-file metadata ID at zero. That ID is normally only a compile counter; fixing it at zero prevents two otherwise identical snapshot refreshes from looking different.
     - The benchmark report lists every changed path under `packages/hxhx/bootstrap_out`, including untracked generated files, with before/after SHA-256 digests. This makes it clear whether the committed snapshot is behind the Haxe source or the generator itself is changing unpredictably.
     - include compile knobs in benchmark runs:
@@ -647,11 +738,24 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Repo-owned server process-lifecycle diagnostics:
     - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|owned-pids|stop`
     - The helper records the launcher and descendants with stable process-start identities. `stop`, failed startup, launcher exit, and interrupted startup terminate the complete recorded tree, including a native Haxe child whose Node/Lix wrapper used a different internal port.
+    - `owned-pids` also saves identities for newly observed descendants before returning them.
+      This keeps those children stoppable after their launcher exits.
+    - `start`, `stop`, and `owned-pids` serialize changes with `flock` on Linux or `lockf` on macOS.
+      Lock acquisition waits at most 15 seconds. The kernel releases the lock when the helper exits.
+      The server does not inherit it. The retained `haxe-server.lock` file does not indicate a running server.
+    - `npm run test:hxhx:haxe-server-identity` includes a deterministic late-child regression and a concurrent observation/stop check.
+      It also interrupts startup before PID publication, before the first process-tree snapshot, and during readiness checks.
+      Each interruption must remove owned processes and saved state while preserving an unrelated server on the same port.
     - Warm Reflaxe generation through `--use-repo-server` is temporarily blocked
       because a measured cached request lost complete target-wide state. See
       `docs/01-getting-started/COMPILATION_SERVER.md`.
   - Optional skip-if-unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
+    - Regeneration reads every selected input again before it compares the saved fingerprint.
+      Checksum batches contain at most 128 paths and about 16 KiB of path arguments.
+      Batching preserves the input order and digest format. A failed checksum stops regeneration.
+    - `npm run test:hxhx:bootstrap-fingerprint` verifies the complete manifest, all 24 configuration fields,
+      file changes, both installed checksum tools, and the real skip/force branches with a fake compiler.
   - Faster local iteration (reuse previous emit output + skip verify):
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast`
     - Equivalent env knobs:
@@ -756,10 +860,29 @@ Notes:
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.
+- `npm run test:m14:neko-typed-local-projection` includes native String construction with the real Neko standard library.
+  The fixture compares both output layouts with upstream Haxe. It checks argument effects and an ordinary qualified class also named `String`.
+  The core String constructor must use its native primitive without emitting an unused object implementation.
+- The same Neko group covers inherited construction, field order, default arguments, virtual calls, and receiver identity across three class levels.
+  It also loads the real `haxe.ValueException` provider and checks its inherited message and `unwrap()` result in both output layouts.
+- Neko standard-library selection coverage is in `npm run test:m14:neko-standard-library-paths`.
+  It checks that project sources take precedence, then Neko implementations in `std/neko/_std`, then common declarations in `std`.
+  For example, ordinary Neko lookup selects `std/neko/_std/haxe/Exception.hx` before `std/haxe/Exception.hx`.
+  The test also checks that the last explicit `-cp` wins and that other targets exclude the Neko directory.
+  This test proves source selection. Complete exception compilation and runtime behavior require separate coverage.
 - HashLink native backend boundary smoke coverage is in `npm run test:m14:hashlink-native-backend-smoke`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
+- `npm run test:m14:neko-startup-try` compiles and runs successful and caught-failure try expressions, including local and static-field assignments.
+  `npm run test:m14:typed-body-boundary` checks that assignment operands retain their calls, result types, and source lines without opaque executable syntax.
+  The startup command also compares stack primitives with upstream Haxe in both Neko output layouts. It preserves ordinary class-member calls and rejects invalid primitive argument counts.
+  The same runtime fixture checks calls to later functions, mutual recursion, and constructor references across generated definitions.
+- Module declaration coverage is in `npm run test:m14:hih-module-type-declaration-skip`.
+  It checks final class modifiers, class metadata, and module-level final fields, plus complete typedef, enum, and abstract declaration boundaries.
+- `npm run test:m14:hih-expr-text-parser` also checks dollar-prefixed expressions through the complete module parser.
+  Ordinary expressions retain Neko primitive names such as `$new`. Inside macro quotations, dollar expressions insert an existing expression into the quoted syntax.
+  The parser restores this context across nested quotations and rejects braced reification outside a quotation.
 - JS statement lowering coverage for try/catch + throw is in `npm run test:m14:js-stmt-try-throw`.
 - JS statement multi-catch dispatch lowering coverage is in `npm run test:m14:js-stmt-multi-catch`.
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and
@@ -1032,6 +1155,15 @@ These checks run `haxe` compilations and/or compare emitted `.ml` text:
 - **Printer tests**: ensure OCaml AST printing stays stable/valid.
 - **Integration compile tests**: ensure the backend can compile representative Haxe code.
 - **Snapshot tests** (`test/snapshot/**`): golden `.ml` output comparisons (compile-to-OCaml only; no dune build).
+
+The snapshot checker and updater both accept `HXHX_SNAPSHOT_DIR` to select one fixture or a fixture group.
+For example, regenerate only the enum fixture with the repository compiler wrapper:
+
+```sh
+HXHX_SNAPSHOT_DIR="$PWD/test/snapshot/core/enums_basic" npm exec -- bash scripts/update-snapshots.sh
+```
+
+Review generated changes before committing them. Snapshot comparisons and OCaml parsing do not prove runtime behavior.
 
 These catch regressions in:
 

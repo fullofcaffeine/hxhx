@@ -28,11 +28,37 @@ class JsExprEmitter {
 			},
 			resolveSuperClassRef: function():Null<String> {
 				return parent == null ? null : parent.resolveSuperClassRef();
-			}
-		};
+			},
+			runtimeTypes: parent == null ? null : parent.runtimeTypes,
+			enumDeclarations: parent == null ? null : parent.enumDeclarations,
+			methodUses: parent == null ? null : parent.methodUses,
+			lambdaUses: parent == null ? null : parent.lambdaUses,
+			requireExpression: parent == null ? null : parent.requireExpression,
+			abstractReceiver: parent != null && parent.abstractReceiver == true};
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		final methodValue = JsMethodValueSupport.emitValue(expr, scope);
+		if (methodValue != null)
+			return methodValue;
+		if (TypedRuntimeTypeSource.isMarker(expr))
+			return JsRuntimeTypeSupport.emit(expr, scope);
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null) {
+			final syntax = JsSyntaxIntrinsic.emit(staticCall, operand -> emitCallArg(operand, scope), arguments -> emitInlineJsCode(arguments, scope));
+			if (syntax != null)
+				return syntax;
+			// A bare static call inside an instance body is not a local function.
+			// Its selected owner also disambiguates imported aliases and shadowed names.
+			if (staticCall.callee.match(EIdent(_))) {
+				final parts = staticCall.owner.split('.');
+				var owner:HxExpr = EIdent(parts[0]);
+				for (part in parts.slice(1))
+					owner = EField(owner, part);
+				return emit(ECall(EField(owner, staticCall.method), staticCall.arguments), scope);
+			}
+			return emit(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);
+		}
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
@@ -40,6 +66,11 @@ class JsExprEmitter {
 		if (exactEnumConstructor != null)
 			return emitExactEnumConstructor(exactEnumConstructor, scope);
 		return switch (expr) {
+			case EPrivateAccess(_, _):
+				throw "source access permission must be consumed before JavaScript emission";
+			case ESourceTry(_, _, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) | ESourceFor(_, _, _, _) | EThrow(_, _) |
+				ELoweredControl(_, _, _, _):
+				throw "source control must be lowered before JavaScript emission (haxe_ocaml-o25kr)";
 			case ENull:
 				"null";
 			case EBool(v):
@@ -53,8 +84,7 @@ class JsExprEmitter {
 			case EEnumValue(name):
 				final cls = scope == null ? null : scope.resolveClassRef(name);
 				cls == null ? JsNameMangler.quoteString(name) : cls;
-			case EThis:
-				"this";
+			case EThis: scope != null && scope.abstractReceiver == true ? "this.__hx_value" : "this";
 			case ESuper:
 				"super";
 			case EIdent(name):
@@ -65,9 +95,11 @@ class JsExprEmitter {
 				emitNullSafeField(obj, field, scope);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
+			case EDiscardThen(effect, continuation):
+				"(" + emit(effect, scope) + ", " + emit(continuation, scope) + ")";
 			case EReturn(_):
 				unsupported("EReturn", "expression-position return must be consumed by macro expansion before JS emission");
-			case EWhile(_, _, _, _):
+			case EWhile(_, _, _, _, loopKind):
 				unsupported("EWhile", "expression-position while must be consumed by macro expansion before JS emission");
 			case EBreak(_):
 				unsupported("EBreak", "expression-position break needs shared loop-control lowering before JS emission");
@@ -78,14 +110,15 @@ class JsExprEmitter {
 			case EVariableDeclaration(_, _, _, _, _, _):
 				unsupported("EVariableDeclaration", "a variable declaration must remain inside its expression declaration list");
 			case EMacroExpr(inner, wrappers):
-				emitMacroExpr(inner, wrappers, scope);
+				new JsMacroQuotation(scope).expression(inner, wrappers);
 			case EMacroType(typeText):
-				emitMacroType(typeText);
+				new JsMacroQuotation(scope).type(typeText);
 			case EUnop(op, fixity, inner) if (op == Increment || op == Decrement):
 				emitIncDec(op, fixity, inner, scope);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
-				"(" + HxUnaryOperatorTools.sourceToken(op) + emit(inner, scope) + ")";
+				// A signed Int operand must not fuse with negation into a decrement token.
+				"(" + HxUnaryOperatorTools.sourceToken(op) + " " + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
 				emitBinop(op, left, right, scope);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -103,7 +136,9 @@ class JsExprEmitter {
 			case EArrayAccess(array, index):
 				emitArrayRead(array, index, scope);
 			case ELambda(args, body):
-				emitLambda(args, body, scope);
+				JsLambdaEmitter.emit(expr, args, body, scope);
+			case EParenthesized(inner, _):
+				"(" + emit(inner, scope) + ")";
 			case ECast(inner, _):
 				emit(inner, scope);
 			case EUntyped(inner):
@@ -868,6 +903,10 @@ class JsExprEmitter {
 			if (cls != null)
 				return cls;
 		}
+		// The standard-library provider refers to a compiler-owned registry. Keep
+		// its dollar-bearing binding distinct from an authored _hxEnums local.
+		if (name == "$hxEnums")
+			return "$hxEnums";
 		return JsNameMangler.identifier(name);
 	}
 
@@ -918,6 +957,9 @@ class JsExprEmitter {
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
+			case ESuper:
+				final operands = ["this"].concat(args.map(argument -> emitCallArg(argument, scope)));
+				return resolveSuperRef(scope) + ".call(" + operands.join(", ") + ")";
 			case EField(ESuper, field):
 				return emitSuperMethodCall(field, args, scope);
 			case EField(subject, "match") if (args != null && args.length == 1):
@@ -925,20 +967,17 @@ class JsExprEmitter {
 			case EField(subject, "copy") if (args != null && args.length == 0):
 				return emitCopyCall(subject, scope);
 			case EEnumValue(name):
-				final params = args == null ? [] : args.map(a -> emit(a, scope));
-				return macroEnum(name, params);
+				return unsupported("EEnumValue", "enum call requires its exact checked owner: " + name);
 			case EIdent("__js__") | EField(EField(EIdent("js"), "Syntax"), "code"):
 				return emitInlineJsCode(args, scope);
 			case EIdent("__hxhx_throw"):
 				final thrown = args.length > 0 ? emit(args[0], scope) : "null";
 				return "(function(){ throw " + thrown + "; })()";
-			case EIdent("__hxhx_parenthesized") if (args.length == 1):
-				return "(" + emit(args[0], scope) + ")";
 			case EIdent("__hxhx_spread"):
 				return args.length > 0 ? "..." + emit(args[0], scope) : "";
 			case EIdent("__hxhx_optional_lambda") if (args.length >= 1):
 				return emit(args[0], scope);
-			case EIdent("trace"):
+			case EIdent("trace") if (args.length > 0):
 				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
 				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";
@@ -1018,10 +1057,9 @@ class JsExprEmitter {
 		final patternJs = emit(pattern, scope);
 		return "(function(__hx_v, __hx_p) {"
 			+ "if (__hx_v == null || __hx_p == null) return false;"
-			+ "if (__hx_v.__hx_enum != null && __hx_p.__hx_enum != null && __hx_v.__hx_enum !== __hx_p.__hx_enum) return false;"
-			+ "if (__hx_v.__hx_ctor !== __hx_p.__hx_ctor) return false;"
-			+ "var __hx_vp = Array.isArray(__hx_v.__hx_params) ? __hx_v.__hx_params : [];"
-			+ "var __hx_pp = Array.isArray(__hx_p.__hx_params) ? __hx_p.__hx_params : [];"
+			+ "if ($hx_enum_constructor(__hx_v) == null || $hx_enum_constructor(__hx_v) !== $hx_enum_constructor(__hx_p)) return false;"
+			+ "var __hx_vp = $hx_enum_parameters(__hx_v);"
+			+ "var __hx_pp = $hx_enum_parameters(__hx_p);"
 			+ "if (__hx_vp.length !== __hx_pp.length) return false;"
 			+ "for (var __hx_i = 0; __hx_i < __hx_pp.length; __hx_i++) {"
 			+ "if (JSON.stringify(__hx_vp[__hx_i]) !== JSON.stringify(__hx_pp[__hx_i])) return false;"
@@ -1114,14 +1152,18 @@ class JsExprEmitter {
 		final iterable = emit(args[0], scope);
 		final body = emit(args[1], scope);
 		final continuation = emit(args[2], scope);
-		return "(function(){ var __iter = "
-			+ iterable
-			+ "; var __body = "
-			+ body
-			+
-			"; var __keys = Object.keys(__iter); for (var __i = 0; __i < __keys.length; __i++) { var __raw_key = __keys[__i]; var __key = Array.isArray(__iter) ? (__raw_key | 0) : __raw_key; __body(__key, __iter[__raw_key]); } return "
-			+ continuation
-			+ "; })()";
+		final writer = new JsWriter();
+		writer.writeln("(function(){ var __iter = " + iterable + "; var __body = " + body + ";");
+		JsKeyValueIteration.emit({
+			writer: writer,
+			source: "__iter",
+			key: "__key",
+			value: "__value",
+			fresh: name -> name,
+			body: () -> writer.writeln("__body(__key, __value);")
+		});
+		writer.writeln("return " + continuation + "; })()");
+		return writer.toString();
 	}
 
 	static function emitForInExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
@@ -1724,317 +1766,6 @@ class JsExprEmitter {
 		}
 	}
 
-	static function emitMacroExpr(expr:HxExpr, wrappers:Array<String>, scope:JsEmitScope):String {
-		var exprDef = macroExprDef(expr, scope);
-		if (wrappers != null) {
-			var i = wrappers.length;
-			while (i > 0) {
-				i--;
-				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						macroEnum("EParenthesis", [macroExprObject(exprDef)]);
-					case "untyped":
-						macroEnum("EUntyped", [macroExprObject(exprDef)]);
-					case _:
-						exprDef;
-				}
-			}
-		}
-		return macroExprObject(exprDef);
-	}
-
-	static function emitMacroType(typeText:String):String {
-		return macroComplexType(typeText);
-	}
-
-	static function macroExprObject(exprDef:String):String {
-		return "({expr: " + exprDef + ", pos: null})";
-	}
-
-	static function macroEnum(name:String, params:Array<String>):String {
-		final paramText = params == null ? "" : params.join(", ");
-		return "({__hx_ctor: " + JsNameMangler.quoteString(name) + ", __hx_index: 0, __hx_params: [" + paramText + "]})";
-	}
-
-	static function macroExprDef(expr:HxExpr, scope:JsEmitScope):String {
-		return switch (expr) {
-			case EString(v):
-				macroEnum("EConst", [macroEnum("CString", [JsNameMangler.quoteString(v)])]);
-			case EInt(v):
-				macroEnum("EConst", [macroEnum("CInt", [JsNameMangler.quoteString(Std.string(v))])]);
-			case EFloat(v):
-				macroEnum("EConst", [macroEnum("CFloat", [JsNameMangler.quoteString(Std.string(v))])]);
-			case ENull:
-				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString("null")])]);
-			case EIdent(name):
-				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(name)])]);
-			case EField(obj, field):
-				macroEnum("EField", [emitMacroExpr(obj, [], scope), JsNameMangler.quoteString(field)]);
-			case ENullSafeField(obj, field):
-				macroEnum("EField", [
-					emitMacroExpr(obj, [], scope),
-					JsNameMangler.quoteString(field),
-					macroEnum("Safe", [])
-				]);
-			case EArrayAccess(array, index):
-				macroEnum("EArray", [emitMacroExpr(array, [], scope), emitMacroExpr(index, [], scope)]);
-			case EArrayDecl(values):
-				final items = values == null ? [] : values.map(v -> emitMacroExpr(v, [], scope));
-				macroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
-				macroEnum("EBinop", [
-					macroEnum("OpIn", []),
-					emitMacroExpr(left, [], scope),
-					emitMacroExpr(right, [], scope)
-				]);
-			case ECall(EIdent("__hxhx_macro_if"), args):
-				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
-				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
-				final elseExpr = if (args.length > 2) {
-					switch (args[2]) {
-						case EIdent("__hxhx_macro_missing_else"):
-							"null";
-						case expr:
-							emitMacroExpr(expr, [], scope);
-					}
-				} else {
-					"null";
-				}
-				macroEnum("EIf", [emitMacroExpr(cond, [], scope), emitMacroExpr(thenExpr, [], scope), elseExpr]);
-			case ECall(EIdent("__hxhx_macro_ident_splice"), args):
-				final nameExpr = args.length > 0 ? args[0] : HxExpr.EString("");
-				macroEnum("EConst", [macroEnum("CIdent", ["String(" + emit(nameExpr, scope) + ")"])]);
-			case ECall(callee, args):
-				final loweredArgs = args == null ? [] : args.map(arg -> emitMacroExpr(arg, [], scope));
-				macroEnum("ECall", [emitMacroExpr(callee, [], scope), "[" + loweredArgs.join(", ") + "]"]);
-			case EUntyped(inner):
-				macroEnum("EUntyped", [emitMacroExpr(inner, [], scope)]);
-			case EUnop(op, fixity, inner):
-				HxUnaryOperatorTools.requireValidFixity(op, fixity);
-				macroEnum("EUnop", [
-					macroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
-					fixity == HxUnaryFixity.Postfix ? "true" : "false",
-					emitMacroExpr(inner, [], scope)
-				]);
-			case _:
-				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(emit(expr, scope))])]);
-		}
-	}
-
-	static function macroComplexType(raw:String):String {
-		final text = trimLeadingTypeColon(raw);
-		final arrowParts = splitTopLevelArrow(text);
-		if (arrowParts.length > 1) {
-			final args = new Array<String>();
-			for (i in 0...arrowParts.length - 1) {
-				final segmentArgs = macroFunctionArgTypes(arrowParts[i]);
-				for (arg in segmentArgs)
-					args.push(arg);
-			}
-			return macroEnum("TFunction", ["[" + args.join(", ") + "]", macroComplexType(arrowParts[arrowParts.length - 1])]);
-		}
-
-		final trimmed = StringTools.trim(text);
-		if (trimmed.length == 0)
-			return macroTypePath("");
-
-		final namedColon = findTopLevelChar(trimmed, ":".code);
-		if (namedColon > 0) {
-			final namePart = StringTools.trim(trimmed.substring(0, namedColon));
-			final typePart = trimmed.substr(namedColon + 1);
-			if (StringTools.startsWith(namePart, "?")) {
-				final name = StringTools.trim(namePart.substr(1));
-				return macroEnum("TOptional", [
-					macroEnum("TNamed", [JsNameMangler.quoteString(name), macroComplexType(typePart)])
-				]);
-			}
-			return macroEnum("TNamed", [JsNameMangler.quoteString(namePart), macroComplexType(typePart)]);
-		}
-
-		if (StringTools.startsWith(trimmed, "?"))
-			return macroEnum("TOptional", [macroComplexType(trimmed.substr(1))]);
-
-		final parenEnd = matchingOuterParen(trimmed);
-		if (parenEnd == trimmed.length - 1)
-			return macroEnum("TParent", [macroComplexType(trimmed.substring(1, trimmed.length - 1))]);
-
-		return macroTypePath(trimmed);
-	}
-
-	static function macroFunctionArgTypes(raw:String):Array<String> {
-		final trimmed = StringTools.trim(raw);
-		final parenEnd = matchingOuterParen(trimmed);
-		if (parenEnd == trimmed.length - 1) {
-			final inner = trimmed.substring(1, trimmed.length - 1);
-			final commaParts = splitTopLevelComma(inner);
-			if (commaParts.length > 1)
-				return commaParts.map(part -> macroComplexType(part));
-		}
-		return [macroComplexType(trimmed)];
-	}
-
-	static function macroTypePath(raw:String):String {
-		final path = StringTools.trim(stripGenericTypeParams(raw));
-		final parts = path.split(".");
-		final name = parts.length == 0 ? path : parts[parts.length - 1];
-		final pack = new Array<String>();
-		if (parts.length > 1) {
-			for (i in 0...parts.length - 1)
-				pack.push(JsNameMangler.quoteString(parts[i]));
-		}
-		final typePath = "{pack: [" + pack.join(", ") + "], name: " + JsNameMangler.quoteString(name) + ", params: [], sub: null}";
-		return macroEnum("TPath", [typePath]);
-	}
-
-	static function trimLeadingTypeColon(raw:String):String {
-		var text = StringTools.trim(raw == null ? "" : raw);
-		if (StringTools.startsWith(text, ":"))
-			text = StringTools.trim(text.substr(1));
-		return text;
-	}
-
-	static function stripGenericTypeParams(raw:String):String {
-		final lt = findTopLevelChar(raw, "<".code);
-		return lt < 0 ? raw : raw.substr(0, lt);
-	}
-
-	static function splitTopLevelArrow(raw:String):Array<String> {
-		final out = new Array<String>();
-		var start = 0;
-		var i = 0;
-		var paren = 0;
-		var bracket = 0;
-		var angle = 0;
-		var brace = 0;
-		while (i + 1 < raw.length) {
-			final c = raw.charCodeAt(i);
-			switch (c) {
-				case "(".code:
-					paren++;
-				case ")".code:
-					if (paren > 0)
-						paren--;
-				case "[".code:
-					bracket++;
-				case "]".code:
-					if (bracket > 0)
-						bracket--;
-				case "{".code:
-					brace++;
-				case "}".code:
-					if (brace > 0)
-						brace--;
-				case "<".code:
-					angle++;
-				case ">".code:
-					if (angle > 0)
-						angle--;
-				case "-".code if (paren == 0 && bracket == 0 && angle == 0 && brace == 0 && raw.charCodeAt(i + 1) == ">".code):
-					out.push(raw.substring(start, i));
-					i += 2;
-					start = i;
-					continue;
-				case _:
-			}
-			i++;
-		}
-		out.push(raw.substr(start));
-		return out;
-	}
-
-	static function splitTopLevelComma(raw:String):Array<String> {
-		final out = new Array<String>();
-		var start = 0;
-		var paren = 0;
-		var bracket = 0;
-		var angle = 0;
-		var brace = 0;
-		for (i in 0...raw.length) {
-			final c = raw.charCodeAt(i);
-			switch (c) {
-				case "(".code:
-					paren++;
-				case ")".code:
-					if (paren > 0)
-						paren--;
-				case "[".code:
-					bracket++;
-				case "]".code:
-					if (bracket > 0)
-						bracket--;
-				case "{".code:
-					brace++;
-				case "}".code:
-					if (brace > 0)
-						brace--;
-				case "<".code:
-					angle++;
-				case ">".code:
-					if (angle > 0)
-						angle--;
-				case ",".code if (paren == 0 && bracket == 0 && angle == 0 && brace == 0):
-					out.push(raw.substring(start, i));
-					start = i + 1;
-				case _:
-			}
-		}
-		out.push(raw.substr(start));
-		return out;
-	}
-
-	static function findTopLevelChar(raw:String, target:Int):Int {
-		var paren = 0;
-		var bracket = 0;
-		var angle = 0;
-		var brace = 0;
-		for (i in 0...raw.length) {
-			final c = raw.charCodeAt(i);
-			switch (c) {
-				case "(".code:
-					paren++;
-				case ")".code:
-					if (paren > 0)
-						paren--;
-				case "[".code:
-					bracket++;
-				case "]".code:
-					if (bracket > 0)
-						bracket--;
-				case "{".code:
-					brace++;
-				case "}".code:
-					if (brace > 0)
-						brace--;
-				case "<".code:
-					angle++;
-				case ">".code:
-					if (angle > 0)
-						angle--;
-				case _:
-			}
-			if (c == target && paren == 0 && bracket == 0 && angle == 0 && brace == 0)
-				return i;
-		}
-		return -1;
-	}
-
-	static function matchingOuterParen(raw:String):Int {
-		if (raw == null || raw.length == 0 || raw.charCodeAt(0) != "(".code)
-			return -1;
-		var depth = 1;
-		for (i in 1...raw.length) {
-			final c = raw.charCodeAt(i);
-			if (c == "(".code) {
-				depth++;
-			} else if (c == ")".code) {
-				depth--;
-				if (depth == 0)
-					return i;
-			}
-		}
-		return -1;
-	}
-
 	static function emitAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>, scope:JsEmitScope):String {
 		final pairs = new Array<String>();
 		final n = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
@@ -2077,18 +1808,6 @@ class JsExprEmitter {
 			}
 		}
 		return "{" + pairs.join(", ") + "}";
-	}
-
-	static function emitLambda(args:Array<String>, body:HxExpr, scope:JsEmitScope):String {
-		final lambdaLocals = new haxe.ds.StringMap<String>();
-		final params = new Array<String>();
-		for (a in args) {
-			final safe = JsNameMangler.identifier(a);
-			lambdaLocals.set(a, safe);
-			params.push(safe);
-		}
-		final nested = nestedScope(scope, lambdaLocals);
-		return "function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }";
 	}
 
 	static function emitRangeExpr(startExpr:HxExpr, endExpr:HxExpr, scope:JsEmitScope):String {

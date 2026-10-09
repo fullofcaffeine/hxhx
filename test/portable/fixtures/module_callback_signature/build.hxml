@@ -1,0 +1,9 @@
+-cp src
+-cp macros
+-main Main
+--no-output
+-lib reflaxe.ocaml
+--macro CheckCallbackSignatures.install()
+-D no-traces
+-D no_traces
+-D ocaml_output=out

@@ -46,9 +46,9 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 86
-	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 94
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17'
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	fail('unexpected lowering report, representation, or call-model version')
 }
 

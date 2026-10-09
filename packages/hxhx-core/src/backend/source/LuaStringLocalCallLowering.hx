@@ -60,7 +60,7 @@ class LuaStringLocalCallLowering {
 					;
 				}
 			case EBinop("+", left, right): dependsOnExactStringValue(left, locals, fields) || dependsOnExactStringValue(right, locals, fields);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				dependsOnExactStringValue(inner, locals, fields);
 			case ECall(EIdent("__hxhx_lua_string_concat"), _):
 				true;

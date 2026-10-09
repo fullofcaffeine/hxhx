@@ -62,6 +62,8 @@ class CompilerDependencyCollector {
 			collectResolvedHeaderType(edgeByKey, consumerModule, index, typedClass.getResolvedExtends(), "extends");
 			for (implemented in typedClass.getResolvedImplements())
 				collectResolvedHeaderType(edgeByKey, consumerModule, index, implemented, "implements");
+			for (extended in typedClass.getResolvedInterfaceExtends())
+				collectResolvedHeaderType(edgeByKey, consumerModule, index, extended, "interface-extends");
 			final semanticInfo = typedClass.getSemanticInfo();
 			if (semanticInfo != null)
 				for (declaration in semanticInfo.getDeclarations()) {
@@ -69,14 +71,20 @@ class CompilerDependencyCollector {
 						collectType(edgeByKey, consumerModule, index, argument, "signature:" + declaration.getIdentity().getCanonicalKey());
 					collectType(edgeByKey, consumerModule, index, declaration.getSignature().getReturnType(),
 						"signature:" + declaration.getIdentity().getCanonicalKey());
+					for (key => constraints in declaration.getResolvedTypeParameterConstraints())
+						for (constraint in constraints)
+							collectType(edgeByKey, consumerModule, index, constraint, "method-constraint:" + key);
 				}
 			for (fieldInitializer in typedClass.getFieldInitializers()) {
 				final field = fieldInitializer.getField();
 				collectExpression(edgeByKey, consumerModule, index, semanticInfo, fieldInitializer.getExpression(), field.getIsStatic() ? field : null);
 			}
-			for (typedFunction in typedClass.getFunctions())
+			for (typedFunction in typedClass.getFunctions()) {
+				for (value in typedFunction.getDefaults())
+					collectExpression(edgeByKey, consumerModule, index, semanticInfo, value.getExpression());
 				for (statement in typedFunction.getBody().getStatements())
 					collectStatement(edgeByKey, consumerModule, index, semanticInfo, statement);
+			}
 		}
 	}
 
@@ -84,6 +92,7 @@ class CompilerDependencyCollector {
 			currentOwner:Null<TyNominalInfo>, statement:TypedStmt, ?staticInitializer:TyFieldInfo):Void {
 		if (statement == null)
 			return;
+		collectCatchUses(edgeByKey, consumerModule, index, statement.getLocalBindings(), statement.getCatchUses(), staticInitializer);
 		for (expression in statement.getExpressions())
 			collectExpression(edgeByKey, consumerModule, index, currentOwner, expression, staticInitializer);
 		for (child in statement.getStatements())
@@ -94,7 +103,12 @@ class CompilerDependencyCollector {
 			currentOwner:Null<TyNominalInfo>, expression:TypedExpr, ?staticInitializer:TyFieldInfo):Void {
 		if (expression == null)
 			return;
+		collectCatchUses(edgeByKey, consumerModule, index, expression.getLocalBindings(), expression.getCatchUses(), staticInitializer);
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
+		final runtimeTarget = expression.getRuntimeTypeTarget();
+		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
+		if (runtimeOwner != null)
+			collectType(edgeByKey, consumerModule, index, TyType.nominal(runtimeOwner, []), "runtime-type-target", staticInitializer);
 		collectConstantRead(edgeByKey, consumerModule, index, currentOwner, expression);
 		final field = resolvedFieldRead(index, currentOwner, expression);
 		if (field != null)
@@ -103,7 +117,7 @@ class CompilerDependencyCollector {
 		if (declaration != null) {
 			final provider = index == null ? null : index.getByFullName(declaration.getOwner().getCanonicalName());
 			if (provider != null) {
-				final kind = declaration.getIsInline() ? CompilerDependencyKind.InlineImplementation : CompilerDependencyKind.PublicInterface;
+				final kind = declarationDependencyKind(declaration);
 				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, kind,
 					"declaration:" + declaration.getIdentity().getCanonicalKey());
 				addStaticInitializationEdge(edgeByKey, consumerModule, staticInitializer, provider.getModulePath(),
@@ -152,6 +166,8 @@ class CompilerDependencyCollector {
 				null;
 			case EnumValue:
 				null;
+			case RuntimeTypeValue | RuntimeTypeTest:
+				null;
 			case ThisValue:
 				null;
 			case SuperValue:
@@ -160,7 +176,7 @@ class CompilerDependencyCollector {
 				null;
 			case NullSafeFieldRead:
 				null;
-			case Call:
+			case Call | FeatureDefinition | FeatureSelection:
 				null;
 			case MacroExpr:
 				null;
@@ -168,7 +184,7 @@ class CompilerDependencyCollector {
 				null;
 			case Lambda:
 				null;
-			case SwitchExpr:
+			case SwitchExpr | ControlSwitch:
 				null;
 			case NewValue:
 				null;
@@ -186,11 +202,11 @@ class CompilerDependencyCollector {
 				null;
 			case ArrayComprehension:
 				null;
-			case ArrayDecl:
+			case ArrayDecl | ArrayAppend | MapInsert:
 				null;
 			case ArrayAccess:
 				null;
-			case Range:
+			case Range | FixedRange:
 				null;
 			case Cast:
 				null;
@@ -198,7 +214,8 @@ class CompilerDependencyCollector {
 				null;
 			case Opaque:
 				null;
-			case Block:
+			case PrivateAccess | Parenthesized | TargetScope | Block | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | SourceTry |
+				ControlTry | ThrowExpr | ControlBranch | ControlWhile | ControlFor:
 				null;
 			case Temporary:
 				null;
@@ -215,6 +232,45 @@ class CompilerDependencyCollector {
 			case ContinueExpr:
 				null;
 		};
+	}
+
+	/** Private signatures are absent from public revisions, including compiler-selected helpers. */
+	static function declarationDependencyKind(declaration:TyDeclarationInfo):CompilerDependencyKind {
+		if (declaration.getIsInline())
+			return CompilerDependencyKind.InlineImplementation;
+		return declaration.getIsPublic() ? CompilerDependencyKind.PublicInterface : CompilerDependencyKind.PrivateDeclaration;
+	}
+
+	/** Catch declarations retain dependencies even when their handlers never read the bound value. */
+	static function collectCatchUses(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			bindings:Array<TyLocalBinding>, uses:Array<TypedCatchUse>, staticInitializer:Null<TyFieldInfo>):Void {
+		for (binding in bindings)
+			if (binding.getKind().match(CatchVariable))
+				collectType(edgeByKey, consumerModule, index, binding.getType(), "catch-binding:"
+					+ binding.getIdentity().getCanonicalKey(), staticInitializer);
+		for (use in uses) {
+			final targetOwner = use.target == null ? null : use.target.getDeclarationIdentity();
+			if (targetOwner != null)
+				collectType(edgeByKey, consumerModule, index, TyType.nominal(targetOwner, []), "implicit-catch-target", staticInitializer);
+			if (use.conversion != null) {
+				final declaration = use.conversion;
+				final kind = declarationDependencyKind(declaration);
+				final provider = index.getByFullName(declaration.getOwner().getCanonicalName());
+				if (provider == null)
+					throw "implicit catch conversion lost its provider";
+				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, kind,
+					"implicit-catch-conversion:" + declaration.getIdentity().getCanonicalKey());
+				addStaticInitializationEdge(edgeByKey, consumerModule, staticInitializer, provider.getModulePath(),
+					"implicit-catch-conversion:" + declaration.getIdentity().getCanonicalKey());
+				for (argument in declaration.getSignature().getArgs())
+					collectType(edgeByKey, consumerModule, index, argument, "implicit-catch-conversion-argument", staticInitializer);
+			}
+			if (use.payload != null) {
+				collectType(edgeByKey, consumerModule, index, TyType.nominal(use.payload.getOwner(), []),
+					"implicit-catch-payload:" + use.payload.getCanonicalKey(), staticInitializer);
+				collectType(edgeByKey, consumerModule, index, use.payload.getType(), "implicit-catch-payload-type", staticInitializer);
+			}
+		}
 	}
 
 	static function collectType(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, type:TyType,
@@ -239,6 +295,9 @@ class CompilerDependencyCollector {
 				collectType(edgeByKey, consumerModule, index, argument, factIdentity, staticInitializer);
 			collectType(edgeByKey, consumerModule, index, type.getFunctionReturn(), factIdentity, staticInitializer);
 		}
+		// Record fields can contain nominal types or callbacks that consume other modules.
+		for (fieldType in type.getAnonymousFieldTypes())
+			collectType(edgeByKey, consumerModule, index, fieldType, factIdentity, staticInitializer);
 	}
 
 	/**

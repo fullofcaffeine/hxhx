@@ -9,6 +9,9 @@ class HxhxOcamlTargetLiteralAdapter {
 			throw "native OCaml literal adapter requires a typed expression";
 		final typeDisplay = expression.getType().getCanonicalDisplay();
 		return switch (expression.getTag()) {
+			case Parenthesized: final children = expression.getExpressions(); children.length == 1 && children[0].getType()
+					.getSemanticKey() == expression.getType()
+					.getSemanticKey() ? fromExpression(children[0]) : null;
 			case NullValue: OcamlTargetLiteralFact.nullValue(typeDisplay);
 			case ThisValue: OcamlTargetLiteralFact.thisValue(typeDisplay);
 			case SuperValue: OcamlTargetLiteralFact.superValue(typeDisplay);
@@ -19,9 +22,12 @@ class HxhxOcamlTargetLiteralAdapter {
 				if (values.length != 1)
 					throw "native OCaml string literal has no exact value";
 				OcamlTargetLiteralFact.stringLiteral(values[0], typeDisplay);
-			case FloatValue | EnumValue | LocalRead | NameRead | FieldRead | NullSafeFieldRead | Call | MacroExpr | MacroType | Lambda | SwitchExpr |
-				NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl | ArrayAccess | Range | Cast |
-				Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr | BreakExpr | ContinueExpr:
+			case FloatValue | EnumValue | RuntimeTypeValue | RuntimeTypeTest | LocalRead | NameRead | FieldRead | NullSafeFieldRead | Call | MacroExpr |
+				MacroType | Lambda | SwitchExpr | NewValue | Unary | Binary | Assign | CompoundAssign | Ternary | Anonymous | ArrayComprehension | ArrayDecl |
+				ArrayAccess | Range | Cast | Untyped | Opaque | Block | Temporary | ReturnExpr | VariableDeclarations | VariableDeclaration | WhileExpr |
+				BreakExpr | ContinueExpr | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | ThrowExpr | ControlBranch | ControlWhile |
+				ControlFor | ControlSwitch | FixedRange | SourceTry | ControlTry | ArrayAppend | FeatureDefinition | FeatureSelection | MapInsert |
+				PrivateAccess | TargetScope:
 				null;
 		};
 	}

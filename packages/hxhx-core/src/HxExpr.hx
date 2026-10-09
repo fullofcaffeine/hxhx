@@ -18,6 +18,18 @@
 	  designed to keep the example runnable in CI while we expand coverage.
 **/
 enum HxExpr {
+	/** Authored grouping; it evaluates its child without introducing a call or control scope. */
+	EParenthesized(inner:HxExpr, position:HxPos);
+
+	/** First child is the try body; each later child belongs to the corresponding ordered catch. */
+	ESourceTry(catches:Array<HxSourceCatch>, bodies:Array<HxExpr>, position:HxPos);
+
+	/** Authored iteration owns its binding and body; its body is not a synthetic function. */
+	ESourceFor(binding:HxForBinding, iterable:HxExpr, body:HxExpr, position:HxPos);
+
+	/** Derived executable control; recursive children keep the native module graph acyclic. */
+	ELoweredControl(kind:HxLoweredControlKind, targetIdentity:String, expressions:Array<HxExpr>, position:HxPos);
+
 	ENull;
 	EBool(value:Bool);
 	EString(value:String);
@@ -92,8 +104,8 @@ enum HxExpr {
 
 		What
 		- `expr` is the parsed quoted expression payload.
-		- `wrappers` records quote-only wrappers that the normal expression AST
-		  otherwise erases, currently `parenthesis` and `untyped`.
+		- `wrappers` records the quote's outer `untyped` modifier. Parentheses stay
+		  on the shared expression tree, including nested groups.
 	**/
 	EMacroExpr(expr:HxExpr, wrappers:Array<String>);
 
@@ -136,7 +148,7 @@ enum HxExpr {
 		  - and keeps outer locals/params visible for capture.
 		- Stage 3 emitter lowers this to an OCaml `fun ... -> ...` closure.
 	**/
-	ELambda(args:Array<String>, body:HxExpr);
+	ELambda(args:Array<String>, body:HxExpr, ?signature:HxLambdaSignature);
 
 	/**
 		Try/catch expression (Stage 3 expansion): `try { ... } catch(e:Dynamic) { ... }`.
@@ -283,6 +295,12 @@ enum HxExpr {
 		- Stage 3 emitters may lower it directly to an OCaml `if ... then ... else ...`.
 	**/
 	ETernary(cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr);
+
+	/** Authored if syntax preserves an absent else separately from an explicit null branch. */
+	ESourceIf(condition:HxExpr, whenTrue:HxExpr, whenFalse:Null<HxExpr>, position:HxPos);
+
+	/** Throw is abrupt source control, never a call to a compiler-private function. */
+	EThrow(value:HxExpr, position:HxPos);
 
 	/**
 		Anonymous-structure literal: `{ field: expr, ... }`.
@@ -460,7 +478,7 @@ enum HxExpr {
 		stored because nested expression nodes do not otherwise inherit a precise
 		position from their parent call.
 	**/
-	EWhile(condition:HxExpr, body:Array<HxExpr>, bodyIsBlock:Bool, position:HxPos);
+	EWhile(condition:HxExpr, body:Array<HxExpr>, bodyIsBlock:Bool, position:HxPos, loopKind:HxWhileKind);
 
 	/**
 		Exit the nearest loop from a position where Haxe expects an expression.
@@ -478,4 +496,34 @@ enum HxExpr {
 		Ordinary standalone `continue` remains `HxStmt.SContinue`.
 	**/
 	EContinue(position:HxPos);
+
+	/**
+		Evaluate the effect once, discard its result, then evaluate the continuation.
+
+		The effect may return Void. Abrupt completion skips the continuation. This
+		operation creates no binding or function scope, so discarded expressions
+		cannot shadow authored names. It is appended to preserve older enum tags.
+	**/
+	EDiscardThen(effect:HxExpr, continuation:HxExpr);
+
+	/**
+		An authored brace group with its ordered source expressions.
+		The group preserves lexical scope and macro syntax. It creates no function,
+		so a return inside it still targets the enclosing source function.
+	 */
+	ESourceGroup(expressions:Array<HxExpr>, position:HxPos);
+
+	/**
+		An authored function with its original body and parameter defaults.
+		Defaults follow the parameter indexes in `facts`. They are source children,
+		separate from the body, and must be applied at parameter entry during lowering.
+	 */
+	ESourceFunction(facts:HxSourceFunction, body:HxExpr, defaults:Array<HxExpr>, position:HxPos);
+
+	/**
+		An authored access permission for exactly one child expression.
+		It preserves ordinary type checking and creates no lexical or function scope.
+		Assignment parsing includes the RHS; ordinary binary operands remain separate.
+	 */
+	EPrivateAccess(inner:HxExpr, position:HxPos);
 }

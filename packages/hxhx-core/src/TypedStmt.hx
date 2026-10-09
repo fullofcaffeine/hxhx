@@ -42,11 +42,27 @@ class TypedStmt {
 	final catchTypeHints:Array<String>;
 	final metadata:Array<String>;
 	final localBindings:Array<TyLocalBinding>;
+	final catchUses:Array<TypedCatchUse>;
+	final controlTarget:Null<TyControlTarget>;
+	final switchHasExhaustiveCoverage:Bool;
 
 	function new(tag:TypedStmtTag, position:Null<HxPos>, ?names:Array<String>, ?expressions:Array<TypedExpr>, ?statements:Array<TypedStmt>,
 			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>, ?metadata:Array<String>,
-			?localBindings:Array<TyLocalBinding>) {
+			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>, ?controlTarget:TyControlTarget, switchHasExhaustiveCoverage:Bool = false) {
+		if (controlTarget != null) {
+			switch tag {
+				case While | DoWhile | ForIn | ForKeyValue | Break | Continue:
+					if (controlTarget.getKind() != Loop)
+						throw "typed loop statement requires a loop target";
+				case _:
+					throw "ordinary typed statement cannot carry a control target";
+			}
+		}
+		if (switchHasExhaustiveCoverage && tag != Switch)
+			throw "switch coverage requires a switch statement";
+		this.switchHasExhaustiveCoverage = switchHasExhaustiveCoverage;
 		this.tag = tag;
+		this.controlTarget = controlTarget;
 		this.position = position;
 		this.names = names == null ? [] : names.copy();
 		this.expressions = expressions == null ? [] : expressions.copy();
@@ -56,6 +72,7 @@ class TypedStmt {
 		this.catchTypeHints = catchTypeHints == null ? [] : catchTypeHints.copy();
 		this.metadata = metadata == null ? [] : metadata.copy();
 		this.localBindings = localBindings == null ? [] : localBindings.copy();
+		this.catchUses = catchUses == null ? [] : catchUses.copy();
 		if (tag == Try && (this.statements.length != this.catchNames.length + 1 || this.catchNames.length != this.catchTypeHints.length))
 			throw "typed try statement has inconsistent catch payloads";
 	}
@@ -89,8 +106,8 @@ class TypedStmt {
 		return new TypedStmt(DoWhile, position, null, [condition], [body]);
 
 	public static function switchStmt(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, bodies:Array<TypedStmt>, position:Null<HxPos>,
-			?bindings:Array<TyLocalBinding>):TypedStmt
-		return new TypedStmt(Switch, position, null, [scrutinee], bodies, patterns, null, null, null, bindings);
+			?bindings:Array<TyLocalBinding>, exhaustive:Bool = false):TypedStmt
+		return new TypedStmt(Switch, position, null, [scrutinee], bodies, patterns, null, null, null, bindings, null, null, exhaustive);
 
 	public static function tryStmt(body:TypedStmt, catchNames:Array<String>, catchTypeHints:Array<String>, catchBodies:Array<TypedStmt>, position:Null<HxPos>,
 			?bindings:Array<TyLocalBinding>):TypedStmt
@@ -130,6 +147,10 @@ class TypedStmt {
 	public function getStatements():Array<TypedStmt>
 		return statements.copy();
 
+	/** True only when shared typing proved that every normally completing input selects an arm. */
+	public function getSwitchHasExhaustiveCoverage():Bool
+		return switchHasExhaustiveCoverage;
+
 	public function getPatterns():Array<HxSwitchPattern>
 		return patterns.copy();
 
@@ -146,7 +167,28 @@ class TypedStmt {
 	public function getLocalBindings():Array<TyLocalBinding>
 		return localBindings.copy();
 
+	/** Source-ordered implicit runtime uses owned by this try statement's catch declarations. */
+	public function getCatchUses():Array<TypedCatchUse>
+		return catchUses.copy();
+
+	public function withCatchUses(uses:Array<TypedCatchUse>):TypedStmt
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, uses,
+			controlTarget, switchHasExhaustiveCoverage);
+
+	/** The exact loop introduced here, or selected by this break or continue statement. */
+	public function getControlTarget():Null<TyControlTarget>
+		return controlTarget;
+
+	/** Attach the immutable destination selected during typing; recursive rebuilds preserve it. */
+	public function withControlTarget(target:TyControlTarget):TypedStmt
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses, target,
+			switchHasExhaustiveCoverage);
+
 	/** Rebuild this immutable statement after a shared recursive expression pass. **/
 	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
-		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings);
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses,
+			controlTarget, switchHasExhaustiveCoverage
+			&& newExpressions.length > 0
+			&& expressions.length > 0
+			&& newExpressions[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey());
 }

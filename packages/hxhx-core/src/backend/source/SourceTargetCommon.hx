@@ -10,6 +10,7 @@ import backend.GenIrProgram;
 import backend.TargetCoreBackend;
 import backend.TargetDescriptor;
 import backend.source.PhpFunctionLoweringPlan.PhpFunctionPlanEnumConstructorFact;
+import backend.source.PhpExecutableLowering.PhpClosureOperation;
 import backend.source.PhpLexicalRenderScope.PhpLexicalScopeKind;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumAbstractValueFact;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumConstructorFact;
@@ -242,11 +243,11 @@ class SourceTargetCommon {
 	}
 
 	/** Find the typed directives belonging to the backend declaration being rendered. **/
-	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl):Array<TyModuleDirective> {
+	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl, strict:Bool = false):Array<TyModuleDirective> {
 		if (program == null || declaration == null)
 			return [];
 		for (typed in program.getTypedModules())
-			if (typed.getBackendDeclaration() == declaration)
+			if ((strict ? typed.getBackendProjection().getDeclaration() : typed.getBackendDeclaration()) == declaration)
 				return typed.getEnv().getResolvedDirectives();
 		return [];
 	}
@@ -343,8 +344,11 @@ class SourceTargetCommon {
 	}
 
 	public static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
+		if (target == Python)
+			program = PythonStaticMemberQualification.qualify(program);
 		if (target == Php)
 			return emitPhpTarget(program, context);
+		TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		final maybeMain = findMainModule(program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
@@ -358,11 +362,12 @@ class SourceTargetCommon {
 		}
 		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
-		final strictProjection = target == Lua || target == Cs ? strictTypedMainProjection(program, main) : null;
+		final strictProjection = target == Lua || target == Cs || target == Java ? strictTypedMainProjection(program, main) : null;
 		final csEnumConstructors = target == Cs ? new CsEnumConstructorCallLowering(program, context.hasDefine("no_root")) : null;
 		final mainBody = switch (target) {
 			case Lua: LuaStringLocalCallLowering.body(strictProjection.main);
 			case Cs: csEnumConstructors.body(strictProjection.main);
+			case Java: strictProjection.main.getBody();
 			case Php: throw "PHP source target must use its request-owned program renderer";
 			case _: HxFunctionDecl.getBody(main.fn);
 		};
@@ -389,17 +394,19 @@ class SourceTargetCommon {
 		renderer used by this request.
 	**/
 	public static function emitPhpTarget(program:GenIrProgram, context:BackendContext):EmitResult {
-		final main = mainModule(program, context);
-		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(main.cls));
-		final strictProjection = strictTypedMainProjection(program, main);
 		final projections = new PhpTypedProgramProjection(program);
-		final programRenderer = phpProgramBodyRenderer(program, main.decl, projections);
+		final strictProjection = projections.requireMain(context.mainModule);
+		final declaration = strictProjection.module.getDeclaration();
+		final className = sanitizeTypeNameForTarget(Php, HxClassDecl.getName(strictProjection.cls.getDeclaration()));
+		final programRenderer = phpProgramBodyRenderer(program, declaration, projections);
+		PhpRuntimeTypeLowering.validateProgram(projections, programRenderer.getProgramFacts());
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(Php, className)]);
+		// Rendering validates exact closure and local facts. Reject before creating or replacing output.
+		final contents = renderPhpProgram(program, context, declaration, className, strictProjection.main.getBody(), strictProjection.module,
+			strictProjection.main, projections, programRenderer);
 		ensureParentDirectory(outputPath);
-		sys.io.File.saveContent(outputPath,
-			renderPhpProgram(program, context, main.decl, className, strictProjection.main.getBody(), strictProjection.module, strictProjection.main,
-				projections, programRenderer));
+		sys.io.File.saveContent(outputPath, contents);
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(Php), outputPath)], false);
 	}
 
@@ -416,6 +423,8 @@ class SourceTargetCommon {
 		if (compiler == null)
 			throw "C# source backend MVP executable packaging requires `mcs` or `csc` on PATH";
 		final args = compiler == "csc" ? ["-nologo", "-out:" + exePath].concat(sourcePaths) : ["-out:" + exePath].concat(sourcePaths);
+		if (context.hasDefine("unsafe"))
+			args.unshift("-unsafe");
 		final code = Sys.command(compiler, args);
 		if (code != 0)
 			throw "C# source backend MVP executable packaging failed with exit code " + code;
@@ -469,6 +478,8 @@ class SourceTargetCommon {
 		if (compiler == null)
 			throw "C# source backend MVP library packaging requires `mcs` or `csc` on PATH";
 		final args = compiler == "csc" ? ["-nologo", "-target:library", "-out:" + dllPath].concat(sourcePaths) : ["-target:library", "-out:" + dllPath].concat(sourcePaths);
+		if (context.hasDefine("unsafe"))
+			args.unshift("-unsafe");
 		final code = Sys.command(compiler, args);
 		if (code != 0)
 			throw "C# source backend MVP library packaging failed with exit code " + code;
@@ -1171,7 +1182,65 @@ class SourceTargetCommon {
 	}
 
 	static function renderExprWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):String {
+		switch expr {
+			case ELoweredControl(_, _, _, _):
+				throw "source target requires executable statement-region support before rendering control";
+			case _:
+		}
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final csLambda = CsLambdaLowering.decode(expr);
+		if (csLambda != null) {
+			if (target != Cs)
+				throw "C# callback reached a different target";
+			final locals = switch frame {
+				case NativeFunction(locals): locals;
+				case _: throw "C# callback rendering requires its typed function frame";
+			};
+			final lines = ["(("
+				+ csLambda.delegateType
+				+ ")(("
+				+ [for (name in csLambda.arguments) sanitizeCsIdentifier(name)].join(", ") + ") => {"];
+			for (line in renderNativeFunctionBody(locals, TypedControlStatements.functionBody(csLambda.body), "  "))
+				lines.push(line);
+			lines.push("}))");
+			return lines.join("\n");
+		}
+		final phpRuntimeType = PhpRuntimeTypeLowering.decode(expr);
+		final phpClosure = PhpExecutableLowering.decodeClosure(expr);
+		if (phpClosure != null) {
+			if (target != Php)
+				throw "PHP closure operation reached a different target";
+			final parameters = phpClosure.signature == null ? [] : phpClosure.signature.getParameters();
+			final optional = new Array<String>();
+			var rest = -1;
+			for (index in 0...parameters.length) {
+				if (parameters[index].isOptional)
+					optional.push(phpClosure.arguments[index]);
+				if (parameters[index].isRest)
+					rest = index;
+			}
+			return phpLambdaExprWithFrame(frame, phpClosure.arguments, phpClosure.body, [], [], optional, rest, null, phpClosure);
+		}
+		if (phpRuntimeType != null) {
+			if (target != Php)
+				throw "PHP runtime type operation reached a different target";
+			return phpRuntimeType.arguments.length == 0 ? phpClassValueExpr(phpRuntimeType.typeName) : "__hxhx_is_of_type("
+				+ renderExprWithFrame(frame, phpRuntimeType.arguments[0])
+				+ ", "
+				+ PhpSyntax.quoteString(phpRuntimeType.typeName)
+				+ ")";
+		}
+		final csStaticCall = CsSourceStaticCallLowering.decode(expr);
+		if (csStaticCall != null) {
+			if (target != Cs)
+				throw "C# source static call reached a different target";
+			return callExpr(Cs,
+				csGlobalClassRef(csStaticCall.packagePath, csStaticCall.className, csStaticCall.noRoot) + "." + sanitizeCsIdentifier(csStaticCall.method),
+				csStaticCall.arguments);
+		}
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
 		if (exactCall != null)
 			return renderExprWithFrame(frame, TypedExactCallSource.ordinaryInstanceCall(exactCall));
@@ -1352,8 +1421,8 @@ class SourceTargetCommon {
 				fieldAccessExprWithFrame(frame, receiver, field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExprWithFrame(frame, receiver, index);
-			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
-				"(" + renderExprWithFrame(frame, args[0]) + ")";
+			case EParenthesized(inner, _):
+				"(" + renderExprWithFrame(frame, inner) + ")";
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]):
 				renderExprWithFrame(frame, inner);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
@@ -1417,7 +1486,20 @@ class SourceTargetCommon {
 				}
 			case EReturn(_):
 				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
-			case EWhile(_, _, _, _):
+			case EDiscardThen(effect, continuation):
+				switch (target) {
+					case Python:
+						"(" + renderExprWithFrame(frame, effect) + ", " + renderExprWithFrame(frame, continuation) + ")[1]";
+					case Java:
+						"((java.util.function.Supplier<Object>)(" + javaLambdaExpr("", expr) + ")).get()";
+					case Cs:
+						"((System.Func<object>)(" + csLambdaExpr("", expr) + "))()";
+					case Lua:
+						"(" + luaLambdaExpr("", expr) + ")()";
+					case Php:
+						"(" + phpLambdaExprWithFrame(frame, [], expr, [], [], []) + ")()";
+				}
+			case EWhile(_, _, _, _, loopKind):
 				throw targetLabel(target) + " source backend: expression-position while must be consumed by macro expansion before emission";
 			case EBreak(_):
 				throw targetLabel(target) + " source backend: expression-position break needs shared loop-control lowering before emission";
@@ -1446,6 +1528,13 @@ class SourceTargetCommon {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case ESourceGroup(_, _): "ESourceGroup";
+			case ESourceIf(_, _, _, _): "ESourceIf";
+			case ESourceFor(_, _, _, _): "ESourceFor";
+			case ESourceTry(_, _, _): "ESourceTry";
+			case EThrow(_, _): "EThrow";
+			case ELoweredControl(_, _, _, _): "ELoweredControl";
+			case ESourceFunction(_, _, _, _): "ESourceFunction";
 			case ENull: "ENull";
 			case EBool(_): "EBool";
 			case EString(_): "EString";
@@ -1459,9 +1548,10 @@ class SourceTargetCommon {
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
-			case EWhile(_, _, _, _): "EWhile";
+			case EWhile(_, _, _, _, loopKind): "EWhile";
 			case EBreak(_): "EBreak";
 			case EContinue(_): "EContinue";
+			case EDiscardThen(_, _): "EDiscardThen";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
@@ -1480,6 +1570,8 @@ class SourceTargetCommon {
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
 			case ECast(_, _): "ECast";
+			case EParenthesized(_, _): "EParenthesized";
+			case EPrivateAccess(_, _): "EPrivateAccess";
 			case EUntyped(_): "EUntyped";
 			case EUnsupported(raw): "EUnsupported(" + summarizeRaw(raw) + ")";
 		};
@@ -2127,7 +2219,7 @@ class SourceTargetCommon {
 				fieldCallExpr(Php, expr, "invert", []);
 			case ECast(inner, castHint) if (phpTypeHasInstanceMethod(castHint, "invert") || phpReceiverHasInstanceMethod(inner, "invert")):
 				fieldCallExpr(Php, expr, "invert", []);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpUnaryMinusOperatorCall(inner);
 			case _:
 				null;
@@ -2144,7 +2236,7 @@ class SourceTargetCommon {
 				if (phpTypeHasInstanceMethodWithFrame(frame, castHint, "invert")
 					|| phpReceiverHasInstanceMethodWithFrame(frame, inner, "invert")):
 				fieldCallExprWithFrame(frame, expr, "invert", []);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpUnaryMinusOperatorCallWithFrame(frame, inner);
 			case _:
 				null;
@@ -2459,7 +2551,9 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Php:
 				"__hxhx_add_string(" + renderExprWithFrame(frame, expr) + ")";
-			case Python, Java, Cs, Lua:
+			case Python:
+				"hxhx_std_string(" + renderExprWithFrame(frame, expr) + ")";
+			case Java, Cs, Lua:
 				stringCall(target, renderExprWithFrame(frame, expr));
 		};
 	}
@@ -2572,7 +2666,7 @@ class SourceTargetCommon {
 				true;
 			case ECast(_, typeHint) if (isDynamicTypeHint(typeHint)):
 				true;
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpShouldUseFieldReadHelper(inner, field);
 			case ENull:
 				true;
@@ -2591,7 +2685,7 @@ class SourceTargetCommon {
 				true;
 			case ECast(_, typeHint) if (isDynamicTypeHint(typeHint)):
 				true;
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpShouldUseFieldReadHelperWithFrame(frame, inner, field);
 			case ENull:
 				true;
@@ -3082,7 +3176,7 @@ class SourceTargetCommon {
 					}
 				}
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExprWithFrame(frame, receiver);
-				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
+				callExprWithFrame(frame, fieldAccess(target, renderedReceiver, field), args);
 		};
 	}
 
@@ -3118,7 +3212,9 @@ class SourceTargetCommon {
 		if (args == null || args.length != 1)
 			return null;
 		return switch (field) {
-			case "unsafe" | "unsafe_" | "fixed" | "fixed_" | "pointerOfArray" | "valueOf":
+			case "unsafe" | "unsafe_":
+				throw "C# unsafe requires its checked syntax scope";
+			case "fixed" | "fixed_" | "pointerOfArray" | "valueOf":
 				renderExpr(Cs, args[0]);
 			case _:
 				null;
@@ -3310,7 +3406,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceMethod(typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceMethod(castHint, field) || phpReceiverHasInstanceMethod(inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceMethod(inner, field);
 			case _:
 				false;
@@ -3327,7 +3423,7 @@ class SourceTargetCommon {
 				phpTypeHasInstanceMethodWithFrame(frame, typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceMethodWithFrame(frame, castHint,
 					field) || phpReceiverHasInstanceMethodWithFrame(frame, inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceMethodWithFrame(frame, inner, field);
 			case _:
 				false;
@@ -3352,7 +3448,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceField(typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceField(castHint, field) || phpReceiverHasInstanceField(inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceField(inner, field);
 			case _:
 				false;
@@ -3370,7 +3466,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpTypeHasInstanceFieldWithFrame(frame, typePath, field);
 			case ECast(inner, castHint): phpTypeHasInstanceFieldWithFrame(frame, castHint, field) || phpReceiverHasInstanceFieldWithFrame(frame, inner, field);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverHasInstanceFieldWithFrame(frame, inner, field);
 			case _:
 				false;
@@ -3394,7 +3490,7 @@ class SourceTargetCommon {
 				phpPoint3LikeTypeHint(typePath);
 			case ECast(_, castHint):
 				phpPoint3LikeTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPoint3LikeReceiver(inner);
 			case _:
 				false;
@@ -3410,7 +3506,7 @@ class SourceTargetCommon {
 				phpPoint3LikeTypeHint(typePath);
 			case ECast(_, castHint):
 				phpPoint3LikeTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPoint3LikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3465,7 +3561,7 @@ class SourceTargetCommon {
 				phpRuntimeListType(typePath);
 			case ECast(_, castHint):
 				phpRuntimeListType(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpListLikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3480,7 +3576,7 @@ class SourceTargetCommon {
 				phpRuntimeListType(typePath);
 			case ECast(_, castHint):
 				phpRuntimeListType(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpListLikeReceiver(inner);
 			case _:
 				false;
@@ -3615,7 +3711,7 @@ class SourceTargetCommon {
 				phpGenericStackTypeHint(typePath);
 			case ECast(_, castHint):
 				phpGenericStackTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericStackReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3630,7 +3726,7 @@ class SourceTargetCommon {
 				phpGenericStackTypeHint(typePath);
 			case ECast(_, castHint):
 				phpGenericStackTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericStackReceiver(inner);
 			case _:
 				false;
@@ -3662,7 +3758,7 @@ class SourceTargetCommon {
 				phpArrayItemTypeHint(phpInstanceFieldTypeHintForType(phpLocalTypeHint(name), field));
 			case ECast(_, castHint):
 				phpArrayItemTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverArrayItemTypeHint(inner);
 			case _:
 				"";
@@ -3684,7 +3780,7 @@ class SourceTargetCommon {
 				phpArrayItemTypeHint(phpInstanceFieldTypeHintForType(receiverHint, field));
 			case ECast(_, castHint):
 				phpArrayItemTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpReceiverArrayItemTypeHintWithFrame(frame, inner);
 			case _:
 				"";
@@ -3700,7 +3796,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpArrayBackedAbstractTypeHint(typePath);
 			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpArrayBackedReceiver(inner);
 			case _:
 				false;
@@ -3718,7 +3814,7 @@ class SourceTargetCommon {
 			case ENew(typePath, _):
 				phpArrayBackedAbstractTypeHint(typePath);
 			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpArrayBackedReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -3879,6 +3975,7 @@ class SourceTargetCommon {
 
 	static function luaStringFieldReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): luaStringFieldReceiver(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
@@ -3887,7 +3984,7 @@ class SourceTargetCommon {
 			case ECall(EField(EIdent("String"), "new"), _):
 				true;
 			case ECast(inner, castHint): isStringTypeHint(luaUnwrapNullTypeHint(castHint)) || isDynamicTypeHint(castHint) && luaStringLikeOperand(inner);
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				luaStringFieldReceiver(inner);
 			case _:
 				false;
@@ -3913,7 +4010,7 @@ class SourceTargetCommon {
 					case _:
 						false;
 				}
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpKnownStringResultReceiver(inner);
 			case _:
 				false;
@@ -3944,7 +4041,7 @@ class SourceTargetCommon {
 					case _:
 						false;
 				}
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpKnownStringResultReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -4020,7 +4117,7 @@ class SourceTargetCommon {
 				typePath == "EReg";
 			case ECast(_, castHint):
 				StringTools.trim(castHint == null ? "" : castHint) == "EReg";
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpERegLikeReceiver(inner);
 			case _:
 				false;
@@ -4035,7 +4132,7 @@ class SourceTargetCommon {
 				typePath == "EReg";
 			case ECast(_, castHint):
 				StringTools.trim(castHint == null ? "" : castHint) == "EReg";
-			case EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpERegLikeReceiverWithFrame(frame, inner);
 			case _:
 				false;
@@ -4044,6 +4141,7 @@ class SourceTargetCommon {
 
 	static function phpStringLikeReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): phpStringLikeReceiver(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): phpStringLikeReceiver(left) || phpStringLikeReceiver(right);
@@ -4056,8 +4154,9 @@ class SourceTargetCommon {
 
 	static function phpArrayResultReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
+			case EDiscardThen(_, continuation): phpArrayResultReceiver(continuation);
 			case ECall(EField(base, "split"), args): args.length == 1 && phpStringMethodReceiver(base, "split");
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayResultReceiver(inner);
 			case _:
 				false;
@@ -4075,6 +4174,7 @@ class SourceTargetCommon {
 
 	static function javaStringLikeOperand(expr:HxExpr):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): javaStringLikeOperand(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): javaStringLikeOperand(left) || javaStringLikeOperand(right);
@@ -4087,6 +4187,7 @@ class SourceTargetCommon {
 
 	static function luaStringLikeOperand(expr:HxExpr):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): luaStringLikeOperand(continuation);
 			case EString(_):
 				true;
 			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
@@ -4288,8 +4389,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return nil"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = luaExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = luaExprAsStatements(effect, indent, false);
 				for (line in luaExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4402,8 +4503,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return null;"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = csExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = csExprAsStatements(effect, indent, false);
 				for (line in csExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4481,25 +4582,14 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function isLambdaSeqTemp(name:String):Bool {
-		return name != null && StringTools.startsWith(name, "__hxhx_lambda_seq_");
-	}
-
 	/**
-		Activate an exact PHP lexical binding or the one projection-only binder.
-
-		Normal parameters and declarations must exist in the typed function plan.
-		`TypedBodySource` adds `__hxhx_lambda_seq_*` continuation binders while
-		projecting a typed block into nested expressions, after that plan is
-		sealed. They have no source-level identity, so the request-owned scope
-		records them explicitly as synthetic instead of guessing an identity.
+		Activate a parameter or declaration selected by the typed function plan.
+		Discarded effects introduce no binding and cannot authorize an unplanned name.
 	**/
 	static function phpActivateLexicalLocal(scope:PhpLexicalRenderScope, targetName:String, ?targetTypeHint:String):PhpLexicalRenderScope {
 		final cleanName = PhpName.valueIdentifier(targetName);
 		if (scope.getPlan().findLocalByTargetName(cleanName) != null)
 			return scope.withPlannedLocal(cleanName);
-		if (isLambdaSeqTemp(cleanName))
-			return scope.withSyntheticLocal(cleanName, targetTypeHint);
 		throw "PHP lexical scope cannot activate unplanned local " + cleanName + " in " + scope.getPlan().getFunctionIdentity();
 	}
 
@@ -4507,8 +4597,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull:
 				appendReturn ? [indent + "return null;"] : [];
-			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
-				final out = javaExprAsStatements(callArgs[0], indent, false);
+			case EDiscardThen(effect, continuation):
+				final out = javaExprAsStatements(effect, indent, false);
 				for (line in javaExprAsStatements(continuation, indent, appendReturn))
 					out.push(line);
 				out;
@@ -4661,7 +4751,7 @@ class SourceTargetCommon {
 				phpSetInferredLocalTypeIfUnknown(lambdaLocalTypes, clean, "");
 			}
 		}
-		final renderedBody = renderExpr(Php, body);
+		final renderedBody = phpReturnBody(body, value -> renderExpr(Php, value));
 		final refNames = phpLambdaAssignedCaptures(body, args);
 		final valueCaptures = new Array<String>();
 		if (valueNames != null) {
@@ -4690,13 +4780,14 @@ class SourceTargetCommon {
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
-		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + renderedBody + " }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
 	}
 
 	static function phpLambdaExprWithFrame(frame:SourceFunctionRenderFrame, args:Array<String>, body:HxExpr, valueNames:Array<String>,
-			extraRefNames:Array<String>, optionalArgNames:Array<String>, restIndex:Int = -1, ?refArgIndexes:Array<Int>):String {
+			extraRefNames:Array<String>, optionalArgNames:Array<String>, restIndex:Int = -1, ?refArgIndexes:Array<Int>,
+			?exactClosure:PhpClosureOperation):String {
 		final parentScope = SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		var lambdaScope = parentScope.derive(Lambda);
 		for (i in 0...args.length) {
@@ -4716,10 +4807,26 @@ class SourceTargetCommon {
 				if (i == restIndex) "..." + name; else refPrefix + name + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
 			}
 		].join(", ");
-		final thisCaptureName = parentScope.usesThisValueSlot() && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
+		final thisCaptureName = parentScope.usesThisValueSlot()
+			&& (exactClosure == null ? phpExprTouchesThis(body) : exactClosure.capturesReceiver) ? "__hxhx_this_value" : null;
 		if (thisCaptureName != null)
 			lambdaScope = lambdaScope.withThisCapture(thisCaptureName);
-		final renderedBody = renderExprWithFrame(SourceFunctionRenderFrameTools.withPhpScope(frame, lambdaScope), body);
+		if (exactClosure != null)
+			for (capture in exactClosure.captures)
+				lambdaScope = lambdaScope.withPlannedLocal(capture);
+		final bodyFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, lambdaScope);
+		if (exactClosure != null) {
+			final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
+			final statements = phpRewriteSameClassMembersInStmts(TypedControlStatements.functionBody(body), renderer.copyCurrentInstanceMethodTargetNames(),
+				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
+				args.concat(exactClosure.captures));
+			final rendered = renderStmtsWithFrame(bodyFrame, statements, "  ", renderer.copyLocalTypeHints()).join("\n");
+			final uses = phpLambdaUseClause(thisCaptureName == null ? [] : [thisCaptureName], exactClosure.captures);
+			final lambda = "function(" + renderedArgs + ")" + uses + " {\n" + phpLambdaArgPrologue(args, rendered) + rendered + "\n}";
+			return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
+				+ "; })(__hxhx_copy_value($this->__hx_value))";
+		}
+		final renderedBody = phpReturnBody(body, value -> renderExprWithFrame(bodyFrame, value));
 		final refNames = phpLambdaAssignedCapturesWithFrame(frame, body, args);
 		final valueCaptures = new Array<String>();
 		if (valueNames != null) {
@@ -4749,13 +4856,21 @@ class SourceTargetCommon {
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
-		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + renderedBody + " }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
 	}
 
 	static function phpLambdaArgIsRefLike(refArgIndexes:Null<Array<Int>>, index:Int):Bool {
 		return refArgIndexes != null && refArgIndexes.indexOf(index) >= 0;
+	}
+
+	/** Emit discarded effects as statements within the existing lexical closure. */
+	static function phpReturnBody(body:HxExpr, render:HxExpr->String):String {
+		return switch (body) {
+			case EDiscardThen(effect, continuation): render(effect) + "; " + phpReturnBody(continuation, render);
+			case _: "return " + render(body) + ";";
+		};
 	}
 
 	static function phpLambdaArgCanUsePhpDefault(args:Array<String>, optionalArgNames:Array<String>, index:Int):Bool {
@@ -5106,7 +5221,7 @@ class SourceTargetCommon {
 				phpCollectUsedListWithFrame(frame, args, names, bound);
 			case EUnop(_, _, inner):
 				phpCollectUsedIdentsWithFrame(frame, inner, names, bound);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectUsedIdentsWithFrame(frame, left, names, bound);
 				phpCollectUsedIdentsWithFrame(frame, right, names, bound);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5130,7 +5245,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index) | ERange(receiver, index):
 				phpCollectUsedIdentsWithFrame(frame, receiver, names, bound);
 				phpCollectUsedIdentsWithFrame(frame, index, names, bound);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectUsedIdentsWithFrame(frame, inner, names, bound);
 			case _:
 		}
@@ -5173,7 +5288,7 @@ class SourceTargetCommon {
 				phpCollectUsedList(args, names);
 			case EUnop(_, _, inner):
 				phpCollectUsedIdents(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectUsedIdents(left, names);
 				phpCollectUsedIdents(right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5193,7 +5308,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index) | ERange(receiver, index):
 				phpCollectUsedIdents(receiver, names);
 				phpCollectUsedIdents(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectUsedIdents(inner, names);
 			case _:
 		}
@@ -5289,7 +5404,7 @@ class SourceTargetCommon {
 				phpCollectAssignedList(args, names);
 			case EUnop(_, _, inner):
 				phpCollectAssignedIdents(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectAssignedIdents(left, names);
 				phpCollectAssignedIdents(right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5308,7 +5423,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index):
 				phpCollectAssignedIdents(receiver, names);
 				phpCollectAssignedIdents(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectAssignedIdents(inner, names);
 			case _:
 		}
@@ -5373,7 +5488,7 @@ class SourceTargetCommon {
 						phpCollectAssignedIdentsWithFrame(frame, arg, names);
 			case EUnop(_, _, inner):
 				phpCollectAssignedIdentsWithFrame(frame, inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				phpCollectAssignedIdentsWithFrame(frame, left, names);
 				phpCollectAssignedIdentsWithFrame(frame, right, names);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -5392,7 +5507,7 @@ class SourceTargetCommon {
 			case EArrayAccess(receiver, index):
 				phpCollectAssignedIdentsWithFrame(frame, receiver, names);
 				phpCollectAssignedIdentsWithFrame(frame, index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpCollectAssignedIdentsWithFrame(frame, inner, names);
 			case _:
 		}
@@ -5411,7 +5526,7 @@ class SourceTargetCommon {
 			case EIdent(name) if (phpArrayBackedReceiver(receiver) || phpLocalExists(name)):
 				final clean = sanitizeTypeName(name);
 				clean.length == 0 ? null : clean;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayMutatingReceiverLocal(inner, field, args);
 			case _:
 				null;
@@ -5425,7 +5540,7 @@ class SourceTargetCommon {
 			case EIdent(name): final clean = PhpName.valueIdentifier(name); final local = SourceFunctionRenderFrameTools.requirePhpScope(frame)
 					.findLocal(clean); clean.length == 0 || (local == null
 					&& !phpArrayBackedReceiverWithFrame(frame, receiver)) ? null : clean;
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpArrayMutatingReceiverLocalWithFrame(frame, inner, field, args);
 			case _:
 				null;
@@ -5483,6 +5598,8 @@ class SourceTargetCommon {
 
 	static function phpCollectAssignedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -5761,6 +5878,7 @@ class SourceTargetCommon {
 				switch (frame) {
 					case PhpFunction(_, _): renderPhpTryExprWithFrame(frame, tryStatement, catches);
 					case Program(_): renderPhpTryExpr(tryStatement, catches);
+					case NativeFunction(_): throw "native function scope cannot render a PHP try expression";
 				}
 			case Java: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
 			case Cs: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
@@ -5941,7 +6059,7 @@ class SourceTargetCommon {
 		if (mapLiteralResult != null)
 			return mapLiteralResult;
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResult(inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
@@ -5974,7 +6092,7 @@ class SourceTargetCommon {
 		if (mapLiteralResult != null)
 			return mapLiteralResult;
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResultWithFrame(frame, inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHintWithFrame(frame, name), value);
@@ -6035,7 +6153,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasNumericAbstractWrapper(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasNumericAbstractWrapper(inner);
 			case EIdent(name): phpLocalHasInstanceMethod(name, "get") && (phpLocalHasInstanceMethod(name, "invert")
 					|| phpLocalHasInstanceMethod(name, "incr"));
@@ -6051,7 +6169,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasNumericAbstractWrapperWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasNumericAbstractWrapperWithFrame(frame, inner);
 			case EIdent(name): final typeHint = phpLocalTypeHintWithFrame(frame,
 					name); phpTypeHasInstanceMethodWithFrame(frame, typeHint,
@@ -6070,7 +6188,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasMyStringType(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasMyStringType(inner);
 			case EIdent(name): final hint = sanitizeTypeName(phpLocalTypeHint(name)); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
 			case ECast(_, typeHint): final hint = sanitizeTypeName(typeHint); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
@@ -6081,7 +6199,7 @@ class SourceTargetCommon {
 
 	static function helperExprHasMyStringTypeWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprHasMyStringTypeWithFrame(frame, inner);
 			case EIdent(name): final hint = sanitizeTypeName(phpLocalTypeHintWithFrame(frame,
 					name)); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
@@ -6093,7 +6211,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralTypeError(expr:HxExpr):Null<Bool> {
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperMapLiteralTypeError(inner);
 			case EArrayDecl(items):
 				if (items.length == 0)
@@ -6129,7 +6247,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralKeySignature(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperMapLiteralKeySignature(inner);
 			case EInt(value):
 				"i:" + Std.string(value);
@@ -6146,7 +6264,7 @@ class SourceTargetCommon {
 
 	static function helperMapLiteralProbeKind(expr:HxExpr, isKey:Bool):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperMapLiteralProbeKind(inner, isKey);
 			case EInt(_):
 				"number";
@@ -6168,7 +6286,7 @@ class SourceTargetCommon {
 	static function helperTypeErrorLoweredBlockResult(expr:HxExpr, ?abstractLocals:Array<String>):Null<Bool> {
 		final knownAbstractLocals = abstractLocals == null ? [] : abstractLocals;
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperTypeErrorLoweredBlockResult(inner, knownAbstractLocals);
 			case ECall(ELambda([], body), []):
 				return helperTypeErrorLoweredBlockResult(body, knownAbstractLocals);
@@ -6201,7 +6319,7 @@ class SourceTargetCommon {
 
 	static function helperAbstractCastCarrierName(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperAbstractCastCarrierName(inner);
 			case ECall(EIdent("__hxhx_copy_value"), [inner]):
 				helperAbstractCastCarrierName(inner);
@@ -6214,7 +6332,7 @@ class SourceTargetCommon {
 
 	static function helperExprCreatesAbstractCastCarrier(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				helperExprCreatesAbstractCastCarrier(inner);
 			case ENew(path, _): final clean = sanitizeTypeName(path); clean == "AbstractBase" || StringTools.endsWith(clean, "_AbstractBase");
 			case _:
@@ -6630,7 +6748,7 @@ class SourceTargetCommon {
 		if (args == null || args.length == 0)
 			return null;
 		final raw = switch (args[0]) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperTypeErrorBlockResult([inner]);
 			case ETryCatchRaw(raw):
 				raw;
@@ -6688,6 +6806,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpTypeStringExprHintWithFrame(frame, continuation, seen);
 			case EIdent(name):
 				final targetName = PhpName.valueIdentifier(name);
 				final local = SourceFunctionRenderFrameTools.requirePhpScope(frame).findLocal(targetName);
@@ -6720,7 +6839,7 @@ class SourceTargetCommon {
 				}
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpTypeStringExprHintWithFrame(frame, inner, seen);
 			case _:
 				phpExprTypeHint(expr);
@@ -6731,6 +6850,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpTypeStringExprHint(continuation, seen);
 			case EIdent(name):
 				final clean = sanitizeTypeName(name);
 				if (seen.indexOf(clean) >= 0) {
@@ -6765,7 +6885,7 @@ class SourceTargetCommon {
 				}
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpTypeStringExprHint(inner, seen);
 			case _:
 				phpExprTypeHint(expr);
@@ -6795,6 +6915,11 @@ class SourceTargetCommon {
 	}
 
 	static function helperExprNullableStateWithFrame(frame:SourceFunctionRenderFrame, expr:HxExpr, seen:Array<String>):String {
+		switch (expr) {
+			case EDiscardThen(_, continuation):
+				return helperExprNullableStateWithFrame(frame, continuation, seen);
+			case _:
+		}
 		final scope = SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		switch (expr) {
@@ -6828,7 +6953,7 @@ class SourceTargetCommon {
 			case _:
 		}
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperExprNullableStateWithFrame(frame, inner, seen);
 			case EBinop("??", left, right):
 				final leftNullable = helperExprNullableStateWithFrame(frame, left, seen);
@@ -6884,6 +7009,8 @@ class SourceTargetCommon {
 
 	static function helperExprNullableState(expr:HxExpr, seen:Array<String>):String {
 		switch (expr) {
+			case EDiscardThen(_, continuation):
+				return helperExprNullableState(continuation, seen);
 			case EIdent(name):
 				final localHint = phpLocalTypeHint(name);
 				if (StringTools.trim(localHint).length > 0)
@@ -6914,7 +7041,7 @@ class SourceTargetCommon {
 			case _:
 		}
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return helperExprNullableState(inner, seen);
 			case EBinop("??", left, right):
 				final leftNullable = helperExprNullableState(left, seen);
@@ -7418,8 +7545,6 @@ class SourceTargetCommon {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						pythonMacroEnum("EParenthesis", [pythonMacroExprObject(exprDef)]);
 					case "untyped":
 						pythonMacroEnum("EUntyped", [pythonMacroExprObject(exprDef)]);
 					case _:
@@ -7441,6 +7566,10 @@ class SourceTargetCommon {
 
 	static function pythonMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				pythonMacroEnum("EBlock", ["[" + [for (child in children) pythonMacroExpr(child, [])].join(", ") + "]"]);
 			case EString(value):
 				pythonMacroEnum("EConst", [
 					pythonMacroEnum("CString", [quoteString(value), pythonMacroEnum("DoubleQuotes", [])])
@@ -7462,11 +7591,15 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) pythonMacroExpr(value, [])];
 				pythonMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
-				pythonMacroEnum("EBinop", [pythonMacroEnum("OpIn", []), pythonMacroExpr(left, []), pythonMacroExpr(right, [])]);
-			case EBinop("=>", left, right):
+			case EBinop(op, left, right):
 				pythonMacroEnum("EBinop", [
-					pythonMacroEnum("OpArrow", []),
+					HxMacroBinaryOperator.render(op, pythonMacroEnum),
+					pythonMacroExpr(left, []),
+					pythonMacroExpr(right, [])
+				]);
+			case ERange(left, right):
+				pythonMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", pythonMacroEnum),
 					pythonMacroExpr(left, []),
 					pythonMacroExpr(right, [])
 				]);
@@ -7492,6 +7625,8 @@ class SourceTargetCommon {
 				pythonMacroEnum("ECall", [pythonMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				pythonMacroEnum("EUntyped", [pythonMacroExpr(inner, [])]);
+			case EParenthesized(inner, _):
+				pythonMacroEnum("EParenthesis", [pythonMacroExpr(inner, [])]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				pythonMacroEnum("EUnop", [
@@ -7576,8 +7711,6 @@ class SourceTargetCommon {
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
-					case "parenthesis":
-						phpMacroEnum("EParenthesis", [phpMacroExprObject(exprDef)]);
 					case "untyped":
 						phpMacroEnum("EUntyped", [phpMacroExprObject(exprDef)]);
 					case _:
@@ -7851,6 +7984,10 @@ class SourceTargetCommon {
 
 	static function phpMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
+			case EDiscardThen(_, _):
+				throw HxMacroBlockBoundary.missingSourceGroup;
+			case ESourceGroup(children, _):
+				phpMacroEnum("EBlock", ["[" + [for (child in children) phpMacroExpr(child, [])].join(", ") + "]"]);
 			case EString(value):
 				phpMacroEnum("EConst", [
 					phpMacroEnum("CString", [PhpSyntax.quoteString(value), phpMacroEnum("DoubleQuotes", [])])
@@ -7876,10 +8013,18 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) phpMacroExpr(value, [])];
 				phpMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
-			case EBinop("in", left, right):
-				phpMacroEnum("EBinop", [phpMacroEnum("OpIn", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
-			case EBinop("=>", left, right):
-				phpMacroEnum("EBinop", [phpMacroEnum("OpArrow", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
+			case EBinop(op, left, right):
+				phpMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render(op, phpMacroEnum),
+					phpMacroExpr(left, []),
+					phpMacroExpr(right, [])
+				]);
+			case ERange(left, right):
+				phpMacroEnum("EBinop", [
+					HxMacroBinaryOperator.render("...", phpMacroEnum),
+					phpMacroExpr(left, []),
+					phpMacroExpr(right, [])
+				]);
 			case ECall(EIdent("__hxhx_macro_if"), args):
 				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
 				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
@@ -7899,6 +8044,8 @@ class SourceTargetCommon {
 				phpMacroEnum("ECall", [phpMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				phpMacroEnum("EUntyped", [phpMacroExpr(inner, [])]);
+			case EParenthesized(inner, _):
+				phpMacroEnum("EParenthesis", [phpMacroExpr(inner, [])]);
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				phpMacroEnum("EUnop", [
@@ -8729,7 +8876,7 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Python: "range(" + a + ", " + b + ")";
 			case Java: "range(" + a + ", " + b + ")";
-			case Cs: "range(" + a + ", " + b + ")";
+			case Cs: "global::hxhx.__HxRuntime.range(" + a + ", " + b + ")";
 			case Php: "range(" + a + ", " + b + " - 1)";
 			case Lua: "hxhx_range(" + a + ", " + b + ")";
 		};
@@ -8742,7 +8889,7 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Python: "range(" + a + ", " + b + ")";
 			case Java: "range(" + a + ", " + b + ")";
-			case Cs: "range(" + a + ", " + b + ")";
+			case Cs: "global::hxhx.__HxRuntime.range(" + a + ", " + b + ")";
 			case Php: "range(" + a + ", " + b + " - 1)";
 			case Lua: "hxhx_range(" + a + ", " + b + ")";
 		};
@@ -8753,7 +8900,7 @@ class SourceTargetCommon {
 			case Python: "print(" + expr + ")";
 			case Java: "System.out.println(" + expr + ");";
 			case Cs: "System.Console.WriteLine(" + expr + ");";
-			case Php: "echo " + expr + " . PHP_EOL;";
+			case Php: "Sys::println(" + expr + ");";
 			case Lua: "print(" + expr + ")";
 		};
 	}
@@ -8807,6 +8954,8 @@ class SourceTargetCommon {
 				EUnop(op, fixity, javaExprWithStmtTraceLine(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(op, javaExprWithStmtTraceLine(left, pos), javaExprWithStmtTraceLine(right, pos));
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(javaExprWithStmtTraceLine(effect, pos), javaExprWithStmtTraceLine(continuation, pos));
 			case ETernary(cond, thenExpr, elseExpr):
 				ETernary(javaExprWithStmtTraceLine(cond, pos), javaExprWithStmtTraceLine(thenExpr, pos), javaExprWithStmtTraceLine(elseExpr, pos));
 			case EAnon(fieldNames, fieldValues):
@@ -8826,8 +8975,10 @@ class SourceTargetCommon {
 				ECast(javaExprWithStmtTraceLine(inner, pos), typeHint);
 			case EUntyped(inner):
 				EUntyped(javaExprWithStmtTraceLine(inner, pos));
-			case ELambda(args, body):
-				ELambda(args, javaExprWithStmtTraceLine(body, pos));
+			case EParenthesized(inner, position):
+				EParenthesized(javaExprWithStmtTraceLine(inner, pos), position);
+			case ELambda(args, body, signature):
+				ELambda(args, javaExprWithStmtTraceLine(body, pos), signature);
 			case _:
 				expr;
 		};
@@ -8922,8 +9073,10 @@ class SourceTargetCommon {
 	static function renderStmtWithFrame(frame:SourceFunctionRenderFrame, stmt:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		return switch (stmt) {
+			case STargetScope(kind, body, _):
+				CsSyntaxScopeEmitter.render(kind, target, indent, () -> renderStmtWithFrame(frame, body, indent));
 			case SBlock(stmts, _) if (target == Cs):
-				renderCStyleScopedBlock(target, stmts, indent);
+				renderCStyleScopedBlockWithFrame(frame, stmts, indent);
 			case SBlock(stmts, _):
 				final childFrame = target == Php ? SourceFunctionRenderFrameTools.withPhpScope(frame,
 					SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Block)) : frame;
@@ -8942,9 +9095,16 @@ class SourceTargetCommon {
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + exprStmt(target, renderExprWithFrame(frame, rendered))];
 			case SVar(name, _typeHint, init, pos):
+				final exactDeclaration = nativeLocalDeclaration(frame, name, init);
+				if (exactDeclaration != null)
+					return [indent + exactDeclaration];
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExprWithFrame(frame, value);
-					[indent + varDecl(target, sanitizeTypeName(name), rhs, _typeHint, value)];
+				final renewal = target == Php ? SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(name, indent) : [];
+				renewal.concat([indent + varDecl(target, sanitizeTypeName(name), rhs, _typeHint, value)]);
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderIfWithFrame(frame, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
@@ -8953,8 +9113,8 @@ class SourceTargetCommon {
 				renderForKeyValueWithFrame(frame, keyName, valueName, iterable, body, indent);
 			case SWhile(cond, body, _):
 				renderWhileWithFrame(frame, cond, body, indent);
-			case SSwitch(scrutinee, patterns, bodies, _):
-				renderSwitchStmtWithFrame(frame, scrutinee, patterns, bodies, indent);
+			case SSwitch(scrutinee, patterns, bodies, _, exhaustive):
+				renderSwitchStmtWithFrame(frame, scrutinee, patterns, bodies, indent, exhaustive == true);
 			case STry(tryBody, catches, _):
 				renderTryWithFrame(frame, tryBody, catches, indent);
 			case SBreak(_):
@@ -8980,6 +9140,7 @@ class SourceTargetCommon {
 
 	static function stmtKind(stmt:HxStmt):String {
 		return switch (stmt) {
+			case STargetScope(_, _, _): "STargetScope";
 			case SBlock(_, _): "SBlock";
 			case SVar(_, _, _, _): "SVar";
 			case SIf(_, _, _, _): "SIf";
@@ -9010,7 +9171,7 @@ class SourceTargetCommon {
 				return renderPhpStmtsWithFrame(frame, stmts, indent, initialLocalTypes);
 			case Program(Php):
 				throw "PHP function bodies require PhpFunctionBodyRenderer";
-			case Program(_):
+			case Program(_) | NativeFunction(_):
 		}
 		final out = new Array<String>();
 		final localTypes = (target == Php || target == Cs)
@@ -9271,7 +9432,7 @@ class SourceTargetCommon {
 					constructorName: legacy.ctorName,
 					hasArguments: legacy.hasArgs
 				};
-			case Program(_):
+			case Program(_) | NativeFunction(_):
 				null;
 		};
 	}
@@ -9280,14 +9441,14 @@ class SourceTargetCommon {
 		return switch (frame) {
 			case PhpFunction(renderer, _): renderer.hasCurrentInstanceMethod(name);
 			case Program(Php): phpCurrentInstanceMethodValue(name);
-			case Program(_): false;
+			case Program(_) | NativeFunction(_): false;
 		};
 
 	static function phpFrameHasLocal(frame:SourceFunctionRenderFrame, name:String):Bool
 		return switch (frame) {
 			case PhpFunction(_, scope): scope.findLocal(PhpName.valueIdentifier(name)) != null;
 			case Program(Php): phpLocalExists(name);
-			case Program(_): false;
+			case Program(_) | NativeFunction(_): false;
 		};
 
 	static function phpEnumCtorValueExprWithFrame(frame:SourceFunctionRenderFrame, name:String):Null<String> {
@@ -9353,7 +9514,7 @@ class SourceTargetCommon {
 					withPhpPreferredEnum(enumRef.enumName, function() {
 						return callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 					});
-				case Program(_):
+				case Program(_) | NativeFunction(_):
 					callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 			};
 		return enumRef.enumName + "::$" + enumRef.constructorName;
@@ -9386,7 +9547,7 @@ class SourceTargetCommon {
 				phpEnumNameFromTypeHint(phpLocalTypeHint(name));
 			case ECast(_, typeHint):
 				phpEnumNameFromTypeHint(typeHint);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpPreferredEnumFromExpr(inner);
 			case _:
 				null;
@@ -9436,7 +9597,7 @@ class SourceTargetCommon {
 			case EIdent(name):
 				final local = SourceFunctionRenderFrameTools.requirePhpScope(frame).findLocal(PhpName.valueIdentifier(name));
 				local == null ? null : SourceFunctionRenderFrameTools.requirePhpRenderer(frame).findEnumOwnerIdentity(local.semanticType);
-			case EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
 				phpPreferredEnumFromExprWithFrame(frame, inner);
 			case _:
 				null;
@@ -9857,7 +10018,7 @@ class SourceTargetCommon {
 				castHint;
 			case EThis:
 				SourceFunctionRenderFrameTools.requirePhpScope(frame).getPlan().getClassIdentity();
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				return phpInstanceOverloadMethodNameWithFrame(frame, inner, field, args);
 			case _:
 				phpExprTypeHint(receiver);
@@ -10051,6 +10212,11 @@ class SourceTargetCommon {
 			.hasStaticCallableField(phpInstanceMemberLookupCandidates(typePath), sanitizeTypeName(field));
 
 	static function inferLocalTypeHint(typeHint:Null<String>, init:Null<HxExpr>):String {
+		switch (init) {
+			case EDiscardThen(_, continuation):
+				return inferLocalTypeHint(typeHint, continuation);
+			case _:
+		}
 		if (typeHint != null && StringTools.trim(typeHint).length > 0) {
 			return switch (init) {
 				case ENew(typePath, _):
@@ -10088,7 +10254,7 @@ class SourceTargetCommon {
 			case ECast(inner, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				final innerHint = phpExprTypeHint(inner);
 				if (isNullTypeHint(innerHint) && phpUnwrapNullTypeHint(innerHint) == normalizeTypeHint(castHint)) innerHint; else castHint;
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				inferLocalTypeHint("", inner);
 			case _:
 				"";
@@ -10099,6 +10265,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprTypeHint(continuation);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -10125,7 +10292,7 @@ class SourceTargetCommon {
 			case ETernary(cond, thenExpr, elseExpr):
 				phpExprTypeHint(cond);
 				phpTernaryTypeHint(thenExpr, elseExpr);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprTypeHint(inner);
 			case _:
 				"";
@@ -10257,6 +10424,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return false;
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprReturnsInt64(continuation);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
 			case ECall(callee, args): phpInt64StaticCall(callee, args.length) || phpInt64InstanceMethodReturnsInt64Call(callee, args);
@@ -10266,7 +10434,7 @@ class SourceTargetCommon {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				phpExprIsInt64Value(inner);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64(inner);
 			case _:
 				false;
@@ -10307,6 +10475,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return false;
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpExprReturnsInt64WithFrame(frame, continuation);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
 			case ECall(callee, args): phpInt64StaticCallWithFrame(frame, callee,
@@ -10317,7 +10486,7 @@ class SourceTargetCommon {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				phpExprIsInt64ValueWithFrame(frame, inner);
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64WithFrame(frame, inner);
 			case _:
 				false;
@@ -10391,7 +10560,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EField(_, _): true;
 			case ECast(inner, _): csExprIsBoxedFieldAccess(inner);
-			case EUntyped(inner): csExprIsBoxedFieldAccess(inner);
+			case EParenthesized(inner, _) | EUntyped(inner): csExprIsBoxedFieldAccess(inner);
 			case _: false;
 		};
 	}
@@ -10491,6 +10660,9 @@ class SourceTargetCommon {
 		final render = function():Array<String> {
 			return switch (stmt) {
 				case SVar(name, typeHint, init, pos):
+					final exactDeclaration = nativeLocalDeclaration(frame, name, init);
+					if (exactDeclaration != null)
+						return [indent + exactDeclaration];
 					final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
 					final inferredType = inferLocalTypeHint(typeHint, init);
 					if (target == Php) {
@@ -10503,7 +10675,16 @@ class SourceTargetCommon {
 						phpRegisterOptionalLambdaLocal(cleanName, init);
 					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 					final rhs = value == null ? defaultValue(target) : assignedValueExprWithFrame(frame, value, typeHint);
-					return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
+					final renewal = target == Php ? SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+						.getPlan()
+						.getCaptureStorage()
+						.renewal(cleanName, indent) : [];
+					return renewal.concat([indent + varDecl(target, cleanName, rhs, typeHint, value)]);
+				case SExpr(expr, _) if (target == Php && expr.match(ELoweredControl(_, _, _, _))):
+					return renderStmtWithLocalsWithFrame(frame,
+						TypedControlStatements.methodStatement(expr,
+							SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().requireRootControlIdentity()),
+						indent, localTypes);
 				case SExpr(EBinop("??=", left, right), _) if (target == Python):
 					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
 				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
@@ -10525,7 +10706,7 @@ class SourceTargetCommon {
 					phpSetInferredLocalTypeIfUnknown(phpLocals, cleanValueName, "");
 					return renderForKeyValueWithFrame(frame, keyName, valueName, iterable, body, indent, phpLocals);
 				case SBlock(stmts, _) if (target == Cs):
-					return renderCStyleScopedBlock(target, stmts, indent, localTypes);
+					return renderCStyleScopedBlockWithFrame(frame, stmts, indent, localTypes);
 				case SBlock(stmts, _) if (target == Php):
 					final childFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Block));
 					return renderStmtsWithFrame(childFrame, stmts, indent, localTypes);
@@ -10556,8 +10737,14 @@ class SourceTargetCommon {
 	**/
 	static function renderCStyleScopedBlock(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String,
 			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
+		return renderCStyleScopedBlockWithFrame(Program(target), stmts, indent, initialLocalTypes);
+	}
+
+	static function renderCStyleScopedBlockWithFrame(frame:SourceFunctionRenderFrame, stmts:Array<HxStmt>, indent:String,
+			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
+		final target = SourceFunctionRenderFrameTools.target(frame);
 		final out = [indent + "{"];
-		for (line in renderStmts(target, stmts, indent + indentStep(target), initialLocalTypes))
+		for (line in renderStmtsWithFrame(frame, stmts, indent + indentStep(target), initialLocalTypes))
 			out.push(line);
 		out.push(indent + "}");
 		return out;
@@ -10604,6 +10791,47 @@ class SourceTargetCommon {
 		}
 	}
 
+	/** Render Java/C# declarations with the same exact local catalog throughout the function. */
+	public static function renderNativeFunctionBody(locals:SourceNativeFunctionLocals, body:Array<HxStmt>, indent:String):Array<String> {
+		if (locals == null)
+			throw "native function rendering requires typed local ownership";
+		return renderStmtsWithFrame(NativeFunction(locals), body, indent);
+	}
+
+	/** Resolve a legacy declaration through its typed owner before entering Java rendering. */
+	static function javaFunctionProjection(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl):TypedBackendFunctionProjection {
+		for (module in program.getTypedModules())
+			if (module.getBackendDeclaration() == decl) {
+				final found = module.findBackendFunctionProjection(cls, fn);
+				if (found == null)
+					throw "Java function declaration has no exact typed function owner";
+				return found.functionProjection;
+			}
+		throw "Java function declaration has no exact typed module owner";
+	}
+
+	/** Keep one exact function catalog while target-specific rewrites preserve projected local names. */
+	static function renderProjectedNativeFunction(target:SourceNativeTarget, program:GenIrProgram, projection:TypedBackendFunctionProjection,
+			body:Array<HxStmt>, indent:String, noRoot:Bool):Array<String> {
+		return renderNativeFunctionBody(new SourceNativeFunctionLocals({
+			target: target,
+			program: program,
+			projection: projection,
+			noRoot: noRoot
+		}), body, indent);
+	}
+
+	static function nativeLocalDeclaration(frame:SourceFunctionRenderFrame, name:String, initializer:Null<HxExpr>):Null<String> {
+		final needsType = initializer == null || initializer.match(ENull);
+		if (!needsType)
+			return null;
+		return switch (frame) {
+			case NativeFunction(locals): locals.declaration(name, initializer != null);
+			case Program(Java) | Program(Cs): throw "native local declaration requires its typed function scope: " + name;
+			case _: null;
+		};
+	}
+
 	/**
 		Enter recursive PHP function rendering with one request-owned renderer.
 
@@ -10624,13 +10852,19 @@ class SourceTargetCommon {
 		so nested lambdas already carry collision-free transport names. Recursive
 		rendering still requires an explicit frame because lambda capture and
 		receiver decisions must not fall back to process-wide state.
+		Same-class members use the initializer's declaration facts before capture
+		analysis, so a static method or field cannot become a captured PHP local.
 	**/
 	public static function renderPhpFieldInitializer(renderer:PhpFunctionBodyRenderer, expression:HxExpr, context:String):String {
 		if (renderer == null || expression == null)
 			throw "PHP field initializer rendering requires a request-owned renderer and expression";
 		final frame = SourceFunctionRenderFrameTools.forPhpRenderer(renderer);
 		return try {
-			final renamed = phpRenameScopedLocalExpr(expression, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
+			final lowered = PhpExecutableLowering.expression(renderer, expression);
+			final rewritten = phpRewriteSameClassMemberExpr(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
+				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
+				[]);
+			final renamed = phpRenameScopedLocalExpr(rewritten, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>(), true);
 			renderExprWithFrame(frame, renamed);
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -10644,7 +10878,8 @@ class SourceTargetCommon {
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		return try {
-			final rewrittenBody = phpRewriteSameClassMembersInStmts(body, renderer.copyCurrentInstanceMethodTargetNames(),
+			final lowered = PhpExecutableLowering.body(renderer, body);
+			final rewrittenBody = phpRewriteSameClassMembersInStmts(lowered, renderer.copyCurrentInstanceMethodTargetNames(),
 				renderer.copyCurrentInstanceFieldTargetNames(), renderer.copyCurrentClassStaticMemberTargetNames(), renderer.getPlan().getEmittedClassName(),
 				renderer.copyParameterTargetNames());
 			final renderBody = phpRenameScopedLocalStmts(rewrittenBody);
@@ -10735,10 +10970,11 @@ class SourceTargetCommon {
 	}
 
 	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String,
-			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
+			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final cleanName = sanitizeTypeName(name);
 		final value = valueName(target, cleanName);
-		final source = renderExpr(target, iterable);
+		final source = renderExprWithFrame(frame, iterable);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		switch (target) {
@@ -10748,12 +10984,12 @@ class SourceTargetCommon {
 					out.push(line);
 			case Java:
 				out.push(indent + "for (var " + sanitizeJavaIdentifier(name) + " : " + source + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Cs:
 				out.push(indent + "foreach (var " + cleanName + " in " + source + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Php:
@@ -10774,7 +11010,7 @@ class SourceTargetCommon {
 			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderForIn(target, name, iterable, body, indent, knownPhpLocals);
+			return renderForIn(target, name, iterable, body, indent, knownPhpLocals, frame);
 		final cleanName = PhpName.valueIdentifier(name);
 		final value = valueName(Php, cleanName);
 		final source = renderExprWithFrame(frame, iterable);
@@ -10782,7 +11018,13 @@ class SourceTargetCommon {
 		var loopScope = SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Loop);
 		loopScope = loopScope.withPlannedLocal(cleanName);
 		final loopFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, loopScope);
-		final out = [indent + "foreach (__hxhx_iter(" + source + ") as " + value + ") {"];
+		final storage = SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage();
+		final carrier = valueName(Php, storage.iterationCarrier(cleanName));
+		final out = [indent + "foreach (__hxhx_iter(" + source + ") as " + carrier + ") {"];
+		for (line in storage.renewal(cleanName, childIndent))
+			out.push(line);
+		if (carrier != value)
+			out.push(childIndent + value + " = " + carrier + ";");
 		for (line in renderPhpLoopBodyWithFrame(loopFrame, body, childIndent, knownPhpLocals))
 			out.push(line);
 		out.push(indent + "}");
@@ -10833,6 +11075,11 @@ class SourceTargetCommon {
 		loopScope = loopScope.withPlannedLocal(cleanKey).withPlannedLocal(cleanItem);
 		final loopFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, loopScope);
 		final out = [indent + "foreach (__hxhx_key_value_iter(" + source + ") as " + pairName + ") {"];
+		final storage = SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage();
+		for (line in storage.renewal(cleanKey, childIndent))
+			out.push(line);
+		for (line in storage.renewal(cleanItem, childIndent))
+			out.push(line);
 		out.push(childIndent + keyValue + " = " + pairName + "[0];");
 		out.push(childIndent + itemValue + " = " + pairName + "[1];");
 		for (line in renderPhpLoopBodyWithFrame(loopFrame, body, childIndent, knownPhpLocals))
@@ -10855,6 +11102,8 @@ class SourceTargetCommon {
 
 	static function renderPhpLoopBodyWithFrame(frame:SourceFunctionRenderFrame, body:HxStmt, indent:String,
 			knownPhpLocals:Null<haxe.ds.StringMap<String>>):Array<String> {
+		if (SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().getCaptureStorage().hasClosures())
+			return renderStmtWithFrame(frame, body, indent);
 		if (!phpLoopNeedsIterationScope(body, knownPhpLocals))
 			return renderStmtWithFrame(frame, body, indent);
 		final useClause = phpLoopIterationUseClause(body, knownPhpLocals);
@@ -10866,7 +11115,8 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
+	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final renderedCond = renderExpr(target, cond);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
@@ -10877,12 +11127,12 @@ class SourceTargetCommon {
 					out.push(line);
 			case Java:
 				out.push(indent + "while (" + renderedCond + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Cs:
 				out.push(indent + "while (" + renderedCond + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Php:
@@ -10902,7 +11152,7 @@ class SourceTargetCommon {
 	static function renderWhileWithFrame(frame:SourceFunctionRenderFrame, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderWhile(target, cond, body, indent);
+			return renderWhile(target, cond, body, indent, frame);
 		final renderedCond = renderExprWithFrame(frame, cond);
 		final childIndent = indent + indentStep(Php);
 		final loopScope = SourceFunctionRenderFrameTools.requirePhpScope(frame).derive(Loop);
@@ -10914,8 +11164,9 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			indent:String):Array<String> {
+	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
+			?functionFrame:SourceFunctionRenderFrame, exhaustive:Bool = false):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final scrutineeExpr = renderExpr(target, scrutinee);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
@@ -10959,9 +11210,9 @@ class SourceTargetCommon {
 				}
 				out.push(indent + "}");
 			case Java:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame, exhaustive);
 			case Cs:
-				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out, frame, exhaustive);
 			case Lua:
 				if (count == 0)
 					return out;
@@ -10984,10 +11235,10 @@ class SourceTargetCommon {
 	}
 
 	static function renderSwitchStmtWithFrame(frame:SourceFunctionRenderFrame, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			indent:String):Array<String> {
+			indent:String, exhaustive:Bool = false):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent);
+			return renderSwitchStmt(target, scrutinee, patterns, bodies, indent, frame, exhaustive);
 		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 		if (count == 0)
 			return [];
@@ -11003,6 +11254,11 @@ class SourceTargetCommon {
 			for (binding in lowered.bindings) {
 				final bindName = PhpName.valueIdentifier(binding.name);
 				caseScope = caseScope.withPlannedLocal(bindName);
+				for (line in SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(bindName, childIndent))
+					out.push(line);
 				out.push(childIndent + varDecl(Php, bindName, binding.expr));
 			}
 			final caseFrame = SourceFunctionRenderFrameTools.withPhpScope(frame, caseScope);
@@ -11014,7 +11270,8 @@ class SourceTargetCommon {
 	}
 
 	static function renderCStyleSwitchStmtInto(target:SourceNativeTarget, scrutineeExpr:String, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
-			count:Int, indent:String, childIndent:String, out:Array<String>):Void {
+			count:Int, indent:String, childIndent:String, out:Array<String>, ?functionFrame:SourceFunctionRenderFrame, exhaustive:Bool = false):Void {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		if (count == 0)
 			return;
 		for (i in 0...count) {
@@ -11025,10 +11282,20 @@ class SourceTargetCommon {
 			out.push(indent + keyword + " (" + lowered.cond + ") {");
 			for (binding in lowered.bindings) {
 				final bindName = sanitizeTypeName(binding.name);
-				out.push(childIndent + varDecl(target, bindName, binding.expr));
+				final declaration = switch frame {
+					case NativeFunction(locals) if (target == Cs): locals.patternDeclaration(binding.name, binding.expr);
+					case _: varDecl(target, bindName, binding.expr);
+				};
+				out.push(childIndent + declaration);
 			}
-			for (line in renderStmt(target, bodies[i], childIndent))
+			for (line in renderStmtWithFrame(frame, bodies[i], childIndent))
 				out.push(line);
+		}
+		// Exhaustive value switches cannot fall through without assigning their result.
+		// Keep null abrupt, as upstream does, instead of inventing a default value.
+		if (exhaustive && target == Cs && !patterns[count - 1].match(PWildcard)) {
+			out.push(indent + "} else {");
+			out.push(childIndent + "throw new System.InvalidOperationException(\"Exhaustive switch did not match\");");
 		}
 		out.push(indent + "}");
 	}
@@ -11621,6 +11888,11 @@ class SourceTargetCommon {
 				final catchName = PhpName.valueIdentifier(c.name);
 				final catchScope = SourceFunctionRenderFrameTools.requirePhpScope(parentFrame).derive(Catch).withPlannedLocal(catchName);
 				final catchFrame = SourceFunctionRenderFrameTools.withPhpScope(parentFrame, catchScope);
+				for (line in SourceFunctionRenderFrameTools.requirePhpRenderer(parentFrame)
+					.getPlan()
+					.getCaptureStorage()
+					.renewal(catchName, bodyIndent))
+					out.push(line);
 				for (line in phpCatchBindLines(c, "$" + caughtName, bodyIndent))
 					out.push(line);
 				for (line in renderStmtWithFrame(catchFrame, c.body, bodyIndent))
@@ -12391,7 +12663,7 @@ class SourceTargetCommon {
 					for (line in javaOperationDispatchBody(operationCall, returnType, "    "))
 						out.push(line);
 				} else if (HxFunctionDecl.getIsStatic(fn) && javaCreateReturnsNewOwner(fn, className)) {
-					for (line in javaMainHelperBody(fn, returnType, className, methodName))
+					for (line in javaMainHelperBody(program, javaFunctionProjection(program, decl, cls, fn), returnType, className, methodName))
 						out.push(line);
 				} else {
 					out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
@@ -12615,7 +12887,7 @@ class SourceTargetCommon {
 		final packagePath = HxModuleDecl.getPackagePath(decl);
 		final outputPackagePath = csOutputPackagePath(packagePath, noRoot);
 		final rawClassName = HxClassDecl.getName(cls);
-		for (line in renderCsHeader(program, decl, rawClassName))
+		for (line in renderCsHeader(program, decl, rawClassName, noRoot))
 			out.push(line);
 		if (out.length > 1)
 			out.push("");
@@ -12685,7 +12957,7 @@ class SourceTargetCommon {
 					if (canRenderBody) {
 						for (line in csMissingDefaultArgDecls(args, count, bodyIndent + "    "))
 							out.push(line);
-						for (line in renderFunctionStmts(Cs, projectedBody, bodyIndent + "    ", className + ".new"))
+						for (line in renderProjectedNativeFunction(Cs, program, functionProjection, projectedBody, bodyIndent + "    ", noRoot))
 							out.push(line);
 					}
 					out.push(bodyIndent + "  }");
@@ -12716,8 +12988,8 @@ class SourceTargetCommon {
 						throw "C# support method is missing its strict projection: " + className + "." + methodName;
 					if (enumConstructors == null)
 						throw "C# support method is missing its request-owned enum-constructor catalog";
-					final bodyLines = csSupportMethodBodyLines(fn, enumConstructors.body(functionProjection), count, bodyIndent + "    ",
-						className + "." + methodName);
+					final bodyLines = csSupportMethodBodyLines(program, functionProjection, enumConstructors.body(functionProjection), count,
+						bodyIndent + "    ", noRoot);
 					if (bodyLines == null)
 						out.push(bodyIndent + "    return null;");
 					else
@@ -12876,12 +13148,21 @@ class SourceTargetCommon {
 		return out.join("\n");
 	}
 
-	static function renderCsHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String):Array<String> {
+	static function renderCsHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String, noRoot:Bool = false):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		appendCsUsing(out, seen, "haxe.io");
 		appendCsUsing(out, seen, "sys");
 		appendCsUsing(out, seen, "sys.io");
+		for (selected in CsSourceTypeImports.collect(program, resolvedDirectives(program, decl))) {
+			if (!noRoot && selected.packagePath.length == 0 && selected.localName == selected.className)
+				continue;
+			out.push("using "
+				+ sanitizeCsIdentifier(selected.localName)
+				+ " = "
+				+ csGlobalClassRef(selected.packagePath, selected.className, noRoot)
+				+ ";");
+		}
 		for (directive in resolvedDirectives(program, decl)) {
 			if (directive.getKind().match(UsingType))
 				continue;
@@ -13021,8 +13302,8 @@ class SourceTargetCommon {
 		return out.join("\n");
 	}
 
-	static function appendCsMainSupportMembers(out:Array<String>, decl:HxModuleDecl, projection:TypedBackendClassProjection, indent:String, className:String,
-			classRef:String, enumConstructors:CsEnumConstructorCallLowering):Void {
+	static function appendCsMainSupportMembers(out:Array<String>, program:GenIrProgram, decl:HxModuleDecl, projection:TypedBackendClassProjection,
+			indent:String, className:String, classRef:String, enumConstructors:CsEnumConstructorCallLowering, noRoot:Bool):Void {
 		if (enumConstructors == null)
 			throw "C# main helpers require the request-owned enum-constructor catalog";
 		final emitted = new Map<String, Bool>();
@@ -13060,7 +13341,7 @@ class SourceTargetCommon {
 			if (functionProjection == null)
 				throw "C# main helper is missing its strict projection: " + className + "." + methodName;
 			final rewrittenBody = csRewriteSameClassStaticMembersInStmts(enumConstructors.body(functionProjection), staticMemberNames, classRef, argLocals);
-			final body = renderFunctionStmts(Cs, rewrittenBody, indent + "  ", className + "." + methodName);
+			final body = renderProjectedNativeFunction(Cs, program, functionProjection, rewrittenBody, indent + "  ", noRoot);
 			var hasReturn = false;
 			for (line in body) {
 				if (StringTools.startsWith(StringTools.trim(line), "return "))
@@ -13327,16 +13608,13 @@ class SourceTargetCommon {
 		return true;
 	}
 
-	static function csSupportMethodBodyLines(fn:HxFunctionDecl, body:Array<HxStmt>, count:Int, indent:String, context:String):Null<Array<String>> {
-		if (count != HxFunctionDecl.getArgs(fn).length)
+	static function csSupportMethodBodyLines(program:GenIrProgram, projection:TypedBackendFunctionProjection, body:Array<HxStmt>, count:Int, indent:String,
+			noRoot:Bool):Null<Array<String>> {
+		if (count != HxFunctionDecl.getArgs(projection.getDeclaration()).length)
 			return null;
 		if (body == null || body.length == 0)
 			return null;
-		return try {
-			renderFunctionStmts(Cs, body, indent, context);
-		} catch (e:String) {
-			null;
-		}
+		return renderProjectedNativeFunction(Cs, program, projection, body, indent, noRoot);
 	}
 
 	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
@@ -13434,7 +13712,7 @@ class SourceTargetCommon {
 		appendSourceNativeTemplateLines(out, indent, "java/support-class-members", "ArraySupport.java");
 	}
 
-	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
+	static function appendJavaMainSupportMembers(out:Array<String>, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
 		final emittedMethods = new Map<String, Bool>();
 		final functionRefs = new Map<String, Bool>();
 		for (stmt in body)
@@ -13451,7 +13729,8 @@ class SourceTargetCommon {
 				emittedMethods.set(key, true);
 				out.push("  public static Object " + methodName + "(" + javaFunctionArgs(args) + ") {");
 				if (functionRefs.exists(methodName)) {
-					for (line in javaMainHelperBody(fn, "Object", className, methodName))
+					for (line in javaMainHelperBody(program, javaFunctionProjection(program, decl, HxModuleDecl.getMainClass(decl), fn), "Object", className,
+						methodName))
 						out.push(line);
 				} else {
 					out.push("    return null;");
@@ -13472,6 +13751,8 @@ class SourceTargetCommon {
 
 	static function collectJavaEntryBodyFunctionRefs(stmt:HxStmt, out:Map<String, Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (child in stmts)
 					collectJavaEntryBodyFunctionRefs(child, out);
@@ -13517,9 +13798,9 @@ class SourceTargetCommon {
 				collectJavaEntryBodyFunctionRefsInExpr(callee, out, true);
 				for (arg in args)
 					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
-			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectJavaEntryBodyFunctionRefsInExpr(left, out, false);
 				collectJavaEntryBodyFunctionRefsInExpr(right, out, false);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -13682,8 +13963,9 @@ class SourceTargetCommon {
 		return returnType == "Object" ? callbackExpr : javaSupportDefaultReturn(returnType);
 	}
 
-	static function javaMainHelperBody(fn:HxFunctionDecl, returnType:String, className:String, methodName:String):Array<String> {
-		final lines = renderFunctionStmts(Java, HxFunctionDecl.getBody(fn), "    ", className + "." + methodName);
+	static function javaMainHelperBody(program:GenIrProgram, projection:TypedBackendFunctionProjection, returnType:String, className:String,
+			methodName:String):Array<String> {
+		final lines = renderProjectedNativeFunction(Java, program, projection, projection.getBody(), "    ", false);
 		var hasReturn = false;
 		for (line in lines) {
 			if (StringTools.startsWith(StringTools.trim(line), "return ")) {
@@ -13717,6 +13999,8 @@ class SourceTargetCommon {
 
 	static function collectJavaEntryBodyDirectCalls(stmt:HxStmt, out:Array<{name:String, arity:Int}>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (child in stmts)
 					collectJavaEntryBodyDirectCalls(child, out);
@@ -13764,9 +14048,9 @@ class SourceTargetCommon {
 				collectJavaEntryBodyDirectCallsInExpr(callee, out);
 				for (arg in args)
 					collectJavaEntryBodyDirectCallsInExpr(arg, out);
-			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _), EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectJavaEntryBodyDirectCallsInExpr(left, out);
 				collectJavaEntryBodyDirectCallsInExpr(right, out);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -13806,7 +14090,7 @@ class SourceTargetCommon {
 	}
 
 	static function isJavaBuiltinDirectCall(name:String):Bool {
-		return name == "trace" || name == "__hxhx_parenthesized" || name == "__hxhx_int_literal" || name == "__hxhx_for_in" || name == "__hxhx_throw";
+		return name == "trace" || name == "__hxhx_int_literal" || name == "__hxhx_for_in" || name == "__hxhx_throw";
 	}
 
 	static function javaSyntheticObjectArgs(arity:Int):String {
@@ -13900,7 +14184,7 @@ class SourceTargetCommon {
 						sawTestIssuesMacro = true;
 					continue;
 				}
-				if ((className == mainClassName && !pythonMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
+				if (seen.exists(className))
 					continue;
 				seen.set(className, true);
 				packageByClassName.set(className, HxModuleDecl.getPackagePath(moduleDecl));
@@ -14003,6 +14287,7 @@ class SourceTargetCommon {
 			appendPythonMetaSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
+		final pythonFields = new PythonFieldAccessLowering(program);
 		final pythonClassesByName = new Map<String, HxClassDecl>();
 		for (cls in pending)
 			pythonClassesByName.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), cls);
@@ -14010,7 +14295,8 @@ class SourceTargetCommon {
 			if (out.length > 0)
 				out.push("");
 			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
-			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className)))
+			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className), pythonFields,
+				className == mainClassName))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -14052,18 +14338,6 @@ class SourceTargetCommon {
 				out.push(line);
 		}
 		return out;
-	}
-
-	static function pythonMainClassNeedsRuntimeSupport(cls:HxClassDecl):Bool {
-		if (HxClassDecl.getExtendsPath(cls) != null && HxClassDecl.getExtendsPath(cls).length > 0)
-			return true;
-		for (field in HxClassDecl.getFields(cls))
-			if (!HxFieldDecl.getIsStatic(field))
-				return true;
-		for (fn in HxClassDecl.getFunctions(cls))
-			if (!HxFunctionDecl.getIsStatic(fn))
-				return true;
-		return false;
 	}
 
 	static function renderPythonPackageNamespaceAliases(classes:Array<HxClassDecl>, packageByClassName:Map<String, String>,
@@ -14385,7 +14659,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return counts;
 	}
 
@@ -14403,7 +14677,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14428,7 +14702,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -14477,6 +14751,14 @@ class SourceTargetCommon {
 				names.set(clean, true);
 		}
 		switch (expr) {
+			case ESourceGroup(children, _) | ELoweredControl(_, _, children, _):
+				for (child in children)
+					phpRecordReferencedMemberExpr(child, names);
+			case ESourceFunction(facts, body, defaults, _):
+				facts.assertDefaultCount(defaults.length);
+				phpRecordReferencedMemberExpr(body, names);
+				for (value in defaults)
+					phpRecordReferencedMemberExpr(value, names);
 			case EIdent(name) | EEnumValue(name):
 				record(name);
 			case EField(obj, field) | ENullSafeField(obj, field):
@@ -14486,10 +14768,10 @@ class SourceTargetCommon {
 				phpRecordReferencedMemberExpr(callee, names);
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EReturn(value):
+			case EReturn(value) | EThrow(value, _):
 				if (value != null)
 					phpRecordReferencedMemberExpr(value, names);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				phpRecordReferencedMemberExpr(condition, names);
 				for (entry in body)
 					phpRecordReferencedMemberExpr(entry, names);
@@ -14514,12 +14796,15 @@ class SourceTargetCommon {
 			case ENew(_, args) | EArrayDecl(args):
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				phpRecordReferencedMemberExpr(inner, names);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right) | ESourceFor(_, left, right, _):
 				phpRecordReferencedMemberExpr(left, names);
 				phpRecordReferencedMemberExpr(right, names);
-			case ETernary(cond, thenExpr, elseExpr):
+			case ESourceTry(_, bodies, _):
+				for (body in bodies)
+					phpRecordReferencedMemberExpr(body, names);
+			case ETernary(cond, thenExpr, elseExpr) | ESourceIf(cond, thenExpr, elseExpr, _):
 				phpRecordReferencedMemberExpr(cond, names);
 				phpRecordReferencedMemberExpr(thenExpr, names);
 				phpRecordReferencedMemberExpr(elseExpr, names);
@@ -14539,6 +14824,8 @@ class SourceTargetCommon {
 
 	static function phpRecordReferencedMemberStmt(stmt:HxStmt, names:Map<String, Bool>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (inner in stmts)
 					phpRecordReferencedMemberStmt(inner, names);
@@ -14700,7 +14987,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "instance", instanceEntries);
 		PhpSyntax.appendStaticAssocMap(lines, "  ", "statics", staticEntries);
@@ -14977,7 +15264,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		lines.push("function __hxhx_meta_object($entries) {");
 		lines.push("  if (array_key_exists(\"_\", $entries)) {");
 		lines.push("    if (!array_key_exists(\"new\", $entries)) $entries[\"new\"] = $entries[\"_\"];");
@@ -15051,7 +15338,7 @@ class SourceTargetCommon {
 		addName("List");
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15093,7 +15380,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, "");
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), typed.getParsed().getFilePath());
+			addDecl(typed.getBackendProjection().getDeclaration(), typed.getParsed().getFilePath());
 		return bases;
 	}
 
@@ -15173,7 +15460,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -15226,7 +15513,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15294,7 +15581,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15343,7 +15630,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration(), false);
+			addDecl(typed.getBackendProjection().getDeclaration(), false);
 		return out;
 	}
 
@@ -15363,12 +15650,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addImports(decl);
 		for (typed in program.getTypedModules())
-			addImports(typed.getBackendDeclaration());
+			addImports(typed.getBackendProjection().getDeclaration());
 		return aliases;
 	}
 
@@ -15406,7 +15693,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15436,7 +15723,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15464,7 +15751,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15499,7 +15786,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15549,7 +15836,7 @@ class SourceTargetCommon {
 
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 
 		for (shortName in classesByName.keys()) {
 			final cls = classesByName.get(shortName);
@@ -15613,7 +15900,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15664,7 +15951,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15699,7 +15986,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -15834,12 +16121,12 @@ class SourceTargetCommon {
 
 		addDeclClassAliases(decl);
 		for (typed in program.getTypedModules()) {
-			addDeclClassAliases(typed.getBackendDeclaration());
-			addParsedModuleAlias(typed.getParsed(), typed.getBackendDeclaration());
+			addDeclClassAliases(typed.getBackendProjection().getDeclaration());
+			addParsedModuleAlias(typed.getParsed(), typed.getBackendProjection().getDeclaration());
 		}
-		addDeclExtensionContext(decl, resolvedDirectives(program, decl));
+		addDeclExtensionContext(decl, resolvedDirectives(program, decl, true));
 		for (typed in program.getTypedModules())
-			addDeclExtensionContext(typed.getBackendDeclaration(), typed.getEnv().getResolvedDirectives());
+			addDeclExtensionContext(typed.getBackendProjection().getDeclaration(), typed.getEnv().getResolvedDirectives());
 		return out;
 	}
 
@@ -15968,7 +16255,7 @@ class SourceTargetCommon {
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getBackendDeclaration());
+			addDecl(typed.getBackendProjection().getDeclaration());
 		return out;
 	}
 
@@ -16117,7 +16404,7 @@ class SourceTargetCommon {
 	static function phpProgramDeclaresClass(program:GenIrProgram, className:String):Bool {
 		final cleanName = PhpName.typeIdentifier(className);
 		for (typed in program.getTypedModules()) {
-			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration())) {
+			for (cls in HxModuleDecl.getClasses(typed.getBackendProjection().getDeclaration())) {
 				if (PhpName.typeIdentifier(HxClassDecl.getName(cls)) == cleanName)
 					return true;
 			}
@@ -16200,12 +16487,12 @@ class SourceTargetCommon {
 			}
 		}
 		function addDeclImports(moduleDecl:HxModuleDecl):Void {
-			for (directive in resolvedDirectives(program, moduleDecl))
+			for (directive in resolvedDirectives(program, moduleDecl, true))
 				addImport(directive);
 		}
 		addDeclImports(decl);
 		for (typed in program.getTypedModules())
-			addDeclImports(typed.getBackendDeclaration());
+			addDeclImports(typed.getBackendProjection().getDeclaration());
 		return names;
 	}
 
@@ -16354,6 +16641,7 @@ class SourceTargetCommon {
 		if (expr == null)
 			return "";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpGenericTypeHintFromExpr(continuation, localTypes);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -16378,7 +16666,7 @@ class SourceTargetCommon {
 				typeHint;
 			case EIdent(name) if (localTypes != null && localTypes.exists(sanitizeTypeName(name))):
 				localTypes.get(sanitizeTypeName(name));
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericTypeHintFromExpr(inner, localTypes);
 			case _:
 				"";
@@ -16461,7 +16749,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EArrayDecl(values):
 				values.length == 0;
-			case ECast(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericExprIsEmptyArray(inner);
 			case _:
 				false;
@@ -16597,6 +16885,7 @@ class SourceTargetCommon {
 
 	static function phpGenericSpecializationSuffixFromExpr(expr:HxExpr, localTypes:haxe.ds.StringMap<String>):Null<String> {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): phpGenericSpecializationSuffixFromExpr(continuation, localTypes);
 			case EInt(_):
 				"Int";
 			case EString(_):
@@ -16633,7 +16922,7 @@ class SourceTargetCommon {
 				phpGenericSpecializationSuffixFromExpr(inner, localTypes);
 			case EIdent(name) if (localTypes != null && localTypes.exists(sanitizeTypeName(name))):
 				phpGenericTypeSuffix(localTypes.get(sanitizeTypeName(name)));
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				phpGenericSpecializationSuffixFromExpr(inner, localTypes);
 			case _:
 				null;
@@ -17000,11 +17289,11 @@ class SourceTargetCommon {
 					phpCollectGenericStaticSpecializationsFromExpr(arg, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EField(receiver, _):
 				phpCollectGenericStaticSpecializationsFromExpr(receiver, className, genericFns, localTypes, specializations, allowDirectCalls);
-			case EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
+			case EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EUnop(_, _, inner):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
-			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right):
+			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right) | EDiscardThen(left, right):
 				phpCollectGenericStaticSpecializationsFromExpr(left, className, genericFns, localTypes, specializations, allowDirectCalls);
 				phpCollectGenericStaticSpecializationsFromExpr(right, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -17044,6 +17333,8 @@ class SourceTargetCommon {
 		if (stmt == null)
 			return;
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpCollectGenericStaticSpecializationsFromStmts(stmts, className, genericFns, copyStringMap(localTypes), specializations, allowDirectCalls);
 			case SVar(name, typeHint, init, _):
@@ -17773,6 +18064,7 @@ class SourceTargetCommon {
 
 	static function phpStmtTouchesThis(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListTouchesThis(stmts);
 			case SVar(_, _, init, _): init != null && phpExprTouchesThis(init);
@@ -17817,7 +18109,7 @@ class SourceTargetCommon {
 				phpExprListTouchesThis(args);
 			case EUnop(_, _, inner):
 				phpExprTouchesThis(inner);
-			case EBinop(_, left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
+			case EBinop(_, left, right) | EDiscardThen(left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
 			case ETernary(cond, thenExpr, elseExpr): phpExprTouchesThis(cond) || phpExprTouchesThis(thenExpr) || phpExprTouchesThis(elseExpr);
 			case EAnon(_, fieldValues):
 				phpExprListTouchesThis(fieldValues);
@@ -17825,7 +18117,7 @@ class SourceTargetCommon {
 			case EArrayDecl(values):
 				phpExprListTouchesThis(values);
 			case EArrayAccess(receiver, index): phpExprTouchesThis(receiver) || phpExprTouchesThis(index);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpExprTouchesThis(inner);
 			case _:
 				false;
@@ -17869,6 +18161,8 @@ class SourceTargetCommon {
 
 	static function phpCollectDeclaredLocalsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -17953,6 +18247,8 @@ class SourceTargetCommon {
 
 	static function phpCollectUsedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				if (stmts != null)
 					for (inner in stmts)
@@ -17995,6 +18291,7 @@ class SourceTargetCommon {
 
 	static function phpStmtHasRefCaptureOfNames(stmt:HxStmt, names:Array<String>):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasRefCaptureOfNames(stmts, names);
 			case SVar(_, _, init, _): init != null && phpExprHasRefCaptureOfNames(init, names);
@@ -18047,7 +18344,7 @@ class SourceTargetCommon {
 				phpExprListHasRefCaptureOfNames(args, names);
 			case EUnop(_, _, inner):
 				phpExprHasRefCaptureOfNames(inner, names);
-			case EBinop(_, left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
+			case EBinop(_, left, right) | EDiscardThen(left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
 			case ETernary(cond, thenExpr, elseExpr): phpExprHasRefCaptureOfNames(cond,
 					names) || phpExprHasRefCaptureOfNames(thenExpr, names) || phpExprHasRefCaptureOfNames(elseExpr, names);
 			case EAnon(_, fieldValues):
@@ -18059,7 +18356,7 @@ class SourceTargetCommon {
 				phpExprListHasRefCaptureOfNames(values, names);
 			case EArrayAccess(receiver, index) | ERange(receiver, index): phpExprHasRefCaptureOfNames(receiver,
 					names) || phpExprHasRefCaptureOfNames(index, names);
-			case ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
 				phpExprHasRefCaptureOfNames(inner, names);
 			case _:
 				false;
@@ -18077,6 +18374,7 @@ class SourceTargetCommon {
 
 	static function phpStmtHasLoopControlEscape(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasLoopControlEscape(stmts);
 			case SIf(_, thenBranch, elseBranch, _): phpStmtHasLoopControlEscape(thenBranch) || (elseBranch != null && phpStmtHasLoopControlEscape(elseBranch));
@@ -18255,6 +18553,7 @@ class SourceTargetCommon {
 
 	static function phpRenameScopedLocalStmt(stmt:HxStmt, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>, rewriteRawText:Bool):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters, rewriteRawText), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -18286,7 +18585,7 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(phpRenameScopedLocalStmt(body, copyStringMap(env), counters, rewriteRawText),
 					phpRenameScopedLocalExpr(cond, env, counters, rewriteRawText), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final renamedPatterns = new Array<HxSwitchPattern>();
 				final renamedBodies = new Array<HxStmt>();
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
@@ -18295,7 +18594,7 @@ class SourceTargetCommon {
 					renamedPatterns.push(phpRenameScopedPattern(patterns[i], caseEnv, counters, rewriteRawText));
 					renamedBodies.push(phpRenameScopedLocalStmt(bodies[i], caseEnv, counters, rewriteRawText));
 				}
-				SSwitch(phpRenameScopedLocalExpr(scrutinee, env, counters, rewriteRawText), renamedPatterns, renamedBodies, pos);
+				SSwitch(phpRenameScopedLocalExpr(scrutinee, env, counters, rewriteRawText), renamedPatterns, renamedBodies, pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(phpRenameScopedLocalStmt(tryBody, copyStringMap(env), counters, rewriteRawText), [
 					for (c in catches) {
@@ -18317,6 +18616,9 @@ class SourceTargetCommon {
 
 	static function phpRenameScopedLocalExpr(expr:HxExpr, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>, rewriteRawText:Bool):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(phpRenameScopedLocalExpr(effect, env, counters, rewriteRawText),
+					phpRenameScopedLocalExpr(continuation, env, counters, rewriteRawText));
 			case EIdent(name):
 				env.exists(name) ? EIdent(env.get(name)) : expr;
 			case ETryCatchRaw(raw):
@@ -18328,11 +18630,11 @@ class SourceTargetCommon {
 					[for (arg in args) phpRenameScopedLocalExpr(arg, env, counters, rewriteRawText)]);
 			case EMacroExpr(inner, wrappers):
 				EMacroExpr(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), wrappers);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final lambdaEnv = copyStringMap(env);
 				for (arg in args)
 					lambdaEnv.set(arg, arg);
-				ELambda(args, phpRenameScopedLocalExpr(body, lambdaEnv, counters, rewriteRawText));
+				ELambda(args, phpRenameScopedLocalExpr(body, lambdaEnv, counters, rewriteRawText), signature);
 			case ESwitch(scrutinee, patterns, exprs):
 				final renamedPatterns = new Array<HxSwitchPattern>();
 				final renamedExprs = new Array<HxExpr>();
@@ -18378,6 +18680,8 @@ class SourceTargetCommon {
 				ECast(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), typeHint);
 			case EUntyped(inner):
 				EUntyped(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText));
+			case EParenthesized(inner, position):
+				EParenthesized(phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText), position);
 			case _:
 				expr;
 		};
@@ -18490,6 +18794,7 @@ class SourceTargetCommon {
 
 	static function pythonRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -18525,11 +18830,11 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)),
 					pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				SSwitch(pythonRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, locals), patterns, [
 					for (body in bodies)
 						pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals))
-				], pos);
+				], pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(pythonRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, copyStringArray(locals)), [
 					for (c in catches) {
@@ -18551,6 +18856,9 @@ class SourceTargetCommon {
 
 	static function pythonRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(pythonRewriteSameClassMemberExpr(effect, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(continuation, methodNames, fieldNames, locals));
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
 				ECall(EField(EThis, name), [
 					for (arg in args)
@@ -18601,12 +18909,12 @@ class SourceTargetCommon {
 					rewrittenGuard = pythonRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals);
 				EArrayComprehension(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals), rewrittenGuard,
 					pythonRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, bodyLocals));
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, pythonRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals));
+				ELambda(args, pythonRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)
@@ -18616,6 +18924,8 @@ class SourceTargetCommon {
 				ECast(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), position);
 			case _:
 				expr;
 		}
@@ -18792,6 +19102,8 @@ class SourceTargetCommon {
 
 	static function csRewriteSameClassStaticMembersInStmt(stmt:HxStmt, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(kind, body, position):
+				STargetScope(kind, csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, locals.copy()), position);
 			case SBlock(stmts, pos):
 				SBlock(csRewriteSameClassStaticMembersInStmts(stmts, staticMemberNames, className, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -18827,11 +19139,11 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals)),
 					csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				SSwitch(csRewriteSameClassStaticMemberExpr(scrutinee, staticMemberNames, className, locals), patterns, [
 					for (body in bodies)
 						csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals))
-				], pos);
+				], pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(csRewriteSameClassStaticMembersInStmt(tryBody, staticMemberNames, className, copyStringArray(locals)), [
 					for (c in catches) {
@@ -18853,6 +19165,9 @@ class SourceTargetCommon {
 
 	static function csRewriteSameClassStaticMemberExpr(expr:HxExpr, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(csRewriteSameClassStaticMemberExpr(effect, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(continuation, staticMemberNames, className, locals));
 			case ECall(EIdent(name), args) if (staticMemberNames.exists(name) && locals.indexOf(name) < 0):
 				ECall(EField(EIdent(className), name), [
 					for (arg in args)
@@ -18906,12 +19221,12 @@ class SourceTargetCommon {
 					for (expr in exprs)
 						csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals)
 				]);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, csRewriteSameClassStaticMemberExpr(body, staticMemberNames, className, bodyLocals));
+				ELambda(args, csRewriteSameClassStaticMemberExpr(body, staticMemberNames, className, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)
@@ -18921,6 +19236,8 @@ class SourceTargetCommon {
 				ECast(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals), position);
 			case _:
 				expr;
 		}
@@ -18941,6 +19258,7 @@ class SourceTargetCommon {
 	static function phpRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos, metadata):
@@ -18977,7 +19295,7 @@ class SourceTargetCommon {
 			case SDoWhile(body, cond, pos):
 				SDoWhile(phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)),
 					phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, staticFieldNames, className, locals), pos);
-			case SSwitch(scrutinee, patterns, bodies, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 				final rewrittenBodies = new Array<HxStmt>();
 				for (i in 0...count) {
@@ -18985,7 +19303,8 @@ class SourceTargetCommon {
 					phpCollectDeclaredLocalsInPattern(patterns[i], caseLocals);
 					rewrittenBodies.push(phpRewriteSameClassMembersInStmt(bodies[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
 				}
-				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenBodies, pos);
+				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenBodies,
+					pos, exhaustive);
 			case STry(tryBody, catches, pos):
 				STry(phpRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), [
 					for (c in catches) {
@@ -19012,6 +19331,9 @@ class SourceTargetCommon {
 	static function phpRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):HxExpr {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				EDiscardThen(phpRewriteSameClassMemberExpr(effect, methodNames, fieldNames, staticFieldNames, className, locals),
+					phpRewriteSameClassMemberExpr(continuation, methodNames, fieldNames, staticFieldNames, className, locals));
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
 				final rewrittenArgs = [
 					for (arg in args)
@@ -19080,12 +19402,12 @@ class SourceTargetCommon {
 					rewrittenExprs.push(phpRewriteSameClassMemberExpr(exprs[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
 				}
 				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenExprs);
-			case ELambda(args, body):
+			case ELambda(args, body, signature):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)
 					if (bodyLocals.indexOf(arg) < 0)
 						bodyLocals.push(arg);
-				ELambda(args, phpRewriteSameClassMemberExpr(body, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
+				ELambda(args, phpRewriteSameClassMemberExpr(body, methodNames, fieldNames, staticFieldNames, className, bodyLocals), signature);
 			case ENew(typePath, args):
 				ENew(typePath, [
 					for (arg in args)
@@ -19095,13 +19417,15 @@ class SourceTargetCommon {
 				ECast(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals));
+			case EParenthesized(inner, position):
+				EParenthesized(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals), position);
 			case _:
 				expr;
 		}
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>,
-			packagePath:String):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>, packagePath:String,
+			pythonFields:PythonFieldAccessLowering, isEntryClass:Bool):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final fullName = packagePath != null
 			&& packagePath.length > 0 ? packagePath + "." + HxClassDecl.getName(cls) : HxClassDecl.getName(cls);
@@ -19133,11 +19457,18 @@ class SourceTargetCommon {
 		final fieldVisited:Map<String, Bool> = [];
 		final instanceMethodNames = pythonInstanceMethodNames(cls, classesByName, methodVisited);
 		final instanceFieldNames = pythonInstanceFieldNames(cls, classesByName, fieldVisited);
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (legacyFunction in HxClassDecl.getFunctions(cls)) {
+			final projection = pythonFields.projection(cls, legacyFunction);
+			final fn = projection.getDeclaration();
 			if (isCompileTimeOnlyFunction(fn) && !pythonShouldEmitNeutralCompileTimeOnlyFunction(fullName, fn))
 				continue;
-			if (HxFunctionDecl.getName(fn) == "main")
+			if (isEntryClass && HxFunctionDecl.getName(fn) == "main") {
+				// The module-level body avoids Python class-name mangling of runtime helpers.
+				// Attach that same function before static initializers can refer to it.
+				out.push("    main = staticmethod(main)");
+				memberCount += 1;
 				continue;
+			}
 			final isStatic = HxFunctionDecl.getIsStatic(fn);
 			final isCtor = HxFunctionDecl.getName(fn) == "new";
 			if (isCtor)
@@ -19164,9 +19495,10 @@ class SourceTargetCommon {
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, fullName, className, HxFunctionDecl.getName(fn))) {
+				final loweredBody = pythonFields.body(projection);
 				final body = !isStatic
-					|| isCtor ? pythonRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
-						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
+					|| isCtor ? pythonRewriteSameClassMembersInStmts(loweredBody, instanceMethodNames, instanceFieldNames,
+						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : loweredBody;
 				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
@@ -19544,12 +19876,12 @@ class SourceTargetCommon {
 		switch (target) {
 			case Python:
 				appendSourceNativeTemplateLines(lines, "", "python/runtime", "Prelude.py");
-				for (line in renderSupportClasses(target, program, decl, className))
-					lines.push(line);
-				if (lines[lines.length - 1] != "# Generated by hxhx Stage3 Python source backend MVP")
-					lines.push("");
+				lines.push("");
 				lines.push("def main():");
 				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
+					lines.push(line);
+				lines.push("");
+				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
 				lines.push("");
 				lines.push("if __name__ == \"__main__\":");
@@ -19561,13 +19893,14 @@ class SourceTargetCommon {
 				if (lines.length > 1)
 					lines.push("");
 				lines.push("public class " + className + " {");
-				appendJavaMainSupportMembers(lines, decl, className, body);
+				appendJavaMainSupportMembers(lines, program, decl, className, body);
 				lines.push("  public static void main(String[] __hxhx_cli_args) {");
 				lines.push("    Sys.__hxhx_args = __hxhx_cli_args == null ? new String[0] : __hxhx_cli_args;");
 				if (className == "UtilityProcess") {
 					appendJavaUtilityProcessRuntime(lines, className);
 				} else {
-					for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					for (line in renderProjectedNativeFunction(Java, program, mainProjection, body, "    ", false))
 						lines.push(line);
 					lines.push("  }");
 				}
@@ -19580,7 +19913,7 @@ class SourceTargetCommon {
 				if (strictMainClass == null)
 					throw "C# source backend requires the exact strict main-class projection";
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
-				for (line in renderCsHeader(program, decl, className))
+				for (line in renderCsHeader(program, decl, className, context.hasDefine("no_root")))
 					lines.push(line);
 				if (lines.length > 1)
 					lines.push("");
@@ -19592,7 +19925,7 @@ class SourceTargetCommon {
 				final classRef = csGlobalClassRef(packagePath, className, noRoot);
 				appendCsNamespaceOpen(lines, outputPackagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
-				appendCsMainSupportMembers(lines, decl, strictMainClass, bodyIndent + "  ", className, classRef, csEnumConstructors);
+				appendCsMainSupportMembers(lines, program, decl, strictMainClass, bodyIndent + "  ", className, classRef, csEnumConstructors, noRoot);
 				appendCsPostUpdateVarSupport(lines, bodyIndent + "  ");
 				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
 				if (className == "UtilityProcess") {
@@ -19600,7 +19933,8 @@ class SourceTargetCommon {
 				} else {
 					final entryBody = csRewriteSameClassStaticMembersInStmts(body, csCurrentClassStaticMemberNames(HxModuleDecl.getMainClass(decl)), classRef,
 						[]);
-					for (line in renderFunctionStmts(target, entryBody, "    ", entryClassName + ".Main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					for (line in renderProjectedNativeFunction(Cs, program, mainProjection, entryBody, "    ", noRoot))
 						lines.push(bodyIndent + line);
 					lines.push(bodyIndent + "  }");
 				}

@@ -75,9 +75,63 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 
 ## C++ Prelude and CppTargetCore Runtime Helper Audit
 
+Parameterless enum Map keys have `bounded_bringup_support`. The Haxe enum plan
+admits an ordinary nongeneric enum only when every constructor has no parameters.
+The existing descriptor validates key identity before a constructor index selects
+integer-keyed physical storage. The source runtime family remains EnumValueMap;
+erased Map-family tests remain rejected. This does not grant object-identity
+equality to enums. Payload-bearing and generic enums require a structural key
+plan under `haxe_ocaml-60jwu`. Null-key error timing and the actual generic
+EnumValueMap comparison provider remain outside this focused proof. The native
+descriptor accessor checks physical identity only; it does not select semantics.
+README and North Star progress estimates remain unchanged.
+
+`CppManagedValueTransfer` and `CppManagedNullCompare` provide
+`bounded_bringup_support` for null-preserving common-value storage. The focused
+null fixture covers locals, fields, arguments, results, statics, arrays, and
+String-backed abstracts against upstream Haxe. Null comparisons inspect the
+value tag after evaluating both operands in source order. They do not compare
+object payloads or perform numeric coercion. Nullable scalar values keep their
+boxed representation; non-nullable scalar destinations reject literal null.
+The existing cast plan resolves abstract backing types before storage selection.
+Incomplete types, checked casts, and representation-changing conversions remain
+rejected. No Float arithmetic, parsing, serialization, reflection, or general
+Dynamic conversion behavior is added. Full1 and public readiness remain unchanged.
+
+`CppManagedStaticUpdate` provides `bounded_bringup_support` for increment and
+decrement on exact mutable Int static fields. It uses existing field ownership,
+write-permission checks, and integer wraparound operations. Prefix and postfix
+results are covered by the collecting static-field observer. The unchanged Map
+runtime-family source also verifies a discarded increment and exactly-once
+evaluation. Instance-field updates and wider numeric conversions remain unsupported.
+
 | Surface | Current classification | Audit note |
 | --- | --- | --- |
 | `CppProgramPrelude` fixed prelude plus string/vector/base64/basecode/hash/resource lowering | `bounded_bringup_support` | The extracted module preserves the established output order; compact target-owned primitives are acceptable when edge-case oracle coverage exists. Do not broaden them without behavior specs. |
+| `runtime/cpp/ManagedHeap.hpp` | `bounded_bringup_support`, not source parity | Native allocation, explicit roots, and precise non-moving collection only. Haxe must own payload selection, capture placement, and call/root plans. Independent graph, injected allocation-failure, and sanitizer tests run through `test:m14:cpp-managed-heap`. Generated-source integration, host memory exhaustion, external retention, and performance remain unproved under `haxe_ocaml-9jezt`. |
+| `runtime/cpp/ManagedValue.hpp` | `bounded_bringup_support`, not source parity | Common value transport and array storage preserve allocation identity through erasure. Physical layout checks protect recovery; they do not implement `Std.isOfType`, reflection, numeric conversion, or Haxe indexing policy. Mixed graph and buffer-growth tests support the storage contract only. The native closure witness remains required. |
+| `CppManagedClassStorage`, `CppManagedConstructor`, and `CppManagedInstanceField` | `bounded_bringup_support`, not broad class parity | Exact program-owned declarations select ordinary nongeneric instance layouts and authored constructor bodies. Arguments and receivers remain rooted through allocation and field writes. The native payload only stores and traces Haxe-selected fields. The class fixture checks source order, final initialization, nested fields, static construction, closure construction, and compound assignment against upstream Haxe. Inheritance, interfaces, generic layouts, instance field initializers, property accessors, general instance calls, and class reflection remain unsupported. This descriptor table must also own future class-value handles; do not add a second native registry. |
+| `CppManagedStoragePlan` and `CppManagedFunctionOwner` | `declaration_only_support`, not execution admission | Promote exact captured bindings into shared cell plans and preserve their source allocation events. Ordinary roots require their exact projection object; closures require their exact cataloged expression. Root parameter order comes from semantic binding identities, and its ABI omits the closure environment. Root parameter promotion passes native lifetime checks, but general root-body emission and normal target integration remain required. Named functions keep initialize-once policy. Descendants share cell identities and receiver requirements remain explicit. Physical payload, call, and temporary-root plans must be complete before these facts authorize generation. |
+| `runtime/cpp/ManagedCallable.hpp` and `CppManagedClosureAbi` | `bounded_bringup_support`, not source parity | Native cells preserve presence and the Haxe-selected write contract. Active invocation roots retain selected callables through replacement and unwind. The Haxe ABI plan uses cataloged semantic signatures, preserves source arity, and selects caller-owned roots for managed results. Generated native type checks and sanitizer invocation tests pass; normal source emission and external callback retention remain required under `haxe_ocaml-9jezt`. |
+| `CppManagedRuntime` and its build macro | `bounded_bringup_support`, not source parity | Embed authored native headers with content hashes and publish them without checkout lookup. Upstream warm-build invalidation and source-free Neko publication pass. The ABI fixture compiles against published files only. Native hxhx bootstrap and normal target publication remain unproved. |
+| `runtime/cpp/ManagedThrow.hpp` and managed source throw emission | `bounded_bringup_support`, not source parity | Evaluate an authored throw operand once and retain its existing managed value across native unwinding. Copies share a stable external root. Native sanitizer checks cover collection during unwinding, array mutation and identity, rethrow, escaped closures, and final release. The heap must outlive all retained transports. Source objects must not store this transport. Ordered catches, standard exception views, numeric matching, foreign errors, and ordinary target integration remain required under `haxe_ocaml-qrk0u`. |
+| `CppManagedEnvironmentEmitter` | `bounded_bringup_support`, not source parity | Emit immutable environment fields and trace functions from exact captured binding identities. Generated cell, receiver, and empty layouts pass native sanitizer checks. Callers must root input cells before allocation. Function-body emission and complete temporary-root placement remain required under `haxe_ocaml-9jezt`. |
+| `CppManagedCallEmitter` | `bounded_bringup_support`, not source parity | Generate ordered call blocks with roots for the selected callable, managed arguments, and managed results. Sanitizers cover collection during argument effects and exceptions. Null invocation preserves upstream argument effects. Inputs must already have source arity and conversions resolved. Normal source-call selection, callee parameter ingress, and complete function-body emission remain required. |
+| `CppManagedCellEmitter` and `CppManagedParameterEmitter` | `bounded_bringup_support`, not source parity | Generate exact-event cell allocation, rooted reads/assignments, and parameter ingress. All incoming managed arguments acquire roots before promoted parameter allocation. Forced-collection observers cover right-hand-side effects, recursive cycles, and a returned child retaining an input array. Placing these operations in normal source bodies and replacing ordinary callable signatures/returns remain required under `haxe_ocaml-9jezt`. |
+| `CppManagedFunctionBody` and `CppControlRegion` result transport | `bounded_bringup_support`, not source parity | Use one control-flow renderer for direct, Void, and caller-rooted returns. Exact root methods and nested closures preserve return destinations and lexical roots. The real counter factory and captured-array creator render their entire bodies; root branch, scalar, and void returns pass native checks. Root loop/catch projection, receiver transport, and normal carrier/signature/body-service integration remain required. |
+| Managed Boolean condition emission | `bounded_bringup_support`, not source parity | Complete exact Bool expressions in a synchronous native scope before shared branch/loop control consumes the value. The unchanged original counter factory passes native lifetime checks. Collecting branch, while, and do-while conditions preserve evaluation counts and unwind roots on exceptions. Non-Boolean conditions and unadmitted source control expressions fail explicitly. The full original program still needs aggregate expressions and normal target integration. |
+| `CppManagedFunctionEmitter` and `CppManagedBodyServices` | `bounded_bringup_support`, not source parity | Emit a checked method and its closures as one native unit, owning forward declarations, closure links, ABI signatures, parameter ingress, and body services. Counter and root-method observers use independently asserted native signatures. Mutated projections, local symbol collisions, and unadapted root defaults are rejected. Receivers, full common-carrier selection, and normal target integration remain required. |
+| `CppManagedProgramEmitter` and `CppManagedStaticTarget` | `bounded_bringup_support`, not source parity | Link static calls through exact typed declaration identities and current semantic signatures. Shared call sequencing preserves argument effects and result roots. Native observers cover cross-method counter calls, later declarations, same-named methods on different classes, static calls from escaped closures, managed results, and void effects. Missing/wrong targets and stale/copied calls fail. Receiver effects, defaults, aggregate expression support, runtime publication, and normal target selection remain required. |
+| `CppManagedLocalAccess` | `bounded_bringup_support`, not source parity | Resolve exact parameter, ordinary-local, and captured-cell reads, typed Boolean conditions, and same-type leaf returns. Authored conditional and child-capture returns pass native lifetime checks. General expressions, conversions, and normal target integration remain required. |
+| `CppManagedRootedExpression` | `bounded_bringup_support`, not source parity | Emit an authored child function return through rooted environment construction and publication. Separate creator invocations preserve independent captured arrays after return. Only exact compiler-added callable annotations can be removed; authored casts require explicit conversion support. Normal C++ target integration remains required. |
+| `CppManagedLocalStorage` | `bounded_bringup_support`, not source parity | Allocate ordinary roots and promoted cells at exact declaration events. An authored local survives creator exit; an authored named function retains its own callable identity and its cycle is collected after external roots leave. Uninitialized storage, other allocation events, conversions, compound updates, source calls, and normal target integration remain required. |
+| `CppManagedPlace` and rooted assignment emission | `bounded_bringup_support`, not source parity | Retain a selected captured cell before RHS effects and publish assignment results after successful writes. Authored chained assignments, local/managed-parameter writes, and collecting closure replacement pass lifetime checks. Direct leaf-parameter writes, compound updates, conversions, general places, and normal target integration remain required. |
+| `CppManagedSourceCall` and `CppManagedLeaf` | `bounded_bringup_support`, not source parity | Resolve callable locals from semantic signatures and use the shared native call sequencer. Source tests cover callee replacement during arguments, allocating argument closures, nested calls, Boolean/Void transport, and null-call argument effects. Direct integer returns finish collecting expression steps before scalar extraction. String uses common rooted transport to preserve null versus empty text; Bool, Int, and Float retain exact scalar transport without conversions or arithmetic. Exact arity is required; defaults, rest packing, other callee forms, conversions, null literal lowering, and normal target integration remain unfinished. |
+| `CppManagedInteger` and rooted integer expressions | `bounded_bringup_support`, not source parity | Sequence exact Int operands left to right, use widened arithmetic for signed 32-bit wrapping, preserve prefix/postfix results on selected local or captured storage, and evaluate only the selected conditional branch. The authored recursive counter body passes after creator exit, including copies, independent creators, and cycle cleanup. Native entry symbols still come from the fixture; normal target integration and mixed object/array/callback proof remain required. Float, numeric conversions, and direct scalar-parameter writes are not admitted here. |
+| `CppManagedAggregate`, retained aggregate occurrences, and `RecordPayload` | `bounded_bringup_support`, not source parity | Preserve exact aggregate types and ordered projected children. Construct parents and children in rooted storage, then publish only a completed result. Native sanitizer checks cover nested arrays and objects, an escaped callback sharing the array, initializer order, copied results, exception cleanup, and exact String bytes. Missing providers and unplanned conversions fail. Authored field access, iteration, reflection, and ordinary target integration remain required under `haxe_ocaml-9jezt`. |
+| `LocalSlot`, compiler result declarations, and `CppManagedSwitch` | `bounded_bringup_support`, not source parity | Compiler temporary identities authorize deferred result assignment. Stack slots retain rooted values and distinguish unassigned storage from null. Literal scalar switches select once, defer default until other patterns fail, and preserve enclosing loop exits. Native checks cover collecting branches, early returns, nested switches, null, and exceptions. Ordinary uninitialized source variables and binding/extractor patterns remain unsupported at this boundary. |
+| `CppManagedOutput` and `runtime/cpp/ManagedOutput.hpp` | `bounded_bringup_support`, not source parity | Explicit program bindings join selected Sys print/println declarations by exact identity. Haxe evaluates rooted operands before formatting Bool, Int, or String values. The native primitive writes and flushes exact bytes and reports I/O failure. Native observers cover UTF-8, embedded zeroes, null strings, collecting callbacks, argument exceptions, and escaped closures. Dynamic, Float, and object formatting, complete Sys behavior, and normal target integration remain required. |
+| `CppRuntimeTypePlan` and `CppRuntimeType.validate` | `declaration_only_support`, `unsupported_diagnostic` | Plan exact cataloged class values and instance tests across functions and field initializers. Share descriptors by semantic target identity and retain real declaration owners. This does not provide native class-object storage, public reflection names, erased-value membership, or ordinary dynamic-target call admission. Unsupported execution still fails before publication. `m14_cpp_map_runtime_type_inventory_test.hxml` checks the real provider inventory; native Map and class-value contracts remain required. README/North Star progress bars are unchanged. |
 | `renderMissingInterfaceDeclaration` and missing declarations | `declaration_only_support` | Signature/declaration boundary only. Avoid fake generated classes for runtime behavior. |
 | `renderRttiMetaHelper` and `rttiMetaLines` callers | `bounded_bringup_support`, `review_required` | Empty/default metadata results must not count as strict Reflect/RTTI parity. |
 | `renderDceReflectionHelperStringOverload` | `bounded_bringup_support` | Narrow string overload support for current DCE/reflection helper shapes. Expansion needs behavior cases. |
@@ -178,6 +232,29 @@ Decision for the `Assertation` timing seam:
 
 ## Required Follow-Ups
 
+The unchanged escaping counter now passes through the normal C++ target.
+Run `haxe test/m14_source_named_function_test.hxml` to check its output and
+unchanged typed source. The check also runs native builds with address and
+undefined-behavior sanitizers at O0 and O2. It loads the real Array and Sys
+dependencies and rejects the old owning function carriers in generated output.
+This proves that workload; it does not establish general C++ or Full1 parity.
+
+Unchecked casts retain their destination types through shared typing.
+`CppManagedCastPlan` admits a cast only when its exact program occurrence and
+substituted storage types agree. Generic abstract unwrapping does not require
+an implicit output conversion. Checked casts and conversions that change
+storage still require separate runtime plans. Run
+`npm run test:m14:cpp-managed-authored-cast` for focused typing, rejection,
+and native sanitizer checks.
+
+The managed Array loop and record-read fixtures add bounded evidence under
+`haxe_ocaml-9jezt`. A lowered Array value loop retains its selected array and
+allocates captured bindings once per iteration. Required anonymous fields use
+their structural types; String equality distinguishes null from empty text.
+Key/value loops, general iterators, root-statement loops, and optional fields
+remain outside that evidence. The full counter adds normal target evidence,
+but these other behaviors still need their own contracts and runtime checks.
+
 - Convert unsafe Reflect/Dynamic/default-return scaffolding into explicit
   `unsupported_diagnostic` behavior or oracle-backed support. The current
   inventory lives in
@@ -194,6 +271,28 @@ Decision for the `Assertation` timing seam:
   [`CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md`](CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md).
 - Keep declaration-only support separate from runtime behavior in code, tests,
   bead notes, and README/North Star status.
+
+Map-comprehension construction has bounded native evidence under `haxe_ocaml-20jan`.
+The shared lowerer retains authored loop bindings and creates typed map insertions.
+`CppManagedMapStorage` selects integer or string keys from the real Map provider.
+`ManagedMap.hpp` owns physical keyed storage and traces its values; it does not select source operations.
+Insertion evaluates the map, key, and value in order while retaining all three roots.
+The focused capture observer proves duplicate replacement, escaped closures, and complete reclamation for both key representations.
+It runs at O0 and O2 with both sanitizers.
+Ordinary Map methods, other key kinds, nullable keys, conversions, and ordinary target integration remain required.
+The broader map execution fixture remains blocked by managed Int remainder, tracked in `haxe_ocaml-6gjt1`.
+Neither the focused pass nor the runtime header establishes general Map parity.
+
+The managed Map consumer under `haxe_ocaml-0i4lh` also admits anonymous keys and
+ordinary class keys whose exact program-owned instance layouts are supported.
+These use the same traced ObjectMap storage and compare allocation identity.
+Map literals, comprehension insertions, reads, and runtime-family tests consume
+the same representation choice. Class field contents never select key equality.
+The source Map.get fixture checks equal-valued distinct keys, replacement,
+missing entries, and non-Map instance controls against upstream Haxe.
+The native object-map observer checks class-key retention and unreachable cycles.
+This remains `bounded_bringup_support`: enum keys, erased Map identity, unsupported
+class layouts, other Map methods, and the complete original Map acceptance remain open.
 
 ## Closure Rule
 

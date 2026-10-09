@@ -115,7 +115,8 @@ class ExprMacroExpander {
 			}
 
 			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields, HxClassDecl.getExtendsPath(cls),
-				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls));
+				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls),
+				HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls), HxClassDecl.getEnumDeclaration(cls));
 			final newClasses = new Array<HxClassDecl>();
 			for (c in HxModuleDecl.getClasses(decl)) {
 				if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {
@@ -147,6 +148,8 @@ class ExprMacroExpander {
 	static function rewriteStmt(s:HxStmt, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, onExpand:() -> Void):HxStmt {
 		return switch (s) {
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final out = new Array<HxStmt>();
 				var changed = false;
@@ -228,12 +231,71 @@ class ExprMacroExpander {
 		}
 	}
 
+	/**
+		Replace registered calls while preserving their surrounding authored syntax.
+		Unchanged children retain node identity; changed containers retain source facts
+		and positions. This traversal does not make syntax arguments ordinary values.
+	 */
 	static function rewriteExpr(e:HxExpr, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, depth:Int, onExpand:() -> Void):HxExpr {
 		if (depth > 4)
 			return e; // prevent runaway recursion in bring-up
 
 		return switch (e) {
+			case ELoweredControl(_, _, _, _):
+				throw "executable control cannot re-enter source macro expansion";
+			case EParenthesized(inner, position):
+				final rewritten = rewriteExpr(inner, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				rewritten != inner ? EParenthesized(rewritten, position) : e;
+			case EPrivateAccess(inner, position):
+				final rewritten = rewriteExpr(inner, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				rewritten != inner ? EPrivateAccess(rewritten, position) : e;
+			case ESourceTry(catches, bodies, position):
+				// Catch declarations remain source facts; expansion only replaces their bodies.
+				var changed = false;
+				final rewritten = [
+					for (body in bodies) {
+						final value = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						if (value != body) changed = true;
+						value;
+					}
+				];
+				changed ? ESourceTry(catches.copy(), rewritten, position) : e;
+			case ESourceFor(binding, iterable, body, position):
+				final rewrittenIterable = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenBody = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				(rewrittenIterable != iterable || rewrittenBody != body) ? ESourceFor(binding, rewrittenIterable, rewrittenBody, position) : e;
+			case ESourceGroup(children, position):
+				var changed = false;
+				final rewritten = [
+					for (child in children) {
+						final value = rewriteExpr(child, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						if (value != child) changed = true;
+						value;
+					}
+				];
+				changed ? ESourceGroup(rewritten, position) : e;
+			case ESourceFunction(facts, body, defaults, position):
+				final rewrittenBody = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				var changed = rewrittenBody != body;
+				final rewrittenDefaults = [
+					for (entry in defaults) {
+						final value = rewriteExpr(entry, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						if (value != entry) changed = true;
+						value;
+					}
+				];
+				changed ? ESourceFunction(facts, rewrittenBody, rewrittenDefaults, position) : e;
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				final rewrittenCondition = rewriteExpr(condition, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenTrue = rewriteExpr(whenTrue, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenFalse = whenFalse == null ? null : rewriteExpr(whenFalse, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
+					onExpand);
+					(rewrittenCondition != condition || rewrittenTrue != whenTrue || rewrittenFalse != whenFalse) ? ESourceIf(rewrittenCondition,
+						rewrittenTrue, rewrittenFalse, position) : e;
+			case EThrow(value, position):
+				final rewritten = rewriteExpr(value, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				rewritten != value ? EThrow(rewritten, position) : e;
 			case EReturn(value):
 				if (value == null) {
 					e;
@@ -258,7 +320,7 @@ class ExprMacroExpander {
 				final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
 					onExpand);
 				rewritten != initializer ? HxExprVarDecl.make(name, typeHint, rewritten, position, isFinal, isStatic) : e;
-			case EWhile(condition, body, bodyIsBlock, position):
+			case EWhile(condition, body, bodyIsBlock, position, loopKind):
 				final rewrittenCondition = rewriteExpr(condition, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				var changed = rewrittenCondition != condition;
 				final rewrittenBody = new Array<HxExpr>();
@@ -268,7 +330,7 @@ class ExprMacroExpander {
 						changed = true;
 					rewrittenBody.push(rewritten);
 				}
-				changed ? EWhile(rewrittenCondition, rewrittenBody, bodyIsBlock, position) : e;
+				changed ? EWhile(rewrittenCondition, rewrittenBody, bodyIsBlock, position, loopKind) : e;
 			case EBreak(_) | EContinue(_): e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
@@ -327,6 +389,10 @@ class ExprMacroExpander {
 				final rl = rewriteExpr(left, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final rr = rewriteExpr(right, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				(rl != left || rr != right) ? EBinop(op, rl, rr) : e;
+			case EDiscardThen(effect, continuation):
+				final rewrittenEffect = rewriteExpr(effect, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenContinuation = rewriteExpr(continuation, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				(rewrittenEffect != effect || rewrittenContinuation != continuation) ? EDiscardThen(rewrittenEffect, rewrittenContinuation) : e;
 			case ETernary(cond, thenExpr, elseExpr):
 				final rc = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final rt = rewriteExpr(thenExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
@@ -399,6 +465,15 @@ class ExprMacroExpander {
 			case EMacroExpr(_, _): "MacroExpr";
 			case EMacroType(_): "MacroType";
 			case ELambda(_, _): "Lambda";
+			case ESourceGroup(_, _): "SourceGroup";
+			case EParenthesized(_, _): "Parenthesized";
+			case EPrivateAccess(_, _): "PrivateAccess";
+			case ESourceTry(_, _, _): "SourceTry";
+			case ESourceIf(_, _, _, _): "SourceIf";
+			case ESourceFor(_, _, _, _): "SourceFor";
+			case EThrow(_, _): "Throw";
+			case ESourceFunction(_, _, _, _): "SourceFunction";
+			case ELoweredControl(_, _, _, _): "LoweredControl";
 			case ETryCatchRaw(_): "TryCatch";
 			case ESwitchRaw(_): "Switch";
 			case ESwitch(_, _, _): "Switch";
@@ -410,10 +485,11 @@ class ExprMacroExpander {
 			case EField(_, _): "Field";
 			case ENullSafeField(_, _): "NullSafeField";
 			case ECall(_, _): "Call";
+			case EDiscardThen(_, _): "DiscardThen";
 			case EReturn(_): "Return";
 			case EVars(_): "Vars";
 			case EVariableDeclaration(_, _, _, _, _, _): "VariableDeclaration";
-			case EWhile(_, _, _, _): "While";
+			case EWhile(_, _, _, _, loopKind): "While";
 			case EBreak(_): "Break";
 			case EContinue(_): "Continue";
 			case EUnop(_, _, _): "Unop";

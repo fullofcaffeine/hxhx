@@ -1,5 +1,25 @@
+/** Semantic declaration kind, before any target erases an abstract to its backing type. */
+enum TypedBackendNominalKind {
+	ClassInstance;
+	EnumValue;
+	AbstractValue(underlyingType:TyType);
+}
+
+/** A constructor is either a singleton field or a callable with an exact typed signature. */
+enum TypedBackendEnumConstructorMember {
+	Singleton(field:TypedBackendClassFieldFact);
+	Callable(method:TypedBackendClassMethodFact);
+}
+
+typedef TypedBackendEnumConstructorFact = {
+	final index:Int;
+	final name:String;
+	final member:TypedBackendEnumConstructorMember;
+};
+
 typedef TypedBackendClassFieldFact = {
 	final canonicalIdentity:String;
+	final constantIdentity:String;
 	final name:String;
 	final semanticType:TyType;
 	final typeIdentity:String;
@@ -11,6 +31,7 @@ typedef TypedBackendClassFieldFact = {
 	final hasInitializer:Bool;
 	final propertyGet:String;
 	final propertySet:String;
+	final hasStorage:Bool;
 	final noImportGlobal:Bool;
 };
 
@@ -50,26 +71,73 @@ typedef TypedBackendClassMethodFact = {
 	This record contains only members declared by the class. A target that needs
 	inherited members must traverse an exact program-owned superclass graph; it
 	must not search classes by short name.
+
+	Typed functions contribute finalized body results for unannotated methods.
+	Declaration-only consumers pass an empty function list and retain indexed
+	signatures. Neither path changes the declaration identities used by calls.
 **/
 class TypedBackendClassSemanticFacts {
 	final classIdentity:String;
+	final declarationOwner:TyNominalInfo;
+	final declaredFieldTypes:Null<TypedDeclaredFieldTypes>;
+	final nominalKind:TypedBackendNominalKind;
 	final moduleIdentity:String;
+	final declaredName:String;
 	final typeParameters:Array<TyTypeParameterId>;
 	final superType:Null<TyType>;
 	final superClassIdentity:Null<String>;
 	final superTypeIdentity:Null<String>;
 	final superTypeDisplay:Null<String>;
+	final isInterface:Bool;
+	final isExtern:Bool;
+	final interfaceTypes:Array<TyType>;
+	final dynamicMemberType:Null<TyType>;
 	final fields:Array<TypedBackendClassFieldFact>;
 	final methods:Array<TypedBackendClassMethodFact>;
 	final fieldIndex:haxe.ds.StringMap<TypedBackendClassFieldFact>;
 	final methodIndex:haxe.ds.StringMap<TypedBackendClassMethodFact>;
 	final canonicalIdentity:String;
+	final enumConstructors:Array<TypedBackendEnumConstructorFact> = [];
 
-	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>) {
+	public function new(info:TyNominalInfo, resolvedSuperType:Null<TyType>, typedFunctions:Array<TypedFunction>, ?resolvedInterfaces:Array<TyType>,
+			?enumDeclaration:HxEnumDeclaration, ?declaredFieldTypes:TypedDeclaredFieldTypes) {
+		this.declarationOwner = info;
+		this.declaredFieldTypes = declaredFieldTypes;
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertOwner(info);
 		if (info == null)
 			throw "typed backend class semantic facts require exact nominal information";
 		classIdentity = normalize(info.getIdentity().getCanonicalName());
 		moduleIdentity = normalize(info.getModulePath());
+		declaredName = normalize(info.getShortName());
+		// Only class declarations own interface relationships. This checked boundary
+		// keeps enum and abstract facts out of the class/interface membership graph.
+		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
+		isInterface = classInfo != null && classInfo.getIsInterface();
+		isExtern = classInfo != null && classInfo.getIsExtern();
+		final indexedInterfaces = classInfo == null ? [] : classInfo.getDeclaredInterfaceTypes();
+		final resolvedHeader = resolvedInterfaces == null ? indexedInterfaces : resolvedInterfaces.copy();
+		if (indexedInterfaces.length != resolvedHeader.length)
+			throw "typed backend interface parent count changed for " + classIdentity;
+		for (index in 0...indexedInterfaces.length)
+			if (!hasUnresolvedHeaderType(indexedInterfaces[index])
+				&& indexedInterfaces[index].getSemanticKey() != resolvedHeader[index].getSemanticKey())
+				throw "typed backend interface parent conflicts with indexed identity for " + classIdentity;
+		final relationships = TyClassRelationships.resolve(resolvedHeader, isInterface, isExtern);
+		interfaceTypes = relationships.interfaces;
+		dynamicMemberType = relationships.dynamicMemberType;
+		// This checked semantic-class boundary preserves the typed abstract carrier;
+		// targets must not recover abstract identity from its erased display name.
+		nominalKind = if (Std.isOfType(info, TyAbstractInfo)) {
+			final underlying = (cast info : TyAbstractInfo).getUnderlyingType();
+			if (underlying == null)
+				throw "typed backend abstract facts require an underlying type for " + classIdentity;
+			AbstractValue(underlying);
+		} else if (info.getIsEnum()) {
+			EnumValue;
+		} else {
+			ClassInstance;
+		};
 		typeParameters = if (Std.isOfType(info, TyClassInfo)) {
 			(cast info : TyClassInfo).getTypeParameterIds();
 		} else if (Std.isOfType(info, TyAbstractInfo)) {
@@ -85,6 +153,11 @@ class TypedBackendClassSemanticFacts {
 			if (parameterName.length == 0 || seenTypeParameters.exists(parameterName))
 				throw "typed backend class semantic facts contain invalid type parameters for " + classIdentity;
 			seenTypeParameters.set(parameterName, true);
+		}
+		switch (nominalKind) {
+			case AbstractValue(underlying):
+				requireDeclaredTypeParameters(underlying, typeParameters, "abstract " + classIdentity);
+			case ClassInstance, EnumValue:
 		}
 
 		final indexedSuperType = Std.isOfType(info, TyClassInfo) ? (cast info : TyClassInfo).getSuperType() : null;
@@ -105,6 +178,10 @@ class TypedBackendClassSemanticFacts {
 		superTypeDisplay = selectedSuperType == null ? null : selectedSuperType.getCanonicalDisplay();
 		if (selectedSuperType != null)
 			requireDeclaredTypeParameters(selectedSuperType, typeParameters, "superclass " + classIdentity);
+		for (interfaceType in interfaceTypes)
+			requireDeclaredTypeParameters(interfaceType, typeParameters, "interface parent " + classIdentity);
+		if (dynamicMemberType != null)
+			requireDeclaredTypeParameters(dynamicMemberType, typeParameters, "dynamic members " + classIdentity);
 
 		fieldIndex = new haxe.ds.StringMap<TypedBackendClassFieldFact>();
 		for (field in info.getFieldInfos()) {
@@ -112,12 +189,14 @@ class TypedBackendClassSemanticFacts {
 				throw "typed backend class semantic facts contain a null field for " + classIdentity;
 			if (field.getOwner().getCanonicalName() != classIdentity || field.getModulePath() != moduleIdentity)
 				throw "typed backend class semantic facts contain foreign field " + field.getCanonicalKey() + " in " + classIdentity;
+			final fieldType = declaredFieldTypes == null ? field.getType() : declaredFieldTypes.typeFor(field);
 			final fact:TypedBackendClassFieldFact = {
 				canonicalIdentity: normalize(field.getCanonicalKey()),
+				constantIdentity: field.getConstant().getCanonicalIdentity(),
 				name: normalize(field.getName()),
-				semanticType: field.getType(),
-				typeIdentity: field.getType().getSemanticKey(),
-				typeDisplay: field.getType().getCanonicalDisplay(),
+				semanticType: fieldType,
+				typeIdentity: fieldType.getSemanticKey(),
+				typeDisplay: fieldType.getCanonicalDisplay(),
 				isStatic: field.getIsStatic(),
 				isPublic: field.getIsPublic(),
 				isFinal: field.getIsFinal(),
@@ -125,12 +204,34 @@ class TypedBackendClassSemanticFacts {
 				hasInitializer: field.getHasInitializer(),
 				propertyGet: field.getPropertyGet(),
 				propertySet: field.getPropertySet(),
+				hasStorage: field.getHasStorage(),
 				noImportGlobal: field.getNoImportGlobal()
 			};
 			if (fact.typeIdentity.length == 0 || fact.typeDisplay.length == 0)
 				throw "typed backend class semantic facts contain an incomplete field type " + fact.canonicalIdentity;
 			requireDeclaredTypeParameters(fact.semanticType, typeParameters, "field " + fact.canonicalIdentity);
 			addField(fact);
+		}
+
+		final bodyResults = new haxe.ds.StringMap<TyType>();
+		final seenFunctions = new haxe.ds.StringMap<Bool>();
+		for (typedFunction in typedFunctions) {
+			final declaration = typedFunction.getDeclaration();
+			final environment = typedFunction.getEnvironment();
+			if (declaration == null
+				|| environment == null
+				|| info.declarationForSource(typedFunction.getSourceDeclaration()) != declaration
+				|| environment.getOwnerIdentity() != typedFunction.getStableIdentity())
+				throw "typed backend class semantic facts contain foreign function result in " + classIdentity;
+			final key = declaration.getIdentity().getCanonicalKey();
+			if (seenFunctions.exists(key))
+				throw "typed backend class semantic facts contain duplicate function result " + key;
+			seenFunctions.set(key, true);
+			typedFunction.assertParsedBodyCurrent();
+			// Bodyless declarations have no inferred completion. Their written
+			// signature remains authoritative even if bring-up typing made an environment.
+			if (declaration.getHasBody())
+				bodyResults.set(key, environment.getReturnType());
 		}
 
 		methodIndex = new haxe.ds.StringMap<TypedBackendClassMethodFact>();
@@ -165,7 +266,7 @@ class TypedBackendClassSemanticFacts {
 					throw "typed backend class semantic facts contain an incomplete method argument " + declaration.getIdentity().getCanonicalKey();
 				arguments.push(argument);
 			}
-			final returnType = signature.getReturnType();
+			final returnType = resolvedMethodResult(declaration, bodyResults.get(declaration.getIdentity().getCanonicalKey()));
 			final methodTypeParameters = declaration.getTypeParameterIds();
 			final seenMethodTypeParameters = new haxe.ds.StringMap<Bool>();
 			for (parameter in methodTypeParameters) {
@@ -205,11 +306,44 @@ class TypedBackendClassSemanticFacts {
 		final methodIdentities = [for (identity in methodIndex.keys()) identity];
 		methodIdentities.sort((left, right) -> Reflect.compare(left, right));
 		methods = [for (identity in methodIdentities) copyMethod(methodIndex.get(identity))];
+		if (info.getIsEnum() != (enumDeclaration != null))
+			throw "typed enum identity disagrees with its parsed declaration";
+		if (enumDeclaration != null)
+			for (constructor in enumDeclaration.getConstructors()) {
+				final member:TypedBackendEnumConstructorMember = if (constructor.arity == 0) {
+					final candidates = fields.filter(field -> field.name == constructor.name && field.isStatic);
+					if (candidates.length != 1
+						|| candidates[0].semanticType.getNominalIdentity() == null
+						|| candidates[0].semanticType.getNominalIdentity().getCanonicalName() != classIdentity)
+						throw "enum singleton lacks its exact nominal field";
+					Singleton(candidates[0]);
+				} else {
+					final candidates = methods.filter(method -> method.name == constructor.name && method.isEnumConstructor && method.isStatic);
+					if (candidates.length != 1
+						|| candidates[0].arguments.length != constructor.arity
+						|| candidates[0].returnSemanticType.getNominalIdentity() == null
+						|| candidates[0].returnSemanticType.getNominalIdentity().getCanonicalName() != classIdentity)
+						throw "enum constructor lacks its exact typed signature";
+					Callable(candidates[0]);
+				};
+				enumConstructors.push({index: enumConstructors.length, name: constructor.name, member: member});
+			}
 
 		final identityFacts = new Array<Null<String>>();
 		identityFacts.push(getSchemaRevision());
 		identityFacts.push(classIdentity);
 		identityFacts.push(moduleIdentity);
+		identityFacts.push(declaredName);
+		identityFacts.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
+		switch (nominalKind) {
+			case ClassInstance:
+				identityFacts.push("class-instance");
+			case EnumValue:
+				identityFacts.push("enum-value");
+			case AbstractValue(underlying):
+				identityFacts.push("abstract-value");
+				identityFacts.push(underlying.getSemanticKey());
+		}
 		identityFacts.push(Std.string(typeParameters.length));
 		for (parameter in typeParameters) {
 			identityFacts.push(parameter.getCanonicalKey());
@@ -218,10 +352,19 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(superClassIdentity);
 		identityFacts.push(superTypeIdentity);
 		identityFacts.push(superTypeDisplay);
+		identityFacts.push(isInterface ? "interface" : "non-interface");
+		identityFacts.push(isExtern ? "extern" : "generated");
+		identityFacts.push(dynamicMemberType == null ? "no-dynamic-members" : dynamicMemberType.getSemanticKey());
+		identityFacts.push(Std.string(interfaceTypes.length));
+		for (interfaceType in interfaceTypes) {
+			identityFacts.push(interfaceType.getSemanticKey());
+			identityFacts.push(interfaceType.getCanonicalDisplay());
+		}
 		identityFacts.push("fields");
 		identityFacts.push(Std.string(fields.length));
 		for (field in fields) {
 			identityFacts.push(field.canonicalIdentity);
+			identityFacts.push(field.constantIdentity);
 			identityFacts.push(field.name);
 			identityFacts.push(field.typeIdentity);
 			identityFacts.push(field.typeDisplay);
@@ -232,6 +375,7 @@ class TypedBackendClassSemanticFacts {
 			identityFacts.push(boolText(field.hasInitializer));
 			identityFacts.push(field.propertyGet);
 			identityFacts.push(field.propertySet);
+			identityFacts.push(field.hasStorage ? "stored" : "virtual");
 			identityFacts.push(boolText(field.noImportGlobal));
 		}
 		identityFacts.push("methods");
@@ -268,8 +412,20 @@ class TypedBackendClassSemanticFacts {
 	public function getClassIdentity():String
 		return classIdentity;
 
+	/** Returns the semantic receiver kind and, for an abstract, its exact backing type. */
+	public function getNominalKind():TypedBackendNominalKind
+		return nominalKind;
+
 	public function getModuleIdentity():String
 		return moduleIdentity;
+
+	/**
+		Return the declared short name without deriving it from a compiler lookup path.
+		Targets can use it for name-based runtime behavior while classIdentity retains
+		the exact declaration owner. Native C++ default string conversion uses this name.
+	 */
+	public function getDeclaredName():String
+		return declaredName;
 
 	/** Return class-level generic parameters in declared order. **/
 	public function getTypeParameters():Array<String>
@@ -293,6 +449,31 @@ class TypedBackendClassSemanticFacts {
 	public function getSuperType():Null<TyType>
 		return superType;
 
+	/** Extern status belongs to the selected declaration and affects target generation. */
+	public function getIsExtern():Bool
+		return isExtern;
+
+	public function getIsInterface():Bool
+		return isInterface;
+
+	/** Exact implemented or extended interface types, without constructor meaning. */
+	public function getInterfaceTypes():Array<TyType>
+		return interfaceTypes.copy();
+
+	/** Exact fallback member type, separate from ordinary interface dispatch. */
+	public function getDynamicMemberType():Null<TyType>
+		return dynamicMemberType;
+
+	/** Early index observations can retain names whose provider has not loaded yet. */
+	static function hasUnresolvedHeaderType(type:TyType):Bool {
+		if (type.isUnknown() || type.isUnresolved())
+			return true;
+		for (argument in type.getTypeArguments())
+			if (hasUnresolvedHeaderType(argument))
+				return true;
+		return false;
+	}
+
 	public function getSuperTypeIdentity():Null<String>
 		return superTypeIdentity;
 
@@ -300,18 +481,71 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v5";
+		return "typed-backend-class-semantic-facts-v13";
 
-	public function getCanonicalIdentity():String
+	/**
+		Publish an inferred result without replacing the declaration key selected
+		before body typing. Written results remain contracts. Constructors describe
+		the allocated value in their signature and complete with Void in their body.
+	**/
+	static function resolvedMethodResult(declaration:TyDeclarationInfo, bodyResult:Null<TyType>):TyType {
+		final signature = declaration.getSignature();
+		final declaredResult = signature.getReturnType();
+		if (bodyResult == null)
+			return declaredResult;
+		if (signature.getName() == "new" && !signature.getIsStatic()) {
+			if (bodyResult.getSemanticKey() != TyType.fromHintText("Void").getSemanticKey())
+				throw "typed backend constructor body must complete with Void: " + declaration.getIdentity().getCanonicalKey();
+			return declaredResult;
+		}
+		if (!declaredResult.isUnknown() && declaredResult.getSemanticKey() != bodyResult.getSemanticKey())
+			throw "typed backend class semantic facts contain conflicting function result " + declaration.getIdentity().getCanonicalKey();
+		return bodyResult;
+	}
+
+	public function getCanonicalIdentity():String {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		return canonicalIdentity;
+	}
 
-	public function copyFields():Array<TypedBackendClassFieldFact>
+	public function copyFields():Array<TypedBackendClassFieldFact> {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		return [for (field in fields) copyField(field)];
+	}
+
+	/** An equal spelling from another request cannot borrow this completed type. */
+	public function requireField(field:TyFieldInfo):TypedBackendClassFieldFact {
+		if (field == null || declarationOwner.fieldInfo(field.getName()) != field)
+			throw "backend field facts require their exact declaration";
+		final fact = findField(field.getCanonicalKey());
+		if (fact == null)
+			throw "backend field declaration has no published facts";
+		return fact;
+	}
 
 	public function copyMethods():Array<TypedBackendClassMethodFact>
 		return [for (method in methods) copyMethod(method)];
 
+	/** Preserve source tag order while isolating callers from the retained member inventories. */
+	public function copyEnumConstructors():Array<TypedBackendEnumConstructorFact> {
+		return [
+			for (constructor in enumConstructors)
+				{
+					index: constructor.index,
+					name: constructor.name,
+					member: switch constructor.member {
+						case Singleton(field): Singleton(copyField(field));
+						case Callable(method): Callable(copyMethod(method));
+					}
+				}
+		];
+	}
+
 	public function findField(canonicalFieldIdentity:String):Null<TypedBackendClassFieldFact> {
+		if (declaredFieldTypes != null)
+			declaredFieldTypes.assertCurrent();
 		final fact = fieldIndex.get(canonicalFieldIdentity);
 		return fact == null ? null : copyField(fact);
 	}
@@ -346,6 +580,7 @@ class TypedBackendClassSemanticFacts {
 			&& left.name == right.name
 			&& left.semanticType.getSemanticKey() == right.semanticType.getSemanticKey()
 			&& left.typeIdentity == right.typeIdentity
+			&& left.constantIdentity == right.constantIdentity
 			&& left.typeDisplay == right.typeDisplay
 			&& left.isStatic == right.isStatic
 			&& left.isPublic == right.isPublic
@@ -354,6 +589,7 @@ class TypedBackendClassSemanticFacts {
 			&& left.hasInitializer == right.hasInitializer
 			&& left.propertyGet == right.propertyGet
 			&& left.propertySet == right.propertySet
+			&& left.hasStorage == right.hasStorage
 			&& left.noImportGlobal == right.noImportGlobal;
 
 	static function sameMethod(left:TypedBackendClassMethodFact, right:TypedBackendClassMethodFact):Bool {
@@ -389,6 +625,7 @@ class TypedBackendClassSemanticFacts {
 	static function copyField(fact:TypedBackendClassFieldFact):TypedBackendClassFieldFact
 		return {
 			canonicalIdentity: fact.canonicalIdentity,
+			constantIdentity: fact.constantIdentity,
 			name: fact.name,
 			semanticType: fact.semanticType,
 			typeIdentity: fact.typeIdentity,
@@ -400,6 +637,7 @@ class TypedBackendClassSemanticFacts {
 			hasInitializer: fact.hasInitializer,
 			propertyGet: fact.propertyGet,
 			propertySet: fact.propertySet,
+			hasStorage: fact.hasStorage,
 			noImportGlobal: fact.noImportGlobal
 		};
 
@@ -441,7 +679,7 @@ class TypedBackendClassSemanticFacts {
 		final allowedKeys = new haxe.ds.StringMap<Bool>();
 		for (parameter in allowed)
 			allowedKeys.set(parameter.getCanonicalKey(), true);
-		for (parameter in TyTypeSubstitution.parameterIdentities(type))
+		for (parameter in TyTypeSubstitution.freeParameterIdentities(type))
 			if (!allowedKeys.exists(parameter.getCanonicalKey()))
 				throw "typed backend class semantic facts contain unbound type parameter " + parameter.getName() + " in " + context;
 	}

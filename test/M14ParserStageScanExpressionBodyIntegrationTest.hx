@@ -1,5 +1,6 @@
 import ParserStageScanHelpers;
 
+/** Checks that helper declaration scanning preserves source bodies and following members. */
 class M14ParserStageScanExpressionBodyIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -7,6 +8,83 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 	}
 
 	static function main():Void {
+		final calls = ParserStageScanHelpers.scanModuleLocalHelperClasses([
+			"class CallBodies {",
+			"  static function qualified():Void Sys.println(\"qualified\");",
+			"  static function bare():Void qualified();",
+			"  static function result():Int return 17;",
+			"  static function conditional(value:Bool):Void { if (value) qualified(); }",
+			"}"
+		].join("\n"), null);
+		assertTrue(calls.length == 1, "expected the call-expression helper class");
+		final methods = HxClassDecl.getFunctions(calls[0]);
+		assertTrue(methods.length == 4, "expression bodies must not consume following declarations");
+		assertTrue(HxFunctionDecl.getReturnTypeHint(methods[0]) == "Void", "qualified body call must not become return-type text");
+		assertTrue(HxFunctionDecl.getBodyText(methods[0]) == 'Sys.println("qualified");', "retain the qualified call body");
+		assertTrue(HxFunctionDecl.getBodyText(methods[1]) == "qualified();", "retain the bare call body");
+		assertTrue(HxFunctionDecl.getBodyText(methods[2]) == "return 17;", "retain the following return body");
+		switch (HxFunctionDecl.getBody(methods[3])) {
+			case [HxStmt.SIf(_, _, _, _)]:
+			case _:
+				throw "a structured static body must not require a final return statement";
+		}
+		for (scrutinee in ["items", "({values: items}).values"]) {
+			final text = "class SwitchBody { static function run(items:Array<Int>):Void switch "
+				+ scrutinee
+				+ " { case [0, x] | [x, 0]: Sys.println(x); case _: Sys.println(-1); } static function after():Int return 9; }";
+			final scanned = ParserStageScanHelpers.scanModuleLocalHelperClasses(text, null)[0];
+			final parsed = HxModuleDecl.getMainClass(ParserStage.parse(text, "SwitchBody.hx").getDecl());
+			for (cls in [scanned, parsed]) {
+				final functions = HxClassDecl.getFunctions(cls);
+				assertTrue(functions.length == 2, "switch body consumed the following function");
+				assertTrue(HxFunctionDecl.getReturnTypeHint(functions[0]) == "Void", "switch text entered the return type");
+				assertTrue(StringTools.startsWith(HxFunctionDecl.getBodyText(functions[0]), "switch "), "switch prefix disappeared");
+				switch HxFunctionDecl.getBody(functions[0]) {
+					case [HxStmt.SSwitch(_, patterns, bodies, position)]:
+						assertTrue(patterns.length == 2 && bodies.length == 2, "switch cases disappeared");
+						assertTrue(position.getIndex() == text.indexOf("switch "), "switch source position changed");
+					case _:
+						throw "unbraced switch did not remain a complete statement";
+				}
+			}
+		}
+
+		final typeCases = [
+			{hint: "T", body: "@:privateAccess { return value; }"},
+			{hint: "Array<Array<Int>>", body: "@:privateAccess { return [[1]]; }"},
+			{hint: "Void->Void", body: "@:privateAccess { return callback; }"},
+			{hint: "{value:Int}", body: "@:privateAccess { return {value: 1}; }"},
+			{hint: "Void", body: '/* body boundary */ Sys.println("ok");'},
+			{hint: "Array<Array<Int>>", body: "return [[1]];"},
+			{hint: "Void->Void", body: "return callback;"},
+			{hint: "{value:Int}", body: "return {value: 1};"},
+			{hint: "haxe.io.Bytes", body: "return null;"}
+		];
+		for (testCase in typeCases) {
+			final text = "class TypeBoundary { static function probe():"
+				+ testCase.hint
+				+ " "
+				+ testCase.body
+				+ " static function after():Int return 9; }";
+			final scanned = ParserStageScanHelpers.scanModuleLocalHelperClasses(text, null)[0];
+			final parsed = HxModuleDecl.getMainClass(new HxParser(text).parseModule("TypeBoundary"));
+			for (cls in [scanned, parsed]) {
+				final functions = HxClassDecl.getFunctions(cls);
+				assertTrue(functions.length == 2, "return type must not consume the following method: " + testCase.hint);
+				assertTrue(HxFunctionDecl.getReturnTypeHint(functions[0]) == testCase.hint, "preserve the complete type: " + testCase.hint);
+				assertTrue(HxFunctionDecl.getBody(functions[0]).length > 0, "retain the body after type: " + testCase.hint);
+				if (StringTools.startsWith(testCase.body, "@:privateAccess")) {
+					assertTrue(HxFunctionDecl.getBodyText(functions[0]) == testCase.body, "retain exact body metadata text");
+					switch HxFunctionDecl.getBody(functions[0]) {
+						case [HxStmt.SExpr(HxExpr.EPrivateAccess(_, position), _)]:
+							assertTrue(position.getIndex() == text.indexOf("@:privateAccess"), "retain body permission source position");
+						case _:
+							throw "return type scanning erased the body permission";
+					}
+				}
+			}
+		}
+
 		final source = [
 			"abstract LocalVector<T>(Array<T>) from Array<T> {",
 			"  inline public function fill(value:Int):Void for (i in 0...this.length) this[i] = value;",

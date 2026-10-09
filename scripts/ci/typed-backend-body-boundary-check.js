@@ -23,9 +23,62 @@ function haxeFiles(entry) {
 const files = roots.flatMap(haxeFiles);
 const failures = [];
 const typedClassFactPlanCuts = new Set([
+  // JavaScript binds exact superclass edges to admitted emitted providers before rendering.
+  "packages/hxhx-core/src/backend/js/JsClassInheritancePlan.hx",
   "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
+  // Stage3 enum planning copies exact identities into closed target storage choices.
+  "packages/hxhx-core/src/backend/ocaml/Stage3OcamlEnumPlan.hx",
+  // C++ indexes exact class/module owners here; callable plans still own target representation choices.
+  "packages/hxhx-core/src/backend/cpp/CppTypedProgramProjection.hx",
+  // Managed program admission joins exact method owners and extern bindings before emission.
+  "packages/hxhx-core/src/backend/cpp/CppManagedProgramPlan.hx",
+  // Static storage joins selected field declarations to one traced program payload.
+  "packages/hxhx-core/src/backend/cpp/CppManagedStaticStorage.hx",
+  // Instance storage validates exact owners before selecting constructor bodies and traced field layouts.
+  "packages/hxhx-core/src/backend/cpp/CppManagedClassStorage.hx",
+  // Extracted layout planning validates applied field identities and returns defensive layout copies.
+  "packages/hxhx-core/src/backend/cpp/CppManagedClassLayouts.hx",
+  // Extracted method planning validates exact calls and freezes targets from admitted allocations.
+  "packages/hxhx-core/src/backend/cpp/CppManagedMethods.hx",
+  // Implicit string conversion seals exact authored method applications before rendering.
+  "packages/hxhx-core/src/backend/cpp/CppManagedStringMethods.hx",
+  // Static defaults substitute exact abstract backing types before choosing storage values.
+  "packages/hxhx-core/src/backend/cpp/CppManagedStaticDefault.hx",
+  // Class-handle storage validates the exact core abstract and applied parameter shape.
+  "packages/hxhx-core/src/backend/cpp/CppManagedClassValueType.hx",
+  // Authored cast planning compares exact substituted storage types for owned occurrences.
+  "packages/hxhx-core/src/backend/cpp/CppManagedCastPlan.hx",
+  // Enum descriptor generation consumes only the exact typed constructor inventory.
+  "packages/hxhx-core/src/backend/cpp/CppManagedEnumDescriptors.hx",
+  // The Map test plan proves fresh ordinary root classes are unrelated to Map providers.
+  "packages/hxhx-core/src/backend/cpp/CppRuntimeType.hx",
+  // Runtime operand planning binds each descriptor requirement to its exact declaration before admission.
+  "packages/hxhx-core/src/backend/cpp/CppRuntimeTypePlan.hx",
+  // Neko joins exact calls to their indexed class and function before rendering.
+  "packages/hxhx-core/src/backend/vm/NekoTypedProgramProjection.hx",
+  // Registry entries consume exact nominal facts and precomputed interface membership.
+  "packages/hxhx-core/src/backend/vm/NekoRuntimeTypeRegistry.hx",
+  // Startup binds the shared class order to exact admitted Neko declarations before emission.
+  "packages/hxhx-core/src/backend/vm/NekoStaticInitializationPlan.hx",
+  // Enum calls validate their exact typed constructor inventory before selecting an existing body.
+  "packages/hxhx-core/src/backend/vm/NekoEnumConstructorPlan.hx",
+  // Static storage selection validates exact field occurrences and declaring owners before emission.
+  "packages/hxhx-core/src/backend/vm/NekoStaticFieldPlan.hx",
+  // Catch plans validate exact implicit helper and payload owners before pruning.
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
 ]);
+
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoTargetCore.hx",
+  "plan.validate(program)",
+  "prepared Neko catch validation before executable pruning",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/vm/NekoCatchPlan.hx",
+  "program.requireFunction(use.conversion.getOwner().getCanonicalName(), use.conversion.getIdentity().getCanonicalKey())",
+  "exact implicit catch helper ownership",
+);
 
 function requireFragment(relative, fragment, claim) {
   const source = fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -70,6 +123,13 @@ for (const file of files) {
   if (
     relative !== "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx" &&
     relative !== "packages/hxhx-core/src/backend/source/SourceTargetCommon.hx" &&
+    // These C++ plans admit inherited field prefixes and representation-preserving upcasts.
+    // Renderers still cannot consume the observational graph directly.
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedClassStorage.hx" &&
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedClassLayouts.hx" &&
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedMethods.hx" &&
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedStringMethods.hx" &&
+    relative !== "packages/hxhx-core/src/backend/cpp/CppManagedCastPlan.hx" &&
     source.includes(".getClassGraph(")
   ) {
     failures.push(`${relative}: observation-only exact class graph reached a production backend before a target-owned plan cut`);
@@ -104,7 +164,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v5"',
+  'return "typed-backend-class-semantic-facts-v13"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(
@@ -124,7 +184,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassGraph.hx",
-  'return "typed-backend-class-graph-v3"',
+  'return "typed-backend-class-graph-v4"',
   "versioned immutable typed backend class graph",
 );
 requireFragment(
@@ -144,7 +204,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBodySource.hx",
-  "new TypedBackendClassSemanticFacts(semanticInfo, null)",
+  "new TypedBackendClassSemanticFacts(semanticInfo, null, typedClass.getFunctions(), interfaces,\n\t\t\tHxClassDecl.getEnumDeclaration(typedClass.getSourceDeclaration()), typedClass.getDeclaredFieldTypes())",
   "single-owner typed class semantic-fact handoff to backend projection",
 );
 requireFragment(
@@ -155,12 +215,22 @@ requireFragment(
 requireFragment(
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
   "classes.push(copyClass(classProjection.requireSemanticFacts()));",
-  "single native OCaml semantic-fact plan cut",
+  "shared target native OCaml semantic-fact plan cut",
 );
 requireFragment(
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
   "return new OcamlTargetDeclarationRequest(hostProgramRevision, classes);",
   "copied target-owned OCaml declaration request",
+);
+rejectFragment(
+  "packages/hxhx-core/src/backend/ocaml/Stage3OcamlEnums.hx",
+  "TypedBackendClassSemanticFacts",
+  "native enum rendering retained host declaration facts instead of the target plan",
+);
+requireFragment(
+  "packages/hxhx-core/src/backend/ocaml/Stage3OcamlEnums.hx",
+  "Stage3OcamlEnumPlan.fromProjection(projection, outputModule, packagePath, valueName)",
+  "native enum target plan boundary",
 );
 rejectFragment(
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetProgramAdapter.hx",
@@ -214,7 +284,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/backend/source/PhpFunctionLoweringPlan.hx",
-  'return "php-function-lowering-plan-v5"',
+  'return "php-function-lowering-plan-v7"',
   "versioned immutable PHP function-plan schema",
 );
 requireFragment(

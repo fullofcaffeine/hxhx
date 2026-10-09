@@ -25,11 +25,8 @@ class ParserStage {
 
 	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl):HxModuleDecl {
 		final enumDecls = ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null);
-		final typedefDecls = ParserStageScanHelpers.scanModuleLocalHelperTypedefs(source, null);
 		final abstractDecls = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null);
-		if ((enumDecls == null || enumDecls.length == 0)
-			&& (typedefDecls == null || typedefDecls.length == 0)
-			&& (abstractDecls == null || abstractDecls.length == 0))
+		if ((enumDecls == null || enumDecls.length == 0) && (abstractDecls == null || abstractDecls.length == 0))
 			return parsed;
 
 		final scannedOverlayByName:Map<String, HxClassDecl> = new Map();
@@ -44,11 +41,6 @@ class ParserStage {
 				&& nm.length > 0
 				&& HxClassDecl.getMetadata(c).indexOf("__hxhx_abstract") >= 0
 				&& !scannedOverlayByName.exists(nm))
-				scannedOverlayByName.set(nm, c);
-		}
-		for (c in typedefDecls) {
-			final nm = c == null ? null : HxClassDecl.getName(c);
-			if (nm != null && nm.length > 0)
 				scannedOverlayByName.set(nm, c);
 		}
 
@@ -203,17 +195,12 @@ class ParserStage {
 				changed = true;
 			return overlayChanged ? new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields,
 				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls),
-				HxClassDecl.getVisibility(cls)) : cls;
+				HxClassDecl.getVisibility(cls), HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls), HxClassDecl.getEnumDeclaration(cls),
+				HxClassDecl.getTypeParameters(cls)) : cls;
 		}
 
 		final parsedMain = HxModuleDecl.getMainClass(parsed);
-		final parsedMainIsPlaceholder = parsedMain != null
-			&& HxClassDecl.getName(parsedMain) == "Unknown"
-			&& expectedMainClass != null
-			&& expectedMainClass.length > 0
-			&& expectedMainClass != "Unknown"
-			&& HxClassDecl.getFunctions(parsedMain).length == 0
-			&& HxClassDecl.getFields(parsedMain).length == 0;
+		final parsedMainIsPlaceholder = HxModuleDecl.getClasses(parsed).indexOf(parsedMain) < 0;
 		var main = parsedMain;
 		main = overlayScannedDecl(main);
 		var mainName = main == null ? "" : HxClassDecl.getName(main);
@@ -229,7 +216,9 @@ class ParserStage {
 			}
 			for (c in abstractDecls) {
 				final nm = HxClassDecl.getName(c);
-				if (nm == expectedMainClass) {
+				// Prefer the parser-owned header, already enriched above, so selecting
+				// an abstract as the module entry cannot discard its metadata.
+				if (nm == expectedMainClass && mainName != expectedMainClass) {
 					main = c;
 					mainName = nm;
 					changed = true;
@@ -252,21 +241,11 @@ class ParserStage {
 				seen.set(nm, true);
 		}
 
-		pushUnique(main);
+		if (!parsedMainIsPlaceholder || main != parsedMain)
+			pushUnique(main);
 		for (c in HxModuleDecl.getClasses(parsed))
-			// The pure parser has to provide a main-class object even for an enum-only
-			// module. Once scanning finds the expected real declaration, that exact
-			// empty placeholder must not survive as another target-visible class.
-			if (!(parsedMainIsPlaceholder && c == parsedMain && main != parsedMain))
-				pushUnique(c);
+			pushUnique(c);
 		for (c in enumDecls) {
-			final nm = HxClassDecl.getName(c);
-			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
-				changed = true;
-				pushUnique(c);
-			}
-		}
-		for (c in typedefDecls) {
 			final nm = HxClassDecl.getName(c);
 			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
 				changed = true;
@@ -281,8 +260,12 @@ class ParserStage {
 			}
 		}
 
+		// Declaration enrichment can discover an enum without finding
+		// an ordinary class. Use that real declaration instead of a fallback header.
+		if (parsedMainIsPlaceholder && main == parsedMain && classes.length > 0)
+			main = classes[0];
 		return changed ? new HxModuleDecl(HxModuleDecl.getPackagePath(parsed), HxModuleDecl.getDirectives(parsed), main, classes,
-			HxModuleDecl.getHeaderOnly(parsed), HxModuleDecl.getHasToplevelMain(parsed)) : parsed;
+			HxModuleDecl.getHeaderOnly(parsed), HxModuleDecl.getHasToplevelMain(parsed), HxModuleDecl.getTypedefs(parsed)) : parsed;
 	}
 
 	/**
@@ -293,6 +276,6 @@ class ParserStage {
 		compiler process now has exactly one parser.
 	**/
 	public static function cacheConfigurationRevision():String {
-		return "hxhx-parser-schema-v2|frontend=haxe";
+		return "hxhx-parser-schema-v11|frontend=haxe";
 	}
 }

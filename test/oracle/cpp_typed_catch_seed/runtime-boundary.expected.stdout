@@ -1,0 +1,8 @@
+first=line:a
+partial-line=line:last
+exhausted=eof
+misleading-string=string:Eof
+misleading-exception=exception:Eof
+partial-read=97,98,0,0
+read-all=all
+read-all-exhausted=true

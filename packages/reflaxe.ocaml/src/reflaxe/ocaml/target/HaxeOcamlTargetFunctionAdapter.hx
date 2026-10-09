@@ -48,24 +48,37 @@ class HaxeOcamlTargetFunctionAdapter {
 
 	public static function fromSourceBeforePreprocessing(data:ClassFuncData):Null<OcamlTargetFunctionFact> {
 		final body = data == null ? null : data.expr;
-		if (data == null || body == null || !data.isStatic || data.args.length != 0)
+		if (data == null || body == null || data.field.name == "new" || data.field.params.length != 0)
 			return null;
 		final returnType = TypeTools.toString(data.ret);
-		if (returnType != "Void")
+		if (!OcamlTargetFunctionFact.admitsResult(returnType))
 			return null;
+		final argumentTypes = new Array<String>();
+		for (argument in data.args) {
+			final type = TypeTools.toString(argument.type);
+			if (argument.opt || argument.expr != null || argument.tvar == null || !OcamlTargetFunctionFact.admitsValue(type))
+				return null;
+			argumentTypes.push(type);
+		}
 		final signature:OcamlTargetFunctionSignature = {
 			moduleId: data.classType.module,
 			sourceTypeName: data.classType.name,
 			sourceFunctionName: data.field.name,
-			role: OcamlTargetFunctionRole.StaticFunction,
-			argumentTypeDisplays: [],
+			role: data.isStatic ? OcamlTargetFunctionRole.StaticFunction : OcamlTargetFunctionRole.InstanceMethod,
+			argumentTypeDisplays: argumentTypes,
 			returnTypeDisplay: returnType
 		};
 		final targetIdentity = OcamlTargetFunctionFact.identityFor(signature);
-		final targetBody = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing(targetIdentity, body, data.classType);
-		if (targetBody == null || targetBody.semanticTypeDisplay != returnType)
+		final parameters = [
+			for (index in 0...data.args.length)
+				HaxeOcamlTargetBindingAdapter.fromSourceLocalBeforePreprocessing(targetIdentity,
+					OcamlTargetExpressionPath.indexed(OcamlTargetExpressionPath.ROOT, "parameter", index), Parameter, data.args[index].tvar)
+		];
+		final targetBody = HaxeOcamlTargetExpressionAdapter.fromFunctionBody(targetIdentity, body, data.classType,
+			[for (argument in data.args) argument.tvar], parameters, returnType);
+		if (targetBody == null || !targetBody.admitsFunctionResult(returnType))
 			return null;
-		return new OcamlTargetFunctionFact(signature, targetBody);
+		return new OcamlTargetFunctionFact(signature, targetBody, parameters);
 	}
 
 	/** Returns every target-function identity still carried by one final body. **/

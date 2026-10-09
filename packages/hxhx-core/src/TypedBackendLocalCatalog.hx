@@ -13,8 +13,9 @@ class TypedBackendLocalCatalog {
 	final entries:Array<TypedBackendLocalProjection>;
 	final byIdentity:StringMap<TypedBackendLocalProjection>;
 	final byProjectedName:StringMap<TypedBackendLocalProjection>;
+	final catchUses:StringMap<TypedCatchUse>;
 
-	public function new(bindings:Array<TyLocalBinding>, ?reservedProjectedNames:Array<String>) {
+	public function new(bindings:Array<TyLocalBinding>, ?reservedProjectedNames:Array<String>, ?catchUses:Array<TypedCatchUse>) {
 		final exactBindings = new StringMap<TyLocalBinding>();
 		final identities = new Array<String>();
 		final sourceNames = new StringMap<Bool>();
@@ -45,6 +46,7 @@ class TypedBackendLocalCatalog {
 		this.entries = [];
 		this.byIdentity = new StringMap<TypedBackendLocalProjection>();
 		this.byProjectedName = new StringMap<TypedBackendLocalProjection>();
+		this.catchUses = new StringMap<TypedCatchUse>();
 		for (index in 0...identities.length) {
 			final binding = exactBindings.get(identities[index]);
 			if (binding == null)
@@ -63,6 +65,20 @@ class TypedBackendLocalCatalog {
 			byIdentity.set(identities[index], entry);
 			byProjectedName.set(projectedName, entry);
 		}
+		if (catchUses != null)
+			for (use in catchUses) {
+				if (use == null)
+					throw "typed backend local catalog received a null catch use";
+				final identity = use.binding.getIdentity().getCanonicalKey();
+				final local = byIdentity.get(identity);
+				if (local == null
+					|| !local.getBinding().getKind().match(CatchVariable)
+					|| local.getBinding().getCanonicalIdentity() != use.binding.getCanonicalIdentity())
+					throw "typed backend catch use belongs to another local catalog";
+				if (this.catchUses.exists(identity))
+					throw "typed backend local catalog received duplicate catch uses";
+				this.catchUses.set(identity, use);
+			}
 	}
 
 	public function getEntries():Array<TypedBackendLocalProjection>
@@ -85,4 +101,8 @@ class TypedBackendLocalCatalog {
 
 	public function findByIdentity(bindingIdentity:String):Null<TypedBackendLocalProjection>
 		return bindingIdentity == null ? null : byIdentity.get(bindingIdentity);
+
+	/** Retrieve implicit provider facts by exact binding identity, never by source spelling. */
+	public function findCatchUse(bindingIdentity:String):Null<TypedCatchUse>
+		return bindingIdentity == null ? null : catchUses.get(bindingIdentity);
 }

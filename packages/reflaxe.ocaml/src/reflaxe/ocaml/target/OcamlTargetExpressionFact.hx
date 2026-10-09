@@ -9,17 +9,22 @@ enum OcamlTargetExpressionKind {
 	VariableDeclarationExpression;
 	BlockExpression;
 	StaticCallExpression;
+	ConditionalExpression;
+	NullableIntNullExpression;
+	BoxNullableIntExpression;
+	UnwrapNullableIntExpression;
+	TestNullableIntNullExpression;
 }
 
 /**
 	One immutable expression tree copied independently by either compiler host.
 
-	Revision 2 adds resolved static zero-argument Void calls to direct non-null
-	literals, initialized locals, local reads, and lexical blocks. Unsupported
-	expressions and compiler temporaries remain outside this contract.
+	Revision 5 represents nullable integers and their explicit conversions.
+	Direct non-null literals, initialized locals, local reads, and lexical blocks
+	retain their value types. Function control lives in OcamlTargetStatementFact.
 **/
 class OcamlTargetExpressionFact {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v2";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v5";
 
 	public final path:String;
 	public final kind:OcamlTargetExpressionKind;
@@ -70,8 +75,40 @@ class OcamlTargetExpressionFact {
 	public static function block(path:String, semanticTypeDisplay:String, children:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact
 		return new OcamlTargetExpressionFact(path, BlockExpression, semanticTypeDisplay, null, null, children);
 
-	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact):OcamlTargetExpressionFact
-		return new OcamlTargetExpressionFact(path, StaticCallExpression, "Void", null, null, [], call);
+	/** A contextual null uses the existing nullable Int representation, never integer zero. **/
+	public static function nullableIntNull(path:String):OcamlTargetExpressionFact
+		return new OcamlTargetExpressionFact(path, NullableIntNullExpression, "Null<Int>", null, null, []);
+
+	/** Keep representation changes explicit instead of relabeling the operand's type. **/
+	public static function boxNullableInt(path:String, operand:OcamlTargetExpressionFact):OcamlTargetExpressionFact
+		return new OcamlTargetExpressionFact(path, BoxNullableIntExpression, "Null<Int>", null, null, [operand]);
+
+	/** Null must be checked before converting a nullable representation to an Int value. **/
+	public static function unwrapNullableInt(path:String, operand:OcamlTargetExpressionFact):OcamlTargetExpressionFact
+		return new OcamlTargetExpressionFact(path, UnwrapNullableIntExpression, "Int", null, null, [operand]);
+
+	public static function testNullableIntNull(path:String, operand:OcamlTargetExpressionFact):OcamlTargetExpressionFact
+		return new OcamlTargetExpressionFact(path, TestNullableIntNullExpression, "Bool", null, null, [operand]);
+
+	/** Keep condition and alternatives distinct so lowering cannot evaluate both branches. **/
+	public static function conditional(path:String, semanticTypeDisplay:String, condition:OcamlTargetExpressionFact, whenTrue:OcamlTargetExpressionFact,
+			whenFalse:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
+		if (condition == null || whenTrue == null || whenFalse == null)
+			throw "OCaml target conditional requires a condition and both branches";
+		return new OcamlTargetExpressionFact(path, ConditionalExpression, semanticTypeDisplay, null, null, [condition, whenTrue, whenFalse]);
+	}
+
+	public static function directStaticCall(path:String, call:OcamlTargetStaticCallFact, arguments:Array<OcamlTargetExpressionFact>):OcamlTargetExpressionFact {
+		if (call == null || arguments == null || arguments.length != call.copyArgumentTypeDisplays().length)
+			throw "OCaml target static call arguments do not match its declaration";
+		final types = call.copyArgumentTypeDisplays();
+		for (index in 0...arguments.length)
+			if (arguments[index] == null
+				|| arguments[index].semanticTypeDisplay != types[index]
+				|| arguments[index].path != OcamlTargetExpressionPath.indexed(path, "argument", index))
+				throw "OCaml target static call requires exact ordered argument facts";
+		return new OcamlTargetExpressionFact(path, StaticCallExpression, call.returnTypeDisplay, null, null, arguments, call);
+	}
 
 	/** Preserve source occurrence order when checking the enclosing program's call references. **/
 	public function copyStaticCalls():Array<OcamlTargetStaticCallFact> {
@@ -100,8 +137,33 @@ class OcamlTargetExpressionFact {
 	static function validateShape(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
 			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Void {
 		switch (kind) {
+			case NullableIntNullExpression:
+				if (literal != null || binding != null || children.length != 0 || semanticTypeDisplay != "Null<Int>")
+					invalidShape("nullable Int null");
+			case BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression:
+				if (literal != null || binding != null || children.length != 1 || children[0] == null)
+					invalidShape("nullable Int operation");
+				final inputType = kind == BoxNullableIntExpression ? "Int" : "Null<Int>";
+				final resultType = kind == BoxNullableIntExpression ? "Null<Int>" : kind == UnwrapNullableIntExpression ? "Int" : "Bool";
+				if (children[0].path != OcamlTargetExpressionPath.child(path, "operand")
+					|| children[0].semanticTypeDisplay != inputType
+					|| semanticTypeDisplay != resultType)
+					throw "OCaml target nullable Int operation requires its exact operand path and types";
+			case ConditionalExpression:
+				if (literal != null || binding != null || children.length != 3)
+					invalidShape("conditional");
+				final roles = ["condition", "then", "else"];
+				for (index in 0...children.length)
+					if (children[index].path != OcamlTargetExpressionPath.child(path, roles[index]))
+						throw "OCaml target conditional child path does not match its role";
+				if (children[0].semanticTypeDisplay != "Bool"
+					|| children[1].semanticTypeDisplay != semanticTypeDisplay
+					|| children[2].semanticTypeDisplay != semanticTypeDisplay)
+					throw "OCaml target conditional requires a Boolean condition and exact branch result types";
+				if (children[1].kind != BlockExpression || children[2].kind != BlockExpression)
+					throw "OCaml target conditional requires scoped branches";
 			case StaticCallExpression:
-				if (literal != null || binding != null || children.length != 0 || semanticTypeDisplay != "Void")
+				if (literal != null || binding != null)
 					invalidShape("static call");
 			case LiteralExpression:
 				if (literal == null) {
@@ -184,12 +246,24 @@ class OcamlTargetExpressionFact {
 			case VariableDeclarationExpression: "VariableDeclarationExpression";
 			case BlockExpression: "BlockExpression";
 			case StaticCallExpression: "StaticCallExpression";
+			case ConditionalExpression: "ConditionalExpression";
+			case NullableIntNullExpression: "NullableIntNullExpression";
+			case BoxNullableIntExpression: "BoxNullableIntExpression";
+			case UnwrapNullableIntExpression: "UnwrapNullableIntExpression";
+			case TestNullableIntNullExpression: "TestNullableIntNullExpression";
 		};
 	}
 
+	@:allow(reflaxe.ocaml.target.OcamlTargetStatementFact)
 	static function validateNode(node:OcamlTargetExpressionFact, scopes:Array<Map<String, Bool>>, identities:Map<String, Bool>):Void {
 		switch (node.kind) {
-			case LiteralExpression | StaticCallExpression:
+			case LiteralExpression | NullableIntNullExpression:
+			case StaticCallExpression | ConditionalExpression | BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression:
+				for (child in node.children) {
+					scopes.push([]);
+					validateNode(child, scopes, identities);
+					scopes.pop();
+				}
 			case LocalReadExpression:
 				final local = node.binding;
 				if (local == null || !isVisible(local.getCanonicalIdentity(), scopes))

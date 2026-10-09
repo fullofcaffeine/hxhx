@@ -61,7 +61,7 @@ class CppMapLiteral {
 		return switch (expr) {
 			case EArrayDecl(elements):
 				entriesFromElements(elements);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				entriesFromExpr(inner);
 			case _:
 				null;
