@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_RESULT_ROOT="$(mktemp -d)"
-trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_RESULT_ROOT"' EXIT
+INSPECTOR_DIR="$(mktemp -d)"
+trap 'rm -f "$INSPECTION_COPY"; rm -rf "$INVALID_RESULT_ROOT" "$INSPECTOR_DIR"' EXIT
 
 # The upstream routes establish the observable virtual dispatch and early-return
 # behavior. The native build performed by the portable harness is checked below
@@ -104,9 +105,13 @@ for (const item of expectedVoid) {
 }
 NODE
 
+# Compile once, then inspect each report in a fresh process. The disposable
+# bytecode preserves isolation without rebuilding the same CLI seven times.
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
@@ -167,9 +172,7 @@ report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').up
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted instance String result $mutation evidence" >&2
 		exit 1
@@ -222,9 +225,7 @@ report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').up
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/void-$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted instance Void result $mutation evidence" >&2
 		exit 1
