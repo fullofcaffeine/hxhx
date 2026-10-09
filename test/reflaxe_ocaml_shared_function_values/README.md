@@ -20,7 +20,8 @@ It also supplies effectful argument functions to independently check the lowerer
 An effectful condition and two alternative functions prove that the condition runs once and only the selected branch runs.
 Typed-module identities must remain unchanged after adaptation. Corrupt parameter identities, argument types, and return types must fail validation.
 Conditional validation also rejects wrong child paths, a non-Boolean condition, mismatched results, and locals read from the other branch.
-Both adapters reject optional, defaulted, rest, generic, nullable, and Float signatures until their semantics enter the shared contract.
+Both adapters reject optional, defaulted, rest, generic, nullable Bool, and Float signatures until their semantics enter the shared contract.
+Nullable Int has its own required regression in `test/reflaxe_ocaml_shared_nullable_values`.
 
 The focused regression is included in `npm run test:reflaxe-ocaml:target-definition`.
 Run the complete stock-Haxe preprocessing and native runtime check with:

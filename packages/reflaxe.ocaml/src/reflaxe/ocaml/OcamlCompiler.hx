@@ -91,10 +91,8 @@ import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetFieldInitializerAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetFunctionAdapter;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
-import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.target.OcamlTargetFieldInitializerCatalog;
 import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
-import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetProgramCore;
 import reflaxe.ocaml.target.OcamlTargetProgramCore.OcamlTargetProgramPublisher;
 import reflaxe.ocaml.target.OcamlTargetProgramRequest;
@@ -1969,7 +1967,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
 		final sharedExpression = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("standalone:" + ownerId, expression);
 		if (sharedExpression != null && sharedExpression.semanticTypeDisplay == TypeTools.toString(fieldType))
-			return OcamlTargetExpressionLowerer.build(sharedExpression);
+			return ctx.lowerSharedTargetExpression(sharedExpression, "standalone:" + ownerId);
 		#if macro
 		if (Context.definedValue("reflaxe_ocaml_target_expression_test_require_shared") == ownerId)
 			Context.error("reflaxe.ocaml: required field initializer did not enter the shared target expression route", expression.pos);
@@ -2984,7 +2982,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
-				{expression: OcamlTargetFunctionLowerer.build(sharedFunction), signature: null};
+				{expression: ctx.lowerSharedTargetFunction(sharedFunction), signature: null};
 			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
@@ -3339,7 +3337,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				throw "reflaxe.ocaml: shared target report requires one main module";
 			final request = new OcamlTargetProgramRequest(revision.id, sharedMain, declarations, targetFieldInitializerCatalog.copyFacts(),
 				targetFunctionCatalog.copyFacts());
-			final plan = OcamlTargetProgramCore.lower(request);
+			final plan = OcamlTargetProgramCore.lower(request,
+				() -> new reflaxe.ocaml.target.OcamlTargetRuntimeSources(RuntimeCopier.resolveRuntimeSourceDirectory()));
 			File.saveContent(Path.join([outDir, OcamlTargetProgramCore.REPORT_FILE]), plan.reportJson("stock-haxe"));
 			final sharedOutput = Context.definedValue("reflaxe_ocaml_shared_program_output");
 			if (sharedOutput != null && StringTools.trim(sharedOutput).length > 0)

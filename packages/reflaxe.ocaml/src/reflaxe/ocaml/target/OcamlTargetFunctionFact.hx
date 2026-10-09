@@ -20,7 +20,7 @@ typedef OcamlTargetFunctionSignature = {
 /**
 	One immutable function copied independently from either compiler host.
 
-	Exact primitive parameters and terminal returns cross this boundary with
+	Primitive and nullable Int parameters and terminal returns cross this boundary with
 	ordered binding identities. Receiver state and captures remain unsupported.
 **/
 class OcamlTargetFunctionFact {
@@ -113,7 +113,7 @@ class OcamlTargetFunctionFact {
 		return parameters.copy();
 
 	public static function admitsValue(typeDisplay:String):Bool
-		return typeDisplay == "Int" || typeDisplay == "Bool" || typeDisplay == "String";
+		return typeDisplay == "Int" || typeDisplay == "Bool" || typeDisplay == "String" || typeDisplay == "Null<Int>";
 
 	public static function admitsResult(typeDisplay:String):Bool
 		return typeDisplay == "Void" || admitsValue(typeDisplay);

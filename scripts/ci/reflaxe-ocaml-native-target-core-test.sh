@@ -89,7 +89,7 @@ const manifest = readJson(nativeOutput, 'ocaml_shared_target_manifest.json')
 if (report.schemaVersion !== 1 || report.route !== 'native-target-core-runtime') {
 	throw new Error('native target-core report has the wrong schema or route')
 }
-if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v2') {
+if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v3') {
 	throw new Error('native target-core report has the wrong standalone core identity')
 }
 for (const key of ['normalizedInputIdentity', 'loweredPlanIdentity', 'runtimeReasonIdentity', 'outputManifestIdentity']) {

@@ -7,7 +7,7 @@ import reflaxe.ocaml.target.OcamlTargetDeclarationRequest.OcamlTargetClassFact;
 	The first complete, host-neutral program input for the standalone OCaml target.
 
 	This revision deliberately accepts one primary class containing only static,
-	initialized final fields and static functions with exact primitive values. Both host
+	initialized final fields and static functions with primitive or nullable Int values. Both host
 	adapters may carry larger compiler programs into this constructor, but the
 	semantic identity contains only the selected main class and its exact bodies.
 **/

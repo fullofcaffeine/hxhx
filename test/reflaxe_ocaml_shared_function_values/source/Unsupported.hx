@@ -9,7 +9,7 @@ class Unsupported {
 	public static function generic<T>(value:T):T
 		return value;
 
-	public static function nullable(value:Null<Int>):Void {}
+	public static function nullable(value:Null<Bool>):Void {}
 
 	public static function floating(value:Float):Void {}
 

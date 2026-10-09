@@ -52,7 +52,8 @@ class HxhxOcamlTargetFunctionAdapter {
 				HxhxOcamlTargetBindingAdapter.fromBinding(identity, nativeParameters[index],
 					reflaxe.ocaml.target.OcamlTargetExpressionPath.indexed("root", "parameter", index))
 		];
-		final body = HxhxOcamlTargetExpressionAdapter.fromFunctionBody(identity, fn.getStableIdentity(), fn.getBody(), owner, nativeParameters, parameters);
+		final body = HxhxOcamlTargetExpressionAdapter.fromFunctionBody(identity, fn.getStableIdentity(), fn.getBody(), owner, nativeParameters, parameters,
+			returnType);
 		if (body == null || !body.admitsFunctionResult(returnType))
 			return null;
 		return new OcamlTargetFunctionFact(targetSignature, body, parameters);

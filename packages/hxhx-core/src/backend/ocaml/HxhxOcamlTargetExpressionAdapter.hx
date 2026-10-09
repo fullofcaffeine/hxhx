@@ -11,12 +11,14 @@ class HxhxOcamlTargetExpressionAdapter {
 	final ownerIdentity:String;
 	final nativeFunctionIdentity:Null<String>;
 	final sourceOwner:Null<TyNominalInfo>;
+	final functionResultType:Null<String>;
 	final bindingsByNativeKey:Map<String, OcamlTargetBindingFact>;
 
-	function new(ownerIdentity:String, ?nativeFunctionIdentity:String, ?sourceOwner:TyNominalInfo) {
+	function new(ownerIdentity:String, ?nativeFunctionIdentity:String, ?sourceOwner:TyNominalInfo, ?functionResultType:String) {
 		this.ownerIdentity = requiredOwner(ownerIdentity);
 		this.nativeFunctionIdentity = nativeFunctionIdentity;
 		this.sourceOwner = sourceOwner;
+		this.functionResultType = functionResultType;
 		bindingsByNativeKey = new Map<String, OcamlTargetBindingFact>();
 	}
 
@@ -37,10 +39,10 @@ class HxhxOcamlTargetExpressionAdapter {
 		and owns lowering. Unsupported statements reject the complete body.
 	**/
 	public static function fromFunctionBody(ownerIdentity:String, nativeFunctionIdentity:String, body:TypedFunctionBody, sourceOwner:TyNominalInfo,
-			nativeParameters:Array<TyLocalBinding>, parameters:Array<OcamlTargetBindingFact>):Null<OcamlTargetStatementFact> {
+			nativeParameters:Array<TyLocalBinding>, parameters:Array<OcamlTargetBindingFact>, resultType:String):Null<OcamlTargetStatementFact> {
 		if (body == null)
 			throw "native OCaml expression adapter requires a typed function body";
-		final adapter = new HxhxOcamlTargetExpressionAdapter(ownerIdentity, requiredOwner(nativeFunctionIdentity), sourceOwner);
+		final adapter = new HxhxOcamlTargetExpressionAdapter(ownerIdentity, requiredOwner(nativeFunctionIdentity), sourceOwner, resultType);
 		if (nativeParameters.length != parameters.length)
 			throw "native OCaml function parameter inventory mismatch";
 		for (index in 0...nativeParameters.length) {
@@ -74,7 +76,7 @@ class HxhxOcamlTargetExpressionAdapter {
 					expressions.length == 0 ? OcamlTargetStatementFact.returnValue(childPath, null) : null;
 				case Return:
 					if (expressions.length == 1) {
-						final copied = copyExpression(expressions[0], OcamlTargetExpressionPath.child(childPath, "return-value"));
+						final copied = copyExpression(expressions[0], OcamlTargetExpressionPath.child(childPath, "return-value"), functionResultType);
 						copied == null ? null : OcamlTargetStatementFact.returnValue(childPath, copied);
 					} else null;
 				case Block:
@@ -125,7 +127,7 @@ class HxhxOcamlTargetExpressionAdapter {
 			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
 			final child = switch (current.getTag()) {
 				case Return if (index == statements.length - 1 && expressions.length == 1):
-					copyExpression(expressions[0], childPath);
+					copyExpression(expressions[0], childPath, functionResultType);
 				case Expression if (expressions.length == 1):
 					copyExpression(expressions[0], childPath);
 				case Var: final bindings = current.getLocalBindings(); bindings.length == 1 && expressions.length == 1 ? copyDeclaration(bindings[0],
@@ -139,20 +141,48 @@ class HxhxOcamlTargetExpressionAdapter {
 		return OcamlTargetExpressionFact.block(path, children[children.length - 1].semanticTypeDisplay, children);
 	}
 
-	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyExpression(expression:TypedExpr, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {
+		final actualType = expression.getType().getCanonicalDisplay();
+		if (expression.getTag() == NullValue && (expectedType == "Null<Int>" || (expectedType == null && actualType == "Null<Int>")))
+			return OcamlTargetExpressionFact.nullableIntNull(path);
+		final contextual = switch (expression.getTag()) {
+			case Ternary | SourceIf | Block | SourceGroup | Parenthesized: true;
+			case _: false;
+		};
+		if (expectedType != null && actualType != expectedType && !contextual) {
+			final boxed = actualType == "Int" && expectedType == "Null<Int>";
+			final unwrapped = actualType == "Null<Int>" && expectedType == "Int";
+			if (!boxed && !unwrapped)
+				return null;
+			final operand = copyExpression(expression, OcamlTargetExpressionPath.child(path, "operand"));
+			return operand == null ? null : boxed ? OcamlTargetExpressionFact.boxNullableInt(path,
+				operand) : OcamlTargetExpressionFact.unwrapNullableInt(path, operand);
+		}
 		final literal = HxhxOcamlTargetLiteralAdapter.fromExpression(expression);
 		if (literal != null)
 			return isDirectLiteral(literal) ? OcamlTargetExpressionFact.literalExpression(path, literal) : null;
 		return switch (expression.getTag()) {
+			case Binary:
+				final children = expression.getExpressions();
+				final operators = expression.getTexts();
+				if (children.length != 2 || operators.length != 1 || operators[0] != "==") null; else {
+					final operand = isNullConstant(children[1]) ? children[0] : isNullConstant(children[0]) ? children[1] : null;
+					if (operand == null || operand.getType().getCanonicalDisplay() != "Null<Int>")
+						null;
+					else {
+						final copied = copyExpression(operand, OcamlTargetExpressionPath.child(path, "operand"), "Null<Int>");
+						copied == null ? null : OcamlTargetExpressionFact.testNullableIntNull(path, copied);
+					}
+				}
 			case Ternary | SourceIf:
 				final children = expression.getExpressions();
 				if (children.length != 3) {
 					null;
 				} else {
+					final resultType = expectedType == null ? actualType : expectedType;
 					final condition = copyExpression(children[0], OcamlTargetExpressionPath.child(path, "condition"));
-					final whenTrue = copyBranch(children[1], OcamlTargetExpressionPath.child(path, "then"));
-					final whenFalse = copyBranch(children[2], OcamlTargetExpressionPath.child(path, "else"));
-					final resultType = expression.getType().getCanonicalDisplay();
+					final whenTrue = copyBranch(children[1], OcamlTargetExpressionPath.child(path, "then"), resultType);
+					final whenFalse = copyBranch(children[2], OcamlTargetExpressionPath.child(path, "else"), resultType);
 					condition == null
 					|| whenTrue == null
 					|| whenFalse == null
@@ -164,7 +194,7 @@ class HxhxOcamlTargetExpressionAdapter {
 			case Parenthesized: // Grouping adds no binding or runtime operation to the shared target facts.
 				final children = expression.getExpressions(); children.length == 1 && children[0].getType()
 					.getSemanticKey() == expression.getType()
-					.getSemanticKey() ? copyExpression(children[0], path) : null;
+					.getSemanticKey() ? copyExpression(children[0], path, expectedType) : null;
 			case Call:
 				copyCall(expression, path);
 			case LocalRead:
@@ -187,7 +217,7 @@ class HxhxOcamlTargetExpressionAdapter {
 			case VariableDeclarations:
 				copyBlock(expression, expression.getExpressions(), path);
 			case Block | SourceGroup:
-				copyNativeBlock(expression, path);
+				copyNativeBlock(expression, path, expectedType);
 			case _:
 				null;
 		};
@@ -198,7 +228,7 @@ class HxhxOcamlTargetExpressionAdapter {
 		Only declaration lists expand within their existing scope; the target facts
 		still validate each local read against its visible declaration.
 	**/
-	function copyNativeBlock(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyNativeBlock(expression:TypedExpr, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {
 		final flattened = new Array<TypedExpr>();
 		for (child in expression.getExpressions()) {
 			if (child.getTag() == VariableDeclarations) {
@@ -208,18 +238,18 @@ class HxhxOcamlTargetExpressionAdapter {
 				flattened.push(child);
 			}
 		}
-		return copyBlock(expression, flattened, path);
+		return copyBlock(expression, flattened, path, expectedType);
 	}
 
 	/** Normalize bare alternatives to blocks without flattening authored local scopes. **/
-	function copyBranch(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyBranch(expression:TypedExpr, path:String, expectedType:String):Null<OcamlTargetExpressionFact> {
 		return switch (expression.getTag()) {
 			case Parenthesized: final children = expression.getExpressions(); children.length == 1 && children[0].getType()
 					.getSemanticKey() == expression.getType()
-					.getSemanticKey() ? copyBranch(children[0], path) : null;
-			case Block | SourceGroup: copyNativeBlock(expression, path);
+					.getSemanticKey() ? copyBranch(children[0], path, expectedType) : null;
+			case Block | SourceGroup: copyNativeBlock(expression, path, expectedType);
 			case _:
-				final child = copyExpression(expression, OcamlTargetExpressionPath.indexed(path, "block-item", 0));
+				final child = copyExpression(expression, OcamlTargetExpressionPath.indexed(path, "block-item", 0), expectedType);
 				child == null ? null : OcamlTargetExpressionFact.block(path, child.semanticTypeDisplay, [child]);
 		};
 	}
@@ -258,7 +288,7 @@ class HxhxOcamlTargetExpressionAdapter {
 				|| signature.getArgOptional()[index]
 				|| signature.getArgRest()[index])
 				return null;
-			final argument = copyExpression(children[index + 1], OcamlTargetExpressionPath.indexed(path, "argument", index));
+			final argument = copyExpression(children[index + 1], OcamlTargetExpressionPath.indexed(path, "argument", index), argumentTypes[index]);
 			if (argument == null || argument.semanticTypeDisplay != argumentTypes[index])
 				return null;
 			arguments.push(argument);
@@ -272,15 +302,16 @@ class HxhxOcamlTargetExpressionAdapter {
 		}), arguments);
 	}
 
-	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String):Null<OcamlTargetExpressionFact> {
+	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {
+		final blockType = expectedType == null ? expression.getType().getCanonicalDisplay() : expectedType;
 		final children = new Array<OcamlTargetExpressionFact>();
 		for (index in 0...expressions.length) {
-			final child = copyExpression(expressions[index], OcamlTargetExpressionPath.indexed(path, "block-item", index));
+			final child = copyExpression(expressions[index],
+				OcamlTargetExpressionPath.indexed(path, "block-item", index), index == expressions.length - 1 && blockType != "Void" ? blockType : null);
 			if (child == null)
 				return null;
 			children.push(child);
 		}
-		final blockType = expression.getType().getCanonicalDisplay();
 		final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
 		return blockType == resultType ? OcamlTargetExpressionFact.block(path, blockType, children) : null;
 	}
@@ -306,7 +337,7 @@ class HxhxOcamlTargetExpressionAdapter {
 		if (nativeBinding.getKind() != Variable)
 			return null;
 		bindingsByNativeKey.set(identity.getCanonicalKey(), binding);
-		final initializer = copyExpression(initializerExpression, OcamlTargetExpressionPath.child(path, "initializer"));
+		final initializer = copyExpression(initializerExpression, OcamlTargetExpressionPath.child(path, "initializer"), binding.semanticTypeDisplay);
 		return initializer == null
 			|| initializer.semanticTypeDisplay != binding.semanticTypeDisplay ? null : OcamlTargetExpressionFact.variableDeclaration(path, binding,
 				initializer);
@@ -326,5 +357,12 @@ class HxhxOcamlTargetExpressionAdapter {
 		if (normalized.length == 0)
 			throw "native OCaml expression adapter requires a target owner identity";
 		return normalized;
+	}
+
+	static function isNullConstant(expression:TypedExpr):Bool {
+		if (expression.getTag() == NullValue)
+			return true;
+		final children = expression.getExpressions();
+		return expression.getTag() == Parenthesized && children.length == 1 && isNullConstant(children[0]);
 	}
 }

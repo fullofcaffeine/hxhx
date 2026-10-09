@@ -5,6 +5,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
 
 /**
 	Lowers the first recursive host-neutral expression family into OCaml syntax.
@@ -16,9 +17,11 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 class OcamlTargetExpressionLowerer {
 	final localNames:Map<String, String>;
 	final occupied:Map<String, Bool>;
+	final runtimePlan:OcamlTargetRuntimePlan;
 
 	/** Reserve called functions before locals, so keyword escaping cannot redirect a call. **/
-	function new(expressions:Array<OcamlTargetExpressionFact>, parameters:Array<OcamlTargetBindingFact>) {
+	function new(expressions:Array<OcamlTargetExpressionFact>, parameters:Array<OcamlTargetBindingFact>, runtimePlan:OcamlTargetRuntimePlan) {
+		this.runtimePlan = runtimePlan;
 		localNames = [];
 		occupied = [];
 		for (expression in expressions)
@@ -68,23 +71,42 @@ class OcamlTargetExpressionLowerer {
 	public static function build(expression:OcamlTargetExpressionFact):OcamlExpr {
 		if (expression == null)
 			throw "OCaml target expression lowering requires a normalized expression";
+		return lower(expression, expression.getCanonicalIdentity(), "portable").expression;
+	}
+
+	/** Preserve field/expression runtime requirements for whole-program publication. **/
+	public static function lower(expression:OcamlTargetExpressionFact, ownerIdentity:String, profile:String,
+			?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetFunctionLowerer.OcamlTargetLoweredFunction {
+		if (expression == null)
+			throw "OCaml target expression lowering requires a normalized expression";
 		expression.validateClosedBindings();
-		return new OcamlTargetExpressionLowerer([expression], []).buildNode(expression);
+		final plan = new OcamlTargetRuntimePlan(ownerIdentity, expression.getCanonicalIdentity(), [expression], profile, finalOutput);
+		final result = new OcamlTargetExpressionLowerer([expression], [], plan).buildNode(expression);
+		plan.reconcile(result);
+		return {expression: result, runtimeRequirements: plan.copyRequirements()};
 	}
 
 	/** Allocate parameters and locals together, then lower the validated terminal-return body. **/
-	public static function buildFunction(fact:OcamlTargetFunctionFact):OcamlExpr {
+	public static function buildFunction(fact:OcamlTargetFunctionFact):OcamlExpr
+		return lowerFunction(fact, "portable").expression;
+
+	/** Return both checked syntax and the runtime requirements its caller must package. **/
+	public static function lowerFunction(fact:OcamlTargetFunctionFact, profile:String,
+			?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlTargetFunctionLowerer.OcamlTargetLoweredFunction {
 		final expressions = new Array<OcamlTargetExpressionFact>();
 		collectExpressions(fact.body, expressions);
 		final parameters = fact.copyParameters();
-		final builder = new OcamlTargetExpressionLowerer(expressions, parameters);
+		final plan = new OcamlTargetRuntimePlan(fact.getTargetIdentity(), fact.getCanonicalIdentity(), expressions, profile, finalOutput);
+		final builder = new OcamlTargetExpressionLowerer(expressions, parameters, plan);
 		final patterns = [
 			for (parameter in parameters)
 				OcamlPat.PAnnot(OcamlPat.PVar(builder.bindingName(parameter)), primitiveType(parameter.semanticTypeDisplay))
 		];
 		if (patterns.length == 0)
 			patterns.push(OcamlPat.PConst(OcamlConst.CUnit));
-		return OcamlExpr.EFun(patterns, OcamlExpr.EAnnot(builder.buildStatement(fact.body), primitiveType(fact.returnTypeDisplay)));
+		final result = OcamlExpr.EFun(patterns, OcamlExpr.EAnnot(builder.buildStatement(fact.body), primitiveType(fact.returnTypeDisplay)));
+		plan.reconcile(result);
+		return {expression: result, runtimeRequirements: plan.copyRequirements()};
 	}
 
 	static function collectExpressions(statement:OcamlTargetStatementFact, output:Array<OcamlTargetExpressionFact>):Void {
@@ -100,6 +122,7 @@ class OcamlTargetExpressionLowerer {
 			case "Bool": "bool";
 			case "String": "string";
 			case "Void": "unit";
+			case "Null<Int>": "Obj.t";
 			case _: throw "OCaml target function has an unsupported represented type";
 		});
 	}
@@ -132,6 +155,15 @@ class OcamlTargetExpressionLowerer {
 
 	function buildNode(expression:OcamlTargetExpressionFact):OcamlExpr {
 		return switch (expression.kind) {
+			case NullableIntNullExpression:
+				OcamlExpr.ERuntimeIdent(runtimePlan.reference(expression, "HxRuntime.hx_null"));
+			case BoxNullableIntExpression:
+				// The validated operand is a concrete Int; Obj.repr preserves zero as a value.
+				OcamlExpr.EApp(OcamlExpr.EIdent("Obj.repr"), [buildNode(onlyChild(expression))]);
+			case UnwrapNullableIntExpression:
+				OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimePlan.reference(expression, "HxRuntime.nullable_int_unwrap")), [buildNode(onlyChild(expression))]);
+			case TestNullableIntNullExpression:
+				OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(runtimePlan.reference(expression, "HxRuntime.is_null")), [buildNode(onlyChild(expression))]);
 			case ConditionalExpression:
 				final children = expression.copyChildren();
 				OcamlExpr.EIf(buildNode(children[0]), buildNode(children[1]), buildNode(children[2]));
@@ -178,7 +210,8 @@ class OcamlTargetExpressionLowerer {
 					final initializer = onlyChild(child);
 					result = OcamlExpr.ELet(bindingName(binding), buildNode(initializer), result, false);
 					hasResult = true;
-				case LiteralExpression | LocalReadExpression | BlockExpression | StaticCallExpression | ConditionalExpression:
+				case LiteralExpression | LocalReadExpression | BlockExpression | StaticCallExpression | ConditionalExpression | NullableIntNullExpression |
+					BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression:
 					final built = buildNode(child);
 					if (!hasResult) {
 						result = built;

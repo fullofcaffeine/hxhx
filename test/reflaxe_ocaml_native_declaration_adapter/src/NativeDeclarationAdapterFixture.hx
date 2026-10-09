@@ -67,6 +67,7 @@ class NativeDeclarationAdapterFixture {
 		assertRecursiveExpression(binding);
 		assertAuthoredGroupScope(binding);
 		assertRecursiveFunction();
+		assertNullableInitializer();
 		assertProgramCore(nativeInt);
 		assertAuthoredFieldInitializer();
 		assertUnsupportedExpressionFallsBack();
@@ -225,16 +226,30 @@ class NativeDeclarationAdapterFixture {
 	static function assertUnsupportedExpressionFallsBack():Void {
 		if (!BindingIdentityMacro.stockUnsupportedExpression())
 			throw "stock Haxe adapter admitted an unsupported expression carrier";
-		final nullableInt = TyType.fromHintText("Null<Int>");
+		final unsupportedType = TyType.fromHintText("Float");
 		final bindingId = TyLocalId.forSourceDeclaration("unit.BindingFixture.unsupported", 0, Variable, "value");
-		final binding = new TyLocalBinding(bindingId, "value", nullableInt, Variable);
+		final binding = new TyLocalBinding(bindingId, "value", unsupportedType, Variable);
+		final initializer = TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown());
+		final declaration = TypedExpr.variableDeclaration("value", "Float", initializer, false, false, unsupportedType, HxPos.unknown(), binding);
+		final declarations = TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), HxPos.unknown());
+		final read = TypedExpr.localRead("value", unsupportedType, HxPos.unknown(), binding);
+		final body = TypedExpr.block([declarations, read], unsupportedType, HxPos.unknown());
+		if (HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.unsupported", body) != null)
+			throw "native hxhx adapter admitted an unsupported local-initializer conversion";
+	}
+
+	/** Preserve the former nullable negative case as a positive cross-host identity contract. **/
+	static function assertNullableInitializer():Void {
+		final nullableInt = TyType.fromHintText("Null<Int>");
+		final owner = "unit.BindingFixture.nullable";
+		final binding = new TyLocalBinding(TyLocalId.forSourceDeclaration(owner, 0, Variable, "value"), "value", nullableInt, Variable);
 		final initializer = TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown());
 		final declaration = TypedExpr.variableDeclaration("value", "Null<Int>", initializer, false, false, nullableInt, HxPos.unknown(), binding);
 		final declarations = TypedExpr.variableDeclarations([declaration], TyType.fromHintText("Void"), HxPos.unknown());
 		final read = TypedExpr.localRead("value", nullableInt, HxPos.unknown(), binding);
-		final body = TypedExpr.block([declarations, read], nullableInt, HxPos.unknown());
-		if (HxhxOcamlTargetExpressionAdapter.fromExpression("unit.BindingFixture.unsupported", body) != null)
-			throw "native hxhx adapter admitted an unsupported local-initializer conversion";
+		final fact = HxhxOcamlTargetExpressionAdapter.fromExpression(owner, TypedExpr.block([declarations, read], nullableInt, HxPos.unknown()));
+		if (fact == null || fact.getCanonicalIdentity() != BindingIdentityMacro.stockNullableExpression())
+			throw "nullable local initialization differs across compiler hosts";
 	}
 
 	static function assertRecursiveExpression(binding:TyLocalBinding):Void {

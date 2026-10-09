@@ -75,7 +75,7 @@ class HaxeOcamlTargetFunctionAdapter {
 					OcamlTargetExpressionPath.indexed(OcamlTargetExpressionPath.ROOT, "parameter", index), Parameter, data.args[index].tvar)
 		];
 		final targetBody = HaxeOcamlTargetExpressionAdapter.fromFunctionBody(targetIdentity, body, data.classType,
-			[for (argument in data.args) argument.tvar], parameters);
+			[for (argument in data.args) argument.tvar], parameters, returnType);
 		if (targetBody == null || !targetBody.admitsFunctionResult(returnType))
 			return null;
 		return new OcamlTargetFunctionFact(signature, targetBody, parameters);

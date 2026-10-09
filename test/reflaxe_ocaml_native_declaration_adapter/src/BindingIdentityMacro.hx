@@ -34,6 +34,17 @@ class BindingIdentityMacro {
 		return macro $v{fact == null};
 	}
 
+	/** Nullable Int initialization is now an explicit shared conversion. **/
+	public static macro function stockNullableExpression():Expr {
+		final fact = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("unit.BindingFixture.nullable", Context.typeExpr(macro {
+			var value:Null<Int> = 7;
+			value;
+		}));
+		if (fact == null)
+			Context.error("stock Haxe adapter rejected nullable Int initialization", Context.currentPos());
+		return macro $v{fact.getCanonicalIdentity()};
+	}
+
 	/** Parentheses must not change the target's declaration paths or selected storage. */
 	public static macro function stockGroupedExpression():Expr {
 		final fact = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("unit.BindingFixture.run", Context.typeExpr(macro({

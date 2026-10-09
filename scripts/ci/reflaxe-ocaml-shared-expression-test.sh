@@ -54,7 +54,7 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 1 || report.route !== 'stock-haxe') {
 	throw new Error('shared target report did not record the stock Haxe route')
 }
-if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v2') {
+if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v3') {
 	throw new Error('shared target report did not execute the standalone target core')
 }
 for (const key of ['normalizedInputIdentity', 'loweredPlanIdentity', 'runtimeReasonIdentity', 'outputManifestIdentity']) {

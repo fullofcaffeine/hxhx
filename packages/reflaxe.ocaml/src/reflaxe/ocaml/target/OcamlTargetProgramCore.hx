@@ -7,6 +7,8 @@ import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -53,13 +55,15 @@ class OcamlTargetProgramPlan {
 	public final outputManifestIdentity:String;
 
 	final files:Array<OcamlTargetProgramFile>;
+	final runtimeReasons:Array<String>;
 	final normalizedClassIdentityFacts:Array<Null<String>>;
 	final normalizedFieldIdentities:Array<String>;
 	final normalizedFunctionIdentities:Array<String>;
 
 	public function new(hostProgramRevision:String, mainModuleId:String, normalizedInputIdentity:String, normalizedClassIdentity:String,
 			normalizedClassIdentityFacts:Array<Null<String>>, normalizedFieldIdentities:Array<String>, normalizedFunctionIdentities:Array<String>,
-			loweredPlanIdentity:String, runtimeReasonIdentity:String, outputManifestIdentity:String, files:Array<OcamlTargetProgramFile>) {
+			loweredPlanIdentity:String, runtimeReasonIdentity:String, outputManifestIdentity:String, files:Array<OcamlTargetProgramFile>,
+			runtimeReasons:Array<String>) {
 		this.hostProgramRevision = hostProgramRevision;
 		this.mainModuleId = mainModuleId;
 		this.normalizedInputIdentity = normalizedInputIdentity;
@@ -71,6 +75,7 @@ class OcamlTargetProgramPlan {
 		this.runtimeReasonIdentity = runtimeReasonIdentity;
 		this.outputManifestIdentity = outputManifestIdentity;
 		this.files = files.copy();
+		this.runtimeReasons = runtimeReasons.copy();
 	}
 
 	public function copyFiles():Array<OcamlTargetProgramFile>
@@ -97,7 +102,7 @@ class OcamlTargetProgramPlan {
 			// Admitted calls remain inside the selected class, so no selected
 			// expression can depend on another source module.
 			dependencyModuleIds: [],
-			runtimeReasons: [],
+			runtimeReasons: runtimeReasons.copy(),
 			files: [
 				for (file in files)
 					{
@@ -122,33 +127,44 @@ class OcamlTargetProgramPlan {
 	fail before any file is written.
 **/
 class OcamlTargetProgramCore {
-	public static inline final CORE_ID = "reflaxe.ocaml.target-program-core.v2";
+	public static inline final CORE_ID = "reflaxe.ocaml.target-program-core.v3";
 	public static inline final REPORT_FILE = "ocaml_shared_target_report.json";
 	public static inline final MANIFEST_FILE = "ocaml_shared_target_manifest.json";
 	public static inline final ENTRY_NAME = "reflaxe_ocaml_entry";
 
-	/** Revision 1 is a runtime-free portable tracer and must not imply metal support. **/
+	/** The admitted program family currently has portable-profile execution evidence. **/
 	public static function requireProfile(profile:String):Void {
 		if (profile != "portable")
-			throw 'OCaml target program core revision 1 does not support profile "$profile"';
+			throw 'OCaml target program core does not support profile "$profile"';
 	}
 
-	public static function lower(request:OcamlTargetProgramRequest):OcamlTargetProgramPlan {
+	public static function lower(request:OcamlTargetProgramRequest, ?runtimeSources:Void->OcamlTargetRuntimeSources):OcamlTargetProgramPlan {
 		if (request == null)
 			throw "OCaml target program core requires a normalized request";
 		final printer = new OcamlASTPrinter();
+		final finalUses = new OcamlFinalRuntimeUseAuthority();
+		finalUses.beginProgram(request.hostProgramRevision, "portable");
+		final requirements = new Array<OcamlRuntimeRequirement>();
 		final bindings = new Array<OcamlLetBinding>();
-		for (field in request.copyFieldInitializers())
+		for (field in request.copyFieldInitializers()) {
+			final lowered = OcamlTargetExpressionLowerer.lower(field.initializer, field.getTargetIdentity(), "portable", finalUses);
+			for (requirement in lowered.runtimeRequirements)
+				requirements.push(requirement);
 			bindings.push({
 				name: targetValueName(field.moduleId, field.sourceTypeName, field.sourceFieldName),
-				expr: OcamlTargetExpressionLowerer.build(field.initializer)
+				expr: lowered.expression
 			});
+		}
 		final functionBindings = new Array<OcamlLetBinding>();
-		for (fn in request.copyFunctions())
+		for (fn in request.copyFunctions()) {
+			final lowered = OcamlTargetFunctionLowerer.lower(fn, "portable", finalUses);
+			for (requirement in lowered.runtimeRequirements)
+				requirements.push(requirement);
 			functionBindings.push({
 				name: targetValueName(fn.moduleId, fn.sourceTypeName, fn.sourceFunctionName),
-				expr: OcamlTargetFunctionLowerer.build(fn)
+				expr: lowered.expression
 			});
+		}
 		bindings.sort((left, right) -> compareText(left.name, right.name));
 		functionBindings.sort((left, right) -> compareText(left.name, right.name));
 
@@ -163,6 +179,21 @@ class OcamlTargetProgramCore {
 			if (fn.body.copyStaticCalls().length != 0)
 				hasCalls = true;
 		items.push(OcamlModuleItem.ILet(functionBindings, hasCalls));
+		finalUses.observeModuleItems(items, modulePath);
+		finalUses.finishProgram();
+		requirements.sort((left, right) -> compareText(left.id, right.id));
+		final runtimeRoots = new Array<String>();
+		for (requirement in requirements)
+			for (root in requirement.rootModules)
+				if (!runtimeRoots.contains(root))
+					runtimeRoots.push(root);
+		final runtimeFiles = if (runtimeRoots.length == 0) {
+			new Array<OcamlTargetProgramFile>();
+		} else {
+			if (runtimeSources == null)
+				throw "OCaml target program requires a checked runtime source provider.";
+			runtimeSources().select(runtimeRoots, "portable");
+		};
 		final moduleContents = printer.printModule(items) + "\n";
 		final entryContents = "let () = ignore (" + moduleName(request.mainModuleId) + ".main ())\n";
 		final duneProject = [
@@ -176,6 +207,7 @@ class OcamlTargetProgramCore {
 			"(executable",
 			" (name " + ENTRY_NAME + ")",
 			" (modules :standard)",
+			runtimeFiles.length == 0 ? "" : " (libraries hx_runtime)",
 			// Unused Haxe locals are valid. Keep OCaml warning 26 visible without
 			// promoting it to a build error; other diagnostics retain Dune's policy.
 			" (flags (:standard -warn-error -26))",
@@ -189,11 +221,43 @@ class OcamlTargetProgramCore {
 			file("dune-project", "dune-project", duneProject),
 			file("dune", "dune-stanza", dune)
 		];
+		for (runtimeFile in runtimeFiles)
+			files.push(runtimeFile);
 		files.sort((left, right) -> compareText(left.path, right.path));
 
 		final loweredParts:Array<Null<String>> = [CORE_ID, request.getCanonicalIdentity(), modulePath, moduleContents];
 		final loweredPlanIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode(loweredParts));
-		final runtimeReasonIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode([CORE_ID, "runtime-reasons-v1", "none"]));
+		final runtimeReasons = [
+			for (requirement in requirements)
+				requirement.sourceId + ": " + requirement.explanation
+		];
+		final runtimeParts:Array<Null<String>> = [CORE_ID, "runtime-reasons-v2", Std.string(runtimeReasons.length)];
+		for (requirement in requirements) {
+			// Explicit field order keeps identity equal across macro, eval, and native hosts.
+			for (part in [
+				requirement.id,
+				requirement.sourceKind,
+				requirement.sourceId,
+				requirement.source.file,
+				Std.string(requirement.source.min),
+				Std.string(requirement.source.max),
+				requirement.semanticCapability,
+				requirement.cause,
+				requirement.decisionId,
+				requirement.subject.kind,
+				requirement.subject.id,
+				requirement.implementationFeature,
+				requirement.explanation,
+				Std.string(requirement.rootModules.length)
+			])
+				runtimeParts.push(part);
+			for (root in requirement.rootModules)
+				runtimeParts.push(root);
+			runtimeParts.push(Std.string(requirement.profileEligibility.length));
+			for (profile in requirement.profileEligibility)
+				runtimeParts.push(profile);
+		}
+		final runtimeReasonIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode(runtimeParts));
 		final manifestParts:Array<Null<String>> = [CORE_ID, "output-manifest-v1", Std.string(files.length)];
 		for (output in files) {
 			manifestParts.push(output.path);
@@ -203,7 +267,7 @@ class OcamlTargetProgramCore {
 		final outputManifestIdentity = Sha256.encode(OcamlTargetDeclarationCodec.encode(manifestParts));
 		return new OcamlTargetProgramPlan(request.hostProgramRevision, request.mainModuleId, request.getCanonicalIdentity(), request.getMainClassIdentity(),
 			request.copyMainClassIdentityFacts(), request.copyFieldIdentities(), request.copyFunctionIdentities(), loweredPlanIdentity, runtimeReasonIdentity,
-			outputManifestIdentity, files);
+			outputManifestIdentity, files, runtimeReasons);
 	}
 
 	static function file(path:String, kind:String, contents:String):OcamlTargetProgramFile
@@ -211,7 +275,7 @@ class OcamlTargetProgramCore {
 			path: path,
 			kind: kind,
 			contents: contents,
-			sha256: Sha256.encode(contents)
+			sha256: Sha256.make(haxe.io.Bytes.ofString(contents)).toHex()
 		};
 
 	/** Apply the same OCaml value-name contract regardless of compiler host. **/
@@ -243,8 +307,10 @@ class OcamlTargetProgramPublisher {
 		final output = Path.normalize(FileSystem.absolutePath(required(outputDirectory, "output directory")));
 		ensureDirectory(output);
 		assertOutputOwned(output, plan);
-		for (file in plan.copyFiles())
+		for (file in plan.copyFiles()) {
+			ensureDirectory(Path.directory(Path.join([output, file.path])));
 			File.saveContent(Path.join([output, file.path]), file.contents);
+		}
 		File.saveContent(Path.join([output, OcamlTargetProgramCore.MANIFEST_FILE]), manifestJson(plan));
 		File.saveContent(Path.join([output, OcamlTargetProgramCore.REPORT_FILE]), plan.reportJson(route));
 		if (build) {
@@ -278,14 +344,26 @@ class OcamlTargetProgramPublisher {
 			allowed.set(file.path, true);
 		allowed.set(OcamlTargetProgramCore.MANIFEST_FILE, true);
 		allowed.set(OcamlTargetProgramCore.REPORT_FILE, true);
-		for (entry in FileSystem.readDirectory(output)) {
-			if (entry == "_build")
+		checkOwnedDirectory(output, "", allowed);
+	}
+
+	/** Inspect nested runtime paths before writing, preserving the existing no-unowned-output rule. **/
+	static function checkOwnedDirectory(output:String, relative:String, allowed:Map<String, Bool>):Void {
+		for (entry in FileSystem.readDirectory(Path.join([output, relative]))) {
+			if (relative.length == 0 && entry == "_build")
 				continue;
-			if (!allowed.exists(entry))
-				throw 'OCaml target program output contains unowned path "$entry"; choose an empty output directory';
-			final path = Path.join([output, entry]);
-			if (FileSystem.isDirectory(path))
-				throw 'OCaml target program output contains an unexpected directory "$entry"';
+			final child = relative.length == 0 ? entry : relative + "/" + entry;
+			if (FileSystem.isDirectory(Path.join([output, child]))) {
+				var expected = false;
+				for (path in allowed.keys())
+					if (StringTools.startsWith(path, child + "/"))
+						expected = true;
+				if (!expected)
+					throw 'OCaml target program output contains an unexpected directory "$child"';
+				checkOwnedDirectory(output, child, allowed);
+			} else if (!allowed.exists(child)) {
+				throw 'OCaml target program output contains unowned path "$child"; choose an empty output directory';
+			}
 		}
 	}
 

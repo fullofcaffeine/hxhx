@@ -11,11 +11,13 @@ class HaxeOcamlTargetExpressionAdapter {
 	#if (macro || reflaxe_runtime)
 	final ownerIdentity:String;
 	final sourceOwner:Null<ClassType>;
+	final functionResultType:Null<String>;
 	final bindingsByHostId:Map<Int, OcamlTargetBindingFact>;
 
-	function new(ownerIdentity:String, ?sourceOwner:ClassType) {
+	function new(ownerIdentity:String, ?sourceOwner:ClassType, ?functionResultType:String) {
 		this.ownerIdentity = requiredOwner(ownerIdentity);
 		this.sourceOwner = sourceOwner;
+		this.functionResultType = functionResultType;
 		bindingsByHostId = new Map<Int, OcamlTargetBindingFact>();
 	}
 
@@ -36,10 +38,10 @@ class HaxeOcamlTargetExpressionAdapter {
 
 	/** Copy function control without interpreting a host return node as a runtime value. **/
 	public static function fromFunctionBody(ownerIdentity:String, body:TypedExpr, sourceOwner:ClassType, locals:Array<TVar>,
-			parameters:Array<OcamlTargetBindingFact>):Null<OcamlTargetStatementFact> {
+			parameters:Array<OcamlTargetBindingFact>, resultType:String):Null<OcamlTargetStatementFact> {
 		if (locals.length != parameters.length)
 			throw "stock OCaml function parameter inventory mismatch";
-		final adapter = new HaxeOcamlTargetExpressionAdapter(ownerIdentity, sourceOwner);
+		final adapter = new HaxeOcamlTargetExpressionAdapter(ownerIdentity, sourceOwner, resultType);
 		for (index in 0...locals.length) {
 			if (adapter.bindingsByHostId.exists(locals[index].id))
 				throw "stock OCaml function repeats a parameter identity";
@@ -63,7 +65,7 @@ class HaxeOcamlTargetExpressionAdapter {
 				case TBlock(items): copyStatements(items, childPath);
 				case TReturn(null): OcamlTargetStatementFact.returnValue(childPath, null);
 				case TReturn(value):
-					final copied = copyExpression(value, OcamlTargetExpressionPath.child(childPath, "return-value"));
+					final copied = copyExpression(value, OcamlTargetExpressionPath.child(childPath, "return-value"), functionResultType);
 					copied == null ? null : OcamlTargetStatementFact.returnValue(childPath, copied);
 				case _:
 					final copied = copyExpression(statement, childPath);
@@ -105,7 +107,7 @@ class HaxeOcamlTargetExpressionAdapter {
 			final childPath = OcamlTargetExpressionPath.indexed(path, "block-item", index);
 			final child = switch (statements[index].expr) {
 				case TReturn(value) if (value != null && index == statements.length - 1):
-					copyExpression(value, childPath);
+					copyExpression(value, childPath, functionResultType);
 				case _ if (index != statements.length - 1):
 					copyExpression(statements[index], childPath);
 				case _: null;
@@ -117,13 +119,35 @@ class HaxeOcamlTargetExpressionAdapter {
 		return OcamlTargetExpressionFact.block(path, children[children.length - 1].semanticTypeDisplay, children);
 	}
 
-	function copyExpression(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyExpression(expression:TypedExpr, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {
+		final actualType = TypeTools.toString(expression.t);
+		final contextual = switch (expression.expr) {
+			case TIf(_, _, _) | TBlock(_) | TParenthesis(_): true;
+			case _: false;
+		};
+		if (expectedType != null && actualType != expectedType && !contextual) {
+			final boxed = actualType == "Int" && expectedType == "Null<Int>";
+			final unwrapped = actualType == "Null<Int>" && expectedType == "Int";
+			if (!boxed && !unwrapped)
+				return null;
+			final operand = copyExpression(expression, OcamlTargetExpressionPath.child(path, "operand"));
+			return operand == null ? null : boxed ? OcamlTargetExpressionFact.boxNullableInt(path,
+				operand) : OcamlTargetExpressionFact.unwrapNullableInt(path, operand);
+		}
 		return switch (expression.expr) {
+			case TConst(TNull) if (actualType == "Null<Int>" && (expectedType == null || expectedType == "Null<Int>")):
+				OcamlTargetExpressionFact.nullableIntNull(path);
+			case TBinop(OpEq, left, right):
+				final operand = isNullConstant(right) ? left : isNullConstant(left) ? right : null;
+				if (operand == null || TypeTools.toString(operand.t) != "Null<Int>") null; else {
+					final copied = copyExpression(operand, OcamlTargetExpressionPath.child(path, "operand"), "Null<Int>");
+					copied == null ? null : OcamlTargetExpressionFact.testNullableIntNull(path, copied);
+				}
 			case TIf(condition, whenTrue, whenFalse) if (whenFalse != null):
+				final resultType = expectedType == null ? actualType : expectedType;
 				final copiedCondition = copyExpression(condition, OcamlTargetExpressionPath.child(path, "condition"));
-				final copiedTrue = copyBranch(whenTrue, OcamlTargetExpressionPath.child(path, "then"));
-				final copiedFalse = copyBranch(whenFalse, OcamlTargetExpressionPath.child(path, "else"));
-				final resultType = TypeTools.toString(expression.t);
+				final copiedTrue = copyBranch(whenTrue, OcamlTargetExpressionPath.child(path, "then"), resultType);
+				final copiedFalse = copyBranch(whenFalse, OcamlTargetExpressionPath.child(path, "else"), resultType);
 				copiedCondition == null
 				|| copiedTrue == null
 				|| copiedFalse == null
@@ -133,7 +157,7 @@ class HaxeOcamlTargetExpressionAdapter {
 					copiedFalse);
 			case TParenthesis(inner):
 				// Match native grouping without inventing a target-owned binding path.
-				TypeTools.toString(inner.t) == TypeTools.toString(expression.t) ? copyExpression(inner, path) : null;
+				TypeTools.toString(inner.t) == TypeTools.toString(expression.t) ? copyExpression(inner, path, expectedType) : null;
 			case TCall(callee, arguments):
 				copyCall(callee, arguments, TypeTools.toString(expression.t), path);
 			case TConst(constant): final literal = HaxeOcamlTargetLiteralAdapter.fromConstant(constant,
@@ -147,27 +171,28 @@ class HaxeOcamlTargetExpressionAdapter {
 					final binding = HaxeOcamlTargetBindingAdapter.fromSourceLocalBeforePreprocessing(ownerIdentity,
 						OcamlTargetExpressionPath.child(path, "binding"), OcamlTargetBindingRole.Variable, local);
 					bindingsByHostId.set(local.id, binding);
-					final copiedInitializer = copyExpression(initializer, OcamlTargetExpressionPath.child(path, "initializer"));
+					final copiedInitializer = copyExpression(initializer, OcamlTargetExpressionPath.child(path, "initializer"), binding.semanticTypeDisplay);
 					copiedInitializer == null
 					|| copiedInitializer.semanticTypeDisplay != binding.semanticTypeDisplay ? null : OcamlTargetExpressionFact.variableDeclaration(path,
 						binding, copiedInitializer);
 				}
 			case TBlock(expressions):
-				copyBlock(expression, expressions, path);
+				copyBlock(expression, expressions, path, expectedType);
 			case _:
 				null;
 		};
 	}
 
-	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String):Null<OcamlTargetExpressionFact> {
+	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {
+		final blockType = expectedType == null ? TypeTools.toString(expression.t) : expectedType;
 		final children = new Array<OcamlTargetExpressionFact>();
 		for (index in 0...expressions.length) {
-			final child = copyExpression(expressions[index], OcamlTargetExpressionPath.indexed(path, "block-item", index));
+			final child = copyExpression(expressions[index],
+				OcamlTargetExpressionPath.indexed(path, "block-item", index), index == expressions.length - 1 && blockType != "Void" ? blockType : null);
 			if (child == null)
 				return null;
 			children.push(child);
 		}
-		final blockType = TypeTools.toString(expression.t);
 		final resultType = children.length == 0 ? "Void" : children[children.length - 1].semanticTypeDisplay;
 		return blockType == resultType ? OcamlTargetExpressionFact.block(path, blockType, children) : null;
 	}
@@ -176,13 +201,13 @@ class HaxeOcamlTargetExpressionAdapter {
 		Both hosts publish a lexical block for each alternative. Stock Haxe may
 		already wrap a single branch value; keep real declarations inside that scope.
 	**/
-	function copyBranch(expression:TypedExpr, path:String):Null<OcamlTargetExpressionFact> {
+	function copyBranch(expression:TypedExpr, path:String, expectedType:String):Null<OcamlTargetExpressionFact> {
 		return switch (expression.expr) {
 			case TParenthesis(inner) if (TypeTools.toString(inner.t) == TypeTools.toString(expression.t)):
-				copyBranch(inner, path);
-			case TBlock(items): copyBlock(expression, items, path);
+				copyBranch(inner, path, expectedType);
+			case TBlock(items): copyBlock(expression, items, path, expectedType);
 			case _:
-				final child = copyExpression(expression, OcamlTargetExpressionPath.indexed(path, "block-item", 0));
+				final child = copyExpression(expression, OcamlTargetExpressionPath.indexed(path, "block-item", 0), expectedType);
 				child == null ? null : OcamlTargetExpressionFact.block(path, child.semanticTypeDisplay, [child]);
 		};
 	}
@@ -214,7 +239,7 @@ class HaxeOcamlTargetExpressionAdapter {
 				} else {
 					final copied = new Array<OcamlTargetExpressionFact>();
 					for (index in 0...arguments.length) {
-						final argument = copyExpression(arguments[index], OcamlTargetExpressionPath.indexed(path, "argument", index));
+						final argument = copyExpression(arguments[index], OcamlTargetExpressionPath.indexed(path, "argument", index), argumentTypes[index]);
 						if (argument == null || argument.semanticTypeDisplay != argumentTypes[index])
 							return null;
 						copied.push(argument);
@@ -239,6 +264,13 @@ class HaxeOcamlTargetExpressionAdapter {
 			case NullValue | ThisValue | SuperValue: false;
 		};
 	}
+
+	static function isNullConstant(expression:TypedExpr):Bool
+		return switch (expression.expr) {
+			case TConst(TNull): true;
+			case TParenthesis(inner): isNullConstant(inner);
+			case _: false;
+		};
 
 	static function requiredOwner(value:String):String {
 		final normalized = value == null ? "" : StringTools.trim(value);

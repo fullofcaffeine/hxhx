@@ -550,6 +550,28 @@ class CompilationContext {
 		activeRuntimeRequirementProgramRevision = programRevision;
 	}
 
+	/** Lower shared syntax into this compile's final-use and runtime-packaging ledgers. **/
+	public function lowerSharedTargetFunction(fact:reflaxe.ocaml.target.OcamlTargetFunctionFact):reflaxe.ocaml.ast.OcamlExpr {
+		final profile = activeRuntimeRequirementProfile;
+		if (profile == null || activeRuntimeRequirementProgramRevision == null)
+			throw "Shared target function lowering requires an active runtime program.";
+		final lowered = reflaxe.ocaml.target.OcamlTargetFunctionLowerer.lower(fact, profile, finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			runtimeRequirements.record(requirement);
+		return lowered.expression;
+	}
+
+	/** Keep standalone shared expressions in the same runtime checks as function bodies. **/
+	public function lowerSharedTargetExpression(fact:reflaxe.ocaml.target.OcamlTargetExpressionFact, ownerId:String):reflaxe.ocaml.ast.OcamlExpr {
+		final profile = activeRuntimeRequirementProfile;
+		if (profile == null || activeRuntimeRequirementProgramRevision == null)
+			throw "Shared target expression lowering requires an active runtime program.";
+		final lowered = reflaxe.ocaml.target.OcamlTargetExpressionLowerer.lower(fact, ownerId, profile, finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			runtimeRequirements.record(requirement);
+		return lowered.expression;
+	}
+
 	/** Records the runtime capabilities already sealed into one place-lowering plan. **/
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
