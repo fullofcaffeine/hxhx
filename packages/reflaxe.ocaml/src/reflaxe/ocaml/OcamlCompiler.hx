@@ -45,6 +45,9 @@ import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.target.OcamlTargetConstructionLowerer.buildAllocation;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.declareInstanceRecord;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.initializeInstanceRecord;
+import reflaxe.ocaml.target.OcamlTargetClassMarker.lowerClassMarker;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.hasInheritedDeclarationRecord;
@@ -2250,11 +2253,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			if (interfaceMethodOrder.length > 0) {
 				final interfaceTypeFields:Array<OcamlTypeRecordField> = [];
-				interfaceTypeFields.push({
-					name: "__hx_type",
-					isMutable: false,
-					typ: OcamlTypeExpr.TIdent("Obj.t")
-				});
 				for (methodName in interfaceMethodOrder) {
 					final methodField = interfaceMethodByName.get(methodName);
 					if (methodField == null)
@@ -2266,11 +2264,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					});
 				}
 				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
-				registerTypeDeclaration(classType.module, classType.name, {
-					name: instanceTypeName,
-					params: [],
-					kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
-				});
+				registerTypeDeclaration(classType.module, classType.name, declareInstanceRecord({typeName: instanceTypeName, fields: interfaceTypeFields}));
 			}
 		}
 
@@ -2501,13 +2495,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			final typeFields:Array<OcamlTypeRecordField> = [];
 
-			// Runtime class identity (M10): all class instances carry their most-derived class value
-			// in the first record slot so `Type.getClass` can work even through `Obj.magic` upcasts.
-			typeFields.push({
-				name: "__hx_type",
-				isMutable: false,
-				typ: OcamlTypeExpr.TIdent("Obj.t")
-			});
 			// Every inheritance or interface-dispatch record needs the shared layout,
 			// even when it contains no method slots. Otherwise a field-only subclass
 			// contains only its local fields, so a base constructor or field access
@@ -2601,12 +2588,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			final typeDecl:OcamlTypeDecl = {
-				name: instanceTypeName,
-				params: [],
-				kind: OcamlTypeDeclKind.Record(typeFields)
-			};
-			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
+			final typeDecl = declareInstanceRecord({typeName: instanceTypeName, fields: typeFields});
+			switch (typeDecl.kind) {
+				case Record(fields):
+					validateMonomorphicClassLayout(classType, instanceTypeName, fields);
+				case _:
+					throw "OCaml instance layout did not produce its record declaration";
+			}
 			registerTypeDeclaration(classType.module, classType.name, typeDecl);
 
 			// create: allocate record, run ctor body, return self
@@ -2655,10 +2643,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final classMarker = classIdentityMarker(classType, fullName, emissionRole);
 				return if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];
-					fields.push({
-						name: "__hx_type",
-						value: classMarker
-					});
 					if (isDispatch && dispatchLayoutFields != null) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
 							final ownerExpr = owner.module == classType.module ? OcamlExpr.EIdent(ownerBindingName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)),
@@ -2754,18 +2738,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					if (isDispatch) {
 						ctorBody = ensureParamUsage(ctorBody, [OcamlPat.PVar("self")]);
 					}
-					final recordExpr = OcamlExpr.ERecord(fields);
-					// Always annotate: `__hx_type` is a shared label across many records, and
-					// some classes may otherwise become ambiguous for OCaml's record inference.
-					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
+					initializeInstanceRecord({declaration: typeDecl, classMarker: classMarker, fields: fields});
 				} else {
-					final recordExpr = OcamlExpr.ERecord([
-						{
-							name: "__hx_type",
-							value: classMarker
-						}
-					]);
-					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
+					initializeInstanceRecord({declaration: typeDecl, classMarker: classMarker, fields: []});
 				}
 			}
 
@@ -5064,16 +5039,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (revision == null)
 			throw "reflaxe.ocaml [ocaml-class-marker:missing-program]: class identity marker requires an active program revision";
 		final decision = OcamlClassIdentityMarkerPlan.seal(classType, runtimeClassName, emissionRole, revision.id, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-		OcamlClassIdentityMarkerPlan.requireDecision(decision);
-		ctx.runtimeRequirements.recordClassIdentityMarker(decision);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
-		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
-			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
-		final occurrence = decision.runtimeUseOccurrences[0];
-		final reference = authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
-		final marker = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(reference), [OcamlExpr.EConst(OcamlConst.CString(decision.runtimeClassName))]);
-		authority.reconcileExpression(marker);
-		return marker;
+		final lowered = lowerClassMarker(decision, activeProfile, ctx.finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			ctx.runtimeRequirements.record(requirement);
+		return lowered.expression;
 	}
 
 	/**

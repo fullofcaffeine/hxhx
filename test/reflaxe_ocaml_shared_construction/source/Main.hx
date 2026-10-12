@@ -86,6 +86,8 @@ class Main {
 
 	static function main():Void {
 		final first = new Item(7, false);
+		if (Type.getClass(first) != Item)
+			throw "ordinary allocation lost its runtime class";
 		if (first.value != 7 || events.join(",") != "field,body" || Item.last != first)
 			throw "first constructor order or receiver: value="
 				+ first.value
@@ -110,13 +112,17 @@ class Main {
 		if (!failed || events.join(",") != "field,body" || retained == null || retained.value != 19)
 			throw "throwing constructor lost its effects";
 		events = [];
-		Type.createEmptyInstance(Item);
+		final emptyItem = Type.createEmptyInstance(Item);
+		if (Type.getClass(emptyItem) != Item)
+			throw "empty allocation lost its runtime class";
 		if (events.length != 0 || Item.last != retained)
 			throw "empty allocation ran field initializers or the constructor";
 		final child = new Child();
 		if (events.join(",") != "child-field,base-field,base-body,child-body")
 			throw "inherited initialization order: " + events.join(",");
 		final parent:Parent = child;
+		if (Type.getClass(child) != Child || Type.getClass(parent) != Child)
+			throw "inherited allocation or upcast lost its most-derived runtime class";
 		if (parent.read() != 5)
 			throw "inherited constructor storage or dispatch differs";
 		events = [];
@@ -127,7 +133,9 @@ class Main {
 		if (other.values.length != 1 || child.values.length != 2)
 			throw "inherited instances share array storage";
 		events = [];
-		Type.createEmptyInstance(Child);
+		final emptyChild = Type.createEmptyInstance(Child);
+		if (Type.getClass(emptyChild) != Child)
+			throw "empty inherited allocation lost its runtime class";
 		if (events.length != 0)
 			throw "empty inherited allocation ran initializers or constructors";
 		final ordered = new OrderedFields();
@@ -145,8 +153,13 @@ class Main {
 			|| implicit.seed != 7)
 			throw "omitted constructor initialization or arguments: " + events.join(",");
 		events = [];
-		Type.createEmptyInstance(OrderedFields);
-		Type.createEmptyInstance(ImplicitChild);
+		final emptyOrdered = Type.createEmptyInstance(OrderedFields);
+		final emptyImplicit = Type.createEmptyInstance(ImplicitChild);
+		if (Type.getClass(ordered) != OrderedFields
+			|| Type.getClass(implicit) != ImplicitChild
+			|| Type.getClass(emptyOrdered) != OrderedFields
+			|| Type.getClass(emptyImplicit) != ImplicitChild)
+			throw "explicit or omitted constructor lost its runtime class";
 		if (events.length != 0)
 			throw "empty allocation ran ordered or omitted constructor effects";
 		Sys.println("construction:ok");

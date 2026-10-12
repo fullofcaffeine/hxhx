@@ -3,7 +3,9 @@
 This fixture checks the allocation wrapper used by the standalone OCaml class emitter.
 The shared target function receives the already selected initializer, constructor body and parameter patterns.
 It allocates the receiver, runs the body once, and returns that same receiver.
-Class layout, field defaults, dispatch and runtime authorization remain with their existing owners.
+The shared record builder adds the runtime class marker as the first slot and checks the remaining member order against the declaration.
+The class owner still selects inherited fields, dispatch methods, field carriers and storage defaults.
+A shared marker operation consumes the existing checked runtime permission for each constructor or empty allocation.
 
 Run the full source-to-runtime check from the repository root:
 
@@ -14,6 +16,7 @@ bash scripts/ci/reflaxe-ocaml-shared-construction-test.sh
 The independent OCaml observer checks order, object identity, distinct storage and constructor exceptions.
 The Haxe program checks field initialization, two instances, and retained mutations after an exception.
 It also checks inherited fields, virtual calls, zero-argument constructors and separate array storage.
+Runtime reflection must recover the correct class after ordinary and empty allocation, including an upcast from a child to its parent.
 Upstream Haxe initializes the child's field before entering the parent constructor in this fixture.
 Both ordinary and inherited empty allocation must skip authored initializers and constructor effects.
 Both upstream Haxe and the generated native executable must produce `expected.stdout`.
