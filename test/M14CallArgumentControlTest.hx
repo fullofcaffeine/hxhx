@@ -55,6 +55,20 @@ class M14CallArgumentControlTest {
 			"class Sink { public function new() {} public function put(value:Null<Int>):Int return value==null ? 9 : value; } " +
 			"class Main { static function main():Void { final sink=new Sink(); if(sink.put(true ? 3 : null)!=3 || sink.put(false ? 3 : null)!=9) throw 'nullable call'; } }",
 			true);
+		check("native_capture_order",
+			"class Sink { public function new() {} public function put(value:Null<Int>):Int return value==null ? 9 : value; } "
+			+ "class State { public var order:Int; public function new() {} } "
+			+ "class Main { static function mark(state:State, digit:Int):Int { state.order=state.order*10+digit; return digit; } "
+			+ "static function receiver(state:State):Sink { mark(state,1); return new Sink(); } static function main():Void { "
+			+ "final state=new State(); state.order=0; "
+			+ "final result=receiver(state).put({ mark(state,2); var value:Null<Int>=true ? mark(state,3) : null; mark(state,4); value; }); "
+			+ "if(result!=3 || state.order!=1234) throw 'native receiver capture order'; } }",
+			true);
+		check("native_zero_argument_capture",
+			"class Sink { public var calls:Int; public function new() {} public function read():Int { calls=calls+1; return calls; } } " +
+			"class Main { static function main():Void { final sink=new Sink(); sink.calls=0; final call=sink.read; " +
+			"if(sink.calls!=0) throw 'eager method capture'; if(call()!=1 || call()!=2 || sink.calls!=2) throw 'captured receiver state'; } }",
+			true);
 		for (selected in [true, false]) {
 			final source = "class Sink { public function new() {} public function run(first:Int, second:Null<Int>):Int { Main.mark(6); return first+(second==null ? 0 : second)+10; } } "
 				+ "class Main { static var order:Int=0; public static function mark(digit:Int):Int { order=order*10+digit; return digit; } "

@@ -3045,6 +3045,20 @@ class EmitterStage {
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
 		}
+		final methodValue = currentTypedInitializer != null ? currentTypedInitializer.findMethodUse(e) : currentTypedFunction == null ? null : currentTypedFunction.findMethodUse(e);
+		if (methodValue != null && methodValue.getUse() == ValueRead) {
+			final declaration = methodValue.getDeclaration();
+			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
+			final methodName = ocamlValueIdent(declaration.getSignature().getName());
+			final qualified = ownerModule + "." + methodName;
+			return backend.ocaml.Stage3OcamlMethodValue.render({
+				occurrence: methodValue,
+				reference: ownerModule == currentOcamlModuleName ? methodName : qualified,
+				signature: callSigForStage3(qualified, callSigByCallee),
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				names: currentFunctionLocalOcamlNames
+			});
+		}
 		final structuralAccess = objectAccess(e);
 		if (structuralAccess != null) {
 			if (currentFunctionLocalOcamlNames == null)
