@@ -1,4 +1,9 @@
 import backend.ocaml.HxhxOcamlTargetDeclarationAdapter;
+import ClassMarkerObservation.describeRequirements;
+import backend.ocaml.HxhxOcamlTargetClassMarkerAdapter.fromTypedClass;
+import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
+import reflaxe.ocaml.target.OcamlTargetClassMarker.lowerClassMarker;
 import sys.io.File;
 
 /** Keep class construction eligibility distinct before the shared target selects a layout. */
@@ -40,6 +45,72 @@ class SharedClassKindsFixture {
 			|| stock.length != compared
 			|| CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "class-header inventory or original module revision changed";
+		final stockMarkers = StockClassKindsMacro.markers();
+		var markerCount = 0;
+		for (typedClass in typed.getTypedClasses()) {
+			for (role in [
+				OcamlClassIdentityMarkerPlan.CONSTRUCTOR_ROLE,
+				OcamlClassIdentityMarkerPlan.EMPTY_INSTANCE_ROLE
+			]) {
+				final marker = fromTypedClass({
+					module: typed,
+					typedClass: typedClass,
+					emissionRole: role,
+					programRevision: "class-headers-program",
+					pipelineRevision: "class-headers-pipeline"
+				});
+				final expected = stockMarkers.filter(row -> row.name == marker.sourceDeclarationId && row.role == role);
+				final lowered = lowerClassMarker(marker, "portable");
+				final syntax = new OcamlASTPrinter().printExpr(lowered.expression);
+				if (expected.length != 1
+					|| expected[0].id != marker.id
+					|| expected[0].revision != marker.revision
+					|| expected[0].file != marker.source.file
+					|| expected[0].start != marker.source.min
+					|| expected[0].end != marker.source.max
+					|| expected[0].syntax != syntax
+					|| expected[0].requirements != describeRequirements(lowered.runtimeRequirements))
+					throw "class marker differs between hosts for " + marker.sourceDeclarationId + " / " + role + " expected="
+						+ haxe.Json.stringify(expected) + " actual=" + haxe.Json.stringify(marker) + " syntax=" + syntax + " requirements="
+						+ haxe.Json.stringify(lowered.runtimeRequirements);
+				markerCount++;
+			}
+		}
+		if (markerCount != 10
+			|| stockMarkers.length != markerCount
+			|| CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
+			throw "class-marker inventory or original module revision changed";
+		final other = typeSource("OtherMarker", "class OtherMarker {}");
+		expectMarkerFailure(typed, other.getTypedClasses()[0], "owned by its typed module");
+		final hidden = typeSource("PrivateMarker", "private class PrivateMarker {}");
+		expectMarkerFailure(hidden, hidden.getTypedClasses()[0], "private runtime names");
+		final renamed = typeSource("NativeMarker", '@:native("Renamed") class NativeMarker {}');
+		expectMarkerFailure(renamed, renamed.getTypedClasses()[0], "renamed runtime classes");
+		final original = typeSource("OriginalMarker", '@:realPath("Original") class OriginalMarker {}');
+		expectMarkerFailure(original, original.getTypedClasses()[0], "renamed runtime classes");
 		Sys.println("REFLAXE_OCAML_SHARED_CLASS_HEADERS:PASS");
+	}
+
+	/** Use the real parser and typer even when testing rejected marker declarations. */
+	static function typeSource(name:String, source:String):TypedModule {
+		final resolved = new ResolvedModule(name, name + ".hx", ParserStage.parse(source, name + ".hx"));
+		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+	}
+
+	static function expectMarkerFailure(module:TypedModule, typedClass:TypedClass, message:String):Void {
+		try {
+			fromTypedClass({
+				module: module,
+				typedClass: typedClass,
+				emissionRole: OcamlClassIdentityMarkerPlan.CONSTRUCTOR_ROLE,
+				programRevision: "class-headers-program",
+				pipelineRevision: "class-headers-pipeline"
+			});
+		} catch (error:haxe.Exception) {
+			if (error.message.indexOf(message) >= 0)
+				return;
+			throw error;
+		}
+		throw "invalid class marker was admitted: " + message;
 	}
 }

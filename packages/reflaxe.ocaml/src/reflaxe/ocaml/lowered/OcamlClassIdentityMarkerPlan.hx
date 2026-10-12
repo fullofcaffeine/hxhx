@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 #if macro
 import haxe.macro.Type.ClassType;
@@ -8,6 +7,16 @@ import haxe.macro.Type.ClassType;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+
+/** Class identity and actual declaration location copied by a typed host adapter. */
+typedef OcamlClassIdentityMarkerInput = {
+	final sourceDeclarationId:String;
+	final runtimeClassName:String;
+	final source:OcamlLoweredSourceSpan;
+	final emissionRole:String;
+	final programRevision:String;
+	final pipelineRevision:String;
+}
 
 /** One generated class record whose runtime class marker has an exact owner. */
 typedef OcamlClassIdentityMarkerDecision = {
@@ -56,9 +65,33 @@ class OcamlClassIdentityMarkerPlan {
 			throw 'reflaxe.ocaml [ocaml-class-marker:wrong-runtime-name]: typed class $rewrittenName cannot authorize marker name $stableRuntimeName';
 		final sourceDeclarationId = OcamlTypedDeclarationIdentity.canonicalSourceName(classType.meta, rewrittenName, "a class marker declaration");
 		final source = OcamlLoweredOrigin.sourceSpan(classType.pos);
-		final stableRole = requireRole(emissionRole);
-		final stableProgramRevision = required(programRevision, "program revision");
-		final stablePipelineRevision = required(pipelineRevision, "target pipeline revision");
+		return fromTypedInput({
+			sourceDeclarationId: sourceDeclarationId,
+			runtimeClassName: stableRuntimeName,
+			source: source,
+			emissionRole: emissionRole,
+			programRevision: programRevision,
+			pipelineRevision: pipelineRevision
+		});
+	}
+	#end
+
+	/**
+		Seal the same class-marker decision from either compiler's copied facts.
+
+		The host adapter must resolve names and positions from its typed class.
+		This boundary checks and copies those facts; allocation eligibility and
+		constructor execution remain the program emitter's responsibility.
+	 */
+	public static function fromTypedInput(input:OcamlClassIdentityMarkerInput):OcamlClassIdentityMarkerDecision {
+		if (input == null)
+			throw "reflaxe.ocaml [ocaml-class-marker:missing-input]: class identity marker requires typed input";
+		final sourceDeclarationId = required(input.sourceDeclarationId, "source declaration identity");
+		final stableRuntimeName = required(input.runtimeClassName, "runtime class name");
+		final source = input.source;
+		final stableRole = requireRole(input.emissionRole);
+		final stableProgramRevision = required(input.programRevision, "program revision");
+		final stablePipelineRevision = required(input.pipelineRevision, "target pipeline revision");
 		requireSource(sourceDeclarationId, source);
 		final id = idFor(sourceDeclarationId, stableRuntimeName, stableRole, stableProgramRevision, stablePipelineRevision, source);
 		final requirementId = id + ":runtime:" + RUNTIME_CAPABILITY;
@@ -94,7 +127,6 @@ class OcamlClassIdentityMarkerPlan {
 			proofClaim: PROOF_CLAIM
 		};
 	}
-	#end
 
 	/** Rejects changed class, request, output-role, requirement, or use facts. */
 	public static function requireDecision(decision:OcamlClassIdentityMarkerDecision):Void {
@@ -195,4 +227,3 @@ class OcamlClassIdentityMarkerPlan {
 		return {file: source.file, min: source.min, max: source.max};
 	}
 }
-#end

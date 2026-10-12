@@ -44,3 +44,12 @@ Both adapters must preserve interface and extern flags, secondary-class names, a
 The declaration identity includes these facts and owns a copy of the interface list.
 The current program emitter rejects interface relationships and extern or interface main types before selecting a layout.
 These checks do not prove interface dispatch, inheritance, or arbitrary generic type arguments.
+
+The header check runs under eval and as a compiled Neko program without macro-host defines.
+It also compares runtime class markers from both hosts.
+Each generated instance stores a marker so `Type.getClass` can identify its class.
+The native adapter uses the typed declaration and its original Unicode source range.
+For all five declarations, both allocation roles must have equal identities, runtime requirements, and emitted marker syntax.
+This proves marker inputs only; an interface or extern marker does not authorize construction.
+Borrowed declarations and unsupported private or renamed class identities must fail explicitly.
+The complete native construction and instance-call fixture above remains required.
