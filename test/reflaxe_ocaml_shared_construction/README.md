@@ -33,6 +33,12 @@ The original instance-call acceptance remains open under `haxe_ocaml-i1c2c`.
 The lifecycle command also checks Haxe's constructor input before and after generation.
 Haxe inserts instance field initializers after `onGenerate`, before Reflaxe consumes the program.
 The test checks that each initializer precedes the authored body and the child's `super()` call.
+Three-field cases distinguish Haxe 4.3.7's observed reverse declaration order
+from alphabetical order. The inherited case omits its constructor in source;
+Haxe supplies a constructor that initializes local fields, then forwards the
+inherited argument to `super`. The test checks that argument's binding identity.
+Independent eval, JavaScript, and Neko observations establish the expected order.
+The native lifecycle program also checks these cases and their empty allocations.
 This guards the shared-target migration against omitted or duplicated initialization effects.
 It does not claim that the native program adapter already supports complete construction.
 

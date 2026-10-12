@@ -47,6 +47,34 @@ class Child extends Parent {
 	}
 }
 
+/** Three names distinguish Haxe's initializer order from both declaration and alphabetical order. */
+class OrderedFields {
+	public var zeta:Int = Main.record("ordered-zeta", 1);
+	public var alpha:Int = Main.record("ordered-alpha", 2);
+	public var middle:Int = Main.record("ordered-middle", 3);
+
+	public function new() {
+		Main.events.push("ordered-body");
+	}
+}
+
+/** An inherited constructor must forward its argument to the original receiver. */
+class ParameterParent {
+	public var seed:Int;
+
+	public function new(seed:Int) {
+		this.seed = seed;
+		Main.events.push("parameter-parent-body");
+	}
+}
+
+/** Haxe supplies the omitted constructor, including local initialization before super. */
+class ImplicitChild extends ParameterParent {
+	public var zeta:Int = Main.record("implicit-zeta", 4);
+	public var alpha:Int = Main.record("implicit-alpha", 5);
+	public var middle:Int = Main.record("implicit-middle", 6);
+}
+
 /** Exercise allocation through ordinary Haxe, without generated-source repairs. */
 class Main {
 	public static var events:Array<String> = [];
@@ -102,6 +130,25 @@ class Main {
 		Type.createEmptyInstance(Child);
 		if (events.length != 0)
 			throw "empty inherited allocation ran initializers or constructors";
+		final ordered = new OrderedFields();
+		if (events.join(",") != "ordered-middle,ordered-alpha,ordered-zeta,ordered-body"
+			|| ordered.zeta != 1
+			|| ordered.alpha != 2
+			|| ordered.middle != 3)
+			throw "multiple field initializer order: " + events.join(",");
+		events = [];
+		final implicit = new ImplicitChild(7);
+		if (events.join(",") != "implicit-middle,implicit-alpha,implicit-zeta,parameter-parent-body"
+			|| implicit.zeta != 4
+			|| implicit.alpha != 5
+			|| implicit.middle != 6
+			|| implicit.seed != 7)
+			throw "omitted constructor initialization or arguments: " + events.join(",");
+		events = [];
+		Type.createEmptyInstance(OrderedFields);
+		Type.createEmptyInstance(ImplicitChild);
+		if (events.length != 0)
+			throw "empty allocation ran ordered or omitted constructor effects";
 		Sys.println("construction:ok");
 	}
 }

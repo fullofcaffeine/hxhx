@@ -20,13 +20,21 @@ class ConstructorInputPhaseFixture {
 		}, false);
 		Context.onAfterGenerate(() -> {
 			check(captured, true);
-			Sys.println("CONSTRUCTOR_INPUT_PHASE:PASS classes=3");
+			Sys.println("CONSTRUCTOR_INPUT_PHASE:PASS classes=5");
 		});
 	}
 
 	/** Each source constructor starts with a body effect or super call, never this field assignment. */
 	static function check(types:Array<Type>, afterGeneration:Bool):Void {
-		final expected = ["Item" => "value", "Parent" => "base", "Child" => "values"];
+		// Independent Haxe 4.3.7 eval, JavaScript and Neko runs establish the
+		// order below. Three fields keep alphabetical sorting from passing by chance.
+		final expected = [
+			"Item" => ["value"],
+			"Parent" => ["base"],
+			"Child" => ["values"],
+			"OrderedFields" => ["middle", "alpha", "zeta"],
+			"ImplicitChild" => ["middle", "alpha", "zeta"]
+		];
 		var checked = 0;
 		for (type in types)
 			switch (type) {
@@ -43,14 +51,31 @@ class ConstructorInputPhaseFixture {
 					};
 					if (statements.length == 0)
 						throw "constructor phase fixture lost source effects: " + owner.name;
-					final startsWithInitializer = switch (statements[0].expr) {
-						case TBinop(OpAssign, {expr: TField({expr: TConst(TThis)}, FInstance(declaring, _, field))}, _): declaring.get()
-								.module == owner.module && declaring.get().name == owner.name && field.get().name == expected.get(owner.name);
-						case _: false;
-					};
-					if (startsWithInitializer != afterGeneration)
-						throw "constructor field-initializer phase changed for " + owner.name + ": afterGeneration=" + afterGeneration;
-					var bodyIndex = afterGeneration ? 1 : 0;
+					final initializers = expected.get(owner.name);
+					for (index in 0...initializers.length) {
+						final matchesInitializer = statements.length > index && switch (statements[index].expr) {
+							case TBinop(OpAssign, {expr: TField({expr: TConst(TThis)}, FInstance(declaring, _, field))}, _): declaring.get()
+									.module == owner.module && declaring.get().name == owner.name && field.get().name == initializers[index];
+							case _: false;
+						};
+						if (matchesInitializer != afterGeneration)
+							throw "constructor initializer phase/order changed for " + owner.name + "." + initializers[index];
+					}
+					var bodyIndex = afterGeneration ? initializers.length : 0;
+					if (owner.name == "ImplicitChild") {
+						final parameter = switch (body.expr) {
+							case TFunction({args: [{v: variable}]}): variable;
+							case _: throw "omitted constructor lost the inherited parameter";
+						};
+						final forwardsParameter = statements.length == bodyIndex + 1 && switch (statements[bodyIndex].expr) {
+							case TCall({expr: TConst(TSuper)}, [{expr: TLocal(argument)}]): argument.id == parameter.id;
+							case _: false;
+						};
+						if (!forwardsParameter)
+							throw "omitted constructor lost its ordered super call or argument identity";
+						checked++;
+						continue;
+					}
 					if (owner.name == "Child") {
 						final superIndex = afterGeneration ? 1 : 0;
 						final callsSuper = statements.length > superIndex && switch (statements[superIndex].expr) {
@@ -61,7 +86,13 @@ class ConstructorInputPhaseFixture {
 							throw "constructor phase changed field-initializer order relative to super";
 						bodyIndex++;
 					}
-					final expectedLabel = owner.name == "Item" ? "body" : owner.name == "Parent" ? "base-body" : "child-body";
+					final expectedLabel = switch (owner.name) {
+						case "Item": "body";
+						case "Parent": "base-body";
+						case "Child": "child-body";
+						case "OrderedFields": "ordered-body";
+						case _: throw "unexpected constructor phase owner";
+					};
 					final retainsBody = statements.length > bodyIndex && switch (statements[bodyIndex].expr) {
 						case TCall({expr: TField(_, FInstance(_, _, method))}, [{expr: TConst(TString(label))}]): method.get()
 								.name == "push" && label == expectedLabel;
@@ -72,7 +103,7 @@ class ConstructorInputPhaseFixture {
 					checked++;
 				case _:
 			}
-		if (checked != 3)
-			throw "constructor phase fixture requires all three source classes";
+		if (checked != 5)
+			throw "constructor phase fixture requires all five source classes";
 	}
 }
