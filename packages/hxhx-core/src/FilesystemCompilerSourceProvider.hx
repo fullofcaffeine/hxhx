@@ -36,8 +36,8 @@ class FilesystemCompilerSourceProvider {
 		}
 	}
 
-	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
-		return ParserStage.parse(filteredSource, filePath);
+	public function parseFilteredSource(input:CompilerParseInput):ParsedModule {
+		return ParserStage.parseFilteredSource(input);
 	}
 
 	public function readDirectory(path:String):Array<String> {

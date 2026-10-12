@@ -40,9 +40,9 @@ private class RecordingCompilerSourceProvider {
 		return delegate.readSource(filePath);
 	}
 
-	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
+	public function parseFilteredSource(input:CompilerParseInput):ParsedModule {
 		parseCalls += 1;
-		return delegate.parseFilteredSource(filteredSource, filePath);
+		return delegate.parseFilteredSource(input);
 	}
 
 	public function readDirectory(path:String):Array<String> {
@@ -448,7 +448,10 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 			["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], [], null), Stage3Compiler.runRequest);
 		final realSuccessWire = CompilationServerRequestCodec.encodeReply(realSuccess);
 		assertTrue(!realSuccess.isError, "a real Stage3 no-emit request should succeed");
-		assertTrue(realSuccessWire.indexOf("resolved_modules=1") >= 0, "a real successful request should return compiler progress to its client");
+		// Resolution includes Main plus the real StdTypes and Class declarations.
+		// The typed-module count separately describes the application module.
+		assertTrue(realSuccessWire.indexOf("resolved_modules=3") >= 0, "compiler progress should report Main, StdTypes, and Class: " + realSuccessWire);
+		assertTrue(realSuccessWire.indexOf("typed_modules=1") >= 0, "compiler progress should report the typed application module");
 		assertTrue(realSuccessWire.indexOf("stage3=no_emit_ok") >= 0, "a real successful request should return its completion marker to its client");
 		assertTrue(realSuccessWire.indexOf("\x02") == -1, "a successful request should not contain Haxe's failure marker");
 

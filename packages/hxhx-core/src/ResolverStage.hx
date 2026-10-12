@@ -314,7 +314,7 @@ class ResolverStage {
 			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 			final filteredSource = conditional.getFilteredSource();
 			final parsed = try {
-				sources.parseFilteredSource(filteredSource, filePath);
+				sources.parseFilteredSource({originalSource: source, filteredSource: filteredSource, filePath: filePath});
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {
@@ -421,7 +421,7 @@ class ResolverStage {
 			final filteredSource = conditional.getFilteredSource();
 
 			final parsed = try {
-				sources.parseFilteredSource(filteredSource, filePath);
+				sources.parseFilteredSource({originalSource: source, filteredSource: filteredSource, filePath: filePath});
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {

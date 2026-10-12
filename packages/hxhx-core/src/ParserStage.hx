@@ -17,9 +17,17 @@ class ParserStage {
 	}
 
 	public static function parse(source:String, ?filePath:String):ParsedModule {
-		final expectedMainClass = expectedMainClassFromFile(filePath);
-		final decl = enrichPureParserDecl(source, expectedMainClass, new HxParser(source).parseModule(expectedMainClass));
-		final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
+		return parseFilteredSource({originalSource: source, filteredSource: source, filePath: filePath == null ? "<memory>" : filePath});
+	}
+
+	/** Parse active text with exact Unicode positions from its original source. */
+	public static function parseFilteredSource(input:CompilerParseInput):ParsedModule {
+		if (input == null || input.originalSource == null || input.filteredSource == null)
+			throw "parser requires original and filtered source text";
+		final source = input.filteredSource;
+		final expectedMainClass = expectedMainClassFromFile(input.filePath);
+		final decl = enrichPureParserDecl(source, expectedMainClass, new HxParser(source).parseModule(expectedMainClass, input.originalSource));
+		final path = input.filePath == null || input.filePath.length == 0 ? "<memory>" : input.filePath;
 		return new ParsedModule(source, decl, path);
 	}
 
@@ -196,7 +204,7 @@ class ParserStage {
 			return overlayChanged ? new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields,
 				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls),
 				HxClassDecl.getVisibility(cls), HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls), HxClassDecl.getEnumDeclaration(cls),
-				HxClassDecl.getTypeParameters(cls)) : cls;
+				HxClassDecl.getTypeParameters(cls), HxClassDecl.getSourceRange(cls)) : cls;
 		}
 
 		final parsedMain = HxModuleDecl.getMainClass(parsed);
@@ -276,6 +284,6 @@ class ParserStage {
 		compiler process now has exactly one parser.
 	**/
 	public static function cacheConfigurationRevision():String {
-		return "hxhx-parser-schema-v11|frontend=haxe";
+		return "hxhx-parser-schema-v12|frontend=haxe";
 	}
 }

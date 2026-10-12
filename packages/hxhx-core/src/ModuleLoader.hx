@@ -462,7 +462,7 @@ class ModuleLoader extends LazyTypeLoader {
 		final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 		final filtered = conditional.getFilteredSource();
 		final parsed = try {
-			sourceProvider.parseFilteredSource(filtered, filePath);
+			sourceProvider.parseFilteredSource({originalSource: source, filteredSource: filtered, filePath: filePath});
 		} catch (_:HxParseError) {
 			null;
 		} catch (_:String) {

@@ -4409,12 +4409,15 @@ class HxParser {
 	}
 
 	/** Extern members default to public; authored modifiers still override the owning class default. */
-	function parseClassMembers(defaultVisibility:HxVisibility):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
+	function parseClassMembers(defaultVisibility:HxVisibility):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>, end:HxPos} {
 		final funcs = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
+		var end:Null<HxPos> = null;
 		while (true) {
 			switch (cur.kind) {
 				case TRBrace:
+					final close = cur.getPos();
+					end = new HxPos(close.getIndex() + 1, close.getLine(), close.getColumn() + 1);
 					bump();
 					break;
 				case TEof:
@@ -4546,7 +4549,9 @@ class HxParser {
 					}
 			}
 		}
-		return {functions: funcs, fields: fields};
+		if (end == null)
+			throw "parsed class lost its closing brace position";
+		return {functions: funcs, fields: fields, end: end};
 	}
 
 	function isSemicolonlessFieldInitializer(expr:HxExpr, initText:String):Bool {
@@ -4608,8 +4613,14 @@ class HxParser {
 		- Abstract headers retain metadata and binders; their bodies and enums still
 		  use declaration enrichment. Unsupported class constructs skip to the
 		  next likely boundary.
+		- After conditional filtering, `originalSource` supplies physical Unicode
+		  positions at the same host-string indices. Direct parsing uses `source`.
 	**/
-	public function parseModule(?expectedMainClass:String):HxModuleDecl {
+	public function parseModule(?expectedMainClass:String, ?originalSource:String):HxModuleDecl {
+		final positionSource = originalSource == null ? source : originalSource;
+		if (positionSource.length != source.length)
+			throw "parser requires original and filtered source with equal host-string lengths";
+		final classOffsets = new HxSourceOffsetCursor(positionSource);
 		var packagePath = "";
 		final directives = new Array<HxModuleDirective>();
 		var hasToplevelMain = false;
@@ -4808,6 +4819,7 @@ class HxParser {
 			}
 			switch (cur.kind) {
 				case TKeyword(KClass) | TIdent("interface"):
+					final classStart = cur.getPos();
 					final classMetadata = pendingTypeMetadata.copy();
 					pendingTypeMetadata = [];
 					final isInterface = cur.kind.match(TIdent("interface"));
@@ -4860,8 +4872,13 @@ class HxParser {
 						}
 					}
 
+					final sourceStart = classOffsets.advance(classStart.getIndex());
+					final sourceEnd = classOffsets.advance(members.end.getIndex());
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
-						moduleMemberVisibility, interfaceExtendsPaths, typeIsExtern, null, classTypeParameters));
+						moduleMemberVisibility, interfaceExtendsPaths, typeIsExtern, null, classTypeParameters, {
+							start: sourceStart,
+							end: sourceEnd
+						}));
 				// `parseClassMembers` consumes the closing `}`.
 				case TIdent("typedef"):
 					typedefs.push(new HxTypedefParser(this).declaration(moduleMemberVisibility, pendingTypeMetadata, typeIsExtern));
@@ -4931,7 +4948,7 @@ class HxParser {
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
 				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base),
 				HxClassDecl.getVisibility(base), HxClassDecl.getInterfaceExtendsPaths(base), HxClassDecl.getIsExtern(base),
-				HxClassDecl.getEnumDeclaration(base), HxClassDecl.getTypeParameters(base));
+				HxClassDecl.getEnumDeclaration(base), HxClassDecl.getTypeParameters(base), HxClassDecl.getSourceRange(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {

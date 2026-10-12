@@ -38,6 +38,8 @@ class ParsedModuleIntegrity {
 
 	static function addClass(out:StringBuf, parsedClass:HxClassDecl):Void {
 		add(out, HxClassDecl.getName(parsedClass));
+		final sourceRange = HxClassDecl.getSourceRange(parsedClass);
+		add(out, sourceRange == null ? "no-source-range" : '${sourceRange.start}:${sourceRange.end}');
 		add(out, HxClassDecl.getHasStaticMain(parsedClass) ? "static-main" : "no-static-main");
 		add(out, HxClassDecl.getExtendsPath(parsedClass));
 		add(out, HxClassDecl.getIsInterface(parsedClass) ? "interface" : "class");

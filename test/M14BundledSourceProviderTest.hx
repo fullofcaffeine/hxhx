@@ -25,7 +25,7 @@ class M14BundledSourceProviderTest {
 		require(path != null && !sys.FileSystem.exists(path), "provider must work without a source file on disk");
 		final source = provider.readSource(path);
 		require(source != null, "direct provider must read embedded bytes");
-		final parsed = provider.parseFilteredSource(source, path);
+		final parsed = provider.parseFilteredSource({originalSource: source, filteredSource: source, filePath: path});
 		final declarations = HxModuleDecl.getClasses(parsed.getDecl());
 		require(declarations.length == 1 && !HxClassDecl.getIsExtern(declarations[0]), "exception must be an authored class");
 		require(provider.resolveModuleFile([root], "haxe.exception") == null, "lookup must preserve filename case");
@@ -42,7 +42,7 @@ class M14BundledSourceProviderTest {
 			final request = cache.openRequest();
 			require(request.resolveModuleFile([root], "haxe.Exception") == path, "server lookup must match direct lookup");
 			require(request.readSource(path) == source, "server bytes must match direct bytes");
-			request.parseFilteredSource(source, path);
+			request.parseFilteredSource({originalSource: source, filteredSource: source, filePath: path});
 			if (run == 1)
 				require(request.report().sourceHits == 1 && request.report().parserHits == 1 && request.report().resolutionHits == 1,
 					"unchanged bundled sources must reuse exact server entries");

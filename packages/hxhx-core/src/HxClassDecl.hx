@@ -1,4 +1,17 @@
 /**
+	The authored keyword-to-closing-brace range of a class or interface.
+
+	Offsets count Unicode code points, as upstream Haxe positions do. The lexer
+	uses host string indices, which can count bytes or UTF-16 units instead.
+	The parser normalizes that difference before storing this immutable range.
+	The end points immediately after the closing brace, before trailing trivia.
+**/
+typedef HxClassSourceRange = {
+	final start:Int;
+	final end:Int;
+}
+
+/**
 	Parsed class or interface header and its declared members.
 
 	A class has at most one superclass. An interface can extend several other
@@ -21,10 +34,12 @@ class HxClassDecl {
 	public final enumDeclaration:Null<HxEnumDeclaration>;
 
 	final typeParameters:Array<HxTypeSyntax.HxTypeSyntaxParameter>;
+	final sourceRange:Null<HxClassSourceRange>;
 
 	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
 			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>, ?visibility:HxVisibility, ?interfaceExtendsPaths:Array<String>,
-			isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration, ?typeParameters:Array<HxTypeSyntax.HxTypeSyntaxParameter>) {
+			isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration, ?typeParameters:Array<HxTypeSyntax.HxTypeSyntaxParameter>,
+			?sourceRange:HxClassSourceRange) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
@@ -35,6 +50,9 @@ class HxClassDecl {
 		this.isExtern = isExtern;
 		this.enumDeclaration = enumDeclaration;
 		this.typeParameters = typeParameters == null ? [] : HxTypeSyntax.copyParameters(typeParameters);
+		if (sourceRange != null && (sourceRange.start < 0 || sourceRange.end <= sourceRange.start))
+			throw "class source range requires ordered Unicode source offsets";
+		this.sourceRange = sourceRange == null ? null : {start: sourceRange.start, end: sourceRange.end};
 		this.implementsPaths = implementsPaths == null ? [] : implementsPaths;
 		this.interfaceExtendsPaths = interfaceExtendsPaths == null ? [] : interfaceExtendsPaths.copy();
 		if (this.isInterface && this.extendsPath.length > 0)
@@ -57,6 +75,15 @@ class HxClassDecl {
 	/** Preserve authored class bounds as syntax; typing resolves them in the declaring module. */
 	public static function getTypeParameters(c:HxClassDecl):Array<HxTypeSyntax.HxTypeSyntaxParameter>
 		return HxTypeSyntax.copyParameters(c.typeParameters);
+
+	/**
+		Return the actual parsed class range for diagnostics and runtime ownership.
+
+		Synthetic declarations and declaration kinds without a parsed range retain
+		absence. Callers must not turn that absence into a successful source claim.
+	**/
+	public static function getSourceRange(c:HxClassDecl):Null<HxClassSourceRange>
+		return c.sourceRange;
 
 	/**
 		Non-inline getter for `hasStaticMain`.

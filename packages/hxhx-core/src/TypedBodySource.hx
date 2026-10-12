@@ -989,7 +989,7 @@ class TypedBodySource {
 		];
 		return new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), functions, fields, extendsPath,
 			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source), interfaceExtendsPaths,
-			HxClassDecl.getIsExtern(source), HxClassDecl.getEnumDeclaration(source), HxClassDecl.getTypeParameters(source));
+			HxClassDecl.getIsExtern(source), HxClassDecl.getEnumDeclaration(source), HxClassDecl.getTypeParameters(source), HxClassDecl.getSourceRange(source));
 	}
 
 	public static function classProjection(typedClass:TypedClass):TypedBackendClassProjection {

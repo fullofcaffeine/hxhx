@@ -123,11 +123,18 @@ class CompilationServerSourceCacheRequest {
 		return source;
 	}
 
-	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
+	public function parseFilteredSource(input:CompilerParseInput):ParsedModule {
 		ensureOpen();
-		final logicalPath = normalizePath(filePath);
+		final logicalPath = normalizePath(input.filePath);
 		final parserConfiguration = ParserStage.cacheConfigurationRevision();
-		final inputRevision = CompilerCacheIdentity.encode(["parser-input-v2", logicalPath, parserConfiguration, filteredSource]);
+		// Inactive Unicode can change source positions without changing filtered text.
+		final inputRevision = CompilerCacheIdentity.encode([
+			"parser-input-v3",
+			logicalPath,
+			parserConfiguration,
+			input.filteredSource,
+			input.originalSource
+		]);
 		final key = inputRevision;
 		final staged = stagedParsedModules.get(key);
 		if (staged != null) {
@@ -148,9 +155,9 @@ class CompilationServerSourceCacheRequest {
 		}
 
 		providerReport.recordParserMiss(parserMissReasonCallback(logicalPath, inputRevision));
-		final parsed = filesystem.parseFilteredSource(filteredSource, filePath);
+		final parsed = filesystem.parseFilteredSource(input);
 		final integrityRevision = ParsedModuleIntegrity.revision(parsed);
-		final retainedBytesEstimate = Bytes.ofString(filteredSource).length * 2 + key.length * 2 + integrityRevision.length * 2 + 1024;
+		final retainedBytesEstimate = Bytes.ofString(input.filteredSource).length * 2 + key.length * 2 + integrityRevision.length * 2 + 1024;
 		stagedParsedModules.set(key, new CompilationServerCachedParse(key, logicalPath, inputRevision, parsed, integrityRevision, retainedBytesEstimate));
 		return parsed;
 	}

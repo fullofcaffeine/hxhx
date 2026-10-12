@@ -230,7 +230,7 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final mutableProvider = integrityCache.openRequest();
 		final integrityPath = mutableProvider.resolveModuleFile([srcDir], "Main");
 		final integritySource = mutableProvider.readSource(integrityPath);
-		final mutatedParsed = mutableProvider.parseFilteredSource(integritySource, integrityPath);
+		final mutatedParsed = mutableProvider.parseFilteredSource({originalSource: integritySource, filteredSource: integritySource, filePath: integrityPath});
 		final directiveCopy = HxModuleDecl.getDirectives(mutatedParsed.getDecl());
 		directiveCopy.push(HxModuleDirective.normalImport("Injected.Mutation"));
 		assertTrue(HxModuleDecl.getDirectives(mutatedParsed.getDecl()).length + 1 == directiveCopy.length,
@@ -250,12 +250,16 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final seedProvider = integrityCache.openRequest();
 		final seedPath = seedProvider.resolveModuleFile([srcDir], "Main");
 		final seedSource = seedProvider.readSource(seedPath);
-		seedProvider.parseFilteredSource(seedSource, seedPath);
+		seedProvider.parseFilteredSource({originalSource: seedSource, filteredSource: seedSource, filePath: seedPath});
 		seedProvider.finish(true);
 		final cachedMutationProvider = integrityCache.openRequest();
 		final cachedMutationPath = cachedMutationProvider.resolveModuleFile([srcDir], "Main");
 		final cachedMutationSource = cachedMutationProvider.readSource(cachedMutationPath);
-		final cachedMutation = cachedMutationProvider.parseFilteredSource(cachedMutationSource, cachedMutationPath);
+		final cachedMutation = cachedMutationProvider.parseFilteredSource({
+			originalSource: cachedMutationSource,
+			filteredSource: cachedMutationSource,
+			filePath: cachedMutationPath
+		});
 		assertTrue(cachedMutationProvider.report().parserHits == 1, "fixture should mutate a previously cached parser tree");
 		HxModuleDecl.getClasses(cachedMutation.getDecl()).push(HxModuleDecl.getMainClass(cachedMutation.getDecl()));
 		var cachedMutationRejected = false;
@@ -268,7 +272,11 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final afterCachedMutationProvider = integrityCache.openRequest();
 		final afterCachedMutationPath = afterCachedMutationProvider.resolveModuleFile([srcDir], "Main");
 		final afterCachedMutationSource = afterCachedMutationProvider.readSource(afterCachedMutationPath);
-		afterCachedMutationProvider.parseFilteredSource(afterCachedMutationSource, afterCachedMutationPath);
+		afterCachedMutationProvider.parseFilteredSource({
+			originalSource: afterCachedMutationSource,
+			filteredSource: afterCachedMutationSource,
+			filePath: afterCachedMutationPath
+		});
 		assertTrue(afterCachedMutationProvider.report().parserMisses == 1,
 			"request after cached-tree mutation should reparse instead of reusing the quarantined tree");
 		afterCachedMutationProvider.finish(true);
@@ -301,7 +309,7 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final context = CompilationRequestContext.server(nextRequestId, provider);
 		final modulePath = provider.resolveModuleFile([srcDir], "Main");
 		final source = provider.readSource(modulePath);
-		provider.parseFilteredSource(source, modulePath);
+		provider.parseFilteredSource({originalSource: source, filteredSource: source, filePath: modulePath});
 
 		final finalOutput = haxe.io.Path.join([root, "output-failure-result"]);
 		final paths = context.prepareOutput(finalOutput, finalOutput, null);
@@ -314,7 +322,7 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final probe = cache.openRequest();
 		final probePath = probe.resolveModuleFile([srcDir], "Main");
 		final probeSource = probe.readSource(probePath);
-		probe.parseFilteredSource(probeSource, probePath);
+		probe.parseFilteredSource({originalSource: probeSource, filteredSource: probeSource, filePath: probePath});
 		assertTrue(probe.report().resolutionMisses > 0, "failed output request must not publish module lookup candidates");
 		assertTrue(probe.report().sourceMisses == 1, "failed output request must not publish source candidates");
 		assertTrue(probe.report().parserMisses == 1, "failed output request must not publish parser candidates");
