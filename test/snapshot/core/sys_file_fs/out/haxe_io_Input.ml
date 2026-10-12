@@ -62,7 +62,7 @@ let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> 
 
 let close__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let readAll__impl = fun (self : t) (bufsize : Obj.t) -> let tempNumber = ref (0 : int) in (

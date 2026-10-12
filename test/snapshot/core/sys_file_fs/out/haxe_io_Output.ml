@@ -53,12 +53,12 @@ let writeBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) ->
 
 let flush__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let close__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let write__impl = fun (self : t) (s : HxBytes.t) -> ignore (ignore (let l = ref (let __bytes_receiver_15 = s in HxBytes.length __bytes_receiver_15) in let p = ref 0 in while !l > 0 do ignore (let k = (Obj.magic self : t).writeBytes (Obj.magic self) (Obj.magic s) (!p) (!l) in (
@@ -76,7 +76,7 @@ let prepare__impl = fun (self : t) (_nbytes : int) -> ignore ((
   ignore self;
   (
     ignore _nbytes;
-    ignore ()
+    (() : unit)
   )
 ))
 
