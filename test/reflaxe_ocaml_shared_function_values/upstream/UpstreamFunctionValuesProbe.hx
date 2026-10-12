@@ -1,6 +1,17 @@
 /** Establish the result contract independently with upstream Haxe before target adaptation. */
 class UpstreamFunctionValuesProbe {
 	static function main():Void {
+		for (left in [-9, 0, 11])
+			for (right in [-9, 0, 11]) {
+				if (Main.equal(left, right) != (left == right) || Main.different(left, right) != (left != right))
+					throw "integer comparison changed its result";
+				if (Main.callComparison(left, right))
+					throw "comparison of nested calls changed its result";
+			}
+		for (left in [false, true])
+			for (right in [false, true])
+				if (Main.conjunction(left, right) != (left && right) || Main.disjunction(left, right) != (left || right))
+					throw "Boolean operator changed its result";
 		if (Main.choose(7, 9) != 7 || Main.choose(-3, 11) != -3)
 			throw "function result did not preserve the first argument";
 		if (!Main.logical(true) || Main.logical(false))

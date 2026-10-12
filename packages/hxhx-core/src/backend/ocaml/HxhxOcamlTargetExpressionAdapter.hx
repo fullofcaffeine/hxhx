@@ -2,6 +2,7 @@ package backend.ocaml;
 
 import reflaxe.ocaml.target.OcamlTargetBindingFact;
 import reflaxe.ocaml.target.OcamlTargetExpressionFact;
+import reflaxe.ocaml.target.OcamlTargetExpressionFact.OcamlTargetBinaryOperator;
 import reflaxe.ocaml.target.OcamlTargetExpressionPath;
 import reflaxe.ocaml.target.OcamlTargetStatementFact;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact;
@@ -165,7 +166,8 @@ class HxhxOcamlTargetExpressionAdapter {
 			case Binary:
 				final children = expression.getExpressions();
 				final operators = expression.getTexts();
-				if (children.length != 2 || operators.length != 1 || operators[0] != "==") null; else {
+				if (children.length != 2 || operators.length != 1) null; else if (operators[0] == "=="
+					&& (isNullConstant(children[0]) || isNullConstant(children[1]))) {
 					final operand = isNullConstant(children[1]) ? children[0] : isNullConstant(children[0]) ? children[1] : null;
 					if (operand == null || operand.getType().getCanonicalDisplay() != "Null<Int>")
 						null;
@@ -173,7 +175,7 @@ class HxhxOcamlTargetExpressionAdapter {
 						final copied = copyExpression(operand, OcamlTargetExpressionPath.child(path, "operand"), "Null<Int>");
 						copied == null ? null : OcamlTargetExpressionFact.testNullableIntNull(path, copied);
 					}
-				}
+				} else copyBinary(operators[0], children[0], children[1], actualType, path);
 			case Ternary | SourceIf:
 				final children = expression.getExpressions();
 				if (children.length != 3) {
@@ -221,6 +223,29 @@ class HxhxOcamlTargetExpressionAdapter {
 			case _:
 				null;
 		};
+	}
+
+	/** Narrow native operation spelling at the adapter boundary and retain exact operand types. **/
+	function copyBinary(operation:String, left:TypedExpr, right:TypedExpr, resultType:String, path:String):Null<OcamlTargetExpressionFact> {
+		final selected:Null<OcamlTargetBinaryOperator> = switch (operation) {
+			case "==": IntEqual;
+			case "!=": IntNotEqual;
+			case "&&": BooleanAnd;
+			case "||": BooleanOr;
+			case _: null;
+		};
+		if (selected == null || resultType != "Bool")
+			return null;
+		final operandType = switch (selected) {
+			case IntEqual | IntNotEqual: "Int";
+			case BooleanAnd | BooleanOr: "Bool";
+		};
+		if (left.getType().getCanonicalDisplay() != operandType || right.getType().getCanonicalDisplay() != operandType)
+			return null;
+		final copiedLeft = copyExpression(left, OcamlTargetExpressionPath.child(path, "left"));
+		final copiedRight = copyExpression(right, OcamlTargetExpressionPath.child(path, "right"));
+		return copiedLeft == null
+			|| copiedRight == null ? null : OcamlTargetExpressionFact.binary(path, selected, copiedLeft, copiedRight);
 	}
 
 	/**

@@ -1,5 +1,14 @@
 (* Independently observe emitted function inputs and results, not only termination. *)
 let () =
+  List.iter (fun left -> List.iter (fun right ->
+    assert (Main.equal left right = (left = right));
+    assert (Main.different left right = (left <> right));
+    assert (not (Main.callComparison left right))
+  ) [-9; 0; 11]) [-9; 0; 11];
+  List.iter (fun left -> List.iter (fun right ->
+    assert (Main.conjunction left right = (left && right));
+    assert (Main.disjunction left right = (left || right))
+  ) [false; true]) [false; true];
   assert (Main.choose 7 9 = 7);
   assert (Main.choose (-3) 11 = -3);
   assert (Main.logical true);
@@ -43,3 +52,15 @@ let condition () = events := !events @ ["condition"]; !selected
 let assert_conditional flag result =
   assert (result = (if flag then 11 else 29));
   assert (!events = (if flag then ["condition"; "left"] else ["condition"; "right"]))
+
+(* A selected right operand can throw; a skipped operand must have no effects. *)
+exception Binary_right
+let binary_first = ref false
+let binary_second = ref false
+let binary_throws = ref false
+let reset_binary first second throws =
+  events := []; binary_first := first; binary_second := second; binary_throws := throws
+let binary_left () = events := !events @ ["left"]; !binary_first
+let binary_right () =
+  events := !events @ ["right"];
+  if !binary_throws then raise Binary_right else !binary_second

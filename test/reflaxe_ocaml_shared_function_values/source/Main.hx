@@ -8,6 +8,21 @@ class Main {
 	public static function logical(value:Bool):Bool
 		return value;
 
+	public static function equal(hx_left:Int, hx_right:Int):Bool
+		return hx_left == hx_right;
+
+	public static function different(first:Int, second:Int):Bool
+		return first != second;
+
+	public static function conjunction(first:Bool, second:Bool):Bool
+		return first && second;
+
+	public static function disjunction(first:Bool, second:Bool):Bool
+		return first || second;
+
+	public static function callComparison(first:Int, second:Int):Bool
+		return choose(first, second) != first || choose(second, first) != second;
+
 	public static function text(value:String):String
 		return value;
 
@@ -59,6 +74,11 @@ class Main {
 	static function main():Void {
 		choose(7, 9);
 		logical(false);
+		equal(3, 9);
+		different(3, 9);
+		conjunction(false, true);
+		disjunction(true, false);
+		callComparison(3, 9);
 		text("hé\x00z");
 		invoke(3, 5);
 		scoped(8);

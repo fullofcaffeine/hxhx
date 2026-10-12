@@ -169,6 +169,24 @@ class OcamlTargetExpressionLowerer {
 
 	function buildNode(expression:OcamlTargetExpressionFact):OcamlExpr {
 		return switch (expression.kind) {
+			case BinaryExpression(operation):
+				final children = expression.copyChildren();
+				final left = buildNode(children[0]);
+				final right = buildNode(children[1]);
+				switch (operation) {
+					case BooleanAnd:
+						OcamlExpr.EIf(left, right, OcamlExpr.EConst(OcamlConst.CBool(false)));
+					case BooleanOr:
+						OcamlExpr.EIf(left, OcamlExpr.EConst(OcamlConst.CBool(true)), right);
+					case IntEqual | IntNotEqual:
+						// OCaml does not specify binary-operand order. Bind each value
+						// once before comparison so Haxe effects stay left-to-right.
+						final leftName = allocateName("hx_left");
+						final rightName = allocateName("hx_right");
+						final op = operation == IntEqual ? OcamlBinop.Eq : OcamlBinop.Neq;
+						OcamlExpr.ELet(leftName, left,
+							OcamlExpr.ELet(rightName, right, OcamlExpr.EBinop(op, OcamlExpr.EIdent(leftName), OcamlExpr.EIdent(rightName)), false), false);
+				}
 			case NullableIntNullExpression:
 				OcamlExpr.ERuntimeIdent(runtimePlan.reference(expression, "HxRuntime.hx_null"));
 			case BoxNullableIntExpression:
@@ -225,7 +243,7 @@ class OcamlTargetExpressionLowerer {
 					result = OcamlExpr.ELet(bindingName(binding), buildNode(initializer), result, false);
 					hasResult = true;
 				case LiteralExpression | LocalReadExpression | BlockExpression | StaticCallExpression | ConditionalExpression | NullableIntNullExpression |
-					BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression:
+					BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression | BinaryExpression(_):
 					final built = buildNode(child);
 					if (!hasResult) {
 						result = built;

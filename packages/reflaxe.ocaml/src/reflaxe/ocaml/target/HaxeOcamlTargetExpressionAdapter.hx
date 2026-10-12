@@ -3,6 +3,8 @@ package reflaxe.ocaml.target;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
+import haxe.macro.Expr.Binop;
+import reflaxe.ocaml.target.OcamlTargetExpressionFact.OcamlTargetBinaryOperator;
 import reflaxe.ocaml.target.OcamlTargetBindingFact.OcamlTargetBindingRole;
 #end
 
@@ -137,12 +139,14 @@ class HaxeOcamlTargetExpressionAdapter {
 		return switch (expression.expr) {
 			case TConst(TNull) if (actualType == "Null<Int>" && (expectedType == null || expectedType == "Null<Int>")):
 				OcamlTargetExpressionFact.nullableIntNull(path);
-			case TBinop(OpEq, left, right):
+			case TBinop(OpEq, left, right) if (isNullConstant(left) || isNullConstant(right)):
 				final operand = isNullConstant(right) ? left : isNullConstant(left) ? right : null;
 				if (operand == null || TypeTools.toString(operand.t) != "Null<Int>") null; else {
 					final copied = copyExpression(operand, OcamlTargetExpressionPath.child(path, "operand"), "Null<Int>");
 					copied == null ? null : OcamlTargetExpressionFact.testNullableIntNull(path, copied);
 				}
+			case TBinop(operation, left, right):
+				copyBinary(operation, left, right, actualType, path);
 			case TIf(condition, whenTrue, whenFalse) if (whenFalse != null):
 				final resultType = expectedType == null ? actualType : expectedType;
 				final copiedCondition = copyExpression(condition, OcamlTargetExpressionPath.child(path, "condition"));
@@ -181,6 +185,29 @@ class HaxeOcamlTargetExpressionAdapter {
 			case _:
 				null;
 		};
+	}
+
+	/** Copy only the exact primitive operation; never apply OCaml equality to a host object. **/
+	function copyBinary(operation:Binop, left:TypedExpr, right:TypedExpr, resultType:String, path:String):Null<OcamlTargetExpressionFact> {
+		final selected:Null<OcamlTargetBinaryOperator> = switch (operation) {
+			case OpEq: IntEqual;
+			case OpNotEq: IntNotEqual;
+			case OpBoolAnd: BooleanAnd;
+			case OpBoolOr: BooleanOr;
+			case _: null;
+		};
+		if (selected == null || resultType != "Bool")
+			return null;
+		final operandType = switch (selected) {
+			case IntEqual | IntNotEqual: "Int";
+			case BooleanAnd | BooleanOr: "Bool";
+		};
+		if (TypeTools.toString(left.t) != operandType || TypeTools.toString(right.t) != operandType)
+			return null;
+		final copiedLeft = copyExpression(left, OcamlTargetExpressionPath.child(path, "left"));
+		final copiedRight = copyExpression(right, OcamlTargetExpressionPath.child(path, "right"));
+		return copiedLeft == null
+			|| copiedRight == null ? null : OcamlTargetExpressionFact.binary(path, selected, copiedLeft, copiedRight);
 	}
 
 	function copyBlock(expression:TypedExpr, expressions:Array<TypedExpr>, path:String, ?expectedType:String):Null<OcamlTargetExpressionFact> {

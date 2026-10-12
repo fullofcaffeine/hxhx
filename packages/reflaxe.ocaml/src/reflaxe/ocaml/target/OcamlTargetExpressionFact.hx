@@ -2,6 +2,14 @@ package reflaxe.ocaml.target;
 
 import haxe.crypto.Sha256;
 
+/** Exact primitive operations; object, String and Float equality have separate contracts. **/
+enum OcamlTargetBinaryOperator {
+	IntEqual;
+	IntNotEqual;
+	BooleanAnd;
+	BooleanOr;
+}
+
 /** Expression shapes admitted by the first recursive shared-target tracer. **/
 enum OcamlTargetExpressionKind {
 	LiteralExpression;
@@ -14,17 +22,18 @@ enum OcamlTargetExpressionKind {
 	BoxNullableIntExpression;
 	UnwrapNullableIntExpression;
 	TestNullableIntNullExpression;
+	BinaryExpression(operation:OcamlTargetBinaryOperator);
 }
 
 /**
 	One immutable expression tree copied independently by either compiler host.
 
-	Revision 5 represents nullable integers and their explicit conversions.
+	Revision 6 adds ordered Int comparisons and short-circuit Boolean operations.
 	Direct non-null literals, initialized locals, local reads, and lexical blocks
 	retain their value types. Function control lives in OcamlTargetStatementFact.
 **/
 class OcamlTargetExpressionFact {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v5";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-expression-v6";
 
 	public final path:String;
 	public final kind:OcamlTargetExpressionKind;
@@ -90,6 +99,14 @@ class OcamlTargetExpressionFact {
 	public static function testNullableIntNull(path:String, operand:OcamlTargetExpressionFact):OcamlTargetExpressionFact
 		return new OcamlTargetExpressionFact(path, TestNullableIntNullExpression, "Bool", null, null, [operand]);
 
+	/** Preserve operand roles and exact types; the lowerer owns evaluation order and laziness. **/
+	public static function binary(path:String, operation:OcamlTargetBinaryOperator, left:OcamlTargetExpressionFact,
+			right:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
+		if (operation == null || left == null || right == null)
+			throw "OCaml target binary expression requires an operation and both operands";
+		return new OcamlTargetExpressionFact(path, BinaryExpression(operation), "Bool", null, null, [left, right]);
+	}
+
 	/** Keep condition and alternatives distinct so lowering cannot evaluate both branches. **/
 	public static function conditional(path:String, semanticTypeDisplay:String, condition:OcamlTargetExpressionFact, whenTrue:OcamlTargetExpressionFact,
 			whenFalse:OcamlTargetExpressionFact):OcamlTargetExpressionFact {
@@ -137,6 +154,18 @@ class OcamlTargetExpressionFact {
 	static function validateShape(path:String, kind:OcamlTargetExpressionKind, semanticTypeDisplay:String, literal:Null<OcamlTargetLiteralFact>,
 			binding:Null<OcamlTargetBindingFact>, children:Array<OcamlTargetExpressionFact>):Void {
 		switch (kind) {
+			case BinaryExpression(operation):
+				if (literal != null || binding != null || children.length != 2 || semanticTypeDisplay != "Bool")
+					invalidShape("binary operation");
+				final operandType = switch (operation) {
+					case IntEqual | IntNotEqual: "Int";
+					case BooleanAnd | BooleanOr: "Bool";
+				};
+				for (index in 0...children.length)
+					if (children[index] == null
+						|| children[index].path != OcamlTargetExpressionPath.child(path, index == 0 ? "left" : "right")
+						|| children[index].semanticTypeDisplay != operandType)
+						throw "OCaml target binary operation requires exact operand paths and types";
 			case NullableIntNullExpression:
 				if (literal != null || binding != null || children.length != 0 || semanticTypeDisplay != "Null<Int>")
 					invalidShape("nullable Int null");
@@ -241,6 +270,12 @@ class OcamlTargetExpressionFact {
 	/** Returns the protocol spelling without target-specific enum stringification. **/
 	static function kindName(kind:OcamlTargetExpressionKind):String {
 		return switch (kind) {
+			case BinaryExpression(operation): switch (operation) {
+					case IntEqual: "IntEqualExpression";
+					case IntNotEqual: "IntNotEqualExpression";
+					case BooleanAnd: "BooleanAndExpression";
+					case BooleanOr: "BooleanOrExpression";
+				};
 			case LiteralExpression: "LiteralExpression";
 			case LocalReadExpression: "LocalReadExpression";
 			case VariableDeclarationExpression: "VariableDeclarationExpression";
@@ -258,7 +293,8 @@ class OcamlTargetExpressionFact {
 	static function validateNode(node:OcamlTargetExpressionFact, scopes:Array<Map<String, Bool>>, identities:Map<String, Bool>):Void {
 		switch (node.kind) {
 			case LiteralExpression | NullableIntNullExpression:
-			case StaticCallExpression | ConditionalExpression | BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression:
+			case StaticCallExpression | ConditionalExpression | BoxNullableIntExpression | UnwrapNullableIntExpression | TestNullableIntNullExpression |
+				BinaryExpression(_):
 				for (child in node.children) {
 					scopes.push([]);
 					validateNode(child, scopes, identities);

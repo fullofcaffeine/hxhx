@@ -61,6 +61,8 @@ class SharedFunctionValuesFixture {
 				final expectedSignature = switch (name) {
 					case "choose", "invoke": "int -> int -> int";
 					case "logical": "bool -> bool";
+					case "equal", "different", "callComparison": "int -> int -> bool";
+					case "conjunction", "disjunction": "bool -> bool -> bool";
 					case "text": "string -> string";
 					case "scoped": "int -> int";
 					case "done", "main": "unit -> unit";
@@ -76,11 +78,12 @@ class SharedFunctionValuesFixture {
 			}
 		if (failures.length != 0)
 			throw "shared function arguments/results are incomplete: " + failures.join("; ");
-		if (compared != 13 || stock.length != compared)
+		if (compared != 18 || stock.length != compared)
 			throw "shared function values did not compare the complete authored inventory";
 		final request = HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram([typed], false), "Main");
 		FunctionValuesValidation.check(request);
 		ConditionalValuesValidation.check();
+		BinaryValuesValidation.check();
 		final plan = OcamlTargetProgramCore.lower(request);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != before)
 			throw "shared function value adaptation changed its original typed module";
@@ -89,7 +92,11 @@ class SharedFunctionValuesFixture {
 		if (Sys.command(executable, []) != 0)
 			throw "shared function value application failed";
 		File.copy("test/reflaxe_ocaml_shared_function_values/Observer.ml", output + "/Observer.ml");
-		File.saveContent(output + "/Order.ml", FunctionValuesValidation.orderObserverSource() + ConditionalValuesValidation.observerSource());
+		File.saveContent(output
+			+ "/Order.ml",
+			FunctionValuesValidation.orderObserverSource()
+			+ ConditionalValuesValidation.observerSource()
+			+ BinaryValuesValidation.observerSource());
 		final cwd = Sys.getCwd();
 		try {
 			Sys.setCwd(output);
