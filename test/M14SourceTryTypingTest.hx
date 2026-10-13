@@ -24,6 +24,7 @@ class M14SourceTryTypingTest {
 		return nodes.filter(node -> node.getTag() == tag);
 
 	public static function run():Void {
+		resultConversions();
 		for (target in ["neko", "cpp"])
 			resolvedCatchUses(target);
 		capturedCatch();
@@ -88,6 +89,61 @@ class M14SourceTryTypingTest {
 			|| CompilerTypedTreeRevision.functionBody(fn) != originalRevision)
 			throw "try lowering changed typed source or was not idempotent";
 		Sys.println("SOURCE_TRY_TYPING:PASS");
+	}
+
+	/** Concrete branch results select the storage type; only Dynamic values need a conversion. */
+	static function resultConversions():Void {
+		final source = "class Main {"
+			+ " static function fallback(value:Dynamic):Dynamic return value;"
+			+
+			" static function caught(flag:Bool):String { final result = try { if (flag) throw 'boom'; 'ready'; } catch (error:Dynamic) fallback(error); return result; }"
+			+ " static function attempted(value:Dynamic):String { final result = try value catch (error:Dynamic) 'caught'; return result; }"
+			+ " static function dynamic(value:Dynamic):Dynamic { final result = try value catch (error:Dynamic) fallback(error); return result; }"
+			+ " static function thrown():Dynamic { final result = try throw 'boom' catch (error:Dynamic) fallback(error); return result; }"
+			+ " static function concrete():String { final result = try 'ready' catch (error:Dynamic) 'caught'; return result; }"
+			+ " static function rethrown():String { final result = try 'ready' catch (error:Dynamic) throw error; return result; }"
+			+ "}";
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final functions = typed.getTypedClasses()[0].getFunctions();
+		for (entry in [
+			{name: "caught", type: "primitive:String", convertedBranch: 1},
+			{name: "attempted", type: "primitive:String", convertedBranch: 0},
+			{name: "dynamic", type: "dynamic", convertedBranch: -1},
+			{name: "thrown", type: "dynamic", convertedBranch: -1},
+			{name: "concrete", type: "primitive:String", convertedBranch: -1},
+			{name: "rethrown", type: "primitive:String", convertedBranch: -1}
+		]) {
+			final matches = functions.filter(fn -> fn.getDeclaration().getSignature().getName() == entry.name);
+			if (matches.length != 1)
+				throw "missing try result fixture: " + entry.name;
+			final fn = matches[0];
+			final originalRevision = CompilerTypedTreeRevision.functionBody(fn);
+			final tries = tagged(expressions(fn), SourceTry);
+			if (tries.length != 1 || tries[0].getType().getSemanticKey() != entry.type)
+				throw "try result lost its selected type: " + entry.name;
+			final bodies = tries[0].getExpressions();
+			if (bodies.length != 2 || tries[0].getLocalBindings().length != 1)
+				throw "try result lost its ordered bodies or catch binding";
+			for (index in 0...bodies.length) {
+				final body = bodies[index];
+				if (index == entry.convertedBranch) {
+					if (body.getTag() != Cast
+						|| body.getType().getSemanticKey() != entry.type
+						|| body.getExpressions().length != 1
+						|| !body.getExpressions()[0].getType().isDynamic())
+						throw "try branch lost its explicit Dynamic conversion: " + entry.name;
+				} else if (body.getTag() == Cast) {
+					throw "try branch acquired an unnecessary conversion: " + entry.name;
+				}
+			}
+			final lowered = TypedControlLowering.functionBody(fn);
+			final casts = tagged(expressions(lowered), Cast);
+			if (casts.length != (entry.convertedBranch < 0 ? 0 : 1))
+				throw "try lowering lost or duplicated a selected conversion: " + entry.name;
+			if (CompilerTypedTreeRevision.functionBody(fn) != originalRevision)
+				throw "try result lowering changed the typed source";
+		}
 	}
 
 	/** Target-selected catch facts belong to lexical try handlers and must survive lowering with their exact bindings. */

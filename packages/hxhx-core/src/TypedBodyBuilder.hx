@@ -750,7 +750,8 @@ class TypedBodyBuilder {
 						if (use != null)
 							uses.push(use);
 					}
-				TypedExpr.sourceTry(catches, typedBodies, nodeType, exactPosition(sourcePosition), bindings).withCatchUses(uses);
+				final alignedBodies = typeResolver == null ? typedBodies : [for (body in typedBodies) TySourceTryResult.convertBranch(body, nodeType)];
+				TypedExpr.sourceTry(catches, alignedBodies, nodeType, exactPosition(sourcePosition), bindings).withCatchUses(uses);
 			case ESourceFor(binding, iterable, body, sourcePosition):
 				final typedIterable = buildExpr(iterable, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				// Quoted syntax has no executing environment and must not select runtime iterator declarations.

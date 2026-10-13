@@ -2557,8 +2557,7 @@ class TyperStage {
 					scope.declareLocal(entry.getName(), type, CatchVariable);
 					final handler = inferExprType(bodies[index + 1], scope, ctx, entry.getPosition(), expectedResult);
 					scope.exitLexicalScope();
-					final joined = TyType.unify(result, handler);
-					result = joined == null ? TyType.fromHintText("Dynamic") : joined;
+					result = TySourceTryResult.select(result, handler);
 				}
 				result;
 			case ELoweredControl(_, _, _, _):
