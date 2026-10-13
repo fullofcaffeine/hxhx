@@ -1,4 +1,6 @@
 import haxe.io.Path;
+import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.Stage3SetupSupport;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -41,8 +43,24 @@ class M14Stage3ExactCallOwnerIntegrationTest {
 				new ResolvedModule("Main", mainPath, ParserStage.parse(mainSource, mainPath)),
 				new ResolvedModule("CallReceiver", receiverPath, ParserStage.parse(receiverSource, receiverPath))
 			];
-			final index = TyperIndex.build(modules);
-			final typed = modules.map(module -> TyperStage.typeResolvedModule(module, index));
+			// The callback's Sys.println body needs its declared Void result before
+			// native return conversion can validate the exact callable boundary.
+			final args = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
+			if (args == null)
+				throw "exact-call fixture arguments did not parse";
+			final paths = Stage3SetupSupport.projectClassPaths({
+				explicitPaths: [root],
+				libraries: [],
+				cwd: Sys.getCwd(),
+				standardRoot: Stage1Args.getStandardLibraryRoot(args),
+				targetDefine: "ocaml"
+			});
+			final index = TyperIndex.buildHeaders(modules);
+			final loader = new ModuleLoader(paths, Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
+			loader.markResolvedAlready(modules);
+			if (loader.ensureTypeAvailable("Sys", "", []) == null)
+				throw "exact-call fixture requires the real Sys provider";
+			final typed = modules.map(module -> TyperStage.typeResolvedModule(module, index, loader, true));
 			final executable = EmitterStage.emitToDir(MacroStage.expandProgram(typed, []), Path.join([root, "out"]), true);
 			if (missing)
 				throw "missing source argument was accepted";
