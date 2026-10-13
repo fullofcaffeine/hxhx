@@ -65,6 +65,31 @@ function projectDeclarationSignature(parameters:Array<Type>, result:Type, repres
 	return resultType == null ? null : {parameters: parameterTypes, result: resultType};
 }
 
+/**
+	Retains static helpers whose generic values stay inside standard maps.
+
+	For example, count<T>(values:StringMap<T>):Int keeps the map's existing
+	boxed element storage while exporting an Int result. Only map parameters
+	may use this method's declared type parameters. Other arguments and the
+	result must already have ordinary declaration types. In particular, this
+	does not constrain a polymorphic identity<T>(value:T):T to Obj.t.
+**/
+function projectStaticMapDeclarationSignature(parameters:Array<Type>, result:Type, representations:OcamlRepresentationRegistry,
+		nominalType:Type->OcamlTypeExpr, context:CompilationContext, ownedTypeParameters:Array<Type>):Null<OcamlDeclarationSignature> {
+	final resultType = declarationCarrier(result, representations, nominalType, context, null);
+	if (resultType == null)
+		return null;
+	final parameterTypes:Array<OcamlTypeExpr> = [];
+	for (parameter in parameters) {
+		final mapParameters = OcamlStandardMapCarrierContract.declarationParameters(parameter);
+		final carrier = declarationCarrier(parameter, representations, nominalType, context, mapParameters == null ? null : ownedTypeParameters);
+		if (carrier == null)
+			return null;
+		parameterTypes.push(carrier);
+	}
+	return {parameters: parameterTypes, result: resultType};
+}
+
 /** Only explicit, existing storage choices may become exported declaration types. */
 private function declarationCarrier(type:Type, representations:OcamlRepresentationRegistry, nominalType:Type->OcamlTypeExpr, context:CompilationContext,
 		erasedMethodTypeParameters:Null<Array<Type>>):Null<OcamlTypeExpr> {

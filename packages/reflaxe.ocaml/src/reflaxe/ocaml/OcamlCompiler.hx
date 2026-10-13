@@ -1086,6 +1086,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						final dependencyClass = classReference.get();
 						final dependencyField = fieldReference.get();
 						final isMutableStorage = switch (dependencyField.kind) {
+							case FVar(AccInline, _): false;
 							case FVar(_, _): !dependencyField.isFinal;
 							case FMethod(MethDynamic): true;
 							case _: false;
@@ -1164,6 +1165,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case FMethod(MethDynamic): true;
 					case _: false;
 				}).concat(fields.filter(field -> switch (field.kind) {
+					// Reflaxe omits inline constants: Haxe substitutes their values.
+					// A module prelude must not invent a mutable cell for that field.
+					case FVar(AccInline, _): false;
 					case FVar(_, _): !field.isFinal;
 					case _: false;
 				}));
@@ -2993,8 +2997,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 			};
 			final bindingName = storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
-			final binding:OcamlLetBinding = if (!isDynamicMethod && builtFunction.signature != null) {
-				{name: bindingName, expr: expr, signature: builtFunction.signature};
+			var staticSignature = builtFunction.signature;
+			if (!isDynamicMethod && staticSignature == null && f.field.params.length > 0) {
+				final declaration = reflaxe.ocaml.ast.OcamlDeclarationSignature.projectStaticMapDeclarationSignature(argInfo.map(argument -> argument.t),
+					staticReturnType, representationRegistry, ocamlTypeExprFromHaxeType, ctx, f.field.params.map(parameter -> parameter.t));
+				if (declaration != null)
+					staticSignature = signatureFromTypes(declaration.parameters, declaration.result);
+			}
+			final binding:OcamlLetBinding = if (!isDynamicMethod && staticSignature != null) {
+				{name: bindingName, expr: expr, signature: staticSignature};
 			} else {
 				{name: bindingName, expr: expr};
 			};
