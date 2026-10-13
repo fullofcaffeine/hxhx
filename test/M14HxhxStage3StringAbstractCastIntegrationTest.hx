@@ -96,7 +96,8 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 
 		final projectedCall = TypedBodySource.expression(returnExpression);
 		switch (projectedCall) {
-			case ECall(EField(ECast(EIdent("value"), "String"), "toLowerCase"), []):
+			case ECall(EField(EParenthesized(ECast(EIdent("value"), "String"), position), "toLowerCase"), []):
+				assertTrue(position.getLine() == 6, "typed source projection lost the authored receiver parentheses position");
 			case _:
 				throw "typed source projection lost the explicit String receiver cast";
 		}
@@ -135,7 +136,7 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final output = File.getContent(haxe.io.Path.join([outDir, "StringAbstractCast.ml"]));
-		assertTrue(output.indexOf("HxString.toLowerCase ((Obj.obj (Obj.repr (value)) : string)) ()") >= 0,
+		assertTrue(output.indexOf("HxString.toLowerCase (((Obj.obj (Obj.repr (value)) : string))) ()") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the explicit cast");
 		assertTrue(output.indexOf("accept ((Obj.obj (Obj.repr (value)) : string))") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the call boundary");
