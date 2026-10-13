@@ -86,11 +86,13 @@ class M14Stage3BoolStringTest {
 			libraries: [],
 			cwd: Sys.getCwd(),
 			standardRoot: Stage1Args.getStandardLibraryRoot(arguments),
-			targetDefine: ""
+			targetDefine: "ocaml"
 		});
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(paths, new haxe.ds.StringMap<String>(), index, null, false);
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
 		loader.markResolvedAlready([resolved]);
-		return TyperStage.typeResolvedModule(resolved, index, loader);
+		if (loader.ensureTypeAvailable("Array", "", []) == null)
+			throw "string conversion fixture requires the real Array provider";
+		return TyperStage.typeResolvedModule(resolved, index, loader, true);
 	}
 }
