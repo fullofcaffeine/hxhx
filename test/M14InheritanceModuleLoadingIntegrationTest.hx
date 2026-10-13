@@ -131,9 +131,9 @@ class M14InheritanceModuleLoadingIntegrationTest {
 			});
 			final paths = modulePaths(program.modules);
 			assertTrue(paths.join(",") == "Base,IContract,Main,Middle", "typing Main should load and type its complete parent chain: " + paths.join(","));
-			// Signature preparation visits sorted header dependencies before body typing.
-			// Middle then prepares Base before publishing its own indexed parent facts.
-			assertTrue(program.prepared.join(",") == "IContract,Middle,Base",
+			// Headers are prepared breadth first in declaration order: Main names
+			// Middle before IContract, then Middle contributes Base to the next level.
+			assertTrue(program.prepared.join(",") == "Middle,IContract,Base",
 				"each lazily discovered parent module should run request-owned preparation exactly once in discovery order: " + program.prepared.join(","));
 			assertTrue(program.prepared.indexOf("Unrelated") == -1,
 				"inheritance loading should not inspect an unrelated source file merely because it shares the class path");
