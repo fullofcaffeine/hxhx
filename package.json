@@ -603,7 +603,7 @@
     "test:m14:cpp-managed-startup-order": "haxe test/m14_cpp_managed_startup_order_test.hxml",
     "test:m14:enum-declaration-identity": "haxe test/m14_enum_declaration_identity_test.hxml",
     "test:m14:contextual-authored-cast": "haxe test/m14_contextual_authored_cast_test.hxml",
-    "test:m14:cpp-managed-authored-cast": "npm run test:m14:contextual-authored-cast && haxe test/m14_cpp_managed_cast_plan_test.hxml && haxe test/m14_cpp_managed_authored_cast_test.hxml",
+    "test:m14:cpp-managed-authored-cast": "npm run test:m14:contextual-authored-cast && haxe test/m14_cpp_managed_cast_plan_test.hxml && haxe test/m14_cpp_managed_authored_cast_test.hxml && haxe test/m14_cpp_type_annotation_test.hxml",
     "test:m14:literal-character-code": "haxe test/m14_literal_character_code_test.hxml",
     "test:m14:cpp-literal-character-code": "npm run test:m14:literal-character-code && haxe test/m14_cpp_literal_character_code_test.hxml",
     "test:m14:generic-abstract-conversion": "haxe test/m14_generic_abstract_conversion_test.hxml",

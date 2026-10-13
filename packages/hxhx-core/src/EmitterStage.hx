@@ -889,7 +889,7 @@ class EmitterStage {
 					final sb = constFoldString(b);
 					sb == null ? null : (sa + sb);
 				}
-			case ECast(expr, _hint):
+			case ECast(expr, _hint) | ECheckType(expr, _hint):
 				constFoldString(expr);
 			case EParenthesized(expr, _) | EUntyped(expr):
 				constFoldString(expr);
@@ -1881,7 +1881,7 @@ class EmitterStage {
 				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
 					|| op == ">>>"): stage3IsInt64Expr(a, tyByIdent) || stage3IsInt64Expr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsInt64Expr(thenExpr, tyByIdent) && stage3IsInt64Expr(elseExpr, tyByIdent);
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsInt64Expr(inner, tyByIdent);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInt64Expr(inner, tyByIdent);
@@ -1893,7 +1893,7 @@ class EmitterStage {
 	static function stage3IsInfNanFieldExpr(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsInfNanFieldExpr(inner);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInfNanFieldExpr(inner);
@@ -1905,7 +1905,7 @@ class EmitterStage {
 	static function stage3IsPositiveInfinityFieldExpr(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsPositiveInfinityFieldExpr(inner);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsPositiveInfinityFieldExpr(inner);
@@ -2033,7 +2033,7 @@ class EmitterStage {
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "String";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsStringExpr(inner, tyByIdent);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsStringExpr(inner, tyByIdent);
@@ -2092,7 +2092,7 @@ class EmitterStage {
 			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
-			case ECast(_, typeHint):
+			case ECast(_, typeHint) | ECheckType(_, typeHint):
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(typeHint);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee);
@@ -2132,7 +2132,7 @@ class EmitterStage {
 			case EIdent(name):
 				final hint = StringTools.trim(stage3TyForIdent(name, tyByIdent));
 				(hint.length == 0 || hint == "Unknown" || hint == "Dynamic") ? TyType.unknown() : TyType.fromHintText(hint);
-			case ECast(inner, typeHint):
+			case ECast(inner, typeHint) | ECheckType(inner, typeHint):
 				final hint = StringTools.trim(typeHint == null ? "" : typeHint);
 				hint.length == 0 ? stage3CallArgumentType(inner, tyByIdent, callSigByCallee, staticImportByIdent) : TyType.fromHintText(hint);
 			case ENew(typePath, _):
@@ -2265,7 +2265,7 @@ class EmitterStage {
 	static function stage3IsSysIoProcessExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
 			case EIdent(name): final t = stage3TyForIdent(name, tyByIdent); t == "sys.io.Process" || t == "sys.io.Process.Process";
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				stage3IsSysIoProcessExpr(inner, tyByIdent);
 			case _:
 				false;
@@ -2352,7 +2352,7 @@ class EmitterStage {
 			case ECall(EField(inner, "copy"), []):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
 			case ECall(EField(inner, "concat"), [other]): stage3IsLikelyStringArrayExpr(inner, tyByIdent) && stage3IsLikelyStringArrayExpr(other, tyByIdent);
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
@@ -2582,7 +2582,7 @@ class EmitterStage {
 				throw "stage3 emitter: malformed structural __hxhx_try expression";
 			case ECall(EIdent("__hxhx_throw"), _):
 				throw "stage3 emitter: malformed structural __hxhx_throw expression";
-			case ECast(lambda = ELambda(args, body), typeHint):
+			case ECast(lambda = ELambda(args, body), typeHint) | ECheckType(lambda = ELambda(args, body), typeHint):
 				final argumentTypes = stage3TypedLambdaArgumentTypes(typeHint, args.length);
 				if (argumentTypes != null) {
 					final ocamlArgs = args.map(requireOcamlFunctionLocalValueIdent).join(" ");
@@ -2992,7 +2992,7 @@ class EmitterStage {
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		switch e {
-			case ECast(lambda = ELambda(_, body), _) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
+			case ECast(lambda = ELambda(_, body), _) | ECheckType(lambda = ELambda(_, body), _) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
 				return exprToOcaml(lambda, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case ELambda(arguments, body) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
 				final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(e) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(e);
@@ -4501,8 +4501,15 @@ class EmitterStage {
 				// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
 				// a range in expression position, collapse to poison.
 				"(Obj.magic 0)";
-			case ECast(expr, hint):
+			case ECast(expr, hint) | ECheckType(expr, hint):
 				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findCast(e) : currentTypedFunction == null ? null : currentTypedFunction.findCast(e);
+				// A selected operand conversion already produced the annotation's
+				// destination. Keep its existing native view without wrapping it twice.
+				if (occurrence != null
+					&& occurrence.isAnnotation()
+					&& occurrence.getSourceType().getSemanticKey() == occurrence.getTargetType().getSemanticKey())
+					return value;
 				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
 				stringCast == null ? value : stringCast;
 			case EParenthesized(inner, _):
@@ -4797,7 +4804,7 @@ class EmitterStage {
 					// into `(Obj.magic 0)`.
 					hasBringupPoison(iterable);
 				case EArrayAccess(arr, idx): hasBringupPoison(arr) || hasBringupPoison(idx);
-				case ECast(expr, _hint):
+				case ECast(expr, _hint) | ECheckType(expr, _hint):
 					hasBringupPoison(expr);
 				case EParenthesized(expr, _) | EUntyped(expr):
 					hasBringupPoison(expr);
@@ -4943,7 +4950,7 @@ class EmitterStage {
 				if (exprs != null)
 					for (branchExpr in exprs)
 						collectAssignedNamesInExprRec(branchExpr, out);
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				collectAssignedNamesInExprRec(inner, out);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				collectAssignedNamesInExprRec(inner, out);
@@ -5088,7 +5095,7 @@ class EmitterStage {
 			case ERange(start, end):
 				scanExprForPreludeDepsRec(start, locals, calls, idents);
 				scanExprForPreludeDepsRec(end, locals, calls, idents);
-			case ECast(expr, _):
+			case ECast(expr, _) | ECheckType(expr, _):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
 			case EParenthesized(expr, _) | EUntyped(expr):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
@@ -5809,7 +5816,7 @@ class EmitterStage {
 					case ERange(startExpr, endExpr): exprContainsIdent(startExpr, needle) || exprContainsIdent(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprContainsIdent(cond,
 							needle) || exprContainsIdent(thenExpr, needle) || exprContainsIdent(elseExpr, needle);
-					case ECast(inner, _):
+					case ECast(inner, _) | ECheckType(inner, _):
 						exprContainsIdent(inner, needle);
 					case EParenthesized(inner, _) | EUntyped(inner):
 						exprContainsIdent(inner, needle);
@@ -5870,7 +5877,7 @@ class EmitterStage {
 					case EArrayAccess(arrayExpr, indexExpr): exprHintsInt(arrayExpr, needle) || exprHintsInt(indexExpr, needle);
 					case ERange(startExpr, endExpr): exprHintsInt(startExpr, needle) || exprHintsInt(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprHintsInt(cond, needle) || exprHintsInt(thenExpr, needle) || exprHintsInt(elseExpr, needle);
-					case ECast(inner, _):
+					case ECast(inner, _) | ECheckType(inner, _):
 						exprHintsInt(inner, needle);
 					case EParenthesized(inner, _) | EUntyped(inner):
 						exprHintsInt(inner, needle);
@@ -8119,7 +8126,7 @@ class EmitterStage {
 									staticInitWorklist.push(start);
 								if (end != null)
 									staticInitWorklist.push(end);
-							case ECast(expr, _):
+							case ECast(expr, _) | ECheckType(expr, _):
 								if (expr != null)
 									staticInitWorklist.push(expr);
 							case EParenthesized(expr, _) | EUntyped(expr):
@@ -8730,7 +8737,7 @@ class EmitterStage {
 											exprWorklist.push(start);
 										if (end != null)
 											exprWorklist.push(end);
-									case ECast(expr, _hint):
+									case ECast(expr, _hint) | ECheckType(expr, _hint):
 										if (expr != null)
 											exprWorklist.push(expr);
 									case EParenthesized(expr, _) | EUntyped(expr):

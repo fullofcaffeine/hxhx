@@ -62,6 +62,7 @@ function expression(node:TypedExpr):HxExpr {
 		case ArrayAccess: EArrayAccess(child(0), child(1));
 		case Range: ERange(child(0), child(1));
 		case Cast: ECast(child(0), texts[0]);
+		case CheckType: ECheckType(child(0), texts[0]);
 		case Untyped: EUntyped(child(0));
 		case Opaque:
 			switch node.getOpaqueKind() {

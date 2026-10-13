@@ -302,6 +302,7 @@ class CompilerTypedTreeRevision {
 			case Range: "range";
 			case FixedRange: "fixed-range";
 			case Cast: "cast";
+			case CheckType: "check-type";
 			case Untyped: "untyped";
 			case Opaque: "opaque";
 			case Block: "block";

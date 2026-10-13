@@ -321,6 +321,7 @@ class CppMacroExpr {
 			case ESwitchRaw(_): "ESwitchRaw";
 			case ESwitch(_, _, _): "ESwitch";
 			case ECast(_, _): "ECast";
+			case ECheckType(_, _): "ECheckType";
 			case EUntyped(_): "EUntyped";
 			case ENew(typePath, _): "ENew(" + typePath + ")";
 			case EAnon(_, _): "EAnon";

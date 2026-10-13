@@ -3514,6 +3514,16 @@ class TyperStage {
 				}
 				// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
 				TyType.fromHintText("Dynamic");
+			case ECheckType(operand, typeHint):
+				final hinted = typeFromHintInContext(typeHint, ctx, scope);
+				final inner = inferExprType(operand, scope, ctx, pos, hinted);
+				if (!scope.isUntypedContext()
+					&& !TyFieldAssignment.explicitlyUntyped(operand)
+					&& !hinted.hasUnknownComponent()
+					&& !inner.hasUnknownComponent()
+					&& !TyValueCompatibility.accepts(ctx.getIndex(), hinted, inner, operand))
+					throw new TyperError(ctx.getFilePath(), pos, inner.getDisplay() + " should be " + hinted.getDisplay());
+				hinted;
 			case ECast(operand, typeHint):
 				final hinted = typeFromHintInContext(typeHint, ctx, scope);
 				final inner = switch (operand) {

@@ -240,7 +240,8 @@ class CppPrepLocalInferenceGuard {
 				true;
 			case ECall(callee, args): exprHasBindCallableEvidence(callee) || exprListHasBindCallableEvidence(args);
 			case EBinop(_, left, right) | EArrayAccess(left, right) | EDiscardThen(left, right): exprHasBindCallableEvidence(left) || exprHasBindCallableEvidence(right);
-			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | ECheckType(receiver, _) |
+				EUntyped(receiver) | EMacroExpr(receiver, _):
 				exprHasBindCallableEvidence(receiver);
 			case ETernary(cond, thenExpr, elseExpr): exprHasBindCallableEvidence(cond) || exprHasBindCallableEvidence(thenExpr) || exprHasBindCallableEvidence(elseExpr);
 			case EAnon(_, fieldValues) | EArrayDecl(fieldValues):
@@ -313,7 +314,8 @@ class CppPrepLocalInferenceGuard {
 		return switch (expr) {
 			case ECall(callee, args): isHelperTypedAsCallee(callee) || exprHasHelperTypedAsEvidence(callee) || exprListHasHelperTypedAsEvidence(args);
 			case EBinop(_, left, right) | EArrayAccess(left, right) | EDiscardThen(left, right): exprHasHelperTypedAsEvidence(left) || exprHasHelperTypedAsEvidence(right);
-			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
+			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | ECheckType(receiver, _) |
+				EUntyped(receiver) | EMacroExpr(receiver, _):
 				exprHasHelperTypedAsEvidence(receiver);
 			case ETernary(cond, thenExpr, elseExpr): exprHasHelperTypedAsEvidence(cond) || exprHasHelperTypedAsEvidence(thenExpr) || exprHasHelperTypedAsEvidence(elseExpr);
 			case EAnon(_, fieldValues) | EArrayDecl(fieldValues):

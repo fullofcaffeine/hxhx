@@ -43,9 +43,9 @@ function body(projection:TypedBackendFunctionProjection, program:backend.GenIrPr
 					types.push(locals.typeName(result));
 				final delegateType = "System." + (result.isVoid() ? "Action" : "Func") + (types.length == 0 ? "" : "<" + types.join(", ") + ">");
 				return ECall(EUnsupported(marker()), [EString(delegateType), rebuilt]);
-			case ECast(ELambda(_, _), hint) if (hint.indexOf("->") >= 0):
+			case ECast(ELambda(_, _), hint) | ECheckType(ELambda(_, _), hint) if (hint.indexOf("->") >= 0):
 				switch rebuilt {
-					case ECast(inner, _) if (decode(inner) != null): return inner;
+					case ECast(inner, _) | ECheckType(inner, _) if (decode(inner) != null): return inner;
 					case _:
 				}
 			case _:

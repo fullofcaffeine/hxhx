@@ -66,7 +66,7 @@ class CppLocalCallScanner {
 					local) || exprCallsLocal(guardExpr, local) || exprCallsLocal(yieldExpr, local);
 			case ERange(start, end): exprCallsLocal(start, local) || exprCallsLocal(end, local);
 			case EBinop(_, left, right) | EDiscardThen(left, right): exprCallsLocal(left, local) || exprCallsLocal(right, local);
-			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprCallsLocal(inner, local);
 			case ETernary(cond, thenExpr, elseExpr): exprCallsLocal(cond, local) || exprCallsLocal(thenExpr, local) || exprCallsLocal(elseExpr, local);
 			case EAnon(_, fieldValues):

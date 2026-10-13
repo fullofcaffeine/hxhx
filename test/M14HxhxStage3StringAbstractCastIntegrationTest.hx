@@ -4,10 +4,10 @@ import sys.io.File;
 import TypedExpr.TypedExprTag;
 
 /**
-	Verifies that explicit and call-required String abstract casts reach OCaml.
+	Verifies that annotated and call-required String abstract conversions reach OCaml.
 
 	The typed tree must retain the concrete String destination while preserving
-	the source abstract on the cast child. Generated OCaml can then recover a
+	the source abstract on the conversion child. Generated OCaml can then recover a
 	concrete `string` only at the operation that requires it.
 **/
 class M14HxhxStage3StringAbstractCastIntegrationTest {
@@ -88,7 +88,9 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final normalize = findFunction(typed, "StringAbstractCast", "normalize");
 		final returnExpression = normalize.getBody().getStatements()[0].getExpressions()[0];
 		final typedCast = findTag(returnExpression, TypedExprTag.Cast);
-		assertTrue(typedCast != null, "typed String method receiver lost its explicit cast");
+		final annotation = findTag(returnExpression, TypedExprTag.CheckType);
+		assertTrue(annotation != null && annotation.getExpressions()[0] == typedCast && typedCast.isRepresentationPreservingCast(),
+			"String receiver annotation lost its selected abstract header conversion");
 		assertTrue(typedCast.getTexts().length == 1
 			&& typedCast.getTexts()[0] == "String"
 			&& typedCast.getType().getSemanticKey() == "primitive:String",
@@ -96,10 +98,10 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 
 		final projectedCall = TypedBodySource.expression(returnExpression);
 		switch (projectedCall) {
-			case ECall(EField(EParenthesized(ECast(EIdent("value"), "String"), position), "toLowerCase"), []):
+			case ECall(EField(EParenthesized(ECheckType(ECast(EIdent("value"), "String"), "String"), position), "toLowerCase"), []):
 				assertTrue(position.getLine() == 6, "typed source projection lost the authored receiver parentheses position");
 			case _:
-				throw "typed source projection lost the explicit String receiver cast";
+				throw "typed source projection lost the String annotation or its header conversion";
 		}
 
 		final normalizeArgument = findFunction(typed, "StringAbstractCast", "normalizeArgument");

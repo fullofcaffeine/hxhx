@@ -493,6 +493,8 @@ class HxParser {
 				EArrayAccess(rebaseFunctionBodyExprValue(left, base, bodyStartIndex), rebaseFunctionBodyExprValue(right, base, bodyStartIndex));
 			case ECast(inner, hint):
 				ECast(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), hint);
+			case ECheckType(inner, hint):
+				ECheckType(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), hint);
 			case EUntyped(inner):
 				EUntyped(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex));
 			case _:
@@ -597,6 +599,8 @@ class HxParser {
 				ERange(offsetFunctionBodyExprColumns(start, delta), offsetFunctionBodyExprColumns(end, delta));
 			case ECast(inner, typeHint):
 				ECast(offsetFunctionBodyExprColumns(inner, delta), typeHint);
+			case ECheckType(inner, typeHint):
+				ECheckType(offsetFunctionBodyExprColumns(inner, delta), typeHint);
 			case EUntyped(inner):
 				EUntyped(offsetFunctionBodyExprColumns(inner, delta));
 			case EParenthesized(inner, position):
@@ -3115,7 +3119,7 @@ class HxParser {
 			bump();
 			final hint = readTypeHintText(() -> stop() || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
-			e = ECast(e, hint);
+			e = ECheckType(e, hint);
 		}
 		return e;
 	}

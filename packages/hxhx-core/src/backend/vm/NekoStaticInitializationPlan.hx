@@ -50,6 +50,8 @@ class NekoStaticInitializationPlan {
 			return false;
 		var value = body.value;
 		switch value {
+			case ECheckType(_, _):
+				return false;
 			case ECast(_, _):
 				if (initializer.findCast(value) != null)
 					return false;

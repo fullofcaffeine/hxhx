@@ -733,7 +733,8 @@ class NekoTargetCore {
 					collectExprRefs(context, initializer, addConstructor, addStatic);
 			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
-			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner) |
+				EMacroExpr(inner, _):
 				collectExprRefs(context, inner, addConstructor, addStatic);
 			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectExprRefs(context, left, addConstructor, addStatic);
@@ -1547,7 +1548,7 @@ class NekoTargetCore {
 				renderConditionalExpr(context, cond, thenExpr, elseExpr);
 			case EParenthesized(inner, _):
 				"(" + renderExpr(context, inner) + ")";
-			case ECast(inner, _) | EUntyped(inner):
+			case ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				renderExpr(context, inner);
 			case EMacroExpr(inner, wrappers):
 				NekoMacroExprLowering.render(inner, wrappers, function(value) return renderExpr(context, value));
@@ -1854,6 +1855,7 @@ class NekoTargetCore {
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
 			case ECast(_, typeHint): "ECast(" + typeHint + ")";
+			case ECheckType(_, typeHint): "ECheckType(" + typeHint + ")";
 			case EParenthesized(_, _): "EParenthesized";
 			case EPrivateAccess(_, _): "EPrivateAccess";
 			case EUntyped(_): "EUntyped";
@@ -2709,7 +2711,7 @@ class NekoTargetCore {
 
 	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
 		switch (callee) {
-			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				// A wrapped local is a function value. Do not reinterpret its name
 				// as language syntax after removing the authored wrapper.
 				switch inner {

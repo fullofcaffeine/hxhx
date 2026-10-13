@@ -32,7 +32,7 @@ class TypedBackendSourceWalk {
 				for (value in defaults)
 					visit(value);
 			case EPrivateAccess(value, _) | EParenthesized(value, _) | EField(value, _) | ENullSafeField(value, _) | EMacroExpr(value, _) |
-				ELambda(_, value) | EUnop(_, _, value) | ECast(value, _) | EUntyped(value) | EReturn(value) | EThrow(value, _):
+				ELambda(_, value) | EUnop(_, _, value) | ECast(value, _) | ECheckType(value, _) | EUntyped(value) | EReturn(value) | EThrow(value, _):
 				visit(value);
 			case ECall(callee, arguments):
 				visit(callee);

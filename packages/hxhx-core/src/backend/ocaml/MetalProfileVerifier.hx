@@ -282,6 +282,9 @@ class MetalProfileVerifier {
 			case ERange(start, end):
 				verifyExpr(filePath, className, fnName, stmtPos, start, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, end, violations);
+			case ECheckType(inner, typeHint):
+				verifyExplicitDynamicTypeHint(filePath, className, fnName, stmtPos, "annotation type", typeHint, violations);
+				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case ECast(inner, typeHint):
 				verifyExplicitDynamicTypeHint(filePath, className, fnName, stmtPos, "cast target type", typeHint, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);

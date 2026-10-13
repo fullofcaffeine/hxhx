@@ -2410,8 +2410,8 @@ class ParserStageScanHelpers {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EPrivateAccess(obj, _), EParenthesized(obj, _), EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj),
-				EReturn(obj), EThrow(obj, _):
+			case EPrivateAccess(obj, _), EParenthesized(obj, _), EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), ECheckType(obj, _),
+				EUntyped(obj), EReturn(obj), EThrow(obj, _):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {

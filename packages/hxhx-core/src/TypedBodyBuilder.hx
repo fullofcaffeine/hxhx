@@ -1159,6 +1159,11 @@ class TypedBodyBuilder {
 				final typedStart = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.range(typedStart, typedEnd, nodeType, position);
+			case ECheckType(inner, typeHint):
+				final operand = buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, nodeType);
+				// Quotation preserves syntax without applying executable conversions.
+				final converted = typeResolver == null ? operand : typeResolver.convertValue(operand, nodeType);
+				TypedExpr.checkType(converted, typeHint, nodeType, position);
 			case ECast(inner, typeHint):
 				final typedInner = switch (inner) {
 					case ELambda(names, body, signature) if (nodeType.isFunction()

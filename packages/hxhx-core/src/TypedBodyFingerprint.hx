@@ -366,6 +366,10 @@ class TypedBodyFingerprint {
 				addString(state, "expr-cast");
 				addExpression(state, inner);
 				addString(state, typeHint);
+			case ECheckType(inner, typeHint):
+				addString(state, "expr-check-type");
+				addExpression(state, inner);
+				addString(state, typeHint);
 			case EUntyped(inner):
 				addString(state, "expr-untyped");
 				addExpression(state, inner);

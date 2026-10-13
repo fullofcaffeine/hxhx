@@ -71,7 +71,7 @@ class TypedBackendCaptureCatalog {
 				continue;
 			final published = publishedExpressions[index];
 			switch published {
-				case ECast(value, _):
+				case ECast(value, _) | ECheckType(value, _):
 					ascriptions.push({index: index, expression: published, value: value});
 				case _:
 					throw "callable annotation differs from the checked projection";

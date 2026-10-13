@@ -1,7 +1,8 @@
 /**
-	Retain exact source and destination types for a projected cast occurrence.
+	Retain exact source and destination types for a projected cast or type annotation.
 	A target must still choose the runtime operation; equal hint text cannot prove
-	that a cast preserves representation. Compiler callable ascriptions are separate.
+	that a cast preserves representation. An annotation retains its distinct syntax
+	and its already-selected operand conversion. Compiler callable ascriptions are separate.
  */
 class TypedBackendCastOccurrence {
 	final ownerIdentity:String;
@@ -23,7 +24,7 @@ class TypedBackendCastOccurrence {
 			|| input.bodyRevision == null
 			|| input.source == null
 			|| input.operand == null
-			|| input.source.getTag() != Cast
+			|| (input.source.getTag() != Cast && input.source.getTag() != CheckType)
 			|| input.source.getExpressions().length != 1)
 			throw "cast occurrence requires its exact typed owner and operand";
 		ownerIdentity = input.ownerIdentity;
@@ -32,7 +33,7 @@ class TypedBackendCastOccurrence {
 		sourceType = input.source.getExpressions()[0].getType();
 		targetType = input.source.getType();
 		preservesRepresentation = input.source.isRepresentationPreservingCast();
-		expression = ECast(operand, input.source.getTexts()[0]);
+		expression = input.source.getTag() == CheckType ? ECheckType(operand, input.source.getTexts()[0]) : ECast(operand, input.source.getTexts()[0]);
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 
@@ -41,6 +42,10 @@ class TypedBackendCastOccurrence {
 
 	public function getOwnerIdentity():String
 		return ownerIdentity;
+
+	/** An annotation checks ordinary compatibility; it does not request a checked or unchecked cast. */
+	public function isAnnotation():Bool
+		return expression.match(ECheckType(_, _));
 
 	/** Only a hint-free cast has the authored unchecked contract; hinted forms need their own operation. */
 	public function isUnchecked():Bool
@@ -66,7 +71,7 @@ class TypedBackendCastOccurrence {
 		if (owner != ownerIdentity || revision != bodyRevision)
 			throw "cast occurrence belongs to another executable or revision";
 		switch expression {
-			case ECast(child, _) if (child == operand):
+			case ECast(child, _) | ECheckType(child, _) if (child == operand):
 			case _:
 				throw "cast occurrence operand was replaced";
 		}

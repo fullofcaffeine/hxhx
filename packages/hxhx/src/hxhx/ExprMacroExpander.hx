@@ -442,6 +442,9 @@ class ExprMacroExpander {
 			case ECast(expr, hint):
 				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				re != expr ? ECast(re, hint) : e;
+			case ECheckType(expr, hint):
+				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				re != expr ? ECheckType(re, hint) : e;
 			case EUntyped(expr):
 				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				re != expr ? EUntyped(re) : e;
@@ -501,6 +504,7 @@ class ExprMacroExpander {
 			case EArrayAccess(_, _): "ArrayAccess";
 			case ERange(_, _): "Range";
 			case ECast(_, _): "Cast";
+			case ECheckType(_, _): "CheckType";
 			case EUntyped(_): "Untyped";
 			case EUnsupported(_): "Unsupported";
 		}

@@ -93,7 +93,7 @@ class Stage3DiagnosticsSupport {
 				countUnsupportedExprsInExpr(yieldExpr);
 			case EArrayAccess(arrayExpr, indexExpr):
 				countUnsupportedExprsInExpr(arrayExpr) + countUnsupportedExprsInExpr(indexExpr);
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				countUnsupportedExprsInExpr(inner);
 			case EUntyped(inner) | EPrivateAccess(inner, _):
 				countUnsupportedExprsInExpr(inner);
@@ -158,7 +158,7 @@ class Stage3DiagnosticsSupport {
 			case EArrayAccess(arrayExpr, indexExpr):
 				collectUnsupportedExprRawInExpr(arrayExpr, out, max);
 				collectUnsupportedExprRawInExpr(indexExpr, out, max);
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				collectUnsupportedExprRawInExpr(inner, out, max);
 			case EUntyped(inner) | EPrivateAccess(inner, _):
 				collectUnsupportedExprRawInExpr(inner, out, max);

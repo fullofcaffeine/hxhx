@@ -45,6 +45,7 @@ enum TypedExprTag {
 	Range;
 	FixedRange;
 	Cast;
+	CheckType;
 	Untyped;
 	Opaque;
 	Block;
@@ -591,6 +592,10 @@ class TypedExpr {
 	public function isRepresentationPreservingCast():Bool
 		return tag == Cast && boolValue;
 
+	/** Keep a written annotation distinct from its already-selected operand conversion and from an authored cast. */
+	public static function checkType(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(CheckType, type, position, [typeHint], [expression]);
+
 	public static function untypedValue(expression:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Untyped, type, position, null, [expression]);
 
@@ -733,7 +738,9 @@ class TypedExpr {
 		final applied = TyTypeSubstitution.apply(type, bindings);
 		// An unchecked authored cast has no written target. Giving it a type hint
 		// would change its runtime checking behavior during source projection.
-		final appliedTexts = tag == Cast && texts.length == 1 && texts[0].length > 0 ? [applied.getCanonicalDisplay()] : texts;
+		final appliedTexts = (tag == Cast || tag == CheckType)
+			&& texts.length == 1
+			&& texts[0].length > 0 ? [applied.getCanonicalDisplay()] : texts;
 		return new TypedExpr(tag, applied, position, appliedTexts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
 			unaryFixity, opaqueKind, fieldInfo, [], extensionProvider, runtimeTypeTarget, [], null, null, null, sourceCatches, null,
 			argumentBinding == null ? null : argumentBinding.substituteTypes(bindings),

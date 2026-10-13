@@ -406,6 +406,9 @@ enum HxExpr {
 	**/
 	ECast(expr:HxExpr, typeHint:String);
 
+	/** A written `(value:Type)` uses ordinary assignment compatibility and may invoke an implicit conversion. */
+	ECheckType(expr:HxExpr, typeHint:String);
+
 	/**
 		`untyped` escape hatch: `untyped expr`.
 

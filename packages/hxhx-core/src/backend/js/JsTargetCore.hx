@@ -262,7 +262,7 @@ class JsTargetCore implements ITargetCore {
 			case ERange(start, end):
 				collectStaticInitClassDeps(start, deps, byFullName, bySimpleFullName);
 				collectStaticInitClassDeps(end, deps, byFullName, bySimpleFullName);
-			case EParenthesized(inner, _) | ECast(inner, _) | EUntyped(inner):
+			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
 			case _:
 		}

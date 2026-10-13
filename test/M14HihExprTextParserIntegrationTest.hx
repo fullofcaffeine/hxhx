@@ -81,16 +81,16 @@ class M14HihExprTextParserIntegrationTest {
 		final returnMacroArgument = HxParser.parseFunctionBodyText("shouldFail(return (null : Null<String>));");
 		switch (returnMacroArgument) {
 			case [
-				SExpr(ECall(EIdent("shouldFail"), [EReturn(EParenthesized(ECast(ENull, "Null<String>"), _))]), _)
+				SExpr(ECall(EIdent("shouldFail"), [EReturn(EParenthesized(ECheckType(ENull, "Null<String>"), _))]), _)
 			]:
 			case [SExpr(EUnsupported(raw), _)]:
 				fail("return macro argument stayed opaque: " + raw);
 			case _:
-				fail("return macro argument lost its return, cast, or null structure");
+				fail("return macro argument lost its return, type annotation, or null structure");
 		}
 		final standaloneTypedNullReturn = HxParser.parseFunctionBodyText("return (null : Null<String>);");
 		switch (standaloneTypedNullReturn) {
-			case [SReturn(EParenthesized(ECast(ENull, "Null<String>"), _), _)]:
+			case [SReturn(EParenthesized(ECheckType(ENull, "Null<String>"), _), _)]:
 			case _:
 				fail("standalone typed-null return no longer parses as a return statement");
 		}
@@ -1112,7 +1112,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected null coalescing assignment expression");
 		}
 		switch (nullCoalescingStmts[2]) {
-			case SVar("notNull", _, EBinop("??", EParenthesized(ECast(EIdent("one"), "Null<Float>"), _), EThrow(EString(""), _)), _):
+			case SVar("notNull", _, EBinop("??", EParenthesized(ECheckType(EIdent("one"), "Null<Float>"), _), EThrow(EString(""), _)), _):
 			case SVar(_, _, EUnsupported(raw), _):
 				fail("null coalescing throw fallback parsed as unsupported: " + raw);
 			case _:
@@ -1172,10 +1172,10 @@ class M14HihExprTextParserIntegrationTest {
 		switch (numericSuffixStmts[3]) {
 			case SExpr(ECall(EIdent("eq"), [
 				ECall(EIdent("__hxhx_int_literal"), [EString("0xFFFFFFFF"), EString("u32")]),
-				EParenthesized(ECast(EInt(-1), "UInt"), _)
+				EParenthesized(ECheckType(EInt(-1), "UInt"), _)
 			]), _):
 			case _:
-				fail("expected u32 hex suffix and UInt cast to preserve numeric intent");
+				fail("expected u32 hex suffix and UInt annotation to preserve numeric intent");
 		}
 
 		final floatSuffixTypeTestStmts = HxParser.parseFunctionBodyText('eq(1f64 is Float, true); eq(.0f64, 0.0); eq(7e+0f64, 7e+0);');

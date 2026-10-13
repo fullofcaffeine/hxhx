@@ -37,7 +37,7 @@ function arguments(name:String, values:Array<HxExpr>):Array<HxExpr> {
 
 private function body(expression:HxExpr):HxExpr {
 	return switch (expression) {
-		case ECast(inner, _) if (inner.match(ELambda(_, _, _))): inner;
+		case ECast(inner, _) | ECheckType(inner, _) if (inner.match(ELambda(_, _, _))): inner;
 		case _: expression;
 	};
 }

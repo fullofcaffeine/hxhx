@@ -35,6 +35,13 @@ class CppManagedCastPlan {
 		// non-null checked casts; scalar backing types still need conversion.
 		if (occurrence.getSourceType().isNullLiteral() && retainsNull(occurrence.getTargetType()))
 			return;
+		// Typing has materialized any selected annotation conversion in its
+		// operand. Only exact values or a proven class upcast need no further work.
+		// Matching abstract backing storage alone cannot justify an annotation.
+		if (occurrence.isAnnotation()
+			&& (occurrence.getSourceType().getSemanticKey() == occurrence.getTargetType().getSemanticKey()
+				|| permitsClassUpcast(occurrence.getTargetType(), occurrence.getSourceType())))
+			return;
 		if (!occurrence.isUnchecked())
 			throw "managed cast requires an explicit runtime conversion plan";
 		final source = storageType(occurrence.getSourceType(), new haxe.ds.StringMap());

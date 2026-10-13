@@ -1,6 +1,7 @@
 /** An unchecked authored cast gets its destination context without changing its operand type. */
 class M14ContextualAuthoredCastTest {
 	static function main():Void {
+		M14SourceTypeAnnotationTest.run();
 		final source = "class Main { static var box:Box<Int> = 7; static var plain:Int = cast box;"
 			+ "static var grouped:Int = (cast box); static function output(value:Int):Void {}"
 			+ "static function result(value:Box<Int>):Int { return cast value; } static function consume(value:Box<Int>):Void {}"

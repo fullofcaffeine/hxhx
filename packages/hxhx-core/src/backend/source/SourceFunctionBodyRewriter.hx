@@ -124,6 +124,8 @@ class SourceFunctionBodyRewriter {
 				EDiscardThen(expressionNode(effect, transform), expressionNode(continuation, transform));
 			case ECast(inner, typeHint):
 				ECast(expressionNode(inner, transform), typeHint);
+			case ECheckType(inner, typeHint):
+				ECheckType(expressionNode(inner, transform), typeHint);
 			case EUntyped(inner):
 				EUntyped(expressionNode(inner, transform));
 			case EParenthesized(inner, position):

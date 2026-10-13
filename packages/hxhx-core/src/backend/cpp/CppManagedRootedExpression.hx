@@ -501,7 +501,7 @@ class CppManagedRootedExpression {
 					.signature.getFunctionReturn();
 				call.staticTarget == null ? CppManagedCallableRepresentation.resultStorage(returned) : returned;
 			case ELambda(_, _): locals.requireClosure(value).abi.signature;
-			case ECast(_, _):
+			case ECast(_, _) | ECheckType(_, _):
 				final conversion = converted(value);
 				conversion == null ? valueType(locals.requireAscribedClosure(value)) : conversion.getTargetType();
 			case _: throw "managed value requires explicit typed expression lowering for " + Type.enumConstructor(value);
@@ -719,7 +719,7 @@ class CppManagedRootedExpression {
 				lines.push(indent + "  }");
 				lines.push(indent + "}");
 				return lines;
-			case ECast(_, _):
+			case ECast(_, _) | ECheckType(_, _):
 				final conversion = converted(value);
 				final lines = render(conversion == null ? locals.requireAscribedClosure(value) : conversion.getOperand(), destination, indent);
 				if (conversion != null

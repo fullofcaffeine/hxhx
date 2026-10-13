@@ -165,10 +165,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(returnExpression.getTag() == TypedExprTag.ReturnExpr, "return macro argument lost its typed return node");
 		final parentheses = returnExpression.getExpressions()[0];
 		assertTrue(parentheses.getTag() == TypedExprTag.Parenthesized, "return macro argument lost its written parentheses");
-		final typedCast = parentheses.getExpressions()[0];
-		assertTrue(typedCast.getTag() == TypedExprTag.Cast && typedCast.getType().getDisplay() == "Null<String>",
-			"return macro argument lost its Null<String> cast");
-		assertTrue(typedCast.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return cast lost its null child");
+		final annotation = parentheses.getExpressions()[0];
+		assertTrue(annotation.getTag() == TypedExprTag.CheckType && annotation.getType().getDisplay() == "Null<String>",
+			"return macro argument lost its Null<String> annotation");
+		assertTrue(annotation.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return annotation lost its null child");
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 

@@ -22,7 +22,7 @@ function check(input:{
 	// merely because a write supplies a convenient value.
 	if (input.expected.hasUnknownComponent() || input.actual.hasUnknownComponent())
 		return;
-	if (accepts(input.index, input.expected, input.actual, input.expression))
+	if (TyValueCompatibility.accepts(input.index, input.expected, input.actual, input.expression))
 		return;
 	throw new TyperError(input.filePath, input.position,
 		"assigned type "
@@ -40,23 +40,4 @@ function explicitlyUntyped(expression:HxExpr):Bool {
 		case EParenthesized(inner, _): explicitlyUntyped(inner);
 		case _: false;
 	};
-}
-
-private function accepts(index:TyperIndex, expected:TyType, actual:TyType, expression:HxExpr):Bool {
-	if (!TyStructuralArgument.literalFits(expression, expected))
-		return false;
-	final basic = TyAssignmentCompatibility.classify(expected, actual, Unchecked);
-	if (basic != Unknown)
-		return basic == Compatible;
-	if (expected.isNullable() || actual.isNullable())
-		return accepts(index, expected.unwrapNull(), actual.unwrapNull(), expression);
-	if (TyAbstractMethodConversion.select(index, expected, actual) != null)
-		return true;
-	final conversion = TyImplicitConversionPlan.select(index, expected, actual);
-	if (conversion != null && conversion.isRepresentationPreservingAbstractConversion())
-		return true;
-	if (actual.isTypeParameter() && index != null)
-		return TyCallerConstraintProof.accepts(expected, actual, index.getParameterBounds, (target, bound) -> accepts(index, target, bound, expression));
-	final proof = new TyInferenceSolver("field-assignment");
-	return TyStructuralConstraint.constrain(index, proof, TyInferenceSolver.fromType(actual), expected);
 }

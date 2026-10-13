@@ -126,7 +126,7 @@ class TypedBodySource {
 		if (value.getTag() == Lambda)
 			return value.getLambdaSignature();
 		final children = value.getExpressions();
-		if (value.getTag() == Cast && children.length == 1)
+		if ((value.getTag() == Cast || value.getTag() == CheckType) && children.length == 1)
 			return callableSignature(children[0]);
 		if (value.getTag() == Call && children.length == 3 && children[0].getTag() == NameRead) {
 			final name = children[0].getTexts()[0];
@@ -763,6 +763,9 @@ class TypedBodySource {
 			case Cast:
 				final operand = expression(expressions[0], catalog, projectionFacts);
 				projectionFacts == null ? ECast(operand, texts[0]) : projectionFacts.projectCast(typedExpression, operand);
+			case CheckType:
+				final operand = expression(expressions[0], catalog, projectionFacts);
+				projectionFacts == null ? ECheckType(operand, texts[0]) : projectionFacts.projectCast(typedExpression, operand);
 			case Untyped: EUntyped(expression(expressions[0], catalog, projectionFacts));
 			case Opaque:
 				switch (typedExpression.getOpaqueKind()) {

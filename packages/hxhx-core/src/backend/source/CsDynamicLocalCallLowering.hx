@@ -32,7 +32,7 @@ class CsDynamicLocalCallLowering {
 	static function dependsOnExactDynamicLocal(expression:HxExpr, locals:TypedBackendLocalCatalog):Bool {
 		return switch (expression) {
 			case EIdent(name): final local = locals.findByProjectedName(name); local != null && local.getBinding().getType().unwrapNull().isDynamic();
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				dependsOnExactDynamicLocal(inner, locals);
 			case EParenthesized(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				dependsOnExactDynamicLocal(inner, locals);

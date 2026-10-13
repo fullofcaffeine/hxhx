@@ -142,7 +142,7 @@ class JsExprEmitter {
 				JsLambdaEmitter.emit(expr, args, body, scope);
 			case EParenthesized(inner, _):
 				"(" + emit(inner, scope) + ")";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				emit(inner, scope);
 			case EUntyped(inner):
 				emit(inner, scope);
@@ -1024,7 +1024,7 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		final callable = switch (callee) {
-			case ELambda(_, _) | ECast(ELambda(_, _), _):
+			case ELambda(_, _) | ECast(ELambda(_, _), _) | ECheckType(ELambda(_, _), _):
 				"(" + calleeJs + ")";
 			case _:
 				calleeJs;
