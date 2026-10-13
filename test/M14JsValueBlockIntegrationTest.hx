@@ -25,6 +25,7 @@ class M14JsValueBlockIntegrationTest {
 	/** Check token boundaries independently of the backend's source rendering. **/
 	static function checkParserBoundaries():Void {
 		final block = '{ var value:String = "}"; /* } */ value; }';
+		final original = TypedBodyFingerprint.exactExpression(HxParser.parseCompleteExprText(block));
 		for (suffix in [
 			"",
 			" \n",
@@ -32,17 +33,21 @@ class M14JsValueBlockIntegrationTest {
 			" // next field",
 			" /* first */ // second\n /** third */"
 		]) {
-			switch (HxParser.parseCompleteExprText(block + suffix)) {
-				case ETryCatchRaw(raw):
-					if (raw != "opaque_block_expr:" + block)
-						throw "block source includes text outside its closing token: " + raw;
+			final parsed = HxParser.parseCompleteExprText(block + suffix);
+			switch parsed {
+				case ESourceGroup([
+					EVars([EVariableDeclaration("value", "String", EString("}"), _, false, false)]),
+					EIdent("value")
+				], position):
+					if (position.getIndex() != 0 || TypedBodyFingerprint.exactExpression(parsed) != original)
+						throw "trailing comments changed the source group's expressions or positions";
 				case _:
 					throw "typed source block must retain its local type annotation";
 			}
 		}
 	}
 
-	/** Require both initializer positions to reach the shared typed block representation. **/
+	/** Both initializers must preserve the author's brace group and ordered declarations before lowering. **/
 	static function checkTypedBlocks(program:MacroExpandedProgram):Void {
 		var staticBlock = false;
 		var localBlock = false;
@@ -50,14 +55,14 @@ class M14JsValueBlockIntegrationTest {
 			for (cls in module.getTypedClasses()) {
 				for (initializer in cls.getFieldInitializers())
 					if (initializer.getField().getName() == "initial")
-						staticBlock = initializer.getExpression().getTag() == TypedExpr.TypedExprTag.Block;
+						staticBlock = initializer.getExpression().getTag() == TypedExpr.TypedExprTag.SourceGroup;
 				for (fn in cls.getFunctions())
 					for (statement in fn.getBody().getStatements())
 						if (statement.getNames().length > 0 && statement.getNames()[0] == "local" && statement.getExpressions().length == 1)
-							localBlock = statement.getExpressions()[0].getTag() == TypedExpr.TypedExprTag.Block;
+							localBlock = statement.getExpressions()[0].getTag() == TypedExpr.TypedExprTag.SourceGroup;
 			}
 		if (!staticBlock || !localBlock)
-			throw "static and local value blocks must reach shared typing as Block nodes: static=" + staticBlock + ", local=" + localBlock;
+			throw "static and local value blocks must retain source groups: static=" + staticBlock + ", local=" + localBlock;
 	}
 
 	static function run(command:String, args:Array<String>):String {

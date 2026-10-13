@@ -11,5 +11,8 @@ parser, typer, and JavaScript backend to generate a program for Node. Both route
 must print `73`, `42`, `8`, `4`, and `7342`, each on its own line. The last two
 numbers check that the four calls execute exactly once each, in source order.
 
-The test also requires shared typed block nodes for both initializer positions.
+The test also checks the local declaration's name, String annotation, initializer,
+and final value. Trailing comments must not change those expressions or positions.
+Both typed initializers must retain a `SourceGroup`, which records the author's
+brace group and ordered expressions before executable control flow is generated.
 It does not establish complete Haxe compatibility or replace the upstream suite.
