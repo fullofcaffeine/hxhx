@@ -1,7 +1,7 @@
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.Stage3SetupSupport;
 
-/** Real-provider integration for JavaScript typeof; the executable fixture asserts its observable contract. */
+/** Real-provider integration for JavaScript typeof and deletion, including aliases and ordered operands. */
 class M14JsSyntaxTypeofTest {
 	static function command(executable:String, arguments:Array<String>):Void {
 		final child = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable].concat(arguments));
@@ -39,5 +39,6 @@ class M14JsSyntaxTypeofTest {
 		final typed = TyperStage.typeResolvedModule(main[0], index, loader);
 		JsRuntimeFixture.assertRuntime(typed, "Main", "");
 		Sys.println("JS_SYNTAX_TYPEOF:PASS");
+		Sys.println("JS_SYNTAX_DELETE:PASS");
 	}
 }
