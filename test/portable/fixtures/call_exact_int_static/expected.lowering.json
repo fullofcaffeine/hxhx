@@ -35816,29 +35816,6 @@
   "schemaVersion": 94,
   "staticStorage": [
     {
-      "carrierTypeId": "int",
-      "declarationOrder": 1,
-      "declarationSite": "owner-binding",
-      "declarationTypeName": null,
-      "declarationTypeOrder": -1,
-      "fieldName": "MIN_SURROGATE_CODE_POINT",
-      "hasInitializer": true,
-      "id": "static-storage:StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
-      "initializationId": "static-initialization:StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
-      "initializationOrder": 1,
-      "initializerDependencyKeys": [],
-      "key": "StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
-      "kind": "variable",
-      "moduleId": "StringTools",
-      "ownerTypeName": "StringTools",
-      "ownerTypeOrder": 0,
-      "programRevision": "8ab7ecedd61dcea9540e5d97de4ef4eeb8c28b4d1fb057300e16490135089321",
-      "representationId": "representation:Int:static-field",
-      "revision": "sha256:71a480f23303b6fbafe9e82548663e568871bd7cdbaa20a857b48d693233f7f6",
-      "semanticTypeId": "Int",
-      "targetValueName": "hx_MIN_SURROGATE_CODE_POINT"
-    },
-    {
       "carrierTypeId": "int HxArray.t",
       "declarationOrder": 0,
       "declarationSite": "owner-binding",
@@ -35885,9 +35862,9 @@
       "targetValueName": "length"
     }
   ],
-  "staticStorageCount": 3,
+  "staticStorageCount": 2,
   "staticStorageModel": "typed-ocaml-static-storage",
-  "staticStorageRevision": "sha256:a02a9fdb60e3f14a89406e9d6284c01895eb0ffb33ba763e9a3d5044d6cdcc8d",
+  "staticStorageRevision": "sha256:f0b7e2a6419c5f63b2c7a7928920585ee5dfe02fde4548c5679e098df65d96e2",
   "stdIsOfType": [
     {
       "bodyRevision": "12:a34eaf7012d0d38dee49acc5b31da46d39eb1bd1b405f83e5e10a3fb41ec6e8c",
