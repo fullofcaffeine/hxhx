@@ -25,6 +25,8 @@ private typedef RequiredInlineSelection = {
 	returns into invocation results without introducing another callable or
 	changing the caller's return destination. Unsupported body forms fail here;
 	targets must never guess a receiver-reference convention.
+	Statement loops and comprehensions both receive fresh caller-owned iteration
+	bindings and loop destinations. Their iterable keeps the enclosing scope.
  */
 class TypedRequiredInlineLowering {
 	final helpers:StringMap<TypedFunction>;
@@ -151,6 +153,25 @@ class TypedRequiredInlineLowering {
 				final binding = allocator.allocate("temporary", initial.getType());
 				locals.set(bindings[0].getIdentity().getCanonicalKey(), binding);
 				return TypedExpr.temporary(binding.getSourceName(), binding.getType().getDisplay(), initial, voidType(), expression.getPosition(), binding);
+			case SourceFor:
+				final bindings = expression.getLocalBindings();
+				if (children.length != 2 || bindings.length != expression.getTexts().length || bindings.length == 0)
+					throw "required inline for expression lacks its exact iteration bindings";
+				final target = introduceLoop(expression.getControlTarget());
+				// The iterable uses the enclosing scope. Only the body can read the
+				// new iteration locals, including nested comprehension guards/yields.
+				final iterable = substitute(children[0], receiver, locals);
+				final loopLocals = locals.copy();
+				final fresh = [
+					for (binding in bindings) {
+						final local = allocator.allocate("iteration", TyTypeSubstitution.apply(binding.getType(), typeBindings));
+						loopLocals.set(binding.getIdentity().getCanonicalKey(), local);
+						local;
+					}
+				];
+				return TypedExpr.sourceFor(HxForBinding.fromNames(fresh.map(binding -> binding.getSourceName())), iterable,
+					substitute(children[1], receiver, loopLocals), TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition(),
+					fresh, target);
 			case Lambda | SourceFunction | ReturnExpr:
 				throw "required inline requires explicit nested callable or expression return ownership";
 			case _:
@@ -189,8 +210,7 @@ class TypedRequiredInlineLowering {
 	}
 
 	/** Each expansion gets caller-owned loop destinations; nested jumps retain the selected loop. */
-	function introduceLoop(statement:TypedStmt):TyControlTarget {
-		final source = statement.getControlTarget();
+	function introduceLoop(source:Null<TyControlTarget>):TyControlTarget {
 		if (source == null || source.getKind() != Loop)
 			throw "required inline loop lacks its selected source destination";
 		final parent = source.getParent();
@@ -263,7 +283,7 @@ class TypedRequiredInlineLowering {
 				case ForIn | ForKeyValue | While | DoWhile:
 					if (hasReturn(statement))
 						throw "Cannot inline a not final return while expanding " + active.join(" -> ");
-					final target = introduceLoop(statement);
+					final target = introduceLoop(statement.getControlTarget());
 					final loopLocals = locals.copy();
 					// The iterable and condition see the enclosing scope, before new iteration bindings.
 					final input = substitute(values[0], receiver, locals);
