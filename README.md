@@ -281,6 +281,8 @@ For full command reference (tests, gates, promotion, plugin matrix):
 Focused compiler runtime tests also require PHP, Neko, and Mono (`mcs` and
 `mono`). CI installs missing PHP and Mono packages and exposes the Neko compiler
 from the pinned Lix toolchain before running these tests.
+The pinned `hxcs` library supplies upstream Haxe's C# build support; `npx lix
+download` installs it with the other repository libraries.
 
 macOS:
 
