@@ -17,6 +17,59 @@ class M14OverloadMetadataRuntimeTest {
 			throw message;
 	}
 
+	/** Reference closure must retain the primary host declaration without replacing the selected call signature. */
+	static function retained(typed:TypedModule, mode:String):MacroExpandedProgram {
+		final program = new MacroExpandedProgram([typed], false);
+		final entries = [
+			for (owner in typed.getTypedClasses())
+				for (fn in owner.getFunctions())
+					if (fn.getDeclaration().getSignature().getName() == "main")
+						fn
+		];
+		check(entries.length == 1, "overload fixture requires one entry point");
+		final reachable = TypedFeatureMemberClosure.retain({
+			program: program,
+			classes: [],
+			functions: entries,
+			fields: []
+		});
+		return new TypedEmissionRetention({reachable: reachable, mode: mode}).apply(program);
+	}
+
+	/** An alternative copied outside the indexed provider cannot borrow its legitimate primary body. */
+	static function rejectCopiedAlternative(typed:TypedModule):Void {
+		final host = [
+			for (owner in typed.getTypedClasses())
+				if (owner.getSemanticInfo().getShortName() == "Host") owner
+		][0];
+		final alternatives = [
+			for (declaration in host.getSemanticInfo().getDeclarations())
+				if (declaration.getImplementation() != declaration) declaration
+		];
+		check(alternatives.length == 1, "overload fixture requires one alternate signature");
+		final original = alternatives[0];
+		final copied = new TyDeclarationInfo(original.getIdentity(), original.getOwner(), original.getSignature(), original.getMetadata(),
+			original.getSourceDeclaration(), original.getPosition(), original.getIsInline(), original.getIsPublic(), original.getModulePath(),
+			original.getResolvedTypeParameterConstraints(), false, original.getTypeParameterIds(), original.getImplementation());
+		final callable = TypedExpr.staticMethodRead("fromCharCode", copied, TyCallableSignature.fromDeclaration(copied).getFunctionType(), null, true);
+		final classes = [
+			for (owner in typed.getTypedClasses())
+				owner.withFunctions([
+					for (fn in owner.getFunctions())
+						fn.getDeclaration()
+							.getSignature()
+							.getName() == "main" ? fn.withBody(new TypedFunctionBody([TypedStmt.expressionStmt(callable, null)],
+								fn.getBody().getSourceFingerprint())) : fn])
+		];
+		var diagnostic = "";
+		try
+			retained(typed.withTypedClasses(classes), "full")
+		catch (error:haxe.Exception)
+			diagnostic = error.message;
+		check(diagnostic == "feature member reference has no owned function declaration", "copied overload acquired retention authority: " + diagnostic);
+		Sys.println("OVERLOAD_RETENTION_COPY_REJECTED:PASS");
+	}
+
 	static function main():Void {
 		final root = ".tmp/overload_metadata_runtime";
 		sys.FileSystem.createDirectory(root);
@@ -35,11 +88,14 @@ class M14OverloadMetadataRuntimeTest {
 		check(reference.code == 0 && reference.stdout == expected, "upstream host result differs: " + reference.stderr);
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
-		final output = root + "/native.js";
-		new JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(root, output, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
-		final native = run("node", [output]);
-		check(native.code == 0 && native.stdout == expected, "native metadata overload call differs: " + native.stderr);
+		for (mode in ["full", "std", "no"]) {
+			final output = root + "/native-" + mode + ".js";
+			new JsBackend().emit(retained(typed, mode), new BackendContext(root, output, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			final native = run("node", [output]);
+			check(native.code == 0 && native.stdout == expected, "native metadata overload call differs: " + native.stderr);
+			Sys.println("OVERLOAD_RETENTION_RUNTIME:PASS " + mode);
+		}
+		rejectCopiedAlternative(typed);
 		final invalid = declarations + 'class Main {static function main():Void {Host.fromCharCode(true);}}';
 		sys.io.File.saveContent(path, invalid);
 		check(run("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "-js", root + "/invalid.js"]).code != 0,

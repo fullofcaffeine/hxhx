@@ -107,7 +107,16 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 		}
 		final declaration = node.getDeclaration();
 		if (declaration != null) {
-			final fn = declarations.get(declaration);
+			var fn = declarations.get(declaration);
+			if (fn == null && declaration.getImplementation() != declaration) {
+				// Metadata overloads own alternative call signatures, while the exact
+				// primary owns the host member. A copied alternative cannot borrow it.
+				final provider = nominalClasses.get(declaration.getOwner().getCanonicalName());
+				if (provider != null && provider.getSemanticInfo().getDeclarations().indexOf(declaration) >= 0) {
+					declaration.requireSupportedImplementation();
+					fn = declarations.get(declaration.getImplementation());
+				}
+			}
 			if (fn == null)
 				throw "feature member reference has no owned function declaration";
 			retainFunction(fn);
