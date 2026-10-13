@@ -22,7 +22,11 @@ class M14CppManagedStartupExecutionTest {
 		Sys.println("CPP_MANAGED_STARTUP_EXECUTION:PASS");
 	}
 
-	/** Execute the normal program runner with a separate observer; never rewrite its generated source. */
+	/**
+		Execute the normal program runner with a separate observer; never rewrite its generated source.
+		Real library bodies can retain source access permissions and abstract operations.
+		Shared preparation consumes those source constructs before C++ receives executable bodies.
+	 */
 	public static function runFixture(input:{
 		sourceRoot:String,
 		output:String,
@@ -39,7 +43,7 @@ class M14CppManagedStartupExecutionTest {
 			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 			[TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))];
 		} else fixture.modules;
-		final program = new MacroExpandedProgram(modules, false);
+		final program = fixture == null ? new MacroExpandedProgram(modules, false) : CppResolvedFixture.prepare(fixture);
 		final output = input.output;
 		CppTargetCore.emit(program,
 			new BackendContext(output, output + "/Main.cpp", "Main", true, false, fixture == null ? new haxe.ds.StringMap() : fixture.defines));
