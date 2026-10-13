@@ -47,6 +47,12 @@ class M14CppManagedStartupExecutionTest {
 		final output = input.output;
 		CppTargetCore.emit(program,
 			new BackendContext(output, output + "/Main.cpp", "Main", true, false, fixture == null ? new haxe.ds.StringMap() : fixture.defines));
+		observeFixture(input);
+	}
+
+	/** Compile and observe an already emitted, unchanged program with both native sanitizer profiles. */
+	public static function observeFixture(input:{sourceRoot:String, output:String, observer:String}):Void {
+		final output = input.output;
 		sys.io.File.copy(input.observer, output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";

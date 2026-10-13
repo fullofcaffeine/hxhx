@@ -1,11 +1,7 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
-
-private typedef TypedUnaryPlace = {
-	final prefix:Array<TypedExpr>;
-	final read:TyType->TypedExpr;
-	final write:TypedExpr->TypedExpr;
-};
+import TypedAbstractUnaryInlinePlace.TypedUnaryPlace;
+import TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace;
 
 private typedef TypedInlineBodyState = {
 	final expressions:Array<TypedExpr>;
@@ -156,16 +152,26 @@ class TypedAbstractUnaryLowering {
 		};
 	}
 
-	static function substituteExpression(expression:TypedExpr, place:TypedUnaryPlace, renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
+	static function substituteExpression(expression:TypedExpr, place:TypedInlineUnaryPlace, renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
 		final children = expression.getExpressions();
 		return switch (expression.getTag()) {
 			case ThisValue:
 				place.read(expression.getType());
-			case Call if (expression.getDeclaration() != null
-				&& !expression.getDeclaration().getIsStatic()
-				&& children[0].getTag() == NameRead):
+			case Call
+				if (expression.getDeclaration() != null
+					&& !expression.getDeclaration().getIsStatic()
+					&& (children[0].getTag() == NameRead
+						|| (children[0].getTag() == FieldRead
+							&& children[0].getExpressions().length == 1
+							&& children[0].getExpressions()[0].getTag() == ThisValue
+							&& expression.getDeclaration().getOwner().equals(place.receiverType.getNominalIdentity())))):
 				final declaration = expression.getDeclaration();
-				final receiver = place.read(TyType.nominal(declaration.getOwner(), [], declaration.getOwner().getCanonicalName()));
+				// A call on the same abstract needs its original writable place. The
+				// backing-value view is for value reads, not nested method receivers.
+				final receiverType = declaration.getOwner()
+					.equals(place.receiverType.getNominalIdentity()) ? place.receiverType : TyType.nominal(declaration.getOwner(), [],
+						declaration.getOwner().getCanonicalName());
+				final receiver = place.read(receiverType);
 				final callee = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), children[0].getType(), expression.getPosition());
 				expression.withExpressions([callee].concat([
 					for (child in children.slice(1))
@@ -179,6 +185,12 @@ class TypedAbstractUnaryLowering {
 				renamed == null ? expression : TypedExpr.localRead(renamed.getSourceName(), expression.getType(), expression.getPosition(), renamed);
 			case Assign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
 				place.write(substituteExpression(children[1], place, renamedLocals));
+			case Unary
+				if (children.length == 1
+					&& children[0].getTag() == ThisValue
+					&& (expression.getUnaryOperator() == HxUnaryOperator.Increment
+						|| expression.getUnaryOperator() == HxUnaryOperator.Decrement)):
+				place.update(expression.getUnaryOperator(), expression.getUnaryFixity(), children[0].getType(), expression.getPosition());
 			case CompoundAssign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
 				final texts = expression.getTexts();
 				final compound = texts[0];
@@ -187,13 +199,13 @@ class TypedAbstractUnaryLowering {
 				// The compound lvalue is one observable occurrence. A separate helper
 				// result read remains a second occurrence, matching measured Haxe 4.3.7
 				// indexed prefix/postfix behavior without target-side memoization.
-				TypedExpr.compoundAssign(compound, place.read(carrierType), right, carrierType, expression.getPosition());
+				place.compound(compound, right, carrierType, expression.getPosition());
 			case _:
 				expression.withExpressions([for (child in children) substituteExpression(child, place, renamedLocals)]);
 		};
 	}
 
-	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedUnaryPlace, renamedLocals:StringMap<TyLocalBinding>,
+	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedInlineUnaryPlace, renamedLocals:StringMap<TyLocalBinding>,
 			state:TypedInlineBodyState, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String, allocator:TyCompilerTemporaryAllocator,
 			declaration:TyDeclarationInfo):Void {
 		for (statement in statements) {
@@ -311,7 +323,13 @@ class TypedAbstractUnaryLowering {
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Inline abstract unary helper result conflicts with its declaration: " + declaration.getIdentity().getCanonicalKey());
 		}
-		final place = placeFor(operand, filePath, operand.getPosition(), allocator);
+		final place = TypedAbstractUnaryInlinePlace.prepare({
+			place: placeFor(operand, filePath, operand.getPosition(), allocator),
+			receiver: operand.getType(),
+			abstractInfo: index.getAbstractByFullName(declaration.getOwner().getCanonicalName()),
+			declaration: declaration,
+			allocator: allocator
+		});
 		final state:TypedInlineBodyState = {expressions: place.prefix.copy(), returned: false, returnedValue: false};
 		lowerInlineStatements(helper.getBody().getStatements(), place, new StringMap<TyLocalBinding>(), state, helpers, index, filePath, allocator,
 			declaration);
@@ -321,7 +339,9 @@ class TypedAbstractUnaryLowering {
 		if (state.expressions.length == 0)
 			state.expressions.push(TypedExpr.nullValue(resultType, operand.getPosition()));
 		final block = TypedExpr.block(state.expressions, resultType, operand.getPosition());
-		return resultType.getNominalIdentity() == null ? block : TypedExpr.castValue(block, resultType.getDisplay(), resultType, operand.getPosition());
+		// This wrapper preserves the block's already selected result type. Storage
+		// conversions inside the body have their own exact declaration proof.
+		return resultType.getNominalIdentity() == null ? block : TypedExpr.castValue(block, resultType.getDisplay(), resultType, operand.getPosition(), true);
 	}
 
 	/** Lower Haxe's getter/setter prefix/postfix contract without selecting the value abstract's helper. **/
@@ -460,7 +480,7 @@ class TypedAbstractUnaryLowering {
 				typedClass.withFunctions([
 					for (typedFunction in typedClass.getFunctions()) {
 						final body = typedFunction.getBody();
-						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-unary-v2", "__hxhx_abstract_");
+						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-unary-v3", "__hxhx_abstract_");
 						final statements = [
 							for (statement in body.getStatements())
 								lowerStatement(statement, helpers, index, filePath, allocator)
