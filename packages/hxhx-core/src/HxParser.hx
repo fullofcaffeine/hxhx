@@ -1617,10 +1617,16 @@ class HxParser {
 	function parsePrimaryExpr():HxExpr {
 		return switch (cur.kind) {
 			case TLParen:
-				// Parenthesized expression: `(expr)`.
+				// The parentheses own `(expr : Type)`. Parse the complete value first,
+				// so a trailing annotation applies to an arrow or conditional as a whole.
 				final position = cur.pos;
 				bump(); // '('
-				final inner = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				var inner = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				if (cur.kind.match(TColon)) {
+					bump();
+					final hint = readTypeHintText(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					inner = ECheckType(inner, hint);
+				}
 				if (!cur.kind.match(TRParen))
 					fail("Expected closing parenthesis");
 				bump();
@@ -3114,12 +3120,6 @@ class HxParser {
 			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
 			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.
 			e = ternaryExpression(e, thenExpr, elseExpr);
-		}
-		if (!stop() && cur.kind.match(TColon)) {
-			bump();
-			final hint = readTypeHintText(() -> stop() || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)
-				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
-			e = ECheckType(e, hint);
 		}
 		return e;
 	}

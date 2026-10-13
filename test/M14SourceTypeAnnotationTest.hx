@@ -35,8 +35,43 @@ class M14SourceTypeAnnotationTest {
 		throw "incompatible source annotation was accepted";
 	}
 
+	/** Public upstream macro syntax places an ungrouped annotation outside the whole function or conditional. */
+	static function annotationOwners():Void {
+		for (source in [
+			"(() -> 1:()->Int)",
+			"(x -> y -> y:Int->Int->Int)",
+			"(() -> true ? 1 : 2:()->Int)",
+			"(() -> { return 1; }:()->Int)",
+			"(x -> x + 1:Int->Int)",
+			"(function() return 1:()->Int)"
+		])
+			switch HxParser.parseCompleteExprText(source) {
+				case EParenthesized(ECheckType(ESourceFunction(_, _, _, _), _), _):
+				case _:
+					throw "annotation moved inside a function: " + source;
+			}
+		if (!HxParser.parseCompleteExprText("(() -> (1:Int))")
+			.match(EParenthesized(ESourceFunction(_, EParenthesized(ECheckType(EInt(1), "Int"), _), [], _), _)))
+			throw "explicit body annotation escaped its own parentheses";
+		if (!HxParser.parseCompleteExprText("(true ? () -> 1 : () -> 2:()->Int)")
+			.match(EParenthesized(ECheckType(ETernary(_, ESourceFunction(_, _, _, _), ESourceFunction(_, _, _, _)), _), _)))
+			throw "annotation moved into the last conditional branch";
+		if (!HxParser.parseCompleteExprText("(() -> (() -> 1:()->Int))")
+			.match(EParenthesized(ESourceFunction(_, EParenthesized(ECheckType(ESourceFunction(_, EInt(1), [], _), _), _), [], _), _)))
+			throw "nested function annotation escaped its own parentheses";
+		var rejected = false;
+		try {
+			HxParser.parseCompleteExprText("1:Int");
+		} catch (_:HxParseError) {
+			rejected = true;
+		}
+		if (!rejected)
+			throw "source annotation was accepted without parentheses";
+	}
+
 	/** Both syntax and selected conversion effects must survive the shared typed representation. */
 	public static function run():Void {
+		annotationOwners();
 		final annotation = HxParser.parseCompleteExprText("(box:Int)");
 		final checked = HxParser.parseCompleteExprText("(cast(box,Int))");
 		if (!annotation.match(EParenthesized(ECheckType(EIdent("box"), "Int"), _))
@@ -86,6 +121,13 @@ class M14SourceTypeAnnotationTest {
 			+ "var apply = ((function(value) { return value + 1; }):Int->Int);"
 			+ "Sys.println(apply(annotated)); Sys.println(checked); Sys.println(calls); } }"),
 			"Main", "8\n7\n2\n");
+		JsRuntimeFixture.assertRuntime(typed("class Main { static function main():Void {"
+			+ "var arrow = (() -> 3:()->Int); var inner = () -> (4:Int); var nested = () -> (() -> 5:()->Int);"
+			+ "var choose = (true ? () -> 6 : () -> 7:()->Int); var explicit = (function() return 8:()->Int);"
+			+ "var body = (() -> { return 9; }:()->Int);"
+			+ "Sys.println(arrow()); Sys.println(inner()); Sys.println(nested()()); Sys.println(choose());"
+			+ "Sys.println(explicit()); Sys.println(body()); } }"),
+			"Main", "3\n4\n5\n6\n8\n9\n");
 		Sys.println("SOURCE_TYPE_ANNOTATION:PASS");
 	}
 }
