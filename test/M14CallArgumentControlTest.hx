@@ -35,8 +35,8 @@ class M14CallArgumentControlTest {
 		Sys.println("CALL_ARGUMENT_CONTROL:PASS " + name);
 	}
 
-	/** Each authored assertion is also checked upstream; successful fixtures produce no output. */
-	static function assertProcess(process:sys.io.Process, context:String):Void {
+	/** Check the exact observation; ordinary assertion fixtures produce no output. */
+	static function assertProcess(process:sys.io.Process, context:String, expected:String = ""):Void {
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = try {
@@ -46,8 +46,32 @@ class M14CallArgumentControlTest {
 			throw new haxe.Exception(context + " did not exit normally: " + stdout + stderr, error);
 		}
 		process.close();
-		if (code != 0 || stdout != "")
+		if (code != 0 || stdout != expected)
 			throw context + " failed: " + stdout + stderr;
+	}
+
+	/**
+		Upstream captures null and rejects its invocation. Until native nullable
+		method storage is supported, reject capture explicitly instead of binding
+		a callable that can return a normal result without using its null receiver.
+		This checks an unsupported boundary, not native parity for null captures.
+	 */
+	static function checkNullReceiver():Void {
+		final root = ".tmp/call_argument_control_null_receiver";
+		final source = "class Sink { public function new() {} public function put(value:Int):Int return value; } "
+			+ "class Main { static function main():Void { var sink:Sink=null; try { final captured=sink.put; "
+			+ "Sys.println(captured==null ? 'captured-null' : 'captured-non-null'); Sys.println('capture-ok:'+captured(7)); "
+			+ "} catch(error:Dynamic) { Sys.println('capture-error:'+Std.string(error)); } } }";
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		assertProcess(new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "--interp"]), "upstream null receiver",
+			"captured-null\ncapture-error:Cannot call null\n");
+		final module = new ResolvedModule("Main", root + "/Main.hx", ParserStage.parse(source, root + "/Main.hx"));
+		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		assertProcess(new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), "native null receiver",
+			"capture-error:Capturing a method from a null receiver is not supported\n");
+		Sys.println("CALL_ARGUMENT_CONTROL:PASS null_receiver_rejected");
 	}
 
 	static function main():Void {
@@ -104,6 +128,7 @@ class M14CallArgumentControlTest {
 			"class Main { static function main():Void { if(new Child().value!=3) throw 'parent constructor'; } }");
 		if (failures != 0)
 			throw "call argument control failures=" + failures;
+		checkNullReceiver();
 		Sys.println("CALL_ARGUMENT_CONTROL:PASS");
 	}
 }

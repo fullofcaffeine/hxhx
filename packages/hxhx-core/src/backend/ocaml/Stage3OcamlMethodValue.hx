@@ -16,6 +16,8 @@ typedef MethodValueInput = {
 	than fields in the receiver's anonymous record. Partial application captures
 	that receiver immediately and retains the method's existing parameter ABI.
 	A zero-argument method needs a unit wrapper so capture does not invoke it.
+	Reject a null receiver before binding: nullable method-value transport is
+	not supported yet, and binding a stateless method would falsely succeed.
 	Dynamic replacement and generic/optional/rest adapters need their own checked
 	storage contracts; they must not fall back to reading a nonexistent field.
  */
@@ -40,7 +42,9 @@ function render(input:MethodValueInput):String {
 		+ captured
 		+ " = ("
 		+ input.emit(receiver)
-		+ ") in "
+		+ ") in if HxRuntime.is_null (Obj.repr "
+		+ captured
+		+ ") then HxRuntime.hx_throw_typed (Obj.repr \"Capturing a method from a null receiver is not supported\") [\"String\"; \"Dynamic\"] else "
 		+ (signature.expected == 1 ? "fun () -> " + applied : applied)
 		+ ")";
 }
