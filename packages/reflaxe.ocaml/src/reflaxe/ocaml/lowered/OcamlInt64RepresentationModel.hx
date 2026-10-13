@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 
 /**
@@ -36,4 +35,3 @@ class OcamlInt64RepresentationContract {
 		"2|low|int|mutable"
 	].join("\n"));
 }
-#end

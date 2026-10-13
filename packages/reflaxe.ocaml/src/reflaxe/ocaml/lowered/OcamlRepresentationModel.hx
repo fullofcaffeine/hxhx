@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 /** Where one Haxe value is stored or passed inside the OCaml target. */
 enum abstract OcamlRepresentationDomain(String) from String to String {
 	/** An ordinary value used inside a function. */
@@ -306,4 +305,3 @@ typedef OcamlRepresentedArrayDescriptor = {
 	final proofClaim:String;
 	final profileEligibility:Array<String>;
 }
-#end

@@ -1,9 +1,10 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+#if (macro || reflaxe_runtime)
 import haxe.macro.Type;
 import reflaxe.ocaml.CompilationContext;
+#end
 import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -41,6 +42,7 @@ class OcamlNativeEnumRepresentation {
 		The enclosing result planner must bind this fact to its final body revision.
 		Locals, calls to ordinary functions, and casts need their own producer proof.
 	**/
+	#if (macro || reflaxe_runtime)
 	public static function selectDirectConstructor(expression:TypedExpr, context:CompilationContext):Null<OcamlNativeEnumDescriptor> {
 		final descriptor = select(expression.t, context);
 		if (descriptor == null)
@@ -66,6 +68,7 @@ class OcamlNativeEnumRepresentation {
 			case _: expression;
 		};
 	}
+	#end
 
 	/** Materializes a registry-validated variant type relative to its current OCaml module. */
 	public static function typeExpr(decision:OcamlRepresentationDecision, currentTargetModuleName:String):OcamlTypeExpr {
@@ -82,6 +85,7 @@ class OcamlNativeEnumRepresentation {
 	}
 
 	/** Resolves transparent compiler references while preserving abstract boundaries. */
+	#if (macro || reflaxe_runtime)
 	public static function select(type:Type, context:CompilationContext):Null<OcamlNativeEnumDescriptor> {
 		var current = type;
 		for (_ in 0...32) {
@@ -116,6 +120,7 @@ class OcamlNativeEnumRepresentation {
 		}
 		return null;
 	}
+	#end
 
 	/** Rejects edited or incomplete descriptors before a program registry accepts them. */
 	public static function validate(descriptor:OcamlNativeEnumDescriptor):Void {
@@ -130,6 +135,7 @@ class OcamlNativeEnumRepresentation {
 	}
 
 	/** Rejects a descriptor whose source identity no longer maps to current target names. */
+	#if (macro || reflaxe_runtime)
 	public static function requireCurrent(descriptor:OcamlNativeEnumDescriptor, context:CompilationContext):Void {
 		validate(descriptor);
 		final separator = descriptor.sourceModuleId.lastIndexOf(".");
@@ -143,6 +149,7 @@ class OcamlNativeEnumRepresentation {
 			throw "reflaxe.ocaml [ocaml-native-enum:stale-context]: native enum identity or generated names changed in the active compilation";
 		}
 	}
+	#end
 
 	static function withRevision(descriptor:OcamlNativeEnumDescriptor):OcamlNativeEnumDescriptor {
 		return {
@@ -167,4 +174,3 @@ class OcamlNativeEnumRepresentation {
 		return "sha256:" + Sha256.encode([for (field in fields) field.length + ":" + field].join(""));
 	}
 }
-#end

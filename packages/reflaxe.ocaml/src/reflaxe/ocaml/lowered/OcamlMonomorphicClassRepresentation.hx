@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime)
 /**
 	One field in the record layout of an admitted monomorphic Haxe class.
 
@@ -39,4 +38,3 @@ typedef OcamlMonomorphicClassDecision = {
 	final proofId:String;
 	final proofClaim:String;
 }
-#end

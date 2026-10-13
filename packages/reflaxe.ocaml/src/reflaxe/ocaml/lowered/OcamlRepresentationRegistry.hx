@@ -1,10 +1,11 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
+#if (macro || reflaxe_runtime)
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
+#end
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
@@ -31,6 +32,10 @@ import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
+
+	The storage registry accepts ordinary Haxe facts from either compiler host.
+	Only the helpers that inspect upstream compiler types require its host API;
+	selection, ownership validation and revision checks share one implementation.
 
 	The registry is request-local. A decision answers a semantic question once—
 	for example, how an exact non-null Haxe `Int` is stored in a mutable local—so
@@ -216,6 +221,7 @@ class OcamlRepresentationRegistry {
 		Returning null is deliberate: a monomorphic class is admitted only when
 		every instance field already has an independently sealed carrier.
 	**/
+	#if (macro || reflaxe_runtime)
 	public function selectAdmittedInstanceField(type:Type):Null<OcamlRepresentationDecision> {
 		if (isExactInt(type))
 			return selectExactInt(OcamlRepresentationDomain.InstanceField);
@@ -229,6 +235,7 @@ class OcamlRepresentationRegistry {
 			return selectExactString(OcamlRepresentationDomain.InstanceField);
 		return null;
 	}
+	#end
 
 	/** Registers one exact monomorphic class layout before function planning. */
 	public function registerMonomorphicClass(selection:{
@@ -313,6 +320,7 @@ class OcamlRepresentationRegistry {
 	}
 
 	/** Returns the admitted exact class layout for a direct Haxe instance type. */
+	#if (macro || reflaxe_runtime)
 	public function monomorphicClassForType(type:Type):Null<OcamlMonomorphicClassDecision> {
 		final semanticTypeId = monomorphicClassSemanticTypeId(type);
 		if (semanticTypeId == null)
@@ -320,6 +328,7 @@ class OcamlRepresentationRegistry {
 		final decision = monomorphicClassesBySemanticType.get(semanticTypeId);
 		return decision == null ? null : copyMonomorphicClass(decision);
 	}
+	#end
 
 	/** Returns the admitted exact class layout by canonical Haxe semantic type. */
 	public function monomorphicClass(semanticTypeId:String):Null<OcamlMonomorphicClassDecision> {
@@ -336,12 +345,14 @@ class OcamlRepresentationRegistry {
 		values, arrays, calls, and external boundaries need separate occurrence or
 		conversion proofs.
 	**/
+	#if (macro || reflaxe_runtime)
 	public function selectMonomorphicClassValue(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
 		final layout = monomorphicClassForType(type);
 		if (layout == null)
 			return null;
 		return selectMonomorphicClassDecision(layout, domain);
 	}
+	#end
 
 	/** Resolves the preplanned internal representation for one admitted class. */
 	public function monomorphicClassValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
@@ -398,6 +409,7 @@ class OcamlRepresentationRegistry {
 		});
 	}
 
+	#if (macro || reflaxe_runtime)
 	/** Returns whether a Haxe type is the exact, non-null built-in `Int`. */
 	public static function isExactInt(type:Type):Bool {
 		var current = type;
@@ -671,6 +683,7 @@ class OcamlRepresentationRegistry {
 				false;
 		}
 	}
+	#end
 
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
@@ -810,6 +823,7 @@ class OcamlRepresentationRegistry {
 		array carrier but different storage owners. Fields, generic arrays, and ABI
 		crossings remain on their existing paths.
 	**/
+	#if (macro || reflaxe_runtime)
 	public function selectRepresentedArray(type:Type, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final normalized = normalizedDirectFlatArray(type);
 		if (normalized == null) {
@@ -817,6 +831,7 @@ class OcamlRepresentationRegistry {
 		}
 		return selectNormalizedRepresentedArray(normalized, domain);
 	}
+	#end
 
 	/**
 		Selects a representation from a host-neutral direct array identity.
@@ -1617,6 +1632,7 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	#if (macro || reflaxe_runtime)
 	static function isExactCoreNullablePrimitive(type:Type, primitiveName:String):Bool {
 		return switch (type) {
 			case TAbstract(abstractRef, [TAbstract(innerRef, _)]):
@@ -1630,12 +1646,14 @@ class OcamlRepresentationRegistry {
 				false;
 		}
 	}
+	#end
 
 	static function requireBytesInternalDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		if (domain != OcamlRepresentationDomain.InternalValue)
 			throw 'reflaxe.ocaml [ocaml-representation:unsupported-bytes-domain]: exact $semanticTypeId is admitted only as an internal value, not $domain';
 	}
 
+	#if (macro || reflaxe_runtime)
 	public static function monomorphicClassSemanticTypeId(type:Type):Null<String> {
 		return switch (type) {
 			case TInst(classRef, parameters):
@@ -1649,6 +1667,7 @@ class OcamlRepresentationRegistry {
 				null;
 		}
 	}
+	#end
 
 	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		switch (domain) {
@@ -1866,4 +1885,3 @@ class OcamlRepresentationRegistry {
 		};
 	}
 }
-#end

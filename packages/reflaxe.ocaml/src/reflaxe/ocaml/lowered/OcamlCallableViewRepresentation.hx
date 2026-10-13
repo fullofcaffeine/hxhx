@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.carrier;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
@@ -110,4 +109,3 @@ private function copyShape(shape:OcamlGenericValueShape):OcamlGenericValueShape 
 		case _: shape;
 	};
 }
-#end

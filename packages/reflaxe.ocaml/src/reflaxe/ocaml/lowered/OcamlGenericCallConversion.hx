@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 #if macro
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
@@ -268,4 +267,3 @@ private function isArrayElement(value:OcamlGenericValueShape):Bool {
 		case _: false;
 	}
 }
-#end
