@@ -1,4 +1,6 @@
 import sys.io.File;
+import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.Stage3SetupSupport;
 
 /** Expression switches must retain postfix operations just as statement switches do. */
 class M14SwitchExpressionSuffixTest {
@@ -39,7 +41,22 @@ class M14SwitchExpressionSuffixTest {
 		}
 		final path = root + "/Main.hx";
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		// Array arguments need the actual provider identity before call publication.
+		// A root-only index leaves Array<Int> as an unresolved spelling.
+		final args = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [root],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: Stage1Args.getStandardLibraryRoot(args),
+			targetDefine: "js"
+		});
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, Stage3SetupSupport.buildDefinesMap([], "js", "js-native"), index);
+		loader.markResolvedAlready([resolved]);
+		if (loader.ensureTypeAvailable("Array", "", []) == null)
+			throw "switch suffix fixture requires the real Array provider";
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		M14GenericConstructorArgumentTest.assertRuntime(typed, "Main", "zero\nother\n");
 		Sys.println("SWITCH_EXPRESSION_SUFFIX:PASS");
 	}
