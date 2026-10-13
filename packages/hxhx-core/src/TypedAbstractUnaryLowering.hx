@@ -276,12 +276,16 @@ class TypedAbstractUnaryLowering {
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Bodyless abstract unary operator requires an explicit value result: " + declaration.getIdentity().getCanonicalKey());
 
+		// The exact bodyless declaration authorizes this Int/Bool storage view
+		// without a public from/to header. Other result types and numeric storage
+		// changes still require their own conversion plan.
+		final preservesCarrier = carrierType.getSemanticKey() == "primitive:Int" || carrierType.getSemanticKey() == "primitive:Bool";
 		final carrierOperand = op == HxUnaryOperator.Increment
 			|| op == HxUnaryOperator.Decrement ? operand.withType(carrierType) : TypedExpr.castValue(operand, carrierType.getDisplay(), carrierType,
-				operand.getPosition());
+				operand.getPosition(), preservesCarrier);
 		final carrierResult = TypedExpr.unary(op, binding.getFixity(), carrierOperand, carrierType, operand.getPosition());
 		return resultType.getSemanticKey() == carrierType.getSemanticKey() ? carrierResult : TypedExpr.castValue(carrierResult, resultType.getDisplay(),
-			resultType, operand.getPosition());
+			resultType, operand.getPosition(), preservesCarrier && resultType.getSemanticKey() == operand.getType().getSemanticKey());
 	}
 
 	static function inlineCall(binding:TyAbstractOperatorInfo, operand:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,

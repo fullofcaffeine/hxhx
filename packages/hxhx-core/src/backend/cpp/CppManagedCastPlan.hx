@@ -43,11 +43,27 @@ class CppManagedCastPlan {
 				|| permitsClassUpcast(occurrence.getTargetType(), occurrence.getSourceType())))
 			return;
 		if (!occurrence.isUnchecked())
-			throw "managed cast requires an explicit runtime conversion plan";
+			throw missingConversion(occurrence);
 		final source = storageType(occurrence.getSourceType(), new haxe.ds.StringMap());
 		final target = storageType(occurrence.getTargetType(), new haxe.ds.StringMap());
 		if (source.getSemanticKey() != target.getSemanticKey())
-			throw "managed cast requires an explicit runtime conversion plan";
+			throw missingConversion(occurrence);
+	}
+
+	/** Identify the rejected operation without requiring a second provider-graph build for diagnostics. */
+	static function missingConversion(occurrence:TypedBackendCastOccurrence):String {
+		return "managed cast requires an explicit runtime conversion plan: owner="
+			+ occurrence.getOwnerIdentity()
+			+ " source="
+			+ occurrence.getSourceType().getSemanticKey()
+			+ " target="
+			+ occurrence.getTargetType().getSemanticKey()
+			+ " annotation="
+			+ occurrence.isAnnotation()
+			+ " unchecked="
+			+ occurrence.isUnchecked()
+			+ " preserving="
+			+ occurrence.isRepresentationPreserving();
 	}
 
 	/** Return exact substituted storage facts without changing values or erasing container arguments. */

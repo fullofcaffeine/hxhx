@@ -169,7 +169,46 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"read after the nested helper block did not return to the outer binding");
 	}
 
+	/** A selected operator's storage guarantee must not authorize unrelated result types or authored casts. */
+	static function storageGuaranteeTests():Void {
+		final source = [
+			"abstract Bits(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private function complement():Bits;",
+			"}",
+			"abstract Other(String) {}",
+			"abstract DifferentResult(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private function complement():Other;",
+			"}",
+			"class Main { static function main() {",
+			"  var value = new Bits(7);",
+			"  var selected = ~value;",
+			"  var checked = cast(value, Int);",
+			"  var unchecked:Int = cast value;",
+			"  var uncheckedBack:Bits = cast 7;",
+			"  var different = ~new DifferentResult(7);",
+			"} }",
+		].join("\n");
+		final main = mainFunction(typedModule(source, "Main.hx"));
+		final selected = initializer(main, "selected");
+		final operandView = selected.getExpressions()[0].getExpressions()[0];
+		assertTrue(selected.isRepresentationPreservingCast() && operandView.isRepresentationPreservingCast(),
+			"bodyless operator without conversion headers lost its selected storage guarantee");
+		for (name in ["checked", "unchecked", "uncheckedBack"])
+			assertTrue(initializer(main, name).getTag() == TypedExprTag.Cast && !initializer(main, name).isRepresentationPreservingCast(),
+				"authored cast acquired a selected operator's storage guarantee: " + name);
+		final different = initializer(main, "different");
+		assertTrue(different.getType().getSemanticKey() == "nominal:Main.Other" && !different.isRepresentationPreservingCast(),
+			"operator with a different result acquired an unsupported storage guarantee");
+		assertTrue(!selected.withType(TyType.fromHintText("String")).isRepresentationPreservingCast(),
+			"changing the result type retained an obsolete storage guarantee");
+		assertTrue(!operandView.withExpressions([operandView.getExpressions()[0].withType(TyType.fromHintText("String"))]).isRepresentationPreservingCast(),
+			"changing the operand type retained an obsolete storage guarantee");
+	}
+
 	static function main():Void {
+		storageGuaranteeTests();
 		final source = [
 			"class Carrier {",
 			"  public var value:Int;",
@@ -341,11 +380,17 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& nativeBitsUnary.getExpressions()[0].getType().getSemanticKey() == "primitive:Int"
 			&& !containsTag(nativeBitsResult, TypedExprTag.Call),
 			"bodyless abstract operator did not become an explicitly authorized primitive-carrier unary operation");
+		assertTrue(nativeBitsResult.isRepresentationPreservingCast()
+			&& nativeBitsUnary.getExpressions()[0].isRepresentationPreservingCast(),
+			"selected bodyless operator lost the exact operand or result storage guarantee");
 		final nativeStaticBitsResult = initializer(main, "nativeStaticBitsResult");
 		assertTrue(nativeStaticBitsResult.getTag() == TypedExprTag.Cast
 			&& nativeStaticBitsResult.getExpressions()[0].getTag() == TypedExprTag.Unary
 			&& !containsTag(nativeStaticBitsResult, TypedExprTag.Call),
 			"bodyless static operator was emitted as a helper call instead of its authorized carrier unary operation");
+		assertTrue(nativeStaticBitsResult.isRepresentationPreservingCast()
+			&& nativeStaticBitsResult.getExpressions()[0].getExpressions()[0].isRepresentationPreservingCast(),
+			"selected static bodyless operator lost its storage guarantee");
 
 		assertTrue(initializer(main, "ordinaryNumber").getTag() == TypedExprTag.Unary,
 			"ordinary numeric unary behavior was routed through the abstract catalog");

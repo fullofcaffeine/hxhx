@@ -484,6 +484,10 @@ class CppManagedRootedExpression {
 			case EUnop(op, _, target) if (op == Increment || op == Decrement):
 				CppManagedInteger.resultType("+", valueType(target), TyType.fromHintText("Int"));
 			case EUnop(Negate, Prefix, operand): CppManagedInteger.resultType("-", TyType.fromHintText("Int"), valueType(operand));
+			case EUnop(BitwiseNot, Prefix, operand):
+				if (valueType(operand).getSemanticKey() != "primitive:Int")
+					throw "managed integer complement requires an exact Int operand";
+				TyType.fromHintText("Int");
 			case EUnop(LogicalNot, Prefix, operand):
 				requireExpression(value);
 				CppManagedBoolean.requireCondition(operand, valueType, requireExpression);
@@ -686,7 +690,7 @@ class CppManagedRootedExpression {
 				return lines;
 			case EUnop(op, fixity, target) if (op == Increment || op == Decrement):
 				return renderSelectedUpdate(target, op, fixity, destination, indent);
-			case EUnop(Negate, Prefix, operand):
+			case EUnop(op, Prefix, operand) if (op == Negate || op == BitwiseNot):
 				valueType(value);
 				final root = destination + "_negated";
 				final lines = [
@@ -695,7 +699,13 @@ class CppManagedRootedExpression {
 				];
 				for (line in render(operand, root, indent + "  "))
 					lines.push(line);
-				for (line in CppManagedInteger.compute("-", TyType.fromHintText("Int"), valueType(operand), "hxhx::managed::Value::integer(0)",
+				// For a signed 32-bit integer, complement is -1 minus the value.
+				// Reuse the widened arithmetic path to avoid signed overflow and
+				// implementation-dependent signed bitwise representation.
+				final initial = op == BitwiseNot ? "-1" : "0";
+				for (line in CppManagedInteger.compute("-", TyType.fromHintText("Int"), valueType(operand), "hxhx::managed::Value::integer("
+					+ initial
+					+ ")",
 					root
 					+ ".get()", destination, root
 					+ "_", indent
