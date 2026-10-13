@@ -107,7 +107,7 @@ class M14JsTypedLocalProjectionIntegrationTest {
 			"compiler temporary was not retained in the backend projection catalog");
 		final projectedName = entries[0].getProjectedName();
 		switch (HxFunctionDecl.getBody(projection.getDeclaration())[0]) {
-			case SExpr(ECall(ECast(ELambda([binder], EIdent(localRead)), _), [EInt(7)]), _):
+			case SBlock([SVar(binder, "Int", EInt(7), _, _), SExpr(EIdent(localRead), _)], _):
 				assertTrue(binder == projectedName && localRead == projectedName,
 					"compiler temporary declaration and read did not share the exact projected transport name");
 			case _:
