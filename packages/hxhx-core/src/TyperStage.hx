@@ -720,8 +720,13 @@ class TyperStage {
 				.publish(semanticInfo)));
 		}
 
+		// JavaScript uses authored Map providers. Resolve collection syntax while
+		// declarations are indexed; other targets retain their physical-storage passes.
+		final collections = index != null
+			&& loader != null
+			&& loader.hasDefine("js") ? TypedMapProviderLowering.lowerClasses(typedClasses, index) : typedClasses;
 		final loweredClasses = index == null
-			|| deferProgramLowering ? typedClasses : TypedAbstractOperatorLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
+			|| deferProgramLowering ? collections : TypedAbstractOperatorLowering.lowerClasses(collections, index, parsed.getFilePath());
 		return {classes: loweredClasses, mainFunctions: mainFunctions, resolvedDirectives: resolvedDirectives};
 	}
 

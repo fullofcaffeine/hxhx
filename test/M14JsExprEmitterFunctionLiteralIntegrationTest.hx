@@ -1,7 +1,19 @@
 import backend.js.JsExprEmitter;
 import backend.js.JsFunctionScope;
 
+/** Keep primitive emission checks and reject source constructs that require typed lowering.
+	Positive function and Map behavior lives in the accompanying runtime fixtures. */
 class M14JsExprEmitterFunctionLiteralIntegrationTest {
+	static function assertRawRejected(expression:HxExpr, scope:backend.js.JsEmitScope, expected:String, label:String):Void {
+		try {
+			JsExprEmitter.emit(expression, scope);
+		} catch (message:String) {
+			assertContains(message, expected, label);
+			return;
+		}
+		throw label + ": raw source unexpectedly bypassed typed lowering";
+	}
+
 	static function assertContains(haystack:String, needle:String, label:String):Void {
 		if (haystack == null || haystack.indexOf(needle) < 0)
 			throw label + ": expected substring '" + needle + "' in '" + haystack + "'";
@@ -22,36 +34,22 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final exprScope = scope.exprScope();
 
 		final unary = HxParser.parseExprText("function(x) return x + 1");
-		final unaryJs = JsExprEmitter.emit(unary, exprScope);
-		assertContains(unaryJs, "function(", "function literal lowers to JS function expression");
-		assertContains(unaryJs, "return (", "function literal emits return statement");
-		assertContains(unaryJs, "__hx_op_add", "function literal preserves expression body through abstract-aware addition");
-		assertContains(unaryJs, "x, 1", "function literal keeps addition operands");
+		assertRawRejected(unary, exprScope, "source control must be lowered before JavaScript emission", "unary");
 
 		final typedArg = HxParser.parseExprText("function(value:Int) return value");
-		final typedArgJs = JsExprEmitter.emit(typedArg, exprScope);
-		assertContains(typedArgJs, "function(", "typed-arg function literal parses");
-		assertContains(typedArgJs, "return ", "typed-arg function literal emits return");
+		assertRawRejected(typedArg, exprScope, "source control must be lowered before JavaScript emission", "typedArg");
 
 		final reservedArg = HxParser.parseExprText("function(arguments) return arguments");
-		final reservedArgJs = JsExprEmitter.emit(reservedArg, exprScope);
-		assertContains(reservedArgJs, "function(arguments_)", "strict-mode reserved lambda arg should be renamed");
-		assertContains(reservedArgJs, "return arguments_", "strict-mode reserved lambda body reference should use the renamed arg");
+		assertRawRejected(reservedArg, exprScope, "source control must be lowered before JavaScript emission", "reservedArg");
 
 		final evalArg = HxParser.parseExprText("function(eval) return eval");
-		final evalArgJs = JsExprEmitter.emit(evalArg, exprScope);
-		assertContains(evalArgJs, "function(eval_)", "strict-mode eval lambda arg should be renamed");
-		assertContains(evalArgJs, "return eval_", "strict-mode eval lambda body reference should use the renamed arg");
+		assertRawRejected(evalArg, exprScope, "source control must be lowered before JavaScript emission", "evalArg");
 
 		final noArgs = HxParser.parseExprText("function() return 7");
-		final noArgsJs = JsExprEmitter.emit(noArgs, exprScope);
-		assertContains(noArgsJs, "function()", "no-arg function literal keeps empty parameter list");
-		assertContains(noArgsJs, "return 7", "no-arg function literal body preserved");
+		assertRawRejected(noArgs, exprScope, "source control must be lowered before JavaScript emission", "noArgs");
 
 		final assignedArrow = HxParser.parseExprText("maybe = () -> Math.random() > 0.5");
-		final assignedArrowJs = JsExprEmitter.emit(assignedArrow, exprScope);
-		assertContains(assignedArrowJs, "maybe = function()", "assignment RHS arrow literal parses as a lambda");
-		assertContains(assignedArrowJs, "Math.random() > 0.5", "assignment RHS arrow keeps comparison body");
+		assertRawRejected(assignedArrow, exprScope, "source control must be lowered before JavaScript emission", "assignedArrow");
 
 		final postfixArgJs = JsExprEmitter.emit(HxParser.parseExprText("file.data.get(p++)"), exprScope);
 		assertContains(postfixArgJs, "file.data.get((function(){ var __hx_old = p;", "postfix increment should pass the old local value to calls");
@@ -77,57 +75,28 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertNotContains(stringCodeJs, ".code", "single-character string .code should not emit an undefined JS property read");
 
 		final optionalArrow = HxParser.parseExprText("f = (?a:Int=1, b:String) -> a + b.length");
-		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
-		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");
-		assertContains(optionalArrowJs, "__hx_op_add", "optional/typed/default arrow body uses abstract-aware addition");
-		assertContains(optionalArrowJs, "((a == null) ? 1 : a), b.length", "optional/typed/default arrow body applies defaulted arg");
+		assertRawRejected(optionalArrow, exprScope, "source control must be lowered before JavaScript emission", "optionalArrow");
 
 		final ascribedArrow = HxParser.parseExprText("f0 = (() -> 1:()->Int)");
-		final ascribedArrowJs = JsExprEmitter.emit(ascribedArrow, exprScope);
-		assertContains(ascribedArrowJs, "f0 = function()", "ascribed arrow expression parses as a lambda");
-		assertContains(ascribedArrowJs, "return 1", "ascribed arrow expression keeps body and consumes type hint");
+		assertRawRejected(ascribedArrow, exprScope, "source control must be lowered before JavaScript emission", "ascribedArrow");
 
 		final mapArrow = HxParser.parseExprText("map = [1 => a -> a + a, 2 => b -> b + b]");
-		final mapArrowJs = JsExprEmitter.emit(mapArrow, exprScope);
-		assertContains(mapArrowJs, "map = {\"1\": function(a)", "map-literal arrow value parses without a stray fat-arrow token");
-		assertContains(mapArrowJs, "\"2\": function(b)", "map-literal keeps each arrow value");
+		assertRawRejected(mapArrow, exprScope, "Map syntax must select its typed provider before JavaScript emission", "mapArrow");
 
 		final unicodeBlock = HxParser.parseExprText('{ var valid = valid.copy(); if (Sys.systemName() == "Windows") valid = valid.filter(f -> !f.match(Only([0x0001]))); valid = valid.filter(f -> !f.match(Only([0xD7FF])) && !f.match(Only([0x1FFFF]))); valid; }');
-		final unicodeBlockJs = JsExprEmitter.emit(unicodeBlock, exprScope);
-		assertContains(unicodeBlockJs, "Array.isArray", "array copy should guard Haxe Array values before falling back to object copy");
-		assertContains(unicodeBlockJs, ".slice()", "array copy should lower to JS slice");
-		assertNotContains(unicodeBlockJs, ".copy())", "array copy should not directly call a missing JS Array.copy method");
-		assertContains(unicodeBlockJs, ".filter(function(f)", "block-expression filter arrows should lower to JS functions");
-		assertContains(unicodeBlockJs, "__hx_ctor", "enum pattern values should lower to comparable enum objects");
-		assertContains(unicodeBlockJs, "JSON.stringify", "enum match should lower to a structural parameter comparison");
-		if (unicodeBlockJs.indexOf("->") >= 0 || unicodeBlockJs.indexOf("0 x") >= 0)
-			throw "UnicodeSequences-style block emitted raw Haxe syntax: " + unicodeBlockJs;
+		assertRawRejected(unicodeBlock, exprScope, "source control must be lowered before JavaScript emission", "unicodeBlock");
 
 		final mapComprehension = HxParser.parseExprText('map = [for (x in ["a", "b"]) x => x.toUpperCase()]');
-		final mapComprehensionJs = JsExprEmitter.emit(mapComprehension, exprScope);
-		assertContains(mapComprehensionJs, "__hxhx_map_out", "map comprehension should allocate an object result");
-		assertContains(mapComprehensionJs, "__hxhx_pair[0]", "map comprehension should use the yielded key");
-		assertContains(mapComprehensionJs, "x.toUpperCase()", "map comprehension should emit the yielded value expression");
+		assertRawRejected(mapComprehension, exprScope, "source control must be lowered before JavaScript emission", "mapComprehension");
 
 		final forExprFunction = HxParser.parseExprText("function() for (x in xml) null");
-		final forExprFunctionJs = JsExprEmitter.emit(forExprFunction, exprScope);
-		assertContains(forExprFunctionJs, "function()", "expression-position for-in should stay inside the callback");
-		assertContains(forExprFunctionJs, "for (var __i = 0; __i < __iter.length; __i++)", "expression-position for-in should emit an iteration IIFE");
-		assertContains(forExprFunctionJs, "return null", "expression-position for-in should preserve the null continuation");
+		assertRawRejected(forExprFunction, exprScope, "source control must be lowered before JavaScript emission", "forExprFunction");
 
 		final switchArrow = HxParser.parseExprText("f7 = switch maybe() { case true: f -> f; case false: f -> g -> f(g); }");
-		final switchArrowJs = JsExprEmitter.emit(switchArrow, exprScope);
-		assertContains(switchArrowJs, "f7 = (function () {", "assignment RHS switch expression parses structurally");
-		assertContains(switchArrowJs, "return function(f)", "switch cases can return arrow functions");
-		assertContains(switchArrowJs, "return function(g)", "nested arrow function inside switch case parses");
+		assertRawRejected(switchArrow, exprScope, "source control must be lowered before JavaScript emission", "switchArrow");
 
 		final blockBody = HxParser.parseExprText("function(x) { var y = x + 1; return y; }");
-		final blockBodyJs = JsExprEmitter.emit(blockBody, exprScope);
-		assertContains(blockBodyJs, "function(", "block-body function literal parses");
-		assertContains(blockBodyJs, "return ", "block-body function literal emits return");
-		assertContains(blockBodyJs, "function(y)", "block-body function literal lowers var binding");
-		assertContains(blockBodyJs, "__hx_op_add", "block-body function literal keeps initializer addition semantics");
-		assertContains(blockBodyJs, "x, 1", "block-body function literal keeps initializer operands");
+		assertRawRejected(blockBody, exprScope, "source control must be lowered before JavaScript emission", "blockBody");
 
 		final jsLibCtor = HxParser.parseExprText("new js.lib.DataView(new js.lib.ArrayBuffer(8))");
 		final jsLibCtorJs = JsExprEmitter.emit(jsLibCtor, exprScope);
@@ -141,32 +110,18 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(spreadCtorJs, "new Array(...values)", "constructor argument spread should lower to JS spread syntax");
 
 		final whileBody = HxParser.parseExprText("function(xs) { var i = 0; while (i < xs.length) { i += 1; } return i; }");
-		final whileBodyJs = JsExprEmitter.emit(whileBody, exprScope);
-		assertContains(whileBodyJs, "while (__cond())", "block-body function while loop should lower to expression helper");
-		assertContains(whileBodyJs, "i += 1", "block-body function while helper should preserve body side effect");
-		assertContains(whileBodyJs, "return i;", "block-body function while helper should run the continuation after the loop");
+		assertRawRejected(whileBody, exprScope, "source control must be lowered before JavaScript emission", "whileBody");
 
 		final forInBody = HxParser.parseExprText("function(xs) { var out = []; for (x in xs) { out.push(x); } return out; }");
-		final forInBodyJs = JsExprEmitter.emit(forInBody, exprScope);
-		assertContains(forInBodyJs, "for (var __i = 0; __i < __iter.length; __i++)", "block-body function for-in should lower to expression helper");
-		assertContains(forInBodyJs, "__body(__iter[__i])", "block-body function for-in helper should pass each value");
-		assertContains(forInBodyJs, "return out;", "block-body function for-in helper should run the continuation after the loop");
+		assertRawRejected(forInBody, exprScope, "source control must be lowered before JavaScript emission", "forInBody");
 
 		final switchBody = HxParser.parseExprText('function(kind) { var out = ""; switch (kind) { case "a": out = "A"; default: out = "X"; } return out; }');
-		final switchBodyJs = JsExprEmitter.emit(switchBody, exprScope);
-		assertContains(switchBodyJs, "var __sw = kind", "block-body function switch should lower to expression switch");
-		assertContains(switchBodyJs, 'if (__sw === "a")', "block-body function switch should preserve string case");
-		assertContains(switchBodyJs, 'out = "A"', "block-body function switch should preserve case body side effect");
-		final switchProcess = new sys.io.Process("node", [
-			"-e",
-			"const run = " + switchBodyJs + "; console.log(run('a')); console.log(run('other'));"
-		]);
-		final switchOutput = switchProcess.stdout.readAll().toString();
-		final switchErrors = switchProcess.stderr.readAll().toString();
-		final switchExit = switchProcess.exitCode();
-		switchProcess.close();
-		assertEquals(Std.string(switchExit), "0", "switch continuation must execute in JavaScript: " + switchErrors);
-		assertEquals(switchOutput, "A\nX\n", "each switch branch must run its side effect before the continuation");
+		assertRawRejected(switchBody, exprScope, "source control must be lowered before JavaScript emission", "switchBody");
+
+		assertRawRejected(HxParser.parseExprText('[1 => 2]'), exprScope, "Map syntax must select its typed provider before JavaScript emission",
+			"raw Map literal");
+		assertEquals(JsExprEmitter.emit(HxParser.parseExprText("__hxhx_map_comprehension(xs, callback)"), exprScope),
+			"__hxhx_map_comprehension(xs, callback)", "old helper spelling is an ordinary user call");
 
 		final castPostfixJs = JsExprEmitter.emit(HxParser.parseExprText("cast(c, Cov1).covariant()"), exprScope);
 		assertContains(castPostfixJs, "c.covariant()", "cast expression should accept field/call postfix suffixes");

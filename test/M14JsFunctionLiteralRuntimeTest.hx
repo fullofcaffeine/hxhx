@@ -1,6 +1,4 @@
 import sys.io.File;
-import hxhx.Stage1Compiler.Stage1Args;
-import hxhx.Stage3SetupSupport;
 
 /**
 	Exercise authored function expressions through typing and control lowering.
@@ -46,6 +44,11 @@ class M14JsFunctionLiteralRuntimeTest {
 				body: 'var map:Map<Int,Int->Int>; map = [1 => a -> a + a, 2 => b -> b + b];' + 'if (map[1](3) != 6 || map[2](4) != 8) throw "map callbacks";'
 			},
 			{
+				name: "map_comprehension",
+				body: 'var map:Map<String,String> = [for (x in ["a", "b"]) x => x.toUpperCase()];' +
+				'if (map["a"] != "A" || map["b"] != "B") throw "map comprehension";'
+			},
+			{
 				name: "block_context",
 				body: 'var callback:Int->Int = { ((s:String) -> s)("ignored"); { value -> value + 1; } };' +
 				'if (callback(8) != 9) throw "nested block context";'
@@ -60,46 +63,34 @@ class M14JsFunctionLiteralRuntimeTest {
 				+ 'if (!result[result.length-3].match(Only([65])) || !result[result.length-2].match(Only([65,66]))'
 				+ '|| result[result.length-1] != All) throw "filter order";}'},
 		];
-		for (entry in cases) {
-			final source = (entry.declarations == null ? "" : entry.declarations)
-				+ 'class Main { static function main():Void {'
-				+ entry.body
-				+ '} }';
-			final root = JsRuntimeFixture.reserveOutput();
-			final path = root + "/Main.hx";
-			File.saveContent(path, source);
-			final configured = Sys.getEnv("HXHX_UPSTREAM_HAXE");
-			command(configured == null ? "node_modules/.bin/haxe" : configured, ["-cp", root, "-main", "Main", "--js", root + "/upstream.js"]);
-			command("node", ["--use-strict", root + "/upstream.js"]);
+		// Keep each original body in its own function scope while loading the real
+		// standard library once for the complete set of independent assertions.
+		final declarations = [for (entry in cases) if (entry.declarations != null) entry.declarations].join("\n");
+		final functions = [
+			for (entry in cases)
+				'static function test_' + entry.name + '():Void {' + entry.body + '}'
+		].join("\n");
+		final calls = [for (entry in cases) 'test_' + entry.name + '();'].join("");
+		final source = declarations + 'class Main { static function main():Void {' + calls + '}' + functions + '}';
+		final root = JsRuntimeFixture.reserveOutput();
+		final path = root + "/Main.hx";
+		File.saveContent(path, source);
+		final configured = Sys.getEnv("HXHX_UPSTREAM_HAXE");
+		command(configured == null ? "node_modules/.bin/haxe" : configured, ["-cp", root, "-main", "Main", "--js", root + "/upstream.js"]);
+		command("node", ["--use-strict", root + "/upstream.js"]);
+		for (entry in cases)
 			Sys.println("JS_FUNCTION_LITERAL_UPSTREAM:PASS " + entry.name);
-			final typed = typeSource(root);
-			JsRuntimeFixture.assertRuntime(typed, "Main", "", ["--use-strict"]);
-			sys.FileSystem.deleteFile(path);
-			sys.FileSystem.deleteFile(root + "/upstream.js");
-			sys.FileSystem.deleteDirectory(root);
-			Sys.println("JS_FUNCTION_LITERAL_RUNTIME:PASS " + entry.name);
-		}
-	}
-
-	/** Load real member declarations before typing primitive String and collection calls. */
-	static function typeSource(root:String):TypedModule {
-		final args = Stage1Args.parse(["-cp", root, "-main", "Main"], true);
-		final paths = Stage3SetupSupport.projectClassPaths({
-			explicitPaths: [root],
-			libraries: [],
-			cwd: Sys.getCwd(),
-			standardRoot: Stage1Args.getStandardLibraryRoot(args),
-			targetDefine: "js"
+		final program = JsSourceProgramFixture.build({
+			sources: [{path: "Main.hx", source: source}],
+			requiredModules: ["String", "Array", "haxe.ds.Map"],
+			mode: "full"
 		});
-		final defines = Stage3SetupSupport.buildDefinesMap([], "js", "js-native");
-		final modules = ResolverStage.parseProjectRootsShallow(paths, ["Main", "String", "Array", "haxe.ds.Map"], defines);
-		final index = TyperIndex.buildHeaders(modules);
-		final loader = new ModuleLoader(paths, defines, index, null, false);
-		loader.markResolvedAlready(modules);
-		final main = modules.filter(module -> ResolvedModule.getModulePath(module) == "Main");
-		if (main.length != 1)
-			throw "function-literal fixture requires one Main module";
-		return TyperStage.typeResolvedModule(main[0], index, loader, true);
+		JsRuntimeFixture.assertProgramRuntime(program, "Main", "", ["--use-strict"]);
+		sys.FileSystem.deleteFile(path);
+		sys.FileSystem.deleteFile(root + "/upstream.js");
+		sys.FileSystem.deleteDirectory(root);
+		for (entry in cases)
+			Sys.println("JS_FUNCTION_LITERAL_RUNTIME:PASS " + entry.name);
 	}
 
 	/** Bound both compiler and runtime children; successful assertions produce no output. */
