@@ -30,7 +30,7 @@ class M14NullReferenceCallTest {
 	static function main():Void {
 		final path = "test/fixtures/null_reference_call/Main.hx";
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final typed = NullCallFixture.typeModule(resolved);
 		for (type in typed.getTypedClasses())
 			for (fn in type.getFunctions())
 				for (body in fn.getBody().getStatements())

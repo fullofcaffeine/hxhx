@@ -2,7 +2,7 @@
 class M14NullCallSelectionTest {
 	static function calls(source:String):Array<TypedExpr> {
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final typed = NullCallFixture.typeModule(resolved);
 		final found = new Array<TypedExpr>();
 		function expression(node:TypedExpr):Void {
 			if (node.getTag() == Call)
@@ -36,16 +36,25 @@ class M14NullCallSelectionTest {
 	static function main():Void {
 		selected('class Main { static function choose<T>(first:T, second:T):T { return second; } static function main():Void { choose(null, "ok"); choose("ok", null); } }',
 			["String", "String"]);
-		selected('class Main { static function choose<T>(value:T):T { return value; } static function main():Void { choose(null); } }', ["Unknown"]);
+		final nullOnly = calls('class Main { static function choose<T>(value:T):T { return value; } static function main():Void { choose(null); } }');
+		if (nullOnly.length != 1 || nullOnly[0].getDeclaration() == null || !nullOnly[0].getType().isOpenMethodParameter())
+			throw "Null-only generic call must keep its declaration and an open type parameter";
 		selected('class Main { static function choose<T>(value:Array<T>, fallback:T):T { return fallback; } static function main():Void { choose(null, "ok"); } }',
 			["String"]);
 		selected('class Main { static function nullable(value:Null<Int>):Bool { return value == null; } static function optional(value:Int = 7):Int { return value; } static function main():Void { nullable(null); optional(null); optional(); } }',
 			["Bool", "Int", "Int"]);
 		selected('class Box {} enum Signal { Ready; } abstract Text(String) {} abstract Wrapped<T>(T) {} class Main { static function box(value:Box):Void {} static function signal(value:Signal):Void {} static function text(value:Text):Void {} static function wrapped(value:Wrapped<String>):Void {} static function main():Void { box(null); signal(null); text(null); wrapped(null); } }',
 			["Void", "Void", "Void", "Void"]);
-		final invalid = calls('class Main { static function accept(value:String, count:Int):Void {} static function main():Void { accept(null, "wrong"); } }');
-		if (invalid.length != 1 || invalid[0].getDeclaration() != null)
-			throw "Null caused an invalid second argument to select a declaration";
+		var invalidRejected = false;
+		try {
+			calls('class Main { static function accept(value:String, count:Int):Void {} static function main():Void { accept(null, "wrong"); } }');
+		} catch (error:TyperError) {
+			if (error.message.indexOf("No compatible method signature for accept") < 0)
+				throw error;
+			invalidRejected = true;
+		}
+		if (!invalidRejected)
+			throw "Null caused an invalid second argument to pass call checking";
 		var ambiguous = false;
 		try {
 			calls('extern class Api { overload static function choose(value:String):Int; overload static function choose(value:Array<Int>):Int; } class Main { static function main():Void { Api.choose(null); } }');
