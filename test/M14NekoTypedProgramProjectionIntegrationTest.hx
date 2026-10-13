@@ -246,7 +246,8 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 				found = true;
 		if (!found)
 			throw "embedding an implicit enum constant lost the provider dependency";
-		expectFailure("unresolved enum-abstract constant", () -> project('enum abstract Cycle(Int) { var A = B; var B = A; }
+		expectFailure("Unresolved enum-abstract constant: Main.Cycle.A: cyclic constant initializer",
+			() -> project('enum abstract Cycle(Int) { var A = B; var B = A; }
 class Main { static function main():Void { Sys.println(Cycle.A); } }'));
 	}
 
