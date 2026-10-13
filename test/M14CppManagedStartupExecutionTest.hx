@@ -5,6 +5,11 @@ import backend.cpp.CppTargetCore;
 class M14CppManagedStartupExecutionTest {
 	static function main():Void {
 		runFixture({
+			sourceRoot: "test/fixtures/cpp_managed_discarded_value_seed",
+			output: ".tmp/managed-discarded-value",
+			observer: "test/cpp_managed_heap/DiscardedValueObserver.cpp"
+		});
+		runFixture({
 			sourceRoot: "test/fixtures/cpp_managed_startup_execution_seed",
 			output: ".tmp/managed-startup-execution",
 			observer: "test/cpp_managed_heap/StartupObserver.cpp"

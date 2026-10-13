@@ -376,8 +376,6 @@ class CppManagedRootedExpression {
 				if (selected != null && !selected.getField().getIsStatic()) renderDiscard(value, indent); else [
 					indent + "static_cast<void>(" + (selected == null ? locals.value(value) : staticRead(selected)) + ");"
 				];
-			case SExpr(value = ENew(_, _), _) | SExpr(value = EField(_, _), _) | SExpr(value = EArrayAccess(_, _), _):
-				renderDiscard(value, indent);
 			case SExpr(EBinop(op, target, value), _) if (op == "+=" || op == "-=" || op == "*="):
 				renderSelectedAssignment(target, value, null, indent, op.substr(0, 1));
 			case SExpr(EBinop("=", target, value), _):
@@ -386,7 +384,7 @@ class CppManagedRootedExpression {
 				renderCall(value, null, indent);
 			case SExpr(EUnop(op, fixity, target), _) if (op == Increment || op == Decrement):
 				renderSelectedUpdate(target, op, fixity, null, indent);
-			case SExpr(value, _): throw "managed expression statement requires explicit lowering for " + Type.enumConstructor(value);
+			case SExpr(value, _): renderDiscard(value, indent);
 			case _: throw "managed statement requires explicit lowering for " + Type.enumConstructor(statement);
 		};
 	}
@@ -1026,8 +1024,9 @@ class CppManagedRootedExpression {
 		};
 	}
 
-	/** Discarding a constructed value or field read must still execute all source effects and checks. */
+	/** Evaluate an unused value normally: inlining can leave literals, while other values still have effects and checks. */
 	function renderDiscard(value:HxExpr, indent:String):Array<String> {
+		requireExpression(value);
 		final root = input.temporaryPrefix + 'discarded_value';
 		final lines = [
 			indent + '{',

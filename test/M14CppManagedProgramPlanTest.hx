@@ -78,6 +78,8 @@ class M14CppManagedProgramPlanTest {
 			"uncalled-class-initializer", []);
 		admission("class Main { static function main():Void {} } class Unused { static function __init__():Void { throw 1.0; } }", "Main",
 			"managed value requires explicit typed expression lowering for EFloat", "uncalled-class-startup", []);
+		admission("class Main { static function main():Void { 1.0; } }", "Main", "managed rooted expression requires explicit lowering for EFloat",
+			"discarded-unsupported-value", []);
 		admission("class Main { static function main():Void { Native.run(); } } extern class Native { public static function run():Void; }", "Main",
 			"explicit native or instance binding", "native-binding", []);
 		admission(source, "Main", "explicit resource publication", "resources", [{name: "sample", data: haxe.io.Bytes.ofString("content")}]);
