@@ -1,7 +1,16 @@
 /** Literal strings must support ordinary method calls and extracted method values. */
 class M14NekoStringMethodTest {
+	/** Resolve the real Array declarations and execute both Neko layouts against upstream. */
+	static function assertSource(name:String, source:String, expected:String):Void {
+		final root = ".tmp/neko_string_method_" + name + "_" + Date.now().getTime();
+		sys.FileSystem.createDirectory(root);
+		sys.io.File.saveContent(root + "/Main.hx", source);
+		sys.io.File.saveContent(root + "/expected.stdout", expected);
+		NekoRuntimeFixture.exercise(root, false);
+	}
+
 	static function main():Void {
-		@:privateAccess M14NekoClosureControlTest.assertSource("string_methods", 'class Main {
+		assertSource("string_methods", 'class Main {
 static function main():Void {
 var value="left:right";
 var pieces=value.split(":");
@@ -9,7 +18,7 @@ Sys.println(pieces.length);Sys.println(pieces[0]);Sys.println(pieces[1]);
 var split=value.split;
 var saved=split(":");Sys.println(saved[0]);Sys.println(saved[1]);
 }}', "2\nleft\nright\nleft\nright\n");
-		@:privateAccess M14NekoClosureControlTest.assertSource("string_split_edges", 'class Main {
+		assertSource("string_split_edges", 'class Main {
 static function main():Void {
 var adjacent=":a::b:".split(":");Sys.println(adjacent.length);Sys.println(adjacent.join("|"));
 var absent="abc".split(":");Sys.println(absent.length);Sys.println(absent[0]);
