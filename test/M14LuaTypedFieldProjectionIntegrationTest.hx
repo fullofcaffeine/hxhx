@@ -168,6 +168,7 @@ class M14LuaTypedFieldProjectionIntegrationTest {
 			assertContains(direct, "local value_1 = 7", "shadowing local should not replace the field transport name");
 			assertContains(direct, "print(__hxhx_string_to_upper_case(value))", "main field read should select the Lua String helper from exact field facts");
 			assertContains(direct, "print(__hxhx_string_to_lower_case(value))", "field read after the nested local should retain exact String behavior");
+			assertContains(direct, "upperField = function()", "the selected static helper must be emitted before it is called");
 			assertContains(direct, "return __hxhx_string_to_upper_case(value)", "helper field read should select the Lua String helper from its own catalog");
 
 			final blockedPath = Path.join([tmpRoot, "blocked.lua"]);

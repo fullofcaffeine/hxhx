@@ -14038,7 +14038,13 @@ class SourceTargetCommon {
 		}
 	}
 
+	/** Discover the same ordinary calls that source rendering restores from typed static-call wrappers. */
 	static function collectJavaEntryBodyDirectCallsInExpr(expr:HxExpr, out:Array<{name:String, arity:Int}>):Void {
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null) {
+			collectJavaEntryBodyDirectCallsInExpr(TypedExactStaticCallSource.ordinaryCall(staticCall), out);
+			return;
+		}
 		switch (expr) {
 			case ECall(EIdent(name), args):
 				addJavaEntryBodyDirectCall(out, name, args.length);
