@@ -4,23 +4,30 @@ import backend.cpp.CppManagedValueTransfer.convertRoot;
 
 /** Compare authored scalar transfer assertions with a collecting native runtime. */
 class M14CppNullableTransferTest {
-	/** A native scalar conversion must remain distinct from copying a nullable value. */
+	/**
+		Int and Bool recover native defaults only at concrete scalar destinations.
+		The runtime fixture below checks Int transfers; the generic-field fixture
+		independently checks Bool recovery and preservation of the nullable source.
+	 */
 	static function admission():Void {
-		final integer = TyType.fromHintText("Int");
-		final nullable = TyType.nullable(integer);
-		if (accepts(integer, nullable) || !supports(integer, nullable))
-			throw "integer conversion admission differs";
-		if (!accepts(nullable, nullable) || convertRoot(nullable, nullable, "root", "").length != 0)
-			throw "nullable copy changed absence";
-		for (source in [
-			TyType.fromHintText("Dynamic"),
-			TyType.fromHintText("String"),
-			TyType.nullable(TyType.fromHintText("Bool"))
-		])
-			if (supports(integer, source))
-				throw "unrelated integer conversion admitted";
-		if (supports(TyType.fromHintText("Bool"), TyType.nullable(TyType.fromHintText("Bool"))))
-			throw "Boolean conversion admitted without its own contract";
+		for (name in ["Int", "Bool"]) {
+			final scalar = TyType.fromHintText(name);
+			final nullable = TyType.nullable(scalar);
+			if (accepts(scalar, nullable) || !supports(scalar, nullable))
+				throw name + " conversion admission differs";
+			if (!accepts(nullable, nullable) || convertRoot(nullable, nullable, "root", "").length != 0)
+				throw name + " nullable copy changed absence";
+			final other = TyType.fromHintText(name == "Int" ? "Bool" : "Int");
+			for (source in [
+				TyType.fromHintText("Dynamic"),
+				TyType.fromHintText("String"),
+				TyType.fromHintText("Float"),
+				other,
+				TyType.nullable(other)
+			])
+				if (supports(scalar, source))
+					throw name + " conversion admitted an unrelated source";
+		}
 	}
 
 	static function main():Void {

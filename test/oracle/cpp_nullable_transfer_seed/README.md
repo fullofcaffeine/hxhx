@@ -29,5 +29,10 @@ requires zero temporary roots and exactly one retained program storage object.
 The companion declared-local test checks that later assignments cannot widen
 an Int local to Null<Int> before emission.
 
-This contract excludes Boolean, Float, Dynamic, and abstract conversions.
-It does not establish complete constructor defaults or Full1 compatibility.
+The native program here covers Int transfers. The admission checks also cover
+the matching `Null<Bool>` to `Bool` conversion and reject unrelated source types.
+The [generic-field fixture](../../fixtures/cpp_generic_field_seed/README.md)
+checks Boolean recovery and preservation of the nullable source at runtime.
+
+Float, Dynamic, and abstract conversions remain outside this contract.
+These checks do not establish complete constructor defaults or Full1 compatibility.
