@@ -147,7 +147,8 @@ function main() {
   const expectedCounts = {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
-    'compiler-focused': 107,
+    'compiler-focused-1': 54,
+    'compiler-focused-2': 53,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -156,7 +157,8 @@ function main() {
   const expectedShardMinimumTiers = {
     'compiler-foundation': 'Q2',
     'compiler-packaging': 'Q2',
-    'compiler-focused': 'Q2',
+    'compiler-focused-1': 'Q2',
+    'compiler-focused-2': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -456,7 +458,8 @@ function main() {
   const expectedBoundedRows = [
     ['compiler-foundation', 'Compiler foundations and runtime'],
     ['compiler-packaging', 'OCaml packaging and metal profile'],
-    ['compiler-focused', 'Focused compiler regressions'],
+    ['compiler-focused-1', 'Focused compiler regressions (1/2)'],
+    ['compiler-focused-2', 'Focused compiler regressions (2/2)'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
@@ -467,6 +470,10 @@ function main() {
       `Core bounded shard ${shard}`
     )
   }
+  assert(
+    (q2Matrix.match(/if: \$\{\{ startsWith\(matrix\.shard, 'compiler-focused-'\) \}\}/g) || []).length === 2,
+    'both focused partitions must install their runtime and Neko compiler dependencies'
+  )
   assert(
     (q2Matrix.match(/          - shard: portable\n/g) || []).length === 3,
     'Core workflow must run exactly three portable fixture partitions'

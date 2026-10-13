@@ -576,8 +576,11 @@ jobs:
           - shard: compiler-packaging
             label: OCaml packaging and metal profile
             timeout_minutes: 40
-          - shard: compiler-focused
-            label: Focused compiler regressions
+          - shard: compiler-focused-1
+            label: Focused compiler regressions (1/2)
+            timeout_minutes: 40
+          - shard: compiler-focused-2
+            label: Focused compiler regressions (2/2)
             timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
@@ -606,9 +609,14 @@ jobs:
             portable_shard_count: "3"
             portable_jobs: "4"
             portable_fixture_timeout_seconds: "2100"
-    # Current-layout runs 33284703349 and 33289157979 measured the slowest
+    # Runs 33284703349 and 33289157979 measured the other bounded rows' slowest
     # 40-minute row at 23m06s and the slowest portable row at 38m25s. These
     # budgets retain at least 16m54s and 11m35s of hosted-runner headroom.
+    # Focused run 38372712525 reached the 40-minute limit after 101/107 commands.
+    # Split those independent commands across clean runners. The observed times
+    # sum to about 18m45s per partition, including the prior run's final six
+    # commands. Failures shorten these measurements; hosted passes must confirm
+    # the headroom as repairs allow more nested checks to execute.
     # The large hxhx application workload retains its own Q3 job below.
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
@@ -662,7 +670,7 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
       - name: Ensure PHP, Mono and Lua are available for focused runtime tests
-        if: ${{ matrix.shard == 'compiler-focused' }}
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}
         run: |
           set -euo pipefail
           runtime_packages=()
@@ -684,7 +692,7 @@ jobs:
           mono --version
           lua -v
       - name: Expose the Neko compiler for focused tests
-        if: ${{ matrix.shard == 'compiler-focused' }}
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}
         run: |
           set -euo pipefail
           # Lix 16.0.2 downloads Neko 2.4.0, but npm exposes only its VM shim.
