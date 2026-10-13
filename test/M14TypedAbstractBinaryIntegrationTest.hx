@@ -231,6 +231,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var nativeLeft:NativeSum = new NativeSum(7);",
 			"  var nativeRight:NativeSum = new NativeSum(8);",
 			"  var nativeResult = nativeLeft + nativeRight;",
+			"  var nativeCompoundResult:NativeSum = (nativeLeft += nativeRight);",
 			"  var nativeText:NativeText = new NativeText('value');",
 			"  var nativeTextResult = nativeText + 4;",
 			"  var typeTestControl = nativeTextResult is String;",
@@ -253,6 +254,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& declarationExpression(direct, "mergeArbitrarily") != null
 			&& !containsTag(direct, TypedExprTag.Binary),
 			"ordinary abstract binary operation did not become an exact ordered call");
+		assertTrue(direct.getExpressions()[2].isRepresentationPreservingCast(), "exact binary helper result lost its unchanged storage");
 
 		final reversed = initializer(main, "reversed");
 		final reversedCall = declarationExpression(reversed, "decorateArbitrarily");
@@ -268,6 +270,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& widenedCall.getExpressions()[2].getTag() == TypedExprTag.Cast
 			&& widenedCall.getExpressions()[2].getType().getDisplay() == "Float",
 			"numeric widening was not made explicit before the exact helper call");
+		assertTrue(!widenedCall.getExpressions()[2].isRepresentationPreservingCast(), "numeric widening acquired a storage-preserving permission");
 
 		final explicitResult = initializer(main, "explicitResult");
 		assertTrue(declarationExpression(explicitResult, "explicitCompoundArbitrarily") != null
@@ -306,12 +309,25 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& containsTag(nativeResult, TypedExprTag.Binary)
 			&& !containsTag(nativeResult, TypedExprTag.Call),
 			"bodyless declaration did not authorize one ordinary carrier operation");
+		final nativeView = nativeResult.getExpressions()[2];
+		final nativeOperation = nativeView.getExpressions()[0];
+		assertTrue(nativeView.isRepresentationPreservingCast()
+			&& nativeOperation.getExpressions()[0].isRepresentationPreservingCast()
+			&& nativeOperation.getExpressions()[1].isRepresentationPreservingCast(),
+			"selected binary operation lost an operand or result storage guarantee");
+		final nativeCompound = initializer(main, "nativeCompoundResult");
+		assertTrue(containsTag(nativeCompound, TypedExprTag.Binary)
+			&& containsTag(nativeCompound, TypedExprTag.Assign)
+			&& !containsTag(nativeCompound, TypedExprTag.Call),
+			"bodyless compound fallback called an unimplemented helper or omitted writeback");
 
 		final nativeTextResult = initializer(main, "nativeTextResult");
 		assertTrue(nativeTextResult.getTag() == TypedExprTag.Block
 			&& nativeTextResult.getType().getSemanticKey() == "nominal:Main.NativeText"
 			&& containsTag(nativeTextResult, TypedExprTag.Binary),
 			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
+		assertTrue(!nativeTextResult.getExpressions()[2].isRepresentationPreservingCast(),
+			"non-scalar native result acquired the bounded Int/Bool storage permission");
 		final typeTest = initializer(main, "typeTestControl");
 		assertTrue(typeTest.getTag() == TypedExprTag.RuntimeTypeTest
 			&& typeTest.getRuntimeTypeTarget().getSemanticKey() == "runtime-core:String"

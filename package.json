@@ -655,7 +655,7 @@
     "test:m14:abstract-unary-cross-backend": "haxe test/m14_abstract_unary_cross_backend_integration_test.hxml",
     "test:m14:abstract-binary-cross-backend": "haxe test/m14_abstract_binary_cross_backend_integration_test.hxml",
     "test:m14:cpp-abstract-unary": "haxe test/m14_cpp_native_abstract_operator_test.hxml && haxe test/m14_cpp_abstract_unary_integration_test.hxml",
-    "test:m14:cpp-abstract-binary": "haxe test/m14_cpp_abstract_binary_integration_test.hxml",
+    "test:m14:cpp-abstract-binary": "haxe test/m14_cpp_native_binary_operator_test.hxml && haxe test/m14_cpp_abstract_binary_integration_test.hxml",
     "test:m14:cpp-int64-equality": "haxe test/m14_cpp_int64_equality_integration_test.hxml",
     "test:m14:cpp-int64-add-int": "haxe test/m14_cpp_int64_add_int_integration_test.hxml",
     "test:m14:cpp-int64-sub-int": "haxe test/m14_cpp_int64_sub_int_integration_test.hxml",

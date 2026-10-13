@@ -240,16 +240,20 @@ class TypedAbstractUnaryLowering {
 		final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), operand.getPosition());
 		final callee = TypedExpr.fieldRead(calleeOwner, declaration.getSignature().getName(), TyType.unknown(), operand.getPosition());
 		final call = TypedExpr.call(callee, [operand], declaration, binding.getResultType(), operand.getPosition());
+		// The selected call already returns this exact type; its wrapper changes no storage.
 		return binding.getResultType()
-			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(), operand.getPosition());
+			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(),
+			operand.getPosition(), true);
 	}
 
 	static function instanceCall(binding:TyAbstractOperatorInfo, operand:TypedExpr):TypedExpr {
 		final declaration = binding.getDeclaration();
 		final callee = TypedExpr.fieldRead(operand, declaration.getSignature().getName(), TyType.unknown(), operand.getPosition());
 		final call = TypedExpr.call(callee, [], declaration, binding.getResultType(), operand.getPosition());
+		// The same identity guarantee applies to an exact instance helper result.
 		return binding.getResultType()
-			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(), operand.getPosition());
+			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(),
+			operand.getPosition(), true);
 	}
 
 	/**

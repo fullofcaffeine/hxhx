@@ -187,6 +187,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  var checked = cast(value, Int);",
 			"  var unchecked:Int = cast value;",
 			"  var uncheckedBack:Bits = cast 7;",
+			"  var uncheckedSame:Bits = cast value;",
 			"  var different = ~new DifferentResult(7);",
 			"} }",
 		].join("\n");
@@ -195,7 +196,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 		final operandView = selected.getExpressions()[0].getExpressions()[0];
 		assertTrue(selected.isRepresentationPreservingCast() && operandView.isRepresentationPreservingCast(),
 			"bodyless operator without conversion headers lost its selected storage guarantee");
-		for (name in ["checked", "unchecked", "uncheckedBack"])
+		for (name in ["checked", "unchecked", "uncheckedBack", "uncheckedSame"])
 			assertTrue(initializer(main, name).getTag() == TypedExprTag.Cast && !initializer(main, name).isRepresentationPreservingCast(),
 				"authored cast acquired a selected operator's storage guarantee: " + name);
 		final different = initializer(main, "different");
@@ -295,12 +296,14 @@ class M14TypedAbstractUnaryIntegrationTest {
 		final classCall = classResult.getExpressions()[0];
 		assertTrue(classResult.getTag() == TypedExprTag.Cast && classCall.getTag() == TypedExprTag.Call,
 			"class-backed unary minus did not become a carrier-preserving exact call");
+		assertTrue(classResult.isRepresentationPreservingCast(), "exact static operator result lost its unchanged storage");
 		assertTrue(classCall.getDeclaration() != null && classCall.getDeclaration().getSignature().getName() == "arbitraryClassNeg",
 			"class-backed helper was not selected by @:op metadata");
 		assertTrue(classResult.getType().getSemanticKey() == "nominal:Main.ClassNeg", "class-backed call lost its declared result type");
 
 		final primitiveResult = initializer(main, "primitiveResult");
 		final primitiveCall = primitiveResult.getExpressions()[0];
+		assertTrue(primitiveResult.isRepresentationPreservingCast(), "exact instance operator result lost its unchanged storage");
 		assertTrue(primitiveResult.getTag() == TypedExprTag.Cast && primitiveCall.getTag() == TypedExprTag.Call,
 			"primitive-backed unary minus did not become a carrier-preserving exact instance call");
 		assertTrue(primitiveCall.getDeclaration() != null
