@@ -25,6 +25,15 @@ class Main {
 		return first * 10 + second;
 	}
 
+	/** A required backing parameter stays required even when a stored view permits omission. */
+	static function requiredView(first:Int, second:Null<Int>):Int {
+		return first * 1000 + (second == null ? 99 : second);
+	}
+
+	static function invokeView(callback:(Int, ?Int) -> Int):Int {
+		return callback(11);
+	}
+
 	static function main():Void {
 		Sys.println(value());
 		Sys.println(value(null));
@@ -46,6 +55,23 @@ class Main {
 		final method = receiver.read;
 		Sys.println(method());
 		Sys.println(new Receiver(0).value);
+		// The casts deliberately model a callable obtained through an unchecked
+		// boundary. The written local signature owns omission, not the backing method.
+		final object = {run: requiredView};
+		final view:(Int, ?Int) -> Int = cast object.run;
+		Sys.println(view(7));
+		Sys.println(view(8, 0));
+		final unchecked:(Int, ?Int) -> Int = untyped object.run;
+		Sys.println(unchecked(9));
+		final alias = view;
+		Sys.println(alias(10));
+		Sys.println(invokeView(view));
+		Sys.println(view(observe("view-first", 12), observe("view-second", 13)));
+		Sys.println(view(observe("view-only", 14)));
+		{
+			final view:(Int, Null<Int>) -> Int = requiredView;
+			Sys.println(view(15, 16));
+		}
 	}
 }
 

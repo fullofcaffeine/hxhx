@@ -2714,7 +2714,8 @@ class NekoTargetCore {
 				// as language syntax after removing the authored wrapper.
 				switch inner {
 					case EIdent(name) if (isLocalName(context, name)):
-						return NekoValueCall.render(context.typedProgram, renderExpr(context, inner), [for (arg in args) renderExpr(context, arg)]);
+						return NekoValueCall.render(context.typedProgram, renderExpr(context, inner),
+							NekoLocalCallArguments.complete(context, callee, [for (arg in args) renderExpr(context, arg)]));
 					case _:
 				}
 				// Expose wrapped lambdas and selected declarations to their renderer.
@@ -2841,7 +2842,7 @@ class NekoTargetCore {
 				// An implicit instance method still needs Neko's invocation receiver.
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 			case _:
-				return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), renderedArgs);
+				return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), NekoLocalCallArguments.complete(context, callee, renderedArgs));
 		}
 	}
 

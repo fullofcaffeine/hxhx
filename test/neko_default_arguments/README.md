@@ -10,6 +10,12 @@ Two parameter names occupy the usual generated argument-array names. The
 compiler must choose a different name so binding one parameter cannot destroy
 the remaining arguments.
 
+A required two-argument function can also enter a local with an optional
+second parameter through `cast` or `untyped`. Calling that local with one
+argument must pass null for its missing parameter. The fixture covers aliases,
+callback parameters, supplied values, evaluation order, and shadowed local names.
+The backing function remains a required fixed-arity function.
+
 Run the upstream Haxe 4.3.7 comparison and both generated Neko layouts:
 
 ```sh
