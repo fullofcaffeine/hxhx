@@ -46,5 +46,10 @@ It emits macro values from authored expressions into the observer templates, the
 Each observer checks two grouping nodes, the binary operator and its arguments, and the order of the left and right operands.
 Output must match `binary.stdout`, which comes from the upstream macro probe.
 
+JavaScript quotation checks load the real macro enum declarations through the normal typed-program fixture.
+The native observer emits those declarations and reads their constructor and payload metadata.
+It does not use the retired `__hx_ctor` and `__hx_params` representation.
+The separate `m14_js_macro_enum_provider_test.hxml` compares reflection with upstream in all three code-retention modes.
+
 These checks do not establish complete macro enum metadata, source-position accuracy, or project-macro argument transport.
 Track the remaining work in `haxe_ocaml-xq2ke` and the expression-macro owner `haxe_ocaml-9sj5p`.

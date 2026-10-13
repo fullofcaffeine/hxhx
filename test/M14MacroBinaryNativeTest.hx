@@ -33,12 +33,13 @@ class M14MacroBinaryNativeTest {
 				HxParser.parseCompleteExprText("((left " + token + " right))")
 		];
 		for (target in ["cpp", "js", "py", "php", "neko"]) {
+			final javascript = target == "js" ? JsMacroQuotationFixture.load() : null;
 			final calls = new Array<String>();
 			for (index in 0...tokens.length) {
 				final source = expressions[index];
 				final value = switch target {
 					case "cpp": CppMacroExpr.macroExpr(source, []);
-					case "js": JsExprEmitter.emit(EMacroExpr(source, []), null);
+					case "js": JsExprEmitter.emit(EMacroExpr(source, []), javascript.scope);
 					case "py": @:privateAccess SourceTargetCommon.pythonMacroExpr(source, []);
 					case "php": @:privateAccess SourceTargetCommon.phpMacroExpr(source, []);
 					case "neko": NekoMacroExprLowering.render(source, [], _ -> throw "native operator probe reached unsupported fallback");
@@ -50,6 +51,21 @@ class M14MacroBinaryNativeTest {
 			program = StringTools.replace(program, target == "py" ? "# VALUES" : "/*VALUES*/", calls.join("\n"));
 			if (target == "cpp")
 				program = StringTools.replace(program, "/*RUNTIME*/", CppMacroExpr.runtimePreludeLines().join("\n"));
+			if (target == "js") {
+				// Emit real enum factories; the observer reads their public reflection
+				// metadata and compares every operator with the upstream expectation.
+				final writer = new backend.js.JsWriter();
+				writer.writeln("var $hxEnums = {};");
+				for (identity in ["haxe.macro.Expr.Constant", "haxe.macro.Expr.Binop", "haxe.macro.Expr.ExprDef"]) {
+					final provider = javascript.declarations.requireRuntimeEnum(identity);
+					backend.js.JsEnumDeclaration.emit(writer, {
+						constructors: provider.enumConstructors,
+						reference: provider.reference,
+						runtimeName: provider.fullName
+					});
+				}
+				program = writer.toString() + program;
+			}
 			final path = output + "main." + target;
 			File.saveContent(path, program);
 			final stdout = switch target {
