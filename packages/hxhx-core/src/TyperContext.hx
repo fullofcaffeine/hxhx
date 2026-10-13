@@ -88,6 +88,30 @@ class TyperContext {
 		return index.resolveNominalProvider(typePath, context);
 	}
 
+	/**
+		Load the core declaration for an already typed primitive value.
+		A literal String value cannot acquire methods from a package-local String
+		class or import alias. Use the root type namespace with the same request
+		loader; ordinary source type names continue through resolveType.
+	 */
+	public function resolvePrimitiveProvider(type:TyType):Null<TyNominalInfo> {
+		if (!type.isPrimitive())
+			throw "primitive member lookup requires an exact primitive value type";
+		if (index == null)
+			return null;
+		final context:TyTypeDeclaration.TyTypeResolutionContext = {
+			packagePath: "",
+			modulePath: "",
+			directives: [],
+			filePath: filePath,
+			position: HxPos.unknown(),
+			parameters: []
+		};
+		if (loader != null)
+			loader.ensureDeclarationAvailable(type.getDisplay(), context);
+		return index.resolveNominalProvider(type.getDisplay(), context);
+	}
+
 	/** Resolve a value type separately from operations that require a nominal provider. */
 	public function resolveTypeUse(type:TyType, ?parameters:Array<TyTypeParameterId>, ?position:HxPos):TyResolvedTypeUse {
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {

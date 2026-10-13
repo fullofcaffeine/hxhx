@@ -2916,8 +2916,7 @@ class TyperStage {
 											structural == null ? TyType.unknown() : structural);
 									if (structural != null && (structural.isFunction() || structural.isDynamic()))
 										return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
-									final idx = ctx.getIndex();
-									final c2 = nominalInfoForType(idx, objTy);
+									final c2 = TyReceiverMemberLookup.owner(objTy, ctx);
 									if (c2 != null && ctx.instanceMethodOwner(field, c2) != null) {
 										selectedCallType(resolveMethodCall(c2, field, false, args, scope, ctx, pos, null, {expression: obj, type: objTy}),
 											capture);
@@ -2926,6 +2925,15 @@ class TyperStage {
 											inferExprType(a, scope, ctx, pos);
 										final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos, true);
 										if (extension == null) {
+											TyReceiverMemberLookup.rejectAbsent({
+												receiver: objTy,
+												member: field,
+												provider: c2,
+												hasValueField: declaredField != null || structural != null,
+												unchecked: scope.isUntypedContext(),
+												context: ctx,
+												position: pos
+											});
 											// Replay also visits the callee field. Retain that occurrence
 											// without traversing the receiver or arguments a second time.
 											// A prior read can already own an unresolved structural slot.
@@ -2967,8 +2975,7 @@ class TyperStage {
 										structural == null ? TyType.unknown() : structural);
 								if (structural != null && (structural.isFunction() || structural.isDynamic()))
 									return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult, structural);
-								final idx = ctx.getIndex();
-								final c2 = nominalInfoForType(idx, objTy);
+								final c2 = TyReceiverMemberLookup.owner(objTy, ctx);
 								if (c2 != null && ctx.instanceMethodOwner(field, c2) != null) {
 									selectedCallType(resolveMethodCall(c2, field, false, args, scope, ctx, pos, null, {expression: obj, type: objTy}), capture);
 								} else {
@@ -2976,6 +2983,15 @@ class TyperStage {
 										inferExprType(a, scope, ctx, pos);
 									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos, true);
 									if (extension == null) {
+										TyReceiverMemberLookup.rejectAbsent({
+											receiver: objTy,
+											member: field,
+											provider: c2,
+											hasValueField: declaredField != null || structural != null,
+											unchecked: scope.isUntypedContext(),
+											context: ctx,
+											position: pos
+										});
 										// The unresolved callee stays unknown, but its source occurrence
 										// must exist before inference is sealed for typed-body replay.
 										// A prior read can already own an unresolved structural slot.
