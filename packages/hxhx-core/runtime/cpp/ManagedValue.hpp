@@ -21,7 +21,13 @@ class Value {
   explicit Value(Storage storage) : storage_(std::move(storage)) {}
 public:
   Value() noexcept = default;
-  Value(const Value&) = default;
+  // Construct the exact alternative directly. GCC 14's variant copy constructor
+  // can fail during cleanup after a string allocation throws. A failed copy
+  // must leave the source and the destination's previous traced edges intact.
+  Value(const Value& other)
+      : storage_(std::visit([](const auto& value) -> Storage {
+          return Storage(std::in_place_type<std::decay_t<decltype(value)>>, value);
+        }, other.storage_)) {}
   Value(Value&&) noexcept = default;
   // Copy before replacing storage. A failing string allocation must not leave
   // a traced location without its previous value or with a valueless variant.

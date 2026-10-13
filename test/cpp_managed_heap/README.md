@@ -63,6 +63,11 @@ It checks that failed allocation preserves an existing root and that failed stri
 replacement preserves a managed edge. Collection after either failure must remain
 safe. This is controlled failure evidence, not a host memory-exhaustion test.
 
+Copying a value constructs its exact storage alternative before replacing the
+destination. This also avoids a GCC 14 standard-library failure during cleanup
+when copying a variant's string throws. The same allocation-failure test must
+pass with both Linux and macOS standard libraries; sanitizer checks remain enabled.
+
 `ManagedStaticRootTest.cpp` checks storage that stays rooted until its heap shuts
 down. `allocateStaticInto` publishes one payload per generated native layout.
 `requireStatic` retrieves that payload without running initialization. The layout
