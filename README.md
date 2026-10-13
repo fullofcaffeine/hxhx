@@ -278,6 +278,10 @@ For full command reference (tests, gates, promotion, plugin matrix):
 - Repository server helper: `flock` on Linux or `lockf` on macOS.
   These tools serialize server ownership updates and cleanup.
 
+Focused compiler runtime tests also require PHP, Neko, and Mono (`mcs` and
+`mono`). CI installs missing PHP and Mono packages and exposes the Neko compiler
+from the pinned Lix toolchain before running these tests.
+
 macOS:
 
 ```bash

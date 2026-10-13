@@ -661,15 +661,24 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
-      - name: Ensure PHP is available for focused runtime tests
+      - name: Ensure PHP and Mono are available for focused runtime tests
         if: ${{ matrix.shard == 'compiler-focused' }}
         run: |
           set -euo pipefail
+          runtime_packages=()
           if ! command -v php >/dev/null 2>&1; then
+            runtime_packages+=(php-cli)
+          fi
+          if ! command -v mcs >/dev/null 2>&1 || ! command -v mono >/dev/null 2>&1; then
+            runtime_packages+=(mono-devel)
+          fi
+          if [ "${#runtime_packages[@]}" -gt 0 ]; then
             sudo apt-get update
-            sudo apt-get install -y php-cli
+            sudo apt-get install -y "${runtime_packages[@]}"
           fi
           php --version
+          mcs --version
+          mono --version
       - name: Expose the Neko compiler for focused tests
         if: ${{ matrix.shard == 'compiler-focused' }}
         run: |
