@@ -16,8 +16,8 @@ function owner(receiver:TyType, context:TyperContext):Null<TyNominalInfo> {
 /**
 	Reject an absent call after declared fields, methods and extensions failed.
 	Dynamic, explicit untyped syntax and incomplete inference remain owned by
-	their existing call paths. Abstract forwarding is not a closed class member
-	inventory, so an abstract cannot prove absence through this check.
+	their existing call paths. Abstract forwarding and compiler-provided enum
+	operations are not closed class inventories and cannot prove absence here.
  */
 function rejectAbsent(input:{
 	receiver:TyType,
@@ -49,6 +49,8 @@ private function classProvesAbsence(provider:Null<TyNominalInfo>, member:String,
 		return false;
 	// The declaration kind is checked before narrowing to class header facts.
 	final declaration:TyClassInfo = cast provider;
+	if (declaration.getIsEnum())
+		return false;
 	final name = declaration.getFullName();
 	if (path.indexOf(name) >= 0
 		|| declaration.hasField(member)

@@ -123,6 +123,13 @@ class M14MissingReceiverMethodTest {
 				parameter: "value:Item",
 				body: "return value.absent();",
 				accepted: false
+			},
+			{
+				name: "enum_match",
+				header: "enum Item {Present;}",
+				parameter: "value:Item",
+				body: "return value.match(Item.Present) ? 1 : 0;",
+				accepted: true
 			}
 		]) {
 			final root = ".tmp/missing_receiver_method_" + entry.name;
