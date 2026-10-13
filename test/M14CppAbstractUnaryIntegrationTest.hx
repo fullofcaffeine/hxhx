@@ -1,6 +1,5 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
-import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -137,18 +136,16 @@ class M14CppAbstractUnaryIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(source, "Main.hx");
-		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
-		final program = new MacroExpandedProgram([typed], false);
-
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_abstract_unary"]);
 		deleteRecursive(root);
-		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
+		final sourceRoot = Path.join([root, "input"]);
+		FileSystem.createDirectory(sourceRoot);
+		File.saveContent(Path.join([sourceRoot, "Main.hx"]), source);
+		// Output and array calls need their real declarations before native emission.
+		// Retain every provider body through the same preparation used by other native fixtures.
+		final fixture = CppResolvedFixture.load({sourceRoot: sourceRoot, mainModule: "Main", requiredModules: ["Sys", "Array"]});
+		final program = CppResolvedFixture.prepare(fixture);
+		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused abstract-unary C++ artifact did not build");
 		final sourcePath = Path.join([root, "src", "Main.cpp"]);
