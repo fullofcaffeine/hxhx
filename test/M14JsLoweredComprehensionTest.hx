@@ -18,7 +18,7 @@ class M14JsLoweredComprehensionTest {
 		final index = TyperIndex.buildHeaders([module]);
 		final loader = new ModuleLoader([root + "/js/_std", root], hxhx.Stage3SetupSupport.buildDefinesMap([], "js", "js-native"), index, null, true);
 		loader.markResolvedAlready([module]);
-		for (name in ["Class", "Array"])
+		for (name in ["Class", "Array", "String"])
 			if (loader.ensureTypeAvailable(name, "", []) == null)
 				throw "missing real provider: " + name;
 		final typed = TyperStage.typeResolvedModule(module, index, loader, true);

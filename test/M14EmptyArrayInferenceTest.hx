@@ -9,8 +9,39 @@ class M14EmptyArrayInferenceTest {
 			+ 'public static function fillGeneric<T>(value:T,output:Array<T>):Void{output.push(value);}}'
 			+ 'class Main{static function take(values:Array<Int>):Void{values.push(7);}'
 			+ 'static function text(values:Array<String>):Void{values.push("word");}'
+			+ 'static function size(values:Array<Int>):Int{return values.length;}'
 			+ 'static function collect<T>(value:T):Array<T>{var values=[];values.push(value);return values;}';
 		for (entry in [
+			{
+				name: "switch_argument",
+				body: 'var values=[7];for(flag in [true,false]) trace(size(switch flag {case true: [];case false: values;}));',
+				output: "0\n1\n",
+				accepted: true
+			},
+			{
+				name: "if_argument",
+				body: 'var values=[7];for(flag in [true,false]) trace(size(if(flag) [] else values));',
+				output: "0\n1\n",
+				accepted: true
+			},
+			{
+				name: "block_argument",
+				body: 'var values=[7];trace(size({var once=values.pop();trace(once);[];}));trace(values.length);',
+				output: "7\n0\n0\n",
+				accepted: true
+			},
+			{
+				name: "explicit_dynamic_argument",
+				body: 'var values:Array<Dynamic>=[];take(if(true) values else []);',
+				output: "",
+				accepted: false
+			},
+			{
+				name: "conflicting_argument_branch",
+				body: 'take(if(true) [] else ["wrong"]);',
+				output: "",
+				accepted: false
+			},
 			{
 				name: "typed_callback",
 				body: 'var copy=function(xs:Array<Int>){var out:Array<Int>=[];for(x in xs){out.push(x);}return out;};' +
@@ -207,7 +238,10 @@ class M14EmptyArrayInferenceTest {
 				throw "local empty-array acceptance differs: " + entry.name;
 			if (typed != null) {
 				assertElementTypes(typed, entry.name);
+				final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 				JsRuntimeFixture.assertRuntime(typed, "Main", entry.output);
+				if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
+					throw "empty-array emission changed retained typing: " + entry.name;
 			}
 			Sys.println("EMPTY_ARRAY_INFERENCE:PASS " + entry.name);
 		}

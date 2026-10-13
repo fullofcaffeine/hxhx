@@ -3,6 +3,7 @@ import sys.io.File;
 /** Prove callback context solves the original argument without replaying either operand. */
 class M14CallbackArgumentContextTest {
 	static function main():Void {
+		collectionContexts();
 		final root = "test/fixtures/callback_argument_context";
 		final expected = "receiver\noperand\ntrue\noperand\ntrue\n";
 		final upstream = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]);
@@ -23,6 +24,38 @@ class M14CallbackArgumentContextTest {
 		sourceSignatureRetention();
 		conflictingArgument();
 		Sys.println("CALLBACK_ARGUMENT_CONTEXT:PASS");
+	}
+
+	/** Only complete collection contexts agreed by every candidate can guide first-pass typing. */
+	static function collectionContexts():Void {
+		final integer = TyType.fromHintText("Int");
+		final string = TyType.fromHintText("String");
+		final array = new TyNominalTypeId("Array");
+		final ints = TyType.nominal(array, [integer]);
+		final strings = TyType.nominal(array, [string]);
+		final map = TyType.nominal(new TyNominalTypeId("haxe.ds.Map"), [string, integer]);
+		final method = new TyTypeParameterId("collection-method", 0, "T");
+		function signature(type:TyType, rest:Bool = false):TyFunSig {
+			return new TyFunSig("take", true, ["values"], [type], [false], [rest], TyType.fromHintText("Void"), HxPos.unknown());
+		}
+		for (type in [ints, map]) {
+			final context = TyCallArgumentContext.shared([signature(type), signature(type)], 1)[0];
+			if (context == null || context.getSemanticKey() != type.getSemanticKey())
+				throw "agreed collection context was lost";
+		}
+		for (signatures in [
+			[signature(ints), signature(strings)],
+			[signature(ints), signature(map)],
+			[signature(TyType.nominal(array, [TyType.unknown()]))],
+			[signature(TyType.fromHintText("Array<Int>"))],
+			[signature(ints, true)]
+		])
+			if (TyCallArgumentContext.shared(signatures, 1)[0] != null)
+				throw "ambiguous, open, unresolved, or rest collection context escaped selection";
+		if (TyCallArgumentContext.shared([signature(TyType.nominal(array, [TyType.typeParameter(method)]))], 1, [[method]])[0] != null)
+			throw "method inference variable became a rigid collection annotation";
+		if (TyCallArgumentContext.shared([signature(ints)], 0).length != 0)
+			throw "omitted collection invented a source context";
 	}
 
 	/** A receiver fixes callback inputs even while the method result remains inferable. */
@@ -80,18 +113,18 @@ class M14CallbackArgumentContextTest {
 			return new TyFunSig('transform', true, ['callback'], [TyType.functionType([input], result)], [false], [false], result, HxPos.unknown());
 		}
 		final generic = signature(callerType, methodType);
-		final context = TyLambdaArgumentContext.shared([generic], 1, [[method]])[0];
+		final context = TyCallArgumentContext.shared([generic], 1, [[method]])[0];
 		if (context == null
 			|| context.getFunctionArguments()[0].getSemanticKey() != callerType.getSemanticKey()
 			|| !context.getFunctionReturn().isUnknown())
 			throw 'generic context confused equally named caller and method binders';
 		if (generic.getArgs()[0].getFunctionReturn().getSemanticKey() != methodType.getSemanticKey())
 			throw 'callback context mutated the declaration';
-		if (TyLambdaArgumentContext.shared([signature(methodType, methodType)], 1, [[method]])[0] != null)
+		if (TyCallArgumentContext.shared([signature(methodType, methodType)], 1, [[method]])[0] != null)
 			throw 'an open method input became a rigid callback annotation';
-		if (TyLambdaArgumentContext.shared([generic, signature(TyType.fromHintText('Int'), methodType)], 1, [[method], [method]])[0] != null)
+		if (TyCallArgumentContext.shared([generic, signature(TyType.fromHintText('Int'), methodType)], 1, [[method], [method]])[0] != null)
 			throw 'overload disagreement supplied a callback context';
-		if (TyLambdaArgumentContext.shared([generic], 0, [[method]]).length != 0)
+		if (TyCallArgumentContext.shared([generic], 0, [[method]]).length != 0)
 			throw 'omitted argument invented a source context';
 	}
 

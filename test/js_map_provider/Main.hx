@@ -94,7 +94,25 @@ class Main {
 		return 4;
 	}
 
+	/** Parameter context must choose Map for empty literals inside value-producing control. */
+	static function hasWitness(values:Map<String, Int>):Bool
+		return values.exists("witness");
+
+	static function checkArgumentContext(flag:Bool):Void {
+		if (hasWitness(if (flag) [] else ["witness" => 1]) == flag)
+			throw "conditional Map argument";
+		if (hasWitness(switch flag {
+			case true: [];
+			case false: ["witness" => 1];
+		}) == flag)
+			throw "switch Map argument";
+		if (hasWitness({[];}))
+			throw "block Map argument";
+	}
+
 	static function main():Void {
+		checkArgumentContext(true);
+		checkArgumentContext(false);
 		var literal:Map<String, Int> = ["a" => 1];
 		if (literal["a"] != 1)
 			throw "literal index";

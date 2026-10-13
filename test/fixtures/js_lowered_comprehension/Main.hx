@@ -6,6 +6,26 @@
 /** Exercise shared array allocation, loop control, conditional selection, and ordered yields. */
 class Main {
 	static var effects:Int = 0;
+	static public var names(default, never):Array<String> = ["ok", [for (i in 0...100) "a"].join("")].concat(switch platform() {
+		case "Windows": [];
+		case _: [
+				#if !(python || neko || cpp || java || cs)
+				[for (i in 0...255) "b"].join("")
+				#end
+			];
+	});
+
+	/** Supply a platform label as fixture data so initialization is independent of the test host. */
+	static function platform():String
+		return "Linux";
+
+	/** Exercise both switch results as call arguments, including the empty-array branch. */
+	static function namesFor(platform:String):Array<String> {
+		return ["ok", [for (i in 0...100) "a"].join("")].concat(switch platform {
+			case "Windows": [];
+			case _: [[for (i in 0...255) "b"].join("")];
+		});
+	}
 
 	static function step(value:Int):Int {
 		effects = effects * 10 + value;
@@ -50,5 +70,10 @@ class Main {
 		offset = 7;
 		Main.observe(callback());
 		Main.observe(early());
+		Output.log(names.length);
+		for (value in names)
+			Output.log(value.length);
+		Output.log(namesFor("Windows").length);
+		Output.log(namesFor("Linux").length);
 	}
 }

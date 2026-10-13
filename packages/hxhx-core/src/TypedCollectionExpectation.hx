@@ -12,9 +12,14 @@ function isEmpty(expression:HxExpr):Bool {
 }
 
 function select(expression:HxExpr, expected:Null<TyType>):Null<TyType> {
-	if (expected == null)
-		return null;
 	if (!isEmpty(expression))
+		return null;
+	return context(expected);
+}
+
+/** A selected parameter can guide empty literals nested in branches or value blocks. */
+function context(expected:Null<TyType>):Null<TyType> {
+	if (expected == null)
 		return null;
 	final type = TyAliasExpansion.revealNonNullable(expected);
 	final identity = type.getNominalIdentity();

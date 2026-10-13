@@ -252,6 +252,10 @@ class TyFunctionInference {
 		solver = new TyInferenceSolver(owner);
 	}
 
+	/** Sealed replay consumes retained facts and cannot introduce new argument context. */
+	public function isSealed():Bool
+		return solver.isSealed();
+
 	/** Register only source arguments whose annotation was omitted, before aliases can capture them. */
 	public function registerOmittedParameter(symbol:TySymbol):Void {
 		if ((symbol.getKind() != Parameter && symbol.getKind() != LambdaParameter) || !symbol.getType().unwrapNull().isUnknown())
@@ -455,6 +459,19 @@ class TyFunctionInference {
 			occurrences.push({expression: expression, term: term});
 		}
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);
+	}
+
+	/** Retain an empty literal's complete context for replay that has no enclosing parameter.
+		An existing occurrence stays authoritative; ordinary constraint typing must reconcile it. */
+	public function contextualCollection(expression:HxExpr, type:TyType):TyType {
+		var term = occurrence(expression);
+		if (term == null) {
+			if (solver.isSealed())
+				throw "contextual collection occurrence is absent from sealed inference";
+			term = TyInferenceSolver.fromType(type);
+			occurrences.push({expression: expression, term: term});
+		}
+		return solver.isSealed() ? solver.published(term) : solver.preview(term);
 	}
 
 	/** Empty and null-only arrays retain an element variable shared by later aliases and uses. */

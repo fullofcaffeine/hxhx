@@ -1616,7 +1616,7 @@ class TyperStage {
 					scope) != null ? TyReceiverCallContext.select(signature, applied, TyNominalApplication.parameterIds(c), solved, order) : null};
 		}
 		final candidates = admittedCandidates == null ? (isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field)) : admittedCandidates;
-		final callbackContexts = TyLambdaArgumentContext.shared(candidates.map(signature -> TyNominalApplication.signature(ctx.getIndex(), c,
+		final argumentContexts = TyCallArgumentContext.shared(candidates.map(signature -> TyNominalApplication.signature(ctx.getIndex(), c,
 			receiver == null ? null : receiver.type, signature)), args.length,
 			candidates.map(signature -> {
 				final declaration = c.declarationForSignature(signature);
@@ -1628,7 +1628,12 @@ class TyperStage {
 					case ECall(EIdent("__hxhx_spread"), [container]):
 						inferExprType(container, scope, ctx, pos);
 					case argument:
-						inferExprType(argument, scope, ctx, pos, callbackContexts[index]);
+						final shared = argumentContexts[index];
+						// A receiver can become more specific after this call. Collection
+						// replay reads retained literals; selected-call validation owns
+						// the original invocation context, not the receiver's final type.
+						final context = shared != null && !shared.isFunction() && scope.getInference().isSealed() ? null : shared;
+						inferExprType(argument, scope, ctx, pos, context);
 				}
 		];
 		if (argTypes.length != args.length)
@@ -3427,7 +3432,7 @@ class TyperStage {
 					return comprehension;
 				final contextual = TypedCollectionExpectation.select(expr, expectedResult);
 				if (contextual != null)
-					return contextual;
+					return scope.getInference().contextualCollection(expr, contextual);
 				if (values.length == 0) {
 					final array = ctx.resolveType("Array");
 					if (array != null)
