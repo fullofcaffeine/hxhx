@@ -4,6 +4,7 @@
 const childProcess = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const vm = require('vm')
 const {
   evaluateAggregateResults,
   jobsRequiredAtTier,
@@ -47,6 +48,64 @@ function requireIncludes(content, snippet, label) {
   assert(content.includes(snippet), `${label} must include ${JSON.stringify(snippet)}`)
 }
 
+/** Exercise the real runner without compiling products or starting external commands. */
+function checkCommandFailureReporting() {
+  const source = fs.readFileSync(path.join(__dirname, 'core-test-shard.js'), 'utf8')
+  const commands = ['test:first', 'test:middle', 'test:last']
+  function observe(outcomes, shared = false, corrupt = false) {
+    const invoked = []
+    const lines = []
+    const artifactResults = []
+    const runtime = { argv: ['node', 'core-test-shard.js', '--shard', 'fixture'], platform: 'linux', env: {}, cwd: () => repoRoot }
+    const artifact = {
+      environment: {},
+      verify: () => { if (corrupt) throw new Error('artifact changed') },
+      failConsumer: command => artifactResults.push(`fail:${command}`),
+      passConsumer: command => artifactResults.push(`pass:${command}`),
+      finish: status => artifactResults.push(`finish:${status}`)
+    }
+    vm.runInNewContext(source, {
+      process: runtime,
+      console: { log: line => lines.push(line), error: line => lines.push(line) },
+      require: name => {
+        if (name === 'child_process') return {
+          spawnSync: (executable, args) => {
+            assert(executable === 'npm' && args[0] === 'run', 'runner changed npm invocation')
+            invoked.push(args[1])
+            return outcomes[invoked.length - 1] || { status: 0 }
+          }
+        }
+        if (name === './core-test-shards') return { loadPlan: () => ({ shards: [{ id: 'fixture', commands }] }) }
+        if (name === './macro-host-test-artifact') return { maybePrepareSharedArtifact: () => shared ? artifact : null }
+        throw new Error(`unexpected runner dependency: ${name}`)
+      }
+    }, { filename: 'core-test-shard.js' })
+    return { invoked, lines: lines.join('\n'), status: runtime.exitCode || 0, artifactResults }
+  }
+  const success = observe([])
+  assert(success.status === 0 && success.invoked.join() === commands.join(), 'successful commands must run once in order')
+  requireIncludes(success.lines, 'PASS shard=fixture', 'successful shard')
+  for (const outcomes of [[{ status: 0 }, { status: 7 }], [{ status: 3 }, { status: 0 }, { status: 9 }]]) {
+    const failed = observe(outcomes)
+    assert(failed.invoked.join() === commands.join(), 'ordinary failure must not hide later independent commands')
+    assert(failed.status === 1 && !failed.lines.includes('PASS shard=fixture'), 'a failed shard must not report success')
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status !== 0) requireIncludes(failed.lines, `${commands[index]} failed with exit ${outcome.status}`, 'failure summary')
+    })
+  }
+  for (const outcome of [{ error: new Error('cannot launch') }, { status: null, signal: 'SIGTERM' }, { status: null }]) {
+    const aborted = observe([{ status: 0 }, outcome])
+    assert(aborted.status === 1 && aborted.invoked.join() === commands.slice(0, 2).join(), 'execution failure must abort immediately')
+    assert(!aborted.lines.includes('PASS shard=fixture'), 'aborted shard must not report success')
+  }
+  const sharedFailure = observe([{ status: 4 }], true)
+  assert(sharedFailure.status === 1 && sharedFailure.invoked.length === 1, 'shared-artifact failure must stop dependent commands')
+  assert(sharedFailure.artifactResults.join() === 'fail:test:first,finish:failed', 'shared artifact must record failure')
+  const corrupt = observe([], true, true)
+  assert(corrupt.status === 1 && corrupt.invoked.length === 0, 'invalid shared artifact must not start a consumer')
+  assert(corrupt.artifactResults.join() === 'fail:test:first,finish:failed', 'invalid artifact must finish as failed')
+}
+
 /** Independent runners consume routing outputs; final aggregation still owns guard enforcement. */
 function checkIndependentJobStarts(workflow) {
   const lines = workflow.split('\n')
@@ -67,6 +126,7 @@ function checkIndependentJobStarts(workflow) {
 }
 
 function main() {
+  checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
   assert(plan.aggregateCommands.length === 146, `expected 146 npm test commands, found ${plan.aggregateCommands.length}`)
 
