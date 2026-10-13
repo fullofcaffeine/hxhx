@@ -8,6 +8,13 @@ import hxhxmacrohost.api.RuntimeMacroExprs;
 /** The public runtime parser and each quote adapter retain nested expression grouping. */
 class M14SourceParenthesizedMacroTest {
 	static function main():Void {
+		// Parsing quoted syntax must retain annotations even when their types
+		// are incompatible. Checking belongs to later typing, not macro parsing.
+		final annotated = RuntimeMacroExprs.parse("(7:String)", null);
+		final checked = RuntimeMacroExprs.parse("(cast(7,String))", null);
+		if (!annotated.expr.match(EParenthesis({expr: ECheckType({expr: EConst(CInt("7", _))}, TPath({name: "String"}))}))
+			|| !checked.expr.match(EParenthesis({expr: ECast({expr: EConst(CInt("7", _))}, TPath({name: "String"}))})))
+			throw "runtime macro parsing confused a source annotation with a checked cast";
 		final sources = ["((value))", "(value = 3)", "((value = 3))", "(1 + 2) * 3", "(value) = 4"];
 		final expected = sys.io.File.getContent("test/oracle/source_parenthesized_seed/syntax.stdout");
 		final actual = [

@@ -240,6 +240,12 @@ class M14CompilerDependencyObservationTest {
 		final groupedSnapshot = CompilerDependencyCollector.collect(groupedFunction.modules, groupedFunction.index);
 		assertTrue(hasEdge(groupedSnapshot, CompilerDependencyKind.PublicInterface, "answer"),
 			"a selected call inside a source function and nested group must retain its provider dependency");
+		final annotated = typedProgram("class Api { public static function answer():Int return 42; }",
+			"class Main { static var value:Int = (Api.answer():Int); static function main():Void {} }");
+		final annotatedSnapshot = CompilerDependencyCollector.collect(annotated.modules, annotated.index);
+		assertTrue(hasEdge(annotatedSnapshot, CompilerDependencyKind.PublicInterface, "answer")
+			&& hasEdge(annotatedSnapshot, CompilerDependencyKind.StaticInitialization, "answer"),
+			"source annotation hid its call or startup dependency");
 		assertStructuralCallbackDependencies();
 		final catchOnly = typedProgram("class Api { public function new() {} }",
 			"class Main { static function main():Void { try { throw 1; } catch (unused:Api) {} var result = try 1 catch (alsoUnused:Api) 2; } }");

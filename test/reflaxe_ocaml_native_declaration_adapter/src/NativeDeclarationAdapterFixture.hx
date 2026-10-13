@@ -39,6 +39,10 @@ class NativeDeclarationAdapterFixture {
 			throw "stock Haxe and native hxhx produced different integer literal facts";
 		if (new OcamlASTPrinter().printExpr(OcamlTargetLiteralLowerer.buildNonNull(nativeInt, Direct)) != "7")
 			throw "native host could not execute the standalone target literal lowerer";
+		final annotatedLiteral = TypedExpr.checkType(TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown()), "Int", TyType.fromHintText("Int"),
+			HxPos.unknown());
+		if (HxhxOcamlTargetLiteralAdapter.fromExpression(annotatedLiteral) != null)
+			throw "literal-only adapter erased a source annotation before its expression owner handled it";
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";

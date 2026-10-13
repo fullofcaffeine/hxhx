@@ -208,7 +208,7 @@ class CompilerDependencyCollector {
 				null;
 			case Range | FixedRange:
 				null;
-			case Cast:
+			case Cast | CheckType:
 				null;
 			case Untyped:
 				null;

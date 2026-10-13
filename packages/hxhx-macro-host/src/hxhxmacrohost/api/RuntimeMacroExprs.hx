@@ -652,6 +652,8 @@ class RuntimeMacroExprs {
 				ENew(parseTypePath(typePath), [for (arg in args) convert(arg, pos)]);
 			case ECast(inner, typeHint):
 				ECast(convert(inner, pos), parseOptionalComplexType(typeHint));
+			case ECheckType(inner, typeHint):
+				ECheckType(convert(inner, pos), parseComplexType(typeHint));
 			case EUntyped(inner):
 				EUntyped(convert(inner, pos));
 			case ELambda(args, body):
