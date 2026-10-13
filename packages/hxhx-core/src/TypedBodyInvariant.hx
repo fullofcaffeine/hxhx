@@ -102,7 +102,8 @@ class TypedBodyInvariant {
 		if (expression == null)
 			throw "typed body contains a null expression in " + owner;
 		expression.assertArgumentBinding();
-		if (expression.getTag() == TraceCall
+		final tag = expression.getTag();
+		if (tag == TraceCall
 			&& (!expression.getType().isVoid()
 				|| expression.getExpressions().length == 0
 				|| expression.getDeclaration() != null
@@ -112,11 +113,11 @@ class TypedBodyInvariant {
 				|| expression.getNamedArguments() != null
 				|| expression.getExtensionProvider() != null))
 			throw "language trace has invalid typed ownership or operands in " + owner;
-		if (expression.getTag() == TargetScope)
+		if (tag == TargetScope)
 			TypedTargetScope.kind(expression);
-		if (expression.getTag() == FeatureDefinition || expression.getTag() == FeatureSelection) {
+		if (tag == FeatureDefinition || tag == FeatureSelection) {
 			final children = expression.getExpressions();
-			final definition = expression.getTag() == FeatureDefinition;
+			final definition = tag == FeatureDefinition;
 			if (expression.getTexts().length != 1
 				|| expression.getTexts()[0] == null
 				|| children.length < 1
@@ -134,37 +135,34 @@ class TypedBodyInvariant {
 		// Source try handlers are lexical regions. Their selected runtime uses
 		// stay on the try node alongside the ordered catch declarations, rather
 		// than requiring the old synthetic handler lambda representation.
-		if (expression.getCatchUses().length > 0
-			&& expression.getTag() != Lambda
-			&& expression.getTag() != SourceTry
-			&& expression.getTag() != ControlTry)
+		if (expression.getCatchUses().length > 0 && tag != Lambda && tag != SourceTry && tag != ControlTry)
 			throw "implicit catch uses require a try region or handler lambda in " + owner;
 		assertCatchUses(expression.getCatchUses(), expression.getLocalBindings(), owner);
 		final member = expression.getDeclaration();
-		if (member != null && expression.getTag() != Call && expression.getTag() != NewValue && expression.getTag() != TargetScope) {
-			if ((expression.getTag() != NameRead && expression.getTag() != FieldRead)
-				|| (!member.getIsStatic() && (expression.getTag() != FieldRead || expression.getRequiresOwnerQualification()))
+		if (member != null && tag != Call && tag != NewValue && tag != TargetScope) {
+			if ((tag != NameRead && tag != FieldRead)
+				|| (!member.getIsStatic() && (tag != FieldRead || expression.getRequiresOwnerQualification()))
 				|| member.getIsEnumConstructor()
 				|| expression.getFieldInfo() != null
 				|| expression.getTexts().length != 1
 				|| !expression.getType().isFunction()
-				|| expression.getExpressions().length != (expression.getTag() == NameRead ? 0 : 1))
+				|| expression.getExpressions().length != (tag == NameRead ? 0 : 1))
 				throw "typed method value has an invalid selected declaration in "
 					+ owner
 					+ ": "
 					+ member.getIdentity().getCanonicalKey()
 					+ " ("
-					+ expression.getTag()
+					+ tag
 					+ ", "
 					+ expression.getType().getSemanticKey()
 					+ ")";
 		}
 		final runtimeTarget = expression.getRuntimeTypeTarget();
-		switch (expression.getTag()) {
+		switch (tag) {
 			case RuntimeTypeValue | RuntimeTypeTest:
 				if (runtimeTarget == null)
 					throw "runtime type expression has no exact target in " + owner;
-				final isTest = expression.getTag() == RuntimeTypeTest;
+				final isTest = tag == RuntimeTypeTest;
 				final expectedType = isTest ? TyType.fromHintText("Bool") : runtimeTarget.getValueType();
 				if (expression.getType().getSemanticKey() != expectedType.getSemanticKey()
 					|| expression.getExpressions().length != (isTest ? 1 : 0)
@@ -176,7 +174,7 @@ class TypedBodyInvariant {
 		}
 		for (child in expression.getExpressions())
 			assertExpr(child, owner);
-		if (expression.getTag() == ArrayAppend) {
+		if (tag == ArrayAppend) {
 			final children = expression.getExpressions();
 			if (children.length != 2 || !expression.getType().isVoid())
 				throw "array append requires two operands and a Void result in " + owner;
@@ -187,7 +185,7 @@ class TypedBodyInvariant {
 			if (path != "Array" || arguments.length != 1 || arguments[0].getSemanticKey() != children[1].getType().getSemanticKey())
 				throw "array append lost its selected element type in " + owner;
 		}
-		if (expression.getTag() == MapInsert) {
+		if (tag == MapInsert) {
 			final children = expression.getExpressions();
 			if (children.length != 3 || !expression.getType().isVoid())
 				throw "map insertion requires three operands and a Void result in " + owner;
@@ -201,7 +199,7 @@ class TypedBodyInvariant {
 				|| arguments[1].getSemanticKey() != children[2].getType().getSemanticKey())
 				throw "map insertion lost its selected key or value type in " + owner;
 		}
-		if (expression.getTag() == Parenthesized) {
+		if (tag == Parenthesized) {
 			final children = expression.getExpressions();
 			if (children.length != 1
 				|| expression.getTexts().length != 0
@@ -210,7 +208,7 @@ class TypedBodyInvariant {
 				|| children[0].getType().getSemanticKey() != expression.getType().getSemanticKey())
 				throw "parenthesized expression changed its child type or acquired semantic ownership in " + owner;
 		}
-		if (expression.getTag() == NewValue && expression.getDeclaration() != null) {
+		if (tag == NewValue && expression.getDeclaration() != null) {
 			final constructor = expression.getDeclaration();
 			final constructedOwner = expression.getType().getNominalIdentity();
 			final application = expression.getConstructorApplication();
@@ -223,7 +221,7 @@ class TypedBodyInvariant {
 			if (application != null)
 				application.assertResult(expression.getType());
 		}
-		if (expression.getTag() == Call) {
+		if (tag == Call) {
 			final declaration = expression.getDeclaration();
 			if (declaration != null && declaration.getIdentity().getCanonicalKey().length == 0)
 				throw "typed call contains an empty declaration identity in " + owner;
@@ -235,7 +233,7 @@ class TypedBodyInvariant {
 		}
 		final localBindings = expression.getLocalBindings();
 		final sourceCatches = expression.getSourceCatches();
-		if (expression.getTag() == SourceTry || expression.getTag() == ControlTry) {
+		if (tag == SourceTry || tag == ControlTry) {
 			if (sourceCatches.length == 0
 				|| expression.getExpressions().length != sourceCatches.length + 1
 				|| expression.getControlTarget() != null)
@@ -246,16 +244,16 @@ class TypedBodyInvariant {
 					if (binding.getKind() != CatchVariable)
 						throw "typed source catch requires a catch declaration in " + owner;
 			}
-			if (expression.getTag() == ControlTry && localBindings.length != sourceCatches.length)
+			if (tag == ControlTry && localBindings.length != sourceCatches.length)
 				throw "lowered try requires every exact catch declaration in " + owner;
-			if (expression.getTag() == ControlTry)
+			if (tag == ControlTry)
 				for (child in expression.getExpressions())
 					if (child.getTag() != ControlRegion || child.getControlTarget() != null)
 						throw "lowered try requires lexical body regions in " + owner;
 		} else if (sourceCatches.length != 0) {
 			throw "ordinary typed expression cannot carry source catch facts in " + owner;
 		}
-		if (expression.getTag() == FixedRange) {
+		if (tag == FixedRange) {
 			final bounds = expression.getExpressions();
 			if (bounds.length != 2)
 				throw "fixed range requires two bound snapshots in " + owner;
@@ -267,29 +265,29 @@ class TypedBodyInvariant {
 		}
 		for (binding in localBindings)
 			assertBinding(binding, owner);
-		if (expression.getTag() == LocalRead) {
+		if (tag == LocalRead) {
 			if (localBindings.length != 1)
 				throw "typed local read must carry exactly one binding in " + owner;
 			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
 		}
-		if (expression.getTag() == Temporary) {
+		if (tag == Temporary) {
 			if (localBindings.length != 1)
 				throw "typed temporary must carry exactly one binding in " + owner;
 			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
 		}
-		if ((expression.getTag() == VariableDeclaration || expression.getTag() == ArrayComprehension) && localBindings.length > 0)
+		if ((tag == VariableDeclaration || tag == ArrayComprehension) && localBindings.length > 0)
 			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
-		if ((expression.getTag() == Lambda || expression.getTag() == SourceFunction) && localBindings.length > 0)
+		if ((tag == Lambda || tag == SourceFunction) && localBindings.length > 0)
 			assertBindingNames(localBindings, expression.getTexts(), owner);
-		if (expression.getTag() == Temporary) {
+		if (tag == Temporary) {
 			if (expression.getTexts().length != 2 || expression.getExpressions().length != 1)
 				throw "typed temporary has an invalid structural payload in " + owner;
 		}
-		if (expression.getTag() == ReturnExpr && expression.getExpressions().length > 1)
+		if (tag == ReturnExpr && expression.getExpressions().length > 1)
 			throw "typed return expression has more than one value in " + owner;
-		if (expression.getTag() == SourceIf && expression.getExpressions().length != 2 && expression.getExpressions().length != 3)
+		if (tag == SourceIf && expression.getExpressions().length != 2 && expression.getExpressions().length != 3)
 			throw "typed source conditional must retain its condition and authored branches in " + owner;
-		if (expression.getTag() == ControlSwitch) {
+		if (tag == ControlSwitch) {
 			final children = expression.getExpressions();
 			if (children.length != expression.getPatterns().length + 1 || expression.getControlTarget() != null)
 				throw "lowered switch must retain one scrutinee and its exact arm count in " + owner;
@@ -297,20 +295,20 @@ class TypedBodyInvariant {
 				if (children[index].getTag() != ControlRegion || children[index].getControlTarget() != null)
 					throw "lowered switch arm requires a lexical region in " + owner;
 		}
-		if (expression.getTag() == SourceFor || expression.getTag() == ControlFor) {
+		if (tag == SourceFor || tag == ControlFor) {
 			HxForBinding.fromNames(expression.getTexts());
 			if (expression.getExpressions().length != 2)
 				throw "source for requires iterable and body children in " + owner;
 			if (localBindings.length > 0)
 				assertBindingNames(localBindings, expression.getTexts(), owner);
-			if (expression.getTag() == ControlFor
+			if (tag == ControlFor
 				&& (expression.getControlTarget() == null
 					|| localBindings.length == 0
 					|| expression.getExpressions()[1].getTag() != ControlRegion
 					|| expression.getExpressions()[1].getControlTarget() != null))
 				throw "lowered for requires exact bindings, loop target, and lexical body in " + owner;
 		}
-		if (expression.getTag() == ControlBranch) {
+		if (tag == ControlBranch) {
 			final children = expression.getExpressions();
 			if (children.length != 2 && children.length != 3)
 				throw "lowered conditional must retain its condition and branches in " + owner;
@@ -318,13 +316,13 @@ class TypedBodyInvariant {
 				if (children[index].getTag() != ControlRegion || children[index].getControlTarget() != null)
 					throw "lowered conditional branch must be a lexical region in " + owner;
 		}
-		if (expression.getTag() == ThrowExpr && (expression.getExpressions().length != 1 || !expression.getType().isNoNormalCompletion()))
+		if (tag == ThrowExpr && (expression.getExpressions().length != 1 || !expression.getType().isNoNormalCompletion()))
 			throw "typed throw must have one operand and abrupt completion in " + owner;
-		if (expression.getTag() == WhileExpr && expression.getExpressions().length < 1)
+		if (tag == WhileExpr && expression.getExpressions().length < 1)
 			throw "typed while expression is missing its condition in " + owner;
-		if (expression.getTag() == WhileExpr || expression.getTag() == ControlWhile)
+		if (tag == WhileExpr || tag == ControlWhile)
 			expression.getWhileKind();
-		if (expression.getTag() == ControlWhile) {
+		if (tag == ControlWhile) {
 			final children = expression.getExpressions();
 			if (expression.getControlTarget() == null
 				|| children.length != 2
@@ -332,17 +330,17 @@ class TypedBodyInvariant {
 				|| children[1].getControlTarget() != null)
 				throw "lowered while requires an exact loop and one lexical body in " + owner;
 		}
-		if (expression.getTag() == WhileExpr && !expression.getBoolValue() && expression.getExpressions().length != 2)
+		if (tag == WhileExpr && !expression.getBoolValue() && expression.getExpressions().length != 2)
 			throw "typed while expression without braces must have exactly one body expression in " + owner;
-		if ((expression.getTag() == BreakExpr || expression.getTag() == ContinueExpr) && !expression.getType().isNoNormalCompletion())
+		if ((tag == BreakExpr || tag == ContinueExpr) && !expression.getType().isNoNormalCompletion())
 			throw "typed loop-control expression must not claim to produce a runtime value in " + owner;
-		if (expression.getTag() == VariableDeclarations)
+		if (tag == VariableDeclarations)
 			for (declaration in expression.getExpressions())
 				if (declaration.getTag() != VariableDeclaration)
 					throw "typed variable declaration list contains a non-declaration child in " + owner;
-		if (expression.getTag() == VariableDeclaration && (expression.getTexts().length != 2 || expression.getExpressions().length > 1))
+		if (tag == VariableDeclaration && (expression.getTexts().length != 2 || expression.getExpressions().length > 1))
 			throw "typed variable declaration has an invalid structural payload in " + owner;
-		if (expression.getTag() == Opaque) {
+		if (tag == Opaque) {
 			final texts = expression.getTexts();
 			final raw = texts.length == 0 ? "" : texts[0];
 			if (opaqueContainsSemanticSyntax(raw))
