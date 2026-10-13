@@ -102,12 +102,16 @@ public var other:Void->Int = function():Int {return 9;};
 		final blockPlan = TypedCapturePlan.afterInitializerLowering(block, lowered(block));
 		check(blockPlan.getBindings()[0].creation == Declaration && blockPlan.getFunctions()[1].getCaptures().length == 1,
 			"initializer-local storage lost its declaration event");
-		final receiver = initializers('class Main { var value:Int; public var read:Void->Int = function():Int {return this.value;}; }')[0];
-		final receiverPlan = TypedCapturePlan.analyzeInitializer(receiver);
-		check(receiverPlan.receiverOwner != null
-			&& receiverPlan.receiverOwner.getCanonicalName() == "Main"
-			&& receiverPlan.getFunctions()[1].capturesReceiver,
-			"initializer closure lost its exact instance receiver");
+		// Haxe rejects the future instance receiver even inside an initializer closure.
+		// Legal initializer-local captures above must not authorize this access.
+		var receiverDiagnostic = "";
+		try {
+			initializers('class Main { var value:Int; public var read:Void->Int = function():Int {return this.value;}; }');
+		} catch (error:TyperError) {
+			receiverDiagnostic = error.getMessage();
+		}
+		check(receiverDiagnostic == "Cannot access this or other member field in variable initialization",
+			"initializer closure must reject access to its future receiver");
 		Sys.println("INITIALIZER_CAPTURE_PLAN:PASS");
 	}
 }
