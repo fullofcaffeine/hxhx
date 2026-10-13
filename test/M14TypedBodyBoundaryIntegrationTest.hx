@@ -239,34 +239,48 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 
-	static function assertWhileMacroArgumentStructure():Void {
+	/** Load the real quotation type before validating a call that accepts a macro expression. */
+	static function typeWhileArgument(argument:String):TypedModule {
 		final filePath = "checks/WhileMacroArgument.hx";
 		final source = [
 			"class WhileMacroArgument {",
 			"  static function shouldFail(value:Dynamic):Void {}",
 			"  static function tick(value:Bool):Void {}",
 			"  static function check(a:Bool):Void {",
-			"    shouldFail(while (a) { tick(a); });",
+			"    shouldFail(" + argument + ");",
 			"  }",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(source, filePath);
 		final resolved = new ResolvedModule("WhileMacroArgument", filePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "WhileMacroArgument"], true);
+		assertTrue(args != null, "while fixture could not locate its standard library");
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		return TyperStage.typeResolvedModule(resolved, index, loader);
+	}
+
+	/** Quotation preserves the loop's syntax without binding names or control to the caller. */
+	static function assertWhileMacroArgumentStructure():Void {
+		final typed = typeWhileArgument("macro while (a) { tick(a); }");
 		final body = findFunction(findClass(typed, "WhileMacroArgument"), "check").getBody();
 		final call = body.getStatements()[0].getExpressions()[0];
 		assertTrue(call.getTag() == TypedExprTag.Call, "while macro fixture lost its outer call");
-		final loop = call.getExpressions()[1];
+		final quote = call.getExpressions()[1];
+		assertTrue(quote.getTag() == TypedExprTag.MacroExpr, "while macro argument lost its quotation boundary");
+		final loop = quote.getExpressions()[0];
 		assertTrue(loop.getTag() == TypedExprTag.WhileExpr, "while macro argument did not become a typed loop expression");
 		assertTrue(loop.getBoolValue(), "while macro block lost its brace-block identity");
 		assertTrue(loop.getExpressions().length == 2, "typed while macro argument lost its condition or body expression");
-		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.LocalRead && loop.getExpressions()[0].getTexts()[0] == "a",
-			"typed while macro condition was not resolved as the function parameter");
+		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.NameRead && loop.getExpressions()[0].getTexts()[0] == "a",
+			"quoted while condition did not retain its authored name");
+		assertTrue(loop.getControlTarget() == null && loop.getExpressions()[0].getLocalBindings().length == 0,
+			"quoted while acquired an executing loop destination or caller binding");
 		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
 		switch (ordinaryStatements(body)[0]) {
 			case SExpr(ECall(EIdent("shouldFail"), [
-				EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position, loopKind)
+				EMacroExpr(EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position, HxWhileKind.Normal), [])
 			]), _):
 				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
 			case _:
@@ -279,6 +293,44 @@ class M14TypedBodyBoundaryIntegrationTest {
 		]);
 		assertTrue(emptyFingerprint != bodyFingerprint, "body fingerprint ignored the while macro body");
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
+	/** A loop supplies effects in a value block; a bare Void loop cannot be an ordinary argument. */
+	static function assertWhileValueArgumentStructure():Void {
+		final typed = typeWhileArgument("{ while (a) { tick(a); } 1; }");
+		final body = findFunction(findClass(typed, "WhileMacroArgument"), "check").getBody();
+		final call = body.getStatements()[0].getExpressions()[0];
+		assertTrue(call.getTag() == TypedExprTag.Call, "value-block fixture lost its outer call");
+		final block = call.getExpressions()[1];
+		assertTrue(block.getTag() == TypedExprTag.SourceGroup
+			&& block.getExpressions().length == 2, "value-block argument lost its loop or final value");
+		final loop = block.getExpressions()[0];
+		assertTrue(loop.getTag() == TypedExprTag.WhileExpr && loop.getBoolValue() && loop.getExpressions().length == 2,
+			"executable while lost its condition, body, or brace-block identity");
+		final condition = loop.getExpressions()[0];
+		assertTrue(condition.getTag() == TypedExprTag.LocalRead
+			&& condition.getTexts()[0] == "a"
+			&& condition.getType().getDisplay() == "Bool"
+			&& condition.getLocalBindings().length == 1,
+			"executable while condition was not bound to its Bool parameter");
+		final tick = loop.getExpressions()[1];
+		assertTrue(tick.getTag() == TypedExprTag.Call
+			&& tick.getExpressions()[1].getLocalBindings()[0].getCanonicalIdentity() == condition.getLocalBindings()[0].getCanonicalIdentity(),
+			"while condition and body did not share the same parameter binding");
+		assertTrue(loop.getControlTarget() != null && loop.getPosition() != null && loop.getPosition().getLine() == 5,
+			"executable while lost its loop destination or source line");
+		assertTrue(block.getExpressions()[1].getTag() == TypedExprTag.IntValue
+			&& block.getExpressions()[1].getIntValue() == 1
+			&& block.getType().getDisplay() == "Int",
+			"value block did not retain its final Int value");
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+		var rejected = false;
+		try {
+			typeWhileArgument("while (a) { tick(a); }");
+		} catch (error:TyperError) {
+			rejected = error.getMessage() == "Missing return: Dynamic" && error.getPos().getLine() == 5;
+		}
+		assertTrue(rejected, "ordinary call accepted a Void while loop as a Dynamic value");
 	}
 
 	static function assertNullCoalescingLoopControlStructure():Void {
@@ -316,15 +368,31 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"typed continue was given a fake runtime value");
 		assertTrue(typedBreak.getTag() == TypedExprTag.BreakExpr
 			&& typedBreak.getType().isNoNormalCompletion(), "typed break was given a fake runtime value");
+		final destination = loop.getControlTarget();
+		assertTrue(destination != null && typedContinue.getControlTarget() == destination && typedBreak.getControlTarget() == destination,
+			"null-coalescing loop control lost its exact enclosing loop destination");
 		assertTrue(continueInitializer.getType().getSemanticKey() == "primitive:String"
 			&& breakInitializer.getType().getSemanticKey() == "primitive:String",
 			"loop control changed the value type of the non-null branch");
+		// Authored syntax keeps break/continue; backend transport also carries the
+		// exact loop destination so nested control cannot silently change its owner.
+		switch ([
+			TypedSourceSyntax.expression(typedContinue),
+			TypedSourceSyntax.expression(typedBreak)
+		]) {
+			case [EContinue(continuePosition), EBreak(breakPosition)]:
+				assertTrue(continuePosition.getLine() == 5 && breakPosition.getLine() == 6, "authored loop-control syntax lost its positions");
+			case _:
+				throw "authored loop-control syntax changed break or continue";
+		}
 		switch (ordinaryStatements(body)[0]) {
 			case SForIn(_, _, SBlock([
-				SVar("value", "String", EBinop("??", _, EContinue(continuePosition)), _, _),
-				SVar("other", "String", EBinop("??", _, EBreak(breakPosition)), _, _)
+				SVar("value", "String", EBinop("??", _, ELoweredControl(Continue, continueTarget, [], continuePosition)), _, _),
+				SVar("other", "String", EBinop("??", _, ELoweredControl(Break, breakTarget, [], breakPosition)), _, _)
 			], _), _):
 				assertTrue(continuePosition.getLine() == 5 && breakPosition.getLine() == 6, "typed-body source projection changed loop-control positions");
+				assertTrue(continueTarget == destination.getCanonicalIdentity() && breakTarget == destination.getCanonicalIdentity(),
+					"typed-body projection changed the selected loop destination");
 			case _:
 				throw "typed-body source projection changed null-coalescing loop control";
 		}
@@ -1040,6 +1108,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertVariableDeclarationMacroArgumentStructure();
 		assertLocalVariableMetadataStructure();
 		assertWhileMacroArgumentStructure();
+		assertWhileValueArgumentStructure();
 		assertNullCoalescingLoopControlStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
