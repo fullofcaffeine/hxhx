@@ -42,7 +42,7 @@ class M14CsEnumSwitchResultTest {
 			final program = new MacroExpandedProgram([TyperStage.typeResolvedModule(module, TyperIndex.build([module]))], false);
 			final result = BackendRegistry.requireForTarget("cs-native")
 				.emit(program, new BackendContext(directory + "/cs", null, "Main", true, true, new haxe.ds.StringMap<String>()));
-			expect(run("gtimeout", ["30", "mono", result.entryPath]), entry.expected);
+			expect(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "mono", result.entryPath]), entry.expected);
 			Sys.println("CS_ENUM_SWITCH_RESULT:PASS " + entry.name);
 		}
 	}

@@ -55,7 +55,7 @@ class M14CsCallbackControlTest {
 			final result = BackendRegistry.requireForTarget("cs-native")
 				.emit(new MacroExpandedProgram([module], false),
 					new BackendContext(directory + "/candidate", null, "Main", true, true, new haxe.ds.StringMap<String>()));
-			expect(run("gtimeout", ["30", "mono", result.entryPath]), entry.expected);
+			expect(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "mono", result.entryPath]), entry.expected);
 			Sys.println("CS_CALLBACK_CONTROL:PASS " + entry.name);
 		}
 		checkOccurrenceOwnership();

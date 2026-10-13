@@ -17,7 +17,7 @@ class M14GenericNullInputTest {
 			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 			JsRuntimeFixture.assertRuntime(typed, 'Main', 'null\nok\n');
 			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
-			check('gtimeout', ['30', executable]);
+			check(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 			Sys.println('GENERIC_NULL_INPUT_CASE:PASS ' + bounded);
 		}
 		Sys.println('GENERIC_NULL_INPUT:PASS');

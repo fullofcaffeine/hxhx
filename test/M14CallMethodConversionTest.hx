@@ -124,7 +124,7 @@ class M14CallMethodConversionTest {
 		#if call_conversion_native
 		{
 			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
-			final native = new sys.io.Process('gtimeout', ['30', executable]);
+			final native = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 			final nativeOutput = native.stdout.readAll().toString();
 			final nativeErrors = native.stderr.readAll().toString();
 			final nativeCode = native.exitCode();

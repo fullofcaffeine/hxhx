@@ -17,7 +17,7 @@ class M14EnumSwitchCoverageTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		#if enum_coverage_ocaml
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + '/ocaml', true);
-		final process = new sys.io.Process('gtimeout', ['30', executable]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -40,7 +40,7 @@ class M14EnumSwitchCoverageTest {
 
 	/** Compare each native observer against the independently specified selected branch values. */
 	static function assertOutput(path:String, expected:String):Void {
-		final process = new sys.io.Process('gtimeout', ['30', 'neko', path]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', 'neko', path]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();

@@ -151,7 +151,7 @@ class M14UntypedCallControlTest {
 
 	/** Execute the generated artifact and compare it with the independently recorded upstream result. */
 	static function assertOutput(path:String, expected:String):Void {
-		final process = new sys.io.Process('gtimeout', ['30', 'neko', path]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', 'neko', path]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();

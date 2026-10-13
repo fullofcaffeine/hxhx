@@ -163,7 +163,7 @@ class M14MethodParameterInferenceTest {
 	/** Compare a real native executable, including the expression-block alias replay path. */
 	static function assertNative(module:TypedModule, root:String, expectedOutput:String = '3\n'):Void {
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([module], []), root + '/ocaml', true);
-		final process = new sys.io.Process('gtimeout', ['30', executable]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();

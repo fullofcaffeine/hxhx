@@ -105,7 +105,7 @@ class M14DynamicRangeBoundTest {
 	/** Exercise boxed bounds through native compilation and actual execution. */
 	static function assertOcaml(typed:TypedModule, root:String, expected:String):Void {
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
-		final process = new sys.io.Process('gtimeout', ['30', executable]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -121,7 +121,7 @@ class M14DynamicRangeBoundTest {
 		sys.io.File.saveContent(root + '/local.neko', source);
 		if (Sys.command('nekoc', [root + '/local.neko']) != 0)
 			throw 'generated Neko range failed compilation';
-		final process = new sys.io.Process('gtimeout', ['30', 'neko', root + '/local.n']);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', 'neko', root + '/local.n']);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();

@@ -37,13 +37,13 @@ class M14PatternCaptureCoverageTest {
 			}
 			#if pattern_capture_ocaml
 			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/ocaml", true);
-			requireOutput(run("gtimeout", ["30", executable]), entry.expected);
+			requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), entry.expected);
 			#else
 			final context = new backend.BackendContext(root, root + "/local.n", "Main", true, false, HxDefineMap.fromRawDefines(["neko=1"]));
 			final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
 			sys.io.File.saveContent(root + "/local.neko", generated);
 			run("nekoc", [root + "/local.neko"]);
-			requireOutput(run("gtimeout", ["30", "neko", root + "/local.n"]), entry.expected);
+			requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "neko", root + "/local.n"]), entry.expected);
 			#end
 			Sys.println("PATTERN_CAPTURE_COVERAGE:PASS " + entry.name);
 		}

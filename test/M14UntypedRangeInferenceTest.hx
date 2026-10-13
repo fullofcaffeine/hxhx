@@ -71,7 +71,7 @@ class M14UntypedRangeInferenceTest {
 
 	/** A real Neko process observes the compiled loop, not merely its generated source. */
 	static function assertOutput(path:String):Void {
-		final process = new sys.io.Process('gtimeout', ['30', 'neko', path]);
+		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', 'neko', path]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();
