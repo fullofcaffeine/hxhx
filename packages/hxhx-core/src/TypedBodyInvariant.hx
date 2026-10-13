@@ -102,6 +102,16 @@ class TypedBodyInvariant {
 		if (expression == null)
 			throw "typed body contains a null expression in " + owner;
 		expression.assertArgumentBinding();
+		if (expression.getTag() == TraceCall
+			&& (!expression.getType().isVoid()
+				|| expression.getExpressions().length == 0
+				|| expression.getDeclaration() != null
+				|| expression.getFieldInfo() != null
+				|| expression.getLocalBindings().length != 0
+				|| expression.getArgumentBinding() != null
+				|| expression.getNamedArguments() != null
+				|| expression.getExtensionProvider() != null))
+			throw "language trace has invalid typed ownership or operands in " + owner;
 		if (expression.getTag() == TargetScope)
 			TypedTargetScope.kind(expression);
 		if (expression.getTag() == FeatureDefinition || expression.getTag() == FeatureSelection) {

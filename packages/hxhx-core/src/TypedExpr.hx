@@ -22,6 +22,7 @@ enum TypedExprTag {
 	FieldRead;
 	NullSafeFieldRead;
 	Call;
+	TraceCall;
 	TargetScope;
 	FeatureDefinition;
 	FeatureSelection;
@@ -296,6 +297,17 @@ class TypedExpr {
 			requiresOwnerQualification:Bool = false, ?extensionProvider:TyNominalTypeId):TypedExpr
 		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, requiresOwnerQualification, 0, 0.0,
 			declaration, null, null, null, null, null, extensionProvider);
+
+	/**
+		Retain language logging separately from an ordinary function call.
+		Its children are ordered value operands; no source identifier is published
+		as an unresolved callable. Target projection still owns runtime emission.
+	 */
+	public static function traceCall(arguments:Array<TypedExpr>, position:Null<HxPos>):TypedExpr {
+		if (arguments == null || arguments.length == 0)
+			throw "language trace requires at least one value operand";
+		return new TypedExpr(TraceCall, TyType.fromHintText("Void"), position, null, arguments);
+	}
 
 	/** A retained definition enables its name at compilation time and evaluates its operand at runtime. */
 	public static function featureDefinition(name:String, value:TypedExpr, position:Null<HxPos>):TypedExpr {

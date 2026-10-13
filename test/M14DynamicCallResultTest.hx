@@ -134,6 +134,7 @@ class M14DynamicCallResultTest {
 				TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getBackendProjection();
 			} catch (error:haxe.Exception) {
 				rejected = error.message.indexOf("should be") >= 0
+					|| error.message.indexOf("captured callback argument conflicts with its inferred type") >= 0
 					|| error.message.indexOf("compatible") >= 0
 					|| error.message.indexOf("unresolved") >= 0
 					|| error.message.indexOf("unknown") >= 0;

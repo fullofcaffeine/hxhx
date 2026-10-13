@@ -2744,6 +2744,11 @@ class TyperStage {
 			case ECall(sourceCallee, args):
 				if (TyTraceCall.isDisabled(expr, ctx.hasDefine("no-traces")))
 					return TyType.fromHintText("Void");
+				if (TyTraceCall.isLanguageCall(expr)) {
+					for (argument in args)
+						inferExprType(argument, scope, ctx, pos);
+					return TyType.fromHintText("Void");
+				}
 				var callee = sourceCallee;
 				while (true)
 					switch callee {

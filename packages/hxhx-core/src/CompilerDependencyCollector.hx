@@ -176,7 +176,7 @@ class CompilerDependencyCollector {
 				null;
 			case NullSafeFieldRead:
 				null;
-			case Call | FeatureDefinition | FeatureSelection:
+			case Call | TraceCall | FeatureDefinition | FeatureSelection:
 				null;
 			case MacroExpr:
 				null;

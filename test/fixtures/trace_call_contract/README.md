@@ -20,9 +20,18 @@ executes eval, JavaScript and Neko programs, and compares exact output.
   named `trace` still execute. Run `haxe test/m14_trace_disabled_test.hxml` for
   the matching hxhx JavaScript and Neko runtime regression.
 
-The upstream observer defines the expected behavior. The local runtime check
-proves the disabled-trace case only. `M14DynamicGenericCallTest` retains the
-local failure for
-`trace(fixed(block, block))`. Task `haxe_ocaml-hgtz2` owns the shared typed trace
-contract and its implementation. Do not remove that failure or bypass unresolved
-operand checks to make this upstream observer pass.
+The upstream observer defines the expected behavior. The local runtime checks
+cover disabled traces and default logging with statement-valued operands. They
+also check nested logging, argument evaluation order, and the distinction between
+bare trace syntax and a parenthesized local call. Run
+`haxe test/m14_trace_disabled_test.hxml` for these checks.
+
+`M14DynamicCallResultTest` and `M14DynamicGenericCallTest` retain the original
+callback and generic-call programs inside trace operands. The shared typed tree
+keeps the language logging operation separate from an ordinary callable value;
+ordinary unresolved operand checks remain required.
+
+Task `haxe_ocaml-hgtz2` still owns complete binding to the replaceable
+`haxe.Log.trace`, position and extra-argument information, and target-specific
+logger lookup timing. The local default-output checks do not prove those broader
+contracts. Keep the upstream fixtures and their independent expectations.

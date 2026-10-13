@@ -880,6 +880,9 @@ class TypedBodyBuilder {
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), field,
 					nodeType, position);
 			case ECall(callee, arguments):
+				if (typeResolver != null && TyTraceCall.isLanguageCall(expression))
+					return TypedExpr.traceCall(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
+						position);
 				switch (callee) {
 					case ESuper:
 						final receiver = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);

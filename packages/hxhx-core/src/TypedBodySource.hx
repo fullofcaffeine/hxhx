@@ -592,6 +592,8 @@ class TypedBodySource {
 				}
 			case FieldRead: projectFieldRead(typedExpression, catalog, projectionFacts, use);
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog, projectionFacts), texts[0]);
+			case TraceCall:
+				ECall(EIdent("trace"), expressionTail(expressions, 0, catalog, projectionFacts));
 			case Call:
 				if (expressions.length > 0 && expressions[0].getTag() == SuperValue) {
 					final arguments = expressionTail(expressions, 1, catalog, projectionFacts);
