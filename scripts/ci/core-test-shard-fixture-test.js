@@ -147,8 +147,8 @@ function main() {
   const expectedCounts = {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
-    'compiler-focused-1': 55,
-    'compiler-focused-2': 56,
+    'compiler-focused-1': 53,
+    'compiler-focused-2': 58,
     'compiler-focused-3': 1,
     'compiler-focused-4': 1,
     'macro-host-integration': 3,

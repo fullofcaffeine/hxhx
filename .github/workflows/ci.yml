@@ -623,6 +623,9 @@ jobs:
     # sum to about 18m45s per partition, including the prior run's final six
     # commands. Failures shorten these measurements; hosted passes must confirm
     # the headroom as repairs allow more nested checks to execute.
+    # Run 38586528338 measured 34m05s and 25m30s of focused command time.
+    # Moving runtime-type-operands and inheritance-module-loading to group 2
+    # balances those commands at 29m01s and 30m34s, excluding runner setup.
     # The large hxhx application workload retains its own Q3 job below.
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:

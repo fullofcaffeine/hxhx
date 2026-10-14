@@ -18,13 +18,13 @@
       "id": "compiler-focused-1",
       "label": "Focused compiler regressions (1/4)",
       "minimumTier": "Q2",
-      "baselineSeconds": 1125.216
+      "baselineSeconds": 1740.597
     },
     {
       "id": "compiler-focused-2",
       "label": "Focused compiler regressions (2/4)",
       "minimumTier": "Q2",
-      "baselineSeconds": null
+      "baselineSeconds": 1834.137
     },
     {
       "id": "compiler-focused-3",
@@ -160,7 +160,7 @@
     "test:m14:parser-stage-scan-expression-body": "compiler-focused-1",
     "test:m14:typer-abstract-catalog": "compiler-focused-2",
     "test:m14:typed-body-boundary": "compiler-focused-1",
-    "test:m14:runtime-type-operands": "compiler-focused-1",
+    "test:m14:runtime-type-operands": "compiler-focused-2",
     "test:m14:cpp-managed-heap": "compiler-focused-2",
     "test:m14:cpp-managed-closure-abi": "compiler-focused-2",
     "test:m14:cpp-managed-runtime-packaging": "compiler-focused-2",
@@ -224,7 +224,7 @@
     "test:m14:compilation-server-request-dispatcher": "compiler-focused-1",
     "test:m14:compilation-server-source-cache": "compiler-focused-1",
     "test:m14:compiler-dependency-observation": "compiler-focused-2",
-    "test:m14:inheritance-module-loading": "compiler-focused-1",
+    "test:m14:inheritance-module-loading": "compiler-focused-2",
     "test:m14:module-import-alias-targets": "compiler-focused-1",
     "test:m14:compiler-dependency-edit-sequence": "compiler-focused-1",
     "test:m14:compilation-server-dependency-observation": "compiler-focused-1",
