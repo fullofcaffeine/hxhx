@@ -86,6 +86,14 @@ class CppManagedLocalAccess {
 	function captureCatalog():TypedBackendCaptureCatalog
 		return projection == null ? initializer.requireCaptureCatalog() : projection.requireCaptureCatalog();
 
+	/** Typed callable facts belong to this exact lexical expression, including nested functions. */
+	public function callableExpression(expression:HxExpr):Null<TypedExpr> {
+		final source = captureCatalog().findCallableExpression(expression);
+		if (source != null)
+			requireLexicalExpression(expression);
+		return source;
+	}
+
 	/** Adapt only the transport requested by the shared control renderer, using semantic source types. */
 	public function render(value:HxExpr, expectedNativeType:String):String {
 		final selected = read(value);
@@ -332,7 +340,7 @@ class CppManagedLocalAccess {
 		plan.requireFunction(owner);
 		final local = (projection == null ? initializer.getLocalCatalog() : projection.getLocalCatalog()).findByProjectedName(name);
 		if (local == null)
-			throw "managed local read is absent from its executable catalog";
+			throw "managed local read is absent from its executable catalog: " + name;
 		return local.getBinding();
 	}
 

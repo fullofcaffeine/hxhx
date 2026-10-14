@@ -219,6 +219,7 @@
     "test:examples": "target-packages",
     "test:hxhx-targets": "hxhx-targets",
     "test:clean-artifacts": "compiler-focused-2",
-    "test:m14:python-entry-members": "compiler-focused-2"
+    "test:m14:python-entry-members": "compiler-focused-2",
+    "test:m14:cpp-static-callable": "compiler-focused-1"
   }
 }

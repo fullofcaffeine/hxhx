@@ -17,6 +17,8 @@ class CppManagedStaticStorage {
 
 	final fields:Array<TypedBackendClassFieldFact> = [];
 	final slots:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+	final callables:Array<TyDeclarationInfo> = [];
+	var layoutPublished:Bool = false;
 
 	public function new(program:CppTypedProgramProjection, nativeName:String, hasStack:Bool = false) {
 		if (program == null || nativeName == null || !~/^hxhx_statics_[A-Za-z0-9_]+$/.match(nativeName))
@@ -157,21 +159,55 @@ class CppManagedStaticStorage {
 		return "field_" + index;
 	}
 
+	/** Register only an exact authored method; one slot preserves its value identity for this heap. */
+	public function callableMember(declaration:TyDeclarationInfo):String {
+		program.assertCurrent();
+		if (declaration == null || !declaration.getIsStatic() || declaration.getIsDynamic())
+			throw "managed immutable callable storage requires a static method";
+		var found = false;
+		for (module in program.getModules())
+			for (owner in module.projection.getClasses())
+				for (method in owner.getFunctions())
+					if (method.requireSemanticDeclaration() == declaration)
+						found = true;
+		if (!found)
+			throw "managed callable storage belongs to another typed program";
+		var slot = callables.indexOf(declaration);
+		if (slot < 0) {
+			if (layoutPublished)
+				throw "managed static callable must be discovered before layout publication";
+			slot = callables.length;
+			callables.push(declaration);
+		}
+		return "callable_" + slot;
+	}
+
+	/** Emission finishes discovering method values before the program publishes its storage layout. */
+	public function getCallables():Array<TyDeclarationInfo> {
+		program.assertCurrent();
+		return callables.copy();
+	}
+
 	/** Inline cells are ordinary traced edges, never registered roots inside a managed payload. */
 	public function render():String {
 		program.assertCurrent();
+		layoutPublished = true;
 		final lines = hasStack ? ['#include "ManagedStack.hpp"'] : [];
 		lines.push("struct " + nativeName + " {");
 		if (hasStack)
 			lines.push("  hxhx::managed::StackState stack;");
 		for (index in 0...fields.length)
 			lines.push("  hxhx::managed::CellPayload field_" + index + "{hxhx::managed::CellWriteMode::Replaceable};");
+		for (index in 0...callables.length)
+			lines.push("  hxhx::managed::CellPayload callable_" + index + "{hxhx::managed::CellWriteMode::Once};");
 		lines.push("};");
 		lines.push("namespace hxhx::managed { template<> struct Trace<" + nativeName + "> {");
 		lines.push("  static void visit(const " + nativeName + "& value, Visitor& visitor) noexcept {");
 		lines.push("    (void)value; (void)visitor;");
 		for (index in 0...fields.length)
 			lines.push("    value.field_" + index + ".trace(visitor);");
+		for (index in 0...callables.length)
+			lines.push("    value.callable_" + index + ".trace(visitor);");
 		lines.push("  }\n}; }");
 		return lines.join("\n");
 	}

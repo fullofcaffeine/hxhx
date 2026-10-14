@@ -223,13 +223,18 @@ class CppManagedProgramEmitter {
 
 	/** Build the complete unit before returning it, so failed linkage cannot publish partial output. */
 	public function render():String {
+		// Complete body admission first: method values register traced program slots.
+		final bodies = [for (fn in functions) fn.render()];
 		final lines = statics == null ? [] : [statics.render()];
 		for (fn in functions)
 			lines.push(fn.rootDeclaration());
 		if (classes != null)
 			lines.push(classes.strings.render(application -> instanceMethods.get(application.identity)));
-		for (fn in functions)
-			lines.push(fn.render());
+		if (statics != null)
+			for (declaration in statics.getCallables())
+				lines.push(CppManagedStaticCallable.renderEntry(resolve(declaration.getIdentity().getCanonicalKey()), statics));
+		for (body in bodies)
+			lines.push(body);
 		return lines.join("\n");
 	}
 }

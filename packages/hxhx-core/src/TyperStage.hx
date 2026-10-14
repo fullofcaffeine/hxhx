@@ -1136,7 +1136,7 @@ class TyperStage {
 								|| scope.isUntypedContext()
 								&& initializerType != null
 								&& hinted.getSemanticKey() != initializerType.getSemanticKey())))
-						scope.getInference().recordLocal(sym, initializerTerm);
+						scope.getInference().recordLocal(sym, initializerTerm, hasWrittenType ? hinted : null);
 				case SReturnVoid(pos):
 					controls.currentReturns().record(Known(TyType.fromHintText("Void")), pos);
 				case SReturn(e, pos):
@@ -3052,7 +3052,7 @@ class TyperStage {
 						&& (hinted == null
 							|| !hinted.isDynamic()
 							&& (!scope.isUntypedContext() || hinted.getSemanticKey() == initializerType.getSemanticKey())))
-						scope.getInference().recordLocal(symbol, initializerTerm);
+						scope.getInference().recordLocal(symbol, initializerTerm, hinted);
 				}
 				completesNormally ? TyType.fromHintText("Void") : TyType.noNormalCompletion();
 			case EVariableDeclaration(_, _, _, _, _, _):

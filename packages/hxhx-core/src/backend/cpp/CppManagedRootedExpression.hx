@@ -404,6 +404,11 @@ class CppManagedRootedExpression {
 
 	/** Keep occurrence ownership in the declared view, then apply types at the storage boundary. */
 	function declaredValueType(value:HxExpr):TyType {
+		final method = staticCallable(value);
+		if (method != null) {
+			CppManagedStaticCallable.requireTarget(method, input.resolveStatic);
+			return method.getType();
+		}
 		final call = instanceCall(value);
 		if (CppManagedMapSet.selects(call)) {
 			CppManagedMapSet.require(call, input.classes, input.enums, input.casts);
@@ -516,6 +521,9 @@ class CppManagedRootedExpression {
 	public function render(value:HxExpr, destination:String, indent:String):Array<String> {
 		if (!identifier(destination))
 			throw "managed value emission requires a stable destination root";
+		final method = staticCallable(value);
+		if (method != null)
+			return CppManagedStaticCallable.renderValue(method, input.resolveStatic, input.statics, input.heap, destination, indent);
 		final call = instanceCall(value);
 		if (CppManagedMapGet.selects(call))
 			return CppManagedMapGet.render({
@@ -970,6 +978,20 @@ class CppManagedRootedExpression {
 		if (target.projection != input.classes.methods.requireInstanceMethod(call, input.callContext))
 			throw 'managed instance call selected another program entry';
 		return target;
+	}
+
+	/** Select method values before ordinary identifiers are interpreted as local bindings. */
+	function staticCallable(expression:HxExpr):Null<TypedExpr> {
+		switch expression {
+			case EIdent(_) | EField(_, _):
+			case _:
+				return null;
+		}
+		final source = switch input.owner {
+			case CallableBody(selected): selected.callableExpression(expression);
+			case FieldInitializer(projection): projection.requireCaptureCatalog().findCallableExpression(expression);
+		};
+		return CppManagedStaticCallable.declaration(source) == null ? null : source;
 	}
 
 	/** Bind only a checked projected call to the program's exact declaration inventory. */

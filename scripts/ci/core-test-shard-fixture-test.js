@@ -128,7 +128,7 @@ function checkIndependentJobStarts(workflow) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 146, `expected 146 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 147, `expected 147 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -147,7 +147,7 @@ function main() {
   const expectedCounts = {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
-    'compiler-focused-1': 54,
+    'compiler-focused-1': 55,
     'compiler-focused-2': 53,
     'macro-host-integration': 3,
     portable: 1,

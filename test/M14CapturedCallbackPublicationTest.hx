@@ -3,6 +3,15 @@ import sys.io.File;
 /** Stored generic calls retain final argument proofs without widening the actual operand type. */
 class M14CapturedCallbackPublicationTest {
 	static function main():Void {
+		check("nullable_static_view",
+			'class Main{static function echo(value:Int):Int{return value;}static function main():Void{var callback:Null<Int>->Null<Int>=echo;var alias=callback;Sys.println(callback(null)==null);Sys.println(alias(7));}}',
+			"true\n7\n");
+		check("nullable_closure_view",
+			'class Main{static function main():Void{var callback:Null<Int>->Null<Int>=function(value:Int):Int{return value;};Sys.println(callback(null)==null);}}',
+			"true\n");
+		check("nullable_view_rejects_string",
+			'class Main{static function echo(value:Int):Int{return value;}static function main():Void{var callback:Null<Int>->Null<Int>=echo;callback("wrong");}}',
+			null, false, "String should be Null<Int>");
 		final declarations = 'class Base<T>{public function new(){}}class Child extends Base<String>{public function new(){super();}}class Receiver{public function new(){}public function echo<T>(value:T):T{return value;}}';
 		check("subtype",
 			declarations +
@@ -22,7 +31,8 @@ class M14CapturedCallbackPublicationTest {
 	}
 
 	/** Upstream decisions precede local typing; accepted programs must also execute in generated JavaScript. */
-	static function check(name:String, source:String, expected:Null<String>, inspectSubtype:Bool = false):Void {
+	static function check(name:String, source:String, expected:Null<String>, inspectSubtype:Bool = false,
+			diagnostic:String = "captured callback argument conflicts with its inferred type"):Void {
 		final root = ".tmp/captured_callback_publication_" + name;
 		sys.FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
@@ -39,9 +49,7 @@ class M14CapturedCallbackPublicationTest {
 		try {
 			typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		} catch (error:TyperError) {
-			if (expected != null
-				|| error.message != "captured callback argument conflicts with its inferred type"
-				|| error.filePath != path)
+			if (expected != null || error.message != diagnostic || error.filePath != path)
 				throw error;
 		}
 		if (expected == null) {

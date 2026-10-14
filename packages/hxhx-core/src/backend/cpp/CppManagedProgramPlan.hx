@@ -94,6 +94,11 @@ class CppManagedProgramPlan {
 		// Initializers own their catalogs. Follow their dependencies without
 		// borrowing the constructor's or a synthetic method's expression facts.
 		function enqueueInitializer(initializer:TypedBackendFieldInitializerProjection, ?application:CppManagedInitializerApplication):Void {
+			for (occurrence in initializer.requireCaptureCatalog().getCallableExpressions()) {
+				final method = CppManagedStaticCallable.declaration(occurrence.source);
+				if (method != null)
+					pending.push(method.getIdentity().getCanonicalKey());
+			}
 			CppManagedRuntimeType.validate(initializer.getRuntimeTypeCatalog(), classes, enums, CppManagedCallContext.fromInitializer(application));
 			for (occurrence in initializer.getConstructorCatalog().getEntries())
 				enqueueApplication(classes.constructorApplication(initializer.requireConstructor(occurrence.getExpression()),
@@ -206,6 +211,11 @@ class CppManagedProgramPlan {
 				CppManagedRuntimeType.validate(selected.projection.getRuntimeTypeCatalog(), classes, enums,
 					CppManagedCallContext.fromFunction(applications.get(identity)));
 				sources.set(identity, selected.projection);
+				for (occurrence in selected.projection.requireCaptureCatalog().getCallableExpressions()) {
+					final method = CppManagedStaticCallable.declaration(occurrence.source);
+					if (method != null)
+						pending.push(method.getIdentity().getCanonicalKey());
+				}
 				for (initializer in classes.constructorInitializers(selected.projection, applications.get(identity)))
 					enqueueInitializer(initializer.projection, initializer);
 				for (occurrence in selected.projection.getConstructorCatalog().getEntries())
@@ -287,9 +297,11 @@ class CppManagedProgramPlan {
 	public function render():String {
 		program.assertCurrent();
 		final defaults = statics.renderDefaults("hxhx_storage");
-		final sources = [emitter.render()];
+		final initializerSources = new Array<String>();
 		for (initializer in initializers)
-			sources.push(emitter.renderInitializer(initializer.projection, initializer.symbol));
+			initializerSources.push(emitter.renderInitializer(initializer.projection, initializer.symbol));
+		// Initializers and method bodies discover callable slots before storage is emitted.
+		final sources = [emitter.render()].concat(initializerSources);
 		// Body admission can select layouts for field-only uses. Emit their one
 		// canonical descriptor table only after every body has completed planning.
 		sources.unshift(enums.render());

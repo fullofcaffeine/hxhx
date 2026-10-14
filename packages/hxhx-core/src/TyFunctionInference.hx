@@ -914,8 +914,16 @@ class TyFunctionInference {
 		return true;
 	}
 
-	/** An alias points at its initializer's term, not a copy of its current incomplete preview. */
-	public function recordLocal(symbol:TySymbol, term:TyInferenceTerm):Void {
+	/**
+		Unannotated aliases share their initializer's inference variables. A complete
+		written callable type instead owns the local's invocation contract, after
+		initializer typing has applied its constraints. Retaining the source method's
+		Int parameter here would erase an accepted Null<Int> callback view during
+		calls and sealed replay. The source occurrence still owns its implementation.
+	 */
+	public function recordLocal(symbol:TySymbol, term:TyInferenceTerm, ?written:TyType):Void {
+		if (written != null && written.isFunction() && !written.hasUnknownComponent())
+			term = TyInferenceSolver.fromType(written);
 		if (solver.isSealed()) {
 			// A speculative resolver may allocate temporary declarations in its own
 			// environment. Only that fork may add aliases to already sealed terms.
