@@ -41,19 +41,26 @@ var result:Int=Api.choose(callback);
 						inspect(expression);
 		if (selected != 1)
 			throw "missing selected callable overload";
-		for (destination in ["Int", "Int->Int", "Void->String"])
+		// Concrete function mismatches fail during argument inference, before
+		// overload rejection. Require each exact diagnostic rather than accepting
+		// an unrelated typing failure as proof that the argument was rejected.
+		for (rejection in [
+			{destination: "Int", message: "No compatible method signature for accept"},
+			{destination: "Int->Int", message: "inferred value ()->Int is not compatible with (Int)->Int"},
+			{destination: "Void->String", message: "inferred value ()->Int is not compatible with ()->String"}
+		])
 			check("reject_"
-				+ destination.split("->").join("_"), 'class Main {
+				+ rejection.destination.split("->").join("_"), 'class Main {
 static function accept(value:'
-				+ destination
+				+ rejection.destination
 				+ '):Void {}
 static function main():Void {var callback:Void->Int=function():Int{return 7;};accept(callback);}
-}', false);
+}', false, rejection.message);
 		Sys.println("FUNCTION_DYNAMIC_ARGUMENT:PASS");
 	}
 
 	/** Compare source acceptance upstream before checking local typing; extern cases require no runtime implementation. */
-	static function check(name:String, source:String, accepts:Bool):Null<TypedModule> {
+	static function check(name:String, source:String, accepts:Bool, ?rejectionMessage:String):Null<TypedModule> {
 		final root = ".tmp/function_dynamic_argument_" + name + "_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
@@ -72,7 +79,7 @@ static function main():Void {var callback:Void->Int=function():Int{return 7;};ac
 				throw "local typing accepted incompatible argument: " + name;
 			return typed;
 		} catch (error:TyperError) {
-			if (accepts || error.message.indexOf("No compatible method signature for accept") < 0)
+			if (accepts || rejectionMessage == null || error.filePath != path || error.message != rejectionMessage)
 				throw error;
 			return null;
 		}
