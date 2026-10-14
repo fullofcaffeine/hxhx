@@ -1350,7 +1350,14 @@ class OcamlRepresentationRegistry {
 		final canonical = canonicalSelection(selection);
 		final key = decisionKey(canonical.semanticTypeId, canonical.domain);
 		final id = "representation:" + canonical.semanticTypeId + ":" + (canonical.domain : String);
-		final revision = "sha256:" + Sha256.encode(selectionFingerprint(canonical));
+		final fingerprint = selectionFingerprint(canonical);
+		final existing = decisionsByKey.get(key);
+		// Validation above still applies to every request. Identical complete hash
+		// inputs cannot change the retained revision, so repeated selections need
+		// only a defensive copy; conflicts continue through the normal hash check.
+		if (existing != null && fingerprint == selectionFingerprint(existing))
+			return copyDecision(existing);
+		final revision = "sha256:" + Sha256.encode(fingerprint);
 		final candidate:OcamlRepresentationDecision = {
 			id: id,
 			key: key,
@@ -1375,7 +1382,6 @@ class OcamlRepresentationRegistry {
 			arrayDescriptorId: canonical.arrayDescriptorId,
 			arrayDescriptorRevision: canonical.arrayDescriptorRevision
 		};
-		final existing = decisionsByKey.get(key);
 		if (existing != null) {
 			if (existing.revision != candidate.revision) {
 				throw 'reflaxe.ocaml [ocaml-representation:conflicting-decision]: "$key" was already assigned ${existing.carrierTypeId} (${existing.revision}), so it cannot also use ${candidate.carrierTypeId} (${candidate.revision})';
