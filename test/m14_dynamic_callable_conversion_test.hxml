@@ -2,6 +2,8 @@ test/m14_typed_callable_projection_test.hxml
 --next
 test/ocaml_callable_program_admission_hosts_test.hxml
 --next
+test/m14_ocaml_callable_selection_test.hxml
+--next
 -cp packages/reflaxe.ocaml/src
 -cp test
 -main CheckOcamlCallableCallReports
