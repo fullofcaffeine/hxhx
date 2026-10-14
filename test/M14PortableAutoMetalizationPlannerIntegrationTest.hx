@@ -121,8 +121,22 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 
 		var failure:Null<String> = null;
 		try {
-			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+			final sourcePath = Path.join([tmpRoot, "Main.hx"]);
+			File.saveContent(sourcePath, source);
+			final resolved = new ResolvedModule("Main", sourcePath, ParserStage.parse(source, sourcePath));
+			final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-cp", tmpRoot, "-main", "Main"], true);
+			final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+				explicitPaths: [tmpRoot],
+				libraries: [],
+				cwd: Sys.getCwd(),
+				standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+				targetDefine: "ocaml"
+			});
+			final index = TyperIndex.buildHeaders([resolved]);
+			final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
+			loader.markResolvedAlready([resolved]);
+			assertTrue(loader.ensureTypeAvailable("Array", "", []) != null, "planner fixture requires the real Array declaration");
+			final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 			final program = MacroStage.expandProgram([typed], []);
 			final context = new BackendContext(outDir, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
 			new OcamlTargetCore().emit(program, context);
@@ -174,5 +188,6 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 		}
 
 		deleteRecursive(tmpRoot);
+		M14Stage3ArrayCallOrderTest.main();
 	}
 }

@@ -3120,6 +3120,22 @@ class EmitterStage {
 				moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
+			if (exactCall.owner == "Array" && (exactCall.method == "map" || exactCall.method == "join")) {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml array call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlArrayCalls.render({
+					occurrence: occurrence,
+					metal: isMetalProfileActive(),
+					autoMetal: isPortableAutoMetalizedRegionActive(),
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames,
+					mark: markPortableAutoMetalizedLoweringUse
+				});
+				if (rendered != null)
+					return rendered;
+			}
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
