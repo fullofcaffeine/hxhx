@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 #if macro
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.parameterId as genericValueParameterId;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.shape as genericValueShape;
@@ -381,4 +380,3 @@ private function sameShape(left:OcamlGenericValueShape, right:OcamlGenericValueS
 private function sameConversion(left:Null<OcamlGenericValueConversion>, right:OcamlGenericValueConversion):Bool {
 	return left != null && Std.string(left) == Std.string(right);
 }
-#end

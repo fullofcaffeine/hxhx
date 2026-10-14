@@ -1,6 +1,5 @@
 package reflaxe.ocaml.ast;
 
-#if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.require as genericCallRequire;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
@@ -105,4 +104,3 @@ private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr
 			}
 	}
 }
-#end
