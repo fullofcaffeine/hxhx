@@ -148,7 +148,11 @@ function select(classes:Array<ClassType>, ?progress:String->Void):Array<OcamlCal
 				switch (signature) {
 					case TFun(parameters, result):
 						final callbackBoundary = isFunction(result) || Lambda.exists(parameters, parameter -> isFunction(parameter.t));
-						final target = method(callee);
+						// Origin classification materializes the referenced method body.
+						// Only callback boundaries use its declaration identity. For an
+						// ordinary static call, the fallback below consumes the exact type
+						// receiver without visiting it; local calls still check their value.
+						final target = callbackBoundary ? method(callee) : null;
 						if (target != null) {
 							if (callbackBoundary)
 								connect(candidate, target);
