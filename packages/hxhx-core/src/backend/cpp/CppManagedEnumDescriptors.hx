@@ -60,6 +60,27 @@ class CppManagedEnumDescriptors {
 		return requireSymbol(owner);
 	}
 
+	/** Resolve a constructor by exact typed declaration, never by its source spelling alone. */
+	public function constructorTarget(declaration:TyDeclarationInfo):{symbol:String, index:Int, arity:Int} {
+		program.assertCurrent();
+		if (declaration == null || !declaration.getIsEnumConstructor() || !declaration.getIsStatic())
+			throw "managed enum construction requires a selected constructor declaration";
+		final owner = program.requireClass(program.requireClassIdentity(declaration.getOwner().getCanonicalName()));
+		final facts = owner.requireSemanticFacts();
+		if (facts.getIsExtern() || facts.getModuleIdentity() != declaration.getModulePath())
+			throw "managed enum construction requires its ordinary declared owner";
+		final matches = owner.getFunctions().filter(fn -> fn.requireSemanticDeclaration() == declaration);
+		if (matches.length != 1)
+			throw "managed enum construction belongs to another typed program";
+		for (constructor in facts.copyEnumConstructors())
+			switch constructor.member {
+				case Callable(method) if (method.canonicalIdentity == declaration.getIdentity().getCanonicalKey()):
+					return {symbol: requireSymbol(owner), index: constructor.index, arity: method.arguments.length};
+				case _:
+			}
+		throw "managed enum constructor is absent from its declaration inventory";
+	}
+
 	/** A same-named class from another projection cannot borrow this program's symbol. */
 	public function requireSymbol(owner:TypedBackendClassProjection):String {
 		program.assertCurrent();

@@ -117,6 +117,18 @@ class CppManagedRootedExpression {
 		};
 	}
 
+	/** Exact typed call facts supply generic enum results and argument contracts. */
+	function enumConstruction(expression:HxExpr):Null<CppManagedEnumConstructor> {
+		if (TypedExactEnumConstructorSource.decode(expression) == null)
+			return null;
+		requireClassOperation(expression);
+		final source = switch input.owner {
+			case CallableBody(selected): selected.callableExpression(expression);
+			case FieldInitializer(projection): projection.requireCaptureCatalog().findCallableExpression(expression);
+		};
+		return new CppManagedEnumConstructor(expression, source, input.enums, applicationType, input.casts);
+	}
+
 	/** Stored methods use their selected occurrence instead of anonymous-record field lookup. */
 	function methodValue(expression:HxExpr):Null<TypedBackendMethodOccurrence> {
 		if (!expression.match(EField(_, _)))
@@ -427,6 +439,9 @@ class CppManagedRootedExpression {
 
 	/** Keep occurrence ownership in the declared view, then apply types at the storage boundary. */
 	function declaredValueType(value:HxExpr):TyType {
+		final enumCall = enumConstruction(value);
+		if (enumCall != null)
+			return enumCall.resultType;
 		final bound = methodValue(value);
 		if (bound != null) {
 			requireClassOperation(value);
@@ -550,6 +565,9 @@ class CppManagedRootedExpression {
 	public function render(value:HxExpr, destination:String, indent:String):Array<String> {
 		if (!identifier(destination))
 			throw "managed value emission requires a stable destination root";
+		final enumCall = enumConstruction(value);
+		if (enumCall != null)
+			return enumCall.render(input.heap, destination, render, indent);
 		final bound = methodValue(value);
 		if (bound != null) {
 			requireClassOperation(value);
