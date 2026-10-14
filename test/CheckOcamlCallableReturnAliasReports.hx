@@ -11,7 +11,12 @@ class CheckOcamlCallableReturnAliasReports {
 		final arguments = Sys.args();
 		if (arguments.length != 1)
 			throw "Expected the generated lowering report path.";
-		final json = sys.io.File.getContent(arguments[0]);
+		verifyFile(arguments[0]);
+	}
+
+	/** Reuse all report assertions without starting another compiler process. */
+	public static function verifyFile(path:String):Void {
+		final json = sys.io.File.getContent(path);
 		inspect(haxe.Json.parse(json));
 		for (name in ["fromParameter", "fromStatic", "fromCall"])
 			for (foreign in [false, true]) {

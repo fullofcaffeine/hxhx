@@ -41,6 +41,12 @@ class Stage3OcamlLocalNames {
 		}
 	}
 
+	/** Reject names borrowed from an equal-looking but separately projected body. */
+	public function requireOwner(catalog:TypedBackendLocalCatalog):Void {
+		if (localCatalog != catalog)
+			throw "Native callback names belong to another local catalog";
+	}
+
 	/** Return the target name only when the projected identifier is an exact local. **/
 	public function findTargetName(projectedName:String):Null<String>
 		return projectedName == null ? null : byProjectedName.get(projectedName);

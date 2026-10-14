@@ -4,6 +4,10 @@ test/ocaml_callable_program_admission_hosts_test.hxml
 --next
 test/m14_ocaml_callable_selection_test.hxml
 --next
+test/m14_ocaml_callable_ownership_test.hxml
+--next
+test/m14_native_callback_call_paths_test.hxml
+--next
 test/ocaml_callable_view_syntax_hosts_test.hxml
 --next
 -cp packages/reflaxe.ocaml/src
@@ -33,23 +37,27 @@ test/ocaml_callable_view_syntax_hosts_test.hxml
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14StoredCallbackArgumentsTest
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14CallableParameterIdentityTest
 --interp
 
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14DynamicCallableConversionTest
 --interp
 
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14StoredCallbackViewsTest
 --interp

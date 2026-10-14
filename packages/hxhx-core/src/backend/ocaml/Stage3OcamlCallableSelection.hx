@@ -269,7 +269,9 @@ private class CallableUseScan {
 			final boundary = (returned != null && isFunction(returned))
 				|| Lambda.exists(parameters, parameter -> isFunction(parameter.type));
 			final declaration = callee.getDeclaration();
-			if (declaration != null && declaration.getIsStatic()) {
+			// A call result can retain its producer declaration. Invoking that result
+			// consumes a callback value; it is not another direct call to the producer.
+			if ((callee.getTag() == NameRead || callee.getTag() == FieldRead) && declaration != null && declaration.getIsStatic()) {
 				if (boundary)
 					connect(declaration.getIdentity().getCanonicalKey());
 			} else if (callee.getTag() == LocalRead || callee.getTag() == Lambda || callee.getTag() == SourceFunction || callee.getTag() == Call) {

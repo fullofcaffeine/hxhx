@@ -9,7 +9,12 @@ class CheckOcamlCallableEarlyReturnReports {
 		final arguments = Sys.args();
 		if (arguments.length != 1)
 			throw "Expected the generated lowering report path.";
-		final json = sys.io.File.getContent(arguments[0]);
+		verifyFile(arguments[0]);
+	}
+
+	/** Reuse all report assertions without starting another compiler process. */
+	public static function verifyFile(path:String):Void {
+		final json = sys.io.File.getContent(path);
 		final value:Dynamic = haxe.Json.parse(json);
 		final representations = ReflaxeOcamlInspection.inspectRepresentations(value, "callback-control-report", 0, []);
 		final calls = ReflaxeOcamlInspection.inspectCalls(value, representations);

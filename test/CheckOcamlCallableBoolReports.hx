@@ -14,9 +14,14 @@ class CheckOcamlCallableBoolReports {
 		final arguments = Sys.args();
 		if (arguments.length != 1)
 			throw "Expected the generated Boolean callback lowering report.";
+		verifyFile(arguments[0]);
+	}
+
+	/** Reuse all report assertions without starting another compiler process. */
+	public static function verifyFile(path:String):Void {
 		// Untrusted JSON stays at the decoder boundary. All operation and helper
 		// assertions below use the production reader's validated records.
-		final value:Dynamic = haxe.Json.parse(sys.io.File.getContent(arguments[0]));
+		final value:Dynamic = haxe.Json.parse(sys.io.File.getContent(path));
 		final representations = ReflaxeOcamlInspection.inspectRepresentations(value, "Boolean callback report", 0, []);
 		final calls = ReflaxeOcamlInspection.inspectCalls(value, representations);
 		final report = reflaxe.ocaml.tooling.ReflaxeOcamlCallableViewInspection.inspect(Reflect.field(value, "callableViews"), representations.decisions,

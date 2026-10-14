@@ -1,4 +1,5 @@
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -D enum_coverage_ocaml
 -main M14EnumSwitchCoverageTest

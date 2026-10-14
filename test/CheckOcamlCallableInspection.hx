@@ -9,7 +9,12 @@ class CheckOcamlCallableInspection {
 		final arguments = Sys.args();
 		if (arguments.length != 1)
 			throw "Expected the generated lowering report path.";
-		verify(sys.io.File.getContent(arguments[0]));
+		verifyFile(arguments[0]);
+	}
+
+	/** Reuse all report assertions without starting another compiler process. */
+	public static function verifyFile(path:String):Void {
+		verify(sys.io.File.getContent(path));
 		Sys.println("OCAML_CALLABLE_INSPECTION:PASS");
 	}
 

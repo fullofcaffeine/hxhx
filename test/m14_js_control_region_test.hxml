@@ -4,6 +4,7 @@
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp packages/hxhx/src
 -cp test
 -main M14DiscardedControlTest
@@ -26,21 +27,25 @@
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14PatternCaptureCoverageTest
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14CsEnumSwitchResultTest
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14CsCallbackControlTest
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp packages/hxhx/src
 -cp test
 -main M14CsSyntaxScopeTest
@@ -77,6 +82,7 @@
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
 -main M14EnumImportConstraintTest
 --interp

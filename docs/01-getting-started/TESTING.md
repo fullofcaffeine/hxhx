@@ -185,6 +185,47 @@ and compares the output with upstream Haxe 4.3.7. It also rejects stale types,
 foreign function bindings, and reordered parameters. This focused check does
 not replace current-source compiler builds or the upstream compatibility suites.
 
+To check stored callback conversions in the native OCaml emitter directly, run:
+
+```bash
+haxe test/m14_native_stored_callback_views_test.hxml
+```
+
+The complete source fixture must match upstream Haxe output after native
+compilation. It checks converted calls, aliases, higher-order arguments, returned
+callbacks, captured values, and function identity. The ownership check also runs
+in eval and compiled Neko:
+
+```bash
+haxe test/m14_ocaml_callable_ownership_test.hxml
+```
+
+The Neko build uses full dead-code elimination so the request-reset check does
+not generate unrelated emitter methods. All ownership and reset assertions still run.
+
+To check parenthesized static calls and returned callback conversions, run:
+
+```bash
+haxe test/m14_native_callback_call_paths_test.hxml
+```
+
+Both reduced programs must match upstream output after native compilation.
+The return case also checks native compilation through the bootstrap direct-return
+route. That route omits ordinary statements, so this extra check proves the
+returned function type rather than whole-program runtime behavior.
+
+The combined callback command remains the acceptance check:
+
+```bash
+haxe test/m14_dynamic_callable_conversion_test.hxml
+```
+
+It also builds the standalone target fixtures and checks their reports. The
+direct native test does not replace those checks or establish shared-target
+production readiness. Test configurations that compile the native emitter include
+`packages/reflaxe.ocaml/src` because callback layouts and conversions belong to
+that shared target. Parser-only configurations do not need this dependency.
+
 To check shared variable identities and catch types, run:
 
 ```bash
