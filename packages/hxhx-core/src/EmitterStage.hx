@@ -3116,8 +3116,7 @@ class EmitterStage {
 		final callSigByCalleeRaw = callSigByCallee;
 		final staticCall = TypedExactStaticCallSource.decode(e);
 		if (staticCall != null)
-			return exprToOcaml(TypedExactStaticCallSource.ordinaryCall(staticCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
-				moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			if (exactCall.owner == "Array" && (exactCall.method == "map" || exactCall.method == "join")) {
@@ -3620,9 +3619,11 @@ class EmitterStage {
 				// - the member is known as an instance method in the current module, and
 				// - the receiver is not a type-path/static reference.
 				switch (callee) {
-					case EField(obj, field) if (stage3HasArity(field, arityByIdentRaw)
-						&& hasCurrentInstanceMethod(field)
-						&& !isTypePathExpr(obj)):
+					case EField(obj, field)
+						if (staticCall == null
+							&& stage3HasArity(field, arityByIdentRaw)
+							&& hasCurrentInstanceMethod(field)
+							&& !isTypePathExpr(obj)):
 						final loweredField = ocamlValueIdent(field);
 						var signature = callSigForStage3(loweredField, callSigByCalleeRaw);
 						if (signature == null)
@@ -3680,10 +3681,10 @@ class EmitterStage {
 				// Method receiver, arity, and argument-recovery facts belong to that method
 				// and must never change a call through the selected local binding.
 				final isLocalCall = switch (callee) {
-					case EIdent(name): stage3HasLocalValueIdent(name);
+					case EIdent(name): staticCall == null && stage3HasLocalValueIdent(name);
 					case _: false;
 				};
-				final instanceCallName = switch (callee) {
+				final instanceCallName = staticCall != null ? null : switch (callee) {
 					case EIdent(name) if (!isLocalCall && hasCurrentInstanceMethod(name)):
 						name;
 					case EField(EThis, name) if (hasCurrentInstanceMethod(name)):
@@ -3720,6 +3721,13 @@ class EmitterStage {
 					&& currentTypedInitializer == null
 					&& currentCallableFunction.staticCallee(callee) != null) {
 					callableDeclarationReference(currentCallableFunction.staticCallee(callee));
+				} else if (staticCall != null) {
+					// A nested type is not a value field of its containing module.
+					// Use the declaration selected by typing after builtin handling,
+					// then retain the ordinary argument conversion and arity plan.
+					final ownerModule = ocamlModuleNameFromTypePath(staticCall.owner);
+					final method = ocamlValueIdent(staticCall.method);
+					ownerModule == currentOcamlModuleName ? method : ownerModule + "." + method;
 				} else {
 					exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				};
