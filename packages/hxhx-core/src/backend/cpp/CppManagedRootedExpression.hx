@@ -1158,7 +1158,7 @@ class CppManagedRootedExpression {
 						input.statics.assertInitializer(projection);
 						if (occurrence.getField().getIsInline())
 							input.statics.inlineInitializer(occurrence);
-						else
+						else if (input.statics.constantValue(occurrence) == null)
 							input.statics.member(occurrence);
 					} else {
 						if (input.classes == null)
@@ -1172,8 +1172,15 @@ class CppManagedRootedExpression {
 		};
 	}
 
-	function staticRead(field:TypedBackendFieldOccurrence):String
-		return input.heap + ".requireStatic<" + input.statics.nativeName + ">()->" + input.statics.member(field) + ".read()";
+	function staticRead(field:TypedBackendFieldOccurrence):String {
+		final constant = input.statics.constantValue(field);
+		return constant == null ? input.heap
+			+ ".requireStatic<"
+			+ input.statics.nativeName
+			+ ">()->"
+			+ input.statics.member(field)
+			+ ".read()" : constant;
+	}
 
 	/** Resolve the applied receiver through exact expressions or lexical receiver facts, never field-owner spelling. */
 	function instanceMember(field:TypedBackendFieldOccurrence):backend.cpp.CppManagedClassStorage.CppManagedInstanceMember {

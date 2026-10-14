@@ -176,7 +176,7 @@ class CppManagedLocalAccess {
 				storage.assertFunction(projection);
 			if (field.getField().getIsInline())
 				storage.inlineInitializer(field);
-			else
+			else if (storage.constantValue(field) == null)
 				storage.member(field);
 		} else {
 			if (classes == null)

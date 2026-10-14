@@ -35,6 +35,8 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/cpp/CppManagedProgramPlan.hx",
   // Static storage joins selected field declarations to one traced program payload.
   "packages/hxhx-core/src/backend/cpp/CppManagedStaticStorage.hx",
+  // Math constants validate exact extern field ownership before selecting native Float values.
+  "packages/hxhx-core/src/backend/cpp/CppManagedMathConstant.hx",
   // Instance storage validates exact owners before selecting constructor bodies and traced field layouts.
   "packages/hxhx-core/src/backend/cpp/CppManagedClassStorage.hx",
   // Extracted layout planning validates applied field identities and returns defensive layout copies.

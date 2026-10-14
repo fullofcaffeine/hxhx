@@ -1,3 +1,5 @@
+test/m14_cpp_math_constant_test.hxml
+--next
 test/m14_cpp_float_literal_integration_test.hxml
 --next
 test/m14_cpp_enum_constructor_ownership_test.hxml

@@ -129,6 +129,10 @@ class CppManagedStaticStorage {
 		throw "managed inline field lacks its typed initializer";
 	}
 
+	/** Standard extern constants have values but no mutable program slot. */
+	public function constantValue(occurrence:TypedBackendFieldOccurrence):Null<String>
+		return CppManagedMathConstant.render(program, occurrence);
+
 	/** Validate declaration facts before selecting a native slot; no source spelling selects an owner. */
 	public function member(occurrence:TypedBackendFieldOccurrence, writing:Bool = false):String {
 		program.assertCurrent();
