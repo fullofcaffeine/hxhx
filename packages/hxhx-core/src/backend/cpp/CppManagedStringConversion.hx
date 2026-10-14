@@ -1,6 +1,6 @@
 package backend.cpp;
 
-/** Haxe-owned text conversion for exact primitive values; object and Float policies remain separate. */
+/** Exact primitive text operations remain distinct from the standard Dynamic conversion. */
 function requireType(type:TyType):Void {
 	if (type.isNullLiteral())
 		return;
@@ -43,8 +43,8 @@ function format(type:TyType, read:String):String {
 /**
 	Declare formatted bytes for one already rooted value. Both standard string
 	conversion and Sys output preserve runtime tags at an authored Dynamic boundary.
-	Only the existing primitive alternatives are admitted; unsupported tags fail
-	before writing bytes. Aggregate formatting remains owned by haxe_ocaml-hcnk8.
+	Unsupported tags fail before writing bytes. The standard-string dispatch owns
+	the reviewed Float spelling and aggregate conversion as separate operations.
  */
 function render(type:TyType, read:String, result:String):Array<String> {
 	CppManagedClosureAbi.assertComplete(type);

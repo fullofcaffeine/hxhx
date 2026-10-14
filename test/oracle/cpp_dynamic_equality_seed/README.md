@@ -32,10 +32,11 @@ Run the complete candidate regression with:
 haxe test/m14_cpp_dynamic_equality_test.hxml
 ```
 
-This regression remains incomplete. The candidate currently rejects a bare
-static method value before emitting comparisons. Method selection and receiver
-identity have existing tracked owners. Generic enum comparison also remains
-unfinished. The temporary runtime diagnostic for enums does not count as parity.
+The candidate supports the original matrix, including stored methods and enum
+payload comparison. The [payload fixture](enum_payload/README.md) adds asymmetric
+conversion, user conversion effects, numeric text and exception checks.
+The upstream enum/null crash below remains an explicit unsupported boundary.
+Passing these programs does not establish complete C++ or release readiness.
 
 The supporting command below exercises authored comparison functions with native
 values, forced collection, and address/undefined-behavior sanitizers at O0 and O2.

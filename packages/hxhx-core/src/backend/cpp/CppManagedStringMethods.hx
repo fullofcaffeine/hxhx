@@ -11,7 +11,7 @@ private typedef ManagedStringCase = {
 
 /**
 	Retain implicit toString calls before the program freezes its reachable bodies.
-	Std.string receives erased values, so each reached allocation selects its most
+	Std.string and enum payload comparison receive erased values, so each reached allocation selects its most
 	derived declaration through the shared class graph. Native code only dispatches
 	on the descriptor chosen by that allocation. This plan does not invent source
 	call occurrences, copy method bodies, or treat an unknown layout as printable.
@@ -28,7 +28,7 @@ class CppManagedStringMethods {
 		this.classes = classes;
 	}
 
-	/** Only an admitted standard declaration enables this implicit call family. */
+	/** An admitted standard conversion or erased equality enables this implicit call family. */
 	public function enable():Void {
 		if (sealed)
 			throw "managed string conversion discovered after reachability was sealed";
@@ -128,6 +128,9 @@ class CppManagedStringMethods {
 		lines.push('    throw std::invalid_argument("managed string conversion received an unplanned instance descriptor");');
 		lines.push("  }");
 		lines.push("  if (hxhx::managed::formatAggregateString(heap, value.get(), result, &hxhx_standard_string)) return;");
+		lines.push("  if (value.get().kind() == hxhx::managed::ValueKind::Float) {");
+		lines.push("    result.set(hxhx::managed::Value::string(hxhx::managed::formatFloatString(value.get().asFloat())));");
+		lines.push("    return;\n  }");
 		for (line in CppManagedStringConversion.render(TyType.fromHintText("Dynamic"), "value.get()", "bytes"))
 			lines.push("  " + line);
 		lines.push("  result.set(hxhx::managed::Value::string(bytes));\n}");

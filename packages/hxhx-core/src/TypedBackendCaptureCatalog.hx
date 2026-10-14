@@ -236,6 +236,51 @@ class TypedBackendCaptureCatalog {
 		return null;
 	}
 
+	/**
+		Observe operand types for implicit-call discovery before a target seals its
+		reachable methods. This query grants no expression emission authority and
+		visits lowered nested functions and initializer steps without exposing trees.
+	 */
+	public function hasBinaryOperation(select:(String, TyType, TyType) -> Bool):Bool {
+		assertCurrent();
+		function expression(node:TypedExpr):Bool {
+			if (node.getTag() == MacroExpr || node.getTag() == MacroType)
+				return false;
+			final children = node.getExpressions();
+			if (node.getTag() == Binary
+				&& children.length == 2
+				&& select(node.getTexts()[0], children[0].getType(), children[1].getType()))
+				return true;
+			for (child in children)
+				if (expression(child))
+					return true;
+			return false;
+		}
+		function statement(node:TypedStmt):Bool {
+			for (value in node.getExpressions())
+				if (expression(value))
+					return true;
+			for (child in node.getStatements())
+				if (statement(child))
+					return true;
+			return false;
+		}
+		switch owner {
+			case FunctionBody(_, lowered, _):
+				for (value in lowered.getDefaults())
+					if (expression(value.getExpression()))
+						return true;
+				for (value in lowered.getBody().getStatements())
+					if (statement(value))
+						return true;
+			case FieldInitializer(_, lowered, _):
+				for (value in initializerEntries(lowered))
+					if (expression(value))
+						return true;
+		}
+		return false;
+	}
+
 	public function getPlan():TypedCapturePlan {
 		assertCurrent();
 		return plan;

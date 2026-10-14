@@ -106,6 +106,11 @@ class CppManagedProgramPlan {
 		// Initializers own their catalogs. Follow their dependencies without
 		// borrowing the constructor's or a synthetic method's expression facts.
 		function enqueueInitializer(initializer:TypedBackendFieldInitializerProjection, ?application:CppManagedInitializerApplication):Void {
+			if (initializer.requireCaptureCatalog()
+				.hasBinaryOperation((op, left,
+						right) -> CppManagedDynamicEquality.selects(op, application == null ? left : application.resolveStorageType(left),
+						application == null ? right : application.resolveStorageType(right), classes.casts)))
+				classes.strings.enable();
 			for (occurrence in initializer.requireCaptureCatalog().getCallableExpressions()) {
 				final method = CppManagedStaticCallable.declaration(occurrence.source);
 				if (method != null)
@@ -224,6 +229,12 @@ class CppManagedProgramPlan {
 				CppManagedRuntimeType.validate(selected.projection.getRuntimeTypeCatalog(), classes, enums,
 					CppManagedCallContext.fromFunction(applications.get(identity)));
 				sources.set(identity, selected.projection);
+				final application = applications.get(identity);
+				if (selected.projection.requireCaptureCatalog()
+					.hasBinaryOperation((op, left,
+							right) -> CppManagedDynamicEquality.selects(op, application == null ? left : application.resolveStorageType(left),
+							application == null ? right : application.resolveStorageType(right), classes.casts)))
+					classes.strings.enable();
 				for (occurrence in selected.projection.requireCaptureCatalog().getCallableExpressions()) {
 					final method = CppManagedStaticCallable.declaration(occurrence.source);
 					if (method != null)

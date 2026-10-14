@@ -72,6 +72,7 @@ class M14TypedBackendCaptureCatalogTest {
 	}
 
 	public static function run():Void {
+		binaryDiscovery();
 		callableAnnotations();
 		final source = "class Main { static function make():Int->Int { var calls = 0; function count(n:Int):Int { calls++; return n == 0 ? calls : count(n-1); } return count; } }";
 		final projected = projection(source);
@@ -223,6 +224,34 @@ class M14TypedBackendCaptureCatalogTest {
 			}, _ -> {});
 		check(replaced, "fixture did not replace the callable annotation");
 		rejected(() -> catalog.requireAscribedClosure(casts[2]), "annotation occurrences changed");
+	}
+
+	/** Implicit-call discovery reads exact typed operands, including nested bodies and field initializers. */
+	static function binaryDiscovery():Void {
+		final erased = (op:String, left:TyType, right:TyType) -> (op == "==" || op == "!=") && left.isDynamic() && right.isDynamic();
+		final integers = projection("class Main { static function same(a:Int,b:Int):Bool { return a == b; } }");
+		check(!integers.requireCaptureCatalog().hasBinaryOperation(erased), "integer equality acquired erased conversion effects");
+		final defaulted = projection("class Main { static function same(value:Bool = 1 == 1):Bool { return value; } }");
+		check(defaulted.requireCaptureCatalog()
+			.hasBinaryOperation((op, left, right) -> op == "=="
+				&& left.getSemanticKey() == "primitive:Int"
+				&& right.getSemanticKey() == "primitive:Int"),
+			"parameter default lost its binary operation");
+		final nested = projection("class Main { static function make(a:Dynamic,b:Dynamic):Void->Bool { return () -> a != b; } }");
+		final catalog = nested.requireCaptureCatalog();
+		check(catalog.hasBinaryOperation(erased), "nested erased comparison was absent from discovery");
+		check(!catalog.hasBinaryOperation((op, _, _) -> op == "=="), "discovery changed the selected operator");
+		nested.getBody().push(HxStmt.SReturn(HxExpr.EBool(false), HxPos.unknown()));
+		rejected(() -> catalog.hasBinaryOperation(erased), "projection");
+		nested.getBody().pop();
+		check(catalog.hasBinaryOperation(erased), "restored comparison lost its typed operands");
+		final text = "class Main { static var a:Dynamic = 1; static var b:Dynamic = 2; static var same:Bool = a == b; }";
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(text, "Main.hx"));
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final program = new backend.cpp.CppTypedProgramProjection(new MacroExpandedProgram([typed], false));
+		final owner = program.requireClass(program.requireClassIdentity("Main"));
+		final initializer = owner.getFieldInitializers().filter(value -> value.getField().getName() == "same")[0];
+		check(initializer.requireCaptureCatalog().hasBinaryOperation(erased), "field initializer lost erased comparison discovery");
 	}
 
 	static function main():Void

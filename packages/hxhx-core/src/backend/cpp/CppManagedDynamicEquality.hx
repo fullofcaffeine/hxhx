@@ -18,16 +18,20 @@ function selects(op:String, left:TyType, right:TyType, casts:Null<CppManagedCast
 }
 
 /** Both operands already occupy roots after once-only, left-to-right evaluation. */
-function compute(op:String, left:String, right:String, destination:String, indent:String):Array<String> {
+function compute(op:String, left:String, right:String, destination:String, indent:String, heap:String, conversion:String):Array<String> {
 	if (op != "==" && op != "!=")
 		throw "managed Dynamic comparison requires equality or inequality";
 	return [indent
 		+ destination
 		+ ".set(hxhx::managed::Value::boolean(hxhx::managed::dynamicEquality("
+		+ heap
+		+ ", "
 		+ left
 		+ ", "
 		+ right
 		+ ", "
 		+ (op == "!=" ? "true" : "false")
+		+ ", "
+		+ conversion
 		+ ")));"];
 }

@@ -11,6 +11,10 @@ class M14CppDynamicEqualityValuesTest {
 		});
 		final program = new backend.cpp.CppTypedProgramProjection(CppResolvedFixture.prepare(fixture));
 		final classes = new backend.cpp.CppManagedClassStorage(program);
+		classes.strings.enable();
+		if (classes.strings.discover().length != 0)
+			throw "parameter-only equality fixture unexpectedly needs instance conversion bodies";
+		classes.strings.seal();
 		final owner = program.requireClass(program.requireClassIdentity("Compare"));
 		final inputs:Array<backend.cpp.CppManagedProgramEmitter.CppManagedProgramFunction> = [
 			for (projection in owner.getFunctions()) {
@@ -32,7 +36,7 @@ class M14CppDynamicEqualityValuesTest {
 		final output = ".tmp/cpp-dynamic-equality-values";
 		sys.FileSystem.createDirectory(output);
 		new backend.cpp.CppManagedRuntime().publish(output);
-		sys.io.File.saveContent(output + "/Generated.hpp", '#include "ManagedCallable.hpp"\n' + classes.render() + "\n" + body);
+		sys.io.File.saveContent(output + "/Generated.hpp", '#include "ManagedString.hpp"\n' + classes.render() + "\n" + body);
 		program.assertCurrent();
 		CppManagedAssertionFixture.sanitizers(output, "CPP_DYNAMIC_EQUALITY_VALUES", "test/cpp_managed_heap/DynamicEqualityObserver.cpp", "Generated.hpp");
 		Sys.println("CPP_DYNAMIC_EQUALITY_VALUES:PASS");

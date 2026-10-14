@@ -16,6 +16,7 @@ class CppManagedAssertionFixture {
 				"-g",
 				"-fno-omit-frame-pointer",
 				"-fsanitize=address,undefined",
+				"-fno-sanitize-recover=all",
 				'-DHXHX_LOCAL_PROGRAM="' + programSource + '"',
 				'-DHXHX_UNASSIGNED_DIAGNOSTIC=""',
 				output + "/Observer.cpp",

@@ -6,6 +6,8 @@ test/m14_cpp_enum_constructor_ownership_test.hxml
 --next
 test/m14_cpp_enum_constructor_integration_test.hxml
 --next
+test/m14_cpp_enum_equality_test.hxml
+--next
 -cp packages/hxhx-core/src
 -cp packages/hxhx/src
 -cp test

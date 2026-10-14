@@ -16,7 +16,9 @@ a string conversion.
 
 This fixture proves primitive conversion only. The neighboring
 [instance contract](../cpp_object_string_seed/README.md) adds ordinary object
-conversion. Aggregate and generic object formatting, Float policy, and using the
-standard function as a stored callable remain unfinished under `haxe_ocaml-hcnk8`.
+conversion. The [enum comparison fixture](../cpp_dynamic_equality_seed/enum_payload/README.md)
+also checks native Float spelling and enum conversion. Complete aggregate and
+generic object formatting, plus using the standard function as a stored callable,
+remain tracked under `haxe_ocaml-hcnk8`.
 The combined package command includes the incomplete full comparison.
 README readiness estimates are unchanged.

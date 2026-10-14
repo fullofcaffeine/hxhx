@@ -753,8 +753,11 @@ class CppManagedRootedExpression {
 					lines.push(line);
 				for (line in render(right, b, indent + "  "))
 					lines.push(line);
-				final operation = erased ? CppManagedDynamicEquality.compute(op, a + '.get()', b + '.get()', destination,
-					indent + '  ') : opaqueInstances ? CppManagedReferenceEquality.computeOpaqueInstance(op, a + '.get()', b + '.get()', destination,
+				final operation = erased ? CppManagedDynamicEquality.compute(op, a + '.get()', b + '.get()', destination, indent + '  ', input.heap,
+					input.classes != null
+					&& input.classes.strings.isEnabled() ? '&hxhx_standard_string' : 'nullptr') : opaqueInstances ? CppManagedReferenceEquality.computeOpaqueInstance(op,
+						a
+						+ '.get()', b + '.get()', destination,
 						indent + '  ') : (callables || instances) ? CppManagedReferenceEquality.compute(op, a + '.get()', b + '.get()', destination,
 						indent + '  ') : booleans ? CppManagedBoolean.compare(op, leftType, rightType, a + '.get()', b + '.get()', destination,
 							indent + '  ') : classes ? CppManagedClassEquality.compute(op, a + '.get()', b + '.get()', destination,

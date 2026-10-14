@@ -33,9 +33,9 @@ function requireDeclaration(declaration:TyDeclarationInfo):Void {
 	Root the operand before conversion, including calls into authored toString methods.
 	The sealed program plan selects instance methods and preserves their null returns
 	and exceptions. Primitive alternatives retain their runtime tags and exact formatter.
-	Records and arrays use the owned aggregate formatter, which reads live values
-	between callbacks. Other tags reject until their formatting contract is implemented
-	under haxe_ocaml-hcnk8; Float still needs its separate review.
+	Records, arrays and enums use the owned aggregate formatter, which reads live
+	values between callbacks. Float uses the independently observed native spelling.
+	Other tags reject until their formatting contract is implemented under haxe_ocaml-hcnk8.
  */
 function render(declaration:TyDeclarationInfo, input:CppManagedSourceCallInput, indent:String):Array<String> {
 	requireDeclaration(declaration);
