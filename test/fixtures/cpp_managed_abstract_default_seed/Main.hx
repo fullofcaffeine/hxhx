@@ -7,6 +7,8 @@ class Main {
 	public static var nullable:Null<Count>;
 	public static var number:Count;
 	public static var seen:View<Int>;
+	public static var zeroFloat:Slot<Float>;
+	public static var zeroNullableFloat:Null<Slot<Float>>;
 
 	static function __init__():Void {
 		seen = absent;

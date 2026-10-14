@@ -21,3 +21,5 @@ haxe -cp /path/to/repository/test/fixtures/cpp_managed_abstract_default_seed -ma
 Compare stdout with `expected.stdout`.
 This contract covers defaults only. Abstract conversions and executable initializers require separate typed plans.
 README Goals status is unchanged.
+
+Float-backed generic abstracts use positive zero on the native C++ target. Nullable Float-backed storage keeps null. The native observer checks both representations.

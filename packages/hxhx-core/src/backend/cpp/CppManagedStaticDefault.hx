@@ -4,8 +4,9 @@ package backend.cpp;
 	Choose the native zero/null storage default from exact typed representation facts.
 	Static startup and missing Array elements share these C++ defaults.
 	Abstracts retain source identity but use their substituted backing type for
-	storage. This does not authorize implicit conversions, abstract operators, or
-	Float behavior. Nullable types preserve null even when their inner type is scalar.
+	storage. This does not authorize implicit conversions or abstract operators.
+	Concrete Float storage starts at positive zero, matching native C++ Haxe.
+	Nullable types preserve null even when their inner type is scalar.
 	The enclosing storage plan checks program revisions once before visiting fields.
  */
 function render(program:CppTypedProgramProjection, source:TyType):String {
@@ -16,6 +17,7 @@ function render(program:CppTypedProgramProjection, source:TyType):String {
 			return "hxhx::managed::Value{}";
 		return switch type.getSemanticKey() {
 			case "primitive:Int": "hxhx::managed::Value::integer(0)";
+			case "primitive:Float": "hxhx::managed::Value::floating(0.0)";
 			case "primitive:Bool": "hxhx::managed::Value::boolean(false)";
 			case "primitive:String": "hxhx::managed::Value{}";
 			case _:

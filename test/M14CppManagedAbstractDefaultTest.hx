@@ -12,7 +12,7 @@ class M14CppManagedAbstractDefaultTest {
 		// Malformed or unsupported facts must not silently become reference defaults.
 		for (control in [
 			{type: TyType.nominal(new TyNominalTypeId("Main.Slot"), []), message: "arity mismatch"},
-			{type: TyType.nominal(new TyNominalTypeId("Main.Slot"), [TyType.fromHintText("Float")]), message: "explicit type contract"}
+			{type: TyType.nominal(new TyNominalTypeId("Main.Slot"), [TyType.fromHintText("Void")]), message: "explicit type contract"}
 		]) {
 			var rejected = false;
 			try

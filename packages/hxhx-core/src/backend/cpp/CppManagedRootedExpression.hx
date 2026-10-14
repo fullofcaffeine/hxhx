@@ -439,6 +439,10 @@ class CppManagedRootedExpression {
 
 	/** Keep occurrence ownership in the declared view, then apply types at the storage boundary. */
 	function declaredValueType(value:HxExpr):TyType {
+		if (CppManagedFloatLiteral.value(value) != null) {
+			requireExpression(value);
+			return TyType.fromHintText("Float");
+		}
 		final enumCall = enumConstruction(value);
 		if (enumCall != null)
 			return enumCall.resultType;
@@ -565,6 +569,11 @@ class CppManagedRootedExpression {
 	public function render(value:HxExpr, destination:String, indent:String):Array<String> {
 		if (!identifier(destination))
 			throw "managed value emission requires a stable destination root";
+		final floating = CppManagedFloatLiteral.value(value);
+		if (floating != null) {
+			requireExpression(value);
+			return [indent + destination + ".set(" + CppManagedFloatLiteral.boxed(floating) + ");"];
+		}
 		final enumCall = enumConstruction(value);
 		if (enumCall != null)
 			return enumCall.render(input.heap, destination, render, indent);

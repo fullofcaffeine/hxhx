@@ -2,6 +2,7 @@
 #include "Main.cpp"
 #undef main
 #include <iostream>
+#include <cmath>
 #include <stdexcept>
 
 using namespace hxhx::managed;
@@ -15,6 +16,8 @@ static void observe(Heap& heap) {
       state->field_6.read().kind() != ValueKind::Null ||
       state->field_2.read().asBoolean() || state->field_3.read().asInteger() != 0 ||
       state->field_5.read().asInteger() != 0 ||
+      state->field_7.read().asFloat() != 0.0 || std::signbit(state->field_7.read().asFloat()) ||
+      state->field_8.read().kind() != ValueKind::Null ||
       heap.liveCount() != 1)
     throw std::runtime_error("abstract static default differs");
 }

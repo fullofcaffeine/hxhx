@@ -50,6 +50,15 @@ class Main {
 		return values[index] = value;
 	}
 
+	/** Native observers check concrete Float defaults without decimal formatting. */
+	static function readFloat(values:Array<Float>, index:Int):Float {
+		return values[index];
+	}
+
+	static function writeFloat(values:Array<Float>, index:Int, value:Float):Float {
+		return values[index] = value;
+	}
+
 	/** Both callbacks may collect; their ordering follows the native assignment contract. */
 	static function writeWithIndex(values:Array<Int>, index:Void->Int, value:Void->Int):Int {
 		return values[index()] = value();

@@ -3,6 +3,9 @@
 #include "ManagedHeap.hpp"
 #include <algorithm>
 #include <map>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 #include <string>
 #include <variant>
 #include <vector>
@@ -39,6 +42,17 @@ public:
   static Value boolean(bool value) { return Value(Storage(value)); }
   static Value integer(std::int32_t value) { return Value(Storage(value)); }
   static Value floating(double value) { return Value(Storage(value)); }
+  // Materialize the bits selected by the Haxe compiler without decimal parsing,
+  // aliasing violations, or arithmetic that could change a NaN payload.
+  static Value floatingBits(std::uint64_t bits) {
+    static_assert(sizeof(double) == sizeof(bits) && std::numeric_limits<double>::is_iec559 &&
+                  std::numeric_limits<double>::digits == 53 && std::numeric_limits<double>::max_exponent == 1024,
+                  "managed Float constants require IEEE binary64 storage");
+    double value;
+    std::memcpy(&value, &bits, sizeof(value));
+    return floating(value);
+  }
+
   static Value string(std::string value) { return Value(Storage(std::move(value))); }
   static Value managed(ErasedRef value) { return value ? Value(Storage(value)) : Value(); }
   template<class Payload> static Value managed(Ref<Payload> value) { return managed(ErasedRef(value)); }
