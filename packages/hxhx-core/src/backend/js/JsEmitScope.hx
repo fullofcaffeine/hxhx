@@ -5,6 +5,7 @@ typedef JsEmitScope = {
 	final resolveClassRef:String->Null<String>;
 	final resolveSuperClassRef:Void->Null<String>;
 	final ?runtimeTypes:JsRuntimeTypeScope;
+	final ?abstractValues:JsAbstractValueScope;
 
 	/** Exact retained enum declarations for target-owned quotation construction. */
 	final ?enumDeclarations:String->JsClassInheritancePlan.JsClassInheritanceNode;

@@ -2592,7 +2592,7 @@ class TyperStage {
 				} else if (whenFalse == null) {
 					TyType.fromHintText("Void");
 				} else {
-					final joined = TyConditionalResult.join(trueType, falseType);
+					final joined = TyConditionalResult.join(trueType, falseType, expectedResult, ctx.getIndex());
 					joined == null ? TyType.fromHintText("Dynamic") : joined;
 				}
 			case EThrow(value, sourcePosition):
@@ -3376,7 +3376,7 @@ class TyperStage {
 				inferExprType(cond, scope, ctx, pos);
 				final t1 = inferExprType(thenExpr, scope, ctx, pos, expectedResult);
 				final t2 = inferExprType(elseExpr, scope, ctx, pos, expectedResult);
-				final u = TyConditionalResult.join(t1, t2);
+				final u = TyConditionalResult.join(t1, t2, expectedResult, ctx.getIndex());
 				u == null ? TyType.fromHintText("Dynamic") : u;
 			case EAnon(names, values):
 				TypedAnonymousLiteral.infer({

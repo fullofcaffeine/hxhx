@@ -285,12 +285,23 @@ class CppManagedRootedExpression {
 
 	/** Finish collecting expression steps before returning the exact selected scalar transport. */
 	public function renderDirectReturn(value:HxExpr, nativeType:String, indent:String):Array<String> {
-		final abi = access.plan.requireFunction(access.owner).abi;
+		final functionPlan = access.plan.requireFunction(access.owner);
+		final abi = functionPlan.abi;
 		final type = abi.signature.getFunctionReturn();
+		final source = valueType(value);
 		if (abi.result != DirectResult
 			|| nativeType != abi.nativeReturnType()
-			|| !CppManagedValueTransfer.supports(type, valueType(value), input.casts))
-			throw "managed direct return requires its exact typed transport";
+			|| !CppManagedValueTransfer.supports(type, source, input.casts))
+			throw "managed direct return requires its exact typed transport: owner="
+				+ functionPlan.facts.identity
+				+ " source="
+				+ source.getSemanticKey()
+				+ " target="
+				+ type.getSemanticKey()
+				+ " native="
+				+ nativeType
+				+ " expectedNative="
+				+ abi.nativeReturnType();
 		final root = input.temporaryPrefix + "returned";
 		final lines = [
 			indent + "{",

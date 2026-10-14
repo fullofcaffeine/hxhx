@@ -669,6 +669,15 @@ class TypedBodyBuilder {
 		return [tryBody, typedCatches, continuation];
 	}
 
+	/** Keep a selected conversion inside its branch so unselected effects never execute. */
+	static function conditionalBranch(value:TypedExpr, result:TyType, resolver:Null<TypedExprTypeResolver>):TypedExpr {
+		return resolver == null
+			|| result.isUnknown()
+			|| result.isDynamic()
+			|| result.isVoid()
+			|| value.getType().isNoNormalCompletion() ? value : resolver.convertValue(value, result);
+	}
+
 	/**
 		Build one typed expression while replaying the local declarations recorded by
 		the typer.
@@ -777,18 +786,20 @@ class TypedBodyBuilder {
 				final typedCondition = buildExpr(condition, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.enterLexicalScope();
-				final typedTrue = buildExpr(whenTrue, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				final typedTrue = buildExpr(whenTrue, null, sourcePosition, environment, typeResolver, callResolver, memberResolver,
+					whenFalse == null ? null : expected);
 				if (environment != null)
 					environment.exitLexicalScope();
 				var typedFalse:Null<TypedExpr> = null;
 				if (whenFalse != null) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					typedFalse = buildExpr(whenFalse, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+					typedFalse = buildExpr(whenFalse, null, sourcePosition, environment, typeResolver, callResolver, memberResolver, expected);
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedExpr.sourceIf(typedCondition, typedTrue, typedFalse, nodeType, exactPosition(sourcePosition));
+				TypedExpr.sourceIf(typedCondition, conditionalBranch(typedTrue, nodeType, typeResolver),
+					typedFalse == null ? null : conditionalBranch(typedFalse, nodeType, typeResolver), nodeType, exactPosition(sourcePosition));
 			case EThrow(value, sourcePosition):
 				final typedValue = buildExpr(value, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.throwExpr(typedValue, exactPosition(sourcePosition));
@@ -1099,7 +1110,8 @@ class TypedBodyBuilder {
 				final typedCondition = buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedWhenTrue = buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
 				final typedWhenFalse = buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
-				TypedExpr.ternary(typedCondition, typedWhenTrue, typedWhenFalse, nodeType, position);
+				TypedExpr.ternary(typedCondition, conditionalBranch(typedWhenTrue, nodeType, typeResolver),
+					conditionalBranch(typedWhenFalse, nodeType, typeResolver), nodeType, position);
 			case EAnon(fieldNames, fieldValues):
 				final contexts = TypedAnonymousLiteral.fieldTypes(fieldNames, nodeType);
 				final children = buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, contexts);

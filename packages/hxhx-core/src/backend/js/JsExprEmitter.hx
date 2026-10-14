@@ -30,6 +30,7 @@ class JsExprEmitter {
 				return parent == null ? null : parent.resolveSuperClassRef();
 			},
 			runtimeTypes: parent == null ? null : parent.runtimeTypes,
+			abstractValues: parent == null ? null : parent.abstractValues,
 			enumDeclarations: parent == null ? null : parent.enumDeclarations,
 			methodUses: parent == null ? null : parent.methodUses,
 			lambdaUses: parent == null ? null : parent.lambdaUses,
@@ -60,8 +61,26 @@ class JsExprEmitter {
 			return emit(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);
 		}
 		final exactCall = TypedExactCallSource.decodeInstance(expr);
-		if (exactCall != null)
+		if (exactCall != null) {
+			if (scope != null && scope.abstractValues != null && scope.abstractValues.isAbstractOwner(exactCall.owner)) {
+				final occurrence = scope.abstractValues.requireCall(expr);
+				final reference = scope.abstractValues.methodReference(occurrence.getDeclaration());
+				if (reference != null) {
+					final call = occurrence.getCall();
+					// The record is private to the helper. Its backing value is evaluated
+					// once before call operands, including when that value is null.
+					return reference
+						+ ".prototype"
+						+ JsNameMangler.propertySuffix(call.method)
+						+ ".call({__hx_value: "
+						+ emit(call.receiver, scope)
+						+ "}"
+						+ (call.arguments.length == 0 ? "" : ", " + call.arguments.map(arg -> emitCallArg(arg, scope)).join(", "))
+						+ ")";
+				}
+			}
 			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
+		}
 		final exactEnumConstructor = TypedExactEnumConstructorSource.decode(expr);
 		if (exactEnumConstructor != null)
 			return emitExactEnumConstructor(exactEnumConstructor, scope);
@@ -143,6 +162,8 @@ class JsExprEmitter {
 			case EParenthesized(inner, _):
 				"(" + emit(inner, scope) + ")";
 			case ECast(inner, _) | ECheckType(inner, _):
+				// Shared typing already selected conversions. Public abstract values
+				// have their backing representation, so casts cannot extract object fields.
 				emit(inner, scope);
 			case EUntyped(inner):
 				emit(inner, scope);
@@ -157,7 +178,11 @@ class JsExprEmitter {
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				emitArrayComprehension(name, iterable, guardExpr, yieldExpr, scope);
 			case ENew(typePath, args):
-				emitNew(typePath, args, scope);
+				final reference = scope == null || scope.abstractValues == null ? null : scope.abstractValues.constructorReference(expr);
+				reference == null ? emitNew(typePath, args, scope) : reference
+				+ "("
+				+ args.map(arg -> emitCallArg(arg, scope)).join(", ")
+				+ ")";
 			case EUnsupported(raw):
 				unsupported("EUnsupported", raw);
 		}

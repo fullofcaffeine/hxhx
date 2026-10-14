@@ -15,6 +15,7 @@ private typedef JsClassUnit = {
 	final declarationRank:Int;
 	final interfaceRefs:Array<String>;
 	final runtimeTypes:JsRuntimeTypePlan;
+	final abstractValues:JsAbstractValuePlan;
 	final enumDeclarations:String->JsClassInheritancePlan.JsClassInheritanceNode;
 	final receiverPlan:JsClassInheritancePlan.JsClassInheritanceNode;
 	final jsRef:String;
@@ -71,6 +72,7 @@ class JsTargetCore implements ITargetCore {
 		final byFullName = new haxe.ds.StringMap<String>();
 		final inheritance = new JsClassInheritancePlan(program);
 		final runtimeTypes = new JsRuntimeTypePlan(program, inheritance);
+		final abstractValues = new JsAbstractValuePlan(program, inheritance);
 		var units = new Array<JsClassUnit>();
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
@@ -97,6 +99,7 @@ class JsTargetCore implements ITargetCore {
 					declarationRank: inheritance.declarationRank(classProjection),
 					interfaceRefs: inheritance.interfaceReferences(classProjection),
 					runtimeTypes: runtimeTypes,
+					abstractValues: abstractValues,
 					enumDeclarations: inheritance.requireRuntimeEnum,
 					receiverPlan: plan,
 					jsRef: jsRef,
@@ -540,6 +543,7 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitStaticFields(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
 		final staticScope = new JsFunctionScope(classRefs, staticRefs);
+		staticScope.setAbstractPlan(unit.abstractValues);
 		staticScope.setEnumDeclarations(unit.enumDeclarations);
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
@@ -602,6 +606,7 @@ class JsTargetCore implements ITargetCore {
 			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog(), functionProjection.getFieldReadCatalog(),
 				unit.runtimeTypes.forFunction(functionProjection), functionProjection.findMethodUse);
 			fnScope.setControlProjection(functionProjection);
+			fnScope.setAbstractPlan(unit.abstractValues);
 			fnScope.setEnumDeclarations(unit.enumDeclarations);
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
@@ -652,14 +657,23 @@ class JsTargetCore implements ITargetCore {
 			constructorProjection == null ? null : constructorProjection.findMethodUse);
 		if (constructorProjection != null)
 			scope.setControlProjection(constructorProjection);
+		scope.setAbstractPlan(unit.abstractValues);
 		scope.setReceiverPlan(unit.receiverPlan);
 		scope.setEnumDeclarations(unit.enumDeclarations);
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
 
-		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
+		final abstractReceiver = unit.receiverPlan.abstractReceiver ? scope.freshTemp("__hx_abstract_receiver") : null;
+		writer.writeln("var " + unit.jsRef + " = function(" + (abstractReceiver == null ? params.join(", ") : "") + ") {");
 		writer.pushIndent();
+		if (abstractReceiver != null) {
+			// The factory returns the backing value even when its authored body exits
+			// early. Forward original arguments to preserve omission and default effects.
+			writer.writeln("var " + abstractReceiver + " = {};");
+			writer.writeln("(function(" + params.join(", ") + ") {");
+			writer.pushIndent();
+		}
 		// Class identity belongs to the instance prototype so parent calls cannot overwrite it.
 		emitDefaultArgGuards(writer, args, params, scope);
 		emitInstanceFieldInitializers(writer, unit, scope);
@@ -675,6 +689,11 @@ class JsTargetCore implements ITargetCore {
 		} else if (superRef != null) {
 			// An omitted constructor forwards every supplied operand; the parent owns defaults.
 			writer.writeln(superRef + (ctor == null ? ".apply(this, arguments);" : ".call(this);"));
+		}
+		if (abstractReceiver != null) {
+			writer.popIndent();
+			writer.writeln("}).apply(" + abstractReceiver + ", arguments);");
+			writer.writeln("return " + abstractReceiver + ".__hx_value;");
 		}
 		writer.popIndent();
 		writer.writeln("};");
@@ -871,6 +890,7 @@ class JsTargetCore implements ITargetCore {
 			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog(),
 				functionProjection.getFieldReadCatalog(), unit.runtimeTypes.forFunction(functionProjection), functionProjection.findMethodUse);
 			fnScope.setControlProjection(functionProjection);
+			fnScope.setAbstractPlan(unit.abstractValues);
 			fnScope.setEnumDeclarations(unit.enumDeclarations);
 			fnScope.setReceiverPlan(unit.receiverPlan);
 			final args = HxFunctionDecl.getArgs(fn);

@@ -13,7 +13,7 @@ typedef JsClassInheritanceNode = {
 	/** Direct host paths emit no declaration and may be shared by several extern types. */
 	final usesHostPath:Bool;
 
-	/** The admitted abstract wrapper stores the source-level receiver in its backing slot. */
+	/** Internal abstract helpers read the source receiver from a private record; public values are erased. */
 	final abstractReceiver:Bool;
 
 	/** Enum-only declaration data, copied from exact checked facts before rendering. */

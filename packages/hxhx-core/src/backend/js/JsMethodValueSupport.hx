@@ -9,6 +9,20 @@ function emitValue(expression:HxExpr, scope:JsEmitScope):Null<String> {
 	final occurrence = scope == null || scope.methodUses == null ? null : scope.methodUses(expression);
 	if (occurrence == null || occurrence.getUse() != ValueRead)
 		return null;
+	final reference = scope.abstractValues == null ? null : scope.abstractValues.methodReference(occurrence.getDeclaration());
+	if (reference != null)
+		return switch expression {
+			case EField(receiver, _):
+				// Each abstract method read captures the current backing value. Unlike
+				// ordinary class methods, upstream does not cache this closure on it.
+				reference
+				+ ".prototype"
+				+ JsNameMangler.propertySuffix(occurrence.getDeclaration().getSignature().getName())
+				+ ".bind({__hx_value: "
+				+ JsExprEmitter.emit(receiver, scope)
+				+ "})";
+			case _: throw "JavaScript abstract method value lost its exact receiver";
+		};
 	return switch (expression) {
 		case EField(receiver, name): helperName()
 			+ "("

@@ -394,11 +394,11 @@ class TypedBackendFunctionProjection {
 		return null;
 	}
 
-	/** Consumers first verify lexical occurrence ownership, then request the retained type. */
+	/** Return retained cast types only while the original cast still belongs to this current body. */
 	public function findCast(expression:HxExpr):Null<TypedBackendCastOccurrence> {
 		for (entry in casts)
 			if (entry.getExpression() == expression) {
-				requireCaptureCatalog().assertCurrent();
+				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
 				return entry;
 			}

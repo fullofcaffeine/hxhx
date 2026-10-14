@@ -24,6 +24,14 @@ class JsFunctionScope {
 	var allocationScope:Null<JsFunctionScope> = null;
 	var initializerPrefix:String = "";
 	var enumDeclarations:Null<String->JsClassInheritancePlan.JsClassInheritanceNode>;
+	var abstractPlan:Null<JsAbstractValuePlan>;
+	var abstractValues:Null<JsAbstractValueScope>;
+
+	/** Initializers and nested closures keep their exact executable occurrence owner. */
+	public function setAbstractPlan(plan:JsAbstractValuePlan):Void {
+		abstractPlan = plan;
+		abstractValues = controlProjection == null ? null : plan.forFunction(controlProjection);
+	}
 
 	/** Share the program's admitted enum owners with every expression and nested initializer. */
 	public function setEnumDeclarations(resolve:String->JsClassInheritancePlan.JsClassInheritanceNode):Void {
@@ -36,11 +44,14 @@ class JsFunctionScope {
 		final child = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, null, projection.getLocalCatalog(), projection.getFieldReadCatalog(), types,
 			projection.findMethodUse);
 		final outer = parent.exprScope();
+		child.abstractPlan = parent.abstractPlan;
+		child.abstractValues = parent.abstractPlan == null ? null : parent.abstractPlan.forInitializer(projection);
 		child.parentScope = {
 			resolveLocal: outer.resolveLocal,
 			resolveClassRef: outer.resolveClassRef,
 			resolveSuperClassRef: outer.resolveSuperClassRef,
 			runtimeTypes: types,
+			abstractValues: child.abstractValues,
 			enumDeclarations: outer.enumDeclarations,
 			methodUses: projection.findMethodUse,
 			lambdaUses: projection.findLambda,
@@ -177,6 +188,7 @@ class JsFunctionScope {
 			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name),
 			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef(),
 			runtimeTypes: initializerTypes == null ? runtimeTypes : initializerTypes,
+			abstractValues: abstractValues != null ? abstractValues : parentScope == null ? null : parentScope.abstractValues,
 			enumDeclarations: enumDeclarations != null ? enumDeclarations : parentScope == null ? null : parentScope.enumDeclarations,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
 			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
