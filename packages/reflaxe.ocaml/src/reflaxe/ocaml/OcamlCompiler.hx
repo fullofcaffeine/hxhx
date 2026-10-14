@@ -528,7 +528,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				for (owner in moduleToClasses.get(moduleId) ?? [])
 					owner
 		];
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		final callbacks = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select(classes);
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		final callbacksById = [for (selected in callbacks) selected.calleeId => selected];
 		// A shared enum carrier describes a type. Only the exact method's producer
 		// evidence can authorize exporting that carrier as its function result.
@@ -552,6 +558,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return;
 			functionPlanRegistry.registerCallableDeclaration(declaration);
 		}
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_enum_observation_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		final observedEnumCallees:Map<String, Bool> = [];
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
@@ -575,6 +584,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 		functionPlanRegistry.finishNativeEnumResults();
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_enum_observation_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		profileLogLine("reflaxe.ocaml: callable_registration_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
 			if (classes == null)
@@ -592,6 +605,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					registerMethod(classType, field, false);
 			}
 		}
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_registration_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 	}
 
 	/** Builds and validates every admitted plan for one final typed function body. */
