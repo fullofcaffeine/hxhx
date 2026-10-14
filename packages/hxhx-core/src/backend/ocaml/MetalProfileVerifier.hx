@@ -207,13 +207,20 @@ class MetalProfileVerifier {
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "ESwitchRaw(" + summarizeRaw(raw) + ")",
 					"raw switch fallback nodes cannot guarantee native metal semantics", "use structured switch forms that type-check without fallback nodes");
 			case ECall(callee, args):
-				final reflectionCall = reflectionCallName(callee);
+				// Selection can retain an alias in the source callee. Classify the
+				// selected owner and visit only the original call operands, so the
+				// adapter's metadata cannot hide nested reflection calls.
+				final selected = TypedExactStaticCallSource.decode(expr);
+				final reflectionCall = selected == null ? reflectionCallName(callee) : switch (selected.owner) {
+					case "Reflect", "Type": selected.owner + "." + selected.method;
+					case _: null;
+				};
 				if (reflectionCall != null) {
 					addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, reflectionCall,
 						"reflection-driven calls prevent static specialization in metal mode", "replace reflection calls with static/typed APIs");
 				}
-				verifyExpr(filePath, className, fnName, stmtPos, callee, violations);
-				for (arg in args)
+				verifyExpr(filePath, className, fnName, stmtPos, selected == null ? callee : selected.callee, violations);
+				for (arg in (selected == null ? args : selected.arguments))
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);
 			case EReturn(value):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position return",
