@@ -5,7 +5,7 @@ import haxe.crypto.Sha256;
 import haxe.macro.Type;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
-import reflaxe.ocaml.lowered.OcamlCallableProgramSelection.OcamlCallableMethodSelection;
+import reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.OcamlCallableMethodSelection;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation;
 import reflaxe.ocaml.lowered.OcamlCallableViewRepresentation.OcamlCallableViewDescriptor;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion;

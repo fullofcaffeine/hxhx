@@ -7,19 +7,8 @@ import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
-
-/**
-	A candidate method whose callback uses stay within the supplied typed program.
-
-	This is pre-emission selection, not permission to change a calling convention.
-	The declaration catalog and final-body sealer must still agree on each
-	parameter, result, local, and source occurrence before syntax consumes a view.
-**/
-typedef OcamlCallableMethodSelection = {
-	final calleeId:String;
-	final fieldName:String;
-	final signature:OcamlGenericValueShape;
-};
+import reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.OcamlCallableMethodSelection;
+import reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.needsBoundary;
 
 /** Host objects remain private to the typed-program scan and never enter a stored plan. */
 private typedef Candidate = {
@@ -254,32 +243,17 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 		if (candidate.usesViews && candidate.signature == null)
 			candidate.rejected = true;
 	}
-	if (hasUnresolvedClassValue)
+	return reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.select([
 		for (candidate in candidates)
-			if (needsBoundary(candidate.signature))
-				candidate.rejected = true;
-	final pending = [for (candidate in candidates) if (candidate.rejected) candidate.id];
-	while (pending.length > 0) {
-		final id = pending.pop();
-		if (id == null)
-			break;
-		final candidate = candidates.get(id);
-		if (candidate == null)
-			throw "reflaxe.ocaml [callback-program:missing-method]: rejection lost its typed declaration";
-		for (dependency in candidate.dependencies) {
-			final other = candidates.get(dependency);
-			if (other != null && !other.rejected) {
-				other.rejected = true;
-				pending.push(dependency);
+			{
+				id: candidate.id,
+				fieldName: candidate.fieldName,
+				signature: candidate.signature,
+				dependencies: candidate.dependencies,
+				rejected: candidate.rejected,
+				usesViews: candidate.usesViews
 			}
-		}
-	}
-	final selected:Array<OcamlCallableMethodSelection> = [];
-	for (candidate in candidates)
-		if (candidate.usesViews && !candidate.rejected && candidate.signature != null)
-			selected.push({calleeId: candidate.id, fieldName: candidate.fieldName, signature: candidate.signature});
-	selected.sort((left, right) -> Reflect.compare(left.calleeId, right.calleeId));
-	return selected;
+	], hasUnresolvedClassValue);
 }
 
 private function unwrap(expression:TypedExpr):TypedExpr {
@@ -307,19 +281,6 @@ private function isClassValue(type:Type):Bool {
 private function isLocalOrLiteral(expression:TypedExpr):Bool {
 	return switch (unwrap(expression).expr) {
 		case TLocal(_), TFunction(_), TCall(_, _): true;
-		case _: false;
-	};
-}
-
-private function needsBoundary(shape:Null<OcamlGenericValueShape>):Bool {
-	function callback(value:OcamlGenericValueShape):Bool {
-		return switch (value) {
-			case FunctionValue(_, _): true;
-			case _: false;
-		};
-	}
-	return switch (shape) {
-		case FunctionValue(arguments, result): callback(result) || Lambda.exists(arguments, callback);
 		case _: false;
 	};
 }
