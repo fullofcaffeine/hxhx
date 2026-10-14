@@ -381,14 +381,8 @@ class TypedBackendFunctionProjection {
 		source.assertParsedBodyCurrent();
 		for (entry in methods)
 			if (entry.getExpression() == expression) {
+				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
-				var present = false;
-				TypedBackendSourceWalk.functionDeclaration(declaration, node -> {
-					if (node == expression)
-						present = true;
-				}, _ -> {});
-				if (!present)
-					throw "method occurrence is absent from the current function projection";
 				return entry;
 			}
 		return null;

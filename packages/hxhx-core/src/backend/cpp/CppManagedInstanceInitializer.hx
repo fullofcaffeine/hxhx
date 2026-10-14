@@ -35,6 +35,7 @@ function render(input:CppManagedFunctionEmissionInput, application:CppManagedIni
 		} : resolve,
 		resolveStatic: input.resolveStatic,
 		statics: input.statics,
+		boundCallables: input.boundCallables,
 		casts: input.casts,
 		classes: input.classes,
 		enums: input.enums,

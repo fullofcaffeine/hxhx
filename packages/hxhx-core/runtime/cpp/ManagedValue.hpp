@@ -174,6 +174,11 @@ struct InstanceDescriptor {
 class InstancePayload {
   const InstanceDescriptor* instanceDescriptor_;
   std::vector<Value> fields_;
+  // Haxe selects one static token per applied callable entry. The receiver owns
+  // these values so repeated reads preserve identity without global roots.
+  // Callable environments trace back to this instance; the heap collects the
+  // entire cycle when neither the receiver nor a stored callable is reachable.
+  std::map<const void*, Value> boundCallables_;
   void requireOwner(const ClassDescriptor& owner) const {
     if (!hasOwner(owner)) throw std::invalid_argument("instance field belongs to another layout");
   }
@@ -203,6 +208,18 @@ public:
   }
   void trace(Visitor& visitor) const noexcept {
     for (const auto& value : fields_) value.trace(visitor);
+    for (const auto& entry : boundCallables_) entry.second.trace(visitor);
+  }
+  Value boundCallable(const void* key) const {
+    if (key == nullptr) throw std::invalid_argument("bound callable requires a selected token");
+    const auto found = boundCallables_.find(key);
+    return found == boundCallables_.end() ? Value() : found->second;
+  }
+  void storeBoundCallable(const void* key, Value value) {
+    if (key == nullptr || value.kind() != ValueKind::Managed)
+      throw std::invalid_argument("bound callable requires a selected token and managed value");
+    if (!boundCallables_.emplace(key, std::move(value)).second)
+      throw std::logic_error("bound callable slot is already initialized");
   }
 };
 

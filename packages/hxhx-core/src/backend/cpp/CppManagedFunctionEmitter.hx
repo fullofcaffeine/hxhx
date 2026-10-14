@@ -13,6 +13,7 @@ typedef CppManagedFunctionEmissionInput = {
 	final ?application:CppManagedFunctionApplication;
 	final ?resolveStatic:String->CppManagedStaticTarget;
 	final ?statics:CppManagedStaticStorage;
+	final ?boundCallables:CppManagedBoundCallable;
 	final ?recordStack:Bool;
 	final ?casts:CppManagedCastPlan;
 	final ?classes:CppManagedClassStorage;
@@ -116,6 +117,7 @@ class CppManagedFunctionEmitter {
 				resolve: requireLink,
 				resolveStatic: input.resolveStatic,
 				statics: input.statics,
+				boundCallables: input.boundCallables,
 				casts: input.casts,
 				classes: input.classes,
 				enums: input.enums,

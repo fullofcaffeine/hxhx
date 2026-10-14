@@ -82,7 +82,8 @@ class CppManagedInitializerFunctions {
 				enums: input.enums,
 				defaultValue: input.defaultValue,
 				resolveConstructor: input.resolveConstructor,
-				resolveInstance: input.resolveInstance
+				resolveInstance: input.resolveInstance,
+				boundCallables: input.boundCallables
 			});
 			lines.push("inline " + CppManagedEntrySignature.render(abi, link.entrySymbol) + " {");
 			lines.push("  (void)hxhx_heap; (void)hxhx_environment;");

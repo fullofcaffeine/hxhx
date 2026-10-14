@@ -32,6 +32,7 @@ typedef CppManagedRootedExpressionInput = {
 	final resolve:HxExpr->CppManagedClosureLink;
 	final ?resolveStatic:String->CppManagedStaticTarget;
 	final ?statics:CppManagedStaticStorage;
+	final ?boundCallables:CppManagedBoundCallable;
 	final ?casts:CppManagedCastPlan;
 	final ?classes:CppManagedClassStorage;
 	final ?enums:CppManagedEnumDescriptors;
@@ -114,6 +115,17 @@ class CppManagedRootedExpression {
 			case CallableBody(selected): selected.instanceCall(expression);
 			case FieldInitializer(projection): projection.findInstanceCall(expression);
 		};
+	}
+
+	/** Stored methods use their selected occurrence instead of anonymous-record field lookup. */
+	function methodValue(expression:HxExpr):Null<TypedBackendMethodOccurrence> {
+		if (!expression.match(EField(_, _)))
+			return null;
+		final occurrence = switch input.owner {
+			case CallableBody(selected): selected.methodValue(expression);
+			case FieldInitializer(projection): projection.findMethodUse(expression);
+		};
+		return occurrence != null && occurrence.getUse() == ValueRead ? occurrence : null;
 	}
 
 	/** Implicit conversions retain typing's guarantee; authored casts need the exact target plan. */
@@ -415,6 +427,12 @@ class CppManagedRootedExpression {
 
 	/** Keep occurrence ownership in the declared view, then apply types at the storage boundary. */
 	function declaredValueType(value:HxExpr):TyType {
+		final bound = methodValue(value);
+		if (bound != null) {
+			requireClassOperation(value);
+			input.classes.methods.bound.application(bound, input.callContext);
+			return bound.getCallableType();
+		}
 		final method = staticCallable(value);
 		if (method != null) {
 			CppManagedStaticCallable.requireTarget(method, input.resolveStatic);
@@ -532,6 +550,20 @@ class CppManagedRootedExpression {
 	public function render(value:HxExpr, destination:String, indent:String):Array<String> {
 		if (!identifier(destination))
 			throw "managed value emission requires a stable destination root";
+		final bound = methodValue(value);
+		if (bound != null) {
+			requireClassOperation(value);
+			if (input.boundCallables == null)
+				throw "managed method value requires its program callable inventory";
+			return input.boundCallables.renderValue({
+				occurrence: bound,
+				context: input.callContext,
+				heap: input.heap,
+				destination: destination,
+				prefix: input.temporaryPrefix,
+				renderValue: render
+			}, indent);
+		}
 		final method = staticCallable(value);
 		if (method != null)
 			return CppManagedStaticCallable.renderValue(method, input.resolveStatic, input.statics, input.heap, destination, indent);

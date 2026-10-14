@@ -16,6 +16,8 @@ class TypedBackendMethodOccurrence {
 	final expression:HxExpr;
 	final declaration:TyDeclarationInfo;
 	final use:TypedMethodUse;
+	final receiverType:TyType;
+	final callableType:TyType;
 	final fingerprint:String;
 
 	public function new(input:{
@@ -50,6 +52,8 @@ class TypedBackendMethodOccurrence {
 		expression = input.expression;
 		declaration = selected;
 		use = input.use;
+		receiverType = input.source.getExpressions()[0].getType();
+		callableType = input.source.getType();
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 
@@ -61,6 +65,13 @@ class TypedBackendMethodOccurrence {
 
 	public function getUse():TypedMethodUse
 		return use;
+
+	/** Preserve typing's receiver application and callable contract without reconstructing source hints. */
+	public function getReceiverType():TyType
+		return receiverType;
+
+	public function getCallableType():TyType
+		return callableType;
 
 	/** The executable owner also verifies that this exact object remains in its body. */
 	public function assertCurrent(expectedOwner:String, expectedRevision:String):Void {

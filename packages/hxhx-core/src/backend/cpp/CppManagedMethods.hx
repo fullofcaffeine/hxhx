@@ -29,6 +29,8 @@ private typedef ManagedCallOwner = {
 	while preserving Base<Int>'s checked parameter and result types.
  */
 class CppManagedMethods {
+	public final bound:CppManagedBoundMethods;
+
 	final program:CppTypedProgramProjection;
 	final classes:CppManagedClassStorage;
 	final instanceOwners = new haxe.ds.ObjectMap<TypedBackendInstanceCallOccurrence, ManagedCallOwner>();
@@ -40,6 +42,7 @@ class CppManagedMethods {
 	function new(program:CppTypedProgramProjection, classes:CppManagedClassStorage) {
 		this.program = program;
 		this.classes = classes;
+		bound = new CppManagedBoundMethods(program, classes, this);
 	}
 
 	/** Only a validated constructor application may add a reachable allocation. */
@@ -96,6 +99,7 @@ class CppManagedMethods {
 
 	/** Ordinary entries use their declaring class view; the Value retains the actual allocated descriptor. */
 	@:allow(backend.cpp.CppManagedStringMethods)
+	@:allow(backend.cpp.CppManagedBoundMethods)
 	function ordinaryMethodApplication(projection:TypedBackendFunctionProjection, receiver:TyType, ?validate:Void->Void):CppManagedFunctionApplication {
 		assertInstanceMethod(projection);
 		final declaration = projection.requireSemanticDeclaration();
@@ -155,7 +159,12 @@ class CppManagedMethods {
 					{descriptor: entry.descriptor, application: entry.application}
 			];
 		}
-		final receiverType = appliedCallType(call.getReceiverType(), context);
+		return dispatchApplication(selected, appliedCallType(call.getReceiverType(), context));
+	}
+
+	/** Calls and stored methods share the same allocation-driven override selection. */
+	@:allow(backend.cpp.CppManagedBoundMethods)
+	function dispatchApplication(selected:CppManagedFunctionApplication, receiverType:TyType):Array<CppManagedInstanceDispatchCase> {
 		final names = [for (name in allocations.keys()) name];
 		names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
 		final cases = new Array<CppManagedInstanceDispatchCase>();
@@ -176,7 +185,7 @@ class CppManagedMethods {
 					.filter(fn -> !fn.requireSemanticDeclaration().getIsStatic()
 						&& fn.requireSemanticDeclaration()
 							.getSignature()
-							.getName() == call.getDeclaration()
+							.getName() == selected.projection.requireSemanticDeclaration()
 							.getSignature()
 							.getName());
 				if (matches.length > 1)

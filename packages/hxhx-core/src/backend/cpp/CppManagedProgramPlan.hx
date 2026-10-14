@@ -65,6 +65,7 @@ class CppManagedProgramPlan {
 		final pending = [entry.getStableIdentity()];
 		final applications = new haxe.ds.StringMap<CppManagedFunctionApplication>();
 		final instanceCalls = new Array<backend.cpp.CppManagedMethods.CppManagedMethodUse>();
+		final boundValues = new Array<backend.cpp.CppManagedBoundMethods.CppManagedBoundMethodUse>();
 		// A declaration can have several concrete entries. Keep the authored owner
 		// once, while reachability and symbols distinguish its applied storage.
 		function enqueueApplication(application:CppManagedFunctionApplication):Void {
@@ -91,6 +92,17 @@ class CppManagedProgramPlan {
 				.length == 0)
 				instanceCalls.push({call: call, context: context});
 		}
+		function enqueueBound(occurrence:Null<TypedBackendMethodOccurrence>, context:Null<CppManagedEnclosingApplication>):Void {
+			if (occurrence == null)
+				return;
+			final application = classes.methods.bound.application(occurrence, context);
+			if (application.projection.requireSemanticDeclaration().getHasBody())
+				enqueueApplication(application);
+			if (boundValues.filter(use -> use.occurrence == occurrence
+				&& CppManagedCallContext.identity(use.context) == CppManagedCallContext.identity(context))
+				.length == 0)
+				boundValues.push({occurrence: occurrence, context: context});
+		}
 		// Initializers own their catalogs. Follow their dependencies without
 		// borrowing the constructor's or a synthetic method's expression facts.
 		function enqueueInitializer(initializer:TypedBackendFieldInitializerProjection, ?application:CppManagedInitializerApplication):Void {
@@ -104,6 +116,7 @@ class CppManagedProgramPlan {
 				enqueueApplication(classes.constructorApplication(initializer.requireConstructor(occurrence.getExpression()),
 					CppManagedCallContext.fromInitializer(application)));
 			TypedBackendSourceWalk.expression(initializer.getExpression(), expression -> {
+				enqueueBound(classes.methods.bound.initializerValue(initializer, expression), CppManagedCallContext.fromInitializer(application));
 				final instance = classes.methods.initializerInstanceCall(initializer, expression);
 				if (instance != null
 					&& !CppManagedArrayPush.selects(instance)
@@ -222,6 +235,8 @@ class CppManagedProgramPlan {
 					enqueueApplication(classes.constructorApplication(selected.projection.requireConstructor(occurrence.getExpression()),
 						CppManagedCallContext.fromFunction(applications.get(identity))));
 				TypedBackendSourceWalk.functionDeclaration(selected.projection.getDeclaration(), expression -> {
+					enqueueBound(classes.methods.bound.functionValue(selected.projection, expression),
+						CppManagedCallContext.fromFunction(applications.get(identity)));
 					final instance = classes.methods.functionInstanceCall(selected.projection, expression);
 					if (instance != null
 						&& !CppManagedArrayPush.selects(instance)
@@ -245,9 +260,13 @@ class CppManagedProgramPlan {
 					for (entry in cases)
 						enqueueApplication(entry.application);
 			}
+			for (use in boundValues)
+				for (entry in classes.methods.bound.dispatch(use.occurrence, use.context))
+					enqueueApplication(entry.application);
 			if (pending.length == previous)
 				break;
 		}
+		classes.methods.bound.seal(boundValues);
 		classes.methods.sealInstanceDispatch(instanceCalls);
 		classes.strings.seal();
 		final identities = [for (identity in sources.keys()) identity];

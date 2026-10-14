@@ -29,6 +29,7 @@ class CppManagedProgramEmitter {
 	final defaultValue:Null<TyType->String>;
 	final constructors = new haxe.ds.StringMap<CppManagedConstructorTarget>();
 	final instanceMethods = new haxe.ds.StringMap<CppManagedInstanceMethodEntry>();
+	final boundCallables:Null<CppManagedBoundCallable>;
 
 	public function new(program:{
 		functions:Array<CppManagedProgramFunction>,
@@ -50,6 +51,7 @@ class CppManagedProgramEmitter {
 		statics = program.statics;
 		casts = program.casts;
 		classes = program.classes;
+		boundCallables = classes == null ? null : new CppManagedBoundCallable(classes, identity -> instanceMethods.get(identity));
 		enums = program.enums;
 		defaultValue = program.defaultValue;
 		if (inputs == null || inputs.length == 0)
@@ -151,6 +153,7 @@ class CppManagedProgramEmitter {
 				symbolPrefix: input.symbolPrefix,
 				resolveStatic: resolve,
 				statics: statics,
+				boundCallables: boundCallables,
 				recordStack: program.recordStack,
 				casts: casts,
 				classes: classes,
@@ -208,6 +211,7 @@ class CppManagedProgramEmitter {
 		return try CppManagedInitializerEmitter.render({
 			projection: projection,
 			statics: statics,
+			boundCallables: boundCallables,
 			symbol: symbol,
 			resolveStatic: resolve,
 			casts: casts,
@@ -230,6 +234,8 @@ class CppManagedProgramEmitter {
 			lines.push(fn.rootDeclaration());
 		if (classes != null)
 			lines.push(classes.strings.render(application -> instanceMethods.get(application.identity)));
+		if (boundCallables != null)
+			lines.push(boundCallables.render());
 		if (statics != null)
 			for (declaration in statics.getCallables())
 				lines.push(CppManagedStaticCallable.renderEntry(resolve(declaration.getIdentity().getCanonicalKey()), statics));

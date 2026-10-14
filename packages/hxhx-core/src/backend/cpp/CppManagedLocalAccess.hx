@@ -144,6 +144,15 @@ class CppManagedLocalAccess {
 		return call;
 	}
 
+	/** A stored method retains its exact selection inside this lexical body or initializer closure. */
+	public function methodValue(expression:HxExpr):Null<TypedBackendMethodOccurrence> {
+		final occurrence = projection == null ? initializer.findMethodUse(expression) : projection.findMethodUse(expression);
+		if (occurrence == null || occurrence.getUse() != ValueRead)
+			return null;
+		requireExpression(expression);
+		return occurrence;
+	}
+
 	/** Cast facts remain attached to this exact lexical expression, including nested closures. */
 	public function findCast(expression:HxExpr):Null<TypedBackendCastOccurrence> {
 		final occurrence = projection == null ? initializer.findCast(expression) : projection.findCast(expression);
