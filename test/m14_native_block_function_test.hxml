@@ -4,6 +4,7 @@
 -main M14BlockReturnConversionTest
 --interp
 --next
+-cp packages/hxhx/src
 -cp packages/hxhx-core/src
 -cp packages/reflaxe.ocaml/src
 -cp test

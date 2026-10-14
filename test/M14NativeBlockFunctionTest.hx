@@ -9,7 +9,7 @@ class M14NativeBlockFunctionTest {
 			throw "upstream native block-function contract differs";
 		final path = root + "/Main.hx";
 		final module = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final typed = typeWithProviders(module);
 		for (cls in typed.getBackendProjection().getClasses())
 			for (fn in cls.getFunctions())
 				for (statement in fn.getBody())
@@ -61,7 +61,7 @@ class M14NativeBlockFunctionTest {
 		if (run("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]) != "")
 			throw "unsupported-return control changed upstream behavior";
 		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final typed = typeWithProviders(module);
 		var rejected = false;
 		for (cls in typed.getBackendProjection().getClasses())
 			for (fn in cls.getFunctions())
@@ -84,6 +84,26 @@ class M14NativeBlockFunctionTest {
 					}, _ -> {});
 		if (!rejected)
 			throw "unsupported native block function was admitted: " + expected;
+	}
+
+	/** Load actual standard declarations before positive and rejected native block checks. */
+	static function typeWithProviders(module:ResolvedModule):TypedModule {
+		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true);
+		if (arguments == null)
+			throw "native block fixture arguments did not parse";
+		final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([module]);
+		final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
+		loader.markResolvedAlready([module]);
+		if (loader.ensureTypeAvailable("Array", "", []) == null)
+			throw "native block fixture requires the real Array provider";
+		return TyperStage.typeResolvedModule(module, index, loader, true);
 	}
 
 	static function run(command:String, arguments:Array<String>):String {
