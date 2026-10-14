@@ -15,6 +15,28 @@ class OcamlCallableProgramSelectionTest {
 	static macro function verify():Expr {
 		function checkOwner(owner:ClassType, name:String, expected:Array<String>):Void {
 			final selected = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select([owner]);
+			final events = new Array<String>();
+			final observed = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select([owner], message -> events.push(message));
+			if (Std.string(observed) != Std.string(selected))
+				throw "callback progress changed selection: " + name;
+			final collectEnd = events.indexOf("collect_end");
+			final scanBegin = events.indexOf("scan_begin");
+			final scanEnd = events.indexOf("scan_end");
+			if (events[0] != "collect_begin"
+				|| collectEnd < 1
+				|| scanBegin != collectEnd + 1
+				|| scanEnd <= scanBegin
+				|| events.indexOf("admission_begin") != scanEnd + 1
+				|| !StringTools.startsWith(events[events.length - 1], "admission_end selected="))
+				throw "callback progress lost a phase boundary: " + name;
+			final starts = events.filter(event -> StringTools.startsWith(event, "collect_field_begin ")).length;
+			final finishes = events.filter(event -> StringTools.startsWith(event, "collect_field_end ")
+				|| event == "collect_field_skip").length;
+			if (starts != finishes
+				|| events.filter(event -> StringTools.startsWith(event, "scan_method_begin "))
+					.length != events.filter(event -> StringTools.startsWith(event, "scan_method_end "))
+					.length)
+				throw "callback progress lost a declaration boundary: " + name;
 			final actual = selected.map(method -> method.fieldName);
 			actual.sort(Reflect.compare);
 			expected.sort(Reflect.compare);

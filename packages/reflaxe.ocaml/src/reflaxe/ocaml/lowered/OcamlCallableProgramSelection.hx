@@ -33,14 +33,23 @@ private typedef Candidate = {
 	A runtime class value without an exact owner rejects all higher-order
 	declaration changes until runtime registry consumers have their own plans.
 	Selection is request-local and does not retain host objects in its result.
+	Optional progress reports name phase and declaration boundaries without
+	serializing typed trees; they do not participate in admission decisions.
 **/
-function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
+function select(classes:Array<ClassType>, ?progress:String->Void):Array<OcamlCallableMethodSelection> {
 	final candidates:Map<String, Candidate> = [];
 	var hasUnresolvedClassValue = false;
+	if (progress != null)
+		progress("collect_begin");
 	function collect(owner:ClassType, field:ClassField, isStatic:Bool):Void {
+		if (progress != null)
+			progress("collect_field_begin owner=" + owner.module + "." + owner.name + " field=" + field.name + " static=" + isStatic);
 		final expression = field.expr();
-		if (expression == null)
+		if (expression == null) {
+			if (progress != null)
+				progress("collect_field_skip");
 			return;
+		}
 		final normalOwner = switch (owner.kind) {
 			case KNormal: true;
 			case _: false;
@@ -68,6 +77,8 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 			rejected: !eligible,
 			usesViews: false
 		});
+		if (progress != null)
+			progress("collect_field_end id=" + id);
 	}
 	for (owner in classes) {
 		for (field in owner.statics.get())
@@ -92,6 +103,8 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 			});
 		}
 	}
+	if (progress != null)
+		progress("collect_end");
 	function connect(candidate:Candidate, id:String):Void {
 		final other = candidates.get(id);
 		if (other == null) {
@@ -103,7 +116,11 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 		if (!other.dependencies.contains(candidate.id))
 			other.dependencies.push(candidate.id);
 	}
+	if (progress != null)
+		progress("scan_begin");
 	for (candidate in candidates) {
+		if (progress != null)
+			progress("scan_method_begin id=" + candidate.id);
 		function method(expression:TypedExpr):Null<String> {
 			return switch (reflaxe.ocaml.lowered.OcamlCallableOrigin.classify(unwrap(expression))) {
 				case StaticDeclaration(id): id;
@@ -242,8 +259,14 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 		scan(candidate.body);
 		if (candidate.usesViews && candidate.signature == null)
 			candidate.rejected = true;
+		if (progress != null)
+			progress("scan_method_end id=" + candidate.id);
 	}
-	return reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.select([
+	if (progress != null) {
+		progress("scan_end");
+		progress("admission_begin");
+	}
+	final selected = reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.select([
 		for (candidate in candidates)
 			{
 				id: candidate.id,
@@ -254,6 +277,9 @@ function select(classes:Array<ClassType>):Array<OcamlCallableMethodSelection> {
 				usesViews: candidate.usesViews
 			}
 	], hasUnresolvedClassValue);
+	if (progress != null)
+		progress("admission_end selected=" + selected.length);
+	return selected;
 }
 
 private function unwrap(expression:TypedExpr):TypedExpr {

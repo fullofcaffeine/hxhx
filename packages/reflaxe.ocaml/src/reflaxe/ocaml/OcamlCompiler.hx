@@ -531,7 +531,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
-		final callbacks = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select(classes);
+		final callbacks = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select(classes, #if macro profileEnabled && Context.defined("reflaxe_ocaml_telemetry_detail") ? (message:String) ->
+			profileLogLine("reflaxe.ocaml: callable_selection_"
+			+ message + " elapsed_ms=" + Std.string(profileElapsedMilliseconds())) : null #else null #end);
 		#if macro
 		profileLogLine("reflaxe.ocaml: callable_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
