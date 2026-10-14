@@ -1,5 +1,5 @@
 {
-  "schema": "hxhx.core-test-shards.v3",
+  "schema": "hxhx.core-test-shards.v4",
   "aggregateScript": "test",
   "shards": [
     {
@@ -12,19 +12,31 @@
       "id": "compiler-packaging",
       "label": "OCaml packaging and metal profile",
       "minimumTier": "Q2",
-      "baselineSeconds": 873.120
+      "baselineSeconds": 873.12
     },
     {
       "id": "compiler-focused-1",
-      "label": "Focused compiler regressions (1/2)",
+      "label": "Focused compiler regressions (1/4)",
       "minimumTier": "Q2",
       "baselineSeconds": 1125.216
     },
     {
       "id": "compiler-focused-2",
-      "label": "Focused compiler regressions (2/2)",
+      "label": "Focused compiler regressions (2/4)",
       "minimumTier": "Q2",
-      "baselineSeconds": 1125.327
+      "baselineSeconds": null
+    },
+    {
+      "id": "compiler-focused-3",
+      "label": "C++ constructor and instance regressions",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
+    },
+    {
+      "id": "compiler-focused-4",
+      "label": "C++ inheritance and nullable regressions",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
     },
     {
       "id": "macro-host-integration",
@@ -222,6 +234,8 @@
     "test:hxhx-targets": "hxhx-targets",
     "test:clean-artifacts": "compiler-focused-2",
     "test:m14:python-entry-members": "compiler-focused-2",
-    "test:m14:cpp-static-callable": "compiler-focused-1"
+    "test:m14:cpp-static-callable": "compiler-focused-1",
+    "test:m14:cpp-constructor-applications": "compiler-focused-3",
+    "test:m14:cpp-inherited-storage": "compiler-focused-4"
   }
 }

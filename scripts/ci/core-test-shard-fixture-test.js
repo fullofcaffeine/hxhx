@@ -128,7 +128,7 @@ function checkIndependentJobStarts(workflow) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 149, `expected 149 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 151, `expected 151 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -149,6 +149,8 @@ function main() {
     'compiler-packaging': 14,
     'compiler-focused-1': 55,
     'compiler-focused-2': 55,
+    'compiler-focused-3': 1,
+    'compiler-focused-4': 1,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -159,6 +161,8 @@ function main() {
     'compiler-packaging': 'Q2',
     'compiler-focused-1': 'Q2',
     'compiler-focused-2': 'Q2',
+    'compiler-focused-3': 'Q2',
+    'compiler-focused-4': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -237,6 +241,20 @@ function main() {
   const workflowSource = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflowSource, 'Upload shared macro-host evidence', '.github/workflows/ci.yml')
   requireIncludes(workflowSource, '.artifacts/core-test/macro-host-integration', '.github/workflows/ci.yml')
+
+  // Unmeasured partitions are explicit; malformed or invented zero timings remain invalid.
+  const unmeasured = structuredClone(plan.manifest)
+  unmeasured.shards[0].baselineSeconds = null
+  validateManifest(unmeasured, plan.aggregateCommands)
+  for (const invalidBaseline of [undefined, 0, -1, 'unmeasured']) {
+    const invalidTiming = structuredClone(plan.manifest)
+    invalidTiming.shards[0].baselineSeconds = invalidBaseline
+    expectThrow(
+      () => validateManifest(invalidTiming, plan.aggregateCommands),
+      'needs a positive baselineSeconds value or explicit null until measured',
+      'invalid shard timing baseline'
+    )
+  }
 
   const invalidAggregate = structuredClone(packageJson)
   invalidAggregate.scripts.test = 'npm run one && echo hidden'
@@ -458,8 +476,10 @@ function main() {
   const expectedBoundedRows = [
     ['compiler-foundation', 'Compiler foundations and runtime'],
     ['compiler-packaging', 'OCaml packaging and metal profile'],
-    ['compiler-focused-1', 'Focused compiler regressions (1/2)'],
-    ['compiler-focused-2', 'Focused compiler regressions (2/2)'],
+    ['compiler-focused-1', 'Focused compiler regressions (1/4)'],
+    ['compiler-focused-2', 'Focused compiler regressions (2/4)'],
+    ['compiler-focused-3', 'C++ constructor and instance regressions'],
+    ['compiler-focused-4', 'C++ inheritance and nullable regressions'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
@@ -472,7 +492,7 @@ function main() {
   }
   assert(
     (q2Matrix.match(/if: \$\{\{ startsWith\(matrix\.shard, 'compiler-focused-'\) \}\}/g) || []).length === 2,
-    'both focused partitions must install their runtime and Neko compiler dependencies'
+    'all focused partitions must install their runtime and Neko compiler dependencies'
   )
   assert(
     (q2Matrix.match(/          - shard: portable\n/g) || []).length === 3,

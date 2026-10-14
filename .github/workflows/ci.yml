@@ -577,10 +577,16 @@ jobs:
             label: OCaml packaging and metal profile
             timeout_minutes: 40
           - shard: compiler-focused-1
-            label: Focused compiler regressions (1/2)
+            label: Focused compiler regressions (1/4)
             timeout_minutes: 40
           - shard: compiler-focused-2
-            label: Focused compiler regressions (2/2)
+            label: Focused compiler regressions (2/4)
+            timeout_minutes: 40
+          - shard: compiler-focused-3
+            label: C++ constructor and instance regressions
+            timeout_minutes: 40
+          - shard: compiler-focused-4
+            label: C++ inheritance and nullable regressions
             timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
