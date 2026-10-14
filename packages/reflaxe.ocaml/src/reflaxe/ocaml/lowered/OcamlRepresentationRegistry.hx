@@ -1708,21 +1708,23 @@ class OcamlRepresentationRegistry {
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs a named proof and claim";
 		if (selection.profileEligibility == null || selection.profileEligibility.length == 0)
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs at least one eligible profile";
-		final nominalFieldCount = (selection.nominalTargetModuleName == null ? 0 : 1) + (selection.nominalTargetTypeName == null ? 0 : 1)
-			+ (selection.nominalLayoutRevision == null ? 0 : 1);
-		if (nominalFieldCount != 0 && nominalFieldCount != 3)
-			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal module, type, and layout revision must be supplied together";
-		if (nominalFieldCount == 3
-			&& (selection.nominalTargetModuleName.length == 0
-				|| selection.nominalTargetTypeName.length == 0
-				|| !StringTools.startsWith(selection.nominalLayoutRevision, "sha256:")))
-			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal carrier metadata is incomplete or has an invalid layout revision";
-		final arrayFieldCount = (selection.arrayDescriptorId == null ? 0 : 1) + (selection.arrayDescriptorRevision == null ? 0 : 1);
-		if (arrayFieldCount != 0 && arrayFieldCount != 2)
-			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor identity and revision must be supplied together";
-		if (arrayFieldCount == 2
-			&& (selection.arrayDescriptorId.length == 0 || !StringTools.startsWith(selection.arrayDescriptorRevision, "sha256:")))
-			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor metadata is incomplete or has an invalid revision";
+		final nominalModule = selection.nominalTargetModuleName;
+		final nominalType = selection.nominalTargetTypeName;
+		final nominalLayoutRevision = selection.nominalLayoutRevision;
+		if (nominalModule != null || nominalType != null || nominalLayoutRevision != null) {
+			if (nominalModule == null || nominalType == null || nominalLayoutRevision == null)
+				throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal module, type, and layout revision must be supplied together";
+			if (nominalModule.length == 0 || nominalType.length == 0 || !StringTools.startsWith(nominalLayoutRevision, "sha256:"))
+				throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal carrier metadata is incomplete or has an invalid layout revision";
+		}
+		final arrayDescriptorId = selection.arrayDescriptorId;
+		final arrayDescriptorRevision = selection.arrayDescriptorRevision;
+		if (arrayDescriptorId != null || arrayDescriptorRevision != null) {
+			if (arrayDescriptorId == null || arrayDescriptorRevision == null)
+				throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor identity and revision must be supplied together";
+			if (arrayDescriptorId.length == 0 || !StringTools.startsWith(arrayDescriptorRevision, "sha256:"))
+				throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor metadata is incomplete or has an invalid revision";
+		}
 	}
 
 	/**
@@ -1732,6 +1734,8 @@ class OcamlRepresentationRegistry {
 	function validateArrayDescriptorReference(selection:OcamlRepresentationSelection, programRevision:String):Void {
 		if (selection.arrayDescriptorId == null)
 			return;
+		if (selection.arrayDescriptorRevision == null)
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor identity and revision must be supplied together";
 		final descriptor = requireRepresentedArray(selection.arrayDescriptorId, selection.arrayDescriptorRevision, programRevision);
 		if (selection.semanticTypeId != descriptor.arraySemanticTypeId
 			|| selection.carrierTypeId != descriptor.arrayCarrierTypeId
