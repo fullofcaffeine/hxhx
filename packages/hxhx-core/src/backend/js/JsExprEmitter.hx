@@ -1574,6 +1574,8 @@ class JsExprEmitter {
 		}
 		if (isAssignmentOp(op)) {
 			switch (left) {
+				case EArrayAccess(array, index):
+					return emitArrayCompound(op, array, index, right, scope);
 				case EThis:
 					return emitThisAssignment(op, right, scope);
 				case EField(ESuper, field) if (op == "="):
@@ -1739,6 +1741,31 @@ class JsExprEmitter {
 			+ ", "
 			+ v
 			+ ")";
+	}
+
+	/**
+		Read the selected element before the RHS can mutate or redirect its storage.
+		The RHS callback is created outside the helper's scope so generated names
+		cannot capture user locals. Binding its receiver preserves instance reads
+		without requiring arrow syntax in ES5 output. A throwing RHS never writes;
+		non-null coalescing returns without evaluating the RHS or invoking a setter.
+	 */
+	static function emitArrayCompound(op:String, array:HxExpr, index:HxExpr, right:HxExpr, scope:JsEmitScope):String {
+		final a = emit(array, scope);
+		final i = emit(index, scope);
+		final r = emit(right, scope);
+		final update = op == "??=" ? "if (__hx_value != null) return __hx_value; __hx_value = __hx_rhs(); " : "__hx_value " + op + " __hx_rhs(); ";
+		return "(function(__hx_a, __hx_i, __hx_rhs) { "
+			+ "var __hx_value = (__hx_a != null && typeof __hx_a.__hx_op_read === \"function\") ? __hx_a.__hx_op_read(__hx_i) : __hx_a[__hx_i]; "
+			+ update
+			+ "if (__hx_a != null && typeof __hx_a.__hx_op_write === \"function\") __hx_a.__hx_op_write(__hx_i, __hx_value); "
+			+ "else __hx_a[__hx_i] = __hx_value; return __hx_value; })("
+			+ a
+			+ ", "
+			+ i
+			+ ", (function() { return "
+			+ r
+			+ "; }).bind(this))";
 	}
 
 	static function isAssignmentOp(op:String):Bool {

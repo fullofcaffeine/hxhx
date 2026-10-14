@@ -205,6 +205,7 @@
     "test:m14:js-stmt-multi-catch": "compiler-focused-1",
     "test:m14:js-stmt-key-value-for": "compiler-focused-1",
     "test:m14:js-expr-new-array": "compiler-focused-2",
+    "test:m14:js-array-compound": "compiler-focused-2",
     "test:m14:js-expr-qualified-ctor": "compiler-focused-1",
     "test:m14:js-generic-ctor-oracle": "compiler-focused-1",
     "test:m14:js-expr-function-literal": "compiler-focused-2",
