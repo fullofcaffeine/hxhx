@@ -36,6 +36,7 @@ class M14Stage3ArrayStringTest {
 		M14Stage3BoolStringTest.run("ContextArrayMain", "context-array.expected.stdout");
 		Sys.println("M14_STAGE3_CONTEXT_ARRAY_STRING:PASS");
 		M14Stage3BoolStringTest.run("DynamicArrayMain", "dynamic-array.expected.stdout");
+		M14Stage3BoolStringTest.run("DynamicArrayIdentityMain", "dynamic-array-identity.expected.stdout");
 		Sys.println("M14_STAGE3_ARRAY_STRING:PASS");
 	}
 }

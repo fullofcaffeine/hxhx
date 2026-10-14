@@ -31,6 +31,14 @@ still prints `Array`. The required five-line expectation retains the contents fo
 mixed, Boolean, and integer arrays, including a Boolean-only literal assigned to
 `Array<Dynamic>`. These assertions must not be weakened.
 
+`DynamicArrayIdentityMain` extends that contract with aliases retained before
+mutation. Boolean and integer arrays must keep distinct formatting in the same
+process. Nested and initially empty arrays must reflect later typed writes through
+their erased aliases. The original array identity, one function-call effect, and
+nullable-array conversion also remain observable. The twelve-line expectation is
+checked independently against upstream before native execution. This additional
+contract does not imply that the existing Dynamic-array failure is repaired.
+
 The contextual-array observer checks declarations, later assignments, parameters,
 returns, nested arrays, and static initializers. Each destination supplies its
 element type before storage is selected. The child expressions keep their own
