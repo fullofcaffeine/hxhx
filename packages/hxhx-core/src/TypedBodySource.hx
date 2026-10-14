@@ -500,6 +500,13 @@ class TypedBodySource {
 
 	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder,
 			suppressCallableAscription:Bool = false, use:TypedBackendMethodOccurrence.TypedMethodUse = ValueRead):HxExpr {
+		final projected = projectExpression(typedExpression, catalog, projectionFacts, suppressCallableAscription, use);
+		return projectionFacts == null ? projected : projectionFacts.projectCallableExpression(typedExpression, projected);
+	}
+
+	/** Every projected callback passes through the public wrapper, including early-return lowering cases. */
+	static function projectExpression(typedExpression:TypedExpr, catalog:Null<TypedBackendLocalCatalog>, projectionFacts:Null<TypedBodyProjectionBuilder>,
+			suppressCallableAscription:Bool, use:TypedBackendMethodOccurrence.TypedMethodUse):HxExpr {
 		final texts = typedExpression.getTexts();
 		final expressions = typedExpression.getExpressions();
 		return switch (typedExpression.getTag()) {

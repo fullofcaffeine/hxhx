@@ -19,6 +19,13 @@ private typedef ProjectedCallableAscription = {
 	final value:HxExpr;
 }
 
+/** The checked tree order connects a typed callback use to its exact published object. */
+private typedef ProjectedCallableExpression = {
+	final index:Int;
+	final expression:HxExpr;
+	final source:TypedExpr;
+}
+
 /**
 	Binds capture decisions to one exact projected function body.
 
@@ -26,6 +33,8 @@ private typedef ProjectedCallableAscription = {
 	check proves that this projection carries those facts. The source-shaped body
 	remains mutable, so every public lookup also checks its complete current shape.
 	Matching a function target string alone never authorizes an emitted closure.
+	Callback producers and uses retain the same ownership even when the parser
+	did not preserve a byte position for a nested expression.
  */
 class TypedBackendCaptureCatalog {
 	final owner:TypedCaptureProjectionOwner;
@@ -35,6 +44,7 @@ class TypedBackendCaptureCatalog {
 	final byTarget:StringMap<TypedCaptureFunction> = new StringMap();
 	final callableTypes:StringMap<TyType> = new StringMap();
 	final ascriptions:Array<ProjectedCallableAscription> = [];
+	final callableExpressions:Array<ProjectedCallableExpression> = [];
 
 	public function new(owner:TypedCaptureProjectionOwner, locals:TypedBackendLocalCatalog) {
 		this.owner = owner;
@@ -65,6 +75,11 @@ class TypedBackendCaptureCatalog {
 		if (bodyIdentity != expectedFingerprint)
 			throw "capture catalog requires the exact lowered function projection";
 		final publishedExpressions = expressionOrder();
+		for (occurrence in projectionFacts.getCallableExpressions()) {
+			final index = expectedExpressions.indexOf(occurrence.expression);
+			if (index >= 0)
+				callableExpressions.push({index: index, expression: publishedExpressions[index], source: occurrence.source});
+		}
 		for (annotation in projectionFacts.getCallableAscriptions()) {
 			final index = expectedExpressions.indexOf(annotation);
 			if (index < 0)
@@ -198,6 +213,27 @@ class TypedBackendCaptureCatalog {
 		for (annotation in ascriptions)
 			if (expressions[annotation.index] != annotation.expression)
 				throw "capture catalog callable annotation occurrences changed";
+		for (occurrence in callableExpressions)
+			if (expressions[occurrence.index] != occurrence.expression)
+				throw "capture catalog callable projection occurrences changed";
+	}
+
+	/** Publish detached pairs only after both bodies and all exact occurrences remain current. */
+	public function getCallableExpressions():Array<TypedBackendCallableExpression> {
+		assertCurrent();
+		return [
+			for (entry in callableExpressions)
+				{expression: entry.expression, source: entry.source}
+		];
+	}
+
+	/** An equal reconstruction or same-spelled identifier cannot borrow another occurrence's type or origin. */
+	public function findCallableExpression(expression:HxExpr):Null<TypedExpr> {
+		assertCurrent();
+		for (entry in callableExpressions)
+			if (entry.expression == expression)
+				return entry.source;
+		return null;
 	}
 
 	public function getPlan():TypedCapturePlan {

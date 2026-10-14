@@ -11,6 +11,7 @@ class TypedBodyProjectionBuilder {
 	final runtimeTypes:TypedRuntimeTypeProjectionBuilder;
 	final constructors:Array<TypedBackendConstructorOccurrence> = [];
 	final callableAscriptions:Array<HxExpr> = [];
+	final callableExpressions:Array<TypedBackendCallableExpression> = [];
 	final aggregates:Array<TypedBackendAggregateOccurrence> = [];
 	final fields:Array<TypedBackendFieldOccurrence> = [];
 	final methods:Array<TypedBackendMethodOccurrence> = [];
@@ -66,6 +67,31 @@ class TypedBodyProjectionBuilder {
 
 	public function getCallableAscriptions():Array<HxExpr>
 		return callableAscriptions.copy();
+
+	/** Retain typed callback producers, uses and comparisons before source projection loses their meaning. */
+	public function projectCallableExpression(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add callable expressions to a sealed body projection";
+		final relevant = source.getType().isFunction() || switch source.getTag() {
+			case Call: final children = source.getExpressions(); children.length > 0 && children[0].getType().isFunction();
+			case Binary: final children = source.getExpressions(); children.length == 2 && (children[0].getType().isFunction()
+					|| children[1].getType().isFunction()) && ["==", "!="].indexOf(source.getTexts()[0]) >= 0;
+			case _: false;
+		};
+		if (relevant) {
+			// Projection visits children first. A transparent block returns its child's
+			// object, so the last entry already owns that value. Keep its typed producer;
+			// an effectful sequence creates a distinct object and retains a new entry.
+			final previous = callableExpressions.length == 0 ? null : callableExpressions[callableExpressions.length - 1];
+			if (previous == null || previous.expression != expression)
+				callableExpressions.push({expression: expression, source: source});
+		}
+		return expression;
+	}
+
+	/** The capture catalog binds only entries retained in the complete checked projection. */
+	public function getCallableExpressions():Array<TypedBackendCallableExpression>
+		return callableExpressions.copy();
 
 	/** Preserve the callable result contract without changing the body's own type. */
 	public function projectLambda(source:TypedExpr, expression:HxExpr):HxExpr {

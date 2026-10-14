@@ -1,3 +1,5 @@
+test/m14_typed_callable_projection_test.hxml
+--next
 -cp packages/reflaxe.ocaml/src
 -cp test
 -main CheckOcamlCallableCallReports
