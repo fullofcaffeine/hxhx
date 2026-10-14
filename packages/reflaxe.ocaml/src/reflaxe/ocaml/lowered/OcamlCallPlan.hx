@@ -3219,7 +3219,8 @@ class OcamlCallPlanner {
 				planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullDynamic, true));
 				continue;
 			}
-			final input = representationFor(arguments[index].t, representations);
+			final input = OcamlCallIntegerArgument.select(arguments[index].t, output.semanticTypeId,
+				representations) ?? representationFor(arguments[index].t, representations);
 			if (input == null)
 				return null;
 			if (input.semanticTypeId == output.semanticTypeId) {
