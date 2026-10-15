@@ -1,10 +1,13 @@
 #pragma once
 
 #include "ManagedCallable.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <locale>
 #include <sstream>
+#include <string>
 
 namespace hxhx::managed {
 
@@ -75,6 +78,39 @@ inline Value stringSubstr(const Value& receiver, const Value& position, const Va
     unit = next;
   }
   return Value::string(std::move(result));
+}
+
+// Search uses native Haxe's UTF-16 positions while strings remain UTF-8 values.
+// Decode only for this operation, preserving embedded zeroes and whole scalars.
+inline std::u16string stringSearchUnits(const std::string& text) {
+  std::u16string units;
+  for (std::size_t byte = 0; byte < text.size();) {
+    const auto scalar = stringScalar(text, byte);
+    if (scalar.value <= 0xffff) units.push_back(static_cast<char16_t>(scalar.value));
+    else {
+      const auto pair = scalar.value - 0x10000;
+      units.push_back(static_cast<char16_t>(0xd800 + (pair >> 10)));
+      units.push_back(static_cast<char16_t>(0xdc00 + (pair & 0x3ff)));
+    }
+    byte += scalar.bytes;
+  }
+  return units;
+}
+
+// Native Haxe 4.3.7 observations establish null receivers as missing and null
+// needles as empty. Empty needles clamp to the end even when start exceeds it.
+// Negative starts are unspecified by Haxe; clamp safely instead of reproducing
+// the upstream INT_MIN crash. No compiler declarations are inferred here.
+inline Value stringIndexOf(const Value& receiver, const Value& needle, const Value& position) {
+  if (receiver.kind() == ValueKind::Null) return Value::integer(-1);
+  const auto text = stringSearchUnits(receiver.asString());
+  const auto search = needle.kind() == ValueKind::Null ? std::u16string{} : stringSearchUnits(needle.asString());
+  const auto start = static_cast<std::size_t>(std::max<std::int32_t>(0, position.kind() == ValueKind::Null ? 0 : position.asInteger()));
+  const auto found = search.empty() ? std::min(start, text.size()) : text.find(search, start);
+  if (found == std::u16string::npos) return Value::integer(-1);
+  if (found > static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max()))
+    throw std::overflow_error("string search position exceeds native Int range");
+  return Value::integer(static_cast<std::int32_t>(found));
 }
 
 // Admitted Std.string and enum comparison operations select this formatter.

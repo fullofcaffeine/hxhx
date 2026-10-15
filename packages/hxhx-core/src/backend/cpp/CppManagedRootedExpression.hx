@@ -484,6 +484,10 @@ class CppManagedRootedExpression {
 			CppManagedStringSubstr.require(call, input.callContext);
 			return call.getResultType();
 		}
+		if (CppManagedStringIndexOf.selects(call)) {
+			CppManagedStringIndexOf.require(call, input.callContext);
+			return call.getResultType();
+		}
 		if (CppManagedArrayJoin.selects(call)) {
 			CppManagedArrayJoin.require(call, input.callContext);
 			return call.getResultType();
@@ -1020,6 +1024,15 @@ class CppManagedRootedExpression {
 				context: input.callContext,
 				heap: input.heap,
 				prefix: input.temporaryPrefix + (destination == null ? "discarded" : destination) + "_substr_",
+				destination: destination,
+				renderValue: render
+			}, indent);
+		if (CppManagedStringIndexOf.selects(instance))
+			return CppManagedStringIndexOf.render({
+				call: instance,
+				context: input.callContext,
+				heap: input.heap,
+				prefix: input.temporaryPrefix + (destination == null ? "discarded" : destination) + "_index_of_",
 				destination: destination,
 				renderValue: render
 			}, indent);

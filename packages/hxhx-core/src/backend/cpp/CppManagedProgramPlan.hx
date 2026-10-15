@@ -128,6 +128,7 @@ class CppManagedProgramPlan {
 					if (instance != null
 						&& !CppManagedArrayPush.selects(instance)
 						&& !CppManagedStringSubstr.selects(instance)
+						&& !CppManagedStringIndexOf.selects(instance)
 						&& !CppManagedArrayJoin.selects(instance)
 						&& !CppManagedMapSet.selects(instance)
 						&& !CppManagedMapGet.selects(instance))
@@ -257,6 +258,7 @@ class CppManagedProgramPlan {
 						if (instance != null
 							&& !CppManagedArrayPush.selects(instance)
 							&& !CppManagedStringSubstr.selects(instance)
+							&& !CppManagedStringIndexOf.selects(instance)
 							&& !CppManagedArrayJoin.selects(instance)
 							&& !CppManagedMapSet.selects(instance)
 							&& !CppManagedMapGet.selects(instance))
