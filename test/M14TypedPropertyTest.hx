@@ -49,8 +49,11 @@ class M14TypedPropertyTest {
 		for (owner in module.getTypedClasses()) {
 			final facts = owner.getSemanticInfo();
 			for (field in facts.getFieldInfos()) {
-				final expected = facts.getShortName() == "Stored"
-					|| (field.getName() != "value" && field.getName() != "readOnly" && field.getName() != "global");
+				final expected = switch facts.getShortName() {
+					case "Stored" | "AbstractStorage": true;
+					case "Reading" | "Counter": false;
+					case _: field.getName() != "value" && field.getName() != "readOnly" && field.getName() != "global";
+				};
 				if (field.getHasStorage() != expected)
 					throw "property storage does not match its authored declaration: " + field.getCanonicalKey();
 			}

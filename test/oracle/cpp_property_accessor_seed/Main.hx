@@ -91,6 +91,60 @@ class Main {
 		if (stored.value != 11)
 			throw "untyped property assignment must still invoke its setter";
 		checkPrivateAccess(stored, base);
+		checkAbstractAccess();
+		checkAbstractWriteback();
+	}
+
+	/** A setter that replaces this must update the caller's abstract value. */
+	static function checkAbstractWriteback():Void {
+		var counter = new Counter(3);
+		if ((counter.value = 5) != 15 || counter.value != 5)
+			throw "abstract setter must replace caller storage and retain its result";
+		if ((counter.value += 2) != 17 || counter.value != 7)
+			throw "abstract compound setter must replace caller storage";
+		if (counter.value++ != 7 || counter.value != 8)
+			throw "abstract postfix must retain its old value and replace caller storage";
+		if (++counter.value != 19 || counter.value != 9)
+			throw "abstract prefix must retain its setter result and replace caller storage";
+		if ((counter.added = 2) != 11 || counter.value != 11)
+			throw "compound assignment inside a setter must replace caller storage";
+		if ((counter.next = 0) != 12 || counter.value != 12)
+			throw "unary update inside a setter must replace caller storage";
+		final box = new CounterBox();
+		order = 0;
+		if ((counterReceiver(box).count.value += argument()) != 17 || box.count.value != 7 || order != 12)
+			throw "abstract compound setter must retain its field address before the argument";
+		order = 0;
+		if ((counterReceiver(box).count.value = argument()) != 14 || box.count.value != 4 || order != 211)
+			throw "inline setter must preserve authored receiver occurrences after its argument";
+	}
+
+	static function counterReceiver(box:CounterBox):CounterBox {
+		order = order * 10 + 1;
+		return box;
+	}
+
+	/** Abstract accessors preserve effects, assignment results, and one receiver evaluation. */
+	static function checkAbstractAccess():Void {
+		final reading = new Reading(7);
+		if (reading.value != 7 || reading.reads != 1)
+			throw "abstract getter must execute its authored body";
+		if ((reading.value = 9) != 19 || reading.writes != 1)
+			throw "abstract assignment must return its setter result";
+		if ((reading.value += 2) != 21 || reading.reads != 2 || reading.writes != 2)
+			throw "abstract compound access must call getter and setter once";
+		if (reading.value++ != 11 || reading.reads != 3 || reading.writes != 3)
+			throw "abstract postfix must return the getter result";
+		order = 0;
+		if ((readingReceiver(reading).value += argument()) != 26 || order != 12)
+			throw "abstract receiver and argument must execute once in order";
+		if (reading.reads != 4 || reading.writes != 4 || reading.value != 16)
+			throw "abstract access must retain the same backing storage";
+	}
+
+	static function readingReceiver(value:Reading):Reading {
+		order = order * 10 + 1;
+		return value;
 	}
 
 	/** Check access permission on the same objects after the ordinary property assertions. */
@@ -173,5 +227,86 @@ class Stored {
 	function set_mixed(value:Int):Int {
 		mixed = value;
 		return value + 10;
+	}
+}
+
+/** Mutable backing storage makes abstract accessor effects observable. */
+class AbstractStorage {
+	public var value:Int;
+	public var reads:Int = 0;
+	public var writes:Int = 0;
+
+	public function new(value:Int) {
+		this.value = value;
+	}
+}
+
+/** User-defined properties select authored methods without a target-specific rule. */
+abstract Reading(AbstractStorage) {
+	public inline function new(value:Int) {
+		this = new AbstractStorage(value);
+	}
+
+	public var value(get, set):Int;
+	public var reads(get, never):Int;
+	public var writes(get, never):Int;
+
+	inline function get_value():Int {
+		this.reads++;
+		return this.value;
+	}
+
+	inline function set_value(value:Int):Int {
+		this.writes++;
+		this.value = value;
+		return value + 10;
+	}
+
+	inline function get_reads():Int {
+		return this.reads;
+	}
+
+	inline function get_writes():Int {
+		return this.writes;
+	}
+}
+
+/** No implicit Int conversion is available outside this abstract's authored methods. */
+abstract Counter(Int) {
+	public inline function new(value:Int) {
+		this = value;
+	}
+
+	public var value(get, set):Int;
+	public var added(never, set):Int;
+	public var next(never, set):Int;
+
+	inline function get_value():Int {
+		return this;
+	}
+
+	inline function set_value(value:Int):Int {
+		this = value;
+		return this + 10;
+	}
+
+	inline function set_added(value:Int):Int {
+		this += value;
+		return this;
+	}
+
+	inline function set_next(ignored:Int):Int {
+		this
+		++;
+		return this;
+	}
+}
+
+/** A stored abstract exercises writeback beyond a direct local variable. */
+class CounterBox {
+	public var count:Counter;
+
+	public function new() {
+		count = new Counter(3);
 	}
 }

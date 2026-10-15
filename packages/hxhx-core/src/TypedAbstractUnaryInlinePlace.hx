@@ -15,6 +15,7 @@ typedef TypedInlineUnaryPlace = {
 
 /**
 	Expose an abstract's backing value without changing its caller-owned binding.
+	Unary operators and required inline methods share these exact storage views.
 	Only the selected inline declaration can request these representation views.
 	Each write converts back to the original abstract storage immediately. Compound
 	updates capture their address and old value before RHS effects; subsequent

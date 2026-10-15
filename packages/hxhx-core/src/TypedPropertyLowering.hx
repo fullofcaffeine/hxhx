@@ -1,7 +1,7 @@
 import TypedExpr.TypedExprTag;
 
 /**
-	Resolve ordinary class properties before a backend sees executable bodies.
+	Resolve indexed class and abstract properties before backend emission.
 
 	A property read becomes its exact getter call; a write returns its setter's
 	result. Updates save the receiver once and preserve the old value for postfix
@@ -32,13 +32,13 @@ class TypedPropertyLowering {
 	function error(expression:TypedExpr, message:String):TyperError
 		return new TyperError(filePath, expression.getPosition() == null ? HxPos.unknown() : expression.getPosition(), message);
 
-	/** Only exact indexed ordinary-class fields enter this pass. */
+	/** Exact indexed class and abstract fields share accessor selection. */
 	function property(expression:TypedExpr):Null<TyFieldInfo> {
 		final field = expression.getFieldInfo();
 		if (field == null || expression.getHasPropertyStorageAccess())
 			return null;
 		final provider = index.getByFullName(field.getOwner().getCanonicalName());
-		if (!Std.isOfType(provider, TyClassInfo))
+		if (!Std.isOfType(provider, TyClassInfo) && !Std.isOfType(provider, TyAbstractInfo))
 			return null;
 		if (provider.fieldInfo(field.getName()) != field)
 			throw error(expression, "Property field belongs to another declaration index");
@@ -118,18 +118,29 @@ class TypedPropertyLowering {
 		return TypedExpr.castValue(value, "", expected, value.getPosition());
 	}
 
-	/** Read-modify-write operations save a receiver before either the getter or RHS runs. */
+	/** Updates save object receivers or abstract storage addresses before the getter and RHS. */
 	function update(expression:TypedExpr, target:TypedExpr, value:TypedExpr, op:String, postfix:Bool, unchecked:Bool, privateAccess:Bool):TypedExpr {
 		final prefix = new Array<TypedExpr>();
 		var place = target;
 		final children = target.getExpressions();
 		if (!target.getFieldInfo().getIsStatic() && children.length == 1 && children[0].getTag() != SuperValue) {
-			final binding = allocator.allocate("receiver", children[0].getType());
-			prefix.push(TypedExpr.temporary(binding.getSourceName(), binding.getType().getDisplay(), children[0], TyType.fromHintText("Void"),
-				children[0].getPosition(), binding));
-			place = target.withExpressions([
-				TypedExpr.localRead(binding.getSourceName(), binding.getType(), children[0].getPosition(), binding)
-			]);
+			function capture(value:TypedExpr):TypedExpr {
+				final binding = allocator.allocate("receiver", value.getType());
+				prefix.push(TypedExpr.temporary(binding.getSourceName(), binding.getType().getDisplay(), value, TyType.fromHintText("Void"),
+					value.getPosition(), binding));
+				return TypedExpr.localRead(binding.getSourceName(), binding.getType(), value.getPosition(), binding);
+			}
+			final receiver = children[0];
+			final identity = receiver.getType().getNominalIdentity();
+			final abstractInfo = identity == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
+			// Copying an abstract value would redirect a setter's this assignment
+			// into a temporary. Retain its destination, capturing only its address.
+			final retained = abstractInfo == null ? capture(receiver) : switch receiver.getTag() {
+				case LocalRead | NameRead | FieldRead | ArrayAccess: TypedCompoundDestination.retain(receiver, capture);
+				case ThisValue: receiver;
+				case _: capture(receiver);
+			};
+			place = target.withExpressions([retained]);
 		}
 		var before = access(place, false, null, unchecked, privateAccess);
 		if (postfix) {

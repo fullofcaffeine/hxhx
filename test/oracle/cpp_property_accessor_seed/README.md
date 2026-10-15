@@ -13,6 +13,11 @@ field. The field's type and runtime expectation remain concrete.
 Structured `@:privateAccess` expressions check restricted reads, assignment
 scope, block scope, local declarations, returns, and prefix/postfix updates.
 Annotated virtual properties still invoke their getter and setter.
+User-defined abstract properties also invoke their authored accessors. A
+class-backed abstract counts getter and setter calls and checks receiver order.
+An integer-backed abstract checks that assignment, compound assignment, and
+prefix/postfix updates change the caller's value. It declares no public implicit
+conversion from `Int`, so the setter must retain its own backing-storage authority.
 The separate strict typing regression rejects permission leakage, type
 mismatches, parenthesized writes, and forbidden `never` access:
 
@@ -34,4 +39,5 @@ haxe test/m14_cpp_property_accessor_test.hxml
 ```
 
 Successful execution has no output. These focused checks do not establish full
-exception support or Haxe compatibility. The tracked owner is `haxe_ocaml-17vd4`.
+exception support or Haxe compatibility. The ordinary-property owner is
+`haxe_ocaml-17vd4`; abstract-property coverage belongs to `haxe_ocaml-ws4lu`.

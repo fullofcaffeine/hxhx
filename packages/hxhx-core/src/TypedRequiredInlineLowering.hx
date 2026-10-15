@@ -1,6 +1,7 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
 import TyCallAlignment.TyCallArgumentSlot;
+import TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace;
 
 /** Receiver writers retain caller storage; other required calls may save a receiver value. */
 private typedef RequiredInlineSelection = {
@@ -39,6 +40,7 @@ class TypedRequiredInlineLowering {
 	var loopOrdinal:Int = 0;
 	var loopTargets:StringMap<TyControlTarget> = new StringMap();
 	var typeBindings:StringMap<TyType> = new StringMap();
+	var receiverPlace:Null<TypedInlineUnaryPlace> = null;
 
 	function new(helpers:StringMap<TypedFunction>, selected:RequiredInlineSelection, owner:String, index:TyperIndex) {
 		this.helpers = helpers;
@@ -132,7 +134,22 @@ class TypedRequiredInlineLowering {
 			case ThisValue:
 				if (receiver == null)
 					throw "static inline body cannot read an instance receiver";
+				if (receiverPlace != null)
+					return receiverPlace.read(TyTypeSubstitution.apply(expression.getType(), typeBindings));
 				return receiver.withType(TyTypeSubstitution.apply(expression.getType(), typeBindings));
+			case Assign if (receiverPlace != null && children.length == 2 && children[0].getTag() == ThisValue):
+				return receiverPlace.write(substitute(children[1], receiver, locals));
+			case CompoundAssign if (receiverPlace != null && children.length == 2 && children[0].getTag() == ThisValue):
+				return receiverPlace.compound(expression.getTexts()[0], substitute(children[1], receiver, locals),
+					TyTypeSubstitution.apply(children[0].getType(), typeBindings), expression.getPosition());
+			case Unary
+				if (receiverPlace != null
+					&& children.length == 1
+					&& children[0].getTag() == ThisValue
+					&& (expression.getUnaryOperator() == HxUnaryOperator.Increment
+						|| expression.getUnaryOperator() == HxUnaryOperator.Decrement)):
+				return receiverPlace.update(expression.getUnaryOperator(), expression.getUnaryFixity(),
+					TyTypeSubstitution.apply(children[0].getType(), typeBindings), expression.getPosition());
 			case NameRead if (expression.getFieldInfo() != null && !expression.getFieldInfo().getIsStatic()):
 				if (receiver == null)
 					throw "static inline body cannot read an instance field";
@@ -404,6 +421,29 @@ class TypedRequiredInlineLowering {
 			selectedParameters.unshift(arguments[0].getType());
 		final previousBindings = typeBindings;
 		final previousLoops = loopTargets;
+		final previousPlace = receiverPlace;
+		receiverPlace = null;
+		if (receiver != null
+			&& abstractOwner != null
+			&& writers.exists(identity)
+			&& receiver.getType().getNominalIdentity() != null
+			&& receiver.getType().getNominalIdentity().equals(abstractOwner.getIdentity())) {
+			// Keep the abstract binding intact. Only this exact inline declaration
+			// can read its backing value and convert writes back to caller storage.
+			// Preserve repeated receiver effects at their authored body occurrences.
+			final destination = receiver;
+			receiverPlace = TypedAbstractUnaryInlinePlace.prepare({
+				place: {
+					prefix: [],
+					read: type -> destination,
+					write: value -> TypedExpr.assign(destination, value, destination.getType(), destination.getPosition())
+				},
+				receiver: destination.getType(),
+				abstractInfo: abstractOwner,
+				declaration: declaration,
+				allocator: allocator
+			});
+		}
 		loopTargets = new StringMap();
 		typeBindings = TyMethodGenericBinding.inlineBindings(declaration, selectedParameters, expression.getType(), semanticIndex);
 		for (identity => type in ownerBindings)
@@ -447,6 +487,7 @@ class TypedRequiredInlineLowering {
 		active.pop();
 		typeBindings = previousBindings;
 		loopTargets = previousLoops;
+		receiverPlace = previousPlace;
 		return TypedExpr.block(prefix, expression.getType(), expression.getPosition());
 	}
 
