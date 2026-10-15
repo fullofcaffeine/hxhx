@@ -653,7 +653,7 @@
     "test:m14:python-static-fields": "haxe test/m14_python_static_fields_integration_test.hxml && haxe test/m14_sequencing_native_integration_test.hxml python",
     "test:m14:typed-abstract-unary": "haxe test/m14_typed_abstract_unary_integration_test.hxml",
     "test:m14:typed-abstract-binary": "haxe test/m14_typed_abstract_binary_integration_test.hxml",
-    "test:m14:abstract-unary-cross-backend": "haxe test/m14_abstract_unary_cross_backend_integration_test.hxml",
+    "test:m14:abstract-unary-cross-backend": "haxe test/m14_abstract_unary_cross_backend_integration_test.hxml && haxe test/m14_sys_println_callable_integration_test.hxml",
     "test:m14:abstract-binary-cross-backend": "haxe test/m14_abstract_binary_cross_backend_integration_test.hxml",
     "test:m14:cpp-abstract-unary": "haxe test/m14_cpp_native_abstract_operator_test.hxml && haxe test/m14_cpp_inline_unary_storage_test.hxml && haxe test/m14_cpp_abstract_unary_integration_test.hxml",
     "test:m14:cpp-abstract-binary": "haxe test/m14_cpp_native_binary_operator_test.hxml && haxe test/m14_cpp_abstract_binary_integration_test.hxml",

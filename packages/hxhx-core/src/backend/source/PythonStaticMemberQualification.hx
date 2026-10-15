@@ -17,6 +17,11 @@ private function expression(value:TypedExpr):TypedExpr {
 	if (rebuilt.getTag() == NameRead && field != null && field.getIsStatic())
 		return TypedExpr.fieldRead(ownerReference(field.getOwner(), rebuilt.getPosition()), field.getName(), rebuilt.getType(), rebuilt.getPosition(), field);
 	final declaration = rebuilt.getDeclaration();
+	// Saved functions need the same class qualifier as direct calls. Retain the
+	// selected method so nested closures and static initializers keep its identity.
+	if (rebuilt.getTag() == NameRead && declaration != null && declaration.getIsStatic() && !declaration.getIsEnumConstructor())
+		return TypedExpr.staticMethodRead(declaration.getSignature().getName(), declaration, rebuilt.getType(), rebuilt.getPosition(), true,
+			ownerReference(declaration.getOwner(), rebuilt.getPosition()));
 	if (rebuilt.getTag() == Call
 		&& declaration != null
 		&& declaration.getIsStatic()

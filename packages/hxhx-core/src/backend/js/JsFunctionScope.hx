@@ -55,6 +55,7 @@ class JsFunctionScope {
 			enumDeclarations: outer.enumDeclarations,
 			methodUses: projection.findMethodUse,
 			lambdaUses: projection.findLambda,
+			callableExpressions: projection.findCallableExpression,
 			requireExpression: projection.requireExpression,
 			abstractReceiver: outer.abstractReceiver
 		};
@@ -192,6 +193,7 @@ class JsFunctionScope {
 			enumDeclarations: enumDeclarations != null ? enumDeclarations : parentScope == null ? null : parentScope.enumDeclarations,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
 			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
+			callableExpressions: controlProjection != null ? controlProjection.findCallableExpression : parentScope == null ? null : parentScope.callableExpressions,
 			requireExpression: initializerLambdas != null ? null : controlProjection != null ? controlProjection.requireExpression : parentScope == null ? null : parentScope.requireExpression,
 			abstractReceiver: abstractReceiver
 		};

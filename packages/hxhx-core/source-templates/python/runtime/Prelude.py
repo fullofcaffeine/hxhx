@@ -206,6 +206,11 @@ class Map:
 
 class Sys:
     @staticmethod
+    def println(value):
+        """Keep direct calls and saved function values on the same output boundary."""
+        print(hxhx_std_string(value))
+
+    @staticmethod
     def environment():
         import os
         return Map(os.environ.items())

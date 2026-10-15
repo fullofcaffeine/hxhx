@@ -34,11 +34,15 @@ class JsExprEmitter {
 			enumDeclarations: parent == null ? null : parent.enumDeclarations,
 			methodUses: parent == null ? null : parent.methodUses,
 			lambdaUses: parent == null ? null : parent.lambdaUses,
+			callableExpressions: parent == null ? null : parent.callableExpressions,
 			requireExpression: parent == null ? null : parent.requireExpression,
 			abstractReceiver: parent != null && parent.abstractReceiver == true};
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		final intrinsicValue = JsIntrinsicCallable.emitValue(expr, scope);
+		if (intrinsicValue != null)
+			return intrinsicValue;
 		final methodValue = JsMethodValueSupport.emitValue(expr, scope);
 		if (methodValue != null)
 			return methodValue;

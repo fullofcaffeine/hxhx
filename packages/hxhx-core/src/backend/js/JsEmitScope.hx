@@ -13,6 +13,9 @@ typedef JsEmitScope = {
 	final ?methodUses:HxExpr->Null<TypedBackendMethodOccurrence>;
 	final ?lambdaUses:HxExpr->Null<TypedBackendLambdaOccurrence>;
 
+	/** Exact typed function values, including static extern methods saved before argument effects. */
+	final ?callableExpressions:HxExpr->Null<TypedExpr>;
+
 	/** Authorize only original lowered operations from the current executable projection. */
 	final ?requireExpression:HxExpr->Void;
 

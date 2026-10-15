@@ -84,8 +84,10 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 		].join("\n");
 		final parsed = ParserStage.parse(source, "Main.hx");
 		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([
+			hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true))
+		], HxDefineMap.fromRawDefines(["sys"]), index);
 		loader.markResolvedAlready([resolved]);
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		final program = new MacroExpandedProgram([typed], false);

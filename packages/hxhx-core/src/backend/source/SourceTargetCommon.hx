@@ -362,12 +362,18 @@ class SourceTargetCommon {
 		}
 		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
-		final strictProjection = target == Lua || target == Cs || target == Java ? strictTypedMainProjection(program, main) : null;
+		final strictProjection = target == Lua
+			|| target == Cs
+			|| target == Java
+			|| target == Python ? strictTypedMainProjection(program, main) : null;
 		final csEnumConstructors = target == Cs ? new CsEnumConstructorCallLowering(program, context.hasDefine("no_root")) : null;
 		final mainBody = switch (target) {
 			case Lua: LuaStringLocalCallLowering.body(strictProjection.main);
 			case Cs: csEnumConstructors.body(strictProjection.main);
 			case Java: strictProjection.main.getBody();
+			// The exact local catalog gives each captured callee and argument result
+			// its own name. The legacy body can reuse their display name "result".
+			case Python: new PythonFieldAccessLowering(program).body(strictProjection.main);
 			case Php: throw "PHP source target must use its request-owned program renderer";
 			case _: HxFunctionDecl.getBody(main.fn);
 		};
