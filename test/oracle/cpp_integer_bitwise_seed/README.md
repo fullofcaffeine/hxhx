@@ -2,6 +2,8 @@
 
 This fixture checks `&`, `|`, `^`, `<<`, `>>`, and `>>>` through authored Haxe and generated C++.
 It covers signed 32-bit boundaries, zero and large shift counts, negative shift counts, and operand evaluation order.
+The six compound forms also check stored results and a captured target changed by the right-hand side.
+The target's old value must be read before those effects, then the completed result must be stored once.
 
 `EvalMain` runs the shared integer assertions with upstream Haxe 4.3.7.
 `Main` also checks native nullable operands: absent values contribute zero without changing the source value.
@@ -27,7 +29,7 @@ haxe -cp test/oracle/cpp_integer_bitwise_seed -main Main -cpp .tmp/cpp-integer-b
 
 Success produces no output. Reference checks use Haxe 4.3.7 and hxcpp 4.3.2.
 
-On Apple clang 17, the full upstream native assertion program has an unresolved, optimization-sensitive shift failure.
+On Apple clang 17, the original fixture at `9429c9b3e` exposed an unresolved, optimization-sensitive upstream native shift failure.
 An array-driven upstream probe matches eval, and adding values to the failure message makes the full native program pass.
 Issue `haxe_ocaml-gwee8` retains the reproduction and conflicting evidence; the full upstream native program is not accepted as passing parity evidence.
 

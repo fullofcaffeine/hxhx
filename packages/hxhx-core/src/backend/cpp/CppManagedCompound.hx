@@ -1,5 +1,20 @@
 package backend.cpp;
 
+/** Select only compound operators whose binary operation has a managed implementation. */
+function selectsAssignment(op:String):Bool {
+	return switch op {
+		case "+=" | "-=" | "*=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=": true;
+		case _: false;
+	};
+}
+
+/** Remove the assignment suffix without truncating multi-character shift operators. */
+function binaryOperator(op:String):String {
+	if (!selectsAssignment(op))
+		throw "managed compound assignment requires an implemented binary operator";
+	return op.substr(0, op.length - 1);
+}
+
 /** Compound writes reuse binary operation policy, then require its result to fit the selected place. */
 function requireType(op:String, target:TyType, source:TyType):Void {
 	final result = CppManagedStringConcat.selects(op, target,

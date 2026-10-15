@@ -412,8 +412,8 @@ class CppManagedRootedExpression {
 				if (selected != null && !selected.getField().getIsStatic()) renderDiscard(value, indent); else [
 					indent + "static_cast<void>(" + (selected == null ? locals.value(value) : staticRead(selected)) + ");"
 				];
-			case SExpr(EBinop(op, target, value), _) if (op == "+=" || op == "-=" || op == "*="):
-				renderSelectedAssignment(target, value, null, indent, op.substr(0, 1));
+			case SExpr(EBinop(op, target, value), _) if (CppManagedCompound.selectsAssignment(op)):
+				renderSelectedAssignment(target, value, null, indent, CppManagedCompound.binaryOperator(op));
 			case SExpr(EBinop("=", target, value), _):
 				renderSelectedAssignment(target, value, null, indent);
 			case SExpr(value = ECall(_, _), _):
@@ -508,9 +508,9 @@ class CppManagedRootedExpression {
 				requireExpression(value);
 				CppManagedRecordRead.fieldType(valueType(receiver), name);
 			case EBinop("=", target, _): valueType(target);
-			case EBinop(op, target, right) if (op == "+=" || op == "-=" || op == "*="):
+			case EBinop(op, target, right) if (CppManagedCompound.selectsAssignment(op)):
 				final type = valueType(target);
-				CppManagedCompound.requireType(op.substr(0, 1), type, valueType(right));
+				CppManagedCompound.requireType(CppManagedCompound.binaryOperator(op), type, valueType(right));
 				type;
 			case EBinop(op, left, right):
 				// Selectors share one checked view of each operand within this query.
@@ -699,8 +699,8 @@ class CppManagedRootedExpression {
 					destination: destination,
 					renderValue: render
 				}, indent);
-			case EBinop(op, target, assigned) if (op == "+=" || op == "-=" || op == "*="):
-				return renderSelectedAssignment(target, assigned, destination, indent, op.substr(0, 1));
+			case EBinop(op, target, assigned) if (CppManagedCompound.selectsAssignment(op)):
+				return renderSelectedAssignment(target, assigned, destination, indent, CppManagedCompound.binaryOperator(op));
 			case EBinop("=", target, assigned):
 				return renderSelectedAssignment(target, assigned, destination, indent);
 			case EBinop(op, left, right) if (op == "&&" || op == "||"):

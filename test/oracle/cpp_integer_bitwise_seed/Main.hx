@@ -18,6 +18,7 @@ class Main {
 	}
 
 	public static function common():Void {
+		compound();
 		check(-1, 0, -1, -1, -1);
 		check(-1, 1, -2, -1, 2147483647);
 		check(-1, 16, -65536, -1, 65535);
@@ -39,6 +40,38 @@ class Main {
 		order = 0;
 		if ((operand(5, 1) ^ operand(3, 2)) != 6 || order != 12)
 			throw "bitwise operands did not execute once in order";
+	}
+
+	/** Compound operators return the stored result and read their target before RHS effects. */
+	static function compound():Void {
+		var value = 63;
+		if ((value &= 10) != 10 || value != 10)
+			throw "and assignment lost its result";
+		value |= 32;
+		if (value != 42)
+			throw "or assignment changed its result";
+		value ^= 15;
+		if (value != 37)
+			throw "xor assignment changed its result";
+		value <<= 1;
+		if (value != 74)
+			throw "left shift assignment changed its result";
+		value >>= 1;
+		if (value != 37)
+			throw "signed shift assignment changed its result";
+		value = -1;
+		if ((value >>>= 1) != 2147483647 || value != 2147483647)
+			throw "unsigned shift assignment lost its result";
+		value = -8;
+		if ((value >>= 33) != -4 || value != -4)
+			throw "compound shift count was not masked";
+		var captured = 15;
+		final rhs = () -> {
+			captured = 0;
+			return 3;
+		};
+		if ((captured &= rhs()) != 3 || captured != 3)
+			throw "compound capture read occurred after RHS effects";
 	}
 
 	/** Native nullable operands use zero for numeric operations and retain their original storage. */
