@@ -349,16 +349,30 @@ class TypedAbstractUnaryLowering {
 			fixity:HxUnaryFixity, allocator:TyCompilerTemporaryAllocator, filePath:String):TypedExpr {
 		final resultType = operand.getType();
 		final carrierType = abstractInfo.getUnderlyingType();
+		if (resultType.getNominalIdentity() == null || !resultType.getNominalIdentity().equals(abstractInfo.getIdentity()))
+			throw "abstract property update requires its selected abstract owner";
 		if (!carrierType.isNumeric())
 			throw new TyperError(filePath, expression.getPosition(),
 				"Abstract property increment/decrement requires an Int or Float underlying carrier: " + resultType.getDisplay());
 		final binaryOperator = op == HxUnaryOperator.Increment ? "+" : "-";
 		final one = TypedExpr.intLiteral(1, TyType.fromHintText("Int"), expression.getPosition());
 		final expressions = place.prefix.copy();
+		// Property updates use this exact abstract's Int storage instead of its
+		// overloaded operator. These compiler-created views do not authorize
+		// authored casts or Float representation changes.
+		function storageView(value:TypedExpr, expected:TyType):TypedExpr {
+			final actual = value.getType().getSemanticKey();
+			final target = expected.getSemanticKey();
+			final abstractKey = resultType.getSemanticKey();
+			final carrierKey = carrierType.getSemanticKey();
+			if (!((actual == abstractKey && target == carrierKey) || (actual == carrierKey && target == abstractKey)))
+				throw "abstract property storage view differs from its selected backing type";
+			return TypedExpr.castValue(value, expected.getDisplay(), expected, value.getPosition(), carrierKey == "primitive:Int");
+		}
 		if (fixity == HxUnaryFixity.Prefix) {
-			final current = place.read(carrierType);
+			final current = storageView(place.read(resultType), carrierType);
 			final updatedCarrier = TypedExpr.binary(binaryOperator, current, one, carrierType, expression.getPosition());
-			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			final updated = storageView(updatedCarrier, resultType);
 			expressions.push(place.write(updated));
 		} else {
 			final oldValue = place.read(resultType);
@@ -366,14 +380,14 @@ class TypedAbstractUnaryLowering {
 			final oldName = oldBinding.getSourceName();
 			expressions.push(TypedExpr.temporary(oldName, resultType.getDisplay(), oldValue, voidType(), expression.getPosition(), oldBinding));
 			final oldRead = TypedExpr.localRead(oldName, resultType, expression.getPosition(), oldBinding);
-			final carrierRead = TypedExpr.castValue(oldRead, carrierType.getDisplay(), carrierType, expression.getPosition());
+			final carrierRead = storageView(oldRead, carrierType);
 			final updatedCarrier = TypedExpr.binary(binaryOperator, carrierRead, one, carrierType, expression.getPosition());
-			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			final updated = storageView(updatedCarrier, resultType);
 			expressions.push(place.write(updated));
 			expressions.push(oldRead);
 		}
 		final block = TypedExpr.block(expressions, resultType, expression.getPosition());
-		return TypedExpr.castValue(block, resultType.getDisplay(), resultType, expression.getPosition());
+		return TypedExpr.castValue(block, resultType.getDisplay(), resultType, expression.getPosition(), true);
 	}
 
 	static function lowerExpression(expression:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,

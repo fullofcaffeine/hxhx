@@ -3,3 +3,5 @@
 -cp test
 -main M14CppNativeAbstractOperatorTest
 --interp
+--next
+test/m14_cpp_abstract_property_update_test.hxml

@@ -4,6 +4,14 @@ import TypedStmt.TypedStmtTag;
 
 /** Focused contract for shared exact abstract-unary selection and lowering. **/
 class M14TypedAbstractUnaryIntegrationTest {
+	/** Every conversion in this property schedule is compiler-created from its selected Int backing. */
+	static function assertPropertyStorageProof(expression:TypedExpr):Void {
+		if (expression.getTag() == Cast)
+			assertTrue(expression.isRepresentationPreservingCast(), "property update lost its exact backing storage proof");
+		for (child in expression.getExpressions())
+			assertPropertyStorageProof(child);
+	}
+
 	/** Haxe 4.3.7 accepts this during ordinary typing before null-safety analysis. **/
 	static function hostNullablePostfix(value:Null<Int>):Null<Int> {
 		return value++;
@@ -465,6 +473,7 @@ class Main { static function main():Void { var value:Wrapper = new Payload(); va
 			"postfix result no longer reads the helper's saved old value");
 
 		final propertyPrefix = initializer(main, "propertyPrefix");
+		assertPropertyStorageProof(propertyPrefix);
 		final propertyPrefixBlock = inlineBlock(propertyPrefix);
 		final propertyGetterCall = declarationExpression(propertyPrefix, "get_value");
 		final propertySetterCall = declarationExpression(propertyPrefix, "set_value");
@@ -477,6 +486,7 @@ class Main { static function main():Void { var value:Wrapper = new Payload(); va
 			&& !containsTag(propertyPrefix, TypedExprTag.Unary),
 			"property prefix update did not become an explicit getter/setter schedule");
 		final propertyPostfix = initializer(main, "propertyPostfix");
+		assertPropertyStorageProof(propertyPostfix);
 		final propertyPostfixBlock = inlineBlock(propertyPostfix);
 		assertTrue(propertyPostfixBlock.getTag() == TypedExprTag.Block
 			&& propertyPostfixBlock.getExpressions().length == 4
