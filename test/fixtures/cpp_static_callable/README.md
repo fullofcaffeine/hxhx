@@ -4,6 +4,12 @@ This fixture stores static methods, calls them, compares their identity, shadows
 a method with a local callback, and omits a defaulted argument. The argument
 block in `consume` requires the compiler to capture its callee before evaluation.
 
+`NumberTools` is an abstract with a static method. Its block-valued argument
+also requires callee capture. The test stores that method directly and checks
+that its qualified spelling selects the same function. A local record named
+`NumberTools` must instead use its own callback. Abstract method selection must
+not require, or invent, a runtime class object.
+
 Run the upstream behavior check and native regression from the repository root:
 
 ```sh

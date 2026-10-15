@@ -35,9 +35,8 @@ class TypedRuntimeTypeResolver {
 		return false;
 	}
 
-	/** Returns no class fallback when ordinary value lookup already owns the name. */
-	public static function resolve(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext,
-			namespace:TypedRuntimeTypeNamespace):Null<TypedRuntimeTypeTarget> {
+	/** Ordinary values shadow a declaration qualifier before runtime eligibility is considered. */
+	static function visiblePath(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext, namespace:TypedRuntimeTypeNamespace):Null<String> {
 		final name = path(expression);
 		if (name == null)
 			return null;
@@ -57,6 +56,25 @@ class TypedRuntimeTypeResolver {
 					return null;
 			}
 		}
+		return name;
+	}
+
+	/**
+		Select a static member's nominal owner without requiring a runtime class object.
+		Abstracts can own static methods even though their type name is not a value.
+		The same lexical and member shadowing rules still apply to their qualifiers.
+	 */
+	public static function resolveQualifier(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext):Null<TyNominalInfo> {
+		final name = visiblePath(expression, environment, context, ValueExpression);
+		return name == null ? null : context.resolveType(name);
+	}
+
+	/** Returns no class fallback when ordinary value lookup already owns the name. */
+	public static function resolve(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext,
+			namespace:TypedRuntimeTypeNamespace):Null<TypedRuntimeTypeTarget> {
+		final name = visiblePath(expression, environment, context, namespace);
+		if (name == null)
+			return null;
 		final selected = context.resolveType(name);
 		// Core names are language-defined. A resolved package or secondary type
 		// with the same short spelling remains nominal; ordinary values won above.

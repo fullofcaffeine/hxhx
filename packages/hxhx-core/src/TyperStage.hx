@@ -2270,9 +2270,7 @@ class TyperStage {
 					&& imported.getCandidates().length == 1 ? imported.getProvider().declarationForSignature(imported.getCandidates()[0]) : null;
 				}
 			case EField(object, name):
-				final target = TypedRuntimeTypeResolver.resolve(object, scope, ctx, ValueExpression);
-				final identity = target == null ? null : target.getDeclarationIdentity();
-				identity == null ? null : select(ctx.getIndex().getByFullName(identity.getCanonicalName()), name);
+				select(TypedRuntimeTypeResolver.resolveQualifier(object, scope, ctx), name);
 			case _: null;
 		};
 	}

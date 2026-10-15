@@ -55,5 +55,24 @@ class Main {
 		final defaulted = withDefault;
 		Sys.println(defaulted());
 		Sys.println(initial == other);
+		final controlled = NumberTools.twice({
+			var argument = 6;
+			argument;
+		});
+		Sys.println(controlled);
+		final abstractMethod = NumberTools.twice;
+		Sys.println(abstractMethod(8));
+		final qualified = Main.NumberTools.twice;
+		Sys.println(qualified == abstractMethod);
+		{
+			final NumberTools = {twice: function(value:Int):Int return value + 100};
+			Sys.println(NumberTools.twice(3));
+		}
 	}
+}
+
+/** An abstract can own static methods without being a runtime class object. */
+abstract NumberTools(Int) {
+	public static function twice(value:Int):Int
+		return value * 2;
 }
