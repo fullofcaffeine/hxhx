@@ -3133,6 +3133,19 @@ class EmitterStage {
 			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
+			if (exactCall.owner == "String" && backend.ocaml.Stage3OcamlStringCalls.supports(exactCall.method)) {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml string call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlStringCalls.render({
+					occurrence: occurrence,
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames
+				});
+				if (rendered != null)
+					return rendered;
+			}
 			if (exactCall.owner == "Array" && backend.ocaml.Stage3OcamlArrayCalls.supports(exactCall.method)) {
 				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
 				if (occurrence == null)

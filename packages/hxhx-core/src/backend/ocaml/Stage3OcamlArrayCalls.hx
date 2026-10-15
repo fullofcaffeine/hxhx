@@ -3,7 +3,7 @@ package backend.ocaml;
 /** Only these declared Array operations use this native call adapter. */
 function supports(method:String):Bool {
 	return switch method {
-		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter": true;
+		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter" | "indexOf" | "lastIndexOf": true;
 		case _: false;
 	};
 }
@@ -35,7 +35,7 @@ function render(input:{
 	final expectedCount = switch call.method {
 		case "copy": 0;
 		case "splice": 2;
-		case "slice": call.arguments.length == 1 ? 1 : 2;
+		case "slice" | "indexOf" | "lastIndexOf": call.arguments.length == 1 ? 1 : 2;
 		case _: 1;
 	};
 	if (call.arguments.length != expectedCount || input.names == null)
@@ -76,6 +76,20 @@ function render(input:{
 				+ arguments.join(" ");
 		case "splice": "HxArray.splice " + runtimeReceiver + " " + arguments.join(" ");
 		case "filter": "HxArray.filter " + runtimeReceiver + " " + argument;
+		case "indexOf" | "lastIndexOf":
+			// Dynamic arrays store boxed values. Search must compare the same
+			// representation used by push, including boxed Bool and Float values.
+			final searched = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic ("
+				+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[0], argument)
+				+ "))" : argument;
+			"HxArray."
+			+ call.method
+			+ (arguments.length == 1 ? "_default" : "")
+			+ " "
+			+ runtimeReceiver
+			+ " "
+			+ searched
+			+ (arguments.length == 1 ? "" : " " + arguments[1]);
 		case _: throw "unexpected selected array operation";
 	};
 	final result = call.method == "map"
