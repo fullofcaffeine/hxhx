@@ -9,6 +9,8 @@
 	reads without those facts fail explicitly rather than silently losing features.
 	Record callbacks instead use the receiver's exact structural field type. Their
 	receiver and value expressions still contribute ordinary declaration references.
+	Typed value boundaries retain class members exposed by a structural contract,
+	including methods that have no later nominal call reference.
 	Class-object references retain their resolved ancestors and interfaces, including
 	class initialization, without making every instance method reachable.
 	Only declarations owned by this exact typed program can enter the work queue.
@@ -88,7 +90,8 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 			retainClass(owner);
 		}
 	}
-	function expression(node:TypedExpr, selectedCallee:Bool = false):Void {
+	final structural = new TypedStructuralRetention(nominalClasses, retainFunction, retainField);
+	function expression(node:TypedExpr, selectedCallee:Bool = false, ?returnType:TyType):Void {
 		if (node.getTag() == MacroExpr || node.getTag() == MacroType) {
 			for (owner in TypedQuotationEnumDependencies.find(node.getType(), nominalClasses))
 				retainClass(owner);
@@ -131,19 +134,50 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 		if (field != null)
 			retainField(field);
 		final children = node.getExpressions();
+		switch node.getTag() {
+			case ReturnExpr:
+				if (children.length == 1)
+					structural.boundary(returnType, children[0].getType());
+			case VariableDeclaration:
+				if (children.length == 1 && node.getLocalBindings().length == 1)
+					structural.boundary(node.getLocalBindings()[0].getType(), children[0].getType());
+			case Assign:
+				if (children.length == 2)
+					structural.boundary(children[0].getType(), children[1].getType());
+			case CheckType:
+				if (children.length == 1)
+					structural.boundary(node.getType(), children[0].getType());
+			case Call:
+				final expected = TypedCallExpectedArguments.resolve(node);
+				for (index in 0...expected.length)
+					structural.boundary(expected[index], children[index + 1].getType());
+			case Ternary | SwitchExpr:
+				for (child in children.slice(1))
+					structural.boundary(node.getType(), child.getType());
+			case Block | SourceGroup:
+				if (children.length > 0)
+					structural.boundary(node.getType(), children[children.length - 1].getType());
+			case _:
+		}
+		final nestedReturn = node.getTag() == Lambda || node.getTag() == SourceFunction ? node.getType().getFunctionReturn() : returnType;
 		for (index in 0...children.length) {
 			// A direct call already owns its selected declaration. Parentheses may
 			// wrap that callee without turning it into a separate method-value read.
 			final bound = index == 0
 				&& ((node.getTag() == Call && declaration != null) || (node.getTag() == Parenthesized && selectedCallee));
-			expression(children[index], bound);
+			expression(children[index], bound, nestedReturn);
 		}
 	}
-	function statement(node:TypedStmt):Void {
+	function statement(node:TypedStmt, returnType:Null<TyType>):Void {
+		final values = node.getExpressions();
+		if (node.getTag() == Return && values.length == 1)
+			structural.boundary(returnType, values[0].getType());
+		if (node.getTag() == Var && values.length == 1 && node.getLocalBindings().length == 1)
+			structural.boundary(node.getLocalBindings()[0].getType(), values[0].getType());
 		for (child in node.getExpressions())
-			expression(child);
+			expression(child, false, returnType);
 		for (child in node.getStatements())
-			statement(child);
+			statement(child, returnType);
 	}
 	for (owner in input.classes)
 		retainClass(owner);
@@ -170,13 +204,18 @@ function retain(input:TypedFeatureRoots.TypedFeatureRootSet):TypedFeatureRoots.T
 				if (fn.getDeclaration().getIsStatic() && fn.getDeclaration().getSignature().getName() == "__init__")
 					retainFunction(fn);
 		}
-		while (functionCursor < functions.length)
-			for (body in functions[functionCursor++].getBody().getStatements())
-				statement(body);
+		while (functionCursor < functions.length) {
+			final fn = functions[functionCursor++];
+			final result = fn.getEnvironment() == null ? fn.getDeclaration().getSignature().getReturnType() : fn.getEnvironment().getReturnType();
+			for (body in fn.getBody().getStatements())
+				statement(body, result);
+		}
 		while (fieldCursor < fields.length) {
 			final initializer = initializers.get(fields[fieldCursor++]);
-			if (initializer != null)
+			if (initializer != null) {
+				structural.boundary(initializer.getField().getType(), initializer.getExpression().getType());
 				expression(initializer.getExpression());
+			}
 		}
 		// New methods can expose further classes and calls. Revisit dispatch after
 		// draining ordinary references, until all declaration queues stop growing.
