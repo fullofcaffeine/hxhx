@@ -36,6 +36,7 @@ class M14SourceNamedFunctionTest {
 			"ManagedMap.hpp",
 			"ManagedOutput.hpp",
 			"ManagedStack.hpp",
+			"ManagedString.hpp",
 			"ManagedThrow.hpp",
 			"ManagedValue.hpp"
 		];
@@ -57,7 +58,8 @@ class M14SourceNamedFunctionTest {
 				"-Wextra",
 				"-Werror",
 				optimization,
-				"-g",
+				// Keep sanitizer source locations without costly debugger type metadata.
+				"-g1",
 				"-fno-omit-frame-pointer",
 				"-fsanitize=address,undefined",
 				sources[0],

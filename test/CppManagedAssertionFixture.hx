@@ -1,6 +1,10 @@
 /** Native assertion fixtures with only scalar static storage must release every temporary allocation. */
 class CppManagedAssertionFixture {
-	/** Compile both sanitizer profiles; the selected observer must force collection and check temporary-root cleanup. */
+	/**
+		Compile both sanitizer profiles; the observer must force collection and check root cleanup.
+		Minimal debug information retains source locations without the full debugger type metadata
+		that makes optimized generated-code compilation exceed the bounded test deadline.
+	 */
 	public static function sanitizers(output:String, label:String, observerSource:String = "test/cpp_managed_heap/UninitializedLocalObserver.cpp",
 			programSource:String = "src/Main.cpp"):Void {
 		sys.io.File.copy(observerSource, output + "/Observer.cpp");
@@ -13,7 +17,7 @@ class CppManagedAssertionFixture {
 				compiler,
 				"-std=c++17",
 				optimization,
-				"-g",
+				"-g1",
 				"-fno-omit-frame-pointer",
 				"-fsanitize=address,undefined",
 				"-fno-sanitize-recover=all",
