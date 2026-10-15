@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v26";
+	static final passIdentity = "source-control-v27";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -455,8 +455,12 @@ class TypedControlLowering {
 		final position = expression.getPosition();
 		final outside = new Array<TypedExpr>();
 		var projectedValue:Null<TypedExpr> = null;
-		if (completes && needsValue && result != null && !result.getType().isVoid()) {
-			final binding = temporary(result.getType());
+		if (completes && needsValue && result != null && !result.getType().isVoid() && !expression.getType().isVoid()) {
+			// A typed block can expose a declared result different from its last
+			// operand, for example an inline getter returning a Dynamic function.
+			// Keep that destination type so ordinary assignment conversion preserves
+			// the caller's checked contract when the block becomes statements.
+			final binding = temporary(expression.getType());
 			outside.push(declaration(binding, null, position));
 			projectedValue = TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 			steps.push(TypedExpr.assign(projectedValue, result, binding.getType(), position));

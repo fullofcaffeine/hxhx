@@ -1,4 +1,4 @@
-/** Inline parameter and local storage must preserve ordinary Haxe assignment rules and effects. */
+/** Inline parameter, local, and return storage must preserve Haxe assignment rules and effects. */
 class M14ExternInlineStorageTest {
 	public static function run():Void {
 		// Dynamic is authored at this boundary to exercise the language's implicit
@@ -7,16 +7,24 @@ class M14ExternInlineStorageTest {
 extern class Helper {
 public static inline function typed(value:Int):Int{return value+1;}
 public static inline function local(value:Dynamic):Int{var selected:Int=value;return selected+2;}
+public static inline function returned(value:Dynamic):Int{return value;}
+public static var action(get,never):(?value:Int)->Int;
+static inline function get_action():(?value:Int)->Int{return Main.callback();}
 }
 class Main {
 static var effects=0;
 static function input():Dynamic{effects++;return 4;}
+static function increment(?value:Int):Int{return value==null?8:value+2;}
+public static function callback():Dynamic{effects++;return increment;}
 static function main():Void {
 Console.log(""+Helper.typed(input()));
 Console.log(""+Helper.local(input()));
+Console.log(""+Helper.returned(input()));
+Console.log(""+Helper.action(5));
+Console.log(""+Helper.action());
 Console.log(""+effects);
 }}';
-		final expected = "5\n6\n2\n";
+		final expected = "5\n6\n4\n7\n8\n5\n";
 		final root = ".tmp/extern-inline-storage";
 		sys.FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
@@ -57,7 +65,19 @@ Console.log(""+effects);
 						statement(value);
 		if (assignments != 2)
 			throw "inline storage lost its parameter or local assignment conversion";
+		final revisions = [
+			for (owner in typed.getTypedClasses())
+				for (fn in owner.getFunctions())
+					CompilerTypedTreeRevision.functionBody(fn)
+		];
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
+		final after = [
+			for (owner in typed.getTypedClasses())
+				for (fn in owner.getFunctions())
+					CompilerTypedTreeRevision.functionBody(fn)
+		];
+		if (revisions.join("\n") != after.join("\n"))
+			throw "inline return projection changed the typed source";
 		Sys.println("EXTERN_INLINE_STORAGE:PASS");
 	}
 
