@@ -173,7 +173,11 @@ class CppManagedFunctionEmitter {
 					}
 				case _:
 			}
-			lines.push(new CppManagedFunctionBody(plan, entry.owner).render(selected.abi.result == RootedResult ? "hxhx_result" : null, null, services));
+			try {
+				lines.push(new CppManagedFunctionBody(plan, entry.owner).render(selected.abi.result == RootedResult ? "hxhx_result" : null, null, services));
+			} catch (failure:haxe.Exception) {
+				throw new haxe.Exception("managed function body " + input.projection.getStableIdentity() + ": " + failure.message, failure);
+			}
 			lines.push("}");
 		}
 		plan.assertCurrent();

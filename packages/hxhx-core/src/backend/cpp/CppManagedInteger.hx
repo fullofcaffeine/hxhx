@@ -11,9 +11,9 @@ function resultType(op:String, left:TyType, right:TyType):TyType {
 			+ right.getSemanticKey()
 			+ ")";
 	return switch op {
-		case "+" | "-" | "*": TyType.fromHintText("Int");
+		case "+" | "-" | "*" | "&" | "|" | "^" | "<<" | ">>" | ">>>": TyType.fromHintText("Int");
 		case "==" | "!=" | "<" | "<=" | ">" | ">=": TyType.fromHintText("Bool");
-		case _: throw "managed integer operator requires explicit lowering";
+		case _: throw "managed integer operator requires explicit lowering: " + op;
 	};
 }
 
@@ -30,7 +30,8 @@ function numericValue(type:TyType, value:String):String {
 }
 
 /**
-	Compute from already sequenced Int operands. Every product of two signed
+	Compute from already sequenced Int operands. Bit operations use unsigned
+	patterns. Arithmetic uses a wide intermediate: every product of two signed
 	32-bit values fits in Int64. Reduce the wide result modulo 2^32 through an
 	unsigned conversion, then map it into the signed range before the final cast.
 	This avoids signed-overflow UB and out-of-range unsigned-to-signed casts.
@@ -56,6 +57,10 @@ function compute(op:String, leftType:TyType, rightType:TyType, left:String, righ
 			indent + destination + ".set(hxhx::managed::Value::boolean(" + comparison + "));"
 		];
 	}
+	if (op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" || op == ">>>") {
+		final bits = prefix + "bits";
+		return [indent + "const std::uint32_t " + bits + " = " + bitwiseValue(op, a, b) + ";"].concat(storeBits(bits, destination, indent));
+	}
 	final wide = prefix + "wide";
 	final bits = prefix + "bits";
 	return [indent
@@ -74,15 +79,47 @@ function compute(op:String, leftType:TyType, rightType:TyType, left:String, righ
 		+ " = static_cast<std::uint32_t>("
 		+ wide
 		+ ");",
-		indent
+	].concat(storeBits(bits, destination, indent));
+}
+
+/**
+	Operate on unsigned 32-bit patterns and mask shift counts to five bits.
+	For arithmetic right shift, complement a negative pattern before and after
+	the logical shift. This supplies sign bits without shifting a signed value.
+	Inputs are reads of already sequenced roots; repeating a read has no effects.
+ */
+function bitwiseValue(op:String, left:String, right:String):String {
+	final a = "static_cast<std::uint32_t>(" + left + ")";
+	final b = "static_cast<std::uint32_t>(" + right + ")";
+	final count = "(" + b + " & 31u)";
+	return switch op {
+		case "&" | "|" | "^": "(" + a + " " + op + " " + b + ")";
+		case "<<": "static_cast<std::uint32_t>(static_cast<std::uint64_t>(" + a + ") << " + count + ")";
+		case ">>>": "(" + a + " >> " + count + ")";
+		case ">>": "("
+			+ left
+			+ " < 0 ? static_cast<std::uint32_t>(~(static_cast<std::uint32_t>(~"
+			+ a
+			+ ") >> "
+			+ count
+			+ ")) : ("
+			+ a
+			+ " >> "
+			+ count
+			+ "))";
+		case _: throw "managed bitwise operation requires an exact integer operator";
+	};
+}
+
+/** Map an unsigned pattern into the signed range before narrowing, without implementation-defined casts. */
+function storeBits(bits:String, destination:String, indent:String):Array<String> {
+	return [indent
 		+ destination
 		+ ".set(hxhx::managed::Value::integer(static_cast<std::int32_t>("
 		+ bits
-		+ " > 2147483647LL ? "
-		+ "static_cast<std::int64_t>("
+		+ " > 2147483647LL ? static_cast<std::int64_t>("
 		+ bits
 		+ ") - 4294967296LL : static_cast<std::int64_t>("
 		+ bits
-		+ ")"
-		+ ")));"];
+		+ "))));"];
 }

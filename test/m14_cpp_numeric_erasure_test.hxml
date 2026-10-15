@@ -5,3 +5,5 @@
 --interp
 --next
 test/m14_cpp_abstract_switch_test.hxml
+--next
+test/m14_cpp_integer_bitwise_test.hxml
