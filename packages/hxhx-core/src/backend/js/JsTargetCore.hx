@@ -2210,13 +2210,14 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("return __hx_out + \"\\n\" + " + indent + " + \"}\";");
 	}
 
+	/** Boolean class markers are not names; retain the native constructor name in that case. */
 	static function emitJsBootInstanceofBody(writer:JsWriter, value:String, cls:String):Void {
 		writer.writeln("if (" + cls + " == null) return false;");
 		writer.writeln("var __hx_name = null;");
 		writer.writeln("if (typeof " + cls + " === \"string\") __hx_name = " + cls + ";");
 		writer.writeln("else if (" + cls + ".__hx_name != null) __hx_name = String(" + cls + ".__hx_name);");
-		writer.writeln("else if (" + cls + ".__name__ != null) __hx_name = Array.isArray(" + cls + ".__name__) ? " + cls + ".__name__.join(\".\") : String("
-			+ cls + ".__name__);");
+		writer.writeln("else if (typeof " + cls + ".__name__ === \"string\" || Array.isArray(" + cls + ".__name__)) __hx_name = Array.isArray(" + cls
+			+ ".__name__) ? " + cls + ".__name__.join(\".\") : " + cls + ".__name__;");
 		writer.writeln("else if (" + cls + ".name != null) __hx_name = String(" + cls + ".name);");
 		writer.writeln("if (__hx_name === \"Int\") return typeof " + value + " === \"number\" && ((" + value + " | 0) === " + value + ");");
 		writer.writeln("if (__hx_name === \"Float\") return typeof " + value + " === \"number\";");
