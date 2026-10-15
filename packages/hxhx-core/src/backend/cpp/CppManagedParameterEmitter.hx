@@ -88,13 +88,14 @@ class CppManagedParameterEmitter {
 		throw "binding is not a parameter of this managed closure";
 	}
 
-	/** Managed parameters are mutable roots or promoted cells; direct leaves need their own write transport. */
+	/** Select this invocation's mutable input, keeping captured parameters in their shared cells. */
 	public function place(binding:TyLocalBinding):CppManagedPlace {
 		final slot = requireSlot(binding);
 		if (promoted(binding))
 			return Cell(prefix + "cell" + slot + ".get()");
-		if (plan.requireFunction(owner).abi.getParameters()[slot].storage != RootedParameter)
-			throw "direct parameter assignment requires explicit leaf write transport";
+		final parameter = plan.requireFunction(owner).abi.getParameters()[slot];
+		if (parameter.storage == DirectParameter)
+			return DirectLeaf(inputs[slot], parameter.type);
 		return LocalRoot(prefix + "value" + slot);
 	}
 

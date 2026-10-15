@@ -911,6 +911,7 @@ class CppManagedRootedExpression {
 					+ ");");
 				selected + ".get()->read()";
 			case LocalRoot(root): root + ".get()";
+			case DirectLeaf(symbol, type): CppManagedLeaf.box(type, symbol);
 		};
 		lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + before + "(" + input.heap + ", " + read + ");");
 		lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + after + "(" + input.heap + ");");
@@ -920,6 +921,7 @@ class CppManagedRootedExpression {
 		lines.push(indent + "  " + switch place {
 			case Cell(_): selected + ".get()->write(" + after + ".get());";
 			case LocalRoot(root): root + ".set(" + after + ".get());";
+			case DirectLeaf(symbol, type): symbol + " = " + CppManagedLeaf.read(type, after + ".get()") + ";";
 		});
 		if (destination != null)
 			lines.push(indent
@@ -1345,7 +1347,7 @@ class CppManagedRootedExpression {
 					+ ", "
 					+ reference
 					+ ");");
-			case LocalRoot(_):
+			case LocalRoot(_) | DirectLeaf(_, _):
 		}
 		lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + assigned + "(" + input.heap + ");");
 		// Save a rooted value before RHS effects can replace the selected storage.
@@ -1354,6 +1356,7 @@ class CppManagedRootedExpression {
 			final read = switch place {
 				case Cell(_): selected + ".get()->read()";
 				case LocalRoot(root): root + ".get()";
+				case DirectLeaf(symbol, type): CppManagedLeaf.box(type, symbol);
 			};
 			lines.push(indent + "  hxhx::managed::Root<hxhx::managed::Value> " + before + "(" + input.heap + ", " + read + ");");
 		}
@@ -1373,6 +1376,7 @@ class CppManagedRootedExpression {
 		lines.push(indent + "  " + switch place {
 			case Cell(_): selected + ".get()->write(" + assigned + ".get());";
 			case LocalRoot(root): root + ".set(" + assigned + ".get());";
+			case DirectLeaf(symbol, type): symbol + " = " + CppManagedLeaf.read(type, assigned + ".get()") + ";";
 		});
 		if (destination != null)
 			lines.push(indent + "  " + destination + ".set(" + assigned + ".get());");
