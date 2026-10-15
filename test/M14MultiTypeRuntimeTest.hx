@@ -11,6 +11,20 @@ class M14MultiTypeRuntimeTest {
 		rebind = StringTools.replace(rebind, 'throw "abstract method body";',
 			'throw "abstract method body"; text.clearAgain(); if (text != null) throw "receiver rebinding";');
 		run("receiver_rebinding", rebind);
+		// A receiver write must first apply ordinary assignment conversion. Its
+		// result and any write before a throw remain visible to the caller.
+		var converted = StringTools.replace(source, "public inline function label()",
+			"public inline function replace(value:Storage<T>):Storage<T> return this = value; " +
+			"public inline function clearThenThrow():Void { this = null; throw \"cleared\"; } public inline function label()");
+		converted = StringTools.replace(converted, "final text =", "var text =");
+		converted = StringTools.replace(converted, 'throw "abstract method body";',
+			'throw "abstract method body"; var result = text.replace(ClearEffects.take()); '
+			+ 'if (result != null || text != null || ClearEffects.calls != 1) throw "converted receiver assignment"; '
+			+ 'text = new Choice<String>(); var caught = false; '
+			+ 'try { text.clearThenThrow(); } catch (error:String) { if (error != "cleared") throw "wrong error"; caught = true; } '
+			+ 'if (!caught || text != null) throw "write before throw";');
+		run("converted_rebinding",
+			'class ClearEffects { public static var calls:Int = 0; public static function take():Storage<String> { calls++; return null; } }\n' + converted);
 		run("temporary_receiver", StringTools.replace(source, "text.description()", "(new Choice<String>()).description()"));
 		run("followed_abstract", "abstract TextKey(String) {}\n" + StringTools.replace(source, "new Choice<String>()", "new Choice<TextKey>()"));
 		final effects = 'class Effects { public static var events:String = ""; public static var receivers:Int = 0;'

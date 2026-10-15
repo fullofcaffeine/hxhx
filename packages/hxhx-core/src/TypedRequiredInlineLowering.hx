@@ -138,7 +138,10 @@ class TypedRequiredInlineLowering {
 					return receiverPlace.read(TyTypeSubstitution.apply(expression.getType(), typeBindings));
 				return receiver.withType(TyTypeSubstitution.apply(expression.getType(), typeBindings));
 			case Assign if (receiverPlace != null && children.length == 2 && children[0].getTag() == ThisValue):
-				return receiverPlace.write(substitute(children[1], receiver, locals));
+				// Assignment conversion precedes the exact abstract/backing view.
+				// A null RHS, for example, first becomes the declared backing value;
+				// it cannot itself authorize an arbitrary representation conversion.
+				return receiverPlace.write(storedValue(substitute(children[1], receiver, locals), children[0].getType()));
 			case CompoundAssign if (receiverPlace != null && children.length == 2 && children[0].getTag() == ThisValue):
 				return receiverPlace.compound(expression.getTexts()[0], substitute(children[1], receiver, locals),
 					TyTypeSubstitution.apply(children[0].getType(), typeBindings), expression.getPosition());
