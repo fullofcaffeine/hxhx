@@ -2,7 +2,20 @@ import sys.FileSystem;
 import sys.io.File;
 import haxe.ds.StringMap;
 
+/** Preserve checked receiver calls through native emission and exercise neighboring call diagnostics. */
 class M14HxhxStage3ReceiverCallIntegrationTest {
+	/** Compare an actual process result with the receiver program's independent expected output. */
+	static function observeReceiver(command:String, arguments:Array<String>):Void {
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		final process = new sys.io.Process(timeout, ["30", command].concat(arguments));
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		assertTrue(code == 0, "Receiver program failed: " + stderr);
+		assertEquals(stdout, "42\n", "Receiver program returned the wrong result.");
+	}
+
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
 			throw message;
@@ -59,6 +72,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 	}
 
 	static function main():Void {
+		M14AdditionOperandInferenceTest.main();
 		assertRequestResetDropsAbortedFunctionShadowing();
 		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_hxhx_stage3_receiver_call_' + Std.string(Date.now().getTime()));
 		final srcDir = haxe.io.Path.join([tmpRoot, 'src']);
@@ -122,10 +136,14 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				.filter(fn -> fn.getName() == "dynamicLabel")[0];
 			assertTrue(dynamicLabel.getReturnType().getDisplay() == "Dynamic", "An explicit Dynamic return was narrowed by instance-call inference.");
 
-			final typed = TyperStage.typeModule(parsed);
-			final expanded = MacroStage.expandProgram([typed], []);
+			// Keep the declaration index that proved the instance call's Int result.
+			// Retyping without that index discards the facts required by Std.string.
+			final expanded = MacroStage.expandProgram([resolvedTyped], []);
 			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
+			observeReceiver("node_modules/.bin/haxe", ["-cp", srcDir, "--run", "Main"]);
+			observeReceiver(exePath, []);
+			Sys.println("STAGE3_RECEIVER_CALL_RUNTIME:PASS");
 
 			var mainMl:Null<String> = null;
 			for (entry in FileSystem.readDirectory(outDir)) {

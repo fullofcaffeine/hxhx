@@ -1483,6 +1483,10 @@ class TyperStage {
 			}
 			if (parameter.isOptional && types[source].isNullLiteral())
 				return Compatible;
+			// Admission is directional even when numeric overload ranking assigns
+			// the same distance. The shared assignment owner rejects Float to Int.
+			if (parameter.type.unwrapNull().isPrimitive() && types[source].unwrapNull().isPrimitive())
+				return TyAssignmentCompatibility.classify(parameter.type, types[source], Unchecked);
 			final contextual = TypedCollectionExpectation.select(sources[source], parameter.type);
 			return overloadArgScore(parameter.type, contextual == null ? types[source] : contextual, parameters, index) >= 0 ? Compatible : Incompatible;
 		});
@@ -3366,8 +3370,18 @@ class TyperStage {
 							.getResultType(); else // Best-effort: treat as Bool if both operands are Bool; otherwise Int.
 							(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
 					case "+":
-						final ta = inferExprType(a, scope, ctx, pos);
-						final tb = inferExprType(b, scope, ctx, pos);
+						final operands = TyAdditionOperandInference.constrain({
+							left: a,
+							right: b,
+							leftType: inferExprType(a, scope, ctx, pos),
+							rightType: inferExprType(b, scope, ctx, pos),
+							scope: scope,
+							index: ctx.getIndex(),
+							filePath: ctx.getFilePath(),
+							position: pos
+						});
+						final ta = operands.left;
+						final tb = operands.right;
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
 						if (bound != null) {
 							bound.getOperatorInfo().getResultType();
