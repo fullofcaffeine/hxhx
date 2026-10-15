@@ -22,6 +22,7 @@ class TypedBodyProjectionBuilder {
 	final objectAccesses:Array<TypedBackendObjectAccess> = [];
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
+	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
 	final returns:Array<TypedBackendReturnOccurrence> = [];
@@ -69,6 +70,25 @@ class TypedBodyProjectionBuilder {
 
 	public function getCallableAscriptions():Array<HxExpr>
 		return callableAscriptions.copy();
+
+	/** Keep condition types for calls, fields, locals, and lowered control equally. */
+	public function projectCondition(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add conditions to a sealed projection";
+		conditions.push(new TypedBackendCondition({
+			owner: ownerIdentity,
+			revision: bodyRevision,
+			source: source,
+			expression: expression
+		}));
+		return expression;
+	}
+
+	public function getConditions():Array<TypedBackendCondition> {
+		if (!sealed)
+			throw "conditions require a sealed projection";
+		return conditions.copy();
+	}
 
 	/** Preserve operand types before binary syntax loses them. */
 	public function projectEquality(source:TypedExpr, expression:HxExpr):HxExpr {

@@ -538,13 +538,16 @@ class TypedBodySource {
 				]), "",
 					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
 			case ControlBranch:
-				ELoweredControl(Branch, "", expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+				ELoweredControl(Branch, "",
+					[condition(expressions[0], catalog, projectionFacts)].concat(expressionTail(expressions, 1, catalog, projectionFacts)),
+					sourcePosition(typedExpression.getPosition()));
 			case ControlWhile:
 				final target = typedExpression.getControlTarget();
 				if (target == null)
 					throw "lowered while requires an exact loop target";
 				ELoweredControl(While(typedExpression.getWhileKind()), target.getCanonicalIdentity(),
-					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
+					[condition(expressions[0], catalog, projectionFacts)].concat(expressionTail(expressions, 1, catalog, projectionFacts)),
+					sourcePosition(typedExpression.getPosition()));
 			case ThrowExpr:
 				if (expressions.length != 1)
 					throw "typed throw requires exactly one operand";
@@ -760,7 +763,7 @@ class TypedBodySource {
 				projectionFacts == null ? assignment : projectionFacts.projectArrayAccess(typedExpression,
 					projectionFacts.projectObjectAccess(typedExpression, assignment));
 			case Ternary:
-				ETernary(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
+				ETernary(condition(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
 					expression(expressions[2], catalog, projectionFacts));
 			case Anonymous:
 				final children = expressionTail(expressions, 0, catalog, projectionFacts);
@@ -798,6 +801,12 @@ class TypedBodySource {
 		};
 	}
 
+	/** Project a Boolean-use operand while its exact typed representation is still available. */
+	static function condition(source:TypedExpr, catalog:Null<TypedBackendLocalCatalog>, facts:Null<TypedBodyProjectionBuilder>):HxExpr {
+		final projected = expression(source, catalog, facts);
+		return facts == null ? projected : facts.projectCondition(source, projected);
+	}
+
 	public static function statement(typedStatement:TypedStmt, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder):HxStmt {
 		final position = sourcePosition(typedStatement.getPosition());
 		final names = typedStatement.getNames();
@@ -824,7 +833,7 @@ class TypedBodySource {
 				var whenFalse:Null<HxStmt> = null;
 				if (statements.length > 1)
 					whenFalse = statement(statements[1], catalog, projectionFacts);
-				SIf(expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), whenFalse, position);
+				SIf(condition(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), whenFalse, position);
 			case ForIn:
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed for-in statement");
 				SForIn(projectedName, expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), position);
@@ -832,8 +841,8 @@ class TypedBodySource {
 				final projectedNames = exactProjectedNames(catalog, typedStatement.getLocalBindings(), names, "typed key/value for-in statement");
 				SForKeyValue(projectedNames[0], projectedNames[1], expression(expressions[0], catalog, projectionFacts),
 					statement(statements[0], catalog, projectionFacts), position);
-			case While: SWhile(expression(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), position);
-			case DoWhile: SDoWhile(statement(statements[0], catalog, projectionFacts), expression(expressions[0], catalog, projectionFacts), position);
+			case While: SWhile(condition(expressions[0], catalog, projectionFacts), statement(statements[0], catalog, projectionFacts), position);
+			case DoWhile: SDoWhile(statement(statements[0], catalog, projectionFacts), condition(expressions[0], catalog, projectionFacts), position);
 			case Switch:
 				SSwitch(expression(expressions[0], catalog, projectionFacts),
 					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
@@ -936,7 +945,8 @@ class TypedBodySource {
 			projectionFacts.getThrownValues(), projectionFacts.getLocalWrites(), projectionFacts.getObjectAccesses(), projectionFacts.getCallArguments(),
 			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls(), {
 				arrays: projectionFacts.getArrayAccesses(),
-				equalities: projectionFacts.getEqualities()
+				equalities: projectionFacts.getEqualities(),
+				conditions: projectionFacts.getConditions()
 			});
 	}
 
@@ -988,7 +998,8 @@ class TypedBodySource {
 			projectionFacts.getObjectAccesses(), projectionFacts.getLocalWrites(), projectionFacts.getCallArguments(), projectionFacts.getMethods(),
 			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), {
 				arrays: projectionFacts.getArrayAccesses(),
-				equalities: projectionFacts.getEqualities()
+				equalities: projectionFacts.getEqualities(),
+				conditions: projectionFacts.getConditions()
 			});
 	}
 

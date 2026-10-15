@@ -4,8 +4,11 @@ package backend.ocaml;
 	Convert one local write from exact typed facts. Dynamic uses Obj.t, with a
 	separate Boolean box so true remains distinct from integer 1. The rendered
 	operand occurs once; this boundary never evaluates or reconstructs source.
+	A Dynamic source entering a Bool local uses the checked inverse conversion.
  */
 function store(write:TypedBackendLocalWrite, rendered:String):String {
+	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())
+		return "HxDynamic.booleanValue (" + rendered + ")";
 	if (!write.binding.getType().isDynamic())
 		return rendered;
 	final carrier = if (write.sourceType.getSemanticKey() == "primitive:Bool") {

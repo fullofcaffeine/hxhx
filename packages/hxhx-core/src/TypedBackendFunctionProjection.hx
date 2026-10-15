@@ -32,6 +32,7 @@ class TypedBackendFunctionProjection {
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final conditions:Array<TypedBackendCondition>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
 	final statementControls:Array<TypedBackendStatementControl>;
@@ -45,7 +46,8 @@ class TypedBackendFunctionProjection {
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
-			?equalities:Array<TypedBackendEqualityOccurrence>
+			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?conditions:Array<TypedBackendCondition>
 		}) {
 		if (source == null || lowered == null)
 			throw "typed backend function projection requires authored and lowered owners";
@@ -97,6 +99,9 @@ class TypedBackendFunctionProjection {
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
+		for (entry in this.conditions)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.equalities)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.arrayAccesses)
@@ -383,6 +388,17 @@ class TypedBackendFunctionProjection {
 	/** Indexed storage conversions require an original occurrence in this exact current body. */
 	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
 		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Conditions retain their checked type only in the original executable revision. */
+	public function findCondition(expression:HxExpr):Null<TypedBackendCondition> {
+		for (entry in conditions)
 			if (entry.expression == expression) {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);

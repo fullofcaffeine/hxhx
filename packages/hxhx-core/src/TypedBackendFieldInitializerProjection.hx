@@ -24,6 +24,7 @@ class TypedBackendFieldInitializerProjection {
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final conditions:Array<TypedBackendCondition>;
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
@@ -40,7 +41,8 @@ class TypedBackendFieldInitializerProjection {
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
-			?equalities:Array<TypedBackendEqualityOccurrence>
+			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?conditions:Array<TypedBackendCondition>
 		}) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend field initializer projection requires a stable identity";
@@ -78,6 +80,9 @@ class TypedBackendFieldInitializerProjection {
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
+		for (entry in this.conditions)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.equalities)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.arrayAccesses)
@@ -267,6 +272,18 @@ class TypedBackendFieldInitializerProjection {
 	/** Initializer array accesses cannot borrow a function's element storage facts. */
 	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
 		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireCaptureCatalog();
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Conditions retain their checked type only in the original executable revision. */
+	public function findCondition(expression:HxExpr):Null<TypedBackendCondition> {
+		for (entry in conditions)
 			if (entry.expression == expression) {
 				requireCaptureCatalog();
 				requireExpression(expression);

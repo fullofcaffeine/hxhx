@@ -231,7 +231,11 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			assertTrue(exprToolsSource.indexOf(shape) >= 0, "The focused fixture drifted from the Haxe 4.3.7 ExprTools.getValue shape: " + shape);
 
 		final parsed = ParserStage.parse(source, sourcePath);
-		final typed = TyperStage.typeModule(parsed);
+		// Runtime emission needs the declared method signatures in the module index.
+		// The root-only typer deliberately has no index and loses observed()'s
+		// Dynamic result, so it cannot prove the Boolean storage conversion.
+		final resolved = new ResolvedModule("Main", sourcePath, parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final expanded = MacroStage.expandProgram([typed], []);
 		final executable = EmitterStage.emitToDir(expanded, outputDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outputDir, "Main.ml"]));

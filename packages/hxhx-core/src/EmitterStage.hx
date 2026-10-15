@@ -513,9 +513,19 @@ class EmitterStage {
 				return converted;
 		}
 		final destination = exactFunctionLocalType(name);
-		if (destination == null || !destination.isDynamic())
+		if (destination == null || (!destination.isDynamic() && destination.getSemanticKey() != "primitive:Bool"))
 			return rendered;
 		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered);
+	}
+
+	/** Convert an exact condition once, without replacing unsupported values with true. */
+	static function conditionValue(expression:HxExpr, rendered:String):String {
+		final fact = currentTypedInitializer != null ? currentTypedInitializer.findCondition(expression) : currentTypedFunction != null ? currentTypedFunction.findCondition(expression) : null;
+		if (rendered == "(Obj.magic 0)")
+			throw "OCaml condition has no supported value emission";
+		if (fact != null && fact.type.isDynamic())
+			return "HxDynamic.booleanValue (" + rendered + ")";
+		return rendered;
 	}
 
 	static function isMutableLocalRefIdent(name:String):Bool {
@@ -1036,29 +1046,8 @@ class EmitterStage {
 		}
 
 		inline function condToOcamlBoolForString(cond:HxExpr):String {
-			// Keep the Stage3 “full bodies” rung resilient: a string expression can contain a ternary
-			// like `colorSupported ? "..." + msg : msg`, but we do not yet type/emit arbitrary bool
-			// conditions.
-			//
-			// In bring-up, prefer "always true" over emitting a non-bool expression that would fail
-			// OCaml compilation.
-			return switch (cond) {
-				case EBool(v):
-					v ? "true" : "false";
-				case EIdent(name) if (tyForIdent(name) == "Bool"):
-					// A checked Boolean local must select the string branch at runtime.
-					// Use ordinary reads so mutable locals retain their reference access.
-					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					s == "(Obj.magic 0)" ? "true" : s;
-				case EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _), EBinop("&&", _, _),
-					EBinop("||", _, _):
-					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					s == "(Obj.magic 0)" ? "true" : s;
-				case _:
-					"true";
-			};
+			return conditionValue(cond,
+				exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 		}
 
 		var emitStringExpr:HxExpr->String = null;
@@ -4462,7 +4451,8 @@ class EmitterStage {
 				// progress to the next missing semantic, not to be correct yet.
 				"(Obj.magic 0)";
 			case ETernary(cond, thenExpr, elseExpr):
-				final condCode = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final condCode = conditionValue(cond,
+					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 				// Haxe `Std.parseInt` returns `Null<Int>`. In the OCaml runtime that is an
 				// `Obj.t` sentinel-or-boxed-int, so integer fallback branches in ternaries must
 				// be boxed too (e.g. `parts.length > 1 ? Std.parseInt(parts[1]) : 0`).
@@ -4940,8 +4930,9 @@ class EmitterStage {
 		if (expectedReturnType != null && stage3ReturnTypeNeedsObjBranches(expectedReturnType)) {
 			switch (expr) {
 				case ETernary(cond, thenExpr, elseExpr):
-					final condCode = exprToOcaml(cond, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
-						moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+					final condCode = conditionValue(cond,
+						exprToOcaml(cond, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw));
 					function objBranch(e:HxExpr):String {
 						return "(Obj.magic ("
 							+ exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
@@ -5676,34 +5667,7 @@ class EmitterStage {
 		}
 
 		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>):String {
-			final erasedReturnTyCtx = cast tyCtx;
-			inline function boolOrTrue(s:String):String {
-				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
-				// In a condition position we prefer "always true" over emitting an unbound identifier
-				// that would abort OCaml compilation.
-				return s == "(Obj.magic 0)" ? "true" : s;
-			}
-
-			return switch (e) {
-				case EBool(v):
-					v ? "true" : "false";
-				case EIdent(name) if (exactFunctionLocalType(name) != null
-					&& exactFunctionLocalType(name).getSemanticKey() == "primitive:Bool"):
-					ocamlReadValueIdent(name);
-				case EParenthesized(inner, _):
-					condToOcamlBool(inner, tyCtx);
-				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-					final rendered = returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
-					boolOrTrue(rendered);
-				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee));
-				case _:
-					// Conservative default: we do not have real typing for conditions yet.
-					// Keep bring-up resilient by treating unknown conditions as true.
-					"true";
-			};
+			return conditionValue(e, exprToOcaml(e, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 		}
 
 		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
@@ -6149,10 +6113,7 @@ class EmitterStage {
 					final thenUnit = stmtToUnit(thenBranch, tyCtx);
 					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
 					final condS = condToOcamlBool(cond, erasedTyCtx);
-					// Avoid typechecking dead branches in bring-up:
-					// - Unknown conditions are lowered as `true` by default.
-					// - Keeping the unused branch can still constrain types and break compilation
-					//   (e.g. forcing a param to `Obj.t` due to a dead `Std.string` call).
+					// Only literal conditions can remove a branch; typed values remain runtime decisions.
 					if (condS == "true") {
 						"(" + thenUnit + ")";
 					} else if (condS == "false") {
