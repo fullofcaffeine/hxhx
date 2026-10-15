@@ -17,8 +17,50 @@ class M14TypedPropertyTest {
 		throw "shared property typing accepted invalid access: " + message;
 	}
 
+	/** Enum constants are immutable declaration values, not virtual properties needing a backing slot. */
+	static function enumConstants(source:String):Void {
+		final module = typed(source);
+		var reads = 0;
+		function expression(value:TypedExpr):Void {
+			final field = value.getFieldInfo();
+			if (field != null && field.getConstant().isEnumValue()) {
+				if (field.getHasStorage()
+					|| value.getHasPropertyStorageAccess()
+					|| field.getType().getNominalIdentity() == null
+					|| !field.getType().getNominalIdentity().equals(field.getOwner()))
+					throw "enum constant acquired storage or lost its declared identity";
+				switch field.getConstant().getKind() {
+					case IntValue(7) | StringValue("strong"):
+						reads++;
+					case _:
+						throw "enum constant lost its resolved value";
+				}
+			}
+			for (child in value.getExpressions())
+				expression(child);
+		}
+		function statement(value:TypedStmt):Void {
+			for (child in value.getExpressions())
+				expression(child);
+			for (child in value.getStatements())
+				statement(child);
+		}
+		for (owner in module.getTypedClasses())
+			for (fn in owner.getFunctions())
+				for (body in fn.getBody().getStatements())
+					statement(body);
+		if (reads != 2)
+			throw "expected both indexed enum constant reads";
+		reject("enum abstract Code(Int) { var Ready = 7; } class Main { static function main() { Code.Ready = Code.Ready; } }",
+			"cannot be accessed for writing");
+		reject("enum abstract Cycle(Int) { var A = B; var B = A; } class Main { static function main() { var value = Cycle.A; } }",
+			"cyclic constant initializer");
+	}
+
 	static function main():Void {
 		M14PropertySignatureCompatibilityTest.check();
+		final constants = sys.io.File.getContent("test/oracle/property_enum_constant_seed/Main.hx");
+		enumConstants(constants);
 		final source = sys.io.File.getContent("test/oracle/cpp_property_accessor_seed/Main.hx");
 		final module = typed(source);
 		var getterCalls = 0;
@@ -85,18 +127,20 @@ class M14TypedPropertyTest {
 								appliedGetter = true;
 		if (!appliedGetter)
 			throw "generic property lost its applied result or exact accessor owner";
-		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final deferred = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]), null, true);
-		var rejectedForeign = false;
-		try {
-			TypedPropertyLowering.lowerClasses(deferred.getTypedClasses(), TyperIndex.build([resolved]), "Main.hx");
-		} catch (error:TyperError) {
-			if (error.message.indexOf("another declaration index") < 0)
-				throw error;
-			rejectedForeign = true;
+		for (checked in [source, constants]) {
+			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(checked, "Main.hx"));
+			final deferred = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]), null, true);
+			var rejectedForeign = false;
+			try {
+				TypedPropertyLowering.lowerClasses(deferred.getTypedClasses(), TyperIndex.build([resolved]), "Main.hx");
+			} catch (error:TyperError) {
+				if (error.message.indexOf("another declaration index") < 0)
+					throw error;
+				rejectedForeign = true;
+			}
+			if (!rejectedForeign)
+				throw "property lowering borrowed a field from an independent declaration index";
 		}
-		if (!rejectedForeign)
-			throw "property lowering borrowed a field from an independent declaration index";
 		Sys.println("TYPED_PROPERTY:PASS");
 	}
 }

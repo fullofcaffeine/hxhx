@@ -56,6 +56,10 @@ class TypedPropertyLowering {
 		final mode = writing ? field.getPropertySet() : field.getPropertyGet();
 		if (!unchecked && (mode == "never" || (mode == "null" && !privateAccess && !inOwnerFamily(field))))
 			throw error(expression, "Property " + field.getName() + " cannot be accessed for " + (writing ? "writing" : "reading"));
+		// Enum constants retain their indexed value and dependency identity for
+		// constant projection. Reading one does not require a property storage slot.
+		if (!writing && field.getConstant().isEnumValue())
+			return expression;
 		final accessorName = (writing ? "set_" : "get_") + field.getName();
 		final bypass = functionDeclaration != null
 			&& inOwnerFamily(field)
