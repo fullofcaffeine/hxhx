@@ -1,6 +1,5 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
-import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -28,8 +27,8 @@ class M14CppAbstractBinaryIntegrationTest {
 		}
 	}
 
-	static function commandOutput(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new sys.io.Process(command, []);
+	static function commandOutput(command:String, ?arguments:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, arguments == null ? [] : arguments);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -38,22 +37,32 @@ class M14CppAbstractBinaryIntegrationTest {
 	}
 
 	static function main():Void {
-		final sourcePath = "test/oracle/cpp_abstract_binary_operator_seed/src/Main.hx";
-		final source = HxConditionalCompilation.filterSource(File.getContent(sourcePath), new StringMap<String>());
-		final parsed = ParserStage.parse(source, sourcePath);
-		final resolved = new ResolvedModule("Main", sourcePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
-		final program = new MacroExpandedProgram([typed], false);
+		final sourceRoot = "test/oracle/cpp_abstract_binary_operator_seed/src";
+		final expected = File.getContent("test/oracle/cpp_abstract_binary_operator_seed/expected.stdout");
+		final upstream = commandOutput("haxe", ["-cp", sourceRoot, "--run", "Main"]);
+		assertTrue(upstream.code == 0 && upstream.stderr == "" && upstream.stdout == expected,
+			"upstream abstract-binary contract differs: " + upstream.stdout + upstream.stderr);
+		Sys.println("CPP_ABSTRACT_BINARY:UPSTREAM:PASS");
+		// Calls and output conversions need their real declarations. Production
+		// preparation also preserves the exact selected operator and source effects.
+		final fixture = CppResolvedFixture.load({sourceRoot: sourceRoot, mainModule: "Main", requiredModules: ["Std", "Sys", "Array"]});
+		final revisions = [
+			for (module in fixture.modules)
+				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
+		];
+		Sys.println("CPP_ABSTRACT_BINARY:LOADED modules=" + fixture.modules.length);
+		final program = CppResolvedFixture.prepare(fixture);
+		Sys.println("CPP_ABSTRACT_BINARY:PREPARED");
 
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_abstract_binary"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
+		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused abstract-binary C++ artifact did not build");
+		for (index in 0...fixture.modules.length)
+			assertTrue(revisions[index] == CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity(),
+				"abstract-binary preparation changed an authored typed module");
 		final generated = File.getContent(Path.join([root, "src", "Main.cpp"]));
 		for (helper in [
 			"Ticket::mergeArbitrarily",
@@ -85,8 +94,8 @@ class M14CppAbstractBinaryIntegrationTest {
 
 		final executed = commandOutput(result.entryPath);
 		assertTrue(executed.code == 0, "focused abstract-binary executable failed: " + executed.stderr);
-		final expected = File.getContent("test/oracle/cpp_abstract_binary_operator_seed/expected.stdout");
 		assertTrue(executed.stdout == expected, "unexpected focused abstract-binary stdout:\n" + executed.stdout);
+		Sys.println("CPP_ABSTRACT_BINARY:PASS");
 		deleteRecursive(root);
 	}
 }
