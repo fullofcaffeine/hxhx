@@ -297,8 +297,14 @@ class TypedBodyInvariant {
 		}
 		if (tag == SourceFor || tag == ControlFor) {
 			HxForBinding.fromNames(expression.getTexts());
-			if (expression.getExpressions().length != 2)
+			final children = expression.getExpressions();
+			if (children.length != 2 && !(tag == SourceFor && children.length == 3))
 				throw "source for requires iterable and body children in " + owner;
+			if (children.length == 3) {
+				TypedKeyValueIteration.assertProtocol(children[2]);
+				if (localBindings.length != 2 || expression.getControlTarget() == null)
+					throw "protocol loop requires exact key/value bindings and a control target in " + owner;
+			}
 			if (localBindings.length > 0)
 				assertBindingNames(localBindings, expression.getTexts(), owner);
 			if (tag == ControlFor
@@ -308,6 +314,8 @@ class TypedBodyInvariant {
 					|| expression.getExpressions()[1].getControlTarget() != null))
 				throw "lowered for requires exact bindings, loop target, and lexical body in " + owner;
 		}
+		if (tag == KeyValueProtocol)
+			TypedKeyValueIteration.assertProtocol(expression);
 		if (tag == ControlBranch) {
 			final children = expression.getExpressions();
 			if (children.length != 2 && children.length != 3)
@@ -359,6 +367,11 @@ class TypedBodyInvariant {
 		for (child in statement.getStatements())
 			assertStmt(child, owner);
 		final localBindings = statement.getLocalBindings();
+		if (statement.getTag() == ForKeyValue && statement.getExpressions().length > 1) {
+			if (statement.getExpressions().length != 2 || localBindings.length != 2 || statement.getControlTarget() == null)
+				throw "statement protocol loop requires exact operands, bindings and control target in " + owner;
+			TypedKeyValueIteration.assertProtocol(statement.getExpressions()[1]);
+		}
 		for (binding in localBindings)
 			assertBinding(binding, owner);
 		if (localBindings.length == 0)

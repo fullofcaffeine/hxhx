@@ -278,6 +278,7 @@ class CompilerTypedTreeRevision {
 			case SourceGroup: "source-group";
 			case SourceIf: "source-if";
 			case SourceFor: "source-for";
+			case KeyValueProtocol: "key-value-protocol";
 			case SourceTry: "source-try";
 			case ControlTry: "control-try";
 			case ControlFor: "control-for";

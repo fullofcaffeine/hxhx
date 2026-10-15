@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v29";
+	static final passIdentity = "source-control-v30";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -105,6 +105,17 @@ class TypedControlLowering {
 
 	/** Lift group evaluation into its enclosing statement list, preserving local visibility. */
 	function statement(input:TypedStmt):Array<TypedStmt> {
+		if (input.getTag() == ForKeyValue && input.getExpressions().length == 2) {
+			didLower = true;
+			return statement(TypedKeyValueIteration.lower({
+				protocol: input.getExpressions()[1],
+				body: input.getStatements()[0],
+				bindings: input.getLocalBindings(),
+				target: input.getControlTarget(),
+				position: input.getPosition(),
+				owner: owner
+			}));
+		}
 		final values = new Array<TypedExpr>();
 		final prefix = new Array<TypedStmt>();
 		for (expression in input.getExpressions()) {
@@ -258,7 +269,8 @@ class TypedControlLowering {
 						if (bindings.length != 1 || entry.getVariableIsStatic()) throw "lowered local declaration requires one ordinary binding";
 						final initializers = entry.getExpressions();
 						TypedStmt.variable(entry.getTexts()[0], entry.getTexts()[1], initializers.length == 0 ? null : initializers[0], entry.getPosition(),
-							[], bindings[0]);
+							[], bindings[0])
+							.withControlTarget(entry.getControlTarget());
 					}
 				];
 			case ReturnExpr:
@@ -807,6 +819,17 @@ class TypedControlLowering {
 			case SwitchExpr:
 				return switchValue(expression, target, true);
 			case SourceFor:
+				if (children.length == 3) {
+					didLower = true;
+					return value(TypedKeyValueIteration.lowerExpression({
+						protocol: children[2],
+						body: children[1],
+						bindings: expression.getLocalBindings(),
+						target: expression.getControlTarget(),
+						position: expression.getPosition(),
+						owner: owner
+					}), target);
+				}
 				final loopTarget = expression.getControlTarget();
 				if (loopTarget == null || loopTarget.getOwnerIdentity() != owner)
 					throw "for lowering requires its exact typed loop destination";
@@ -825,6 +848,8 @@ class TypedControlLowering {
 				iterable.steps.push(TypedExpr.controlFor(HxForBinding.fromNames(expression.getTexts()), iterable.value, region, expression.getPosition(),
 					expression.getLocalBindings(), loopTarget));
 				return {steps: iterable.steps, value: null, completes: true};
+			case KeyValueProtocol:
+				throw "iterator protocol evidence must be consumed by its source loop";
 			case BreakExpr | ContinueExpr:
 				if (activeLoop == null || expression.getControlTarget() != activeLoop)
 					throw "loop control lowering cannot change its typed loop destination";

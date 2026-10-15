@@ -1086,8 +1086,13 @@ class TyperStage {
 					controls.exit(target);
 				case SForKeyValue(keyName, valueName, iterable, body, pos):
 					final iterableType = inferExprType(iterable, scope, ctx, pos);
+					final inferProtocol = expression -> scope.withProtocolSource(iterable, iterableType, () -> inferExprType(expression, scope, ctx, pos));
 					// Array statements use the same index and element contract as expression loops.
-					final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, iterableType);
+					final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, iterableType, inferProtocol,
+						() -> scope.getInference()
+							.keyValueProtocolSource(iterable, source -> TySourceFor.selectProtocol(source, inferProtocol, scope.getOwnerIdentity())));
+					if (bindingTypes == null)
+						throw new TyperError(ctx.getFilePath(), pos, "key/value loop requires a resolved iterator protocol");
 					final controls = scope.requireControlScope();
 					final target = controls.enter(Loop, TypedBodyFingerprint.forStatements([s]));
 					scope.enterLexicalScope();
@@ -2414,6 +2419,9 @@ class TyperStage {
 
 	/** Validate result-producing branches before their types are merged, without revisiting lexical declarations. */
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):TyType {
+		final protocolSourceType = scope.protocolSourceType(expr);
+		if (protocolSourceType != null)
+			return scope.getInference().expressionType(expr, protocolSourceType, scope);
 		final capture:Null<TyMethodCallCapture> = expr.match(ECall(_, _)) ? {selection: null} : null;
 		var result = inferExprValueType(expr, scope, ctx, pos, expectedResult, capture);
 		final classScheme = result.getClassValueScheme();

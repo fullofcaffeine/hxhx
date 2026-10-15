@@ -246,6 +246,12 @@ class M14CompilerDependencyObservationTest {
 		assertTrue(hasEdge(annotatedSnapshot, CompilerDependencyKind.PublicInterface, "answer")
 			&& hasEdge(annotatedSnapshot, CompilerDependencyKind.StaticInitialization, "answer"),
 			"source annotation hid its call or startup dependency");
+		final metadata = typedProgram("class Api { public static function answer():Int return 42; }",
+			"class Main { static var value:Int = @:nullSafety(Off) Api.answer(); static function main():Void {} }");
+		final metadataSnapshot = CompilerDependencyCollector.collect(metadata.modules, metadata.index);
+		assertTrue(hasEdge(metadataSnapshot, CompilerDependencyKind.PublicInterface, "answer")
+			&& hasEdge(metadataSnapshot, CompilerDependencyKind.StaticInitialization, "answer"),
+			"expression metadata hid its call or startup dependency");
 		assertStructuralCallbackDependencies();
 		final catchOnly = typedProgram("class Api { public function new() {} }",
 			"class Main { static function main():Void { try { throw 1; } catch (unused:Api) {} var result = try 1 catch (alsoUnused:Api) 2; } }");

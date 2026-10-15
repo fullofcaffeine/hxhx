@@ -58,6 +58,27 @@ class TyFunctionInference {
 	var capturedCalls:Array<InferredCapturedCall> = [];
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
+	var keyValueProtocols:Array<TyKeyValueProtocolSource> = [];
+
+	/** Allocate protocol query occurrences before sealing and retain them for exact replay. */
+	public function keyValueProtocolSource(source:HxExpr, ?select:HxExpr->TyKeyValueProtocolSource):TyKeyValueProtocolSource {
+		for (entry in keyValueProtocols)
+			if (entry.owns(source)) {
+				entry.assertOwner(owner);
+				return entry;
+			}
+		if (solver.isSealed())
+			throw "iterator protocol source is absent from sealed inference";
+		if (select == null)
+			throw "iterator protocol requires typed selection before replay";
+		final entry = select(source);
+		entry.assertOwner(owner);
+		if (!entry.owns(source))
+			throw "selected iterator protocol belongs to another source occurrence";
+		keyValueProtocols.push(entry);
+		return entry;
+	}
+
 	var callbackArguments:Array<{final callee:HxExpr; final binding:TyCallArgumentBinding;}> = [];
 	var sourceFunctions:Array<{
 		final source:HxExpr;
@@ -279,6 +300,7 @@ class TyFunctionInference {
 		candidate.capturedCalls = capturedCalls.copy();
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
+		candidate.keyValueProtocols = keyValueProtocols.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);
 		return candidate;

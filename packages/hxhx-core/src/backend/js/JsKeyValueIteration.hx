@@ -15,6 +15,8 @@ function emit(input:{
 	source:String,
 	key:String,
 	value:String,
+	keyCell:Bool,
+	valueCell:Bool,
 	fresh:String->String,
 	body:() -> Void
 }):Void {
@@ -38,8 +40,10 @@ function emit(input:{
 		+ index
 		+ "++) {");
 	writer.pushIndent();
-	writer.writeln("var " + input.key + " = " + array + " ? " + index + " : " + keys + "[" + index + "];");
-	writer.writeln("var " + input.value + " = " + input.source + "[" + input.key + "];");
+	final key = array + " ? " + index + " : " + keys + "[" + index + "]";
+	writer.writeln("var " + input.key + " = " + (input.keyCell ? "{value: " + key + "}" : key) + ";");
+	final value = input.source + "[" + input.key + (input.keyCell ? ".value" : "") + "]";
+	writer.writeln("var " + input.value + " = " + (input.valueCell ? "{value: " + value + "}" : value) + ";");
 	input.body();
 	writer.popIndent();
 	writer.writeln("}");

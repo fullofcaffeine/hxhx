@@ -34,6 +34,8 @@ class JsExprEmitter {
 			enumDeclarations: parent == null ? null : parent.enumDeclarations,
 			methodUses: parent == null ? null : parent.methodUses,
 			lambdaUses: parent == null ? null : parent.lambdaUses,
+			iterationStorage: parent == null ? null : parent.iterationStorage,
+			resolveIterationCell: parent == null ? null : parent.resolveIterationCell,
 			callableExpressions: parent == null ? null : parent.callableExpressions,
 			requireExpression: parent == null ? null : parent.requireExpression,
 			abstractReceiver: parent != null && parent.abstractReceiver == true};
@@ -1178,6 +1180,8 @@ class JsExprEmitter {
 			source: "__iter",
 			key: "__key",
 			value: "__value",
+			keyCell: false,
+			valueCell: false,
 			fresh: name -> name,
 			body: () -> writer.writeln("__body(__key, __value);")
 		});

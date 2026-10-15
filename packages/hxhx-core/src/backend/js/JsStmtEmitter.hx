@@ -38,7 +38,11 @@ class JsStmtEmitter {
 				writer.writeln("}");
 			case SVar(name, _typeHint, init, _):
 				final local = scope.declareLocal(name);
-				if (init != null) {
+				if (scope.isIterationCapture(name)) {
+					if (init == null)
+						throw "captured iteration binding requires its selected initializer";
+					writer.writeln("var " + local + " = {value: " + JsExprEmitter.emit(init, scope.exprScope()) + "};");
+				} else if (init != null) {
 					writer.writeln("var " + local + " = " + JsExprEmitter.emit(init, scope.exprScope()) + ";");
 				} else {
 					writer.writeln("var " + local + ";");
@@ -183,9 +187,13 @@ class JsStmtEmitter {
 		switch (iterable) {
 			case ERange(start, end):
 				final local = scope.declareLocal(name);
-				writer.writeln("for (var " + local + " = " + JsExprEmitter.emit(start, scope.exprScope()) + "; " + local + " < "
-					+ JsExprEmitter.emit(end, scope.exprScope()) + "; " + local + "++) {");
+				final captured = scope.isIterationCapture(name);
+				final counter = captured ? scope.freshTemp("__index") : local;
+				writer.writeln("for (var " + counter + " = " + JsExprEmitter.emit(start, scope.exprScope()) + "; " + counter + " < "
+					+ JsExprEmitter.emit(end, scope.exprScope()) + "; " + counter + "++) {");
 				writer.pushIndent();
+				if (captured)
+					writer.writeln("var " + local + " = {value: " + counter + "};");
 				emitStmtBlockContent(writer, body, scope);
 				writer.popIndent();
 				writer.writeln("}");
@@ -196,7 +204,8 @@ class JsStmtEmitter {
 				writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
 				writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + sourceVar + ".length; " + indexVar + "++) {");
 				writer.pushIndent();
-				writer.writeln("var " + local + " = " + sourceVar + "[" + indexVar + "];");
+				final initial = sourceVar + "[" + indexVar + "]";
+				writer.writeln("var " + local + " = " + (scope.isIterationCapture(name) ? "{value: " + initial + "}" : initial) + ";");
 				emitStmtBlockContent(writer, body, scope);
 				writer.popIndent();
 				writer.writeln("}");
@@ -213,6 +222,8 @@ class JsStmtEmitter {
 			source: sourceVar,
 			key: keyLocal,
 			value: valueLocal,
+			keyCell: scope.isIterationCapture(keyName),
+			valueCell: scope.isIterationCapture(valueName),
 			fresh: scope.freshTemp,
 			body: () -> emitStmtBlockContent(writer, body, scope)
 		});

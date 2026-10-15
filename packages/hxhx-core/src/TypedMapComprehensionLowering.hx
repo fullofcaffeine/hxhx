@@ -3,7 +3,7 @@ function insertYields(expression:TypedExpr, map:TypedExpr):TypedExpr {
 	final children = expression.getExpressions();
 	return switch expression.getTag() {
 		case SourceFor:
-			expression.withExpressions([children[0], insertYields(children[1], map)]);
+			expression.withExpressions([children[0], insertYields(children[1], map)].concat(children.slice(2)));
 		case SourceIf:
 			expression.withExpressions([children[0]].concat([for (index in 1...children.length) insertYields(children[index], map)]));
 		case Parenthesized:

@@ -21,6 +21,7 @@ class JsFunctionScope {
 	var parentScope:Null<JsEmitScope> = null;
 	var abstractReceiver:Bool = false;
 	var controlProjection:Null<TypedBackendFunctionProjection> = null;
+	var iterationStorage:Null<JsIterationCaptureStorage> = null;
 	var allocationScope:Null<JsFunctionScope> = null;
 	var initializerPrefix:String = "";
 	var enumDeclarations:Null<String->JsClassInheritancePlan.JsClassInheritanceNode>;
@@ -46,6 +47,7 @@ class JsFunctionScope {
 		final outer = parent.exprScope();
 		child.abstractPlan = parent.abstractPlan;
 		child.abstractValues = parent.abstractPlan == null ? null : parent.abstractPlan.forInitializer(projection);
+		child.iterationStorage = new JsIterationCaptureStorage(projection.requireCaptureCatalog, projection.getLocalCatalog());
 		child.parentScope = {
 			resolveLocal: outer.resolveLocal,
 			resolveClassRef: outer.resolveClassRef,
@@ -55,6 +57,8 @@ class JsFunctionScope {
 			enumDeclarations: outer.enumDeclarations,
 			methodUses: projection.findMethodUse,
 			lambdaUses: projection.findLambda,
+			iterationStorage: child.iterationStorage,
+			resolveIterationCell: outer.resolveIterationCell,
 			callableExpressions: projection.findCallableExpression,
 			requireExpression: projection.requireExpression,
 			abstractReceiver: outer.abstractReceiver
@@ -70,6 +74,7 @@ class JsFunctionScope {
 	/** Retain the exact method owner; validate it only when emitting shared control. */
 	public function setControlProjection(projection:TypedBackendFunctionProjection):Void {
 		controlProjection = projection;
+		iterationStorage = new JsIterationCaptureStorage(projection.requireCaptureCatalog, projection.getLocalCatalog());
 	}
 
 	public function requireControlIdentity():String {
@@ -88,6 +93,7 @@ class JsFunctionScope {
 		final child = new JsFunctionScope(new haxe.ds.StringMap<String>(), null, null, null, null, parent == null ? null : parent.runtimeTypes,
 			parent == null ? null : parent.methodUses);
 		child.parentScope = parent;
+		child.iterationStorage = parent == null ? null : parent.iterationStorage;
 		child.abstractReceiver = parent != null && parent.abstractReceiver == true;
 		return child;
 	}
@@ -133,11 +139,31 @@ class JsFunctionScope {
 		return safe;
 	}
 
+	/** A wrapper parameter captures the cell object, while ordinary reads use its value. */
+	public function bindIterationCell(raw:String):String {
+		if (!isIterationCapture(raw))
+			throw "JavaScript capture wrapper requires an exact iteration binding";
+		final name = reserve("$hx_iteration");
+		locals.set(raw, name);
+		return name;
+	}
+
+	public function isIterationCapture(raw:String):Bool
+		return iterationStorage != null && iterationStorage.isCaptured(raw);
+
+	/** Resolve cell identity separately from its mutable value, including forwarded captures. */
+	public function resolveIterationCell(raw:String):Null<String> {
+		final local = locals.get(raw);
+		if (local != null && isIterationCapture(raw))
+			return local;
+		return parentScope == null || parentScope.resolveIterationCell == null ? null : parentScope.resolveIterationCell(raw);
+	}
+
 	/** Resolve lexical locals first, then the exact field selected by shared typing. */
 	public function resolveLocal(raw:String):Null<String> {
 		final local = locals.get(raw);
 		if (local != null)
-			return local;
+			return isIterationCapture(raw) ? local + ".value" : local;
 		// Exact bare reads can belong to a static or inherited field. Locals have
 		// already been resolved above, so lexical shadowing retains precedence.
 		final read = fieldCatalog == null ? null : fieldCatalog.findByProjectedName(raw);
@@ -193,6 +219,8 @@ class JsFunctionScope {
 			enumDeclarations: enumDeclarations != null ? enumDeclarations : parentScope == null ? null : parentScope.enumDeclarations,
 			methodUses: initializerMethods == null ? methodUses : initializerMethods,
 			lambdaUses: initializerLambdas != null ? initializerLambdas : controlProjection != null ? controlProjection.findLambda : parentScope == null ? null : parentScope.lambdaUses,
+			iterationStorage: iterationStorage,
+			resolveIterationCell: self.resolveIterationCell,
 			callableExpressions: controlProjection != null ? controlProjection.findCallableExpression : parentScope == null ? null : parentScope.callableExpressions,
 			requireExpression: initializerLambdas != null ? null : controlProjection != null ? controlProjection.requireExpression : parentScope == null ? null : parentScope.requireExpression,
 			abstractReceiver: abstractReceiver

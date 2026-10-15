@@ -693,6 +693,9 @@ class TypedBodyBuilder {
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>,
 			?expected:TyType, ?selectedCallType:TyType):TypedExpr {
+		final protocolSource = environment == null ? null : environment.protocolSourceExpression(expression);
+		if (protocolSource != null)
+			return protocolSource;
 		if (typeResolver != null && TyTraceCall.isDisabled(expression, typeResolver.tracesDisabled))
 			return TypedExpr.block([], TyType.fromHintText("Void"), position);
 		final nodeType = selectedCallType == null ? expressionType(expression, diagnosticPosition, environment, typeResolver, expected) : selectedCallType;
@@ -768,7 +771,10 @@ class TypedBodyBuilder {
 			case ESourceFor(binding, iterable, body, sourcePosition):
 				final typedIterable = buildExpr(iterable, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				// Quoted syntax has no executing environment and must not select runtime iterator declarations.
-				final types = environment == null ? [] : TySourceFor.bindingTypes(binding, iterable, typedIterable.getType());
+				final directBindings = TySourceFor.bindingTypes(binding, iterable, typedIterable.getType());
+				final types = environment == null ? [] : TySourceFor.bindingTypes(binding, iterable, typedIterable.getType(),
+					typeResolver == null ? null : source -> typeResolver.expressionType(source, sourcePosition, environment, null),
+					() -> environment.getInference().keyValueProtocolSource(iterable));
 				if (types == null)
 					throw "source for replay requires a resolved iterable protocol";
 				final controls = environment == null ? null : environment.requireControlScope();
@@ -785,7 +791,12 @@ class TypedBodyBuilder {
 					environment.exitLexicalScope();
 				if (controls != null)
 					controls.exit(target);
-				TypedExpr.sourceFor(binding, typedIterable, typedBody, nodeType, exactPosition(sourcePosition), bindings, target);
+				final protocol = environment == null
+					|| directBindings != null ? null : environment.withProtocolSource(iterable, typedIterable.getType(),
+						() -> TypedKeyValueIteration.protocol(iterable, environment.getInference().keyValueProtocolSource(iterable),
+							source -> buildExpr(source, null, sourcePosition, environment, typeResolver, callResolver, memberResolver)),
+						typedIterable);
+				TypedExpr.sourceFor(binding, typedIterable, typedBody, nodeType, exactPosition(sourcePosition), bindings, target, protocol);
 			case ESourceIf(condition, whenTrue, whenFalse, sourcePosition):
 				final typedCondition = buildExpr(condition, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
@@ -1282,7 +1293,12 @@ class TypedBodyBuilder {
 				TypedStmt.forIn(name, typedIterable, typedBody, storedPosition, binding).withControlTarget(target);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
-				final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType());
+				final directBindings = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType());
+				final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType(),
+					typeResolver == null ? null : expression -> typeResolver.expressionType(expression, diagnosticPosition, environment, null),
+					environment == null ? null : () -> environment.getInference().keyValueProtocolSource(iterable));
+				if (bindingTypes == null)
+					throw new TyperError("<typed-body>", diagnosticPosition, "key/value loop requires a resolved iterator protocol");
 				final controls = environment == null ? null : environment.requireControlScope();
 				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
@@ -1296,7 +1312,11 @@ class TypedBodyBuilder {
 					environment.exitLexicalScope();
 				if (controls != null)
 					controls.exit(target);
-				TypedStmt.forKeyValue(keyName, valueName, typedIterable, typedBody, storedPosition, bindings).withControlTarget(target);
+				final protocol = directBindings != null ? null : environment.withProtocolSource(iterable, typedIterable.getType(),
+					() -> TypedKeyValueIteration.protocol(iterable, environment.getInference().keyValueProtocolSource(iterable),
+						source -> buildExpr(source, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)),
+					typedIterable);
+				TypedStmt.forKeyValue(keyName, valueName, typedIterable, typedBody, storedPosition, bindings, protocol).withControlTarget(target);
 			case SWhile(condition, body, _):
 				final typedCondition = buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final controls = environment == null ? null : environment.requireControlScope();

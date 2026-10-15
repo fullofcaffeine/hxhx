@@ -3,6 +3,16 @@ package backend.js;
 /** Emit callback bodies with their checked parameter contract and the enclosing Haxe receiver. */
 function emit(expression:HxExpr, arguments:Array<String>, body:HxExpr, scope:JsEmitScope):String {
 	final nested = JsFunctionScope.nested(scope);
+	final cells = new Array<String>();
+	final cellParameters = new Array<String>();
+	if (scope != null && scope.iterationStorage != null)
+		for (name in scope.iterationStorage.captures(expression)) {
+			final cell = scope.resolveIterationCell == null ? null : scope.resolveIterationCell(name);
+			if (cell == null)
+				throw "JavaScript closure lost its exact iteration cell";
+			cells.push(cell);
+			cellParameters.push(nested.bindIterationCell(name));
+		}
 	final parameters = [for (argument in arguments) nested.declareLocal(argument)];
 	final writer = new JsWriter();
 	if (scope != null && scope.lambdaUses != null) {
@@ -24,7 +34,16 @@ function emit(expression:HxExpr, arguments:Array<String>, body:HxExpr, scope:JsE
 		case _:
 			writer.writeln("return " + JsExprEmitter.emit(body, nested.exprScope()) + ";");
 	}
-	return "(function(" + parameters.join(", ") + ") {\n" + writer.toString() + "\n}).bind(this)";
+	final callback = "(function(" + parameters.join(", ") + ") {\n" + writer.toString() + "\n}).bind(this)";
+	// ES5 has function-scoped vars. Capture the current cell object in a new
+	// function scope without changing the callback's parameters or Haxe receiver.
+	return cells.length == 0 ? callback : "(function("
+		+ cellParameters.join(", ")
+		+ ") { return "
+		+ callback
+		+ "; }).call(this, "
+		+ cells.join(", ")
+		+ ")";
 }
 
 /** An initializer keeps its own lambda facts even when its code runs inside a constructor. */

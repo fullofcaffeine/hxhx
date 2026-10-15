@@ -175,7 +175,9 @@ class TypedRequiredInlineLowering {
 				return TypedExpr.temporary(binding.getSourceName(), binding.getType().getDisplay(), initial, voidType(), expression.getPosition(), binding);
 			case SourceFor:
 				final bindings = expression.getLocalBindings();
-				if (children.length != 2 || bindings.length != expression.getTexts().length || bindings.length == 0)
+				if ((children.length != 2 && children.length != 3)
+					|| bindings.length != expression.getTexts().length
+					|| bindings.length == 0)
 					throw "required inline for expression lacks its exact iteration bindings";
 				final target = introduceLoop(expression.getControlTarget());
 				// The iterable uses the enclosing scope. Only the body can read the
@@ -191,7 +193,7 @@ class TypedRequiredInlineLowering {
 				];
 				return TypedExpr.sourceFor(HxForBinding.fromNames(fresh.map(binding -> binding.getSourceName())), iterable,
 					substitute(children[1], receiver, loopLocals), TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition(),
-					fresh, target);
+					fresh, target, children.length == 3 ? substitute(children[2], receiver, locals) : null);
 			case Lambda | SourceFunction | ReturnExpr:
 				throw "required inline requires explicit nested callable or expression return ownership";
 			case _:
@@ -317,8 +319,9 @@ class TypedRequiredInlineLowering {
 					final loopBody = body(children, receiver, loopLocals, voidType());
 					output.push(statement.getTag() == ForIn
 						|| statement.getTag() == ForKeyValue ? TypedExpr.sourceFor(HxForBinding.fromNames(bindings.map(binding -> binding.getSourceName())),
-							input, loopBody, voidType(), position, bindings,
-							target) : TypedExpr.whileExpr(input, [loopBody], true, voidType(), position, statement.getTag() == DoWhile ? DoWhile : Normal)
+							input, loopBody, voidType(), position, bindings, target,
+							values.length == 2 ? substitute(values[1], receiver,
+								locals) : null) : TypedExpr.whileExpr(input, [loopBody], true, voidType(), position, statement.getTag() == DoWhile ? DoWhile : Normal)
 							.withControlTarget(target));
 				case Break | Continue:
 					output.push((statement.getTag() == Break ? TypedExpr.breakExpr(position) : TypedExpr.continueExpr(position))

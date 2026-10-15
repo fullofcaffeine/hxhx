@@ -215,7 +215,7 @@ class CompilerDependencyCollector {
 			case Opaque:
 				null;
 			case PrivateAccess | Parenthesized | TargetScope | Block | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | SourceTry |
-				ControlTry | ThrowExpr | ControlBranch | ControlWhile | ControlFor:
+				ControlTry | ThrowExpr | ControlBranch | ControlWhile | ControlFor | Metadata | KeyValueProtocol:
 				null;
 			case Temporary:
 				null;

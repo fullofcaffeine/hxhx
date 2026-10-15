@@ -33,11 +33,13 @@ class TypedStatementControl {
 				TypedExpr.variableDeclarations([
 					TypedExpr.variableDeclaration(names[0], names[1], values.length == 0 ? null : values[0], false, false, bindings[0].getType(), position,
 						bindings[0])
-				], voidType, position);
+						.withControlTarget(statement.getControlTarget())], voidType, position);
 			case If: TypedExpr.controlBranch(values[0], body(children[0]), children.length == 1 ? null : body(children[1]), voidType, position);
 			case While | DoWhile:
 				TypedExpr.controlWhile(values[0], body(children[0]), position, loopTarget(statement), statement.getTag() == DoWhile ? DoWhile : Normal);
 			case ForIn | ForKeyValue:
+				if (values.length != 1)
+					throw "statement control requires iterator protocols to be lowered first";
 				TypedExpr.controlFor(HxForBinding.fromNames(names), values[0], body(children[0]), position, bindings, loopTarget(statement));
 			case Break: TypedExpr.breakExpr(position).withControlTarget(loopTarget(statement));
 			case Continue: TypedExpr.continueExpr(position).withControlTarget(loopTarget(statement));

@@ -524,7 +524,7 @@ class TypedBodySource {
 				throw "source metadata must be consumed before backend projection";
 			case FeatureDefinition | FeatureSelection:
 				throw "feature intrinsics require program-owned selection before backend projection";
-			case SourceGroup | SourceFunction | SourceIf | SourceFor | SourceTry:
+			case SourceGroup | SourceFunction | SourceIf | SourceFor | SourceTry | KeyValueProtocol:
 				throw "source control must be lowered before backend projection (haxe_ocaml-o25kr)";
 			case ControlTry:
 				final catches = typedExpression.getSourceCatches();

@@ -43,6 +43,9 @@ class NativeDeclarationAdapterFixture {
 			HxPos.unknown());
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(annotatedLiteral) != null)
 			throw "literal-only adapter erased a source annotation before its expression owner handled it";
+		final metadataLiteral = TypedExpr.metadata("nullSafety", "Off", TypedExpr.intLiteral(7, TyType.fromHintText("Int"), HxPos.unknown()), HxPos.unknown());
+		if (HxhxOcamlTargetLiteralAdapter.fromExpression(metadataLiteral) != null)
+			throw "literal-only adapter erased metadata before shared expression lowering handled it";
 		assertDynamicBoolLiteral();
 		if (HxhxOcamlTargetLiteralAdapter.fromExpression(TypedExpr.floatLiteral(1.5, TyType.fromHintText("Float"), HxPos.unknown())) != null)
 			throw "native adapter admitted a float before the numeric review contract";

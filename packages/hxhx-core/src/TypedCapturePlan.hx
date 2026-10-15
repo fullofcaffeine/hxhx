@@ -47,7 +47,7 @@ class TypedCapturePlan {
 		receiverOwner = analysis.receiverOwner;
 		receiverType = analysis.receiverType;
 		final facts:Array<Null<String>> = [
-			"typed-capture-plan-v3",
+			"typed-capture-plan-v4",
 			ownerIdentity,
 			bodyRevision,
 			origin == null ? null : sourceBodyRevision,
@@ -219,6 +219,16 @@ private class CaptureAnalysis {
 	public var receiverType:Null<TyType> = null;
 
 	final declarations:StringMap<TypedCaptureBinding> = new StringMap();
+	var activeLoop:Null<TyControlTarget> = null;
+
+	/** Lowered iteration declarations still allocate once per edge of their exact loop. */
+	function declarationCreation(target:Null<TyControlTarget>):TypedCaptureCreation {
+		if (target == null)
+			return Declaration;
+		if (origin == null || target != activeLoop || target.getOwnerIdentity() != owner || target.getKind() != Loop)
+			throw "iteration declaration is outside its exact lowered loop";
+		return LoopIteration;
+	}
 
 	public function new(input:CaptureAnalysisInput, origin:Null<TypedCapturePlan>) {
 		this.input = input;
@@ -316,7 +326,9 @@ private class CaptureAnalysis {
 		final children = node.getExpressions();
 		final locals = node.getLocalBindings();
 		switch (node.getTag()) {
-			case MacroExpr | MacroType:
+			case MacroExpr | MacroType | KeyValueProtocol:
+				// Protocol evidence repeats the iterable's type queries. Only the
+				// authored iterable creates closures; executable acquisition runs once.
 				return;
 			case SourceFunction:
 				if (origin != null)
@@ -336,8 +348,11 @@ private class CaptureAnalysis {
 				declareAll(named ? locals.slice(1) : locals, childScope, path, FunctionEntry);
 				for (use in node.getCatchUses())
 					childScope.references.push(use.binding);
+				final previousLoop = activeLoop;
+				activeLoop = null;
 				for (index in 0...children.length)
 					expression(children[index], childScope, path + "/e" + index);
+				activeLoop = previousLoop;
 				return;
 			case Lambda:
 				if (origin == null)
@@ -366,14 +381,17 @@ private class CaptureAnalysis {
 				declareAll(locals, childScope, path, FunctionEntry);
 				for (use in node.getCatchUses())
 					childScope.references.push(use.binding);
+				final previousLoop = activeLoop;
+				activeLoop = null;
 				expression(body, childScope, path + "/e0");
+				activeLoop = previousLoop;
 				return;
 			case LocalRead:
 				if (locals.length != 1)
 					throw "capture analysis requires one exact binding for every local reference";
 				scope.references.push(locals[0]);
 			case VariableDeclaration:
-				declareAll(locals, scope, path, Declaration);
+				declareAll(locals, scope, path, declarationCreation(node.getControlTarget()));
 			case Temporary:
 				// Abstract operators already introduce exact temporaries before
 				// control lowering. They are declarations, not lowered control flow.
@@ -443,13 +461,20 @@ private class CaptureAnalysis {
 				throw "capture analysis cannot prove dependencies inside opaque source syntax";
 			case _:
 		}
-		for (index in 0...children.length)
+		for (index in 0...children.length) {
+			final previousLoop = activeLoop;
+			if ((node.getTag() == WhileExpr && index >= 1)
+				|| ((node.getTag() == ControlWhile || node.getTag() == SourceFor || node.getTag() == ControlFor) && index == 1))
+				activeLoop = node.getControlTarget();
 			expression(children[index], scope, path + "/e" + index, node.getTag() == Call && index == 0 && node.getDeclaration() != null);
+			activeLoop = previousLoop;
+		}
 	}
 
 	function statement(node:TypedStmt, scope:CaptureFunctionState, path:String):Void {
 		final creation = switch (node.getTag()) {
 			case ForIn | ForKeyValue: LoopIteration;
+			case Var: declarationCreation(node.getControlTarget());
 			case Switch: PatternMatch;
 			case Try: CatchEntry;
 			case _: Declaration;
@@ -461,8 +486,13 @@ private class CaptureAnalysis {
 		for (index in 0...values.length)
 			expression(values[index], scope, path + "/e" + index);
 		final children = node.getStatements();
-		for (index in 0...children.length)
+		for (index in 0...children.length) {
+			final previousLoop = activeLoop;
+			if (node.getTag() == While || node.getTag() == DoWhile || node.getTag() == ForIn || node.getTag() == ForKeyValue)
+				activeLoop = node.getControlTarget();
 			statement(children[index], scope, path + "/s" + index);
+			activeLoop = previousLoop;
+		}
 	}
 
 	public function run():Void {

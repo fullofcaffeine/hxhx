@@ -37,6 +37,7 @@ function expression(node:TypedExpr):HxExpr {
 		case SourceGroup: ESourceGroup(tail(0), position);
 		case SourceIf: ESourceIf(child(0), child(1), children.length == 3 ? child(2) : null, position);
 		case SourceFor: ESourceFor(HxForBinding.fromNames(node.getTexts()), child(0), child(1), position);
+		case KeyValueProtocol: throw "selected iterator protocol is not authored source syntax";
 		case SourceTry: ESourceTry(node.getSourceCatches(), tail(0), position);
 		case ThrowExpr: EThrow(child(0), position);
 		case SourceFunction:

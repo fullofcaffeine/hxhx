@@ -51,7 +51,7 @@ class TypedStmt {
 			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>, ?controlTarget:TyControlTarget, switchHasExhaustiveCoverage:Bool = false) {
 		if (controlTarget != null) {
 			switch tag {
-				case While | DoWhile | ForIn | ForKeyValue | Break | Continue:
+				case While | DoWhile | ForIn | ForKeyValue | Break | Continue | Var:
 					if (controlTarget.getKind() != Loop)
 						throw "typed loop statement requires a loop target";
 				case _:
@@ -96,8 +96,9 @@ class TypedStmt {
 		return new TypedStmt(ForIn, position, [name], [iterable], [body], null, null, null, null, binding == null ? [] : [binding]);
 
 	public static function forKeyValue(keyName:String, valueName:String, iterable:TypedExpr, body:TypedStmt, position:Null<HxPos>,
-			?bindings:Array<TyLocalBinding>):TypedStmt
-		return new TypedStmt(ForKeyValue, position, [keyName, valueName], [iterable], [body], null, null, null, null, bindings);
+			?bindings:Array<TyLocalBinding>, ?protocol:TypedExpr):TypedStmt
+		return new TypedStmt(ForKeyValue, position, [keyName, valueName], [iterable].concat(protocol == null ? [] : [protocol]), [body], null, null, null,
+			null, bindings);
 
 	public static function whileStmt(condition:TypedExpr, body:TypedStmt, position:Null<HxPos>):TypedStmt
 		return new TypedStmt(While, position, null, [condition], [body]);

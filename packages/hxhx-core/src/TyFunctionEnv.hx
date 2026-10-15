@@ -40,6 +40,54 @@ class TyFunctionEnv {
 	final controlScope:Null<TyControlScope>;
 	final inference:TyFunctionInference;
 	var untypedContext:Bool = false;
+	var protocolSource:Null<{
+		final source:HxExpr;
+		final fingerprint:String;
+		final type:TyType;
+		final typed:Null<TypedExpr>;
+	}>;
+
+	/**
+		Protocol queries refer to an iterable that this traversal already checked.
+		Do not visit its nested declarations again. The reference exists only during
+		the supplied query and typed replay reuses the exact original expression.
+	 */
+	public function withProtocolSource<T>(source:HxExpr, type:TyType, action:() -> T, ?typed:TypedExpr):T {
+		if (typed != null && typed.getType().getSemanticKey() != type.getSemanticKey())
+			throw "protocol source reference changed its checked type";
+		final previous = protocolSource;
+		protocolSource = {
+			source: source,
+			fingerprint: TypedBodyFingerprint.exactExpression(source),
+			type: type,
+			typed: typed
+		};
+		try {
+			final result = action();
+			protocolSource = previous;
+			return result;
+		} catch (error:Dynamic) {
+			// Exception cleanup preserves the original payload and restores the
+			// query-only reference even when typing reports a diagnostic.
+			protocolSource = previous;
+			throw error;
+		}
+	}
+
+	function matchesProtocolSource(source:HxExpr):Bool {
+		if (protocolSource == null || protocolSource.source != source)
+			return false;
+		if (protocolSource.fingerprint != TypedBodyFingerprint.exactExpression(source))
+			throw "protocol source changed during its checked query";
+		return true;
+	}
+
+	public function protocolSourceType(source:HxExpr):Null<TyType>
+		return matchesProtocolSource(source) ? protocolSource.type : null;
+
+	public function protocolSourceExpression(source:HxExpr):Null<TypedExpr>
+		return matchesProtocolSource(source) ? protocolSource.typed : null;
+
 	var retainedBody:Null<{
 		final declaration:HxFunctionDecl;
 		final sourceIdentity:String;
@@ -343,6 +391,7 @@ class TyFunctionEnv {
 		final copied = new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext,
 			controlScope == null ? null : controlScope.copyForInference(), inference.fork(), typeParameters);
 		copied.untypedContext = untypedContext;
+		copied.protocolSource = protocolSource;
 		copied.retainedBody = retainedBody;
 		for (symbol in enclosingSymbols)
 			copied.enclosingSymbols.push(copySymbol(symbol));

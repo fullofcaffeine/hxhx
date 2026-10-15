@@ -64,6 +64,7 @@ enum TypedExprTag {
 	ControlBranch;
 	ControlWhile;
 	SourceFor;
+	KeyValueProtocol;
 	ControlFor;
 	ControlSwitch;
 	SourceTry;
@@ -149,7 +150,7 @@ class TypedExpr {
 				case SourceFunction | ReturnExpr | ControlRegion:
 					if (controlTarget.getKind() != Function)
 						throw "typed function control requires a function target";
-				case WhileExpr | ControlWhile | SourceFor | ControlFor | BreakExpr | ContinueExpr:
+				case WhileExpr | ControlWhile | SourceFor | ControlFor | BreakExpr | ContinueExpr | VariableDeclaration:
 					if (controlTarget.getKind() != Loop)
 						throw "typed loop control requires a loop target";
 				case _:
@@ -410,7 +411,10 @@ class TypedExpr {
 	public static function returnExpr(expression:Null<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(ReturnExpr, type, position, null, expression == null ? [] : [expression]);
 
-	/** Preserve a source-level declaration as a structural child of an expression-level declaration list. **/
+	/**
+		Preserve a declaration inside an expression-level declaration list. A lowered
+		iteration binding can retain its loop target to prove fresh per-iteration storage.
+	 */
 	public static function variableDeclaration(name:String, typeHint:String, initializer:Null<TypedExpr>, isFinal:Bool, isStatic:Bool, type:TyType,
 			position:Null<HxPos>, ?binding:TyLocalBinding):TypedExpr
 		return new TypedExpr(VariableDeclaration, type, position, [name == null ? "" : name, typeHint == null ? "" : typeHint],
@@ -427,9 +431,23 @@ class TypedExpr {
 
 	/** Authored iteration retains exact local bindings and its enclosing control destination. */
 	public static function sourceFor(binding:HxForBinding, iterable:TypedExpr, body:TypedExpr, type:TyType, position:Null<HxPos>,
-			bindings:Array<TyLocalBinding>, target:Null<TyControlTarget>):TypedExpr
-		return new TypedExpr(SourceFor, type, position, HxForBinding.names(binding), [iterable, body], null, false, 0, 0.0, null, null, null, null, null,
-			bindings).withControlTarget(target);
+			bindings:Array<TyLocalBinding>, target:Null<TyControlTarget>, ?protocol:TypedExpr):TypedExpr
+		return new TypedExpr(SourceFor, type, position, HxForBinding.names(binding), [iterable, body].concat(protocol == null ? [] : [protocol]), null, false,
+			0, 0.0, null, null, null, null, null, bindings).withControlTarget(target);
+
+	/**
+		Retain selected iterator calls as visible typed children until executable lowering.
+		This is protocol evidence, not an extra source expression to execute or quote.
+	 */
+	public static function keyValueProtocol(input:{
+		acquire:TypedExpr,
+		condition:TypedExpr,
+		next:TypedExpr,
+		key:TypedExpr,
+		value:TypedExpr
+	}):TypedExpr
+		return new TypedExpr(KeyValueProtocol, TyType.fromHintText("Void"), input.acquire.getPosition(), null,
+			[input.acquire, input.condition, input.next, input.key, input.value]);
 
 	/** Ordered catch declarations and all bodies remain visible to typed replay and macro syntax. */
 	public static function sourceTry(catches:Array<HxSourceCatch>, bodies:Array<TypedExpr>, type:TyType, position:Null<HxPos>,

@@ -7,7 +7,7 @@ function appendYields(expression:TypedExpr, array:TypedExpr, element:TyType):Typ
 	final children = expression.getExpressions();
 	return switch expression.getTag() {
 		case SourceFor:
-			expression.withExpressions([children[0], appendYields(children[1], array, element)]);
+			expression.withExpressions([children[0], appendYields(children[1], array, element)].concat(children.slice(2)));
 		case SourceIf:
 			expression.withExpressions([children[0]].concat([for (index in 1...children.length) appendYields(children[index], array, element)]));
 		case _:
