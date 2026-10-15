@@ -46,6 +46,10 @@ class TypedBackendClassProjection {
 	public function getFieldInitializers():Array<TypedBackendFieldInitializerProjection>
 		return fieldInitializers.copy();
 
+	/** Declaration-only bring-up modules cannot authorize a typed storage choice. */
+	public function hasSemanticFacts():Bool
+		return semanticFacts != null;
+
 	/**
 		Return the exact semantic class and declared-member record supplied by typing.
 

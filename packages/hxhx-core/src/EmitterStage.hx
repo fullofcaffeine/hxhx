@@ -108,6 +108,7 @@ class EmitterStage {
 	static var currentEnums:Null<backend.ocaml.Stage3OcamlEnums> = null;
 
 	static var currentCallables:Null<backend.ocaml.Stage3OcamlCallableProgram> = null;
+	static var currentClassStorage:Null<backend.ocaml.Stage3OcamlClassStorage> = null;
 	static var currentCallableFunction:Null<backend.ocaml.Stage3OcamlCallableProgram.Stage3OcamlCallableFunction> = null;
 
 	static var currentModuleFilePath:Null<String> = null;
@@ -1958,24 +1959,6 @@ class EmitterStage {
 		return access == null ? null : access.resultType;
 	}
 
-	/** Objects and typed function values compare by identity, never by OCaml structural comparison. */
-	static function isIdentityValue(expr:HxExpr):Bool {
-		function requiresIdentity(type:TyType):Bool {
-			final value = type.unwrapNull();
-			return value.isAnonymous() || value.isFunction();
-		}
-		final selected = objectAccessType(expr);
-		if (selected != null)
-			return requiresIdentity(selected);
-		return switch expr {
-			case EAnon(_, _): true;
-			case EIdent(name): final catalog = currentTypedFunction != null ? currentTypedFunction.getLocalCatalog() : currentTypedInitializer == null ? null : currentTypedInitializer.getLocalCatalog(); final local = catalog == null ? null : catalog.findByProjectedName(name); local != null && requiresIdentity(local.getBinding()
-					.getType());
-			case EParenthesized(inner, _): isIdentityValue(inner);
-			case _: false;
-		};
-	}
-
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		final exact = objectAccessType(expr);
 		if (exact != null)
@@ -3117,6 +3100,16 @@ class EmitterStage {
 			});
 		}
 		final structuralAccess = objectAccess(e);
+		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
+			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+			if (field != null) {
+				final rendered = currentClassStorage.read(field,
+					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					"this_", escapeOcamlString);
+				if (rendered != null)
+					return rendered;
+			}
+		}
 		final indexedAccess = arrayAccess(e);
 		if (indexedAccess != null && !isMetalProfileActive()) {
 			final rendered = backend.ocaml.Stage3OcamlArrays.access(indexedAccess,
@@ -4218,7 +4211,10 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				}
 			case EBinop(op, a, b):
-				if ((op == "==" || op == "!=") && (isIdentityValue(a) || isIdentityValue(b))) {
+				final equality = (op != "==" && op != "!=") ? null : currentTypedInitializer != null ? currentTypedInitializer.findEquality(e) : currentTypedFunction == null ? null : currentTypedFunction.findEquality(e);
+				if (equality != null
+					&& currentClassStorage != null
+					&& (currentClassStorage.usesIdentity(equality.leftType) || currentClassStorage.usesIdentity(equality.rightType))) {
 					final left = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					final right = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					if (currentFunctionLocalOcamlNames == null)
@@ -7357,6 +7353,7 @@ class EmitterStage {
 
 		final typedModules = backend.ocaml.OcamlIntFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
 		currentCallables = new backend.ocaml.Stage3OcamlCallableProgram(typedModules);
+		currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
@@ -7378,9 +7375,12 @@ class EmitterStage {
 		for (tm in typedModules) {
 			final projection = tm.getBackendProjection();
 			final decl = projection.getDeclaration();
-			for (cls in projection.getClasses())
-				currentEnums.add(cls, moduleNameForDecl(decl, moduleTypeNameFor(tm), HxClassDecl.getName(cls.getDeclaration())),
-					HxModuleDecl.getPackagePath(decl));
+			for (cls in projection.getClasses()) {
+				final outputModule = moduleNameForDecl(decl, moduleTypeNameFor(tm), HxClassDecl.getName(cls.getDeclaration()));
+				currentEnums.add(cls, outputModule, HxModuleDecl.getPackagePath(decl));
+				if (cls.hasSemanticFacts())
+					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule));
+			}
 		}
 		currentEnums.validate();
 
@@ -9490,6 +9490,7 @@ class EmitterStage {
 	public static function resetRequestState():Void {
 		currentEnums = null;
 		currentCallables = null;
+		currentClassStorage = null;
 		currentCallableFunction = null;
 		currentTypedFunction = null;
 		currentTypedInitializer = null;

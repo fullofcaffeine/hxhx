@@ -159,7 +159,39 @@ class M14MissingReceiverMethodTest {
 			Sys.println("MISSING_RECEIVER_METHOD:PASS " + entry.name);
 		}
 		checkPrimitiveShadow();
+		checkPrimitiveFieldShadow();
 		checkRuntime();
+	}
+
+	/** A field read loads the core provider even when a local String advertises a conflicting field type. */
+	static function checkPrimitiveFieldShadow():Void {
+		final root = ".tmp/primitive_field_shadow";
+		sys.FileSystem.createDirectory(root + "/demo");
+		final source = 'package demo; class String {public var length:Bool;} '
+			+ 'class Main {static function inspect():Int return "xy".length; static function main() {Sys.println(inspect());}}';
+		sys.io.File.saveContent(root + "/demo/Main.hx", source);
+		final upstream = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "--run", "demo.Main"]);
+		final stdout = upstream.stdout.readAll().toString();
+		final stderr = upstream.stderr.readAll().toString();
+		final code = upstream.exitCode();
+		upstream.close();
+		if (code != 0 || stdout != "2\n" || stderr != "")
+			throw "upstream primitive field shadow contract differs: " + stdout + stderr;
+		var selected = 0;
+		for (owner in typeSource(root, "demo.Main").getBackendProjection().getClasses())
+			for (fn in owner.getFunctions())
+				TypedBackendSourceWalk.functionDeclaration(fn.getDeclaration(), expression -> {
+					final field = fn.findField(expression);
+					if (field != null && field.getField().getName() == "length") {
+						selected++;
+						if (field.getField().getOwner().getCanonicalName() != "String"
+							|| field.getType().getSemanticKey() != "primitive:Int")
+							throw "primitive field read lost its core declaration or Int result";
+					}
+				}, _ -> {});
+		if (selected != 1)
+			throw "primitive field ownership observer did not run";
+		Sys.println("PRIMITIVE_FIELD_SHADOW:PASS");
 	}
 
 	/** Use real providers and declaration dependencies for both ordinary and package-qualified inputs. */

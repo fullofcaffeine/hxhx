@@ -1,7 +1,7 @@
 /**
-	Resolve ordinary receiver declarations before method lookup. Primitive value
-	types use their real core provider, so String methods do not depend on another
-	module having happened to load String first. No member signatures live here.
+	Resolve ordinary receiver declarations before field or method lookup. Primitive
+	values use their real core provider, so String members do not depend on another
+	module having loaded String first. No member types or signatures live here.
  */
 function owner(receiver:TyType, context:TyperContext):Null<TyNominalInfo> {
 	if (context.getIndex() == null)

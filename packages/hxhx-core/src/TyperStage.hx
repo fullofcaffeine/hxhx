@@ -2382,8 +2382,8 @@ class TyperStage {
 					&& selected.getIsStatic() ? selected : null;
 				} else {
 					final owner = switch (object) {
-						case EThis: nominalInfoForType(ctx.getIndex(), currentThisType(ctx));
-						case _: nominalInfoForType(ctx.getIndex(), inferExprType(object, scope.copyForInference(), ctx, pos));
+						case EThis: TyReceiverMemberLookup.owner(currentThisType(ctx), ctx);
+						case _: TyReceiverMemberLookup.owner(inferExprType(object, scope.copyForInference(), ctx, pos), ctx);
 					};
 					owner == null ? null : ctx.instanceField(field, owner);
 				}
@@ -2761,8 +2761,7 @@ class TyperStage {
 							throw new TyperError(ctx.getFilePath(), pos, "Unknown field " + _field + " on " + objTy.getDisplay());
 						if (_field == "code" && objTy.getSemanticKey() == "primitive:String")
 							throw new TyperError(ctx.getFilePath(), pos, "String has no field code");
-						final idx = ctx.getIndex();
-						final c = nominalInfoForType(idx, objTy);
+						final c = TyReceiverMemberLookup.owner(objTy, ctx);
 						if (c != null) {
 							final memberType = declaredMemberReadType(c, _field, false, ctx, objTy);
 							if (memberType != null) {

@@ -29,6 +29,8 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/ocaml/HxhxOcamlTargetDeclarationAdapter.hx",
   // Stage3 enum planning copies exact identities into closed target storage choices.
   "packages/hxhx-core/src/backend/ocaml/Stage3OcamlEnumPlan.hx",
+  // Native class storage admits generated owners and validates exact stored fields before rendering.
+  "packages/hxhx-core/src/backend/ocaml/Stage3OcamlClassStorage.hx",
   // C++ indexes exact class/module owners here; callable plans still own target representation choices.
   "packages/hxhx-core/src/backend/cpp/CppTypedProgramProjection.hx",
   // Managed program admission joins exact method owners and extern bindings before emission.

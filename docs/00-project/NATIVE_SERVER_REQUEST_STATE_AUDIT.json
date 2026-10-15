@@ -67,6 +67,7 @@
       "request_reset_fields": [
         "var:currentEnums",
         "var:currentCallables",
+        "var:currentClassStorage",
         "var:currentCallableFunction",
         "var:currentTypedFunction",
         "var:currentTypedInitializer",

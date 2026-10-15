@@ -21,6 +21,7 @@ class TypedBodyProjectionBuilder {
 	final localWrites:Array<TypedBackendLocalWrite> = [];
 	final objectAccesses:Array<TypedBackendObjectAccess> = [];
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
+	final equalities:Array<TypedBackendEqualityOccurrence> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
 	final returns:Array<TypedBackendReturnOccurrence> = [];
@@ -68,6 +69,26 @@ class TypedBodyProjectionBuilder {
 
 	public function getCallableAscriptions():Array<HxExpr>
 		return callableAscriptions.copy();
+
+	/** Preserve operand types before binary syntax loses them. */
+	public function projectEquality(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add equality facts to a sealed projection";
+		if (source.getTexts()[0] == "==" || source.getTexts()[0] == "!=")
+			equalities.push(new TypedBackendEqualityOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	public function getEqualities():Array<TypedBackendEqualityOccurrence> {
+		if (!sealed)
+			throw "equality facts require a sealed projection";
+		return equalities.copy();
+	}
 
 	/** Retain typed callback producers, uses and comparisons before source projection loses their meaning. */
 	public function projectCallableExpression(source:TypedExpr, expression:HxExpr):HxExpr {

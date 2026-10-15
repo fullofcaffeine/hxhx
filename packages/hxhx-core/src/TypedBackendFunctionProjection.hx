@@ -31,6 +31,7 @@ class TypedBackendFunctionProjection {
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
+	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
 	final statementControls:Array<TypedBackendStatementControl>;
@@ -43,7 +44,8 @@ class TypedBackendFunctionProjection {
 			?localWrites:Array<TypedBackendLocalWrite>, ?objectAccesses:Array<TypedBackendObjectAccess>, ?callArguments:Array<TypedBackendCallArgument>,
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>, ?indexedAccesses:{
-			arrays:Array<TypedBackendArrayAccess>
+			arrays:Array<TypedBackendArrayAccess>,
+			?equalities:Array<TypedBackendEqualityOccurrence>
 		}) {
 		if (source == null || lowered == null)
 			throw "typed backend function projection requires authored and lowered owners";
@@ -94,6 +96,9 @@ class TypedBackendFunctionProjection {
 		this.localWrites = localWrites == null ? [] : localWrites.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		for (entry in this.equalities)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.arrayAccesses)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.callArguments = callArguments == null ? [] : callArguments.copy();
@@ -378,6 +383,17 @@ class TypedBackendFunctionProjection {
 	/** Indexed storage conversions require an original occurrence in this exact current body. */
 	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
 		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Equality facts require the exact expression in the current function revision. */
+	public function findEquality(expression:HxExpr):Null<TypedBackendEqualityOccurrence> {
+		for (entry in equalities)
 			if (entry.expression == expression) {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);

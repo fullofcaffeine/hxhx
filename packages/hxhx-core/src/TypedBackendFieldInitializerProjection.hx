@@ -23,6 +23,7 @@ class TypedBackendFieldInitializerProjection {
 	final casts:Array<TypedBackendCastOccurrence>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
+	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
@@ -38,7 +39,8 @@ class TypedBackendFieldInitializerProjection {
 			?objectAccesses:Array<TypedBackendObjectAccess>, ?localWrites:Array<TypedBackendLocalWrite>, ?callArguments:Array<TypedBackendCallArgument>,
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?indexedAccesses:{
-			arrays:Array<TypedBackendArrayAccess>
+			arrays:Array<TypedBackendArrayAccess>,
+			?equalities:Array<TypedBackendEqualityOccurrence>
 		}) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend field initializer projection requires a stable identity";
@@ -75,6 +77,9 @@ class TypedBackendFieldInitializerProjection {
 		this.casts = casts == null ? [] : casts.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		for (entry in this.equalities)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.arrayAccesses)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.localWrites = localWrites == null ? [] : localWrites.copy();
@@ -262,6 +267,18 @@ class TypedBackendFieldInitializerProjection {
 	/** Initializer array accesses cannot borrow a function's element storage facts. */
 	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
 		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireCaptureCatalog();
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Initializer equality cannot borrow facts from a method or another field. */
+	public function findEquality(expression:HxExpr):Null<TypedBackendEqualityOccurrence> {
+		for (entry in equalities)
 			if (entry.expression == expression) {
 				requireCaptureCatalog();
 				requireExpression(expression);

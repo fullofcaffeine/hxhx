@@ -745,7 +745,10 @@ class TypedBodySource {
 				final arguments = expressionTail(expressions, 0, catalog, projectionFacts);
 				projectionFacts == null ? ENew(path, arguments) : projectionFacts.projectConstructor(typedExpression, path, arguments);
 			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog, projectionFacts));
-			case Binary: EBinop(texts[0], expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+			case Binary:
+				final binary:HxExpr = EBinop(texts[0], expression(expressions[0], catalog, projectionFacts),
+					expression(expressions[1], catalog, projectionFacts));
+				projectionFacts == null ? binary : projectionFacts.projectEquality(typedExpression, binary);
 			case Assign | CompoundAssign:
 				final target = expression(expressions[0], catalog, projectionFacts, false, WriteTarget);
 				var value = expression(expressions[1], catalog, projectionFacts);
@@ -932,7 +935,8 @@ class TypedBodySource {
 			facts.runtimeTypes, facts.constructors, projectionFacts.getAggregates(), projectionFacts.getFields(), projectionFacts.getCasts(),
 			projectionFacts.getThrownValues(), projectionFacts.getLocalWrites(), projectionFacts.getObjectAccesses(), projectionFacts.getCallArguments(),
 			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls(), {
-				arrays: projectionFacts.getArrayAccesses()
+				arrays: projectionFacts.getArrayAccesses(),
+				equalities: projectionFacts.getEqualities()
 			});
 	}
 
@@ -983,7 +987,8 @@ class TypedBodySource {
 			facts.runtimeTypes, facts.constructors, projectionFacts.getFields(), projectionFacts.getAggregates(), projectionFacts.getCasts(),
 			projectionFacts.getObjectAccesses(), projectionFacts.getLocalWrites(), projectionFacts.getCallArguments(), projectionFacts.getMethods(),
 			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), {
-				arrays: projectionFacts.getArrayAccesses()
+				arrays: projectionFacts.getArrayAccesses(),
+				equalities: projectionFacts.getEqualities()
 			});
 	}
 
