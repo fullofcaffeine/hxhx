@@ -37,6 +37,58 @@ class M14CppManagedProgramPlanTest {
 			throw "failed managed admission published an artifact";
 	}
 
+	/** The original Float cases now execute; inspect initialized storage and thrown values independently. */
+	static function accepted(input:{
+		source:String,
+		name:String,
+		hasField:Bool,
+		throwsFloat:Bool
+	}):Void {
+		final directory = ".tmp/managed-program-admission/accepted-" + input.name;
+		final selected = program(input.source);
+		final before = [
+			for (module in selected.getTypedModules())
+				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
+		];
+		CppTargetCore.emit(selected, new BackendContext(directory, null, "Main", true, false, new haxe.ds.StringMap()));
+		final after = [
+			for (module in selected.getTypedModules())
+				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
+		];
+		if (before.join("\n") != after.join("\n"))
+			throw "Float admission changed authored source";
+		sys.io.File.copy("test/cpp_managed_heap/ProgramAdmissionObserver.cpp", directory + "/Observer.cpp");
+		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		for (optimization in ["-O0", "-O2"]) {
+			final executable = directory + "/observer" + optimization;
+			if (Sys.command(timeout, [
+				"60",
+				compiler,
+				"-std=c++17",
+				optimization,
+				"-g",
+				"-fno-omit-frame-pointer",
+				"-fsanitize=address,undefined",
+				"-fno-sanitize-recover=all",
+				"-DHXHX_ADMISSION_FIELD=" + (input.hasField ? "1" : "0"),
+				"-DHXHX_ADMISSION_THROW=" + (input.throwsFloat ? "1" : "0"),
+				directory + "/Observer.cpp",
+				"-o",
+				executable
+			]) != 0)
+				throw "Float admission observer failed to compile: " + input.name;
+			final process = new sys.io.Process(timeout, ["20", executable]);
+			final stdout = process.stdout.readAll().toString();
+			final stderr = process.stderr.readAll().toString();
+			final code = process.exitCode();
+			process.close();
+			if (code != 0 || stdout != "" || stderr != "")
+				throw "Float admission observation failed: " + input.name + ": " + stdout + stderr;
+		}
+		Sys.println("CPP_PROGRAM_ADMISSION:" + input.name + ":PASS");
+	}
+
 	static function main():Void {
 		final main = new ResolvedModule("Main", "Main.hx", ParserStage.parse("class Main { static function main():Void { Sys.println('user'); } }", "Main.hx"));
 		final authoredSys = new ResolvedModule("Sys", "Sys.hx",
@@ -73,13 +125,40 @@ class M14CppManagedProgramPlanTest {
 			throw "instance predicate admission changed null behavior: " + stdout + stderr;
 		admission("class Main { static function main():Void {} } class Other { static function main():Void {} }", "", "one exact requested main",
 			"ambiguous-main", []);
-		admission("class Main { static var state:Float = 1.0; static function main():Void {} }", "Main", "explicit type contract", "static-initializer", []);
-		admission("class Main { static function main():Void {} } class Unused { static var state:Float = 1.0; }", "Main", "explicit type contract",
-			"uncalled-class-initializer", []);
-		admission("class Main { static function main():Void {} } class Unused { static function __init__():Void { throw 1.0; } }", "Main",
-			"managed value requires explicit typed expression lowering for EFloat", "uncalled-class-startup", []);
-		admission("class Main { static function main():Void { 1.0; } }", "Main", "managed rooted expression requires explicit lowering for EFloat",
-			"discarded-unsupported-value", []);
+		accepted({
+			source: "class Main { static var state:Float = 1.0; static function main():Void {} }",
+			name: "static-initializer",
+			hasField: true,
+			throwsFloat: false
+		});
+		accepted({
+			source: "class Main { static function main():Void {} } class Unused { static var state:Float = 1.0; }",
+			name: "uncalled-class-initializer",
+			hasField: true,
+			throwsFloat: false
+		});
+		accepted({
+			source: "class Main { static function main():Void {} } class Unused { static function __init__():Void { throw 1.0; } }",
+			name: "uncalled-class-startup",
+			hasField: false,
+			throwsFloat: true
+		});
+		accepted({
+			source: "class Main { static function main():Void { 1.0; } }",
+			name: "discarded-value",
+			hasField: false,
+			throwsFloat: false
+		});
+		// Unsupported calls retain artifact-safety checks at each original effect position.
+		final native = " extern class Native { public static function value():Float; }";
+		admission("class Main { static var state:Float = Native.value(); static function main():Void {} }" + native, "Main",
+			"explicit native or instance binding", "unsupported-static-initializer", []);
+		admission("class Main { static function main():Void {} } class Unused { static var state:Float = Native.value(); }" + native, "Main",
+			"explicit native or instance binding", "unsupported-uncalled-initializer", []);
+		admission("class Main { static function main():Void {} } class Unused { static function __init__():Void { Native.value(); } }" + native, "Main",
+			"explicit native or instance binding", "unsupported-uncalled-startup", []);
+		admission("class Main { static function main():Void { Native.value(); } }" + native, "Main", "explicit native or instance binding",
+			"unsupported-discarded-value", []);
 		admission("class Main { static function main():Void { Native.run(); } } extern class Native { public static function run():Void; }", "Main",
 			"explicit native or instance binding", "native-binding", []);
 		admission(source, "Main", "explicit resource publication", "resources", [{name: "sample", data: haxe.io.Bytes.ofString("content")}]);
