@@ -57,6 +57,8 @@ class M14CppMapRuntimeTypeInventoryTest {
 		final expected = [
 			"runtime-core:Array",
 			"runtime-nominal:Math",
+			"runtime-nominal:cpp.ConstPointer",
+			"runtime-nominal:haxe.Exception",
 			"runtime-nominal:haxe.Int64.___Int64",
 			"runtime-nominal:haxe.ds.EnumValueMap",
 			"runtime-nominal:haxe.ds.IntMap",
@@ -65,6 +67,8 @@ class M14CppMapRuntimeTypeInventoryTest {
 		];
 		// The real closure includes Math.__init__. Int64's __Int64 typedef must
 		// resolve to its concrete ___Int64 class rather than become a descriptor.
+		// NativeString and exception helpers also retain their class operands.
+		assertProviderClassOperands(projection);
 		final actual = [for (descriptor in descriptors) descriptor.getTarget().getSemanticKey()];
 		if (actual.join("\n") != expected.join("\n"))
 			throw "runtime descriptor plan omitted or duplicated a real provider: " + actual.join(", ");
@@ -91,11 +95,11 @@ class M14CppMapRuntimeTypeInventoryTest {
 					throw "repeated Array operands must share one descriptor";
 			}
 		}
-		if (tests != 4 || values != 4 || arrays != 2)
+		if (tests != 4 || values != 7 || arrays != 2)
 			throw "runtime plan confused Map instance tests with provider class values";
 		descriptors.pop();
 		operations.pop();
-		if (plan.getDescriptors().length != 7 || plan.getOperations().length != 8)
+		if (plan.getDescriptors().length != 9 || plan.getOperations().length != 11)
 			throw "runtime plan exposed its mutable inventory";
 		final marker = plan.getOperations()[0].occurrence.getExpression();
 		switch marker {
@@ -123,6 +127,35 @@ class M14CppMapRuntimeTypeInventoryTest {
 			if (descriptor.getDeclaration() != null)
 				throw "primitive type object acquired a synthetic declaration";
 		}
+	}
+
+	/** Tie the additional inventory to real helper bodies, rather than merely raising a count. */
+	static function assertProviderClassOperands(projection:backend.cpp.CppTypedProgramProjection):Void {
+		final expected = [
+			"cpp.NativeString.c_str" => "runtime-nominal:cpp.ConstPointer",
+			"haxe.Exception.caught" => "runtime-nominal:haxe.Exception",
+			"haxe.Exception.thrown" => "runtime-nominal:haxe.Exception"
+		];
+		final found = new haxe.ds.StringMap<Bool>();
+		for (module in projection.getModules())
+			for (cls in module.projection.getClasses())
+				for (fn in cls.getFunctions()) {
+					final declaration = fn.requireSemanticDeclaration();
+					final key = declaration.getOwner().getCanonicalName() + "." + declaration.getSignature().getName();
+					if (!expected.exists(key))
+						continue;
+					final entries = fn.getRuntimeTypeCatalog().getEntries();
+					if (found.exists(key) || entries.length != 1)
+						throw "provider class operand inventory differs in " + key;
+					final entry = fn.requireRuntimeType(entries[0].getExpression());
+					entry.assertOwner(fn.getStableIdentity(), fn.getBodyRevision());
+					if (entry != entries[0] || entry.getValue() != null || entry.getTarget().getSemanticKey() != expected.get(key))
+						throw "provider class operand lost its exact owner or target in " + key;
+					found.set(key, true);
+				}
+		for (key in expected.keys())
+			if (!found.exists(key))
+				throw "provider class operand helper is missing: " + key;
 	}
 
 	/** Static class-valued fields must use their own initializer occurrence catalog. */
