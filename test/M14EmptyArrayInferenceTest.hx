@@ -10,8 +10,15 @@ class M14EmptyArrayInferenceTest {
 			+ 'class Main{static function take(values:Array<Int>):Void{values.push(7);}'
 			+ 'static function text(values:Array<String>):Void{values.push("word");}'
 			+ 'static function size(values:Array<Int>):Int{return values.length;}'
+			+ 'static function nestedSize(values:Array<Array<Int>>):Int{return values.length;}'
 			+ 'static function collect<T>(value:T):Array<T>{var values=[];values.push(value);return values;}';
 		for (entry in [
+			{
+				name: "null_contextual_argument",
+				body: 'var values=[7];trace("null-size:"+nestedSize([null]));',
+				output: "null-size:1\n",
+				accepted: true
+			},
 			{
 				name: "switch_argument",
 				body: 'var values=[7];for(flag in [true,false]) trace(size(switch flag {case true: [];case false: values;}));',

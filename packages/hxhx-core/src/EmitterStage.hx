@@ -1933,6 +1933,12 @@ class EmitterStage {
 			currentTypedFunction != null ? currentTypedFunction.findObjectAccess(expr) : currentTypedInitializer == null ? null : currentTypedInitializer.findObjectAccess(expr);
 	}
 
+	/** Indexed storage facts must belong to the currently executing typed body. */
+	static function arrayAccess(expr:HxExpr):Null<TypedBackendArrayAccess> {
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.findArrayAccess(expr) : currentTypedFunction == null ? null : currentTypedFunction.findArrayAccess(expr);
+	}
+
 	/** Lowered range temporaries retain their source types in the active body's local catalog. */
 	static function rangeBoundCarrier(expression:HxExpr, value:String):String {
 		final locals = currentTypedFunction != null ? currentTypedFunction.getLocalCatalog() : currentTypedInitializer == null ? null : currentTypedInitializer.getLocalCatalog();
@@ -3102,6 +3108,14 @@ class EmitterStage {
 			});
 		}
 		final structuralAccess = objectAccess(e);
+		final indexedAccess = arrayAccess(e);
+		if (indexedAccess != null && !isMetalProfileActive()) {
+			final rendered = backend.ocaml.Stage3OcamlArrays.access(indexedAccess,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+			if (rendered != null)
+				return rendered;
+		}
 		if (structuralAccess != null) {
 			if (currentFunctionLocalOcamlNames == null)
 				throw "object access requires its exact local naming owner";
@@ -3119,7 +3133,7 @@ class EmitterStage {
 			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
-			if (exactCall.owner == "Array" && (exactCall.method == "map" || exactCall.method == "join")) {
+			if (exactCall.owner == "Array" && backend.ocaml.Stage3OcamlArrayCalls.supports(exactCall.method)) {
 				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
 				if (occurrence == null)
 					throw "selected OCaml array call requires its exact executable occurrence";
@@ -3216,8 +3230,14 @@ class EmitterStage {
 				// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
 				escapeOcamlString(name);
 			case ENew(typePath, args):
-				exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
-					callSigByCalleeRaw);
+				final rendered = exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				if (!isMetalProfileActive() && isStage3StdArrayCtorTypePath(typePath) && args.length == 0) {
+					final occurrence = currentTypedInitializer != null ? currentTypedInitializer.requireConstructor(e) : currentTypedFunction == null ? null : currentTypedFunction.requireConstructor(e);
+					if (occurrence == null)
+						throw "OCaml array construction requires its exact typed occurrence";
+					backend.ocaml.Stage3OcamlArrays.retainStringifier(occurrence.getConstructedType(), rendered, currentFunctionLocalOcamlNames);
+				} else rendered;
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				exprToOcamlArrayComprehension(name, iterable, guardExpr, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -4669,6 +4689,14 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final indexedAccess = arrayAccess(e);
+			if (!isMetalProfileActive() && indexedAccess != null && backend.ocaml.Stage3OcamlArrays.supportsAccess(indexedAccess)) {
+				// The typed renderer owns this operation; retain unsupported-operand checks
+				// without replacing supported mutations with a bootstrap placeholder.
+				return hasBringupPoison(indexedAccess.receiver)
+					|| hasBringupPoison(indexedAccess.index)
+					|| (indexedAccess.value != null && hasBringupPoison(indexedAccess.value));
+			}
 			final enumCall = TypedExactEnumConstructorSource.decode(e);
 			if (enumCall != null) {
 				for (argument in enumCall.arguments)
@@ -6247,7 +6275,7 @@ class EmitterStage {
 										currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 								}
 							}
-						case EBinop("=", EField(_, _), _):
+						case EBinop("=", EField(_, _), _) | EBinop("=", EArrayAccess(_, _), _):
 							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 								currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 						case EBinop("=", _l, _r):

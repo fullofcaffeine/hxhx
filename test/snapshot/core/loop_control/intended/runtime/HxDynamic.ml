@@ -147,6 +147,8 @@ let rec toStdString (value : Obj.t) : string =
       if string_value == hx_null_string then "null" else string_value
     else if tag = Obj.double_tag then
       string_of_float (Obj.obj value)
+    else if HxArray.is_value value then
+      HxArray.to_dynamic_string (Obj.obj value) toStdString
     else if HxAnon.is_anon value then
       anonymousToStdString value
     else

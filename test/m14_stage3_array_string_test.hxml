@@ -1,6 +1,10 @@
+test/m14_typed_array_access_projection_test.hxml
+--next
 -cp packages/hxhx-core/src
 -cp packages/reflaxe.ocaml/src
 -cp packages/hxhx/src
 -cp test
 -main M14Stage3ArrayStringTest
 --interp
+--next
+test/m14_stage3_array_producer_string_test.hxml

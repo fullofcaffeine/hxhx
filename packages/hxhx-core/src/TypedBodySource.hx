@@ -749,7 +749,8 @@ class TypedBodySource {
 					value = projectionFacts.projectLocalWrite(catalog.projectedName(binding), binding, expressions[1], value);
 				}
 				final assignment:HxExpr = EBinop(typedExpression.getTag() == Assign ? "=" : texts[0], target, value);
-				projectionFacts == null ? assignment : projectionFacts.projectObjectAccess(typedExpression, assignment);
+				projectionFacts == null ? assignment : projectionFacts.projectArrayAccess(typedExpression,
+					projectionFacts.projectObjectAccess(typedExpression, assignment));
 			case Ternary:
 				ETernary(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
 					expression(expressions[2], catalog, projectionFacts));
@@ -765,7 +766,9 @@ class TypedBodySource {
 			case ArrayDecl:
 				final children = expressionTail(expressions, 0, catalog, projectionFacts);
 				projectionFacts == null ? EArrayDecl(children) : projectionFacts.projectAggregate(typedExpression, children);
-			case ArrayAccess: EArrayAccess(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+			case ArrayAccess:
+				final access:HxExpr = EArrayAccess(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
+				projectionFacts == null ? access : projectionFacts.projectArrayAccess(typedExpression, access);
 			case Range | FixedRange: ERange(expression(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts));
 			case Cast:
 				final operand = expression(expressions[0], catalog, projectionFacts);
@@ -923,7 +926,9 @@ class TypedBodySource {
 		return new TypedBackendFunctionProjection(source, typedFunction, projectedDeclaration, locals, returnType, fields, parameterBindingIdentities,
 			facts.runtimeTypes, facts.constructors, projectionFacts.getAggregates(), projectionFacts.getFields(), projectionFacts.getCasts(),
 			projectionFacts.getThrownValues(), projectionFacts.getLocalWrites(), projectionFacts.getObjectAccesses(), projectionFacts.getCallArguments(),
-			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls());
+			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls(), {
+				arrays: projectionFacts.getArrayAccesses()
+			});
 	}
 
 	/** Project one field from its resolved type and typed initializer when available. **/
@@ -972,7 +977,9 @@ class TypedBodySource {
 		return new TypedBackendFieldInitializerProjection(initializer, lowered, identity, revision, field, declaration, locals, fieldReads,
 			facts.runtimeTypes, facts.constructors, projectionFacts.getFields(), projectionFacts.getAggregates(), projectionFacts.getCasts(),
 			projectionFacts.getObjectAccesses(), projectionFacts.getLocalWrites(), projectionFacts.getCallArguments(), projectionFacts.getMethods(),
-			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls());
+			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), {
+				arrays: projectionFacts.getArrayAccesses()
+			});
 	}
 
 	static function projectedClassDeclaration(typedClass:TypedClass, functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>):HxClassDecl {

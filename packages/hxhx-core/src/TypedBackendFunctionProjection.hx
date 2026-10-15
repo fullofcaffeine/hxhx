@@ -30,6 +30,7 @@ class TypedBackendFunctionProjection {
 	final thrownValues:Array<TypedBackendThrownValue>;
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
+	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
 	final statementControls:Array<TypedBackendStatementControl>;
@@ -41,7 +42,9 @@ class TypedBackendFunctionProjection {
 			?fields:Array<TypedBackendFieldOccurrence>, ?casts:Array<TypedBackendCastOccurrence>, ?thrownValues:Array<TypedBackendThrownValue>,
 			?localWrites:Array<TypedBackendLocalWrite>, ?objectAccesses:Array<TypedBackendObjectAccess>, ?callArguments:Array<TypedBackendCallArgument>,
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
-			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>) {
+			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>, ?indexedAccesses:{
+			arrays:Array<TypedBackendArrayAccess>
+		}) {
 		if (source == null || lowered == null)
 			throw "typed backend function projection requires authored and lowered owners";
 		final stableIdentity = source.getStableIdentity();
@@ -90,6 +93,9 @@ class TypedBackendFunctionProjection {
 		this.thrownValues = thrownValues == null ? [] : thrownValues.copy();
 		this.localWrites = localWrites == null ? [] : localWrites.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
+		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		for (entry in this.arrayAccesses)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.callArguments = callArguments == null ? [] : callArguments.copy();
 		this.lambdas = lambdas == null ? [] : lambdas.copy();
 		this.statementControls = statementControls == null ? [] : statementControls.copy();
@@ -131,7 +137,7 @@ class TypedBackendFunctionProjection {
 				throw "typed backend function projection cannot find exact parameter binding " + identity;
 			seenParameters.set(identity, true);
 		}
-	}
+		}
 
 	public function getDeclaration():HxFunctionDecl
 		return declaration;
@@ -364,6 +370,17 @@ class TypedBackendFunctionProjection {
 				}, _ -> {});
 				if (!present)
 					throw "object access is absent from its function projection";
+				return entry;
+			}
+		return null;
+	}
+
+	/** Indexed storage conversions require an original occurrence in this exact current body. */
+	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
+		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
 				return entry;
 			}
 		return null;

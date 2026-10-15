@@ -3468,8 +3468,12 @@ class TyperStage {
 					filePath: ctx.getFilePath(),
 					position: pos
 				});
-				if (contextualArray != null)
-					return contextualArray;
+				if (contextualArray != null) {
+					// Replayed calls no longer have their initial parameter context.
+					// Retain null-only literals just as we retain empty allocations;
+					// their elements cannot reconstruct the selected reference type.
+					return TypedArrayLiteral.isNullOnly(values) ? scope.getInference().contextualCollection(expr, contextualArray) : contextualArray;
+				}
 				if (TypedArrayLiteral.isNullOnly(values)) {
 					final array = ctx.resolveType("Array");
 					if (array != null)

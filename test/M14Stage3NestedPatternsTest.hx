@@ -29,8 +29,7 @@ class M14Stage3NestedPatternsTest {
 		for (entry in cases) {
 			final source = "class Main { " + entry.prefix + " static function value(v:" + entry.type + "):Int return switch v {case " + entry.pattern
 				+ ": 2;}; static function main():Void {} }";
-			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+			final typed = M14Stage3RuntimeFixture.typeMain({source: source, path: "Main.hx", root: root});
 			var rejected = false;
 			try {
 				typed.getBackendProjection();
@@ -48,8 +47,7 @@ class M14Stage3NestedPatternsTest {
 		checkUnprovenCoverage();
 		observe("haxe", ["-cp", root, "--run", "Main"]);
 		final path = Path.join([root, "Main.hx"]);
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-nested-patterns", true);
 		observe(executable, []);
 		Sys.println("M14_STAGE3_NESTED_PATTERNS:PASS");

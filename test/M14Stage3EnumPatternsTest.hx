@@ -6,8 +6,7 @@ class M14Stage3EnumPatternsTest {
 	static final root = "test/fixtures/stage3_enum_patterns";
 
 	static function program(source:String, path:String):TypedModule {
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(source, path));
-		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		return M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
 	}
 
 	static function rejects(action:Void->Void, expected:String):Void {

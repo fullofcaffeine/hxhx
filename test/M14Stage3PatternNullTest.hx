@@ -18,8 +18,7 @@ class M14Stage3PatternNullTest {
 	}
 
 	static function typed(source:String, path:String):TypedModule {
-		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
-		return TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		return M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
 	}
 
 	/** Unsupported guard syntax must not be mistaken for an unconditional pattern. */

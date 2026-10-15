@@ -20,6 +20,7 @@ class TypedBodyProjectionBuilder {
 	final thrownValues:Array<TypedBackendThrownValue> = [];
 	final localWrites:Array<TypedBackendLocalWrite> = [];
 	final objectAccesses:Array<TypedBackendObjectAccess> = [];
+	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
 	final returns:Array<TypedBackendReturnOccurrence> = [];
@@ -194,6 +195,26 @@ class TypedBodyProjectionBuilder {
 		if (!sealed)
 			throw "object accesses require a sealed projection";
 		return objectAccesses.copy();
+	}
+
+	/** Preserve indexed operand types before target-specific storage conversions. */
+	public function projectArrayAccess(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add array accesses to a sealed body projection";
+		if (TypedBackendArrayAccess.supports(source))
+			arrayAccesses.push(new TypedBackendArrayAccess({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	public function getArrayAccesses():Array<TypedBackendArrayAccess> {
+		if (!sealed)
+			throw "array accesses require a sealed projection";
+		return arrayAccesses.copy();
 	}
 
 	/** Record written operands before target adapters add receiver or control arguments. */

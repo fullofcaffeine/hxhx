@@ -22,6 +22,7 @@ class TypedBackendFieldInitializerProjection {
 	final aggregates:Array<TypedBackendAggregateOccurrence>;
 	final casts:Array<TypedBackendCastOccurrence>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
+	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
@@ -36,7 +37,9 @@ class TypedBackendFieldInitializerProjection {
 			?fields:Array<TypedBackendFieldOccurrence>, ?aggregates:Array<TypedBackendAggregateOccurrence>, ?casts:Array<TypedBackendCastOccurrence>,
 			?objectAccesses:Array<TypedBackendObjectAccess>, ?localWrites:Array<TypedBackendLocalWrite>, ?callArguments:Array<TypedBackendCallArgument>,
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
-			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>) {
+			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?indexedAccesses:{
+			arrays:Array<TypedBackendArrayAccess>
+		}) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend field initializer projection requires a stable identity";
 		if (bodyRevision == null || bodyRevision.length == 0)
@@ -71,6 +74,9 @@ class TypedBackendFieldInitializerProjection {
 		this.aggregates = aggregates == null ? [] : aggregates.copy();
 		this.casts = casts == null ? [] : casts.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
+		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		for (entry in this.arrayAccesses)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.localWrites = localWrites == null ? [] : localWrites.copy();
 		this.callArguments = callArguments == null ? [] : callArguments.copy();
 		this.lambdas = lambdas == null ? [] : lambdas.copy();
@@ -95,7 +101,7 @@ class TypedBackendFieldInitializerProjection {
 		this.constructorCatalog = constructorCatalog == null ? new TypedBackendConstructorCatalog(stableIdentity, bodyRevision, []) : constructorCatalog;
 		this.constructorCatalog.assertOwner(stableIdentity, bodyRevision);
 		this.constructorCatalog.assertExpressions(TypedConstructorSource.inExpression(HxFieldDecl.getInit(declaration)));
-	}
+		}
 
 	/** Capture facts belong to this exact field body and its lowered closure occurrences. */
 	public function requireCaptureCatalog():TypedBackendCaptureCatalog {
@@ -246,6 +252,18 @@ class TypedBackendFieldInitializerProjection {
 	public function findObjectAccess(expression:HxExpr):Null<TypedBackendObjectAccess> {
 		for (entry in objectAccesses)
 			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Initializer array accesses cannot borrow a function's element storage facts. */
+	public function findArrayAccess(expression:HxExpr):Null<TypedBackendArrayAccess> {
+		for (entry in arrayAccesses)
+			if (entry.expression == expression) {
+				requireCaptureCatalog();
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
 				return entry;
