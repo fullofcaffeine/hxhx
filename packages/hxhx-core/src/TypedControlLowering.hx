@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v27";
+	static final passIdentity = "source-control-v28";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -526,8 +526,12 @@ class TypedControlLowering {
 		final defaults = expression.getExpressions().slice(1);
 		final indexes = facts.getDefaultParameterIndexes();
 		facts.assertDefaultCount(defaults.length);
+		final incomingBindings = [
+			for (index in 0...parameterBindings.length)
+				TypedSourceParameterEntry.binding(parameterBindings[index], indexes.contains(index))
+		];
 		for (index in 0...indexes.length) {
-			final binding = parameterBindings[indexes[index]];
+			final binding = incomingBindings[indexes[index]];
 			final position = defaults[index].getPosition();
 			final destination = TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 			final missing = TypedExpr.binary("==", destination, TypedExpr.nullValue(TyType.fromHintText("Null"), position), TyType.fromHintText("Bool"),
@@ -536,13 +540,16 @@ class TypedControlLowering {
 			final guard = TypedExpr.sourceIf(missing, assignment, null, TyType.fromHintText("Void"), position);
 			for (step in discard(guard, target).steps)
 				entry.push(step);
+			final bodyBinding = parameterBindings[indexes[index]];
+			if (binding != bodyBinding)
+				entry.push(declaration(bodyBinding, destination, position));
 		}
 		final plan = facts.getKind() == Arrow ? value(body, target) : discard(body, target);
 		activeLoop = previousLoop;
 		if (facts.getKind() == Arrow && plan.completes && plan.value != null)
 			plan.steps.push(TypedExpr.returnExpr(plan.value, TyType.noNormalCompletion(), body.getPosition()).withControlTarget(target));
 		final region = TypedExpr.controlRegion(entry.concat(plan.steps), body.getType(), body.getPosition(), target);
-		return TypedExpr.lambda(facts.getArguments(), region, expression.getType(), expression.getPosition(), parameterBindings, facts.getSignature())
+		return TypedExpr.lambda(facts.getArguments(), region, expression.getType(), expression.getPosition(), incomingBindings, facts.getSignature())
 			.withCatchUses(expression.getCatchUses());
 	}
 

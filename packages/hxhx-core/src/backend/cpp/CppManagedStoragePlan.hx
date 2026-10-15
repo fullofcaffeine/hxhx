@@ -46,13 +46,21 @@ class CppManagedFunctionPlan {
 		this.parameters = parameters.copy();
 		if (parameters.length != abi.getParameters().length)
 			throw "managed closure parameters disagree with its signature";
-		for (index in 0...parameters.length)
+		for (index in 0...parameters.length) {
+			final bindingType = resolveType == null ? parameters[index].binding.getType() : resolveType(parameters[index].binding.getType());
+			final parameter = abi.getParameters()[index];
+			// Shared lowering can split a defaulted body local from nullable ingress.
+			// Only an optional rooted slot can carry that wider incoming value.
+			final nullableEntry = signature.getFunctionParameters()[index].isOptional
+				&& parameter.storage == RootedParameter
+				&& bindingType.getNullableInner() != null
+				&& bindingType.getNullableInner().getSemanticKey() == parameter.type.getSemanticKey();
 			if (parameters[index].slot != index
 				|| parameters[index].functionIdentity != facts.identity
 				|| parameters[index].creation != FunctionEntry
-				|| (resolveType == null ? parameters[index].binding.getType() : resolveType(parameters[index].binding.getType()))
-					.getSemanticKey() != abi.getParameters()[index].type.getSemanticKey())
+				|| (bindingType.getSemanticKey() != parameter.type.getSemanticKey() && !nullableEntry))
 				throw "managed closure lacks exact ordered parameter identities";
+		}
 	}
 
 	/** Source parameter identities retain signature order and their function-entry allocation events. */

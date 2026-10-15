@@ -1,4 +1,15 @@
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
 -cp test
 -main M14LocalFunctionSignatureIntegrationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14SourceFunctionDefaultTypeTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14SourceFunctionDefaultNativeTest
 --interp

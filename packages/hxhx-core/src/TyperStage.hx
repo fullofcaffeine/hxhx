@@ -2037,8 +2037,9 @@ class TyperStage {
 			final hint = parameter.typeHint;
 			final selected = hint == null ? (contextual == null ? TyType.unknown() : contextual.getFunctionArguments()[index]) : typeFromHintInContext(parameter.isRest ? "haxe.Rest<"
 				+ hint + ">" : hint, ctx, scope);
-			// Upstream exposes nullable body variables for optional and defaulted source parameters.
-			argumentTypes.push((parameter.isOptional || parameter.hasDefault)
+			// Full functions apply concrete defaults before the body. Arrows retain
+			// nullable defaulted inputs upstream; a question mark is nullable in either form.
+			argumentTypes.push((parameter.isOptional || (parameter.hasDefault && facts.getKind() == Arrow))
 				&& !selected.isNullable() ? TyType.nullable(selected) : selected);
 		}
 		final written = signature.getReturnTypeHint();
@@ -2063,7 +2064,12 @@ class TyperStage {
 			if (isStrict() && !parameterType.unwrapNull().isUnknown() && TyType.unify(parameterType, valueType) == null)
 				throw new TyperError(ctx.getFilePath(), pos, "function default is not compatible with its parameter");
 			if (parameterType.unwrapNull().isUnknown()) {
-				final selected = valueType.isNullable() ? valueType : TyType.nullable(valueType);
+				final selected = parameterType.isNullable() && !valueType.isNullable() ? TyType.nullable(valueType) : valueType;
+				argumentTypes[parameterIndex] = selected;
+				parameterSymbols[parameterIndex].setType(selected);
+			} else if (valueType.isNullLiteral() && !parameterType.isNullable()) {
+				// An explicit null default supplies null even without question-mark syntax.
+				final selected = TyType.nullable(parameterType);
 				argumentTypes[parameterIndex] = selected;
 				parameterSymbols[parameterIndex].setType(selected);
 			}

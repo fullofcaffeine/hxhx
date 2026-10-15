@@ -209,6 +209,7 @@ private class CaptureAnalysis {
 	final sourceFunctions:StringMap<TypedCaptureFunction> = new StringMap();
 	final sourceExpressions:StringMap<TypedExpr> = new StringMap();
 	final sourceBindings:StringMap<TypedCaptureBinding> = new StringMap();
+	final defaultedBodyBindings:StringMap<Bool> = new StringMap();
 	final seenFunctions:StringMap<Bool> = new StringMap();
 	final seenTargets:StringMap<Bool> = new StringMap();
 
@@ -272,7 +273,8 @@ private class CaptureAnalysis {
 					throw "lowered capture declaration has no authored binding";
 			} else if (source.binding.getCanonicalIdentity() != binding.getCanonicalIdentity()
 				|| source.functionIdentity != scope.identity
-				|| source.creation != creation) {
+				|| (source.creation != creation
+					&& !(source.creation == FunctionEntry && creation == Declaration && defaultedBodyBindings.exists(key)))) {
 				throw "lowering changed capture declaration ownership or creation";
 			}
 		}
@@ -351,9 +353,14 @@ private class CaptureAnalysis {
 				final parameters = authored.getSourceFunction().getDeclaredName() == null ? authored.getLocalBindings() : authored.getLocalBindings().slice(1);
 				if (parameters.length != locals.length || authored.getType().getSemanticKey() != node.getType().getSemanticKey())
 					throw "lowered closure changed its callable signature";
-				for (index in 0...parameters.length)
-					if (parameters[index].getCanonicalIdentity() != locals[index].getCanonicalIdentity())
+				final defaultIndexes = authored.getSourceFunction().getDefaultParameterIndexes();
+				for (index in 0...parameters.length) {
+					final expected = TypedSourceParameterEntry.binding(parameters[index], defaultIndexes.contains(index));
+					if (expected.getCanonicalIdentity() != locals[index].getCanonicalIdentity())
 						throw "lowered closure changed its parameter bindings";
+					if (expected != parameters[index])
+						defaultedBodyBindings.set(parameters[index].getIdentity().getCanonicalKey(), true);
+				}
 				final childScope = functionAt(path, scope, null, targetIdentity);
 				occurrences.push({expression: node, identity: childScope.identity});
 				declareAll(locals, childScope, path, FunctionEntry);

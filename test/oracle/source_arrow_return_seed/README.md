@@ -46,3 +46,24 @@ Task haxe_ocaml-lg94m remains open for complete default, optional, and rest
 behavior. The original escaping inherited receiver now passes its native and
 sanitizer checks; haxe_ocaml-71qn2 records that local-storage work. These focused
 tests do not establish complete arrow compatibility or release readiness.
+
+`FullFunctionDefaults.hx` checks full functions with concrete defaults. Unlike
+arrows, `function(value:Int=5)` exposes an `Int` body variable upstream. An
+omitted or explicit-null argument still selects the default. Shared lowering
+keeps the incoming nullable value separate, then initializes the body variable.
+Updates and escaping closures continue to use that original body variable.
+
+```sh
+haxe test/m14_source_function_default_type_test.hxml
+haxe test/m14_source_function_default_native_test.hxml
+```
+
+The type test covers named functions, anonymous functions, arrows, explicit
+nullable annotations, and null defaults. It also checks capture ownership and
+rejects unrelated incoming bindings. The native test compares the same program
+with upstream execution, then checks C++ execution and both sanitizer settings.
+It covers omitted, null, and supplied arguments, parameter updates, escaping
+captures, and left-to-right argument effects. Both tests also run through
+`test/m14_local_function_signature_integration_test.hxml`. Task
+`haxe_ocaml-tpic4` tracks integration; these checks do not establish release
+readiness.
