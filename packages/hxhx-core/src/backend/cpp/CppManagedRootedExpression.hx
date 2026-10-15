@@ -339,6 +339,21 @@ class CppManagedRootedExpression {
 		return lines;
 	}
 
+	/** Authored throws and implicit operation failures retain their rooted value and publish the same stack context. */
+	function renderThrownRoot(root:String, indent:String):Array<String> {
+		final carrier = root + "_carrier";
+		final lines = [
+			indent + "auto " + carrier + " = hxhx::managed::ThrownValue(" + input.heap + ", " + root + ".get());"
+		];
+		if (input.statics != null && input.statics.hasStackContext()) {
+			// Publish only after operand evaluation and carrier construction succeed.
+			final stack = input.statics.stackAccess(input.heap);
+			lines.push(indent + stack + ".replaceException(" + stack + ".capture());");
+		}
+		lines.push(indent + "throw " + carrier + ";");
+		return lines;
+	}
+
 	/** Declaration storage comes from exact binding events; native type text cannot choose it. */
 	public function renderStatement(statement:HxStmt, indent:String):Array<String> {
 		return switch statement {
@@ -351,14 +366,8 @@ class CppManagedRootedExpression {
 				];
 				for (line in renderTransfer(value, TyType.fromHintText("Dynamic"), root, indent + "  "))
 					lines.push(line);
-				final carrier = root + "_carrier";
-				lines.push(indent + "  auto " + carrier + " = hxhx::managed::ThrownValue(" + input.heap + ", " + root + ".get());");
-				if (input.statics != null && input.statics.hasStackContext()) {
-					// Publish only after operand evaluation and carrier construction succeed.
-					final stack = input.statics.stackAccess(input.heap);
-					lines.push(indent + "  " + stack + ".replaceException(" + stack + ".capture());");
-				}
-				lines.push(indent + "  throw " + carrier + ";");
+				for (line in renderThrownRoot(root, indent + "  "))
+					lines.push(line);
 				lines.push(indent + "}");
 				lines;
 			case SExpr(expression = ELoweredControl(MapInsert, "", [map, key, value], _), _):
@@ -765,7 +774,25 @@ class CppManagedRootedExpression {
 							indent + '  ') : nulls ? CppManagedNullCompare.compute(op, a + '.get()', b + '.get()', destination,
 							indent + '  ') : concatenation ? CppManagedStringConcat.compute(leftType, rightType, a + ".get()", b + ".get()", destination,
 							indent + "  ") : strings ? CppManagedStringEquality.compute(op, a + ".get()", b + ".get()", destination,
-							indent + "  ") : CppManagedInteger.compute(op, leftType, rightType, a + ".get()", b + ".get()", destination, prefix, indent + "  ");
+							indent + "  ") : op == "%" ? CppManagedInteger.remainder({
+							leftType: leftType,
+							rightType: rightType,
+							left: a + ".get()",
+							right: b + ".get()",
+							destination: destination,
+							prefix: prefix,
+							indent: indent + "  ",
+							throwZero: at -> {
+								final root = prefix + "zero_error";
+								final failed = [at + "hxhx::managed::Root<hxhx::managed::Value> " + root + "(" + input.heap + ");",
+									at
+									+ root
+									+ ".set(hxhx::managed::Value::string("
+									+ CppManagedText.literal("Mod by 0 Error.")
+									+ "));"];
+								return failed.concat(renderThrownRoot(root, at));
+							}
+						}) : CppManagedInteger.compute(op, leftType, rightType, a + ".get()", b + ".get()", destination, prefix, indent + "  ");
 				for (line in operation)
 					lines.push(line);
 				lines.push(indent + "}");

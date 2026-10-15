@@ -11,7 +11,7 @@ function resultType(op:String, left:TyType, right:TyType):TyType {
 			+ right.getSemanticKey()
 			+ ")";
 	return switch op {
-		case "+" | "-" | "*" | "&" | "|" | "^" | "<<" | ">>" | ">>>": TyType.fromHintText("Int");
+		case "+" | "-" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | ">>>": TyType.fromHintText("Int");
 		case "==" | "!=" | "<" | "<=" | ">" | ">=": TyType.fromHintText("Bool");
 		case _: throw "managed integer operator requires explicit lowering: " + op;
 	};
@@ -39,6 +39,8 @@ function numericValue(type:TyType, value:String):String {
  */
 function compute(op:String, leftType:TyType, rightType:TyType, left:String, right:String, destination:String, prefix:String, indent:String):Array<String> {
 	final type = resultType(op, leftType, rightType);
+	if (op == "%")
+		throw "managed integer remainder requires rooted exception context";
 	final a = numericValue(leftType, left);
 	final b = numericValue(rightType, right);
 	if (type.getSemanticKey() == "primitive:Bool") {
@@ -80,6 +82,47 @@ function compute(op:String, leftType:TyType, rightType:TyType, left:String, righ
 		+ wide
 		+ ");",
 	].concat(storeBits(bits, destination, indent));
+}
+
+/**
+	Native Haxe uses a String exception for exact Int zero divisors, but yields
+	zero when either operand is nullable and the result is Int. Preserve that
+	type distinction after operand evaluation. Widening before remainder makes
+	minimum Int modulo minus one defined without changing any 32-bit result.
+	The expression owner supplies the existing rooted throw and stack behavior.
+ */
+function remainder(input:{
+	leftType:TyType,
+	rightType:TyType,
+	left:String,
+	right:String,
+	destination:String,
+	prefix:String,
+	indent:String,
+	throwZero:String->Array<String>
+}):Array<String> {
+	resultType("%", input.leftType, input.rightType);
+	final a = input.prefix + "dividend";
+	final b = input.prefix + "divisor";
+	final at = input.indent;
+	final lines = [at + "const std::int64_t " + a + " = " + numericValue(input.leftType, input.left) + ";",
+		at
+		+ "const std::int64_t "
+		+ b
+		+ " = "
+		+ numericValue(input.rightType, input.right)
+		+ ";",
+		at + "if (" + b + " == 0) {"
+	];
+	if (input.leftType.isNullable() || input.rightType.isNullable())
+		lines.push(at + "  " + input.destination + ".set(hxhx::managed::Value::integer(0));");
+	else
+		for (line in input.throwZero(at + "  "))
+			lines.push(line);
+	lines.push(at + "} else {");
+	lines.push(at + "  " + input.destination + ".set(hxhx::managed::Value::integer(static_cast<std::int32_t>(" + a + " % " + b + ")));");
+	lines.push(at + "}");
+	return lines;
 }
 
 /**
