@@ -99,10 +99,21 @@ class TypedBackendFieldInitializerProjection {
 
 	/** Capture facts belong to this exact field body and its lowered closure occurrences. */
 	public function requireCaptureCatalog():TypedBackendCaptureCatalog {
+		final catalog = captureCatalogForLookup();
+		catalog.assertCurrent();
+		return catalog;
+	}
+
+	/** Query an exact callable occurrence without validating the entire initializer twice. */
+	public function findCallableExpression(expression:HxExpr):Null<TypedExpr> {
+		return captureCatalogForLookup().findCallableExpression(expression);
+	}
+
+	/** Keep lazy construction and owner checks shared while each public query validates freshness. */
+	function captureCatalogForLookup():TypedBackendCaptureCatalog {
 		if (captureCatalog == null)
 			captureCatalog = new TypedBackendCaptureCatalog(FieldInitializer(source, lowered, declaration), localCatalog);
 		captureCatalog.assertOwner(stableIdentity, bodyRevision);
-		captureCatalog.assertCurrent();
 		return captureCatalog;
 	}
 

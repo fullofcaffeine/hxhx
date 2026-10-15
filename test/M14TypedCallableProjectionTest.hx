@@ -64,6 +64,7 @@ class M14TypedCallableProjectionTest {
 		var mutableCall:Null<Array<HxExpr>> = null;
 		for (entry in occurrences) {
 			require(catalog.findCallableExpression(entry.expression) == entry.source, "Projection must preserve the original typed node");
+			require(projection.findCallableExpression(entry.expression) == entry.source, "Direct lookup must retain the exact typed occurrence");
 			final source = entry.source;
 			switch source.getTag() {
 				case NameRead:
@@ -97,12 +98,16 @@ class M14TypedCallableProjectionTest {
 		final other = TypedBodySource.functionProjection(fn).requireCaptureCatalog();
 		require(other.findCallableExpression(occurrences[0].expression) == null, "An equal reconstruction cannot borrow occurrence authority");
 		require(catalog.findCallableExpression(HxExpr.EIdent("first")) == null, "Spelling alone cannot identify a stored view");
+		require(projection.findCallableExpression(HxExpr.EIdent("first")) == null, "Direct lookup cannot authorize reconstructed syntax");
+		require(TypedBodySource.functionProjection(fn).findCallableExpression(occurrences[0].expression) == null,
+			"Direct lookup cannot borrow another projection's occurrence");
 		occurrences.pop();
 		require(catalog.getCallableExpressions().length == occurrences.length + 1, "The caller must not edit the retained occurrence inventory");
 		require(CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() == originalRevision, "Projection must not change typed source");
 		require(mutableCall != null, "The fixture must retain a projected callback invocation");
 		mutableCall.push(EInt(99));
 		rejects("projection was mutated", () -> catalog.getCallableExpressions());
+		rejects("projection was mutated", () -> projection.findCallableExpression(occurrences[0].expression));
 
 		// Equal syntax has the same fingerprint, so exact-object checks must also run.
 		final replacement = TypedBodySource.functionProjection(fn).requireCaptureCatalog();

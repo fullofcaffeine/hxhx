@@ -651,6 +651,11 @@ class NekoTargetCore {
 
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		final staticValue = NekoStaticFunctionValue.fromExpression(context, expr);
+		if (staticValue != null) {
+			addStatic(exactHelperClass(context, staticValue), staticValue.body.getDeclaration());
+			return;
+		}
 		switch (expr) {
 			case ECall(EIdent("__hxhx_try"), _) | ELoweredControl(Try(_), _, _, _):
 				collectCatchRefs(context, NekoCatchPlan.forExpression(context.typedProgram, context.currentExecutable, expr), addConstructor, addStatic);
@@ -871,6 +876,16 @@ class NekoTargetCore {
 	/** A shared table lets mutually recursive closures see helpers installed after their creation. */
 	static function exactHelperRef(context:NekoEmitContext, helper:NekoProjectedFunction):String
 		return (context.symbolTable == null ? context.typedProgram.exactHelperTableName() : context.symbolTable) + "." + helper.symbol;
+
+	/** Static method values and assignments share their declaration-owned symbol or mutable method slot. */
+	static function renderStaticFunctionValue(context:NekoEmitContext, selected:NekoProjectedFunction):String {
+		final info = exactHelperClass(context, selected);
+		final declaration = selected.body.getDeclaration();
+		final name = HxFunctionDecl.getName(declaration);
+		return isDynamicStaticFunction(declaration) ? renderStaticObjectRef(info.fullName)
+			+ "."
+			+ safeIdent(name) : renderFunctionRef(context, info.fullName, name);
+	}
 
 	/**
 		Emits an abstract method with its backing value before the source arguments.
@@ -1408,6 +1423,9 @@ class NekoTargetCore {
 	}
 
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
+		final staticValue = NekoStaticFunctionValue.fromExpression(context, expr);
+		if (staticValue != null)
+			return renderStaticFunctionValue(context, staticValue);
 		final methodValue = NekoMethodValue.render(context, expr, value -> renderExpr(context, value));
 		if (methodValue != null)
 			return methodValue;
@@ -1689,6 +1707,9 @@ class NekoTargetCore {
 				return renderAssignableExpr(context, inner, detail);
 			case _:
 		}
+		final staticValue = NekoStaticFunctionValue.fromExpression(context, expr);
+		if (staticValue != null)
+			return renderStaticFunctionValue(context, staticValue);
 		final runtimeType = NekoRuntimeTypePlan.fromExpression(context, expr);
 		if (runtimeType != null) {
 			if (runtimeType.getValue() != null)
@@ -2743,6 +2764,9 @@ class NekoTargetCore {
 		};
 		final stackPrimitive = declaredMember ? null : NekoStackPrimitives.renderCall(callee, renderedArgs);
 		final arrayPrimitive = declaredMember ? null : NekoArrayPrimitives.renderCall(callee, renderedArgs);
+		final printPrimitive = declaredMember ? null : NekoPrintPrimitive.renderCall(callee, renderedArgs);
+		if (printPrimitive != null)
+			return printPrimitive;
 		if (arrayPrimitive != null)
 			return arrayPrimitive;
 		if (stackPrimitive != null)

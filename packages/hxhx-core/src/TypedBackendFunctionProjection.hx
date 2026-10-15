@@ -261,10 +261,21 @@ class TypedBackendFunctionProjection {
 		Unsupported authored closure forms fail here instead of receiving an empty plan.
 	 */
 	public function requireCaptureCatalog():TypedBackendCaptureCatalog {
+		final catalog = captureCatalogForLookup();
+		catalog.assertCurrent();
+		return catalog;
+	}
+
+	/** Query the exact callable occurrence with one complete freshness check, performed by the catalog. */
+	public function findCallableExpression(expression:HxExpr):Null<TypedExpr> {
+		return captureCatalogForLookup().findCallableExpression(expression);
+	}
+
+	/** Share lazy construction and owner checks; public queries still validate the current source and projection. */
+	function captureCatalogForLookup():TypedBackendCaptureCatalog {
 		if (captureCatalog == null)
 			captureCatalog = new TypedBackendCaptureCatalog(FunctionBody(source, lowered, declaration), localCatalog);
 		captureCatalog.assertOwner(stableIdentity, bodyRevision);
-		captureCatalog.assertCurrent();
 		return captureCatalog;
 	}
 

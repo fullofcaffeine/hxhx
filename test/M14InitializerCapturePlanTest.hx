@@ -40,6 +40,10 @@ class M14InitializerCapturePlanTest {
 		check(facts.getExpressions().length == 2, "initializer lost a closure occurrence");
 		check(facts.getPlan().sourceBodyRevision == projected.getBodyRevision(), "initializer catalog lost its source revision");
 		final closure = facts.getExpressions()[1];
+		final callable = facts.getCallableExpressions()[0];
+		check(projected.findCallableExpression(callable.expression) == callable.source, "direct initializer lookup lost its exact callable source");
+		check(project().findCallableExpression(callable.expression) == null, "direct initializer lookup borrowed another projection");
+		check(projected.findCallableExpression(EIdent("make")) == null, "direct initializer lookup accepted reconstructed syntax");
 		check(facts.require(closure).getCaptures().length == 1, "initializer catalog lost shared storage");
 		expectFailure("not an exact occurrence", () -> facts.require(project().requireCaptureCatalog().getExpressions()[1]));
 		expectFailure("another function or source revision", () -> facts.assertOwner(projected.getStableIdentity(), "changed"));
@@ -55,6 +59,7 @@ class M14InitializerCapturePlanTest {
 				throw "catalog returned a non-closure";
 		}
 		expectFailure("projection was mutated", () -> facts.getPlan());
+		expectFailure("projection was mutated", () -> projected.findCallableExpression(callable.expression));
 	}
 
 	static function main():Void {
