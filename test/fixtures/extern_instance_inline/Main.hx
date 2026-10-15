@@ -2,6 +2,13 @@
 class Main {
 	static var events:String = "";
 	static var current:Cell<Int>;
+	static var packetCalls:Int = 0;
+
+	/** A conversion receiver can be a value-producing call, without writable storage. */
+	static function packetValue():Packet {
+		packetCalls++;
+		return "temporary";
+	}
 
 	static function receiver():Cell<Int> {
 		events += "r";
@@ -41,6 +48,9 @@ class Main {
 		final promoted:String = packet;
 		if (promoted != "promoted")
 			throw "generic output conversion";
+		final temporary:String = packetValue();
+		if (temporary != "temporary" || packetCalls != 1)
+			throw "temporary abstract conversion";
 	}
 }
 

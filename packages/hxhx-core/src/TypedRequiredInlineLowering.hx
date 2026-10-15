@@ -369,9 +369,11 @@ class TypedRequiredInlineLowering {
 					throw "multi-type inline receiver belongs to another applied owner";
 				ownerBindings = TyTypeSubstitution.bind(abstractOwner.getTypeParameterIds(), receiver.getType().getTypeArguments(), identity);
 			}
-			if (abstractOwner == null) {
+			if (abstractOwner == null || (!multiType && !writers.exists(identity))) {
 				// Saving the value preserves null-safe bodies and exactly-once effects.
 				// Arguments may mutate the source local after receiver evaluation.
+				// Read-only ordinary abstracts also accept computed receiver values;
+				// only writers require the caller's original storage expression.
 				final stored = allocator.allocate("receiver", receiver.getType());
 				prefix.push(TypedExpr.temporary(stored.getSourceName(), stored.getType().getDisplay(), receiver, voidType(), receiver.getPosition(), stored));
 				receiver = reads(stored, receiver.getPosition());
