@@ -62,6 +62,18 @@ class TypedBackendDeclarationCatalog {
 	public function getDeclaration():HxModuleDecl
 		return declaration;
 
+	/** Return only an initializer created with this exact current class/field pair. */
+	public function findInitializer(owner:HxClassDecl, field:HxFieldDecl):Null<TypedBackendFieldInitializerProjection> {
+		if (HxModuleDecl.getClasses(declaration).indexOf(owner) < 0 || HxClassDecl.getFields(owner).indexOf(field) < 0)
+			return null;
+		for (initializer in initializers)
+			if (initializer.getDeclaration() == field) {
+				initializer.assertCurrent();
+				return initializer;
+			}
+		return null;
+	}
+
 	/** Resolve constructor facts from this declaration view, never from a separately rebuilt strict projection. */
 	public function requireConstructor(expression:HxExpr):TypedBackendConstructorOccurrence {
 		final classes = HxModuleDecl.getClasses(declaration);

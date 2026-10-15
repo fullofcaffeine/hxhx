@@ -14,17 +14,40 @@ import haxe.ds.StringMap;
 class PythonFieldAccessLowering {
 	final modules:ObjectMap<HxClassDecl, TypedModule> = new ObjectMap();
 	final ownerNames:StringMap<String> = new StringMap();
+	final moduleNames:StringMap<Bool> = new StringMap();
+	var nextInitializer:Int = 0;
 
 	public function new(program:MacroExpandedProgram) {
 		for (module in program.getTypedModules()) {
-			for (declaration in HxModuleDecl.getClasses(module.getBackendDeclaration()))
+			for (declaration in HxModuleDecl.getClasses(module.getBackendDeclaration())) {
 				modules.set(declaration, module);
+				moduleNames.set(HxClassDecl.getName(declaration), true);
+			}
 			for (typedClass in module.getTypedClasses()) {
 				final info = typedClass.getSemanticInfo();
 				if (info != null)
 					ownerNames.set(info.getIdentity().getCanonicalName(), HxClassDecl.getName(typedClass.getSourceDeclaration()));
 			}
 		}
+	}
+
+	/** Module-level initializer helpers must not replace an authored class name. */
+	public function initializerName():String {
+		var name:String;
+		do {
+			name = "_hx_static_initializer_" + nextInitializer++;
+		} while (moduleNames.exists(name));
+		moduleNames.set(name, true);
+		return name;
+	}
+
+	/** Static initialization consumes the exact field view that supplied its expression. */
+	public function initializer(owner:HxClassDecl, field:HxFieldDecl):TypedBackendFieldInitializerProjection {
+		final module = modules.get(owner);
+		final selected = module == null ? null : module.findBackendFieldInitializer(owner, field);
+		if (selected == null)
+			throw "Python initializer requires its exact class and field declaration";
+		return selected;
 	}
 
 	/** Resolve an exact legacy declaration pair through its owning typed module. */

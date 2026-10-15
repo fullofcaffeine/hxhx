@@ -4372,7 +4372,7 @@ class SourceTargetCommon {
 		final renderedArgs = [for (arg in args) valueName(target, arg)].join(", ");
 		return switch (target) {
 			case Python:
-				"lambda " + renderedArgs + ": " + renderExpr(target, body);
+				PythonExpressionFunction.render(renderedArgs, body, value -> renderExpr(target, value));
 			case Java:
 				javaLambdaExpr(renderedArgs, body);
 			case Cs:
@@ -19477,7 +19477,14 @@ class SourceTargetCommon {
 			final init = HxFieldDecl.getInit(field);
 			out.push("    " + fieldName + " = " + defaultValue(Python));
 			if (init != null && postStaticInitializers != null)
-				postStaticInitializers.push(className + "." + fieldName + " = " + renderExpr(Python, init));
+				for (line in PythonFieldInitializer.render({
+					projection: pythonFields.initializer(cls, field),
+					destination: className + "." + fieldName,
+					helperName: pythonFields.initializerName,
+					statements: (body, indent) -> renderStmts(Python, body, indent),
+					expression: value -> renderExpr(Python, value)
+				}))
+					postStaticInitializers.push(line);
 			memberCount += 1;
 		}
 		var sawConstructor = false;

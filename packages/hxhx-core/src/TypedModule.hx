@@ -144,6 +144,11 @@ class TypedModule {
 		return {module: moduleProjection, classProjection: selectedClass, functionProjection: selected};
 	}
 
+	/** Preserve the field occurrence owned by the declaration view instead of rebuilding it by name. */
+	public function findBackendFieldInitializer(owner:HxClassDecl, field:HxFieldDecl):Null<TypedBackendFieldInitializerProjection> {
+		return requireBackendDeclarationCatalog().findInitializer(owner, field);
+	}
+
 	/** Revalidate the sealed syntax revision before macro/backend consumption. **/
 	public function assertBodyRevisionCurrent():Void {
 		TypedBodyInvariant.assertClasses(typedClasses);
