@@ -2023,8 +2023,15 @@ class TyperStage {
 		if (facts.getGenerics().getParameters().length > 0)
 			throw new TyperError(ctx.getFilePath(), pos, "Generic local functions require independently instantiated local binders");
 		final retained = scope.getInference().sourceFunctionType(source);
-		if (retained != null)
+		if (retained != null) {
+			// A speculative block traversal still needs the named declaration in
+			// its current lexical scope. Reusing the solved signature without that
+			// binding makes a later call in the same block appear unresolved.
+			final name = facts.getDeclaredName();
+			if (name != null)
+				scope.declareLocal(name, retained, NamedFunction);
 			return retained;
+		}
 		final signature = facts.getSignature();
 		final parameters = signature.getParameters();
 		final names = facts.getArguments();

@@ -1,5 +1,21 @@
 /** Proves parsed source-function return ownership and exact declaration replay. */
 class M14SourceFunctionTypingTest {
+	/** Reusing a solved function signature must also restore its lexical declaration. */
+	static function namedBlockReplay():Void {
+		final path = "test/fixtures/named_function_block_type/Main.hx";
+		final parsed = ParserStage.parse(sys.io.File.getContent(path), path);
+		final resolved = new ResolvedModule("Main", path, parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]), null, true);
+		final fn = typed.getTypedClasses()[0].getFunctions()[0];
+		final selected = fn.getBody().getStatements()[0].getExpressions()[0];
+		if (selected.getTag() != SwitchExpr || selected.getExpressions()[1].getType().getSemanticKey() != "primitive:Bool")
+			throw "named function replay lost the switch-arm block result type";
+		for (functionBody in typed.getTypedClasses()[0].getFunctions())
+			for (entry in TypedBodySource.functionProjection(functionBody).getLocalCatalog().getEntries())
+				if (entry.getBinding().getType().hasUnknownComponent())
+					throw "named function replay introduced incomplete local storage";
+	}
+
 	static function parsedTracer():TypedExpr {
 		final source = 'class SourceControlFixture { static function main():Void { var callback = function(item:String):Dynamic {'
 			+ 'var result = { { return item; } "wrong"; }; State.events += "after"; return result; }; } }'
@@ -45,6 +61,7 @@ class M14SourceFunctionTypingTest {
 	}
 
 	static function main():Void {
+		namedBlockReplay();
 		final oldStrict = Sys.getEnv("HXHX_TYPER_STRICT");
 		Sys.putEnv("HXHX_TYPER_STRICT", "1");
 		final position = new HxPos(1, 1, 2);
