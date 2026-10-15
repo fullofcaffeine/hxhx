@@ -216,13 +216,14 @@ class CppManagedMethods {
 
 	/**
 		Freeze targets only after reachable bodies and allocations converge. Lookup
-		still validates the whole source program and exact call through instanceApplication,
-		then checks each selected implementation's projected body before returning it.
+		checks the exact call through instanceApplication and each implementation's
+		projected body. Full source checks run at standalone lookup boundaries or
+		around the enclosing target-owned render; no local ownership check is deferred.
 		No new allocation may enter the plan afterward, so rendering cannot reuse an
 		incomplete target set or repeatedly rediscover every implementation.
 	 */
 	public function sealInstanceDispatch(calls:Array<CppManagedMethodUse>):Void {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (sealedDispatch != null)
 			throw "managed instance dispatch was already sealed";
 		final entries = new haxe.ds.ObjectMap<TypedBackendInstanceCallOccurrence, haxe.ds.StringMap<Array<CppManagedInstanceDispatchCase>>>();
@@ -254,7 +255,7 @@ class CppManagedMethods {
 
 	/** Apply the exact caller's receiver arguments without changing the authored method. */
 	public function instanceApplication(call:TypedBackendInstanceCallOccurrence, ?context:CppManagedEnclosingApplication):CppManagedFunctionApplication {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		assertContext(call, context);
 		final find = instanceOwners.get(call).find;
 		final receiver = appliedCallType(call.getReceiverType(), context);

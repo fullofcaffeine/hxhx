@@ -14,7 +14,7 @@ class CppManagedEnumDescriptors {
 		if (program == null)
 			throw "enum descriptors require an exact program";
 		this.program = program;
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses())
 				switch owner.requireSemanticFacts().getNominalKind() {
@@ -37,7 +37,7 @@ class CppManagedEnumDescriptors {
 		Other nominal categories return no match instead of borrowing enum storage.
 	 */
 	public function findNullarySymbol(type:TyType):Null<String> {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		CppManagedClosureAbi.assertComplete(type);
 		final identity = type.getNominalIdentity();
 		if (identity == null)
@@ -62,7 +62,7 @@ class CppManagedEnumDescriptors {
 
 	/** Resolve a constructor by exact typed declaration, never by its source spelling alone. */
 	public function constructorTarget(declaration:TyDeclarationInfo):{symbol:String, index:Int, arity:Int} {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (declaration == null || !declaration.getIsEnumConstructor() || !declaration.getIsStatic())
 			throw "managed enum construction requires a selected constructor declaration";
 		final owner = program.requireClass(program.requireClassIdentity(declaration.getOwner().getCanonicalName()));
@@ -83,7 +83,7 @@ class CppManagedEnumDescriptors {
 
 	/** A same-named class from another projection cannot borrow this program's symbol. */
 	public function requireSymbol(owner:TypedBackendClassProjection):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final symbol = symbols.get(owner);
 		if (symbol == null)
 			throw "enum descriptor requires its exact program-owned enum";
@@ -96,7 +96,7 @@ class CppManagedEnumDescriptors {
 		when a later allocation collects. No synthetic initializer record is executed.
 	 */
 	public function renderSingletonStartup(statics:CppManagedStaticStorage, heap:String, destination:String):Array<String> {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (!~/^[A-Za-z_][A-Za-z0-9_]*$/.match(heap) || !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(destination))
 			throw "managed enum startup requires allocated native symbols";
 		final lines = new Array<String>();
@@ -121,7 +121,7 @@ class CppManagedEnumDescriptors {
 
 	/** The caller includes ManagedValue.hpp before these static-lifetime declarations. */
 	public function render():String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final lines = new Array<String>();
 		for (owner in owners) {
 			final symbol = symbols.get(owner);

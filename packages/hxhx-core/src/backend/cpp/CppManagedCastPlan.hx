@@ -15,7 +15,7 @@ class CppManagedCastPlan {
 
 	public function new(program:CppTypedProgramProjection) {
 		this.program = program;
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses()) {
 				for (method in owner.getFunctions())
@@ -68,7 +68,7 @@ class CppManagedCastPlan {
 
 	/** Return exact substituted storage facts without changing values or erasing container arguments. */
 	public function representationType(type:TyType):TyType {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		return storageType(type, new haxe.ds.StringMap());
 	}
 
@@ -114,7 +114,7 @@ class CppManagedCastPlan {
 	public function permitsClassUpcast(target:TyType, source:TyType):Bool {
 		if (target.getNominalIdentity() == null || source.getNominalIdentity() == null)
 			return false;
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final sourceName = source.getNominalIdentity().getCanonicalName();
 		final targetName = target.getNominalIdentity().getCanonicalName();
 		final graph = program.getClassGraph();
@@ -130,7 +130,7 @@ class CppManagedCastPlan {
 
 	/** Resolve abstract backing storage before allowing null, without introducing a scalar default. */
 	public function retainsNull(type:TyType):Bool {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final stored = storageType(type, new haxe.ds.StringMap());
 		return stored.isNullLiteral()
 			|| stored.isDynamic()

@@ -70,7 +70,7 @@ class CppManagedClassStorage {
 		if (program == null)
 			throw 'managed class storage requires an exact program';
 		this.program = program;
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		casts = new CppManagedCastPlan(program);
 		methods = new CppManagedMethods(program, this);
 		layouts = new CppManagedClassLayouts(program, owner -> descriptor(owner).symbol, publishLayout);
@@ -154,7 +154,7 @@ class CppManagedClassStorage {
 
 	/** Class handles reuse instance identity without admitting an unsupported native layout. */
 	public function requireRuntimeDescriptor(occurrence:TypedBackendRuntimeTypeOccurrence, ?context:CppManagedEnclosingApplication):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		assertRuntimeContext(occurrence, context);
 		if (occurrence.getValue() != null)
 			throw "managed class value requires a descriptor occurrence";
@@ -217,7 +217,7 @@ class CppManagedClassStorage {
 	}
 
 	public function assertFunction(projection:TypedBackendFunctionProjection):Void {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		assertFunctionOwner(projection);
 	}
 
@@ -230,7 +230,7 @@ class CppManagedClassStorage {
 	}
 
 	public function assertInitializer(projection:TypedBackendFieldInitializerProjection):Void {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		assertInitializerOwner(projection);
 	}
 
@@ -390,7 +390,7 @@ class CppManagedClassStorage {
 	 */
 	public function constructorApplication(occurrence:TypedBackendConstructorOccurrence,
 			?context:CppManagedEnclosingApplication):CppManagedFunctionApplication {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final lexical = constructorOwners.get(occurrence);
 		if (lexical == null || lexical.find() != occurrence)
 			throw "managed constructor belongs to another program or occurrence";
@@ -589,7 +589,7 @@ class CppManagedClassStorage {
 
 	/** Emit identity-only entries explicitly; they cannot be used by InstancePayload. */
 	public function render():String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final declarations = [
 			for (entry in descriptors)
 				'extern const hxhx::managed::ClassDescriptor ' + entry.symbol + ';'
@@ -614,7 +614,7 @@ class CppManagedClassStorage {
 		reject before publication instead of silently becoming negative predicates.
 	 */
 	public function renderRuntimePredicate():String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final lines = [
 			"inline bool hxhx_runtime_is_of_type(const hxhx::managed::Value& value, const hxhx::managed::Value& type) {",
 			"  using hxhx::managed::ValueKind;",

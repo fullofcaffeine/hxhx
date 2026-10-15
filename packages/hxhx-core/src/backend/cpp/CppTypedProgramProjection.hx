@@ -38,6 +38,7 @@ class CppTypedProgramProjection {
 	final initializers = new haxe.ds.ObjectMap<HxFieldDecl, TypedBackendFieldInitializerProjection>();
 	final initializerOwners = new haxe.ds.ObjectMap<HxFieldDecl, HxClassDecl>();
 	final programRevision:String;
+	var planning:Bool = false;
 	var classesByIdentity:Null<haxe.ds.StringMap<HxClassDecl>>;
 
 	public function new(program:backend.GenIrProgram) {
@@ -115,6 +116,46 @@ class CppTypedProgramProjection {
 	/** Recheck source revisions before publishing output from this request. */
 	public function assertCurrent():Void
 		source.assertTypedBodyRevisionsCurrent();
+
+	/** Begin one synchronous plan construction or render; no scope survives that operation. */
+	@:allow(backend.cpp.CppManagedProgramPlan)
+	function beginPlanning():Void {
+		if (planning)
+			throw "C++ program is already planning";
+		assertCurrent();
+		planning = true;
+	}
+
+	/** Restore ordinary query checks before inspecting every source body at successful completion. */
+	@:allow(backend.cpp.CppManagedProgramPlan)
+	function finishPlanning():Void {
+		planning = false;
+		assertCurrent();
+	}
+
+	/** A failed operation cannot leave deferred validation enabled for a later caller. */
+	@:allow(backend.cpp.CppManagedProgramPlan)
+	function abortPlanning():Void {
+		planning = false;
+	}
+
+	/**
+		Internal queries may defer the full source scan only within plan construction
+		or rendering. These operations invoke only target-owned callbacks.
+		Standalone planning calls retain their previous full check. Exact owner,
+		body, marker and application checks must still follow this call. A future
+		external callback must leave this scope and revalidate before continuing.
+	 */
+	@:allow(backend.cpp.CppManagedClassStorage)
+	@:allow(backend.cpp.CppManagedMethods)
+	@:allow(backend.cpp.CppManagedClassLayouts)
+	@:allow(backend.cpp.CppManagedCastPlan)
+	@:allow(backend.cpp.CppManagedEnumDescriptors)
+	@:allow(backend.cpp.CppManagedStaticStorage)
+	function assertPlanningCurrent():Void {
+		if (!planning)
+			assertCurrent();
+	}
 
 	/** Reject unsupported operations in all modules, including unreachable bodies. */
 	public function assertRuntimeTypeOperandsAbsent():Void {

@@ -2,3 +2,6 @@
 -cp test
 -main M14CppTypedProgramProjectionTest
 --interp
+
+--next
+test/m14_cpp_validation_boundary_test.hxml

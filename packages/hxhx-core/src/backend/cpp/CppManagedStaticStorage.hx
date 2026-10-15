@@ -26,7 +26,7 @@ class CppManagedStaticStorage {
 		this.program = program;
 		this.nativeName = nativeName;
 		this.hasStack = hasStack;
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses()) {
 				final facts = owner.requireSemanticFacts();
@@ -57,7 +57,7 @@ class CppManagedStaticStorage {
 
 	/** Only an exact enum owner and its declared singleton can select a startup slot. */
 	public function singletonMember(owner:TypedBackendClassProjection, constructorIndex:Int):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (program.requireClass(program.requireClassIdentity(owner.requireSemanticFacts().getClassIdentity())) != owner)
 			throw "managed enum startup belongs to another program";
 		for (constructor in owner.requireSemanticFacts().copyEnumConstructors())
@@ -74,7 +74,7 @@ class CppManagedStaticStorage {
 
 	/** An equally named declaration from another program cannot borrow this storage inventory. */
 	public function assertFunction(projection:TypedBackendFunctionProjection):Void {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses())
 				for (candidate in owner.getFunctions())
@@ -85,7 +85,7 @@ class CppManagedStaticStorage {
 
 	/** Startup can use only an initializer retained in this exact program revision. */
 	public function assertInitializer(projection:TypedBackendFieldInitializerProjection):Void {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		projection.assertCurrent();
 		for (module in program.getModules())
 			for (owner in module.projection.getClasses())
@@ -112,7 +112,7 @@ class CppManagedStaticStorage {
 
 	/** Inline reads consume the declaration's initializer and never acquire a mutable static slot. */
 	public function inlineInitializer(occurrence:TypedBackendFieldOccurrence):TypedBackendFieldInitializerProjection {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final field = occurrence.getField();
 		program.requireFieldDeclaration(field);
 		if (!field.getIsStatic() || !field.getIsInline() || occurrence.getReceiver() == ValueReceiver)
@@ -135,7 +135,7 @@ class CppManagedStaticStorage {
 
 	/** Validate declaration facts before selecting a native slot; no source spelling selects an owner. */
 	public function member(occurrence:TypedBackendFieldOccurrence, writing:Bool = false):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final field = occurrence.getField();
 		program.requireFieldDeclaration(field);
 		final index = slots.get(field.getCanonicalKey());
@@ -165,7 +165,7 @@ class CppManagedStaticStorage {
 
 	/** Register only an exact authored method; one slot preserves its value identity for this heap. */
 	public function callableMember(declaration:TyDeclarationInfo):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (declaration == null || !declaration.getIsStatic() || declaration.getIsDynamic())
 			throw "managed immutable callable storage requires a static method";
 		var found = false;
@@ -188,13 +188,13 @@ class CppManagedStaticStorage {
 
 	/** Emission finishes discovering method values before the program publishes its storage layout. */
 	public function getCallables():Array<TyDeclarationInfo> {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		return callables.copy();
 	}
 
 	/** Inline cells are ordinary traced edges, never registered roots inside a managed payload. */
 	public function render():String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		layoutPublished = true;
 		final lines = hasStack ? ['#include "ManagedStack.hpp"'] : [];
 		lines.push("struct " + nativeName + " {");
@@ -222,7 +222,7 @@ class CppManagedStaticStorage {
 
 	/** Each program's existing heap-owned storage isolates its synchronous stack context. */
 	public function stackAccess(heap:String):String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		if (!hasStack || !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(heap))
 			throw "managed stack requires an admitted program context";
 		return heap + ".requireStatic<" + nativeName + ">()->stack";
@@ -232,7 +232,7 @@ class CppManagedStaticStorage {
 	public function renderAllocation(heap:String, destination:String):String {
 		if (!~/^[A-Za-z_][A-Za-z0-9_]*$/.match(heap) || !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(destination))
 			throw "managed static publication requires allocated native symbols";
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		return heap + ".allocateStaticInto(" + destination + ");";
 	}
 
@@ -244,7 +244,7 @@ class CppManagedStaticStorage {
 	public function renderDefaults(destination:String):Array<String> {
 		if (!~/^[A-Za-z_][A-Za-z0-9_]*$/.match(destination))
 			throw "managed static defaults require an allocated destination symbol";
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final lines = new Array<String>();
 		for (index in 0...fields.length) {
 			final value = try CppManagedStaticDefault.render(program, fields[index].semanticType) catch (failure:haxe.Exception) {

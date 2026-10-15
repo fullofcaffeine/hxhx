@@ -24,7 +24,7 @@ class CppManagedClassLayouts {
 
 	/** Only complete applied class types may select field storage; cached results remain revision checked. */
 	public function requireType(type:TyType):CppManagedClassLayout {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		CppManagedClosureAbi.assertComplete(type);
 		if (type.getNominalIdentity() == null || TyTypeSubstitution.parameterIdentities(type).length != 0)
 			throw "managed class storage requires an exact applied class";
@@ -81,7 +81,7 @@ class CppManagedClassLayouts {
 
 	/** Each exact application dispatches independently while retaining its declaration's public identity. */
 	public function renderInstances():String {
-		program.assertCurrent();
+		program.assertPlanningCurrent();
 		final names = [for (name in applications.keys()) name];
 		names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
 		return [
