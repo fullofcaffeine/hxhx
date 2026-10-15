@@ -14,6 +14,7 @@ function expression(node:TypedExpr):HxExpr {
 	return switch node.getTag() {
 		case Parenthesized: EParenthesized(child(0), position);
 		case PrivateAccess: EPrivateAccess(child(0), position);
+		case Metadata: ECall(EIdent("__hxhx_expr_meta"), [EString(texts[0]), EString(texts[1]), child(0)]);
 		case NullValue: ENull;
 		case BoolValue: EBool(node.getBoolValue());
 		case StringValue: EString(texts[0]);

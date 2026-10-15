@@ -199,14 +199,14 @@ class TypedBodyInvariant {
 				|| arguments[1].getSemanticKey() != children[2].getType().getSemanticKey())
 				throw "map insertion lost its selected key or value type in " + owner;
 		}
-		if (tag == Parenthesized) {
+		if (tag == Parenthesized || tag == Metadata) {
 			final children = expression.getExpressions();
 			if (children.length != 1
-				|| expression.getTexts().length != 0
+				|| expression.getTexts().length != (tag == Metadata ? 2 : 0)
 				|| expression.getLocalBindings().length != 0
 				|| expression.getControlTarget() != null
 				|| children[0].getType().getSemanticKey() != expression.getType().getSemanticKey())
-				throw "parenthesized expression changed its child type or acquired semantic ownership in " + owner;
+				throw "source wrapper changed its child type or acquired semantic ownership in " + owner;
 		}
 		if (tag == NewValue && expression.getDeclaration() != null) {
 			final constructor = expression.getDeclaration();

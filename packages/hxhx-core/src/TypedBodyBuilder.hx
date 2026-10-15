@@ -109,6 +109,7 @@ class TypedBodyBuilder {
 	static function fallbackType(expression:HxExpr, environment:Null<TyFunctionEnv>):TyType {
 		return switch (expression) {
 			case EParenthesized(inner, _) | EPrivateAccess(inner, _): fallbackType(inner, environment);
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]): fallbackType(inner, environment);
 			case ENull: TyType.fromHintText("Null");
 			case EBool(_): TyType.fromHintText("Bool");
 			case EString(_): TyType.fromHintText("String");
@@ -716,6 +717,9 @@ class TypedBodyBuilder {
 			}
 		}
 		final value = switch (expression) {
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(arguments), inner]):
+				TypedExpr.metadata(name, arguments,
+					buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected, selectedCallType), position);
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
 			case EPrivateAccess(inner, sourcePosition):

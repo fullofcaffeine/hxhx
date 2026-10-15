@@ -2562,6 +2562,8 @@ class TyperStage {
 		return switch (expr) {
 			case EParenthesized(inner, sourcePosition) | EPrivateAccess(inner, sourcePosition):
 				inferExprType(inner, scope, ctx, sourcePosition, expectedResult);
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]):
+				inferExprType(inner, scope, ctx, pos, expectedResult);
 			case ESourceFunction(facts, body, defaults, sourcePosition):
 				inferSourceFunctionType(expr, facts, body, defaults, scope, ctx, sourcePosition, expectedResult);
 			case ESourceTry(catches, bodies, sourcePosition):

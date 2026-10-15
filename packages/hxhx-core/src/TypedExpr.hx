@@ -69,6 +69,7 @@ enum TypedExprTag {
 	SourceTry;
 	ControlTry;
 	PrivateAccess;
+	Metadata;
 }
 
 /**
@@ -231,6 +232,10 @@ class TypedExpr {
 	/** Keep source access permission until shared access selection consumes it. */
 	public static function privateAccess(inner:TypedExpr, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(PrivateAccess, inner.getType(), position, null, [inner]);
+
+	/** Retain authored metadata for syntax consumers while the sole value child owns runtime behavior. */
+	public static function metadata(name:String, arguments:String, inner:TypedExpr, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(Metadata, inner.getType(), position, [name, arguments], [inner]);
 
 	public static function superValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(SuperValue, type, position);

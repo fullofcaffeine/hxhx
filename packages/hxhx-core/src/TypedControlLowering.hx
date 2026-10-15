@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v28";
+	static final passIdentity = "source-control-v29";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -722,6 +722,12 @@ class TypedControlLowering {
 	}
 
 	function value(expression:TypedExpr, target:Null<TyControlTarget>):ControlValue {
+		// Typing and macro syntax retain metadata. Executable lowering follows
+		// the same value and control destination without inventing a runtime call.
+		if (expression.getTag() == Metadata) {
+			didLower = true;
+			return value(expression.getExpressions()[0], target);
+		}
 		if (expression.getTag() == FeatureDefinition || expression.getTag() == FeatureSelection)
 			throw "feature intrinsics require program-owned selection before control lowering";
 		final children = expression.getExpressions();

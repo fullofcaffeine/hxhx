@@ -252,6 +252,7 @@ class CompilerTypedTreeRevision {
 		return switch (tag) {
 			case Parenthesized: "parenthesized";
 			case PrivateAccess: "private-access";
+			case Metadata: "metadata";
 			case NullValue: "null";
 			case BoolValue: "bool";
 			case StringValue: "string";
