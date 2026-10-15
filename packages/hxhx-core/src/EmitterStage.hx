@@ -964,10 +964,10 @@ class EmitterStage {
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		// A function-value call need not have a named method signature. Preserve
-		// its checked Boolean result before the runtime can mistake its bits for 1.
+		// Preserve checked scalar results before rendering them as text. Boolean
+		// bits must not become 1, and integer addition must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
-		if (operand != null && operand.type.getSemanticKey() == "primitive:Bool")
+		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
@@ -3010,6 +3010,9 @@ class EmitterStage {
 
 	/** Direct calls and stored callback origins resolve the same exact typed declaration name. */
 	static function callableDeclarationReference(declaration:TyDeclarationInfo):String {
+		final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.reference(declaration);
+		if (intrinsic != null)
+			return intrinsic;
 		final owner = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
 		final name = ocamlValueIdent(declaration.getSignature().getName());
 		return owner == currentOcamlModuleName ? name : owner + "." + name;
@@ -3039,6 +3042,12 @@ class EmitterStage {
 	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
 	static function exprToOcamlRaw(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (e.match(EField(_, "println"))) {
+			final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(e,
+				currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression);
+			if (intrinsic != null)
+				return intrinsic;
+		}
 		switch e {
 			case ECast(lambda = ELambda(_, body), _) | ECheckType(lambda = ELambda(_, body), _) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
 				return exprToOcaml(lambda, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);

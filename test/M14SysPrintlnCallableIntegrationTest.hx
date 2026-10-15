@@ -40,12 +40,17 @@ class M14SysPrintlnCallableIntegrationTest {
 		if (backend.js.JsIntrinsicCallable.emitValue(output, scope) != "console.log"
 			|| backend.js.JsIntrinsicCallable.emitValue(user, scope) != null)
 			throw "output binding must distinguish the selected standard-library declaration";
+		if (backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(output, scope.callableExpressions) != "HxSys.printlnValue"
+			|| backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(user, scope.callableExpressions) != null)
+			throw "native output binding must distinguish the selected standard-library declaration";
 		final copy = switch output {
 			case EField(receiver, name): HxExpr.EField(receiver, name);
 			case _: throw "output observer lost its field value";
 		};
 		if (backend.js.JsIntrinsicCallable.emitValue(copy, scope) != null)
 			throw "copied output syntax borrowed occurrence authority";
+		if (backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(copy, scope.callableExpressions) != null)
+			throw "copied native output syntax borrowed occurrence authority";
 		final foreignScope:backend.js.JsEmitScope = {
 			resolveLocal: scope.resolveLocal,
 			resolveClassRef: scope.resolveClassRef,
@@ -54,15 +59,24 @@ class M14SysPrintlnCallableIntegrationTest {
 		};
 		if (backend.js.JsIntrinsicCallable.emitValue(output, foreignScope) != null)
 			throw "another projection borrowed the output occurrence";
+		if (backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(output, foreignScope.callableExpressions) != null)
+			throw "another projection borrowed the native output occurrence";
 		mutableArguments.push(EInt(99));
-		try {
-			backend.js.JsIntrinsicCallable.emitValue(output, scope);
-		} catch (error:haxe.Exception) {
-			if (error.message.indexOf("projection was mutated") >= 0)
-				return;
-			throw error;
+		for (observe in [
+			() -> backend.js.JsIntrinsicCallable.emitValue(output, scope),
+			() -> backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(output, scope.callableExpressions)
+		]) {
+			var rejected = false;
+			try {
+				observe();
+			} catch (error:haxe.Exception) {
+				if (error.message.indexOf("projection was mutated") < 0)
+					throw error;
+				rejected = true;
+			}
+			if (!rejected)
+				throw "mutated output projection retained callable authority";
 		}
-		throw "mutated output projection retained callable authority";
 	}
 
 	static function main():Void {

@@ -1,6 +1,7 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Check inferred loop types and execute array iteration with production declarations. */
 class M14HihForInIntegrationTest {
 	static function assertEquals(actual:String, expected:String, label:String):Void {
 		if (actual != expected)
@@ -79,8 +80,8 @@ class M14HihForInIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final runtimeParsed = ParserStage.parse(runtimeMain, runtimeMainPath);
-			final runtimeTyped = TyperStage.typeModule(runtimeParsed);
+			M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "sum=10\n"});
+			final runtimeTyped = M14Stage3RuntimeFixture.typeMain({source: runtimeMain, path: runtimeMainPath, root: srcDir});
 			final runtimeExpanded = MacroStage.expandProgram([runtimeTyped], []);
 			final exePath = EmitterStage.emitToDir(runtimeExpanded, outDir, true);
 			assertTrue(FileSystem.exists(exePath), "Emitter did not produce executable: " + exePath);
