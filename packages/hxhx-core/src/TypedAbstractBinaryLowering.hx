@@ -526,8 +526,17 @@ class TypedAbstractBinaryLowering {
 		final right = loweredChildren[1];
 		final selected = TyAbstractBinaryBinding.select(index, left.getType(), right.getType(), texts[0], filePath,
 			rebuilt.getPosition() == null ? HxPos.unknown() : rebuilt.getPosition());
-		if (selected == null)
+		if (selected == null) {
+			// Only the ordinary concatenation fallback may expose a declared
+			// primitive view. An authored operator keeps its selected operands.
+			if ((texts[0] == "+" || texts[0] == "+=")
+				&& (left.getType().getSemanticKey() == "primitive:String" || right.getType().getSemanticKey() == "primitive:String"))
+				return rebuilt.withExpressions([
+					rebuilt.getTag() == TypedExprTag.CompoundAssign ? left : TypedStringOperand.lower(left, index),
+					TypedStringOperand.lower(right, index)
+				]);
 			return rebuilt;
+		}
 		final declaration = selected.getOperatorInfo().getDeclaration();
 		// A bodyless fallback still owns a primitive operation plus writeback;
 		// it cannot become a call to a helper with no implementation.

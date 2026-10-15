@@ -177,6 +177,8 @@ class TyAbstractBinaryBinding {
 	public static function permitsOrdinaryFallback(op:String, leftType:TyType, rightType:TyType):Bool {
 		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(op))
 			return true;
+		if (op == "+=" && leftType != null && leftType.getSemanticKey() == "primitive:String")
+			return true;
 		return op == "+"
 			&& ((leftType != null && leftType.getDisplay() == "String") || (rightType != null && rightType.getDisplay() == "String"));
 	}
@@ -213,6 +215,10 @@ class TyAbstractBinaryBinding {
 			final fallback = best(baseMatches, op, leftType, rightType, filePath, position, true);
 			if (fallback != null)
 				return validateBodyless(index, fallback, filePath);
+			// Inapplicable numeric overloads on the right do not forbid appending
+			// that value to a String. Applicable authored operators still win above.
+			if (permitsOrdinaryFallback(op, leftType, rightType))
+				return null;
 			if (explicitCandidates.length > 0)
 				throw noApplicable(op, leftType, rightType, explicitCandidates, filePath, position);
 			if (baseCandidates.length > 0)

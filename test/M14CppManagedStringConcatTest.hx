@@ -15,6 +15,7 @@ class M14CppManagedStringConcatTest {
 	}
 
 	public static function run():Void {
+		M14TypedStringOperandTest.run();
 		final text = TyType.fromHintText("String");
 		final integer = TyType.fromHintText("Int");
 		rejects(() -> {
@@ -41,7 +42,11 @@ class M14CppManagedStringConcatTest {
 		upstream.close();
 		if (upstreamCode != 0 || observed != expected)
 			throw "upstream String concatenation disagrees with independent expectation: " + observed + upstreamError;
-		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/managed_string_concat_seed/src", mainModule: "Main", requiredModules: ["Sys"]});
+		final fixture = CppResolvedFixture.load({
+			sourceRoot: "test/oracle/managed_string_concat_seed/src",
+			mainModule: "Main",
+			requiredModules: ["Sys", "haxe.Int32"]
+		});
 		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];

@@ -10,6 +10,13 @@ The test compares authored Haxe with an independent output file. It executes ups
 
 The native observer also checks null operands under address and undefined-behavior sanitizers, at two optimization levels.
 
+Integer text cases include real `haxe.Int32` providers, signed limits, both
+operand orders, and String compound assignment. A user-defined abstract with a
+declared `to Int` conversion receives the same treatment. The shared conversion
+retains the operand once and requires an unchanged integer representation.
+Typing checks keep abstracts with `toString()` or `@:to String` methods on
+their own conversion path, and reject an unproved backing-type shortcut.
+
 The `dynamic/DynamicConcat.hx` contract stores primitive values as `Dynamic` before concatenation. It covers Boolean, Int, String, and null values. Assertions check both operand orders, Unicode, embedded zero bytes, once-only effects, evaluation order, and local String compound assignment. The test runs upstream eval and generated native C++, including forced collection with both sanitizer profiles. It also checks that compilation preserves the original typed modules.
 
 The same source passes native Haxe 4.3.7 with hxcpp 4.3.2. With that toolchain available, reproduce it with:
