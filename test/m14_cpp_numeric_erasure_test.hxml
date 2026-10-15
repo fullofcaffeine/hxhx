@@ -3,3 +3,5 @@
 -cp test
 -main M14CppNumericErasureTest
 --interp
+--next
+test/m14_cpp_abstract_switch_test.hxml

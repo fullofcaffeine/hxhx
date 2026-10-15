@@ -4,6 +4,7 @@ package backend.cpp;
 typedef CppManagedSwitchInput = {
 	final value:HxExpr;
 	final type:TyType;
+	final ?casts:CppManagedCastPlan;
 	final patterns:Array<HxSwitchPattern>;
 	final heap:String;
 	final prefix:String;
@@ -19,12 +20,16 @@ typedef CppManagedSwitchInput = {
 	own typed storage plans and are deliberately rejected here.
 	Nullable Int/Bool values, including callback results, retain null during arm
 	selection. Null matches only an explicit null pattern or the default arm.
+	Abstract inputs use backing storage proved by the enclosing program's cast
+	plan. This preserves their values without invoking an implicit conversion.
+	Unsupported backing types and patterns still require their own plans.
  */
 function render(input:CppManagedSwitchInput, indent:String):Array<String> {
-	final type = input.type.getSemanticKey();
+	final stored = input.casts == null ? input.type : input.casts.representationType(input.type);
+	final type = stored.getSemanticKey();
 	if (type != "primitive:Int" && type != "primitive:Bool" && type != "primitive:String" && type != "nullable:primitive:Int"
 		&& type != "nullable:primitive:Bool")
-		throw "managed switch requires an exact supported scalar type";
+		throw "managed switch requires an exact supported scalar type: source=" + input.type.getSemanticKey() + " storage=" + type;
 	final selected = input.prefix + "selected";
 	final conditions = new Array<{index:Int, condition:String}>();
 	var fallback = -1;

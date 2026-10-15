@@ -208,6 +208,7 @@ class CppManagedRootedExpression {
 		return CppManagedSwitch.render({
 			value: value,
 			type: valueType(value),
+			casts: input.casts,
 			patterns: patterns,
 			heap: input.heap,
 			prefix: input.temporaryPrefix + "switch_",
