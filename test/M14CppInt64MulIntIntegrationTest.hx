@@ -66,7 +66,7 @@ class M14CppInt64MulIntIntegrationTest {
 						for (body in fn.getBody().getStatements())
 							statement(body);
 		}
-		assertTrue(provider && multiplications == 1 && mixedMultiplications == 14,
+		assertTrue(provider && multiplications == 15 && mixedMultiplications == 0,
 			"Int64 multiplication lost its real provider or selected calls: provider="
 			+ provider
 			+ ", mul="

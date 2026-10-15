@@ -75,6 +75,29 @@ class M14TypedAbstractBinaryIntegrationTest {
 		return count;
 	}
 
+	/** Find an explicit conversion even when it is evaluated into an operand temporary. */
+	static function castTo(expression:TypedExpr, semanticKey:String):Null<TypedExpr> {
+		if (expression.getTag() == TypedExprTag.Cast && expression.getType().getSemanticKey() == semanticKey)
+			return expression;
+		for (child in expression.getExpressions()) {
+			final found = castTo(child, semanticKey);
+			if (found != null)
+				return found;
+		}
+		return null;
+	}
+
+	/** Count exact local reads through the explicit storage-update block. */
+	static function bindingReads(expression:TypedExpr, binding:TyLocalBinding):Int {
+		final bindings = expression.getLocalBindings();
+		var count = expression.getTag() == TypedExprTag.LocalRead
+			&& bindings.length == 1
+			&& bindings[0].getIdentity().equals(binding.getIdentity()) ? 1 : 0;
+		for (child in expression.getExpressions())
+			count += bindingReads(child, binding);
+		return count;
+	}
+
 	static function typingFailure(source:String, expected:String):Void {
 		var message:Null<String> = null;
 		try {
@@ -131,7 +154,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
 			"shadowing helper local lost its exact temporary binding");
 		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
-		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v2") >= 0
+		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v3") >= 0
 			&& implementationRevision.indexOf(argumentBindings[0].getCanonicalIdentity()) >= 0,
 			"typed-module implementation revision omitted the binary pass or generated binding identity");
 		final innerReadBindings = expressions[2].getLocalBindings();
@@ -140,10 +163,11 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& innerReadBindings[0].getIdentity().equals(innerBindings[0].getIdentity()),
 			"nested helper read did not select the shadowing declaration");
 		final update = expressions[3];
-		final parameterReadBindings = update.getExpressions()[1].getLocalBindings();
-		assertTrue(update.getTag() == TypedExprTag.CompoundAssign
-			&& parameterReadBindings.length == 1
-			&& parameterReadBindings[0].getIdentity().equals(argumentBindings[0].getIdentity()),
+		assertTrue(update.getTag() == TypedExprTag.Block
+			&& containsTag(update, TypedExprTag.Assign)
+			&& containsTag(update, TypedExprTag.Binary)
+			&& bindingReads(update, argumentBindings[0]) == 1
+			&& bindingReads(update, innerBindings[0]) == 0,
 			"read after the nested helper block did not return to the exact parameter binding");
 	}
 
@@ -266,11 +290,10 @@ class M14TypedAbstractBinaryIntegrationTest {
 
 		final widened = initializer(main, "widened");
 		final widenedCall = declarationExpression(widened, "scaleArbitrarily");
-		assertTrue(widenedCall != null
-			&& widenedCall.getExpressions()[2].getTag() == TypedExprTag.Cast
-			&& widenedCall.getExpressions()[2].getType().getDisplay() == "Float",
+		final widenedOperand = castTo(widened, "primitive:Float");
+		assertTrue(widenedCall != null && widenedOperand != null && widenedCall.getExpressions()[2].getType().getDisplay() == "Float",
 			"numeric widening was not made explicit before the exact helper call");
-		assertTrue(!widenedCall.getExpressions()[2].isRepresentationPreservingCast(), "numeric widening acquired a storage-preserving permission");
+		assertTrue(!widenedOperand.isRepresentationPreservingCast(), "numeric widening acquired a storage-preserving permission");
 
 		final explicitResult = initializer(main, "explicitResult");
 		assertTrue(declarationExpression(explicitResult, "explicitCompoundArbitrarily") != null
@@ -284,7 +307,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 		final nullableCall = declarationExpression(nullableResult, "addNullable");
 		assertTrue(nullableCall != null
 			&& nullableCall.getExpressions().length == 3
-			&& nullableCall.getExpressions()[2].getTag() == TypedExprTag.Cast
+			&& castTo(nullableResult, "primitive:Float") != null
 			&& nullableCall.getExpressions()[2].getType().getSemanticKey() == "primitive:Float",
 			"declared abstract-to conversion did not adapt the compound right operand");
 		assertTrue(containsTag(nullableResult, TypedExprTag.Assign) && castCountTo(nullableResult, "nominal:Main.NullFloat") == 1,
@@ -390,7 +413,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 				final expression = statement.getExpressions()[0];
 				if (expression.getType().isVoid()
 					&& expression.getTag() == TypedExprTag.Block
-					&& containsTag(expression, TypedExprTag.CompoundAssign))
+					&& containsTag(expression, TypedExprTag.Assign)
+					&& containsTag(expression, TypedExprTag.Binary))
 					sawInlineMutation = true;
 			}
 		assertTrue(sawInlineMutation, "inline instance compound helper did not expose its carrier mutation in a typed block");
@@ -409,14 +433,16 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"abstract Missing(Int) { public inline function new(value:Int) this = value; }",
 			"class Main { static function main() { var value:Missing = new Missing(1); var result = value * 2; } }",
 		].join("\n"), "No applicable abstract binary operator");
-		typingFailure([
+		final orderedDuplicate = typedModule([
 			"abstract Ambiguous(Int) {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(A + B) public static function first(left:Ambiguous, right:Int):Ambiguous return left;",
 			"  @:op(A + B) public static function second(left:Ambiguous, right:Int):Ambiguous return left;",
 			"}",
 			"class Main { static function main() { var value:Ambiguous = new Ambiguous(1); var result = value + 2; } }",
-		].join("\n"), "Ambiguous abstract binary operator");
+		].join("\n"), "Main.hx");
+		assertTrue(declarationExpression(initializer(mainFunction(orderedDuplicate), "result"), "first") != null,
+			"equal applicable operator signatures did not select the first declaration");
 		typingFailure([
 			"abstract Convert(Int) {",
 			"  public inline function new(value:Int) this = value;",

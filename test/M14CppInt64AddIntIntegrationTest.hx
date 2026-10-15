@@ -66,7 +66,7 @@ class M14CppInt64AddIntIntegrationTest {
 						for (body in fn.getBody().getStatements())
 							statement(body);
 		}
-		assertTrue(provider && additions == 2 && mixedAdditions == 11,
+		assertTrue(provider && additions == 13 && mixedAdditions == 0,
 			"Int64 addition lost its real provider or selected calls: provider="
 			+ provider
 			+ ", add="

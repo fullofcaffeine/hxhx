@@ -43,7 +43,7 @@ class M14CppInt64SubIntIntegrationTest {
 				switch declaration.getSignature().getName() {
 					case "add":
 						additions++;
-					case "subInt":
+					case "sub":
 						subtractions++;
 					case _:
 				}

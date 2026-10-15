@@ -66,7 +66,7 @@ class M14CppInt64DivIntIntegrationTest {
 						for (body in fn.getBody().getStatements())
 							statement(body);
 		}
-		assertTrue(provider && divisions == 1 && mixedDivisions == 12,
+		assertTrue(provider && divisions == 13 && mixedDivisions == 0,
 			"Int64 division lost its real provider or selected calls: provider="
 			+ provider
 			+ ", div="
